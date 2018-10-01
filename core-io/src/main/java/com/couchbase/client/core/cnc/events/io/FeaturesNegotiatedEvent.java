@@ -18,12 +18,27 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.kv.ServerFeature;
 
 import java.time.Duration;
+import java.util.List;
 
+/**
+ * Captures the end of the KV feature negotiation.
+ */
 public class FeaturesNegotiatedEvent extends AbstractEvent {
 
-  public FeaturesNegotiatedEvent(final IoContext ctx, final Duration duration) {
+  private final List<ServerFeature> negotiated;
+
+  public FeaturesNegotiatedEvent(final IoContext ctx, final Duration duration,
+                                 final List<ServerFeature> negotiated) {
     super(Severity.DEBUG, Category.IO, duration, ctx);
+    this.negotiated = negotiated;
   }
+
+  @Override
+  public String description() {
+    return "Negotiated " + negotiated.toString();
+  }
+
 }

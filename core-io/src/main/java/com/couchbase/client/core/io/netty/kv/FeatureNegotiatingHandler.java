@@ -136,7 +136,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
       ctx.channel().attr(ServerFeature.SERVER_FEATURE_KEY).set(negotiated);
       coreContext.env().eventBus().publish(
-        new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO))
+        new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
       );
       interceptedConnectPromise.setSuccess();
       ctx.pipeline().remove(this);

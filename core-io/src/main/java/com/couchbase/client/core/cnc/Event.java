@@ -53,6 +53,13 @@ public interface Event {
   Context context();
 
   /**
+   * A textual description with more information about the event.
+   *
+   * @return the description, if set.
+   */
+  String description();
+
+  /**
    * Describes the severity of any given event.
    */
   enum Severity {

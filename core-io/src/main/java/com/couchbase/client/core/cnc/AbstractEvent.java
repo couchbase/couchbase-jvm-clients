@@ -63,4 +63,9 @@ public abstract class AbstractEvent implements Event {
   public Context context() {
     return context;
   }
+
+  @Override
+  public String description() {
+    return null;
+  }
 }

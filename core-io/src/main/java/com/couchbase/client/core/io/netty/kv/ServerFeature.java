@@ -28,7 +28,7 @@ import java.util.List;
  * @since 2.0.0
  */
 @Stability.Internal
-enum ServerFeature {
+public enum ServerFeature {
 
   /**
    * The custom datatype feature.

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -31,71 +32,78 @@ import java.util.Map;
  */
 class LoggingEventConsumerTest {
 
-  @Test
-  void formatAndLogWithoutContextOrDuration() {
-    LoggingEventConsumer.Logger logger = mock(LoggingEventConsumer.Logger.class);
-    LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer
+  private LoggingEventConsumer.Logger logger;
+  private LoggingEventConsumer loggingEventConsumer;
+
+  @BeforeEach
+  void setup() {
+    logger = mock(LoggingEventConsumer.Logger.class);
+    loggingEventConsumer = LoggingEventConsumer
       .builder()
       .customLogger(logger)
       .build();
+  }
 
+  @Test
+  void formatAndLogWithoutContextOrDuration() {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO, null);
     loggingEventConsumer.accept(event);
-
     verify(logger, times(1)).info("[IO][MyEvent]");
   }
 
   @Test
   void formatAndLogWithDuration() {
-    LoggingEventConsumer.Logger logger = mock(LoggingEventConsumer.Logger.class);
-    LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer
-      .builder()
-      .customLogger(logger)
-      .build();
-
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123), null);
     loggingEventConsumer.accept(event);
-
     verify(logger, times(1)).info("[IO][MyEvent][123000µs]");
   }
 
   @Test
   void formatAndLogWithContext() {
-    LoggingEventConsumer.Logger logger = mock(LoggingEventConsumer.Logger.class);
-    LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer
-      .builder()
-      .customLogger(logger)
-      .build();
-
     Map<String, Object> ctxData = new HashMap<>();
     ctxData.put("foo", true);
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO,
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-
-    verify(logger, times(1)).info("[IO][MyEvent]: {\"foo\":true}");
+    verify(logger, times(1)).info("[IO][MyEvent] {\"foo\":true}");
   }
 
   @Test
   void formatAndLogWithContextAndDuration() {
-    LoggingEventConsumer.Logger logger = mock(LoggingEventConsumer.Logger.class);
-    LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer
-      .builder()
-      .customLogger(logger)
-      .build();
-
     Map<String, Object> ctxData = new HashMap<>();
     ctxData.put("foo", true);
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123),
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
+    verify(logger, times(1)).info("[IO][MyEvent][123000µs] {\"foo\":true}");
+  }
 
-    verify(logger, times(1)).info("[IO][MyEvent][123000µs]: {\"foo\":true}");
+  @Test
+  void formatAndLogWithDescription() {
+    Event event = new EventWithDescription("some text");
+    loggingEventConsumer.accept(event);
+    verify(logger, times(1))
+      .debug("[IO][EventWithDescription][3600000000µs] some text");
   }
 
   static class MyEvent extends AbstractEvent {
     MyEvent(Severity severity, Category category, Duration duration, Context context) {
       super(severity, category, duration, context);
+    }
+  }
+
+  static class EventWithDescription extends AbstractEvent {
+
+    final String desc;
+
+    EventWithDescription(String desc) {
+      super(Severity.DEBUG, Category.IO, Duration.ofHours(1), null);
+      this.desc = desc;
+    }
+
+    @Override
+    public String description() {
+      return desc;
     }
   }
 

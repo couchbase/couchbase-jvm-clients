@@ -92,8 +92,12 @@ public class LoggingEventConsumer implements Consumer<Event> {
         .append("µs]");
     }
 
+    if (event.description() != null) {
+      logLineBuilder.append(" ").append(event.description());
+    }
+
     if (event.context() != null) {
-      logLineBuilder.append(": ").append(event.context().exportAsString(Context.ExportFormat.JSON));
+      logLineBuilder.append(" ").append(event.context().exportAsString(Context.ExportFormat.JSON));
     }
 
     String logLine = logLineBuilder.toString();

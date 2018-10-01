@@ -80,7 +80,7 @@ class FeatureNegotiatingHandlerTest {
    * is propagated through the captured promise.
    */
   @Test
-  void shouldPropagateConnectFailureFromDownstream() {
+  void propagateConnectFailureFromDownstream() {
     final Exception connectException = new Exception("I failed");
     ChannelDuplexHandler failingHandler = new ChannelDuplexHandler() {
       @Override
@@ -106,7 +106,7 @@ class FeatureNegotiatingHandlerTest {
    * otherwise.
    */
   @Test
-  void shouldFailConnectIfPromiseTimesOut() throws Exception {
+  void failConnectIfPromiseTimesOut() throws Exception {
     Duration timeout = Duration.ofMillis(10);
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
@@ -134,7 +134,7 @@ class FeatureNegotiatingHandlerTest {
    * sending a request and completing the connect phase immediately.
    */
   @Test
-  void shouldConnectInstantlyIfNoFeaturesNeeded() {
+  void connectInstantlyIfNoFeaturesNeeded() {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
       Duration.ofMillis(10),
@@ -157,7 +157,7 @@ class FeatureNegotiatingHandlerTest {
    */
   @ParameterizedTest
   @MethodSource("featureProvider")
-  void shouldEncodeAndSendHelloRequest(Set<ServerFeature> enabledFeatures) {
+  void encodeAndSendHelloRequest(Set<ServerFeature> enabledFeatures) {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
       Duration.ofMillis(10),
@@ -190,7 +190,7 @@ class FeatureNegotiatingHandlerTest {
   }
 
   /**
-   * Provider used for {@link #shouldEncodeAndSendHelloRequest(Set)} to test a couple of different
+   * Provider used for {@link #encodeAndSendHelloRequest(Set)} to test a couple of different
    * combinations.
    *
    * @return a stream of server features to test.
@@ -207,7 +207,15 @@ class FeatureNegotiatingHandlerTest {
    * This test verifies that a successful hello response is properly handled.
    */
   @Test
-  void shouldDecodeAndPropagateSuccessHelloResponse() {
+  void decodeAndPropagateSuccessHelloResponse() {
+
+  }
+
+  /**
+   * This test checks that a non-successful response is properly handled.
+   */
+  @Test
+  void decodeNonSuccessfulHelloResponse() {
 
   }
 
