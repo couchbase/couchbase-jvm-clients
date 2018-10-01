@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.json.Mapper;
@@ -23,35 +24,36 @@ import java.util.Map;
 /**
  * Common parent method for all contexts.
  *
- * Contexts are encouraged to derive from this abstract class because all they have
+ * <p>Contexts are encouraged to derive from this abstract class because all they have
  * to do then is to implement/override {@link #injectExportableParams(Map)} and feed
  * the data they want to be extracted. The actual extraction and formatting then
- * comes for free.
+ * comes for free.</p>
  */
 public abstract class AbstractContext implements Context {
 
-    /**
-     * This method needs to be implemented by the actual context implementations to
-     * inject the params they need for exporting.
-     *
-     * @param input pass exportable params in here.
-     */
-    protected void injectExportableParams(final Map<String, Object> input) { }
+  /**
+   * This method needs to be implemented by the actual context implementations to
+   * inject the params they need for exporting.
+   *
+   * @param input pass exportable params in here.
+   */
+  protected void injectExportableParams(final Map<String, Object> input) {
+  }
 
-    @Override
-    public String exportAsString(final ExportFormat format) {
-        Map<String, Object> input = new HashMap<>();
-        injectExportableParams(input);
-        if (!input.isEmpty()) {
-            switch (format) {
-                case JSON:
-                    return Mapper.encodeAsString(input);
-                case JSON_PRETTY:
-                    return Mapper.encodeAsStringPretty(input);
-                default:
-                    throw new UnsupportedOperationException("Unsupported ExportFormat " + format);
-            }
-        }
-        return null;
+  @Override
+  public String exportAsString(final ExportFormat format) {
+    Map<String, Object> input = new HashMap<>();
+    injectExportableParams(input);
+    if (!input.isEmpty()) {
+      switch (format) {
+        case JSON:
+          return Mapper.encodeAsString(input);
+        case JSON_PRETTY:
+          return Mapper.encodeAsStringPretty(input);
+        default:
+          throw new UnsupportedOperationException("Unsupported ExportFormat " + format);
+      }
     }
+    return null;
+  }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 import java.time.Duration;
@@ -22,35 +23,44 @@ import java.time.Duration;
  */
 public abstract class AbstractEvent implements Event {
 
-    private final Severity severity;
-    private final Category category;
-    private final Duration duration;
-    private final Context context;
+  private final Severity severity;
+  private final Category category;
+  private final Duration duration;
+  private final Context context;
 
-    public AbstractEvent(Severity severity, Category category, Duration duration, Context context) {
-        this.severity = severity;
-        this.category = category;
-        this.duration = duration;
-        this.context = context;
-    }
+  /**
+   * Creates a new abstract event.
+   *
+   * @param severity the severity to use.
+   * @param category the category to use.
+   * @param duration the duration for this event.
+   * @param context the context if provided.
+   */
+  protected AbstractEvent(Severity severity, Category category, Duration duration,
+                          Context context) {
+    this.severity = severity;
+    this.category = category;
+    this.duration = duration;
+    this.context = context;
+  }
 
-    @Override
-    public Severity severity() {
-        return severity;
-    }
+  @Override
+  public Severity severity() {
+    return severity;
+  }
 
-    @Override
-    public Category category() {
-        return category;
-    }
+  @Override
+  public Category category() {
+    return category;
+  }
 
-    @Override
-    public Duration duration() {
-        return duration;
-    }
+  @Override
+  public Duration duration() {
+    return duration;
+  }
 
-    @Override
-    public Context context() {
-        return context;
-    }
+  @Override
+  public Context context() {
+    return context;
+  }
 }

@@ -13,27 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.error;
 
 public class CouchbaseException extends RuntimeException {
 
-    public CouchbaseException() {
-    }
+  public CouchbaseException() {
+  }
 
-    public CouchbaseException(String message) {
-        super(message);
-    }
+  public CouchbaseException(String message) {
+    super(message);
+  }
 
-    public CouchbaseException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  public CouchbaseException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-    public CouchbaseException(Throwable cause) {
-        super(cause);
-    }
+  public CouchbaseException(Throwable cause) {
+    super(cause);
+  }
 
-    public CouchbaseException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+  public CouchbaseException(String message, Throwable cause, boolean enableSuppression,
+                            boolean writableStackTrace) {
+    super(message, cause, enableSuppression, writableStackTrace);
+  }
 
 }

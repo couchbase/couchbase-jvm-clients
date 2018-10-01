@@ -2,6 +2,7 @@ plugins {
   id 'java-library'
   id 'nebula.optional-base' version '3.0.3'
   id 'maven-publish'
+  id 'checkstyle'
 }
 
 version = '2.0.0-SNAPSHOT'
@@ -62,4 +63,10 @@ publishing {
       artifact packageJavadoc
     }
   }
+}
+
+
+checkstyle {
+  toolVersion = "8.12"
+  configProperties 'checkstyle.header.file': file('../config/checkstyle/checkstyle-header.txt')
 }

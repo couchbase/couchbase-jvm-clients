@@ -13,45 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.json;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Mapper {
 
-    private Mapper() {}
+  private Mapper() {
+  }
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public static byte[] encodeAsBytes(final Object input) {
-        try {
-            return MAPPER.writeValueAsBytes(input);
-        } catch (Exception ex) {
-            throw new MapperException("Could not encode into JSON: " + input, ex);
-        }
+  /**
+   * Encodes the given input into a byte array, formatted non-pretty.
+   *
+   * @param input the java object as input
+   * @return the json encoded byte array.
+   */
+  public static byte[] encodeAsBytes(final Object input) {
+    try {
+      return MAPPER.writeValueAsBytes(input);
+    } catch (Exception ex) {
+      throw new MapperException("Could not encode into JSON: " + input, ex);
     }
+  }
 
-    public static byte[] encodeAsBytesPretty(final Object input) {
-        try {
-            return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(input);
-        } catch (Exception ex) {
-            throw new MapperException("Could not encode into JSON: " + input, ex);
-        }
+  /**
+   * Encodes the given input into a byte array, formatted pretty.
+   *
+   * @param input the java object as input
+   * @return the json encoded byte array.
+   */
+  public static byte[] encodeAsBytesPretty(final Object input) {
+    try {
+      return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(input);
+    } catch (Exception ex) {
+      throw new MapperException("Could not encode into JSON: " + input, ex);
     }
+  }
 
-    public static String encodeAsString(final Object input) {
-        try {
-            return MAPPER.writeValueAsString(input);
-        } catch (Exception ex) {
-            throw new MapperException("Could not encode into JSON: " + input, ex);
-        }
+  /**
+   * Encodes the given input into a String, formatted non-pretty.
+   *
+   * @param input the java object as input
+   * @return the json encoded String.
+   */
+  public static String encodeAsString(final Object input) {
+    try {
+      return MAPPER.writeValueAsString(input);
+    } catch (Exception ex) {
+      throw new MapperException("Could not encode into JSON: " + input, ex);
     }
+  }
 
-    public static String encodeAsStringPretty(final Object input) {
-        try {
-            return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(input);
-        } catch (Exception ex) {
-            throw new MapperException("Could not encode into JSON: " + input, ex);
-        }
+  /**
+   * Encodes the given input into a String, formatted pretty.
+   *
+   * @param input the java object as input
+   * @return the json encoded String.
+   */
+  public static String encodeAsStringPretty(final Object input) {
+    try {
+      return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(input);
+    } catch (Exception ex) {
+      throw new MapperException("Could not encode into JSON: " + input, ex);
     }
+  }
 }

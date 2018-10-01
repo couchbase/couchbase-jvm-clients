@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.utils;
 
 import java.io.InputStream;
@@ -23,51 +24,52 @@ import java.util.function.BooleanSupplier;
  */
 public class Utils {
 
-    /**
-     * Returns true if a thread with the given name is currently running.
-     *
-     * @param name the name of the thread.
-     * @return true if running, false otherwise.
-     */
-    public static boolean threadRunning(final String name) {
-        for (Thread t : Thread.getAllStackTraces().keySet()) {
-            if (t.getName().equalsIgnoreCase(name)) {
-                return true;
-            }
-        }
-        return false;
+  /**
+   * Returns true if a thread with the given name is currently running.
+   *
+   * @param name the name of the thread.
+   * @return true if running, false otherwise.
+   */
+  public static boolean threadRunning(final String name) {
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if (t.getName().equalsIgnoreCase(name)) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    /**
-     * Waits and sleeps for a little bit of time until the given condition is met.
-     *
-     * Sleeps 10ms between "false" invocations.
-     *
-     * @param supplier return true once it should stop waiting.
-     */
-    public static void waitUntilCondition(final BooleanSupplier supplier) {
-        while (!supplier.getAsBoolean()) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+  /**
+   * Waits and sleeps for a little bit of time until the given condition is met.
+   *
+   * <p>Sleeps 10ms between "false" invocations.</p>
+   *
+   * @param supplier return true once it should stop waiting.
+   */
+  public static void waitUntilCondition(final BooleanSupplier supplier) {
+    while (!supplier.getAsBoolean()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
     }
+  }
 
-    /**
-     * Reads a file from the resources folder (in the same path as the requesting test class).
-     *
-     * The class will be automatically loaded relative to the namespace and converted to a string.
-     *
-     * @param filename the filename of the resource.
-     * @param clazz the reference class.
-     * @return the loaded string.
-     */
-    public static String readResource(final String filename, final Class<?> clazz) {
-        String path = "/" + clazz.getPackage().getName().replace(".", "/") + "/" + filename;
-        InputStream stream = clazz.getResourceAsStream(path);
-        java.util.Scanner s = new java.util.Scanner(stream).useDelimiter("\\A");
-        return s.hasNext() ? s.next() : "";
-    }
+  /**
+   * Reads a file from the resources folder (in the same path as the requesting test class).
+   *
+   * <p>The class will be automatically loaded relative to the namespace and converted
+   * to a string.</p>
+   *
+   * @param filename the filename of the resource.
+   * @param clazz    the reference class.
+   * @return the loaded string.
+   */
+  public static String readResource(final String filename, final Class<?> clazz) {
+    String path = "/" + clazz.getPackage().getName().replace(".", "/") + "/" + filename;
+    InputStream stream = clazz.getResourceAsStream(path);
+    java.util.Scanner s = new java.util.Scanner(stream).useDelimiter("\\A");
+    return s.hasNext() ? s.next() : "";
+  }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 import java.time.Duration;
@@ -23,76 +24,76 @@ import java.time.Duration;
  */
 public interface Event {
 
+  /**
+   * The Severity of this event.
+   *
+   * @return the event severity.
+   */
+  Severity severity();
+
+  /**
+   * The Category of this event.
+   *
+   * @return the event category.
+   */
+  Category category();
+
+  /**
+   * Returns the duration of this event.
+   *
+   * @return the duration of the even, 0 if not set.
+   */
+  Duration duration();
+
+  /**
+   * The context this event is referencing.
+   *
+   * @return the referencing context.
+   */
+  Context context();
+
+  /**
+   * Describes the severity of any given event.
+   */
+  enum Severity {
     /**
-     * The Severity of this event.
-     *
-     * @return the event severity.
+     * Verbose information used to trace certain actual
+     * data throughout the system.
      */
-    Severity severity();
-
-    /**
-     * The Category of this event.
-     *
-     * @return the event category.
-     */
-    Category category();
-
-    /**
-     * Returns the duration of this event.
-     *
-     * @return the duration of the even, 0 if not set.
-     */
-    Duration duration();
-
-    /**
-     * The context this event is referencing.
-     *
-     * @return the referencing context.
-     */
-    Context context();
-
-    /**
-     * Describes the severity of any given event.
-     */
-    enum Severity {
-        /**
-         * Verbose information used to trace certain actual
-         * data throughout the system.
-         */
-        VERBOSE,
-
-        /**
-         * Information that guide debugging and in-depth
-         * troubleshooting.
-         */
-        DEBUG,
-
-        /**
-         * Should rely non-critical information.
-         */
-        INFO,
-
-        /**
-         * Indicates that a component is in a non-ideal state
-         * and that something could escalate into an error
-         * potentially.
-         */
-        WARN,
-
-        /**
-         * Critical errors that require immediate attention and/or
-         * problems which are not recoverable by the system itself.
-         */
-        ERROR
-    }
+    VERBOSE,
 
     /**
-     * Describes the category of any given event.
+     * Information that guide debugging and in-depth
+     * troubleshooting.
      */
-    enum Category {
-        /**
-         * Represents an event from the IO subsystem.
-         */
-        IO
-    }
+    DEBUG,
+
+    /**
+     * Should rely non-critical information.
+     */
+    INFO,
+
+    /**
+     * Indicates that a component is in a non-ideal state
+     * and that something could escalate into an error
+     * potentially.
+     */
+    WARN,
+
+    /**
+     * Critical errors that require immediate attention and/or
+     * problems which are not recoverable by the system itself.
+     */
+    ERROR
+  }
+
+  /**
+   * Describes the category of any given event.
+   */
+  enum Category {
+    /**
+     * Represents an event from the IO subsystem.
+     */
+    IO
+  }
 }

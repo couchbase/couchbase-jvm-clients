@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 /**
@@ -23,26 +24,26 @@ package com.couchbase.client.core.cnc;
  */
 public interface Context {
 
+  /**
+   * Export this context into the specified format.
+   *
+   * @param format the format to export into.
+   * @return the exported format as a string representation.
+   */
+  String exportAsString(final ExportFormat format);
+
+  /**
+   * The format into which the context can be exported.
+   */
+  enum ExportFormat {
     /**
-     * Export this context into the specified format.
-     *
-     * @param format the format to export into.
-     * @return the exported format as a string representation.
+     * Compact JSON.
      */
-    String exportAsString(final ExportFormat format);
+    JSON,
 
     /**
-     * The format into which the context can be exported.
+     * Verbose, Pretty JSON.
      */
-    enum ExportFormat {
-        /**
-         * Compact JSON
-         */
-        JSON,
-
-        /**
-         * Verbose, Pretty JSON
-         */
-        JSON_PRETTY
-    }
+    JSON_PRETTY
+  }
 }

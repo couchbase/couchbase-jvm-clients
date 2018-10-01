@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.env.CoreEnvironment;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -27,17 +28,17 @@ import static org.mockito.Mockito.mock;
  */
 class CoreContextTest {
 
-    @Test
-    void getAndExportProperties() {
-        long id = 12345;
-        CoreEnvironment env = mock(CoreEnvironment.class);
-        CoreContext ctx = new CoreContext(id, env);
+  @Test
+  void getAndExportProperties() {
+    long id = 12345;
+    CoreEnvironment env = mock(CoreEnvironment.class);
+    CoreContext ctx = new CoreContext(id, env);
 
-        assertEquals(id, ctx.id());
-        assertEquals(env, ctx.env());
+    assertEquals(id, ctx.id());
+    assertEquals(env, ctx.env());
 
-        String result = ctx.exportAsString(Context.ExportFormat.JSON);
-        assertEquals("{\"core\":12345}", result);
-    }
+    String result = ctx.exportAsString(Context.ExportFormat.JSON);
+    assertEquals("{\"core\":12345}", result);
+  }
 
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 import java.util.function.Consumer;
@@ -26,41 +27,41 @@ import java.util.function.Consumer;
  */
 public interface EventBus {
 
+  /**
+   * Try to publish an event.
+   *
+   * @param event the event to publish.
+   * @return the {@link PublishResult} of th event.
+   */
+  PublishResult publish(Event event);
+
+  /**
+   * Subscribes a {@link Consumer} to receive {@link Event Events}.
+   *
+   * @param consumer the consumer which will receive events.
+   * @return a {@link EventSubscription} that can be used to unsubscribe.
+   */
+  EventSubscription subscribe(Consumer<Event> consumer);
+
+  /**
+   * Unsubscribes the {@link Consumer} from this {@link EventBus}.
+   *
+   * @param subscription the subscription used.
+   */
+  void unsubscribe(EventSubscription subscription);
+
+  /**
+   * Signals if a publish call was successful and if not why.
+   */
+  enum PublishResult {
     /**
-     * Try to publish an event.
-     *
-     * @param event the event to publish.
-     * @return the {@link PublishResult} of th event.
+     * Publishing was successful.
      */
-    PublishResult publish(Event event);
+    SUCCESS,
 
     /**
-     * Subscribes a {@link Consumer} to receive {@link Event Events}.
-     *
-     * @param consumer the consumer which will receive events.
-     * @return a {@link EventSubscription} that can be used to unsubscribe.
+     * Could not publish because the event bus is overloaded temporarily.
      */
-    EventSubscription subscribe(Consumer<Event> consumer);
-
-    /**
-     * Unsubscribes the {@link Consumer} from this {@link EventBus}.
-     *
-     * @param subscription the subscription used.
-     */
-    void unsubscribe(EventSubscription subscription);
-
-    /**
-     * Signals if a publish call was successful and if not why.
-     */
-    enum PublishResult {
-        /**
-         * Publishing was successful.
-         */
-        SUCCESS,
-
-        /**
-         * Could not publish because the event bus is overloaded temporarily.
-         */
-        OVERLOADED,
-    }
+    OVERLOADED,
+  }
 }

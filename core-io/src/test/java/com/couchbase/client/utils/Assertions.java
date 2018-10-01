@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.utils;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,21 +24,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Assertions {
 
-    /**
-     * Asserts if a thread with the given name is running.
-     *
-     * @param name the name of the thread
-     */
-    public static void assertThreadRunning(final String name) {
-        assertTrue(Utils.threadRunning(name), "Thread with name \"" + name + "\" not running");
-    }
+  /**
+   * Asserts if a thread with the given name is running.
+   *
+   * @param name the name of the thread
+   */
+  public static void assertThreadRunning(final String name) {
+    assertTrue(Utils.threadRunning(name), "Thread with name \"" + name + "\" not running");
+  }
 
-    /**
-     * Asserts if a thread with the given name is not running.
-     *
-     * @param name the name of the thread
-     */
-    public static void assertThreadNotRunning(final String name) {
-        assertFalse(Utils.threadRunning(name), "Thread with name \"" + name + "\" running");
-    }
+  /**
+   * Asserts if a thread with the given name is not running.
+   *
+   * @param name the name of the thread
+   */
+  public static void assertThreadNotRunning(final String name) {
+    assertFalse(Utils.threadRunning(name), "Thread with name \"" + name + "\" running");
+  }
 }

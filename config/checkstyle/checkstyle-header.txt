@@ -13,14 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.couchbase.client.core.json;
-
-import com.couchbase.client.core.error.CouchbaseException;
-
-public class MapperException extends CouchbaseException {
-
-  MapperException(String message, Throwable cause) {
-    super(message, cause);
-  }
-}

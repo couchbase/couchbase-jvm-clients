@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.cnc;
 
 import org.junit.jupiter.api.Test;
@@ -34,54 +35,55 @@ import static org.mockito.Mockito.mock;
  */
 class DefaultEventBusTest {
 
-    @Test
-    void startAndStopEventBus() {
-        final String threadName = UUID.randomUUID().toString();
+  @Test
+  void startAndStopEventBus() {
+    final String threadName = UUID.randomUUID().toString();
 
-        DefaultEventBus eventBus = DefaultEventBus
-            .builder()
-            .threadName(threadName)
-            .build();
-        assertFalse(eventBus.isRunning());
-        assertThreadNotRunning(threadName);
+    DefaultEventBus eventBus = DefaultEventBus
+      .builder()
+      .threadName(threadName)
+      .build();
+    assertFalse(eventBus.isRunning());
+    assertThreadNotRunning(threadName);
 
-        eventBus.start();
-        assertTrue(eventBus.isRunning());
-        assertThreadRunning(threadName);
+    eventBus.start();
+    assertTrue(eventBus.isRunning());
+    assertThreadRunning(threadName);
 
-        eventBus.stop();
-        waitUntilCondition(() -> !threadRunning(threadName));
-        assertFalse(eventBus.isRunning());
-        assertThreadNotRunning(threadName);
-    }
+    eventBus.stop();
+    waitUntilCondition(() -> !threadRunning(threadName));
+    assertFalse(eventBus.isRunning());
+    assertThreadNotRunning(threadName);
+  }
 
-    @Test
-    void subscribeAndUnsubscribeFromEventBus() {
-        DefaultEventBus eventBus = DefaultEventBus.create();
+  @Test
+  void subscribeAndUnsubscribeFromEventBus() {
+    DefaultEventBus eventBus = DefaultEventBus.create();
 
-        assertFalse(eventBus.hasSubscribers());
-        EventSubscription subscription = eventBus.subscribe(event -> {});
-        assertTrue(eventBus.hasSubscribers());
+    assertFalse(eventBus.hasSubscribers());
+    EventSubscription subscription = eventBus.subscribe(event -> {
+    });
+    assertTrue(eventBus.hasSubscribers());
 
-        subscription.unsubscribe();
-        assertFalse(eventBus.hasSubscribers());
-    }
+    subscription.unsubscribe();
+    assertFalse(eventBus.hasSubscribers());
+  }
 
-    @Test
-    void receiveEvents() {
-        DefaultEventBus eventBus = DefaultEventBus.create();
+  @Test
+  void receiveEvents() {
+    DefaultEventBus eventBus = DefaultEventBus.create();
 
-        AtomicInteger eventsReceived = new AtomicInteger();
-        eventBus.subscribe(event -> eventsReceived.incrementAndGet());
+    AtomicInteger eventsReceived = new AtomicInteger();
+    eventBus.subscribe(event -> eventsReceived.incrementAndGet());
 
-        eventBus.start();
+    eventBus.start();
 
-        assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
-        assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
-        assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
+    assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
+    assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
+    assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
 
-        waitUntilCondition(() -> eventsReceived.get() == 3);
+    waitUntilCondition(() -> eventsReceived.get() == 3);
 
-        eventBus.stop();
-    }
+    eventBus.stop();
+  }
 }
