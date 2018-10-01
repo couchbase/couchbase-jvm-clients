@@ -1,0 +1,58 @@
+plugins {
+  id 'java-library'
+  id 'nebula.optional-base' version '3.0.3'
+  id 'maven-publish'
+}
+
+version = '2.0.0-SNAPSHOT'
+
+java {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+  compile 'org.jctools:jctools-core:2.1.1'
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
+  compile 'org.slf4j:slf4j-api:1.7.25', optional
+
+  testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
+  testCompile 'org.mockito:mockito-core:2.22.0'
+  testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+  testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.1'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+}
+
+test {
+  useJUnitPlatform()
+}
+
+javadoc {
+  source = sourceSets.main.allJava
+  classpath = configurations.compileClasspath
+
+  options {
+    links "https://docs.oracle.com/javase/8/docs/api/"
+  }
+}
+
+task sourceJar(type: Jar) {
+  classifier = 'sources'
+  from sourceSets.main.allJava
+}
+
+task packageJavadoc(type: Jar) {
+  from javadoc
+  classifier = 'javadoc'
+}
+
+publishing {
+  publications {
+    maven(MavenPublication) {
+      from components.java
+
+      artifact sourceJar
+      artifact packageJavadoc
+    }
+  }
+}

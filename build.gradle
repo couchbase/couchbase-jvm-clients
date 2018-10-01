@@ -1,7 +1,10 @@
 allprojects {
+
   repositories {
     mavenLocal()
     mavenCentral()
     jcenter()
   }
+
+  group = 'com.couchbase.client'
 }
