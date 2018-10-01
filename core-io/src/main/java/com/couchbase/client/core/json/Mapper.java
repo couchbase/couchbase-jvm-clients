@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Mapper {
 
+    private Mapper() {}
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static byte[] encodeAsBytes(final Object input) {
