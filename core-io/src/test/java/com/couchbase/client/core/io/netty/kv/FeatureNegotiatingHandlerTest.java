@@ -16,14 +16,25 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.verifyRequest;
+import static com.couchbase.client.utils.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
+import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
+import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.netty.ConnectTimings;
+import com.couchbase.client.utils.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -44,6 +55,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -62,11 +75,14 @@ class FeatureNegotiatingHandlerTest {
 
   private CoreContext coreContext;
   private EmbeddedChannel channel;
+  private SimpleEventBus simpleEventBus;
 
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
+    simpleEventBus = new SimpleEventBus();
     CoreEnvironment env = mock(CoreEnvironment.class);
+    when(env.eventBus()).thenReturn(simpleEventBus);
     coreContext = new CoreContext(1, env);
   }
 
@@ -208,7 +224,45 @@ class FeatureNegotiatingHandlerTest {
    */
   @Test
   void decodeAndPropagateSuccessHelloResponse() {
+    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY, ServerFeature.XATTR, ServerFeature.XERROR,
+      ServerFeature.SELECT_BUCKET, ServerFeature.SNAPPY, ServerFeature.TRACING);
+    FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
+      coreContext,
+      Duration.ofSeconds(1000),
+      toNegotiate
+    );
+    channel.pipeline().addLast(handler);
 
+    assertEquals(handler, channel.pipeline().get(FeatureNegotiatingHandler.class));
+    ChannelFuture connectFuture = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+    assertFalse(connectFuture.isDone());
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    ByteBuf writtenRequest = channel.readOutbound();
+    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ByteBuf response = decodeHexDump(readResource(
+    "success_hello_response.txt",
+      FeatureNegotiatingHandlerTest.class
+    ));
+    channel.writeInbound(response);
+    channel.runPendingTasks();
+
+    assertTrue(connectFuture.isSuccess());
+
+    assertEquals(1, simpleEventBus.publishedEvents().size());
+    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(0);
+    assertEquals(
+      "Negotiated [TCPNODELAY, XATTR, XERROR, SELECT_BUCKET, SNAPPY, TRACING]",
+      event.description()
+    );
+    assertEquals(Event.Severity.DEBUG, event.severity());
+
+    List<ServerFeature> serverFeatures = channel.attr(ServerFeature.SERVER_FEATURE_KEY).get();
+    assertEquals(toNegotiate, new HashSet<>(serverFeatures));
+    assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
   }
 
   /**
@@ -216,7 +270,103 @@ class FeatureNegotiatingHandlerTest {
    */
   @Test
   void decodeNonSuccessfulHelloResponse() {
+    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY, ServerFeature.XATTR, ServerFeature.XERROR,
+      ServerFeature.SELECT_BUCKET, ServerFeature.SNAPPY, ServerFeature.TRACING);
+    FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
+      coreContext,
+      Duration.ofSeconds(1000),
+      toNegotiate
+    );
+    channel.pipeline().addLast(handler);
 
+    assertEquals(handler, channel.pipeline().get(FeatureNegotiatingHandler.class));
+    ChannelFuture connectFuture = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+    assertFalse(connectFuture.isDone());
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    ByteBuf writtenRequest = channel.readOutbound();
+    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ByteBuf response = decodeHexDump(readResource(
+      "error_hello_response.txt",
+      FeatureNegotiatingHandlerTest.class
+    ));
+    channel.writeInbound(response);
+    channel.runPendingTasks();
+
+    assertTrue(connectFuture.isSuccess());
+
+    assertEquals(2, simpleEventBus.publishedEvents().size());
+    FeaturesNegotiationFailureEvent failureEvent =
+      (FeaturesNegotiationFailureEvent) simpleEventBus.publishedEvents().get(0);
+    assertEquals(Event.Severity.WARN, failureEvent.severity());
+    assertEquals("HELLO Negotiation failed (KV Status 0x1)", failureEvent.description());
+
+    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+    assertEquals(
+      "Negotiated []",
+      event.description()
+    );
+    assertEquals(Event.Severity.DEBUG, event.severity());
+
+    List<ServerFeature> serverFeatures = channel.attr(ServerFeature.SERVER_FEATURE_KEY).get();
+    assertTrue(serverFeatures.isEmpty());
+    assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+  }
+
+  /**
+   * Should the server return non-asked-for features, ignore them.
+   */
+  @Test
+  void decodeAndIgnoreNonAskedForFeaturesInResponse() {
+    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.SNAPPY, ServerFeature.TRACING);
+    FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
+      coreContext,
+      Duration.ofSeconds(1000),
+      toNegotiate
+    );
+    channel.pipeline().addLast(handler);
+
+    assertEquals(handler, channel.pipeline().get(FeatureNegotiatingHandler.class));
+    ChannelFuture connectFuture = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+    assertFalse(connectFuture.isDone());
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    ByteBuf writtenRequest = channel.readOutbound();
+    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ByteBuf response = decodeHexDump(readResource(
+      "success_hello_response.txt",
+      FeatureNegotiatingHandlerTest.class
+    ));
+    channel.writeInbound(response);
+    channel.runPendingTasks();
+
+    assertTrue(connectFuture.isSuccess());
+
+    assertEquals(2, simpleEventBus.publishedEvents().size());
+
+    UnsolicitedFeaturesReturnedEvent unsolicitedEvent =
+      (UnsolicitedFeaturesReturnedEvent) simpleEventBus.publishedEvents().get(0);
+    assertEquals(
+      "Received unsolicited features during HELLO [TCPNODELAY, XATTR, XERROR, SELECT_BUCKET]",
+      unsolicitedEvent.description()
+    );
+    assertEquals(Event.Severity.WARN, unsolicitedEvent.severity());
+
+    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+    assertEquals(
+      "Negotiated [SNAPPY, TRACING]",
+      event.description()
+    );
+
+    List<ServerFeature> serverFeatures = channel.attr(ServerFeature.SERVER_FEATURE_KEY).get();
+    assertEquals(toNegotiate, new HashSet<>(serverFeatures));
+    assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
   }
 
 }

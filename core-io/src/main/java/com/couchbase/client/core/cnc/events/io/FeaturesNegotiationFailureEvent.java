@@ -18,34 +18,28 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.kv.ServerFeature;
 
 import java.time.Duration;
-import java.util.List;
 
-/**
- * Captures the end of the KV feature negotiation.
- */
-public class FeaturesNegotiatedEvent extends AbstractEvent {
+public class FeaturesNegotiationFailureEvent extends AbstractEvent {
 
-  private final List<ServerFeature> negotiated;
+  private final short status;
 
-  public FeaturesNegotiatedEvent(final IoContext ctx, final Duration duration,
-                                 final List<ServerFeature> negotiated) {
-    super(Severity.DEBUG, Category.IO, duration, ctx);
-    this.negotiated = negotiated;
+  public FeaturesNegotiationFailureEvent(final IoContext ctx, short status) {
+    super(Severity.WARN, Category.IO, Duration.ZERO, ctx);
+    this.status = status;
   }
 
   @Override
   public String description() {
-    return "Negotiated " + negotiated.toString();
+    return "HELLO Negotiation failed (KV Status 0x" +  Integer.toHexString(status) + ")";
   }
 
   /**
-   * Returns the negotiated server features for this connection.
+   * Returns the KV status which was not successful, useful for debugging.
    */
-  public List<ServerFeature> negotiated() {
-    return negotiated;
+  public short status() {
+    return status;
   }
 
 }

@@ -18,11 +18,14 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
+import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
+import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.json.Mapper;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -38,11 +41,16 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.couchbase.client.core.io.netty.kv.Protocol.status;
+
 /**
  * The {@link FeatureNegotiatingHandler} is responsible for sending the KV "hello" command
  * and to handshake enabled features on both sides.
  *
- * @author Michael Nitschinger
+ * <p>If we get any response from the server, we'll take it. If the server returns a non-successful response
+ * we will report that, but move on with no negotiated features. If the server returns more features
+ * than we asked for, we'll only use the subset and not more (and report the abnormal condition).</p>
+ *
  * @since 2.0.0
  */
 class FeatureNegotiatingHandler extends ChannelDuplexHandler {
@@ -100,7 +108,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       downstream.addListener(f -> {
         if (!f.isSuccess() && !interceptedConnectPromise.isDone()) {
           ConnectTimings.record(ctx.channel(), this.getClass());
-          interceptedConnectPromise.setFailure(f.cause());
+          interceptedConnectPromise.tryFailure(f.cause());
         }
       });
       ctx.connect(remoteAddress, localAddress, downstream);
@@ -118,7 +126,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     ctx.executor().schedule(() -> {
       if (!interceptedConnectPromise.isDone()) {
         ConnectTimings.stop(ctx.channel(), this.getClass(), true);
-        interceptedConnectPromise.setFailure(
+        interceptedConnectPromise.tryFailure(
           new TimeoutException("KV Feature Negotiation timed out after "
             + timeout.toMillis() + "ms")
         );
@@ -133,16 +141,21 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
     if (msg instanceof ByteBuf) {
+      if (status((ByteBuf) msg) != Protocol.STATUS_SUCCESS) {
+        coreContext.env().eventBus().publish(
+          new FeaturesNegotiationFailureEvent(ioContext, status((ByteBuf) msg))
+        );
+      }
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
       ctx.channel().attr(ServerFeature.SERVER_FEATURE_KEY).set(negotiated);
       coreContext.env().eventBus().publish(
         new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
       );
-      interceptedConnectPromise.setSuccess();
+      interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
       ctx.fireChannelActive();
     } else {
-      interceptedConnectPromise.setFailure(new CouchbaseException("Unexpected response "
+      interceptedConnectPromise.tryFailure(new CouchbaseException("Unexpected response "
         + "type on channel read, this is a bug - please report. " + msg));
     }
 
@@ -158,20 +171,33 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    */
   private List<ServerFeature> extractFeaturesFromBody(final ByteBuf response) {
     Optional<ByteBuf> body = Protocol.body(response);
-    ArrayList<ServerFeature> negotiated = new ArrayList<>();
+    List<ServerFeature> negotiated = new ArrayList<>();
+    List<ServerFeature> unsolicited = new ArrayList<>();
+
     if (!body.isPresent()) {
       return negotiated;
     }
 
     while (body.get().isReadable()) {
       try {
-        negotiated.add(ServerFeature.from(body.get().readShort()));
+        ServerFeature feature = ServerFeature.from(body.get().readShort());
+        if (features.contains(feature)) {
+          negotiated.add(feature);
+        } else {
+          unsolicited.add(feature);
+        }
       } catch (Exception ex) {
-        interceptedConnectPromise.setFailure(new CouchbaseException(
+        interceptedConnectPromise.tryFailure(new CouchbaseException(
           "Error while parsing negotiated server features.",
           ex
         ));
       }
+    }
+
+    if (!unsolicited.isEmpty()) {
+      coreContext.env().eventBus().publish(
+        new UnsolicitedFeaturesReturnedEvent(ioContext, unsolicited)
+      );
     }
     return negotiated;
   }

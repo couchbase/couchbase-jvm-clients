@@ -24,28 +24,30 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Captures the end of the KV feature negotiation.
+ * If the server sends us unsolicited features during the HELLO negotiation,
+ * this event will be raised - it is a warning severity since it indicates
+ * a server bug.
  */
-public class FeaturesNegotiatedEvent extends AbstractEvent {
+public class UnsolicitedFeaturesReturnedEvent extends AbstractEvent {
 
-  private final List<ServerFeature> negotiated;
+  private final List<ServerFeature> unsolicitedFeatures;
 
-  public FeaturesNegotiatedEvent(final IoContext ctx, final Duration duration,
-                                 final List<ServerFeature> negotiated) {
-    super(Severity.DEBUG, Category.IO, duration, ctx);
-    this.negotiated = negotiated;
+  public UnsolicitedFeaturesReturnedEvent(final IoContext ctx,
+                                          final List<ServerFeature> unsolicitedFeatures) {
+    super(Severity.WARN, Category.IO, Duration.ZERO, ctx);
+    this.unsolicitedFeatures = unsolicitedFeatures;
   }
 
   @Override
   public String description() {
-    return "Negotiated " + negotiated.toString();
+    return "Received unsolicited features during HELLO " + unsolicitedFeatures.toString();
   }
 
   /**
-   * Returns the negotiated server features for this connection.
+   * Returns the unsolicited features that got returned by the server.
    */
-  public List<ServerFeature> negotiated() {
-    return negotiated;
+  public List<ServerFeature> unsolicitedFeatures() {
+    return unsolicitedFeatures;
   }
 
 }
