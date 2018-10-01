@@ -47,9 +47,10 @@ import static com.couchbase.client.core.io.netty.kv.Protocol.status;
  * The {@link FeatureNegotiatingHandler} is responsible for sending the KV "hello" command
  * and to handshake enabled features on both sides.
  *
- * <p>If we get any response from the server, we'll take it. If the server returns a non-successful response
- * we will report that, but move on with no negotiated features. If the server returns more features
- * than we asked for, we'll only use the subset and not more (and report the abnormal condition).</p>
+ * <p>If we get any response from the server, we'll take it. If the server returns a
+ * non-successful response we will report that, but move on with no negotiated features. If
+ * the server returns more features than we asked for, we'll only use the subset and not
+ * more (and report the abnormal condition).</p>
  *
  * @since 2.0.0
  */

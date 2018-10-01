@@ -224,8 +224,9 @@ class FeatureNegotiatingHandlerTest {
    */
   @Test
   void decodeAndPropagateSuccessHelloResponse() {
-    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY, ServerFeature.XATTR, ServerFeature.XERROR,
-      ServerFeature.SELECT_BUCKET, ServerFeature.SNAPPY, ServerFeature.TRACING);
+    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY,
+      ServerFeature.XATTR, ServerFeature.XERROR, ServerFeature.SELECT_BUCKET,
+      ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
       Duration.ofSeconds(1000),
@@ -244,7 +245,7 @@ class FeatureNegotiatingHandlerTest {
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
-    "success_hello_response.txt",
+      "success_hello_response.txt",
       FeatureNegotiatingHandlerTest.class
     ));
     channel.writeInbound(response);
@@ -253,7 +254,8 @@ class FeatureNegotiatingHandlerTest {
     assertTrue(connectFuture.isSuccess());
 
     assertEquals(1, simpleEventBus.publishedEvents().size());
-    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(0);
+    FeaturesNegotiatedEvent event =
+      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(0);
     assertEquals(
       "Negotiated [TCPNODELAY, XATTR, XERROR, SELECT_BUCKET, SNAPPY, TRACING]",
       event.description()
@@ -270,8 +272,9 @@ class FeatureNegotiatingHandlerTest {
    */
   @Test
   void decodeNonSuccessfulHelloResponse() {
-    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY, ServerFeature.XATTR, ServerFeature.XERROR,
-      ServerFeature.SELECT_BUCKET, ServerFeature.SNAPPY, ServerFeature.TRACING);
+    Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.TCPNODELAY,
+      ServerFeature.XATTR, ServerFeature.XERROR, ServerFeature.SELECT_BUCKET,
+      ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
       Duration.ofSeconds(1000),
@@ -304,7 +307,8 @@ class FeatureNegotiatingHandlerTest {
     assertEquals(Event.Severity.WARN, failureEvent.severity());
     assertEquals("HELLO Negotiation failed (KV Status 0x1)", failureEvent.description());
 
-    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+    FeaturesNegotiatedEvent event =
+      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
     assertEquals(
       "Negotiated []",
       event.description()
@@ -358,7 +362,8 @@ class FeatureNegotiatingHandlerTest {
     );
     assertEquals(Event.Severity.WARN, unsolicitedEvent.severity());
 
-    FeaturesNegotiatedEvent event = (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+    FeaturesNegotiatedEvent event =
+      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
     assertEquals(
       "Negotiated [SNAPPY, TRACING]",
       event.description()

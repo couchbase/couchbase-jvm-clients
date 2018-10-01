@@ -22,7 +22,6 @@ import com.couchbase.client.core.cnc.EventSubscription;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 
 /**
@@ -31,28 +30,28 @@ import java.util.function.Consumer;
  */
 public class SimpleEventBus implements EventBus {
 
-    /**
-     * Holds all published events until cleared.
-     */
-    private List<Event> publishedEvents = new ArrayList<>();
+  /**
+   * Holds all published events until cleared.
+   */
+  private List<Event> publishedEvents = new ArrayList<>();
 
-    @Override
-    public synchronized PublishResult publish(Event event) {
-        publishedEvents.add(event);
-        return PublishResult.SUCCESS;
-    }
+  @Override
+  public synchronized PublishResult publish(Event event) {
+    publishedEvents.add(event);
+    return PublishResult.SUCCESS;
+  }
 
-    @Override
-    public synchronized EventSubscription subscribe(Consumer<Event> consumer) {
-        return null;
-    }
+  @Override
+  public synchronized EventSubscription subscribe(Consumer<Event> consumer) {
+    return null;
+  }
 
-    @Override
-    public synchronized void unsubscribe(EventSubscription subscription) {
+  @Override
+  public synchronized void unsubscribe(EventSubscription subscription) {
 
-    }
+  }
 
-    public synchronized List<Event> publishedEvents() {
-        return publishedEvents;
-    }
+  public synchronized List<Event> publishedEvents() {
+    return publishedEvents;
+  }
 }
