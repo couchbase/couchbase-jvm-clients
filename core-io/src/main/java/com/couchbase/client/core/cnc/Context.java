@@ -44,6 +44,10 @@ public interface Context {
     /**
      * Verbose, Pretty JSON.
      */
-    JSON_PRETTY
+    JSON_PRETTY,
+    /**
+     * Java "toString" basically.
+     */
+    STRING
   }
 }

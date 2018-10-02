@@ -80,4 +80,21 @@ public class Mapper {
       throw new MapperException("Could not encode into JSON: " + input, ex);
     }
   }
+
+  /**
+   * Decodes a byte array into the given class.
+   *
+   * @param input the input byte array.
+   * @param clazz the clazz which should be decoded into.
+   * @param <T> generic type used for inference.
+   * @return the created instance.
+   */
+  public static <T> T decodeInto(byte[] input, Class<T> clazz) {
+    try {
+      return MAPPER.readValue(input, clazz);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + input, ex);
+    }
+  }
+
 }

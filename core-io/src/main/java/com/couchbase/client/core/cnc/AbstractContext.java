@@ -50,10 +50,17 @@ public abstract class AbstractContext implements Context {
           return Mapper.encodeAsString(input);
         case JSON_PRETTY:
           return Mapper.encodeAsStringPretty(input);
+        case STRING:
+          return input.toString();
         default:
           throw new UnsupportedOperationException("Unsupported ExportFormat " + format);
       }
     }
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + exportAsString(ExportFormat.STRING);
   }
 }

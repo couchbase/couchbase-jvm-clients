@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
@@ -25,7 +26,6 @@ import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.json.Mapper;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.couchbase.client.core.io.netty.kv.Protocol.status;
+import static com.couchbase.client.core.io.netty.kv.Protocol.successful;
 
 /**
  * The {@link FeatureNegotiatingHandler} is responsible for sending the KV "hello" command
@@ -54,12 +55,35 @@ import static com.couchbase.client.core.io.netty.kv.Protocol.status;
  *
  * @since 2.0.0
  */
+@Stability.Internal
 class FeatureNegotiatingHandler extends ChannelDuplexHandler {
 
+  /**
+   * Holds the timeout for the full feature negotiation phase.
+   */
   private final Duration timeout;
+
+  /**
+   * Holds all features the client requested to the server.
+   */
   private final Set<ServerFeature> features;
+
+  /**
+   * Holds the core context as reference to event bus and more.
+   */
   private final CoreContext coreContext;
+
+  /**
+   * Once connected, holds the io context for more debug information.
+   */
   private IoContext ioContext;
+
+  /**
+   * Holds the intercepted promise from up the pipeline which is either
+   * completed or failed depending on the downstream components or the
+   * result of the hello negotiation.
+   */
+  private ChannelPromise interceptedConnectPromise;
 
   /**
    * Creates a new {@link FeatureNegotiatingHandler}.
@@ -75,13 +99,6 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     this.timeout = timeout;
     this.features = features;
   }
-
-  /**
-   * Holds the intercepted promise from up the pipeline which is either
-   * completed or failed depending on the downstream components or the
-   * result of the hello negotiation.
-   */
-  private ChannelPromise interceptedConnectPromise;
 
   /**
    * Intercepts the connect process inside the pipeline to only propagate either
@@ -137,12 +154,22 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     ctx.writeAndFlush(buildHelloRequest(ctx));
   }
 
+  /**
+   * As soon as we get a response, turn it into a list of negotiated server features.
+   *
+   * <p>Since the server might respond with a non-success status code, this case is handled
+   * and we would move on without any negotiated features but make sure the proper event
+   * is raised.</p>
+   *
+   * @param ctx the {@link ChannelHandlerContext} for which the channel read operation is made.
+   * @param msg the incoming msg that needs to be parsed.
+   */
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
     if (msg instanceof ByteBuf) {
-      if (status((ByteBuf) msg) != Protocol.STATUS_SUCCESS) {
+      if (!successful((ByteBuf) msg)) {
         coreContext.env().eventBus().publish(
           new FeaturesNegotiationFailureEvent(ioContext, status((ByteBuf) msg))
         );
@@ -217,7 +244,10 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       body.writeShort(feature.value());
     }
 
-    return Protocol.request(ctx.alloc(), Protocol.OPCODE_HELLO, key, body);
+    ByteBuf request = Protocol.request(ctx.alloc(), Protocol.Opcode.HELLO.opcode(), key, body);
+    ReferenceCountUtil.release(key);
+    ReferenceCountUtil.release(body);
+    return request;
   }
 
   /**

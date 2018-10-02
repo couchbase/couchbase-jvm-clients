@@ -187,7 +187,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
 
     // sanity check json block
     assertTrue(ProtocolVerifier.key(writtenRequest).isPresent());
@@ -241,7 +241,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -289,7 +289,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -340,7 +340,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.OPCODE_HELLO, true, false, true);
+    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(

@@ -68,4 +68,15 @@ public abstract class AbstractEvent implements Event {
   public String description() {
     return null;
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + "{"
+      + "severity=" + severity
+      + ", category=" + category
+      + ", duration=" + duration
+      + ", description=" + description()
+      + ", context=" + context
+      + '}';
+  }
 }
