@@ -37,6 +37,8 @@ public class FeaturesNegotiationFailureEvent extends AbstractEvent {
 
   /**
    * Returns the KV status which was not successful, useful for debugging.
+   *
+   * @return the unsuccessful status.
    */
   public short status() {
     return status;

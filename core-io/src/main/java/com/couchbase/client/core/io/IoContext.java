@@ -50,6 +50,8 @@ public class IoContext extends CoreContext {
 
   /**
    * Returns the local socket.
+   *
+   * @return the local socket address.
    */
   public SocketAddress localSocket() {
     return localSocket;
@@ -57,6 +59,8 @@ public class IoContext extends CoreContext {
 
   /**
    * Returns the remote socket.
+   *
+   * @return the remote socket address.
    */
   public SocketAddress remoteSocket() {
     return remoteSocket;

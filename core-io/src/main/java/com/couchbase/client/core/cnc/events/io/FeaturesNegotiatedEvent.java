@@ -43,6 +43,8 @@ public class FeaturesNegotiatedEvent extends AbstractEvent {
 
   /**
    * Returns the negotiated server features for this connection.
+   *
+   * @return the negotiated list of server features.
    */
   public List<ServerFeature> negotiated() {
     return negotiated;

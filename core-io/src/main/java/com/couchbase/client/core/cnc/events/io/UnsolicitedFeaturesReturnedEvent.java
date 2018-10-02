@@ -45,6 +45,8 @@ public class UnsolicitedFeaturesReturnedEvent extends AbstractEvent {
 
   /**
    * Returns the unsolicited features that got returned by the server.
+   *
+   * @return the list of unsolicited features returned by the server.
    */
   public List<ServerFeature> unsolicitedFeatures() {
     return unsolicitedFeatures;
