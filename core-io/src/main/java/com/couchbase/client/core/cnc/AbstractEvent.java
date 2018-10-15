@@ -27,6 +27,7 @@ public abstract class AbstractEvent implements Event {
   private final Category category;
   private final Duration duration;
   private final Context context;
+  private final long createdAt;
 
   /**
    * Creates a new abstract event.
@@ -42,6 +43,7 @@ public abstract class AbstractEvent implements Event {
     this.category = category;
     this.duration = duration;
     this.context = context;
+    this.createdAt = System.nanoTime();
   }
 
   @Override
@@ -65,6 +67,11 @@ public abstract class AbstractEvent implements Event {
   }
 
   @Override
+  public long createdAt() {
+    return createdAt;
+  }
+
+  @Override
   public String description() {
     return null;
   }
@@ -75,6 +82,7 @@ public abstract class AbstractEvent implements Event {
       + "severity=" + severity
       + ", category=" + category
       + ", duration=" + duration
+      + ", createdAt=" + createdAt
       + ", description=" + description()
       + ", context=" + context
       + '}';

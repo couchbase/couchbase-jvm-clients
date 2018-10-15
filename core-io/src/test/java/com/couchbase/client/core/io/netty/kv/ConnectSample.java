@@ -14,15 +14,25 @@
  * limitations under the License.
  */
 
-package tmp;
+package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.DefaultEventBus;
+import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.env.CoreEnvironment;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -39,20 +49,35 @@ public class ConnectSample {
     when(coreEnvironment.eventBus()).thenReturn(eventBus);
     when(coreEnvironment.userAgent()).thenReturn("core-io");
 
+    eventBus.subscribe(LoggingEventConsumer.builder()
+      .disableSlf4J(true)
+      .build());
+    eventBus.start();
+
     final CoreContext ctx = new CoreContext(1234, coreEnvironment);
+    final Duration timeout = Duration.ofSeconds(1);
+
+    final Set<ServerFeature> features = new HashSet<>(Collections.singletonList(
+      ServerFeature.SELECT_BUCKET
+    ));
 
     ChannelFuture connect = new Bootstrap()
+      .group(new NioEventLoopGroup())
+      .channel(NioSocketChannel.class)
+      .remoteAddress("127.0.0.1", 11210)
       .handler(new ChannelInitializer<Channel>() {
         @Override
         protected void initChannel(Channel ch)  {
-          ch.pipeline().addLast(new FeatureNegotiatingHand)
+          ch.pipeline()
+            .addLast(new MemcacheProtocolDecoder())
+            .addLast(new LoggingHandler(LogLevel.TRACE))
+            .addLast(new FeatureNegotiatingHandler(ctx, timeout, features))
+            .addLast(new ErrorMapLoadingHandler(ctx, timeout));
         }
       })
-      .connect("127.0.0.1", 11210);
+      .connect();
 
     connect.awaitUninterruptibly();
-
-
     Thread.sleep(100000);
   }
 }

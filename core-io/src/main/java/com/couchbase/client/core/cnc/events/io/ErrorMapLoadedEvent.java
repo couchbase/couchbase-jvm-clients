@@ -51,7 +51,8 @@ public class ErrorMapLoadedEvent extends AbstractEvent {
   @Override
   public String description() {
     return errorMap
-      .map(m -> "KV Error Map successfully loaded. Map: " + m)
+      .map(m -> "KV Error Map successfully loaded. Map Version: "
+        + m.version() + ", Revision: " + m.revision())
       .orElse("KV Error Map successfully negotiated, but no map found in body");
   }
 }

@@ -2,12 +2,14 @@
 <Configuration status="WARN">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+            <PatternLayout pattern="%d{HH:mm:ss} %-5p [%c:%L] %m%n"/>
         </Console>
     </Appenders>
     <Loggers>
-        <Root level="error">
-            <AppenderRef ref="Console"/>
+        <Logger name="io.netty" level="warn">
+        </Logger>
+        <Root level="debug">
+            <AppenderRef ref="Console" />
         </Root>
     </Loggers>
 </Configuration>

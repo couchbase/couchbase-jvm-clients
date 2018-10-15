@@ -18,6 +18,8 @@ dependencies {
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
 
+  compile 'com.graphql-java:graphql-java:10.0'
+
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
   testCompile 'org.mockito:mockito-core:2.22.0'
   testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.1'

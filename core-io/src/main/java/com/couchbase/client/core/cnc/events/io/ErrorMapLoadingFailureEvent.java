@@ -36,7 +36,7 @@ public class ErrorMapLoadingFailureEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "KV Error Map Negotiation failed (KV Status 0x" +  Integer.toHexString(status) + ")";
+    return "KV Error Map Negotiation failed (Status 0x" +  Integer.toHexString(status) + ")";
   }
 
   /**

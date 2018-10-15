@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -114,8 +115,6 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   @Override
   public void connect(final ChannelHandlerContext ctx, final SocketAddress remoteAddress,
                       final SocketAddress localAddress, final ChannelPromise promise) {
-    ioContext = new IoContext(coreContext, localAddress, remoteAddress);
-
     if (features.isEmpty()) {
       ConnectTimings.record(ctx.channel(), this.getClass());
       ctx.pipeline().remove(this);
@@ -141,6 +140,12 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    */
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
+    ioContext = new IoContext(
+      coreContext,
+      ctx.channel().localAddress(),
+      ctx.channel().remoteAddress()
+    );
+
     ctx.executor().schedule(() -> {
       if (!interceptedConnectPromise.isDone()) {
         ConnectTimings.stop(ctx.channel(), this.getClass(), true);
@@ -271,8 +276,16 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     }
     result.put("a", agent);
 
-    String channelId = ctx.channel().id().asShortText();
-    String paddedChannelId = paddedHex(channelId.equals("embedded") ? 1L : Long.decode(channelId));
+    String channelId = "0x" + ctx.channel().id().asShortText();
+    long convertedChannelId;
+    try {
+      convertedChannelId = channelId.equals("0xembedded") ? 1L : Long.decode(channelId);
+    } catch (NumberFormatException ex) {
+      // This is just a safeguard in place should the netty channel ID
+      // format ever change and trigger a failure of decoding the channel ID into a long
+      convertedChannelId = new Random().nextInt();
+    }
+    String paddedChannelId = paddedHex(convertedChannelId);
     result.put("i", paddedHex(coreContext.id()) + "/" + paddedChannelId);
 
     return ctx.alloc().buffer().writeBytes(Mapper.encodeAsBytes(result));

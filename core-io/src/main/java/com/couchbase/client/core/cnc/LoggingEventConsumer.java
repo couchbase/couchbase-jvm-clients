@@ -132,7 +132,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
   }
 
-  static class Builder {
+  public static class Builder {
 
     private Logger customLogger;
     private boolean fallbackToConsole;

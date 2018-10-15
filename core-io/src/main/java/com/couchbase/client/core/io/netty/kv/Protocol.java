@@ -157,7 +157,11 @@ enum Protocol {
     /**
      * Command used to fetch the error map during the bootstrap process.
      */
-    ERROR_MAP((byte) 0xfe);
+    ERROR_MAP((byte) 0xfe),
+    /**
+     * Command used to select a specific bucket on a connection.
+     */
+    SELECT_BUCKET((byte) 0x89);
 
     private final byte opcode;
 

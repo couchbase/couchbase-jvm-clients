@@ -25,6 +25,13 @@ import java.time.Duration;
 public interface Event {
 
   /**
+   * Contains a nano timestamp when the event was created.
+   *
+   * @return the time this event got created.
+   */
+  long createdAt();
+
+  /**
    * The Severity of this event.
    *
    * @return the event severity.

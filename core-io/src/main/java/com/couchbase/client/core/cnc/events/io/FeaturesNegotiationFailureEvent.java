@@ -32,7 +32,7 @@ public class FeaturesNegotiationFailureEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "HELLO Negotiation failed (KV Status 0x" +  Integer.toHexString(status) + ")";
+    return "HELLO Negotiation failed (Status 0x" +  Integer.toHexString(status) + ")";
   }
 
   /**

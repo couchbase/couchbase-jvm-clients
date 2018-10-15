@@ -26,7 +26,6 @@ import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.json.MapperException;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -57,7 +56,7 @@ import static com.couchbase.client.core.json.Mapper.decodeInto;
  * @since 2.0.0
  */
 @Stability.Internal
-public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
+class ErrorMapLoadingHandler extends ChannelDuplexHandler {
 
   /**
    * Holds the potentially loaded error map in this channel.
@@ -89,7 +88,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   /**
    * Holds the intercepted promise from up the pipeline which is either
    * completed or failed depending on the downstream components or the
-   * result of the hello negotiation.
+   * result of the error map negotiation.
    */
   private ChannelPromise interceptedConnectPromise;
 
@@ -117,8 +116,6 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   @Override
   public void connect(final ChannelHandlerContext ctx, final SocketAddress remoteAddress,
                       final SocketAddress localAddress, final ChannelPromise promise) {
-    ioContext = new IoContext(coreContext, localAddress, remoteAddress);
-
     interceptedConnectPromise = promise;
     ChannelPromise downstream = ctx.newPromise();
     downstream.addListener(f -> {
@@ -132,6 +129,12 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
+    ioContext = new IoContext(
+      coreContext,
+      ctx.channel().localAddress(),
+      ctx.channel().remoteAddress()
+    );
+
     ctx.executor().schedule(() -> {
       if (!interceptedConnectPromise.isDone()) {
         ConnectTimings.stop(ctx.channel(), this.getClass(), true);
