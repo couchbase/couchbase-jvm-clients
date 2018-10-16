@@ -45,18 +45,18 @@ class ProtocolVerifier {
                             final boolean shouldHaveExtras, final boolean shouldHaveBody) {
     // 1: Verify header integrity
     assertTrue(
-      request.readableBytes() >= Protocol.HEADER_SIZE,
-      "header size < " + Protocol.HEADER_SIZE
+      request.readableBytes() >= MemcacheProtocol.HEADER_SIZE,
+      "header size < " + MemcacheProtocol.HEADER_SIZE
     );
 
     int totalBodyLength = request.getInt(8);
-    int totalLength = Protocol.HEADER_SIZE + totalBodyLength;
+    int totalLength = MemcacheProtocol.HEADER_SIZE + totalBodyLength;
     assertTrue(
       request.readableBytes() >= totalLength,
       "header + body size < " + totalLength
     );
 
-    assertEquals(Protocol.MAGIC_REQUEST, request.getByte(0), "request magic does not match");
+    assertEquals(MemcacheProtocol.MAGIC_REQUEST, request.getByte(0), "request magic does not match");
     assertEquals(opcode, request.getByte(1), "opcode does not match");
 
     int keyLength = request.getShort(2);
@@ -92,7 +92,7 @@ class ProtocolVerifier {
     int keyLength = request.getShort(2);
     if (keyLength > 0) {
       int extrasLength = request.getByte(4);
-      return Optional.of(request.slice(Protocol.HEADER_SIZE + extrasLength, keyLength));
+      return Optional.of(request.slice(MemcacheProtocol.HEADER_SIZE + extrasLength, keyLength));
     } else {
       return Optional.empty();
     }
@@ -101,7 +101,7 @@ class ProtocolVerifier {
   static Optional<ByteBuf> extras(final ByteBuf request) {
     int extrasLength = request.getByte(4);
     if (extrasLength > 0) {
-      return Optional.of(request.slice(Protocol.HEADER_SIZE, extrasLength));
+      return Optional.of(request.slice(MemcacheProtocol.HEADER_SIZE, extrasLength));
     } else {
       return Optional.empty();
     }
@@ -114,7 +114,7 @@ class ProtocolVerifier {
     int bodyLength = totalBodyLength - keyLength - extrasLength;
     if (bodyLength > 0) {
       return Optional.of(
-        request.slice(Protocol.HEADER_SIZE + extrasLength + keyLength, bodyLength)
+        request.slice(MemcacheProtocol.HEADER_SIZE + extrasLength + keyLength, bodyLength)
       );
     } else {
       return Optional.empty();

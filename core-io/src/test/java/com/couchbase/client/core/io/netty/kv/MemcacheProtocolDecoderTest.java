@@ -72,7 +72,7 @@ class MemcacheProtocolDecoderTest {
 
       ReferenceCountUtil.release(inputHolder.input);
     } finally {
-      channel.finish();
+      channel.finishAndReleaseAll();
     }
   }
 

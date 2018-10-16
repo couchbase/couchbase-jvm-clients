@@ -22,12 +22,12 @@ import io.netty.buffer.ByteBufAllocator;
 import java.util.Optional;
 
 /**
- * The {@link Protocol} class holds static helpers that deal with the encoding
+ * The {@link MemcacheProtocol} class holds static helpers that deal with the encoding
  * and decoding as well as access of the memcache binary protocol.
  *
  * @since 2.0.0
  */
-enum Protocol {
+enum MemcacheProtocol {
   ;
 
   /**
@@ -41,11 +41,29 @@ enum Protocol {
   static final byte MAGIC_FLEXIBLE = (byte) 0x18;
 
   /**
+   * Magic byte for a response without flexible framing extras.
+   */
+  static final byte MAGIC_RESPONSE = (byte) 0x81;
+
+  /**
    * The fixed header size.
    */
   static final int HEADER_SIZE = 24;
 
+  /**
+   * The offset of the magic byte.
+   */
+  static final int MAGIC_OFFSET = 0;
+
+  /**
+   * The offset of the status field.
+   */
   static final int STATUS_OFFSET = 6;
+
+  /**
+   * The offset of the total length field.
+   */
+  static final int TOTAL_LENGTH_OFFSET = 8;
 
   static final short STATUS_SUCCESS = 0x00;
 
@@ -138,12 +156,53 @@ enum Protocol {
     int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
     if (bodyLength > 0) {
       return Optional.of(message.slice(
-          Protocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
+          MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
           bodyLength
       ));
     } else {
       return Optional.empty();
     }
+  }
+
+  /**
+   * Performs simple sanity checking of a key/value request.
+   *
+   * It checks the magic byte and if the total readable bytes match
+   * up with the total length of the packet.
+   *
+   * @param request the request to check.
+   * @return true if verified, false otherwise.
+   */
+  static boolean verifyRequest(final ByteBuf request) {
+    int readableBytes = request.readableBytes();
+    if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
+      return false;
+    }
+    byte magic = request.getByte(MAGIC_OFFSET);
+    int bodyPlusHeader = request.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
+    return magic == MemcacheProtocol.MAGIC_REQUEST && readableBytes == bodyPlusHeader;
+  }
+
+  /**
+   * Performs simple sanity checking of a key/value response.
+   *
+   * It checks the magic byte and if the total readable bytes match
+   * up with the total length of the packet.
+   *
+   * @param response the response to check.
+   * @return true if verified, false otherwise.
+   */
+  static boolean verifyResponse(final ByteBuf response) {
+    int readableBytes = response.readableBytes();
+    if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
+      return false;
+    }
+    byte magic = response.getByte(MAGIC_OFFSET);
+    int bodyPlusHeader = response.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
+
+    return
+      (magic == MemcacheProtocol.MAGIC_FLEXIBLE || magic == MemcacheProtocol.MAGIC_RESPONSE)
+      && readableBytes == bodyPlusHeader;
   }
 
   /**

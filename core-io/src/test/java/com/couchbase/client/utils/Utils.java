@@ -49,7 +49,7 @@ public class Utils {
   public static void waitUntilCondition(final BooleanSupplier supplier) {
     while (!supplier.getAsBoolean()) {
       try {
-        Thread.sleep(10);
+        Thread.sleep(1);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }

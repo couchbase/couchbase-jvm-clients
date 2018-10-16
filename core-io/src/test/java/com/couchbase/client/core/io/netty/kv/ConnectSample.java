@@ -45,16 +45,16 @@ public class ConnectSample {
 
   public static void main(String... args) throws Exception {
     DefaultEventBus eventBus = DefaultEventBus.create();
-    CoreEnvironment coreEnvironment = mock(CoreEnvironment.class);
-    when(coreEnvironment.eventBus()).thenReturn(eventBus);
-    when(coreEnvironment.userAgent()).thenReturn("core-io");
+    CoreEnvironment coreConfig = mock(CoreEnvironment.class);
+    when(coreConfig.eventBus()).thenReturn(eventBus);
+    when(coreConfig.userAgent()).thenReturn("core-io");
 
     eventBus.subscribe(LoggingEventConsumer.builder()
       .disableSlf4J(true)
       .build());
     eventBus.start();
 
-    final CoreContext ctx = new CoreContext(1234, coreEnvironment);
+    final CoreContext ctx = new CoreContext(1234, coreConfig);
     final Duration timeout = Duration.ofSeconds(1);
 
     final Set<ServerFeature> features = new HashSet<>(Collections.singletonList(
@@ -71,8 +71,8 @@ public class ConnectSample {
           ch.pipeline()
             .addLast(new MemcacheProtocolDecoder())
             .addLast(new LoggingHandler(LogLevel.TRACE))
-            .addLast(new FeatureNegotiatingHandler(ctx, timeout, features))
-            .addLast(new ErrorMapLoadingHandler(ctx, timeout));
+            .addLast(new FeatureNegotiatingHandler(ctx, features))
+            .addLast(new ErrorMapLoadingHandler(ctx));
         }
       })
       .connect();

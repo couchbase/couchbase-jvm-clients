@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.utils.SimpleEventBus;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -65,13 +66,16 @@ class SelectBucketHandlerTest {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus();
     CoreEnvironment env = mock(CoreEnvironment.class);
+    IoEnvironment ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(10));
     coreContext = new CoreContext(1, env);
   }
 
   @AfterEach
   void teardown() {
-    channel.finish();
+    channel.finishAndReleaseAll();
   }
 
   /**
@@ -89,11 +93,7 @@ class SelectBucketHandlerTest {
       }
     };
 
-    SelectBucketHandler handler = new SelectBucketHandler(
-      coreContext,
-      Duration.ofMillis(10),
-      "bucket"
-    );
+    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
     channel.pipeline().addLast(failingHandler).addLast(handler);
 
     ChannelFuture connect = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
@@ -108,12 +108,7 @@ class SelectBucketHandlerTest {
   void failConnectIfPromiseTimesOut() throws Exception {
     final Duration timeout = Duration.ofMillis(10);
 
-    SelectBucketHandler handler = new SelectBucketHandler(
-      coreContext,
-      Duration.ofMillis(10),
-      "bucket"
-    );
-
+    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
     channel.pipeline().addLast(handler);
 
     final ChannelFuture connect = channel.connect(
@@ -140,12 +135,7 @@ class SelectBucketHandlerTest {
    */
   @Test
   void completeImmediatelyIfNotNegotiated() {
-    SelectBucketHandler handler = new SelectBucketHandler(
-      coreContext,
-      Duration.ofMillis(10),
-      "bucket"
-    );
-
+    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
     channel.pipeline().addLast(handler);
 
     final ChannelFuture connect = channel.connect(

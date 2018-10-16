@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailureEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.utils.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -49,7 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -71,13 +71,16 @@ class ErrorMapLoadingHandlerTest {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus();
     CoreEnvironment env = mock(CoreEnvironment.class);
+    IoEnvironment ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     coreContext = new CoreContext(1, env);
   }
 
   @AfterEach
   void teardown() {
-    channel.finish();
+    channel.finishAndReleaseAll();
   }
 
   /**
@@ -95,7 +98,7 @@ class ErrorMapLoadingHandlerTest {
       }
     };
 
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext, Duration.ofMillis(10));
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
     channel.pipeline().addLast(failingHandler).addLast(handler);
 
     ChannelFuture connect = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
@@ -108,9 +111,16 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void failConnectIfPromiseTimesOut() throws Exception {
-    Duration timeout = Duration.ofMillis(10);
+    channel = new EmbeddedChannel();
+    simpleEventBus = new SimpleEventBus();
+    CoreEnvironment env = mock(CoreEnvironment.class);
+    IoEnvironment ioEnv = mock(IoEnvironment.class);
+    when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(100));
+    coreContext = new CoreContext(1, env);
 
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext, Duration.ofMillis(10));
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
 
     channel.pipeline().addLast(handler);
 
@@ -119,12 +129,12 @@ class ErrorMapLoadingHandlerTest {
     );
     channel.pipeline().fireChannelActive();
 
-    Thread.sleep(timeout.toMillis() + 5);
+    Thread.sleep(Duration.ofMillis(100).toMillis() + 5);
     channel.runScheduledPendingTasks();
 
     assertTrue(connect.isDone());
     assertTrue(connect.cause() instanceof TimeoutException);
-    assertEquals("KV Error Map loading timed out after 10ms", connect.cause().getMessage());
+    assertEquals("KV Error Map loading timed out after 100ms", connect.cause().getMessage());
   }
 
   /**
@@ -133,10 +143,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void encodeAndSendErrorMapRequest() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(
-      coreContext,
-      Duration.ofMillis(100)
-    );
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -145,7 +152,7 @@ class ErrorMapLoadingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.ERROR_MAP.opcode(), false, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
 
     // sanity check the body payload
     assertTrue(ProtocolVerifier.body(writtenRequest).isPresent());
@@ -161,10 +168,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeSuccessfulErrorMap() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(
-      coreContext,
-      Duration.ofMillis(100)
-    );
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -174,7 +178,7 @@ class ErrorMapLoadingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.ERROR_MAP.opcode(), false, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
     assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -205,10 +209,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeUnsuccessfulResponse() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(
-      coreContext,
-      Duration.ofMillis(100)
-    );
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -218,7 +219,7 @@ class ErrorMapLoadingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.ERROR_MAP.opcode(), false, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
     assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -235,7 +236,7 @@ class ErrorMapLoadingHandlerTest {
       (ErrorMapLoadingFailureEvent) simpleEventBus.publishedEvents().get(0);
 
     assertEquals(Event.Severity.WARN, event.severity());
-    assertEquals("KV Error Map Negotiation failed (KV Status 0x1)", event.description());
+    assertEquals("KV Error Map Negotiation failed (Status 0x1)", event.description());
     assertNull(channel.attr(ErrorMapLoadingHandler.ERROR_MAP_KEY).get());
   }
 
@@ -245,10 +246,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeSuccessfulResponseWithEmptyMap() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(
-      coreContext,
-      Duration.ofMillis(100)
-    );
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -258,8 +256,9 @@ class ErrorMapLoadingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.ERROR_MAP.opcode(), false, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
     assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
+    ReferenceCountUtil.release(writtenRequest);
 
     ByteBuf response = decodeHexDump(readResource(
       "success_empty_errormap_response.txt",

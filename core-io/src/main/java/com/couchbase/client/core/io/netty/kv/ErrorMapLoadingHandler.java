@@ -39,9 +39,9 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.couchbase.client.core.io.netty.kv.Protocol.body;
-import static com.couchbase.client.core.io.netty.kv.Protocol.status;
-import static com.couchbase.client.core.io.netty.kv.Protocol.successful;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 import static com.couchbase.client.core.json.Mapper.decodeInto;
 
 /**
@@ -96,12 +96,10 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    * Creates a new {@link ErrorMapLoadingHandler}.
    *
    * @param coreContext the core context used to refer to values like the core id.
-   * @param timeout     how long the error map loading is allowed to take before the connect
-   *                    process will be failed.
    */
-  ErrorMapLoadingHandler(final CoreContext coreContext, final Duration timeout) {
+  ErrorMapLoadingHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
-    this.timeout = timeout;
+    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
   }
 
   /**
@@ -156,11 +154,11 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       if (successful((ByteBuf) msg)) {
         Optional<ErrorMap> loadedMap = extractErrorMap((ByteBuf) msg);
         loadedMap.ifPresent(errorMap -> ctx.channel().attr(ERROR_MAP_KEY).set(errorMap));
-        coreContext.env().eventBus().publish(
+        coreContext.environment().eventBus().publish(
           new ErrorMapLoadedEvent(ioContext, latency.orElse(Duration.ZERO), loadedMap)
         );
       } else {
-        coreContext.env().eventBus().publish(
+        coreContext.environment().eventBus().publish(
           new ErrorMapLoadingFailureEvent(
             ioContext,
             latency.orElse(Duration.ZERO),
@@ -192,13 +190,13 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       try {
         return Optional.of(decodeInto(input, ErrorMap.class));
       } catch (MapperException e) {
-        coreContext.env().eventBus().publish(new ErrorMapUndecodableEvent(
+        coreContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
           ioContext, e.getMessage(), new String(input, CharsetUtil.UTF_8)
         ));
         return Optional.empty();
       }
     } else {
-      coreContext.env().eventBus().publish(new ErrorMapUndecodableEvent(
+      coreContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
         ioContext, "No content in response", ""
       ));
       return Optional.empty();
@@ -213,7 +211,7 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    */
   private ByteBuf buildErrorMapRequest(final ChannelHandlerContext ctx) {
     ByteBuf content = ctx.alloc().buffer(2).writeShort(MAP_VERSION);
-    ByteBuf request = Protocol.request(ctx.alloc(), Protocol.Opcode.ERROR_MAP.opcode(), content);
+    ByteBuf request = MemcacheProtocol.request(ctx.alloc(), MemcacheProtocol.Opcode.ERROR_MAP.opcode(), content);
     ReferenceCountUtil.release(content);
     return request;
   }

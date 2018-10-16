@@ -4,11 +4,16 @@ Loosely keeping track of things:
 
 ## IO
 
- - in all the kv bootstrap handlers, add a sanity check method to make sure we are getting a good packet (and i.e. not chunked)
+ - add tests for the memcache protocol verifier
  - complete select bucket handler test cases
  - add sasl in the pipeline
  - get a full kv pipeline working
 
+## Env
+ 
+ - allow to configure the env through certain config providers
+ - split up the env into multiple sub-sections (like IO)
+ - make the UserAgent an actual object with parts and a toString
  
 ## Event Bus
 

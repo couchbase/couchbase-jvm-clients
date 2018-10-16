@@ -62,7 +62,7 @@ public class CoreContext extends AbstractContext {
    *
    * @return the core environment attached.
    */
-  public CoreEnvironment env() {
+  public CoreEnvironment environment() {
     return env;
   }
 

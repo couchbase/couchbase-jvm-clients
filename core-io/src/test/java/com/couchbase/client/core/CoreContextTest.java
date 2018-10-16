@@ -35,7 +35,7 @@ class CoreContextTest {
     CoreContext ctx = new CoreContext(id, env);
 
     assertEquals(id, ctx.id());
-    assertEquals(env, ctx.env());
+    assertEquals(env, ctx.environment());
 
     String result = ctx.exportAsString(Context.ExportFormat.JSON);
     assertEquals("{\"core\":12345}", result);

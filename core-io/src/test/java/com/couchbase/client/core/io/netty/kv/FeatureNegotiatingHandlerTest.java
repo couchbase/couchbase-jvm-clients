@@ -33,7 +33,7 @@ import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.netty.ConnectTimings;
+import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.utils.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -76,19 +76,23 @@ class FeatureNegotiatingHandlerTest {
   private CoreContext coreContext;
   private EmbeddedChannel channel;
   private SimpleEventBus simpleEventBus;
+  private IoEnvironment ioEnv;
 
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus();
     CoreEnvironment env = mock(CoreEnvironment.class);
+    ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     coreContext = new CoreContext(1, env);
   }
 
   @AfterEach
   void teardown() {
-    channel.finish();
+    channel.finishAndReleaseAll();
   }
 
   /**
@@ -108,7 +112,6 @@ class FeatureNegotiatingHandlerTest {
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofMillis(10),
       Collections.singleton(ServerFeature.TRACING)
     );
     channel.pipeline().addLast(failingHandler).addLast(handler);
@@ -123,11 +126,11 @@ class FeatureNegotiatingHandlerTest {
    */
   @Test
   void failConnectIfPromiseTimesOut() throws Exception {
-    Duration timeout = Duration.ofMillis(10);
+    Duration timeout = Duration.ofMillis(100);
+    when(ioEnv.connectTimeout()).thenReturn(timeout);
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      timeout,
       Collections.singleton(ServerFeature.TRACING)
     );
     channel.pipeline().addLast(handler);
@@ -142,7 +145,7 @@ class FeatureNegotiatingHandlerTest {
 
     assertTrue(connect.isDone());
     assertTrue(connect.cause() instanceof TimeoutException);
-    assertEquals("KV Feature Negotiation timed out after 10ms", connect.cause().getMessage());
+    assertEquals("KV Feature Negotiation timed out after 100ms", connect.cause().getMessage());
   }
 
   /**
@@ -153,7 +156,6 @@ class FeatureNegotiatingHandlerTest {
   void connectInstantlyIfNoFeaturesNeeded() {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofMillis(10),
       Collections.emptySet()
     );
     channel.pipeline().addLast(handler);
@@ -176,7 +178,6 @@ class FeatureNegotiatingHandlerTest {
   void encodeAndSendHelloRequest(Set<ServerFeature> enabledFeatures) {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofMillis(10),
       enabledFeatures
     );
     channel.pipeline().addLast(handler);
@@ -187,7 +188,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.HELLO.opcode(), true, false, true);
 
     // sanity check json block
     assertTrue(ProtocolVerifier.key(writtenRequest).isPresent());
@@ -229,7 +230,6 @@ class FeatureNegotiatingHandlerTest {
       ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofSeconds(1000),
       toNegotiate
     );
     channel.pipeline().addLast(handler);
@@ -241,7 +241,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -277,7 +277,6 @@ class FeatureNegotiatingHandlerTest {
       ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofSeconds(1000),
       toNegotiate
     );
     channel.pipeline().addLast(handler);
@@ -289,7 +288,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(
@@ -305,7 +304,7 @@ class FeatureNegotiatingHandlerTest {
     FeaturesNegotiationFailureEvent failureEvent =
       (FeaturesNegotiationFailureEvent) simpleEventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.WARN, failureEvent.severity());
-    assertEquals("HELLO Negotiation failed (KV Status 0x1)", failureEvent.description());
+    assertEquals("HELLO Negotiation failed (Status 0x1)", failureEvent.description());
 
     FeaturesNegotiatedEvent event =
       (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
@@ -328,7 +327,6 @@ class FeatureNegotiatingHandlerTest {
     Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       coreContext,
-      Duration.ofSeconds(1000),
       toNegotiate
     );
     channel.pipeline().addLast(handler);
@@ -340,7 +338,7 @@ class FeatureNegotiatingHandlerTest {
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();
-    verifyRequest(writtenRequest, Protocol.Opcode.HELLO.opcode(), true, false, true);
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.HELLO.opcode(), true, false, true);
     assertNotNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ByteBuf response = decodeHexDump(readResource(

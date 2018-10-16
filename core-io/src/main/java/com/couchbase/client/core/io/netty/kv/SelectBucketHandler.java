@@ -36,7 +36,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.couchbase.client.core.io.netty.kv.Protocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 
 /**
  * The {@link SelectBucketHandler} is responsible for, selecting the right
@@ -84,14 +84,11 @@ class SelectBucketHandler extends ChannelDuplexHandler {
    * Creates a new {@link SelectBucketHandler}.
    *
    * @param coreContext the core context used to refer to values like the core id.
-   * @param timeout     how long the select bucket is allowed to take before the connect
-   *                    process will be failed.
    * @param bucketName  the bucket name to select.
    */
-  SelectBucketHandler(final CoreContext coreContext, final Duration timeout,
-                      final String bucketName) {
+  SelectBucketHandler(final CoreContext coreContext, final String bucketName) {
     this.coreContext = coreContext;
-    this.timeout = timeout;
+    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
     this.bucketName = bucketName;
   }
 
@@ -130,7 +127,7 @@ class SelectBucketHandler extends ChannelDuplexHandler {
       ConnectTimings.start(ctx.channel(), this.getClass());
       ctx.writeAndFlush(buildSelectBucketRequest(ctx));
     } else {
-      coreContext.env().eventBus().publish(new SelectBucketDisabledEvent(ioContext, bucketName));
+      coreContext.environment().eventBus().publish(new SelectBucketDisabledEvent(ioContext, bucketName));
       ConnectTimings.record(ctx.channel(), this.getClass());
       interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
@@ -156,7 +153,7 @@ class SelectBucketHandler extends ChannelDuplexHandler {
   private ByteBuf buildSelectBucketRequest(final ChannelHandlerContext ctx) {
     ByteBuf key = Unpooled.copiedBuffer(bucketName, CharsetUtil.UTF_8);
     ByteBuf content = Unpooled.EMPTY_BUFFER;
-    ByteBuf request = request(ctx.alloc(), Protocol.Opcode.SELECT_BUCKET.opcode(), key, content);
+    ByteBuf request = request(ctx.alloc(), MemcacheProtocol.Opcode.SELECT_BUCKET.opcode(), key, content);
     ReferenceCountUtil.release(key);
     ReferenceCountUtil.release(content);
     return request;

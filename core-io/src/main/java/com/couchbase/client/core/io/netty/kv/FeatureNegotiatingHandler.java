@@ -42,8 +42,8 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.couchbase.client.core.io.netty.kv.Protocol.status;
-import static com.couchbase.client.core.io.netty.kv.Protocol.successful;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 
 /**
  * The {@link FeatureNegotiatingHandler} is responsible for sending the KV "hello" command
@@ -90,14 +90,12 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    * Creates a new {@link FeatureNegotiatingHandler}.
    *
    * @param coreContext the core context used to refer to values like the core id.
-   * @param timeout     how long the feature negotiation is allowed to take before the connect
-   *                    process will be failed.
    * @param features    the list of features that should be negotiated from the client side.
    */
-  FeatureNegotiatingHandler(final CoreContext coreContext, final Duration timeout,
+  FeatureNegotiatingHandler(final CoreContext coreContext,
                             final Set<ServerFeature> features) {
     this.coreContext = coreContext;
-    this.timeout = timeout;
+    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
     this.features = features;
   }
 
@@ -175,13 +173,13 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
 
     if (msg instanceof ByteBuf) {
       if (!successful((ByteBuf) msg)) {
-        coreContext.env().eventBus().publish(
+        coreContext.environment().eventBus().publish(
           new FeaturesNegotiationFailureEvent(ioContext, status((ByteBuf) msg))
         );
       }
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
       ctx.channel().attr(ServerFeature.SERVER_FEATURE_KEY).set(negotiated);
-      coreContext.env().eventBus().publish(
+      coreContext.environment().eventBus().publish(
         new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
       );
       interceptedConnectPromise.trySuccess();
@@ -203,7 +201,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    * @return the list of server features, may be empty but never null.
    */
   private List<ServerFeature> extractFeaturesFromBody(final ByteBuf response) {
-    Optional<ByteBuf> body = Protocol.body(response);
+    Optional<ByteBuf> body = MemcacheProtocol.body(response);
     List<ServerFeature> negotiated = new ArrayList<>();
     List<ServerFeature> unsolicited = new ArrayList<>();
 
@@ -228,7 +226,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     }
 
     if (!unsolicited.isEmpty()) {
-      coreContext.env().eventBus().publish(
+      coreContext.environment().eventBus().publish(
         new UnsolicitedFeaturesReturnedEvent(ioContext, unsolicited)
       );
     }
@@ -249,7 +247,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       body.writeShort(feature.value());
     }
 
-    ByteBuf request = Protocol.request(ctx.alloc(), Protocol.Opcode.HELLO.opcode(), key, body);
+    ByteBuf request = MemcacheProtocol.request(ctx.alloc(), MemcacheProtocol.Opcode.HELLO.opcode(), key, body);
     ReferenceCountUtil.release(key);
     ReferenceCountUtil.release(body);
     return request;
@@ -268,7 +266,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   private ByteBuf buildHelloKey(final ChannelHandlerContext ctx) {
     TreeMap<String, String> result = new TreeMap<>();
 
-    String agent = coreContext.env().userAgent();
+    String agent = coreContext.environment().userAgent();
     if (agent == null || agent.isEmpty()) {
       agent = "java-core-io/unknown";
     } else if (agent.length() > 200) {
