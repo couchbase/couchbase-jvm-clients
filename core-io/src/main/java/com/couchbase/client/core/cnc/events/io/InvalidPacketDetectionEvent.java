@@ -48,7 +48,9 @@ public class InvalidPacketDetectionEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Invalid Packet detected: " + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(packet));
+    return "Invalid Packet detected: \n"
+      + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(packet))
+      + "\n";
   }
 
   /**

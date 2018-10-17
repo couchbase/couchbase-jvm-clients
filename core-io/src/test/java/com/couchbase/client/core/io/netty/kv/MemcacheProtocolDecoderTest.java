@@ -88,8 +88,8 @@ class MemcacheProtocolDecoderTest {
   private static Stream<InputHolder> inputProvider() {
     final Class<?> clazz = MemcacheProtocolDecoderTest.class;
     return Stream.of(
-      "decode_key_only",
-      "decode_extras_and_value"
+      "request_key_only",
+      "response_extras_and_value"
     ).map(name -> new InputHolder(
       name,
       decodeHexDump(readResource(name + ".txt", clazz))
