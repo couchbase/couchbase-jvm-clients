@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import java.time.Duration;
+import java.util.Set;
 
 /**
  * The {@link IoEnvironment} holds all IO-related configuration and state.
@@ -40,5 +41,20 @@ public interface IoEnvironment {
    * @return the compression settings.
    */
   CompressionConfig compressionConfig();
+
+  /**
+   * Configures the way transport layer security is set up in the client.
+   *
+   * @return the security settings.
+   */
+  SecurityConfig securityConfig();
+
+  /**
+   * Customizes the SASL mechanisms that are allowed to be negotiated, even
+   * if the server would support more/different ones.
+   *
+   * @return the set of mechanisms allowed.
+   */
+  Set<SaslMechanism> allowedSaslMechanisms();
 
 }

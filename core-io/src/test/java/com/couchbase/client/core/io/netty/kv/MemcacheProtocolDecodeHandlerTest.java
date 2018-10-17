@@ -31,7 +31,7 @@ import java.util.Random;
 import java.util.stream.Stream;
 
 /**
- * Verifies the functionality of the {@link MemcacheProtocolDecoder}.
+ * Verifies the functionality of the {@link MemcacheProtocolDecodeHandler}.
  *
  * <p>If you want to add more tests, just add them to the {@link #inputProvider()} as
  * filenames and place them into the right directory (see other files in the
@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  *
  * @since 2.0.0
  */
-class MemcacheProtocolDecoderTest {
+class MemcacheProtocolDecodeHandlerTest {
 
   static {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
@@ -56,7 +56,7 @@ class MemcacheProtocolDecoderTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("inputProvider")
   void shouldDecodeInput(final InputHolder inputHolder) {
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolDecoder());
+    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolDecodeHandler());
     try {
       for (int i = 0; i < 100; i++) {
         ByteBuf copy = inputHolder.input.copy();
@@ -86,7 +86,7 @@ class MemcacheProtocolDecoderTest {
    * @return a stream of buffers to test.
    */
   private static Stream<InputHolder> inputProvider() {
-    final Class<?> clazz = MemcacheProtocolDecoderTest.class;
+    final Class<?> clazz = MemcacheProtocolDecodeHandlerTest.class;
     return Stream.of(
       "request_key_only",
       "response_extras_and_value"

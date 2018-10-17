@@ -4,9 +4,13 @@ Loosely keeping track of things:
 
 ## IO
 
- - add tests for the memcache protocol verifier
- - complete select bucket handler test cases
- - add sasl in the pipeline
+ - complete the select bucket code
+ - complete select bucket handler test case
+
+ - complete sasl handler code 
+ - add sasl handler unit tests for all mechs
+ - add sasl client unit tests
+ 
  - get a full kv pipeline working
 
 ## Env

@@ -56,6 +56,11 @@ enum MemcacheProtocol {
   static final int MAGIC_OFFSET = 0;
 
   /**
+   * The offset for the opcode.
+   */
+  static final int OPCODE_OFFSET = 1;
+
+  /**
    * The offset of the status field.
    */
   static final int STATUS_OFFSET = 6;
@@ -120,21 +125,31 @@ enum MemcacheProtocol {
   /**
    * Returns the status of that response.
    *
-   * @param response the memcache response to extract from.
+   * @param message the memcache message to extract from.
    * @return the status field.
    */
-  static short status(final ByteBuf response) {
-    return response.getShort(STATUS_OFFSET);
+  static short status(final ByteBuf message) {
+    return message.getShort(STATUS_OFFSET);
   }
 
   /**
    * Helper method to check if the given response has a successful status.
    *
-   * @param response the memcache response to extract from.
+   * @param message the memcache message to extract from.
    * @return true if success.
    */
-  static boolean successful(final ByteBuf response) {
-    return status(response) == STATUS_SUCCESS;
+  static boolean successful(final ByteBuf message) {
+    return status(message) == STATUS_SUCCESS;
+  }
+
+  /**
+   * Helper method to return the opcode for the given request or response.
+   *
+   * @param message the message to get the opcode from.
+   * @return the opcode as a byte.
+   */
+  static byte opcode(final ByteBuf message) {
+    return message.getByte(OPCODE_OFFSET);
   }
 
   /**
@@ -220,7 +235,19 @@ enum MemcacheProtocol {
     /**
      * Command used to select a specific bucket on a connection.
      */
-    SELECT_BUCKET((byte) 0x89);
+    SELECT_BUCKET((byte) 0x89),
+    /**
+     * List all SASL auth mechanisms the server supports.
+     */
+    SASL_LIST_MECHS((byte) 0x20),
+    /**
+     * Initial auth step in the SASL negotiation.
+     */
+    SASL_AUTH((byte) 0x21),
+    /**
+     * Subsequent steps in the SASL negotiation.
+     */
+    SASL_STEP((byte) 0x22);
 
     private final byte opcode;
 

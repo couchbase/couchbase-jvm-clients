@@ -39,11 +39,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the functionality of the {@link MemcacheProtocolVerifier}.
+ * Verifies the functionality of the {@link MemcacheProtocolVerificationHandler}.
  *
  * @since 2.0.0
  */
-class MemcacheProtocolVerifierTest {
+class MemcacheProtocolVerificationHandlerTest {
 
   static {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
@@ -58,7 +58,7 @@ class MemcacheProtocolVerifierTest {
   @MethodSource
   void shouldVerifyCorrectResponses(final InputHolder inputHolder) {
     CoreContext ctx = mock(CoreContext.class);
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerifier(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
     try {
       channel.writeInbound(inputHolder.input);
       ByteBuf written = channel.readInbound();
@@ -91,7 +91,7 @@ class MemcacheProtocolVerifierTest {
     when(ctx.environment()).thenReturn(env);
     when(env.eventBus()).thenReturn(eventBus);
 
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerifier(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
     try {
       channel.writeInbound(inputHolder.input);
       assertFalse(channel.isOpen());
@@ -123,7 +123,7 @@ class MemcacheProtocolVerifierTest {
   @MethodSource
   void shouldVerifyCorrectRequests(final InputHolder inputHolder) {
     CoreContext ctx = mock(CoreContext.class);
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerifier(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
     try {
       channel.writeOutbound(inputHolder.input);
       ByteBuf written = channel.readOutbound();
@@ -146,7 +146,7 @@ class MemcacheProtocolVerifierTest {
    * @return a stream of buffers to test.
    */
   private static Stream<InputHolder> streamPackets(String... paths) {
-    final Class<?> clazz = MemcacheProtocolDecoderTest.class;
+    final Class<?> clazz = MemcacheProtocolDecodeHandlerTest.class;
     return Stream.of(paths).map(name -> new InputHolder(
       name,
       decodeHexDump(readResource(name + ".txt", clazz))
@@ -154,7 +154,7 @@ class MemcacheProtocolVerifierTest {
   }
 
   /**
-   * Simple holder which alles us to give a name to the parameterized
+   * Simple holder which allows us to give a name to the parameterized
    * function.
    */
   private static class InputHolder {

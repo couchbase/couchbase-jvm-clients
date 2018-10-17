@@ -37,23 +37,37 @@ public class KeyValueChannelInitializer extends ChannelInitializer<SocketChannel
    */
   private final String bucketName;
 
-  public KeyValueChannelInitializer(final CoreContext coreContext, final String bucketName) {
+  /**
+   * Name of the user.
+   */
+  private final String userName;
+
+  /**
+   * Password of the user.
+   */
+  private final String password;
+
+  public KeyValueChannelInitializer(final CoreContext coreContext, final String bucketName,
+                                    final String userName, final String password) {
     this.coreContext = coreContext;
     this.bucketName = bucketName;
+    this.userName = userName;
+    this.password = password;
   }
 
   @Override
   protected void initChannel(final SocketChannel ch) {
     ChannelPipeline pipeline = ch.pipeline();
 
-    pipeline.addLast(new MemcacheProtocolDecoder());
-    pipeline.addLast(new MemcacheProtocolVerifier(coreContext));
+    pipeline.addLast(new MemcacheProtocolDecodeHandler());
+    pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
 
     pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
     pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
 
-    // then auth handler
-    // pipeline.addLast(new SaslAuthHandler());
+    if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
+      pipeline.addLast(new SaslAuthenticationHandler(coreContext, userName, password));
+    }
 
     pipeline.addLast(new SelectBucketHandler(coreContext, bucketName));
 

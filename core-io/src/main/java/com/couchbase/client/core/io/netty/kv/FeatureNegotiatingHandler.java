@@ -169,9 +169,9 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    */
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
-    Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
-
     if (msg instanceof ByteBuf) {
+      Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
+
       if (!successful((ByteBuf) msg)) {
         coreContext.environment().eventBus().publish(
           new FeaturesNegotiationFailureEvent(ioContext, status((ByteBuf) msg))

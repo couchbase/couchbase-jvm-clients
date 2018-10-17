@@ -19,10 +19,16 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.env.SaslMechanism;
+import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.io.netty.ConnectTimings;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -31,6 +37,7 @@ import io.netty.handler.logging.LoggingHandler;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -45,39 +52,44 @@ public class ConnectSample {
 
   public static void main(String... args) throws Exception {
     DefaultEventBus eventBus = DefaultEventBus.create();
+    IoEnvironment ioEnv = mock(IoEnvironment.class);
+    when(ioEnv.connectTimeout()).thenReturn(Duration.ofSeconds(1));
     CoreEnvironment coreConfig = mock(CoreEnvironment.class);
     when(coreConfig.eventBus()).thenReturn(eventBus);
     when(coreConfig.userAgent()).thenReturn("core-io");
+    when(coreConfig.ioEnvironment()).thenReturn(ioEnv);
+    CompressionConfig cc = mock(CompressionConfig.class);
+    SecurityConfig sc = mock(SecurityConfig.class);
+    when(cc.enabled()).thenReturn(true);
+    when(sc.certAuthEnabled()).thenReturn(false);
+    when(ioEnv.compressionConfig()).thenReturn(cc);
+    when(ioEnv.securityConfig()).thenReturn(sc);
+    when(ioEnv.allowedSaslMechanisms()).thenReturn(EnumSet.allOf(SaslMechanism.class));
 
     eventBus.subscribe(LoggingEventConsumer.builder()
       .disableSlf4J(true)
+      .fallbackToConsole(true)
       .build());
     eventBus.start();
 
     final CoreContext ctx = new CoreContext(1234, coreConfig);
     final Duration timeout = Duration.ofSeconds(1);
 
-    final Set<ServerFeature> features = new HashSet<>(Collections.singletonList(
-      ServerFeature.SELECT_BUCKET
-    ));
 
     ChannelFuture connect = new Bootstrap()
       .group(new NioEventLoopGroup())
       .channel(NioSocketChannel.class)
       .remoteAddress("127.0.0.1", 11210)
-      .handler(new ChannelInitializer<Channel>() {
-        @Override
-        protected void initChannel(Channel ch)  {
-          ch.pipeline()
-            .addLast(new MemcacheProtocolDecoder())
-            .addLast(new LoggingHandler(LogLevel.TRACE))
-            .addLast(new FeatureNegotiatingHandler(ctx, features))
-            .addLast(new ErrorMapLoadingHandler(ctx));
-        }
-      })
+      .handler(new KeyValueChannelInitializer(ctx, "travel-sample", "Administrator", "password"))
       .connect();
 
-    connect.awaitUninterruptibly();
+    connect.awaitUninterruptibly().addListeners(new ChannelFutureListener() {
+      @Override
+      public void operationComplete(ChannelFuture future) throws Exception {
+        System.err.println(ConnectTimings.export(future.channel()));
+        System.err.println(future.cause().getCause());
+      }
+    });
     Thread.sleep(100000);
   }
 }

@@ -19,12 +19,12 @@ package com.couchbase.client.core.io.netty.kv;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
- * The {@link MemcacheProtocolDecoder} is a lightweight decoder that understands the
+ * The {@link MemcacheProtocolDecodeHandler} is a lightweight decoder that understands the
  * KV header and aggregates header and value into one buffer before passing it on.
  *
  * @since 2.0.0
  */
-class MemcacheProtocolDecoder extends LengthFieldBasedFrameDecoder {
+class MemcacheProtocolDecodeHandler extends LengthFieldBasedFrameDecoder {
 
   /**
    * Approximates the maximum frame length. Technically it can be longer
@@ -62,7 +62,7 @@ class MemcacheProtocolDecoder extends LengthFieldBasedFrameDecoder {
    */
   private static final int INITIAL_BYTES_TO_STRIP = 0;
 
-  MemcacheProtocolDecoder() {
+  MemcacheProtocolDecodeHandler() {
     super(
       MAX_FRAME_LENGTH,
       LENGTH_FIELD_OFFSET,

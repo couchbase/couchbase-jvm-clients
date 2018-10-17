@@ -36,7 +36,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.verifyRespo
  * packets. For performance reasons, it only checks the basic structure
  * and length fields and cannot do any deep-packet inspection.</p>
  */
-public class MemcacheProtocolVerifier extends ChannelDuplexHandler {
+public class MemcacheProtocolVerificationHandler extends ChannelDuplexHandler {
 
   /**
    * Holds the core context as reference to event bus and more.
@@ -44,11 +44,11 @@ public class MemcacheProtocolVerifier extends ChannelDuplexHandler {
   private final CoreContext coreContext;
 
   /**
-   * Creates a new {@link MemcacheProtocolVerifier}.
+   * Creates a new {@link MemcacheProtocolVerificationHandler}.
    *
    * @param coreContext the core context used to refer to values like the core id.
    */
-  MemcacheProtocolVerifier(final CoreContext coreContext) {
+  MemcacheProtocolVerificationHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
   }
 
