@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
-import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
+import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
@@ -301,8 +301,8 @@ class FeatureNegotiatingHandlerTest {
     assertTrue(connectFuture.isSuccess());
 
     assertEquals(2, simpleEventBus.publishedEvents().size());
-    FeaturesNegotiationFailureEvent failureEvent =
-      (FeaturesNegotiationFailureEvent) simpleEventBus.publishedEvents().get(0);
+    FeaturesNegotiationFailedEvent failureEvent =
+      (FeaturesNegotiationFailedEvent) simpleEventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.WARN, failureEvent.severity());
     assertEquals("HELLO Negotiation failed (Status 0x1)", failureEvent.description());
 

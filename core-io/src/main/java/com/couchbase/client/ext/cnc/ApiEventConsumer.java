@@ -17,7 +17,7 @@
 package com.couchbase.client.ext.cnc;
 
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailureEvent;
+import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.ext.cnc.api.State;
 import graphql.ExecutionResult;
@@ -86,7 +86,7 @@ public class ApiEventConsumer implements Consumer<Event> {
   private ApiEventConsumer(Builder builder) {
     this.state = new State();
 
-    state.accept(new ErrorMapLoadingFailureEvent(null, Duration.ZERO, (short) 1));
+    state.accept(new ErrorMapLoadingFailedEvent(null, Duration.ZERO, (short) 1));
 
     SchemaParser schemaParser = new SchemaParser();
     TypeDefinitionRegistry typeDefinitionRegistry = schemaParser.parse(schema);

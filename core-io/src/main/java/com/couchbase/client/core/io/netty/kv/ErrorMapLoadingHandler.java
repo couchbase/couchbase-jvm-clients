@@ -19,7 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
-import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailureEvent;
+import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
@@ -159,7 +159,7 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
         );
       } else {
         coreContext.environment().eventBus().publish(
-          new ErrorMapLoadingFailureEvent(
+          new ErrorMapLoadingFailedEvent(
             ioContext,
             latency.orElse(Duration.ZERO),
             status((ByteBuf) msg))

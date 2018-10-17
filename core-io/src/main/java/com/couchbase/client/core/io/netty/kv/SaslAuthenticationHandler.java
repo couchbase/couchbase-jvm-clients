@@ -18,7 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
-import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailureEvent;
+import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationException;
@@ -383,7 +383,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       lastPacket.readerIndex(ridx);
     }
 
-    coreContext.environment().eventBus().publish(new SaslAuthenticationFailureEvent(
+    coreContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
       latency.orElse(Duration.ZERO),
       ioContext,
       message,

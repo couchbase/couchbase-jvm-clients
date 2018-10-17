@@ -19,7 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
-import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailureEvent;
+import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
@@ -232,8 +232,8 @@ class ErrorMapLoadingHandlerTest {
     assertTrue(connectFuture.isSuccess());
 
     assertEquals(1, simpleEventBus.publishedEvents().size());
-    ErrorMapLoadingFailureEvent event =
-      (ErrorMapLoadingFailureEvent) simpleEventBus.publishedEvents().get(0);
+    ErrorMapLoadingFailedEvent event =
+      (ErrorMapLoadingFailedEvent) simpleEventBus.publishedEvents().get(0);
 
     assertEquals(Event.Severity.WARN, event.severity());
     assertEquals("KV Error Map Negotiation failed (Status 0x1)", event.description());

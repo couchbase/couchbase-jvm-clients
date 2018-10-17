@@ -18,7 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectionEvent;
+import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.utils.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
@@ -96,7 +96,7 @@ class MemcacheProtocolVerificationHandlerTest {
       channel.writeInbound(inputHolder.input);
       assertFalse(channel.isOpen());
 
-      InvalidPacketDetectionEvent event = (InvalidPacketDetectionEvent)
+      InvalidPacketDetectedEvent event = (InvalidPacketDetectedEvent)
         eventBus.publishedEvents().get(0);
 
       assertEquals(Event.Severity.ERROR, event.severity());

@@ -33,7 +33,7 @@ import java.time.Duration;
  *
  * @since 2.0.0
  */
-public class InvalidPacketDetectionEvent extends AbstractEvent {
+public class InvalidPacketDetectedEvent extends AbstractEvent {
 
   /**
    * This is a byte array and not a {@link io.netty.buffer.ByteBuf} since it can come from
@@ -41,7 +41,7 @@ public class InvalidPacketDetectionEvent extends AbstractEvent {
    */
   private final byte[] packet;
 
-  public InvalidPacketDetectionEvent(final IoContext context, final byte[] packet) {
+  public InvalidPacketDetectedEvent(final IoContext context, final byte[] packet) {
     super(Severity.ERROR, Category.IO, Duration.ZERO, context);
     this.packet = packet;
   }

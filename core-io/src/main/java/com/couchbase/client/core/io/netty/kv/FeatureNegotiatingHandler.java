@@ -19,7 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
-import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailureEvent;
+import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
@@ -174,7 +174,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
 
       if (!successful((ByteBuf) msg)) {
         coreContext.environment().eventBus().publish(
-          new FeaturesNegotiationFailureEvent(ioContext, status((ByteBuf) msg))
+          new FeaturesNegotiationFailedEvent(ioContext, status((ByteBuf) msg))
         );
       }
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);

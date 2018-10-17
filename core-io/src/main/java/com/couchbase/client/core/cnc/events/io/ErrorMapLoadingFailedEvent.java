@@ -25,11 +25,11 @@ import java.time.Duration;
  * If loading the KV error map for some reason fails, this event will capture
  * the KV status code.
  */
-public class ErrorMapLoadingFailureEvent extends AbstractEvent {
+public class ErrorMapLoadingFailedEvent extends AbstractEvent {
 
   private final short status;
 
-  public ErrorMapLoadingFailureEvent(final IoContext ctx, Duration duration, short status) {
+  public ErrorMapLoadingFailedEvent(final IoContext ctx, Duration duration, short status) {
     super(Severity.WARN, Category.IO, duration, ctx);
     this.status = status;
   }

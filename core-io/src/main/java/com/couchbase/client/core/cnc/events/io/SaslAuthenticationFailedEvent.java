@@ -34,13 +34,13 @@ import java.time.Duration;
  *
  * @since 2.0.0
  */
-public class SaslAuthenticationFailureEvent extends AbstractEvent {
+public class SaslAuthenticationFailedEvent extends AbstractEvent {
 
   private final String description;
   private final byte[] lastPacket;
 
-  public SaslAuthenticationFailureEvent(final Duration duration, final IoContext context,
-                                        final String description, final byte[] lastPacket) {
+  public SaslAuthenticationFailedEvent(final Duration duration, final IoContext context,
+                                       final String description, final byte[] lastPacket) {
     super(Severity.ERROR, Category.IO, duration, context);
     this.description = description;
     this.lastPacket = lastPacket;

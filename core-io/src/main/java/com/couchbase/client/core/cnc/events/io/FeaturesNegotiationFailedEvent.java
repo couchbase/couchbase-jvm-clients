@@ -21,11 +21,11 @@ import com.couchbase.client.core.io.IoContext;
 
 import java.time.Duration;
 
-public class FeaturesNegotiationFailureEvent extends AbstractEvent {
+public class FeaturesNegotiationFailedEvent extends AbstractEvent {
 
   private final short status;
 
-  public FeaturesNegotiationFailureEvent(final IoContext ctx, short status) {
+  public FeaturesNegotiationFailedEvent(final IoContext ctx, short status) {
     super(Severity.WARN, Category.IO, Duration.ZERO, ctx);
     this.status = status;
   }
