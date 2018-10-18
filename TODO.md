@@ -4,19 +4,17 @@ Loosely keeping track of things:
 
 ## IO
 
- - complete the select bucket code
- - complete select bucket handler test case
-
- - complete sasl handler code 
+ - make sure each channel for kv handles the opaque also for the full bootstrap chain! (pass around and then use?)
+ - complete select bucket handler test case with error cases
  - add sasl handler unit tests for all mechs
  - add sasl client unit tests
+ - add collection support with tests
  
  - get a full kv pipeline working
 
 ## Env
  
  - allow to configure the env through certain config providers
- - split up the env into multiple sub-sections (like IO)
  - make the UserAgent an actual object with parts and a toString
  
 ## Event Bus

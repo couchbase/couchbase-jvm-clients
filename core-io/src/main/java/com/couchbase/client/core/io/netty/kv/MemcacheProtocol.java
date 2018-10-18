@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 import java.util.Optional;
 
@@ -73,52 +74,38 @@ enum MemcacheProtocol {
   static final short STATUS_SUCCESS = 0x00;
 
   /**
-   * Create a memcached protocol request with key and body.
+   * Create a memcached protocol request with all fields necessary.
    *
-   * @param alloc  the allocator where to allocate buffers from.
-   * @param opcode the opcode used for this request.
-   * @param key    the key used for this request.
-   * @param body   the body used for this request.
-   * @return the full request allocated and ready to use.
+   * @param alloc
+   * @param opcode
+   * @param datatype
+   * @param partition
+   * @param opaque
+   * @param cas
+   * @param extras
+   * @param key
+   * @param body
+   * @return the created request.
    */
-  static ByteBuf request(final ByteBufAllocator alloc, final byte opcode,
-                         final ByteBuf key, final ByteBuf body) {
+  static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
+                         final short partition, final int opaque, final long cas,
+                         final ByteBuf extras, final ByteBuf key, final ByteBuf body) {
+    int keySize = key.readableBytes();
+    int extrasSize = extras.readableBytes();
+    int totalBodySize = extrasSize + keySize + body.readableBytes();
     return alloc
-      .buffer(HEADER_SIZE + key.readableBytes() + body.readableBytes())
+      .buffer(HEADER_SIZE + totalBodySize)
       .writeByte(MAGIC_REQUEST)
-      .writeByte(opcode)
-      .writeShort(key.readableBytes())
-      .writeByte(0) // extras length
-      .writeByte(0) // data type
-      .writeShort(0) // vbucket id
-      .writeInt(key.readableBytes() + body.readableBytes()) // total body length
-      .writeInt(0) // opaque
-      .writeLong(0) // cas
+      .writeByte(opcode.opcode())
+      .writeShort(keySize)
+      .writeByte(extrasSize)
+      .writeByte(datatype)
+      .writeShort(partition)
+      .writeInt(totalBodySize)
+      .writeInt(opaque)
+      .writeLong(cas)
+      .writeBytes(extras)
       .writeBytes(key)
-      .writeBytes(body);
-  }
-
-  /**
-   * Create a memcached protocol request with body only.
-   *
-   * @param alloc  the allocator where to allocate buffers from.
-   * @param opcode the opcode used for this request.
-   * @param body   the body used for this request.
-   * @return the full request allocated and ready to use.
-   */
-  static ByteBuf request(final ByteBufAllocator alloc, final byte opcode,
-                         final ByteBuf body) {
-    return alloc
-      .buffer(HEADER_SIZE + body.readableBytes())
-      .writeByte(MAGIC_REQUEST)
-      .writeByte(opcode)
-      .writeShort(0)
-      .writeByte(0) // extras length
-      .writeByte(0) // data type
-      .writeShort(0) // vbucket id
-      .writeInt(body.readableBytes()) // total body length
-      .writeInt(0) // opaque
-      .writeLong(0) // cas
       .writeBytes(body);
   }
 
@@ -139,7 +126,7 @@ enum MemcacheProtocol {
    * @return true if success.
    */
   static boolean successful(final ByteBuf message) {
-    return status(message) == STATUS_SUCCESS;
+    return status(message) == Status.SUCCESS.status();
   }
 
   /**
@@ -221,9 +208,62 @@ enum MemcacheProtocol {
   }
 
   /**
+   * Helper to express no key is used for this message.
+   */
+  static ByteBuf noKey() {
+    return Unpooled.EMPTY_BUFFER;
+  }
+
+  /**
+   * Helper to express no extras are used for this message.
+   */
+  static ByteBuf noExtras() {
+    return Unpooled.EMPTY_BUFFER;
+  }
+
+  /**
+   * Helper to express no body is used for this message.
+   */
+  static ByteBuf noBody() {
+    return Unpooled.EMPTY_BUFFER;
+  }
+
+  /**
+   * Helper to express no datatype is used for this message.
+   */
+  static byte noDatatype() {
+    return 0;
+  }
+
+  /**
+   * Helper to express no partition is used for this message.
+   */
+  static short noPartition() {
+    return 0;
+  }
+
+  /**
+   * Helper to express no opaque is used for this message.
+   */
+  static int noOpaque() {
+    return 0;
+  }
+
+  /**
+   * Helper to express no cas is used for this message.
+   */
+  static long noCas() {
+    return 0;
+  }
+
+  /**
    * Contains all known/used kv protocol opcodes.
    */
   enum Opcode {
+    /**
+     * The get command.
+     */
+    GET((byte) 0x00),
     /**
      * The hello command used during bootstrap to negoatiate the features.
      */
@@ -263,6 +303,35 @@ enum MemcacheProtocol {
     public byte opcode() {
       return opcode;
     }
+  }
 
+  enum Status {
+    /**
+     * Successful message.
+     */
+    SUCCESS((short) 0x00),
+    /**
+     * Entity not found.
+     */
+    NOT_FOUND((short) 0x01),
+    /**
+     * Access problem.
+     */
+    ACCESS_ERROR((short) 0x24);
+
+    private final short status;
+
+    Status(short status) {
+      this.status = status;
+    }
+
+    /**
+     * Returns the status code for the status enum.
+     *
+     * @return the status code.
+     */
+    public short status() {
+      return status;
+    }
   }
 }

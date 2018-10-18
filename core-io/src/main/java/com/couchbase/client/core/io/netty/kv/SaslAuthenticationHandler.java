@@ -51,6 +51,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
@@ -76,7 +83,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   /**
    * Status indicating an authentication error.
    */
-  private static final short STATUS_AUTH_ERORR = 0x20;
+  private static final short STATUS_AUTH_ERROR = 0x20;
 
   /**
    * Status indicating to continue the authentication process.
@@ -171,8 +178,14 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private ByteBuf buildListMechanismsRequest(final ChannelHandlerContext ctx) {
     return MemcacheProtocol.request(
       ctx.alloc(),
-      MemcacheProtocol.Opcode.SASL_LIST_MECHS.opcode(),
-      Unpooled.EMPTY_BUFFER
+      MemcacheProtocol.Opcode.SASL_LIST_MECHS,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      noKey(),
+      noBody()
     );
   }
 
@@ -193,7 +206,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         } catch (Exception ex) {
           failConnect(ctx, "Unexpected error during SASL auth", response, ex);
         }
-      } else if (STATUS_AUTH_ERORR == status(response)) {
+      } else if (STATUS_AUTH_ERROR == status(response)) {
         failConnect(ctx, "Authentication Failure", null, null);
       } else {
         failConnect(
@@ -271,7 +284,20 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       ? ctx.alloc().buffer().writeBytes(payload)
       : Unpooled.EMPTY_BUFFER;
     ByteBuf key = Unpooled.copiedBuffer(saslClient.getMechanismName(), CharsetUtil.UTF_8);
-    return request(ctx.alloc(), MemcacheProtocol.Opcode.SASL_AUTH.opcode(), key, body);
+    ByteBuf request = request(
+      ctx.alloc(),
+      MemcacheProtocol.Opcode.SASL_AUTH,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      key,
+      body
+    );
+    key.release();
+    body.release();
+    return request;
   }
 
   /**
@@ -339,12 +365,21 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       body = Unpooled.wrappedBuffer(evaluatedBytes);
     }
 
-    return request(
+    ByteBuf key = Unpooled.copiedBuffer(mech, CharsetUtil.UTF_8);
+    ByteBuf request =request(
       ctx.alloc(),
-      MemcacheProtocol.Opcode.SASL_STEP.opcode(),
-      Unpooled.copiedBuffer(mech, CharsetUtil.UTF_8),
+      MemcacheProtocol.Opcode.SASL_STEP,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      key,
       body
     );
+    key.release();
+    body.release();
+    return request;
   }
 
   /**

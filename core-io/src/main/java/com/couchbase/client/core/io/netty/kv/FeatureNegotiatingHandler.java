@@ -42,6 +42,11 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 
@@ -247,9 +252,19 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       body.writeShort(feature.value());
     }
 
-    ByteBuf request = MemcacheProtocol.request(ctx.alloc(), MemcacheProtocol.Opcode.HELLO.opcode(), key, body);
-    ReferenceCountUtil.release(key);
-    ReferenceCountUtil.release(body);
+    ByteBuf request = MemcacheProtocol.request(
+      ctx.alloc(),
+      MemcacheProtocol.Opcode.HELLO,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      key,
+      body
+    );
+    key.release();
+    body.release();
     return request;
   }
 

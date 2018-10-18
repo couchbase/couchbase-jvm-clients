@@ -25,6 +25,8 @@ import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.netty.ConnectTimings;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.GetResponse;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -34,12 +36,14 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -64,7 +68,7 @@ public class ConnectSample {
     when(sc.certAuthEnabled()).thenReturn(false);
     when(ioEnv.compressionConfig()).thenReturn(cc);
     when(ioEnv.securityConfig()).thenReturn(sc);
-    when(ioEnv.allowedSaslMechanisms()).thenReturn(EnumSet.allOf(SaslMechanism.class));
+    when(ioEnv.allowedSaslMechanisms()).thenReturn(EnumSet.of(SaslMechanism.PLAIN));
 
     eventBus.subscribe(LoggingEventConsumer.builder()
       .disableSlf4J(true)
@@ -87,9 +91,17 @@ public class ConnectSample {
       @Override
       public void operationComplete(ChannelFuture future) throws Exception {
         System.err.println(ConnectTimings.export(future.channel()));
-        System.err.println(future.cause().getCause());
+        if (future.isSuccess()) {
+          GetRequest request = new GetRequest("airline_10".getBytes(CharsetUtil.UTF_8), timeout, null);
+          future.channel().writeAndFlush(request);
+          request.response().whenComplete((getResponse, throwable) -> System.err.println(getResponse));
+        } else {
+          System.err.println(future.cause());
+        }
       }
     });
+
+
     Thread.sleep(100000);
   }
 }

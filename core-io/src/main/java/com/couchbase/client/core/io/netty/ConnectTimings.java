@@ -109,7 +109,7 @@ public class ConnectTimings {
       sb
         .append(" -> ")
         .append(timing.clazz.getSimpleName())
-        .append(": ")
+        .append(": ~")
         .append(timing.isComplete() ? timing.latency().toMillis() : 0)
         .append("ms (complete=")
         .append(timing.isComplete())

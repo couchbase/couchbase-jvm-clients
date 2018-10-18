@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
 
@@ -33,6 +34,7 @@ public class CoreEnvironment {
 
   private final Supplier<String> userAgent;
   private final Supplier<EventBus> eventBus;
+  private final Timer timer;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -41,7 +43,9 @@ public class CoreEnvironment {
     this.eventBus = builder.eventBus == null
       ? (OwnedSupplier<EventBus>) DefaultEventBus::create
       : builder.eventBus;
-
+    this.timer = builder.timer == null
+      ? Timer.createAndStart()
+      : builder.timer;
 
     if (this.eventBus instanceof OwnedSupplier) {
       ((DefaultEventBus) eventBus.get()).start();
@@ -91,10 +95,21 @@ public class CoreEnvironment {
     return null;
   }
 
+  /**
+   * Holds the timer which is used to schedule tasks and trigger their callback,
+   * for example to time out requests.
+   *
+   * @return the timer used.
+   */
+  public Timer timer() {
+    return timer;
+  }
+
   public static class Builder<SELF extends Builder<SELF>> {
 
     private Supplier<String> userAgent = null;
     private Supplier<EventBus> eventBus = null;
+    private Timer timer = null;
 
     @SuppressWarnings({ "unchecked" })
     protected SELF self() {
@@ -121,6 +136,21 @@ public class CoreEnvironment {
 
     public SELF eventBus(final Supplier<EventBus> eventBus) {
       this.eventBus = eventBus;
+      return self();
+    }
+
+    /**
+     * Allows to pass in a custom {@link Timer}.
+     *
+     * Note that this is advanced API! Also if a timer is passed in, it needs
+     * to be started manually. If this is not done it can lead to unintended
+     * consequences like requests not timing out!
+     *
+     * @param timer the timer to use.
+     * @return this build for chaining purposes.
+     */
+    public SELF timer(final Timer timer) {
+      this.timer = timer;
       return self();
     }
 

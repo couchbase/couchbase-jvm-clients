@@ -180,6 +180,7 @@ class ErrorMapLoadingHandlerTest {
     ByteBuf writtenRequest = channel.readOutbound();
     verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
     assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
+    ReferenceCountUtil.release(writtenRequest);
 
     ByteBuf response = decodeHexDump(readResource(
       "success_errormap_response.txt",
@@ -221,6 +222,7 @@ class ErrorMapLoadingHandlerTest {
     ByteBuf writtenRequest = channel.readOutbound();
     verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
     assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
+    ReferenceCountUtil.release(writtenRequest);
 
     ByteBuf response = decodeHexDump(readResource(
       "error_errormap_response.txt",

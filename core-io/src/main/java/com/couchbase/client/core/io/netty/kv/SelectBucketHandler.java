@@ -18,7 +18,10 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
+import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.ConnectTimings;
 import io.netty.buffer.ByteBuf;
@@ -36,7 +39,14 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 /**
  * The {@link SelectBucketHandler} is responsible for, selecting the right
@@ -139,8 +149,32 @@ class SelectBucketHandler extends ChannelDuplexHandler {
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
-    // todo: if successful, move on. If not cancel the connect process since we can't proceed
-
+    if (msg instanceof ByteBuf) {
+      short status = status((ByteBuf) msg);
+      if (status == MemcacheProtocol.Status.SUCCESS.status()) {
+        coreContext.environment().eventBus().publish(new SelectBucketCompletedEvent(
+          latency.orElse(Duration.ZERO),
+          ioContext,
+          bucketName)
+        );
+        interceptedConnectPromise.trySuccess();
+        ctx.pipeline().remove(this);
+        ctx.fireChannelActive();
+      } else {
+        coreContext.environment().eventBus().publish(
+          new SelectBucketFailedEvent(ioContext, status)
+        );
+        interceptedConnectPromise.tryFailure(
+          new CouchbaseException("Select bucket failed with status code 0x"
+            + Integer.toHexString(status))
+        );
+      }
+    } else{
+      interceptedConnectPromise.tryFailure(
+        new CouchbaseException("Unexpected response type on channel read, this is a bug " +
+          "- please report." + msg)
+      );
+    }
     ReferenceCountUtil.release(msg);
   }
 
@@ -152,10 +186,18 @@ class SelectBucketHandler extends ChannelDuplexHandler {
    */
   private ByteBuf buildSelectBucketRequest(final ChannelHandlerContext ctx) {
     ByteBuf key = Unpooled.copiedBuffer(bucketName, CharsetUtil.UTF_8);
-    ByteBuf content = Unpooled.EMPTY_BUFFER;
-    ByteBuf request = request(ctx.alloc(), MemcacheProtocol.Opcode.SELECT_BUCKET.opcode(), key, content);
-    ReferenceCountUtil.release(key);
-    ReferenceCountUtil.release(content);
+    ByteBuf request = request(
+      ctx.alloc(),
+      MemcacheProtocol.Opcode.SELECT_BUCKET,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      key,
+      noBody()
+    );
+    key.release();
     return request;
   }
 

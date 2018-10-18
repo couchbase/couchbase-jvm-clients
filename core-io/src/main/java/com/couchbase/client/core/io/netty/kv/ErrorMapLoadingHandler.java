@@ -40,6 +40,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 import static com.couchbase.client.core.json.Mapper.decodeInto;
@@ -210,9 +216,18 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    * @return the created request as a {@link ByteBuf}.
    */
   private ByteBuf buildErrorMapRequest(final ChannelHandlerContext ctx) {
-    ByteBuf content = ctx.alloc().buffer(2).writeShort(MAP_VERSION);
-    ByteBuf request = MemcacheProtocol.request(ctx.alloc(), MemcacheProtocol.Opcode.ERROR_MAP.opcode(), content);
-    ReferenceCountUtil.release(content);
+    ByteBuf body = ctx.alloc().buffer(2).writeShort(MAP_VERSION);
+    ByteBuf request = MemcacheProtocol.request(
+      ctx.alloc(),
+      MemcacheProtocol.Opcode.ERROR_MAP,
+      noDatatype(),
+      noPartition(),
+      noOpaque(),
+      noCas(),
+      noExtras(),
+      noKey(),
+      body);
+    body.release();
     return request;
   }
 

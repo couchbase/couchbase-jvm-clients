@@ -20,6 +20,8 @@ import com.couchbase.client.core.CoreContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -62,6 +64,8 @@ public class KeyValueChannelInitializer extends ChannelInitializer<SocketChannel
     pipeline.addLast(new MemcacheProtocolDecodeHandler());
     pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
 
+    pipeline.addLast(new LoggingHandler(LogLevel.WARN));
+
     pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
     pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
 
@@ -70,6 +74,8 @@ public class KeyValueChannelInitializer extends ChannelInitializer<SocketChannel
     }
 
     pipeline.addLast(new SelectBucketHandler(coreContext, bucketName));
+
+    pipeline.addLast(new KeyValueMessageHandler(coreContext));
 
   }
 
