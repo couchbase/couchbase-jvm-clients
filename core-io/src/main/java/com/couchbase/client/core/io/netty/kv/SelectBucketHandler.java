@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.ConnectTimings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
@@ -43,7 +42,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
@@ -191,7 +189,7 @@ class SelectBucketHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.SELECT_BUCKET,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       key,
@@ -207,7 +205,7 @@ class SelectBucketHandler extends ChannelDuplexHandler {
    * @return true if it is, false otherwise.
    */
   private boolean selectBucketEnabled(final ChannelHandlerContext ctx) {
-    List<ServerFeature> features = ctx.channel().attr(ServerFeature.SERVER_FEATURE_KEY).get();
+    List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     return features != null && features.contains(ServerFeature.SELECT_BUCKET);
   }
 

@@ -200,7 +200,7 @@ class ErrorMapLoadingHandlerTest {
     assertTrue(maybeMap.isPresent());
     assertNotNull(maybeMap.get());
 
-    ErrorMap errorMap = channel.attr(ErrorMapLoadingHandler.ERROR_MAP_KEY).get();
+    ErrorMap errorMap = channel.attr(ChannelAttributes.ERROR_MAP_KEY).get();
     assertEquals(errorMap, maybeMap.get());
   }
 
@@ -239,7 +239,7 @@ class ErrorMapLoadingHandlerTest {
 
     assertEquals(Event.Severity.WARN, event.severity());
     assertEquals("KV Error Map Negotiation failed (Status 0x1)", event.description());
-    assertNull(channel.attr(ErrorMapLoadingHandler.ERROR_MAP_KEY).get());
+    assertNull(channel.attr(ChannelAttributes.ERROR_MAP_KEY).get());
   }
 
   /**

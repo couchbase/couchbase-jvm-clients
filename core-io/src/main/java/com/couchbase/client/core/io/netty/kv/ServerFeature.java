@@ -132,12 +132,6 @@ public enum ServerFeature {
   TRACING((short) 0x0f);
 
   /**
-   * Holds the negotiated server features in the channel.
-   */
-  static final AttributeKey<List<ServerFeature>> SERVER_FEATURE_KEY =
-    AttributeKey.newInstance("ServerFeatures");
-
-  /**
    * The actual byte representation on the wire.
    */
   private final short value;

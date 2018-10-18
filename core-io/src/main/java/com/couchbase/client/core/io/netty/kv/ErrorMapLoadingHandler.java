@@ -23,13 +23,11 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.json.MapperException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
@@ -44,7 +42,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
@@ -63,12 +60,6 @@ import static com.couchbase.client.core.json.Mapper.decodeInto;
  */
 @Stability.Internal
 class ErrorMapLoadingHandler extends ChannelDuplexHandler {
-
-  /**
-   * Holds the potentially loaded error map in this channel.
-   */
-  public static final AttributeKey<ErrorMap> ERROR_MAP_KEY =
-    AttributeKey.newInstance("ErrorMap");
 
   /**
    * Right now we are at version 1 for the error map, so that's what we
@@ -159,7 +150,7 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
     if (msg instanceof ByteBuf) {
       if (successful((ByteBuf) msg)) {
         Optional<ErrorMap> loadedMap = extractErrorMap((ByteBuf) msg);
-        loadedMap.ifPresent(errorMap -> ctx.channel().attr(ERROR_MAP_KEY).set(errorMap));
+        loadedMap.ifPresent(errorMap -> ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).set(errorMap));
         coreContext.environment().eventBus().publish(
           new ErrorMapLoadedEvent(ioContext, latency.orElse(Duration.ZERO), loadedMap)
         );
@@ -222,7 +213,7 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.ERROR_MAP,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       noKey(),

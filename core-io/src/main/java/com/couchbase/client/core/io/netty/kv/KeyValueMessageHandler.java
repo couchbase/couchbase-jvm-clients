@@ -32,7 +32,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
@@ -46,10 +45,30 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   private Request request;
 
+  /**
+   * Stores the current opaque value.
+   */
+  private int opaque;
+
   private final CoreContext coreContext;
 
   public KeyValueMessageHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
+  }
+
+  /**
+   * Actions to be performed when the channel becomes active.
+   *
+   * <p>Since the opaque is incremented in the handler below during bootstrap but now is
+   * only modified in this handler, cache the reference since the attribute lookup is
+   * more costly.</p>
+   *
+   * @param ctx the channel context.
+   */
+  @Override
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    opaque = Utils.opaque(ctx.channel(), false);
+    ctx.fireChannelActive();
   }
 
   @Override
@@ -77,7 +96,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.GET,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      ++opaque,
       noCas(),
       noExtras(),
       key,

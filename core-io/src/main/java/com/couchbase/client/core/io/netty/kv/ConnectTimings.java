@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.io.netty;
+package com.couchbase.client.core.io.netty.kv;
 
 import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -33,8 +32,7 @@ import java.util.Optional;
  */
 public class ConnectTimings {
 
-  private static final AttributeKey<ConnectTimings> ATTRIBUTE_KEY =
-    AttributeKey.newInstance("ConnectTimings");
+
 
   private final List<Timing> timings = Collections.synchronizedList(new ArrayList<>());
 
@@ -48,10 +46,10 @@ public class ConnectTimings {
    * @param clazz the clazz to use as an identifier key.
    */
   public static void start(final Channel channel, final Class<?> clazz) {
-    ConnectTimings timings = channel.attr(ATTRIBUTE_KEY).get();
+    ConnectTimings timings = channel.attr(ChannelAttributes.CONNECT_TIMINGS_KEY).get();
     if (timings == null) {
       timings = new ConnectTimings();
-      channel.attr(ATTRIBUTE_KEY).set(timings);
+      channel.attr(ChannelAttributes.CONNECT_TIMINGS_KEY).set(timings);
     }
     timings.timings.add(new Timing(clazz));
   }
@@ -66,7 +64,7 @@ public class ConnectTimings {
    */
   public static Optional<Duration> stop(final Channel channel, final Class<?> clazz,
                                         boolean timeout) {
-    ConnectTimings timings = channel.attr(ATTRIBUTE_KEY).get();
+    ConnectTimings timings = channel.attr(ChannelAttributes.CONNECT_TIMINGS_KEY).get();
     for (Timing timing : timings.timings) {
       if (timing.clazz().equals(clazz)) {
         return Optional.of(timing.complete(timeout));
@@ -122,7 +120,7 @@ public class ConnectTimings {
   }
 
   private static List<Timing> timings(final Channel channel) {
-    ConnectTimings ct = channel.attr(ATTRIBUTE_KEY).get();
+    ConnectTimings ct = channel.attr(ChannelAttributes.CONNECT_TIMINGS_KEY).get();
     return ct == null ? Collections.emptyList() : ct.timings;
   }
 

@@ -24,26 +24,16 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.env.SecurityConfig;
-import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.GetResponse;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.BiConsumer;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

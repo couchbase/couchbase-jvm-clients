@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.json.Mapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -45,7 +44,6 @@ import java.util.concurrent.TimeoutException;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
@@ -183,7 +181,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
         );
       }
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
-      ctx.channel().attr(ServerFeature.SERVER_FEATURE_KEY).set(negotiated);
+      ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).set(negotiated);
       coreContext.environment().eventBus().publish(
         new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
       );
@@ -257,7 +255,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.HELLO,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       key,

@@ -114,7 +114,7 @@ class SelectBucketHandlerTest {
     final ChannelFuture connect = channel.connect(
       new InetSocketAddress("1.2.3.4", 1234)
     );
-    channel.attr(ServerFeature.SERVER_FEATURE_KEY)
+    channel.attr(ChannelAttributes.SERVER_FEATURE_KEY)
       .set(Collections.singletonList(ServerFeature.SELECT_BUCKET));
     channel.pipeline().fireChannelActive();
 

@@ -4,12 +4,11 @@ Loosely keeping track of things:
 
 ## IO
 
- - make sure each channel for kv handles the opaque also for the full bootstrap chain! (pass around and then use?)
+ - add test coverage for the ever-increasing opaque functionality
  - complete select bucket handler test case with error cases
  - add sasl handler unit tests for all mechs
  - add sasl client unit tests
  - add collection support with tests
- 
  - get a full kv pipeline working
 
 ## Env

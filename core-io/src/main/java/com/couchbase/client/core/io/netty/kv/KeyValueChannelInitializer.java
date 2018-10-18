@@ -64,7 +64,7 @@ public class KeyValueChannelInitializer extends ChannelInitializer<SocketChannel
     pipeline.addLast(new MemcacheProtocolDecodeHandler());
     pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
 
-    pipeline.addLast(new LoggingHandler(LogLevel.WARN));
+    //pipeline.addLast(new LoggingHandler(LogLevel.WARN));
 
     pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
     pipeline.addLast(new ErrorMapLoadingHandler(coreContext));

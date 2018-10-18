@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.ConnectTimings;
 import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -56,7 +55,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
@@ -181,7 +179,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_LIST_MECHS,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       noKey(),
@@ -289,7 +287,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_AUTH,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       key,
@@ -371,7 +369,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_STEP,
       noDatatype(),
       noPartition(),
-      noOpaque(),
+      Utils.opaque(ctx.channel(), true),
       noCas(),
       noExtras(),
       key,
