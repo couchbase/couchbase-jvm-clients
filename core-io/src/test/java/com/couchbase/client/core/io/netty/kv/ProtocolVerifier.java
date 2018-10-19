@@ -30,7 +30,7 @@ import java.util.Optional;
  *
  * @since 2.0.0
  */
-class ProtocolVerifier {
+public class ProtocolVerifier {
 
   /**
    * Sanity checks based on some criteria given.
@@ -128,7 +128,7 @@ class ProtocolVerifier {
    * @param dump the pretty input dump.
    * @return the decoded byte array.
    */
-  static ByteBuf decodeHexDump(final String dump) {
+  public static ByteBuf decodeHexDump(final String dump) {
     StringBuilder rawDump = new StringBuilder();
     for (String line : dump.split("\\r?\\n")) {
       if (line.startsWith("|")) {

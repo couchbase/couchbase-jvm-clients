@@ -84,8 +84,8 @@ public class ConnectSample {
     Channel channel = connect.awaitUninterruptibly().channel();
 
     for (int i = 0; i < Integer.MAX_VALUE; i++) {
-      GetRequest request = new GetRequest("airline_10".getBytes(CharsetUtil.UTF_8), timeout, null);
-      request.partition((short) 41);
+      GetRequest request = new GetRequest("foobarish".getBytes(CharsetUtil.UTF_8), timeout, null);
+      request.partition((short) 32);
       channel.writeAndFlush(request);
       System.err.println(new String(request.response().get().content(), CharsetUtil.UTF_8));
       break;

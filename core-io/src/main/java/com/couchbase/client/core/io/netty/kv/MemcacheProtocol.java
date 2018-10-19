@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.msg.ResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
 import java.util.Optional;
@@ -168,8 +169,9 @@ public enum MemcacheProtocol {
     int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
     int keyLength = flexible ? message.getByte(3) : message.getShort(2);
     int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
-    int extrasLength = message.getByte(4);
+    byte extrasLength = message.getByte(4);
     int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
+
     if (bodyLength > 0) {
       return Optional.of(message.slice(
           MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,

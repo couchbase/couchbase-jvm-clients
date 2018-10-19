@@ -10,6 +10,7 @@ Loosely keeping track of things:
  - add sasl client unit tests
  - add collection support with tests
  - get a full kv pipeline working
+  - add snappy support and then reenable
 
 ## Env
  
