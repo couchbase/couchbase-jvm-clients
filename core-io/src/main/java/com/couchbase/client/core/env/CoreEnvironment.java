@@ -35,6 +35,7 @@ public class CoreEnvironment {
   private final Supplier<String> userAgent;
   private final Supplier<EventBus> eventBus;
   private final Timer timer;
+  private final IoEnvironment ioEnvironment;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -46,6 +47,9 @@ public class CoreEnvironment {
     this.timer = builder.timer == null
       ? Timer.createAndStart()
       : builder.timer;
+    this.ioEnvironment = builder.ioEnvironment == null
+      ? IoEnvironment.create()
+      : builder.ioEnvironment;
 
     if (this.eventBus instanceof OwnedSupplier) {
       ((DefaultEventBus) eventBus.get()).start();
@@ -92,7 +96,7 @@ public class CoreEnvironment {
    * @return the IO environment currently in use.
    */
   public IoEnvironment ioEnvironment() {
-    return null;
+    return ioEnvironment;
   }
 
   /**
@@ -110,6 +114,7 @@ public class CoreEnvironment {
     private Supplier<String> userAgent = null;
     private Supplier<EventBus> eventBus = null;
     private Timer timer = null;
+    private IoEnvironment ioEnvironment = null;
 
     @SuppressWarnings({ "unchecked" })
     protected SELF self() {

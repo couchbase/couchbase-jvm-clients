@@ -27,6 +27,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+
+import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
@@ -76,7 +80,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     if (msg instanceof Request) {
       this.request = (Request) msg;
       ctx.write(encode(ctx, (Request) msg));
-      System.err.println("wrote...");
     } else {
       // todo: terminate this channel and raise an event, this is not supposed to happen
     }
@@ -107,11 +110,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-    System.err.println("Reading!" + msg);
-
+    // System.err.println(msg);
     if (msg instanceof ByteBuf) {
-      System.err.println("--->  0x" + Integer.toHexString(status((ByteBuf) msg)));
       request.succeed(new GetResponse());
+      ((ByteBuf) msg).release();
+     // ctx.channel().writeAndFlush(new GetRequest("foobar".getBytes(CharsetUtil.UTF_8), Duration.ZERO, null));
     } else {
       // todo: ERROR!!
     }

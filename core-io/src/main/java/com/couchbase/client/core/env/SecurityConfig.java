@@ -4,7 +4,11 @@ public class SecurityConfig {
 
   private boolean certAuthEnabled;
 
-  public SecurityConfig(boolean certAuthEnabled) {
+  public static SecurityConfig create() {
+    return new SecurityConfig(false);
+  }
+
+  private SecurityConfig(boolean certAuthEnabled) {
     this.certAuthEnabled = certAuthEnabled;
   }
 

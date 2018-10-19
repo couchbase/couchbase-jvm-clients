@@ -17,26 +17,24 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
-import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoEnvironment;
-import com.couchbase.client.core.env.SaslMechanism;
-import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.DefaultSelectStrategyFactory;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SelectStrategyFactory;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
-import java.util.EnumSet;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * This will go away, it is just to demo the kv connect steps in a
@@ -44,53 +42,51 @@ import static org.mockito.Mockito.when;
  */
 public class ConnectSample {
 
-  public static void main(String... args) throws Exception {
-    DefaultEventBus eventBus = DefaultEventBus.create();
-    IoEnvironment ioEnv = mock(IoEnvironment.class);
-    when(ioEnv.connectTimeout()).thenReturn(Duration.ofSeconds(1));
-    CoreEnvironment coreConfig = mock(CoreEnvironment.class);
-    when(coreConfig.eventBus()).thenReturn(eventBus);
-    when(coreConfig.userAgent()).thenReturn("core-io");
-    when(coreConfig.ioEnvironment()).thenReturn(ioEnv);
-    CompressionConfig cc = mock(CompressionConfig.class);
-    SecurityConfig sc = mock(SecurityConfig.class);
-    when(cc.enabled()).thenReturn(true);
-    when(sc.certAuthEnabled()).thenReturn(false);
-    when(ioEnv.compressionConfig()).thenReturn(cc);
-    when(ioEnv.securityConfig()).thenReturn(sc);
-    when(ioEnv.allowedSaslMechanisms()).thenReturn(EnumSet.of(SaslMechanism.PLAIN));
+  static {
+   //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+  }
 
-    eventBus.subscribe(LoggingEventConsumer.builder()
+  public static void main(String... args) throws Exception {
+    CoreEnvironment environment = CoreEnvironment.create();
+
+    environment.eventBus().subscribe(LoggingEventConsumer.builder()
       .disableSlf4J(true)
       .fallbackToConsole(true)
       .build());
-    eventBus.start();
 
-    final CoreContext ctx = new CoreContext(1234, coreConfig);
+    final CoreContext ctx = new CoreContext(1234, environment);
     final Duration timeout = Duration.ofSeconds(1);
 
 
+    SelectStrategyFactory factory = DefaultSelectStrategyFactory.INSTANCE;
+
+    SelectStrategyFactory f2 = () -> (supplier, hasTasks) -> supplier.get();
+
+
+    EventLoopGroup group = environment.ioEnvironment().kvEventLoopGroup().get();
+    Class<? extends Channel> c;
+    if (group instanceof EpollEventLoopGroup) {
+      c = EpollSocketChannel.class;
+    } else if (group instanceof KQueueEventLoopGroup) {
+      c = KQueueSocketChannel.class;
+    } else {
+      c = NioSocketChannel.class;
+    }
+
     ChannelFuture connect = new Bootstrap()
-      .group(new NioEventLoopGroup())
-      .channel(NioSocketChannel.class)
+      .group(group)
+      .channel(c)
       .remoteAddress("127.0.0.1", 11210)
       .handler(new KeyValueChannelInitializer(ctx, "travel-sample", "Administrator", "password"))
       .connect();
 
-    connect.awaitUninterruptibly().addListeners(new ChannelFutureListener() {
-      @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
-        System.err.println(ConnectTimings.export(future.channel()));
-        if (future.isSuccess()) {
-          GetRequest request = new GetRequest("airline_10".getBytes(CharsetUtil.UTF_8), timeout, null);
-          future.channel().writeAndFlush(request);
-          request.response().whenComplete((getResponse, throwable) -> System.err.println(getResponse));
-        } else {
-          System.err.println(future.cause());
-        }
-      }
-    });
+    Channel channel = connect.awaitUninterruptibly().channel();
 
+    for (int i = 0; i < Integer.MAX_VALUE; i++) {
+      GetRequest request = new GetRequest("foobar".getBytes(CharsetUtil.UTF_8), timeout, null);
+      channel.writeAndFlush(request);
+      request.response().get();
+    }
 
     Thread.sleep(100000);
   }

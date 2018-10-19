@@ -22,6 +22,9 @@ public class CompressionConfig {
   private final int minSize;
   private final double minRatio;
 
+  public static CompressionConfig create() {
+    return new CompressionConfig(true, 0, 0);
+  }
   private CompressionConfig(boolean enabled, int minSize, double minRatio) {
     this.enabled = enabled;
     this.minRatio = minRatio;

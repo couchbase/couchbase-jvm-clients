@@ -13,6 +13,7 @@ Loosely keeping track of things:
 
 ## Env
  
+ - make sure all properties have suppliers!
  - allow to configure the env through certain config providers
  - make the UserAgent an actual object with parts and a toString
  
