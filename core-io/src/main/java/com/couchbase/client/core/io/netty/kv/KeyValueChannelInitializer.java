@@ -20,8 +20,6 @@ import com.couchbase.client.core.CoreContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;

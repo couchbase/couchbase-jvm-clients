@@ -33,7 +33,6 @@ import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDu
 import static com.couchbase.client.utils.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

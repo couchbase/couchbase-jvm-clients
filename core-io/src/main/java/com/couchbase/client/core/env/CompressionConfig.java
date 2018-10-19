@@ -23,7 +23,8 @@ public class CompressionConfig {
   private final double minRatio;
 
   public static CompressionConfig create() {
-    return new CompressionConfig(false, 0, 0);
+    // TODO: fixme, this should be true by default.
+    return new CompressionConfig(false, 32, 0.83);
   }
   private CompressionConfig(boolean enabled, int minSize, double minRatio) {
     this.enabled = enabled;
