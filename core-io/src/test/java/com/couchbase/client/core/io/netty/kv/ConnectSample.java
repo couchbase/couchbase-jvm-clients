@@ -32,6 +32,7 @@ import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ResourceLeakDetector;
 
 import java.time.Duration;
 
@@ -43,7 +44,7 @@ import java.time.Duration;
 public class ConnectSample {
 
   static {
-   //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+   ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
   }
 
   public static void main(String... args) throws Exception {
@@ -83,9 +84,11 @@ public class ConnectSample {
     Channel channel = connect.awaitUninterruptibly().channel();
 
     for (int i = 0; i < Integer.MAX_VALUE; i++) {
-      GetRequest request = new GetRequest("foobar".getBytes(CharsetUtil.UTF_8), timeout, null);
+      GetRequest request = new GetRequest("airline_10".getBytes(CharsetUtil.UTF_8), timeout, null);
+      request.partition((short) 41);
       channel.writeAndFlush(request);
-      request.response().get();
+      System.err.println(new String(request.response().get().content(), CharsetUtil.UTF_8));
+      break;
     }
 
     Thread.sleep(100000);

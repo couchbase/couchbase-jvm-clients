@@ -17,27 +17,27 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
-import java.time.Duration;
+import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 /**
  * This handler is responsible for encoding KV requests and completing them once
@@ -47,17 +47,24 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
  */
 public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
-  private Request request;
-
   /**
    * Stores the current opaque value.
    */
   private int opaque;
 
+  /**
+   * Stores the {@link CoreContext} for use.
+   */
   private final CoreContext coreContext;
+
+  /**
+   * Holds all outstanding requests based on their opaque.
+   */
+  private final IntObjectMap<KeyValueRequest> writtenRequests;
 
   public KeyValueMessageHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
+    this.writtenRequests = new IntObjectHashMap<>();
   }
 
   /**
@@ -70,54 +77,61 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param ctx the channel context.
    */
   @Override
-  public void channelActive(ChannelHandlerContext ctx) throws Exception {
+  public void channelActive(final ChannelHandlerContext ctx) {
     opaque = Utils.opaque(ctx.channel(), false);
     ctx.fireChannelActive();
   }
 
   @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-    if (msg instanceof Request) {
-      this.request = (Request) msg;
-      ctx.write(encode(ctx, (Request) msg));
+  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    if (msg instanceof KeyValueRequest) {
+      KeyValueRequest request = (KeyValueRequest) msg;
+
+      int nextOpaque = ++opaque;
+      handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
+      ctx.write(request.encode(ctx.alloc(), nextOpaque));
     } else {
       // todo: terminate this channel and raise an event, this is not supposed to happen
     }
   }
 
-  private ByteBuf encode(ChannelHandlerContext ctx, final Request request) {
-    if (request instanceof GetRequest) {
-      return encodeGet(ctx, (GetRequest) request);
+  private void handleSameOpaqueRequest(final KeyValueRequest requestWithSameOpaque) {
+    if (requestWithSameOpaque == null) {
+      return;
     }
-    return null;
-  }
 
-  private ByteBuf encodeGet(ChannelHandlerContext ctx, final GetRequest request) {
-    ByteBuf key = Unpooled.wrappedBuffer(request.key());
-    ByteBuf r = MemcacheProtocol.request(
-      ctx.alloc(),
-      MemcacheProtocol.Opcode.GET,
-      noDatatype(),
-      noPartition(),
-      ++opaque,
-      noCas(),
-      noExtras(),
-      key,
-      noBody());
-    key.release();
-    return r;
+    // TODO: figure out what to do if there was already one request with the
+    // TODO: same opaque.. likely the new one, before sending, needs to be
+    // TODO: assigned a new opaque!
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-    // System.err.println(msg);
+  public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof ByteBuf) {
-      request.succeed(new GetResponse());
-      ((ByteBuf) msg).release();
-     // ctx.channel().writeAndFlush(new GetRequest("foobar".getBytes(CharsetUtil.UTF_8), Duration.ZERO, null));
+      decode(ctx, (ByteBuf) msg);
     } else {
-      // todo: ERROR!!
+      // todo: ERROR!! something weird came back...
     }
+  }
+
+  /**
+   * Main method to start dispatching the decode.
+   *
+   * @param ctx
+   * @param response
+   */
+  private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
+    int opaque = MemcacheProtocol.opaque(response);
+    KeyValueRequest request = writtenRequests.remove(opaque);
+    if (request == null) {
+      // todo: this is a problem! no request found with the opaque for a given
+      // todo: response.. server error? ignore the request and release its resources
+      // todo: but raise event if this happens and keep going...
+    }
+    Response decoded = request.decode(response);
+    request.succeed(decoded);
+
+    ReferenceCountUtil.release(response);
   }
 
 }

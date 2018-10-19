@@ -14,23 +14,29 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg;
+package com.couchbase.client.core.msg.kv;
 
-/**
- * This interface is the base entity for all Responses flowing through the client.
- *
- * @since 2.0.0
- */
-public interface Response {
+import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.Response;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+
+public interface KeyValueRequest<RES extends Response> extends Request<RES> {
 
   /**
-   * Holds the status of the response.
-   *
-   * <p>Note that it might indicate a successful response or an error of some other sorts. Please
-   * see the enum for further description of the potential states it can be in.</p>
-   *
-   * @return the status for this response.
+   * Reads the currently set partition this request is targeted against.
    */
-  ResponseStatus status();
+  short partition();
+
+  /**
+   * Allows to set the partition used for this request.
+   *
+   * @param partition the partition to set.
+   */
+  void partition(short partition);
+
+  ByteBuf encode(ByteBufAllocator alloc, int opaque);
+
+  RES decode(ByteBuf response);
 
 }

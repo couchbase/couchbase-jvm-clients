@@ -16,21 +16,17 @@
 
 package com.couchbase.client.core.msg;
 
-/**
- * This interface is the base entity for all Responses flowing through the client.
- *
- * @since 2.0.0
- */
-public interface Response {
+public class BaseResponse implements Response {
 
-  /**
-   * Holds the status of the response.
-   *
-   * <p>Note that it might indicate a successful response or an error of some other sorts. Please
-   * see the enum for further description of the potential states it can be in.</p>
-   *
-   * @return the status for this response.
-   */
-  ResponseStatus status();
+  private final ResponseStatus status;
+
+  protected BaseResponse(ResponseStatus status) {
+    this.status = status;
+  }
+
+  @Override
+  public ResponseStatus status() {
+    return status;
+  }
 
 }

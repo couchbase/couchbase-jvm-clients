@@ -16,20 +16,30 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.msg.BaseResponse;
-import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.Response;
 
-public class GetResponse extends BaseResponse {
+import java.time.Duration;
 
-  private final byte[] content;
+public abstract class BaseKeyValueRequest<RES extends Response>
+  extends BaseRequest<RES>
+  implements KeyValueRequest<RES> {
 
-  public GetResponse(final ResponseStatus status, final byte[] content) {
-    super(status);
-    this.content = content;
+  private volatile short partition;
+
+  protected BaseKeyValueRequest(final Duration timeout, final RequestContext ctx) {
+    super(timeout, ctx);
   }
 
-  public byte[] content() {
-    return content;
+  @Override
+  public short partition() {
+    return partition;
+  }
+
+  @Override
+  public void partition(short partition) {
+    this.partition = partition;
   }
 
 }

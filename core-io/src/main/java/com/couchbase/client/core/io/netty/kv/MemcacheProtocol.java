@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.msg.ResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -28,7 +29,7 @@ import java.util.Optional;
  *
  * @since 2.0.0
  */
-enum MemcacheProtocol {
+public enum MemcacheProtocol {
   ;
 
   /**
@@ -71,7 +72,10 @@ enum MemcacheProtocol {
    */
   static final int TOTAL_LENGTH_OFFSET = 8;
 
-  static final short STATUS_SUCCESS = 0x00;
+  /**
+   * The offset for the opaque field.
+   */
+  static final int OPAQUE_OFFSET = 12;
 
   /**
    * Create a memcached protocol request with all fields necessary.
@@ -87,7 +91,7 @@ enum MemcacheProtocol {
    * @param body
    * @return the created request.
    */
-  static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
+  public static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
                          final short partition, final int opaque, final long cas,
                          final ByteBuf extras, final ByteBuf key, final ByteBuf body) {
     int keySize = key.readableBytes();
@@ -140,18 +144,28 @@ enum MemcacheProtocol {
   }
 
   /**
+   * Helper method to return the opaque value for the given request or response.
+   *
+   * @param message the message to get the opaque from.
+   * @return the opaque as an int.
+   */
+  static int opaque(final ByteBuf message) {
+    return message.getInt(OPAQUE_OFFSET);
+  }
+
+  /**
    * Returns the body of the message if available.
    *
    * @param message the message of the body or empty if none found.
    * @return an optional either containing the body of the message or none.
    */
-  static Optional<ByteBuf> body(final ByteBuf message) {
+  public static Optional<ByteBuf> body(final ByteBuf message) {
     if (message == null) {
       return Optional.empty();
     }
     boolean flexible = message.getByte(0) == MAGIC_FLEXIBLE;
 
-    int totalBodyLength = message.getInt(8);
+    int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
     int keyLength = flexible ? message.getByte(3) : message.getShort(2);
     int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
     int extrasLength = message.getByte(4);
@@ -210,56 +224,84 @@ enum MemcacheProtocol {
   /**
    * Helper to express no key is used for this message.
    */
-  static ByteBuf noKey() {
+  public static ByteBuf noKey() {
     return Unpooled.EMPTY_BUFFER;
   }
 
   /**
    * Helper to express no extras are used for this message.
    */
-  static ByteBuf noExtras() {
+  public static ByteBuf noExtras() {
     return Unpooled.EMPTY_BUFFER;
   }
 
   /**
    * Helper to express no body is used for this message.
    */
-  static ByteBuf noBody() {
+  public static ByteBuf noBody() {
     return Unpooled.EMPTY_BUFFER;
   }
 
   /**
    * Helper to express no datatype is used for this message.
    */
-  static byte noDatatype() {
+  public static byte noDatatype() {
     return 0;
   }
 
   /**
    * Helper to express no partition is used for this message.
    */
-  static short noPartition() {
+  public static short noPartition() {
     return 0;
   }
 
   /**
    * Helper to express no opaque is used for this message.
    */
-  static int noOpaque() {
+  public static int noOpaque() {
     return 0;
   }
 
   /**
    * Helper to express no cas is used for this message.
    */
-  static long noCas() {
+  public static long noCas() {
     return 0;
+  }
+
+  /**
+   * Decodes and converts the status from a message.
+   *
+   * <p>This is a convenience method usually used in decoders.</p>
+   *
+   * @param message the message to extract from.
+   * @return the decoded status.
+   */
+  public static ResponseStatus decodeStatus(ByteBuf message) {
+    return decodeStatus(status(message));
+  }
+
+  /**
+   * Converts the KeyValue protocol status into its generic format.
+   *
+   * @param status the protocol status.
+   * @return the response status.
+   */
+  public static ResponseStatus decodeStatus(short status) {
+    if (status == Status.SUCCESS.status) {
+      return ResponseStatus.SUCCESS;
+    } else if (status == Status.NOT_FOUND.status) {
+      return ResponseStatus.NOT_FOUND;
+    } else {
+      return ResponseStatus.UNKNOWN;
+    }
   }
 
   /**
    * Contains all known/used kv protocol opcodes.
    */
-  enum Opcode {
+  public enum Opcode {
     /**
      * The get command.
      */
