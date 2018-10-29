@@ -19,7 +19,10 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.function.Supplier;
 
 /**
@@ -54,6 +57,9 @@ public class CoreEnvironment {
     if (this.eventBus instanceof OwnedSupplier) {
       ((DefaultEventBus) eventBus.get()).start();
     }
+
+    // TODO: make configurable!
+    eventBus.get().subscribe(LoggingEventConsumer.create());
   }
 
   public static CoreEnvironment create() {
@@ -107,6 +113,15 @@ public class CoreEnvironment {
    */
   public Timer timer() {
     return timer;
+  }
+
+  public void shutdown(final Duration timeout) {
+    shutdownAsync(timeout).block();
+  }
+
+  public Mono<Void> shutdownAsync(final Duration timeout) {
+    // todo: implement
+    return Mono.empty();
   }
 
   public static class Builder<SELF extends Builder<SELF>> {

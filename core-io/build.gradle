@@ -3,6 +3,7 @@ plugins {
   id 'nebula.optional-base' version '3.0.3'
   id 'maven-publish'
   id 'checkstyle'
+  id 'idea'
 }
 
 version = '2.0.0-SNAPSHOT'
@@ -12,10 +13,26 @@ java {
   targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+sourceSets {
+  integrationTest {
+    compileClasspath += sourceSets.main.output + configurations.testCompile
+    runtimeClasspath += output + compileClasspath + configurations.testRuntime
+  }
+}
+
+idea {
+  module {
+    testSourceDirs += sourceSets.integrationTest.java.srcDirs
+    testResourceDirs += sourceSets.integrationTest.resources.srcDirs
+    scopes.TEST.plus += [ configurations.integrationTestCompile ]
+  }
+}
+
 dependencies {
   compile 'io.netty:netty-all:4.1.30.Final'
   compile 'org.jctools:jctools-core:2.1.1'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
+  compile 'io.projectreactor:reactor-core:3.2.1.RELEASE'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
 
   compile 'com.graphql-java:graphql-java:10.0'
@@ -25,6 +42,9 @@ dependencies {
   testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.1'
   testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.1'
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+
+  integrationTestCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
+  integrationTestCompile 'org.testcontainers:testcontainers:1.9.1'
 }
 
 test {
@@ -66,6 +86,18 @@ publishing {
     }
   }
 }
+
+
+task integrationTest(type: Test) {
+  description = 'Runs the integration tests.'
+  group = 'verification'
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  outputs.upToDateWhen { false }
+  mustRunAfter test
+}
+
+check.dependsOn integrationTest
 
 checkstyle {
   toolVersion = "8.12"

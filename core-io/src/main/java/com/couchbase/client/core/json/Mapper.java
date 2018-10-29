@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.json;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Mapper {
@@ -92,6 +93,20 @@ public class Mapper {
   public static <T> T decodeInto(byte[] input, Class<T> clazz) {
     try {
       return MAPPER.readValue(input, clazz);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + input, ex);
+    }
+  }
+
+  /**
+   * Decodes a byte array into a json node token tree.
+   *
+   * @param input the input byte array.
+   * @return the created node.
+   */
+  public static JsonNode decodeIntoTree(byte[] input) {
+    try {
+      return MAPPER.readTree(input);
     } catch (Exception ex) {
       throw new MapperException("Could not decode from JSON: " + input, ex);
     }

@@ -309,6 +309,10 @@ public enum MemcacheProtocol {
      */
     GET((byte) 0x00),
     /**
+     * The noop command.
+     */
+    NOOP((byte) 0x0a),
+    /**
      * The hello command used during bootstrap to negoatiate the features.
      */
     HELLO((byte) 0x1f),

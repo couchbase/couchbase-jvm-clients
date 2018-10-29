@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
+import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import io.netty.buffer.ByteBuf;
@@ -158,12 +159,19 @@ class SelectBucketHandler extends ChannelDuplexHandler {
         interceptedConnectPromise.trySuccess();
         ctx.pipeline().remove(this);
         ctx.fireChannelActive();
+      } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
+        coreContext.environment().eventBus().publish(
+          new SelectBucketFailedEvent(ioContext, status)
+        );
+        interceptedConnectPromise.tryFailure(
+          new AuthenticationException("No Access to bucket " + bucketName)
+        );
       } else {
         coreContext.environment().eventBus().publish(
           new SelectBucketFailedEvent(ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
-          new CouchbaseException("Select bucket failed with status code 0x"
+          new CouchbaseException("Select bucket failed with unexpected status code 0x"
             + Integer.toHexString(status))
         );
       }
