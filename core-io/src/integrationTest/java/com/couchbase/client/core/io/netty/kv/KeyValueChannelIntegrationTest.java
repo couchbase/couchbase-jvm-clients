@@ -79,7 +79,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
    * @throws Exception if waiting on the response fails.
    */
   @Test
-  void connectAndDisconnect() throws Exception {
+  void connectNoopAndDisconnect() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
       .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))

@@ -21,10 +21,10 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.couchbase.client.utils.Assertions.assertThreadNotRunning;
-import static com.couchbase.client.utils.Assertions.assertThreadRunning;
-import static com.couchbase.client.utils.Utils.threadRunning;
-import static com.couchbase.client.utils.Utils.waitUntilCondition;
+import static com.couchbase.client.util.Assertions.assertThreadNotRunning;
+import static com.couchbase.client.util.Assertions.assertThreadRunning;
+import static com.couchbase.client.util.Utils.threadRunning;
+import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

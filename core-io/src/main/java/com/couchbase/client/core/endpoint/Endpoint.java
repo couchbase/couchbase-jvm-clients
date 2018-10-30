@@ -19,7 +19,6 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 
-
 /**
  * The parent interface for all endpoints.
  *
@@ -57,7 +56,7 @@ public interface Endpoint {
    *
    * @param request the request to send.
    */
-  void send(Request<Response> request);
+  <R extends Request<? extends Response>> void send(R request);
 
   /**
    * Returns the current state of this {@link Endpoint}.

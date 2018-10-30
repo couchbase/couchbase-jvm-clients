@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.utils;
+package com.couchbase.client.util;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

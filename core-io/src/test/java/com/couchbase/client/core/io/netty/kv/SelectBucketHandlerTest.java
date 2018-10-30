@@ -21,7 +21,7 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
-import com.couchbase.client.utils.SimpleEventBus;
+import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;

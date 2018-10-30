@@ -17,7 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
-import static com.couchbase.client.utils.Utils.readResource;
+import static com.couchbase.client.util.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.netty.buffer.ByteBuf;

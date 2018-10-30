@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.utils;
+package com.couchbase.client.util;
 
 import java.io.InputStream;
 import java.util.function.BooleanSupplier;

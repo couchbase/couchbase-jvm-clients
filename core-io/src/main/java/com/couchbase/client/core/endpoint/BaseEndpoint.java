@@ -164,7 +164,7 @@ public abstract class BaseEndpoint implements Endpoint {
           // todo: meantime
         } else {
           this.channel = channel;
-          state.set(EndpointState.CONNECTED_CIRCUIT_OPEN);
+          state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
           // todo: debug log we are connected.
         }
       });
@@ -173,10 +173,12 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public void disconnect() {
     if (disconnect.compareAndSet(false, true)) {
+      state.set(EndpointState.DISCONNECTING);
       if (channel != null) {
         channel.disconnect().addListener(new ChannelFutureListener() {
           @Override
           public void operationComplete(ChannelFuture future) throws Exception {
+            state.set(EndpointState.DISCONNECTED);
             // todo: track and log proper shutdown
           }
         });
@@ -185,8 +187,13 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   @Override
-  public void send(final Request<Response> request) {
-
+  public <R extends Request<? extends Response>> void send(R request) {
+    if (state.get() == EndpointState.CONNECTED_CIRCUIT_CLOSED) {
+      // todo: make sure channel is writable and active before writing?
+      channel.writeAndFlush(request);
+    } else {
+      // todo: handle me all cases
+    }
   }
 
   @Override
