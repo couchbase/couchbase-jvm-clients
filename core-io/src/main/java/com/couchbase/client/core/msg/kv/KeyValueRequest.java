@@ -21,6 +21,12 @@ import com.couchbase.client.core.msg.Response;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
+/**
+ * Main parent interface for all Key/Value requests.
+ *
+ * @param <RES> the generic type of the response.
+ * @since 1.0.0
+ */
 public interface KeyValueRequest<RES extends Response> extends Request<RES> {
 
   /**
@@ -35,8 +41,21 @@ public interface KeyValueRequest<RES extends Response> extends Request<RES> {
    */
   void partition(short partition);
 
+  /**
+   * Encode this request with the given allocator and opaque.
+   *
+   * @param alloc the allocator where to grab the buffers from.
+   * @param opaque the opaque value to use.
+   * @return the encoded request as a {@link ByteBuf}.
+   */
   ByteBuf encode(ByteBufAllocator alloc, int opaque);
 
+  /**
+   * Decode the encoded response into its message representation.
+   *
+   * @param response the response to decode.
+   * @return the decoded response as {@link RES}.
+   */
   RES decode(ByteBuf response);
 
 }

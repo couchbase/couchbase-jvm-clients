@@ -16,9 +16,13 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.error.StoppedListeningException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
+
+import java.util.function.Function;
 
 /**
  * This class provides utility methods when working with reactor.
@@ -32,11 +36,20 @@ public enum Reactor {
    * Wraps a {@link Request} and returns it in a {@link Mono}.
    *
    * @param request the request to wrap.
+   * @param propagateCancellation if a cancelled/unsubscribed mono should also cancel the
+   *                              request.
    * @return the mono that wraps the request.
    */
-  public <T extends Response> Mono<T> wrap(final Request<T> request) {
-    // todo: how do we signal mono subscription cancellation into the request?
-    return Mono.fromFuture(request.response());
+  public static <T extends Response> Mono<T> wrap(final Request<T> request,
+                                                  final boolean propagateCancellation) {
+    Mono<T> mono = Mono.fromFuture(request.response());
+    if (propagateCancellation) {
+      mono = mono
+        .doFinally(st -> request.fail(StoppedListeningException.INSTANCE))
+        // this is a workaround for https://github.com/reactor/reactor/issues/652
+        .onErrorResume(e -> e instanceof StoppedListeningException ? Mono.empty() : Mono.error(e));
+    }
+    return mono;
   }
 
 }
