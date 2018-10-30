@@ -37,6 +37,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import reactor.core.publisher.Mono;
 
+import java.nio.channels.Pipe;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
@@ -98,7 +99,7 @@ public abstract class BaseEndpoint implements Endpoint {
         @Override
         protected void initChannel(SocketChannel ch) {
           ChannelPipeline pipeline = ch.pipeline();
-          extendPipeline(pipeline);
+          pipelineInitializer().init(pipeline);
         }
       });
   }
@@ -124,11 +125,9 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   /**
-   * Allows to customize the channel pipeline on connection setup.
-   *
-   * @param pipeline the pipeline to extend.
+   * Returns the initialize which adds endpoint-specific handlers to the pipeline.
    */
-  protected abstract void extendPipeline(final ChannelPipeline pipeline);
+  protected abstract PipelineInitializer pipelineInitializer();
 
   /**
    * Starts the connect process of this endpoint.

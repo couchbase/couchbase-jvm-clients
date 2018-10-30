@@ -50,38 +50,59 @@ public class KeyValueEndpoint extends BaseEndpoint {
   }
 
   @Override
-  protected void extendPipeline(final ChannelPipeline pipeline) {
-    pipeline.addLast(new MemcacheProtocolDecodeHandler());
-    pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
-
-    pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
-    pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
-
-    if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
-      pipeline.addLast(new SaslAuthenticationHandler(coreContext, username, password));
-    }
-
-    pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));
-    pipeline.addLast(new KeyValueMessageHandler(coreContext));
+  protected PipelineInitializer pipelineInitializer() {
+    return new KeyValuePipelineInitializer(coreContext, username, bucketname, password);
   }
 
-  /**
-   * Returns the server features that should be negotiated.
-   *
-   * @return the server features to negotiate.
-   */
-  private Set<ServerFeature> serverFeatures() {
-    Set<ServerFeature> features = new HashSet<>(Arrays.asList(
-      ServerFeature.SELECT_BUCKET,
-      ServerFeature.XATTR,
-      ServerFeature.XERROR
-    ));
+  public static class KeyValuePipelineInitializer implements PipelineInitializer {
 
-    if (coreContext.environment().ioEnvironment().compressionConfig().enabled()) {
-      features.add(ServerFeature.SNAPPY);
+    private final CoreContext coreContext;
+    private final String username;
+    private final String bucketname;
+    private final String password;
+
+    public KeyValuePipelineInitializer(CoreContext coreContext, String username, String bucketname,
+                                       String password) {
+      this.coreContext = coreContext;
+      this.username = username;
+      this.bucketname = bucketname;
+      this.password = password;
     }
 
-    return features;
+    @Override
+    public void init(ChannelPipeline pipeline) {
+      pipeline.addLast(new MemcacheProtocolDecodeHandler());
+      pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
+
+      pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
+      pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
+
+      if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
+        pipeline.addLast(new SaslAuthenticationHandler(coreContext, username, password));
+      }
+
+      pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));
+      pipeline.addLast(new KeyValueMessageHandler(coreContext));
+    }
+
+    /**
+     * Returns the server features that should be negotiated.
+     *
+     * @return the server features to negotiate.
+     */
+    private Set<ServerFeature> serverFeatures() {
+      Set<ServerFeature> features = new HashSet<>(Arrays.asList(
+        ServerFeature.SELECT_BUCKET,
+        ServerFeature.XATTR,
+        ServerFeature.XERROR
+      ));
+
+      if (coreContext.environment().ioEnvironment().compressionConfig().enabled()) {
+        features.add(ServerFeature.SNAPPY);
+      }
+
+      return features;
+    }
   }
 
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.msg.RequestContext;
@@ -28,7 +29,9 @@ import com.couchbase.client.util.TestNodeConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,12 +85,17 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
       .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
-      .handler(new KeyValueChannelInitializer(
-        coreContext,
-        config().bucketname(),
-        config().adminUsername(),
-        config().adminPassword()
-      ));
+      .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) {
+          new KeyValueEndpoint.KeyValuePipelineInitializer(
+            coreContext,
+            config().adminUsername(),
+            config().bucketname(),
+            config().adminPassword()
+          ).init(ch.pipeline());
+        }
+      });
 
     Channel channel = bootstrap.connect().awaitUninterruptibly().channel();
     assertTrue(channel.isActive());
@@ -108,12 +116,17 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
       .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
-      .handler(new KeyValueChannelInitializer(
-        coreContext,
-        config().bucketname(),
-        config().adminUsername(),
-        "djslkfsdfsoufhoshfoishgs"
-      ));
+      .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) {
+          new KeyValueEndpoint.KeyValuePipelineInitializer(
+            coreContext,
+            config().adminUsername(),
+            config().bucketname(),
+            "djslkfsdfsoufhoshfoishgs"
+          ).init(ch.pipeline());
+        }
+      });
 
     assertAuthenticationFailure(bootstrap, "Authentication Failure");
   }
@@ -125,12 +138,17 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
       .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
-      .handler(new KeyValueChannelInitializer(
-        coreContext,
-        config().bucketname(),
-        "vfwmf42343rew",
-        config().adminPassword()
-      ));
+      .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) {
+          new KeyValueEndpoint.KeyValuePipelineInitializer(
+            coreContext,
+            "vfwmf42343rew",
+            config().bucketname(),
+            config().adminPassword()
+          ).init(ch.pipeline());
+        }
+      });
 
     assertAuthenticationFailure(bootstrap, "Authentication Failure");
   }
@@ -142,15 +160,21 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
       .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
-      .handler(new KeyValueChannelInitializer(
-        coreContext,
-        "42eredwefrfe",
-        config().adminUsername(),
-        config().adminPassword()
-      ));
+      .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) {
+          new KeyValueEndpoint.KeyValuePipelineInitializer(
+            coreContext,
+            config().adminUsername(),
+            "42eredwefrfe",
+            config().adminPassword()
+          ).init(ch.pipeline());
+        }
+      });
 
     assertAuthenticationFailure(bootstrap, "No Access to bucket 42eredwefrfe");
   }
+
 
   /**
    * Helper method to assert authentication failure in different scenarios.
