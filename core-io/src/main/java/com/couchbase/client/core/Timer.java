@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import io.netty.util.HashedWheelTimer;
@@ -32,16 +33,6 @@ import java.util.concurrent.TimeoutException;
  * @since 2.0.0
  */
 public class Timer {
-
-  /**
-   * Pre-create a {@link TimeoutException} for better performance, since where the
-   * timeout happens the stack trace is useless anyways.
-   */
-  private static final TimeoutException TIMEOUT_EXCEPTION = new TimeoutException();
-
-  static {
-    TIMEOUT_EXCEPTION.setStackTrace(new StackTraceElement[0]);
-  }
 
   /**
    * The internal timer.
@@ -82,7 +73,7 @@ public class Timer {
    */
   public void register(final Request<Response> request) {
     final Timeout registration = wheelTimer.newTimeout(
-      timeout -> request.fail(TIMEOUT_EXCEPTION),
+      timeout -> request.cancel(CancellationReason.TIMEOUT),
       request.timeout().toNanos(),
       TimeUnit.NANOSECONDS
     );

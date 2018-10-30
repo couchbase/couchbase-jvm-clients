@@ -19,6 +19,11 @@ package com.couchbase.client.core.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * Provides utilities for encoding and decoding JSON data.
+ *
+ * @since 2.0.0
+ */
 public class Mapper {
 
   private Mapper() {

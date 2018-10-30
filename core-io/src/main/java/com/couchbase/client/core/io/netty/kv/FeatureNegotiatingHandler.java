@@ -60,7 +60,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
  * @since 2.0.0
  */
 @Stability.Internal
-class FeatureNegotiatingHandler extends ChannelDuplexHandler {
+public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
 
   /**
    * Holds the timeout for the full feature negotiation phase.
@@ -95,7 +95,7 @@ class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    * @param coreContext the core context used to refer to values like the core id.
    * @param features    the list of features that should be negotiated from the client side.
    */
-  FeatureNegotiatingHandler(final CoreContext coreContext,
+  public FeatureNegotiatingHandler(final CoreContext coreContext,
                             final Set<ServerFeature> features) {
     this.coreContext = coreContext;
     this.timeout = coreContext.environment().ioEnvironment().connectTimeout();

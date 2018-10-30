@@ -17,12 +17,12 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.error.StoppedListeningException;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
-import java.util.function.Function;
+import java.util.concurrent.CancellationException;
 
 /**
  * This class provides utility methods when working with reactor.
@@ -45,9 +45,9 @@ public enum Reactor {
     Mono<T> mono = Mono.fromFuture(request.response());
     if (propagateCancellation) {
       mono = mono
-        .doFinally(st -> request.fail(StoppedListeningException.INSTANCE))
+        .doFinally(st -> request.cancel(CancellationReason.STOPPED_LISTENING))
         // this is a workaround for https://github.com/reactor/reactor/issues/652
-        .onErrorResume(e -> e instanceof StoppedListeningException ? Mono.empty() : Mono.error(e));
+        .onErrorResume(e -> e instanceof CancellationException ? Mono.empty() : Mono.error(e));
     }
     return mono;
   }

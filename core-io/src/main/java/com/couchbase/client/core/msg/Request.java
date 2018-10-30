@@ -48,6 +48,11 @@ public interface Request<RES extends Response> {
   void fail(Throwable error);
 
   /**
+   * Cancels this request.
+   */
+  void cancel(CancellationReason reason);
+
+  /**
    * If attached, returns the context for this request.
    *
    * @return the request context if attached.
@@ -60,5 +65,41 @@ public interface Request<RES extends Response> {
    * @return the timeout for this request.
    */
   Duration timeout();
+
+  /**
+   * Allows to check if this request is completed already.
+   *
+   * @return true if completed, failed or cancelled.
+   */
+  boolean completed();
+
+  /**
+   * Allows to check if this request has been successfully completed.
+   *
+   * @return true if succeeded, false otherwise.
+   */
+  boolean succeeded();
+
+  /**
+   * Allows to check if this request has been completed but with an exception.
+   *
+   * @return true if failed, false otherwise.
+   */
+  boolean failed();
+
+  /**
+   * Allows to check if this request has been cancelled before it got a chance
+   * to be either failed or succeeded.
+   *
+   * @return true if cancelled, false otherwise.
+   */
+  boolean cancelled();
+
+  /**
+   * If the request is {@link #cancelled()}, this returns the reason why.
+   *
+   * @return the cancellation reason if cancelled, null otherwise.
+   */
+  CancellationReason cancellationReason();
 
 }

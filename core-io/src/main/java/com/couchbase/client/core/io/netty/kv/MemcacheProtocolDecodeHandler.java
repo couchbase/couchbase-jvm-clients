@@ -24,7 +24,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
  *
  * @since 2.0.0
  */
-class MemcacheProtocolDecodeHandler extends LengthFieldBasedFrameDecoder {
+public class MemcacheProtocolDecodeHandler extends LengthFieldBasedFrameDecoder {
 
   /**
    * Approximates the maximum frame length. Technically it can be longer
@@ -62,7 +62,7 @@ class MemcacheProtocolDecodeHandler extends LengthFieldBasedFrameDecoder {
    */
   private static final int INITIAL_BYTES_TO_STRIP = 0;
 
-  MemcacheProtocolDecodeHandler() {
+  public MemcacheProtocolDecodeHandler() {
     super(
       MAX_FRAME_LENGTH,
       LENGTH_FIELD_OFFSET,

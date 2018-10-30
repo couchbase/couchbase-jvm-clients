@@ -30,6 +30,11 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 
+/**
+ * Represents a NOOP KV Request, doing nothing. really.
+ *
+ * @since 2.0.0
+ */
 public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
   public NoopRequest(final Duration timeout, final RequestContext ctx) {
@@ -52,7 +57,7 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
   }
 
   @Override
-  public NoopResponse decode(ByteBuf response) {
+  public NoopResponse decode(final ByteBuf response) {
     return new NoopResponse(MemcacheProtocol.decodeStatus(response));
   }
 }

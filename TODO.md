@@ -5,9 +5,6 @@ Loosely keeping track of things:
 
 ## Requests
 
- - add the possibility to "cancel" a request. for example if the completable future is 
-   wrapped into a single or flux and it gets unsubscribed (timeout, not needed anymore) this 
-   should automatically propagate through and if the op is not scheduled yet just avoid work.
 
 ## Endpoint
 
@@ -37,15 +34,16 @@ Loosely keeping track of things:
  
 ## Logging
 
- - figure out a proper logger setup for tests
  - add log redaction functionality
  
 ## Integration tests
 
+ - add support for the mock! as another managed cluster
  - Finish work to get an initial managed integration build going
  - add support for N nodes to bootstrap on managed
  - add annotations for at least version
  - add annotation for specific topology type
+ 
  
 ## Performance tests
 

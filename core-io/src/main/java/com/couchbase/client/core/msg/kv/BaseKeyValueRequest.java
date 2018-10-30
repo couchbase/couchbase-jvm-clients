@@ -22,13 +22,22 @@ import com.couchbase.client.core.msg.Response;
 
 import java.time.Duration;
 
+/**
+ * The {@link BaseKeyValueRequest} should be subclassed by all KeyValue requests since it
+ * provides common ground for all of them (i.e. adding the kv partition needed).
+ *
+ * @since 2.0.0
+ */
 public abstract class BaseKeyValueRequest<RES extends Response>
   extends BaseRequest<RES>
   implements KeyValueRequest<RES> {
 
+  /**
+   * Once set, stores the partition where this request should be dispatched against.
+   */
   private volatile short partition;
 
-  protected BaseKeyValueRequest(final Duration timeout, final RequestContext ctx) {
+  BaseKeyValueRequest(final Duration timeout, final RequestContext ctx) {
     super(timeout, ctx);
   }
 

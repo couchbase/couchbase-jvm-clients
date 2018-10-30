@@ -16,6 +16,11 @@
 
 package com.couchbase.client.core.msg;
 
+/**
+ * The parent class for all responses passing through the SDK.
+ *
+ * @since 2.0.0
+ */
 public class BaseResponse implements Response {
 
   private final ResponseStatus status;

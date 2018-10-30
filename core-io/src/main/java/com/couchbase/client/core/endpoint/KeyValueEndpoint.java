@@ -14,67 +14,55 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.io.netty.kv;
+package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
-import io.netty.channel.ChannelInitializer;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
+import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
+import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
+import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
+import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
+import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-public class KeyValueChannelInitializer extends ChannelInitializer<SocketChannel> {
+public class KeyValueEndpoint extends BaseEndpoint {
 
-  /**
-   * Holds the core context as reference to event bus and more.
-   */
   private final CoreContext coreContext;
-
-  /**
-   * The name of the bucket to connect.
-   */
-  private final String bucketName;
-
-  /**
-   * Name of the user.
-   */
-  private final String userName;
-
-  /**
-   * Password of the user.
-   */
+  private final String username;
+  private final String bucketname;
   private final String password;
 
-  public KeyValueChannelInitializer(final CoreContext coreContext, final String bucketName,
-                                    final String userName, final String password) {
+  public KeyValueEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
+                          final int port, final String username,
+                          final String bucketname, final String password) {
+    super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(), coreContext);
     this.coreContext = coreContext;
-    this.bucketName = bucketName;
-    this.userName = userName;
+    this.username = username;
+    this.bucketname = bucketname;
     this.password = password;
   }
 
   @Override
-  protected void initChannel(final SocketChannel ch) {
-    ChannelPipeline pipeline = ch.pipeline();
-
+  protected void extendPipeline(final ChannelPipeline pipeline) {
     pipeline.addLast(new MemcacheProtocolDecodeHandler());
     pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
-
-    // pipeline.addLast(new LoggingHandler(LogLevel.WARN));
 
     pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
     pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
 
     if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
-      pipeline.addLast(new SaslAuthenticationHandler(coreContext, userName, password));
+      pipeline.addLast(new SaslAuthenticationHandler(coreContext, username, password));
     }
 
-    pipeline.addLast(new SelectBucketHandler(coreContext, bucketName));
-
+    pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));
     pipeline.addLast(new KeyValueMessageHandler(coreContext));
-
   }
 
   /**

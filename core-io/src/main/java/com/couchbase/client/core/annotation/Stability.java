@@ -21,6 +21,8 @@ import java.lang.annotation.Documented;
 /**
  * This annotation describes the stability guarantees of the annotated
  * interface, class or method.
+ *
+ * @since 1.0.0
  */
 public @interface Stability {
 

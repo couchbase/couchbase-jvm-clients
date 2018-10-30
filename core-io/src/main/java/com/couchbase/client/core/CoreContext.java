@@ -24,6 +24,8 @@ import java.util.Map;
 /**
  * The {@link CoreContext} is bound to a core and provides both exportable and
  * usable state for the rest of the application to use.
+ *
+ * @since 2.0.0
  */
 public class CoreContext extends AbstractContext {
 

@@ -33,8 +33,19 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
   private static final AtomicReferenceFieldUpdater<BaseRequest, State> STATE_UPDATER =
     AtomicReferenceFieldUpdater.newUpdater(BaseRequest.class, State.class, "state");
 
+  /**
+   * Holds the timeout of this request.
+   */
   private final Duration timeout;
+
+  /**
+   * Holds the request context, if set.
+   */
   private final RequestContext ctx;
+
+  /**
+   * Holds the internal future used to complete the response.
+   */
   private final CompletableFuture<RES> response;
 
   /**
@@ -43,6 +54,11 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
    * <p>Do not rename this field without updating the {@link #STATE_UPDATER}!</p>
    */
   private volatile State state = State.INCOMPLETE;
+
+  /**
+   * If cancelled, contains the reason why it got cancelled.
+   */
+  private volatile CancellationReason cancellationReason;
 
   /**
    * Creates a basic request that has all the required properties to be
@@ -67,16 +83,49 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
 
   @Override
   public void succeed(RES result) {
-    if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.SUCCESS)) {
+    if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.SUCCEEDED)) {
       response.complete(result);
     }
   }
 
   @Override
   public void fail(Throwable error) {
-    if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.FAILURE)) {
+    if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.FAILED)) {
       response.completeExceptionally(error);
     }
+  }
+
+  @Override
+  public void cancel(CancellationReason reason) {
+    if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.CANCELLED)) {
+      response.cancel(false);
+      cancellationReason = reason;
+    }
+  }
+
+  @Override
+  public boolean completed() {
+    return state != State.INCOMPLETE;
+  }
+
+  @Override
+  public boolean succeeded() {
+    return state == State.SUCCEEDED;
+  }
+
+  @Override
+  public boolean failed() {
+    return state == State.FAILED;
+  }
+
+  @Override
+  public boolean cancelled() {
+    return state == State.CANCELLED;
+  }
+
+  @Override
+  public CancellationReason cancellationReason() {
+    return cancellationReason;
   }
 
   @Override
@@ -105,12 +154,17 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
     /**
      * This request has been completed successfully.
      */
-    SUCCESS,
+    SUCCEEDED,
 
     /**
      * This request has been completed with failure.
      */
-    FAILURE
+    FAILED,
 
+    /**
+     * This request has been cancelled before it could be completed.
+     */
+    CANCELLED
   }
+
 }

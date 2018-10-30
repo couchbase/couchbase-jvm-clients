@@ -21,6 +21,12 @@ import com.couchbase.client.core.CoreContext;
 import java.net.SocketAddress;
 import java.util.Map;
 
+/**
+ * The {@link IoContext} is used to extend the core context with IO related metadata
+ * that is useful during event generation.
+ *
+ * @since 2.0.0
+ */
 public class IoContext extends CoreContext {
 
   private final SocketAddress localSocket;

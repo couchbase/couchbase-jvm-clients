@@ -19,9 +19,15 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+/**
+ * The response of a {@link NoopRequest}.
+ *
+ * @since 2.0.0
+ */
 public class NoopResponse extends BaseResponse {
 
-  public NoopResponse(ResponseStatus status) {
+  NoopResponse(ResponseStatus status) {
     super(status);
   }
+
 }

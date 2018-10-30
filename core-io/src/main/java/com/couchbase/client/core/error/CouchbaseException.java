@@ -16,6 +16,11 @@
 
 package com.couchbase.client.core.error;
 
+/**
+ * The parent class for all exceptions created by this SDK (or clients using it).
+ *
+ * @since 2.0.0
+ */
 public class CouchbaseException extends RuntimeException {
 
   public CouchbaseException() {

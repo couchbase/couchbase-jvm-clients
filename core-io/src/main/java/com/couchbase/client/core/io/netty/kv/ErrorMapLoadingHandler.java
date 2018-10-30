@@ -59,7 +59,7 @@ import static com.couchbase.client.core.json.Mapper.decodeInto;
  * @since 2.0.0
  */
 @Stability.Internal
-class ErrorMapLoadingHandler extends ChannelDuplexHandler {
+public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
 
   /**
    * Right now we are at version 1 for the error map, so that's what we
@@ -94,7 +94,7 @@ class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    *
    * @param coreContext the core context used to refer to values like the core id.
    */
-  ErrorMapLoadingHandler(final CoreContext coreContext) {
+  public ErrorMapLoadingHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
     this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
   }

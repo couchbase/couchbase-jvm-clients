@@ -60,7 +60,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
  * @since 2.0.0
  */
 @Stability.Internal
-class SelectBucketHandler extends ChannelDuplexHandler {
+public class SelectBucketHandler extends ChannelDuplexHandler {
 
   /**
    * Holds the core context as reference to event bus and more.
@@ -95,7 +95,7 @@ class SelectBucketHandler extends ChannelDuplexHandler {
    * @param coreContext the core context used to refer to values like the core id.
    * @param bucketName  the bucket name to select.
    */
-  SelectBucketHandler(final CoreContext coreContext, final String bucketName) {
+  public SelectBucketHandler(final CoreContext coreContext, final String bucketName) {
     this.coreContext = coreContext;
     this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
     this.bucketName = bucketName;

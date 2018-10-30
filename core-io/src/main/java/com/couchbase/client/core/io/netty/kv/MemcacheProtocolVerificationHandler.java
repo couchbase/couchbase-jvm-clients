@@ -48,7 +48,7 @@ public class MemcacheProtocolVerificationHandler extends ChannelDuplexHandler {
    *
    * @param coreContext the core context used to refer to values like the core id.
    */
-  MemcacheProtocolVerificationHandler(final CoreContext coreContext) {
+  public MemcacheProtocolVerificationHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
   }
 

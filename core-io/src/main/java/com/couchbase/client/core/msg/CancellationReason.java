@@ -14,21 +14,31 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.json;
-
-import com.couchbase.client.core.error.CouchbaseException;
+package com.couchbase.client.core.msg;
 
 /**
- * This exception is usually raised when a JSON encoding or decoding was not successful.
- *
- * <p>See the cause/message for further details.</p>
+ * Describes the reason why a {@link Request} has been cancelled.
  *
  * @since 2.0.0
  */
-public class MapperException extends CouchbaseException {
+public enum CancellationReason {
 
-  MapperException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  /**
+   * The downstream consumer stopped listening for a result and therefore any further
+   * processing is a waste of resources.
+   */
+  STOPPED_LISTENING,
+
+  /**
+   * The request ran into a timeout and is therefore cancelled before it got a chance
+   * to complete.
+   */
+  TIMEOUT,
+
+  /**
+   * For a different reason. Make sure to emit an event so that debugging provides
+   * further context.
+   */
+  OTHER
 
 }

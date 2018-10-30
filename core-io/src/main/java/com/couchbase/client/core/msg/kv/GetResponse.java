@@ -19,15 +19,25 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+/**
+ * Represents the response of a {@link GetRequest}.
+ *
+ * @since 2.0.0
+ */
 public class GetResponse extends BaseResponse {
 
   private final byte[] content;
 
-  public GetResponse(final ResponseStatus status, final byte[] content) {
+  GetResponse(final ResponseStatus status, final byte[] content) {
     super(status);
     this.content = content;
   }
 
+  /**
+   * Returns the content, but might be empty or null.
+   *
+   * @return the content, if successful and found. Check the result!
+   */
   public byte[] content() {
     return content;
   }
