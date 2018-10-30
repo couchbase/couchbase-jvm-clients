@@ -245,6 +245,11 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
 
+    public Builder connectTimeout(Duration connectTimeout) {
+      this.connectTimeout = connectTimeout;
+      return this;
+    }
+
     public IoEnvironment build() {
       return new IoEnvironment(this);
     }

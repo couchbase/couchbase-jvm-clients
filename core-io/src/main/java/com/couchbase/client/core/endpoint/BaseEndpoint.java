@@ -17,7 +17,10 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectAttemptFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import io.netty.bootstrap.Bootstrap;
@@ -35,15 +38,22 @@ import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.retry.Retry;
+import reactor.retry.RetryContext;
 
-import java.nio.channels.Pipe;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * This {@link BaseEndpoint} implements all common logic for endpoints that wrap the IO layer.
@@ -65,7 +75,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * The related context to use.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Stores the common bootstrap logic for a channel.
@@ -85,7 +95,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
                final CoreContext coreContext) {
-    this.coreContext = coreContext;
+    this.endpointContext = new EndpointContext(coreContext, hostname, port);
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
 
@@ -152,22 +162,44 @@ public abstract class BaseEndpoint implements Endpoint {
   private void reconnect() {
     state.set(EndpointState.CONNECTING);
 
-    channelFutureIntoMono(channelBootstrap.connect())
-      .timeout(coreContext.environment().ioEnvironment().connectTimeout())
-      .flatMap((Function<Channel, Mono<Channel>>) channel -> disconnect.get() ? Mono.empty() : Mono.just(channel))
-      .onErrorResume(throwable -> disconnect.get() ? Mono.empty() : Mono.error(throwable))
-      .retryBackoff(Long.MAX_VALUE, Duration.ofMillis(32), Duration.ofMillis(4096))
-      .subscribe(channel -> {
-        if (disconnect.get()) {
-          state.set(EndpointState.DISCONNECTED);
-          // todo: we succeeded to connect but got instructed to disconnect in the
-          // todo: meantime
-        } else {
-          this.channel = channel;
-          state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
-          // todo: debug log we are connected.
-        }
-      });
+    final AtomicLong attemptStart = new AtomicLong();
+    Mono.defer((Supplier<Mono<Channel>>) () -> {
+      attemptStart.set(System.nanoTime());
+      return channelFutureIntoMono(channelBootstrap.connect());
+    })
+    .timeout(endpointContext.environment().ioEnvironment().connectTimeout())
+    .onErrorResume(throwable -> disconnect.get() ? Mono.empty() : Mono.error(throwable))
+    .retryWhen(Retry
+      .any()
+      .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
+      .retryMax(Long.MAX_VALUE)
+      .doOnRetry(retryContext -> {
+        Duration duration = retryContext.exception() instanceof TimeoutException
+          ? endpointContext.environment().ioEnvironment().connectTimeout()
+          : Duration.ofNanos(System.nanoTime() - attemptStart.get());
+        endpointContext.environment().eventBus().publish(new EndpointConnectAttemptFailedEvent(
+          duration,
+          endpointContext,
+          retryContext.iteration(),
+          retryContext.exception()
+        ));
+      })
+    )
+    .subscribe(channel -> {
+      if (disconnect.get()) {
+        state.set(EndpointState.DISCONNECTED);
+        // todo: we succeeded to connect but got instructed to disconnect in the
+        // todo: meantime
+      } else {
+        this.channel = channel;
+        endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
+          Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+          endpointContext,
+          ConnectTimings.toMap(channel)
+        ));
+        state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
+      }
+    });
   }
 
   @Override
@@ -204,10 +236,13 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * Helper method to convert a netty {@link ChannelFuture} into an async {@link Mono}.
    *
+   * <p>This method can be overridden in tests to fake certain responses from a
+   * connect attempt.</p>
+   *
    * @param channelFuture the future to convert/wrap.
    * @return the created mono.
    */
-  private static Mono<Channel> channelFutureIntoMono(final ChannelFuture channelFuture) {
+  protected Mono<Channel> channelFutureIntoMono(final ChannelFuture channelFuture) {
     CompletableFuture<Channel> completableFuture = new CompletableFuture<>();
     channelFuture.addListener((ChannelFutureListener) f -> {
       if (f.isSuccess()) {
@@ -218,5 +253,7 @@ public abstract class BaseEndpoint implements Endpoint {
     });
     return Mono.fromFuture(completableFuture);
   }
+
+
 
 }

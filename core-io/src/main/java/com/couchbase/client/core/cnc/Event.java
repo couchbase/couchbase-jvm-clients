@@ -108,6 +108,10 @@ public interface Event {
     /**
      * Represents an event from the IO subsystem.
      */
-    IO
+    IO,
+    /**
+     * Represents an event from the Endpoint layer.
+     */
+    ENDPOINT,
   }
 }

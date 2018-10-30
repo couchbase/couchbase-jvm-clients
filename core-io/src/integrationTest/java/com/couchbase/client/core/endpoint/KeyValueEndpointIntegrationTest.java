@@ -68,8 +68,6 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
   void connectNoopAndDisconnect() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
 
-    System.err.println(config().bucketname());
-
     KeyValueEndpoint endpoint = new KeyValueEndpoint(
       coreContext,
       NetworkAddress.create(node.hostname()),

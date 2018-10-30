@@ -21,8 +21,12 @@ import io.netty.channel.Channel;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * This class gets populated with timings and success/failure of different steps in the
@@ -31,8 +35,6 @@ import java.util.Optional;
  * @since 2.0.0
  */
 public class ConnectTimings {
-
-
 
   private final List<Timing> timings = Collections.synchronizedList(new ArrayList<>());
 
@@ -90,7 +92,7 @@ public class ConnectTimings {
    * @param channel which channel to export.
    * @return the exported string.
    */
-  public static String export(final Channel channel) {
+  public static String toString(final Channel channel) {
     String channelId = channel.id().asShortText();
     StringBuilder sb = new StringBuilder();
 
@@ -117,6 +119,18 @@ public class ConnectTimings {
     }
 
     return sb.toString();
+  }
+
+  public static SortedMap<String, Duration> toMap(final Channel channel) {
+    SortedMap<String, Duration> timings = new TreeMap<>();
+    if (channel == null) {
+      return timings;
+    }
+
+    for (ConnectTimings.Timing timing : timings(channel)) {
+      timings.put(timing.clazz.getSimpleName(), timing.latency());
+    }
+    return timings;
   }
 
   private static List<Timing> timings(final Channel channel) {

@@ -18,6 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.DefaultEventBus;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import reactor.core.publisher.Mono;
@@ -45,7 +46,13 @@ public class CoreEnvironment {
       ? DEFAULT_USER_AGENT
       : builder.userAgent;
     this.eventBus = builder.eventBus == null
-      ? (OwnedSupplier<EventBus>) DefaultEventBus::create
+      ? new OwnedSupplier<EventBus>() {
+        private final EventBus bus = DefaultEventBus.create();
+      @Override
+      public EventBus get() {
+        return bus;
+      }
+    }
       : builder.eventBus;
     this.timer = builder.timer == null
       ? Timer.createAndStart()
@@ -147,6 +154,11 @@ public class CoreEnvironment {
 
     public SELF load(final PropertyLoader<Builder> loader) {
       loader.load(this);
+      return self();
+    }
+
+    public SELF ioEnvironment(final IoEnvironment ioEnvironment) {
+      this.ioEnvironment = ioEnvironment;
       return self();
     }
 

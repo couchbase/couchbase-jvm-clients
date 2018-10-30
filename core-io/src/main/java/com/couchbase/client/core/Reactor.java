@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core;
 
-import com.couchbase.client.core.error.StoppedListeningException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;

@@ -8,10 +8,15 @@ Loosely keeping track of things:
 
 ## Endpoint
 
- - Add endpoint which wraps channel bootstrap logic
+ - add the negotiated hello UUID to the context, if available
+ - implement endpoint logic
+ - implement circuit breaker logic
+ - test it all in unit tests
+ - add integration test for circuit breaker (?)
 
 ## IO
 
+ - add the negotiated hello UUID to the context, if available
  - add test coverage for the ever-incrementing opaque functionality
  - complete select bucket handler test case with error cases
  - add sasl handler unit tests for all mechs
@@ -20,6 +25,9 @@ Loosely keeping track of things:
  - add snappy support and then reenable
 
 ## Env
+ 
+ - initialize a couchbase scheduler for reactor
+ - use the reactor scheduler everyhwere we need it
  
  - make sure all changeable properties have suppliers!
  - allow to configure the env through certain config providers
