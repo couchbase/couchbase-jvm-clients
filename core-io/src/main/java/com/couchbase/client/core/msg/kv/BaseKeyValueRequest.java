@@ -28,9 +28,9 @@ import java.time.Duration;
  *
  * @since 2.0.0
  */
-public abstract class BaseKeyValueRequest<RES extends Response>
-  extends BaseRequest<RES>
-  implements KeyValueRequest<RES> {
+public abstract class BaseKeyValueRequest<R extends Response>
+  extends BaseRequest<R>
+  implements KeyValueRequest<R> {
 
   /**
    * Once set, stores the partition where this request should be dispatched against.

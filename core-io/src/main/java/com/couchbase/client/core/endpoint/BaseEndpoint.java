@@ -157,44 +157,45 @@ public abstract class BaseEndpoint implements Endpoint {
     state.set(EndpointState.CONNECTING);
 
     final AtomicLong attemptStart = new AtomicLong();
-    Mono.defer((Supplier<Mono<Channel>>) () -> {
-      attemptStart.set(System.nanoTime());
-      return channelFutureIntoMono(channelBootstrap.connect());
-    })
-    .timeout(endpointContext.environment().ioEnvironment().connectTimeout())
-    .onErrorResume(throwable -> disconnect.get() ? Mono.empty() : Mono.error(throwable))
-    .retryWhen(Retry
-      .any()
-      .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
-      .retryMax(Long.MAX_VALUE)
-      .doOnRetry(retryContext -> {
-        Duration duration = retryContext.exception() instanceof TimeoutException
-          ? endpointContext.environment().ioEnvironment().connectTimeout()
-          : Duration.ofNanos(System.nanoTime() - attemptStart.get());
-        endpointContext.environment().eventBus().publish(new EndpointConnectAttemptFailedEvent(
-          duration,
-          endpointContext,
-          retryContext.iteration(),
-          retryContext.exception()
-        ));
+    Mono
+      .defer((Supplier<Mono<Channel>>) () -> {
+        attemptStart.set(System.nanoTime());
+        return channelFutureIntoMono(channelBootstrap.connect());
       })
-    )
-    .subscribe(channel -> {
-      if (disconnect.get()) {
-        state.set(EndpointState.DISCONNECTED);
-        // todo: we succeeded to connect but got instructed to disconnect in the
-        // todo: meantime
-        // todo: raise a debug event for this and keep going
-      } else {
-        this.channel = channel;
-        endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
-          Duration.ofNanos(System.nanoTime() - attemptStart.get()),
-          endpointContext,
-          ConnectTimings.toMap(channel)
-        ));
-        state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
-      }
-    });
+      .timeout(endpointContext.environment().ioEnvironment().connectTimeout())
+      .onErrorResume(throwable -> disconnect.get() ? Mono.empty() : Mono.error(throwable))
+      .retryWhen(Retry
+        .any()
+        .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
+        .retryMax(Long.MAX_VALUE)
+        .doOnRetry(retryContext -> {
+          Duration duration = retryContext.exception() instanceof TimeoutException
+            ? endpointContext.environment().ioEnvironment().connectTimeout()
+            : Duration.ofNanos(System.nanoTime() - attemptStart.get());
+          endpointContext.environment().eventBus().publish(new EndpointConnectAttemptFailedEvent(
+            duration,
+            endpointContext,
+            retryContext.iteration(),
+            retryContext.exception()
+          ));
+        })
+      )
+      .subscribe(channel -> {
+        if (disconnect.get()) {
+          state.set(EndpointState.DISCONNECTED);
+          // todo: we succeeded to connect but got instructed to disconnect in the
+          // todo: meantime
+          // todo: raise a debug event for this and keep going
+        } else {
+          this.channel = channel;
+          endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
+            Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+            endpointContext,
+            ConnectTimings.toMap(channel)
+          ));
+          state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
+        }
+      });
   }
 
   @Override

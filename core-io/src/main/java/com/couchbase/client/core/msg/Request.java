@@ -24,21 +24,21 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 2.0.0
  */
-public interface Request<RES extends Response> {
+public interface Request<R extends Response> {
 
   /**
    * Holds the response which eventually completes.
    *
    * @return the future containing the response, eventually.
    */
-  CompletableFuture<RES> response();
+  CompletableFuture<R> response();
 
   /**
    * Completes this request successfully.
    *
    * @param result the result to complete with.
    */
-  void succeed(RES result);
+  void succeed(R result);
 
   /**
    * Fails this request and completes it.

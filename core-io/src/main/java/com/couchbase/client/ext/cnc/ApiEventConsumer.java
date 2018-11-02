@@ -62,15 +62,15 @@ import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
  */
 public class ApiEventConsumer implements Consumer<Event> {
 
-  String schema = "type Warning {" +
-    "  name: String" +
-    "  description: String" +
-    "}" +
-    "" +
-    "" +
-    "type Query {" +
-    "  warnings: [Warning]" +
-    "}";
+  String schema = "type Warning {"
+    + "  name: String"
+    + "  description: String"
+    + "}"
+    + ""
+    + ""
+    + "type Query {"
+    + "  warnings: [Warning]"
+    + "}";
 
   private final State state;
   private final GraphQL gq;
@@ -96,49 +96,52 @@ public class ApiEventConsumer implements Consumer<Event> {
       .build();
 
     SchemaGenerator schemaGenerator = new SchemaGenerator();
-    GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(
+    GraphQLSchema graphQlSchema = schemaGenerator.makeExecutableSchema(
       typeDefinitionRegistry,
       runtimeWiring
     );
 
-    gq = GraphQL.newGraphQL(graphQLSchema).build();
+    gq = GraphQL.newGraphQL(graphQlSchema).build();
   }
 
+  /**
+   * Starts this API consumer.
+   */
   public void start() {
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-      ServerBootstrap b = new ServerBootstrap();
-      b.group(bossGroup, workerGroup)
-        .channel(NioServerSocketChannel.class)
-        .childHandler(new ChannelInitializer<SocketChannel>() {
-          @Override
-          protected void initChannel(SocketChannel ch) throws Exception {
-            ch.pipeline()
-              .addLast(new HttpServerCodec())
-              .addLast(new HttpObjectAggregator(Integer.MAX_VALUE))
-              .addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
-                @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
-                  if (msg.uri().startsWith("/graphql") && msg.method().equals(HttpMethod.GET)) {
-                    QueryStringDecoder decoder = new QueryStringDecoder(msg.uri());
-                    String q = decoder.parameters().get("query").get(0);
-                    ExecutionResult executionResult = gq.execute(q);
-                    Map<String, Object> result = executionResult.toSpecification();
-                    ByteBuf content = Unpooled.copiedBuffer(Mapper.encodeAsString(result), CharsetUtil.UTF_8);
-                    FullHttpResponse response = new DefaultFullHttpResponse(
-                      HttpVersion.HTTP_1_1,
-                      HttpResponseStatus.OK,
-                      content
-                    );
-                    response.headers().set("Content-Type", "application/json");
-                    response.headers().setInt("Content-Length", response.content().readableBytes());
-                    ctx.writeAndFlush(response);
-                  }
+    ServerBootstrap b = new ServerBootstrap();
+    b.group(bossGroup, workerGroup)
+      .channel(NioServerSocketChannel.class)
+      .childHandler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        protected void initChannel(SocketChannel ch) throws Exception {
+          ch.pipeline()
+            .addLast(new HttpServerCodec())
+            .addLast(new HttpObjectAggregator(Integer.MAX_VALUE))
+            .addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
+              @Override
+              protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
+                if (msg.uri().startsWith("/graphql") && msg.method().equals(HttpMethod.GET)) {
+                  QueryStringDecoder decoder = new QueryStringDecoder(msg.uri());
+                  String q = decoder.parameters().get("query").get(0);
+                  ExecutionResult executionResult = gq.execute(q);
+                  Map<String, Object> result = executionResult.toSpecification();
+                  ByteBuf content = Unpooled.copiedBuffer(Mapper.encodeAsString(result), CharsetUtil.UTF_8);
+                  FullHttpResponse response = new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1,
+                    HttpResponseStatus.OK,
+                    content
+                  );
+                  response.headers().set("Content-Type", "application/json");
+                  response.headers().setInt("Content-Length", response.content().readableBytes());
+                  ctx.writeAndFlush(response);
                 }
-              });
-          }
-        });
+              }
+            });
+        }
+      });
 
     try {
       Channel ch = b.bind(8080).sync().channel();

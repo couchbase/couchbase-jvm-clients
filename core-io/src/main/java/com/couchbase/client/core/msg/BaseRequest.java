@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  *
  * @since 2.0.0
  */
-public class BaseRequest<RES extends Response> implements Request<RES> {
+public class BaseRequest<R extends Response> implements Request<R> {
 
   /**
    * Atomic updater for the {@link #state} field.
@@ -46,7 +46,7 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
   /**
    * Holds the internal future used to complete the response.
    */
-  private final CompletableFuture<RES> response;
+  private final CompletableFuture<R> response;
 
   /**
    * The {@link State} this {@link Request} is in at the moment.
@@ -77,12 +77,12 @@ public class BaseRequest<RES extends Response> implements Request<RES> {
   }
 
   @Override
-  public CompletableFuture<RES> response() {
+  public CompletableFuture<R> response() {
     return response;
   }
 
   @Override
-  public void succeed(RES result) {
+  public void succeed(R result) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.SUCCEEDED)) {
       response.complete(result);
     }

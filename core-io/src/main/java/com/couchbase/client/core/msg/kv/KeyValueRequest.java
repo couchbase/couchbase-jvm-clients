@@ -24,10 +24,10 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * Main parent interface for all Key/Value requests.
  *
- * @param <RES> the generic type of the response.
+ * @param <R> the generic type of the response.
  * @since 1.0.0
  */
-public interface KeyValueRequest<RES extends Response> extends Request<RES> {
+public interface KeyValueRequest<R extends Response> extends Request<R> {
 
   /**
    * Reads the currently set partition this request is targeted against.
@@ -54,8 +54,8 @@ public interface KeyValueRequest<RES extends Response> extends Request<RES> {
    * Decode the encoded response into its message representation.
    *
    * @param response the response to decode.
-   * @return the decoded response as {@link RES}.
+   * @return the decoded response as {@link R}.
    */
-  RES decode(ByteBuf response);
+  R decode(ByteBuf response);
 
 }

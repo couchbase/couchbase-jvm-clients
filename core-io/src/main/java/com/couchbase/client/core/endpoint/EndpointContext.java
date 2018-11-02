@@ -26,30 +26,37 @@ public class EndpointContext extends CoreContext {
   /**
    * The hostname of this endpoint.
    */
-  private NetworkAddress hostname;
+  private NetworkAddress remoteHostname;
 
   /**
    * The port of this endpoint.
    */
-  private int port;
+  private int remotePort;
 
-  public EndpointContext(CoreContext ctx, NetworkAddress hostname, int port) {
+  /**
+   * Creates a new {@link EndpointContext}.
+   *
+   * @param ctx the parent context to use.
+   * @param remoteHostname the remote hostname.
+   * @param remotePort the remote port.
+   */
+  public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort) {
     super(ctx.id(), ctx.environment());
-    this.hostname = hostname;
-    this.port = port;
+    this.remoteHostname = remoteHostname;
+    this.remotePort = remotePort;
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", hostname().nameOrAddress() + ":" + port());
+    input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
   }
 
-  public NetworkAddress hostname() {
-    return hostname;
+  public NetworkAddress remoteHostname() {
+    return remoteHostname;
   }
 
-  public int port() {
-    return port;
+  public int remotePort() {
+    return remotePort;
   }
 }
