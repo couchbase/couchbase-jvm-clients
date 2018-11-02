@@ -75,7 +75,14 @@ class ScramSaslClientFactoryTest {
     ScramSaslClientFactory factory = new ScramSaslClientFactory();
     CallbackHandler cbh = mock(CallbackHandler.class);
 
-    SaslClient client = factory.createSaslClient(new String[] { "CRAM-MD5" }, null, null, null, null, cbh);
+    SaslClient client = factory.createSaslClient(
+      new String[] { "CRAM-MD5" },
+      null,
+      null,
+      null,
+      null,
+      cbh
+    );
     assertNull(client);
   }
 
@@ -84,7 +91,14 @@ class ScramSaslClientFactoryTest {
     ScramSaslClientFactory factory = new ScramSaslClientFactory();
     CallbackHandler cbh = mock(CallbackHandler.class);
 
-    SaslClient client = factory.createSaslClient(new String[] { "SCRAM-SHA256", "SCRAM-SHA512" }, null, null, null, null, cbh);
+    SaslClient client = factory.createSaslClient(
+      new String[] { "SCRAM-SHA256", "SCRAM-SHA512" },
+      null,
+      null,
+      null,
+      null,
+      cbh
+    );
     assertNotNull(client);
     assertEquals("SCRAM-SHA512", client.getMechanismName());
   }

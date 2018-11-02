@@ -57,7 +57,9 @@ class MemcacheProtocolVerificationHandlerTest {
   @MethodSource
   void shouldVerifyCorrectResponses(final InputHolder inputHolder) {
     CoreContext ctx = mock(CoreContext.class);
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(
+      new MemcacheProtocolVerificationHandler(ctx)
+    );
     try {
       channel.writeInbound(inputHolder.input);
       ByteBuf written = channel.readInbound();
@@ -90,7 +92,9 @@ class MemcacheProtocolVerificationHandlerTest {
     when(ctx.environment()).thenReturn(env);
     when(env.eventBus()).thenReturn(eventBus);
 
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(
+      new MemcacheProtocolVerificationHandler(ctx)
+    );
     try {
       channel.writeInbound(inputHolder.input);
       assertFalse(channel.isOpen());
@@ -122,7 +126,9 @@ class MemcacheProtocolVerificationHandlerTest {
   @MethodSource
   void shouldVerifyCorrectRequests(final InputHolder inputHolder) {
     CoreContext ctx = mock(CoreContext.class);
-    final EmbeddedChannel channel = new EmbeddedChannel(new MemcacheProtocolVerificationHandler(ctx));
+    final EmbeddedChannel channel = new EmbeddedChannel(
+      new MemcacheProtocolVerificationHandler(ctx)
+    );
     try {
       channel.writeOutbound(inputHolder.input);
       ByteBuf written = channel.readOutbound();
@@ -170,7 +176,5 @@ class MemcacheProtocolVerificationHandlerTest {
       return name;
     }
   }
-
-
 
 }

@@ -38,12 +38,8 @@ import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscription;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.retry.Retry;
-import reactor.retry.RetryContext;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -51,8 +47,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -190,6 +184,7 @@ public abstract class BaseEndpoint implements Endpoint {
         state.set(EndpointState.DISCONNECTED);
         // todo: we succeeded to connect but got instructed to disconnect in the
         // todo: meantime
+        // todo: raise a debug event for this and keep going
       } else {
         this.channel = channel;
         endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(

@@ -8,8 +8,10 @@ Loosely keeping track of things:
 
 ## Endpoint
 
+ - add local to endpoint scope if possible, similar to IO
  - add the negotiated hello UUID to the context, if available
  - implement endpoint logic
+   (continue testing)
  - implement circuit breaker logic
  - test it all in unit tests
  - add integration test for circuit breaker (?)

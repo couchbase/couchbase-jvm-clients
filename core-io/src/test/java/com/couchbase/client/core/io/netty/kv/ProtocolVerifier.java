@@ -56,7 +56,11 @@ public class ProtocolVerifier {
       "header + body size < " + totalLength
     );
 
-    assertEquals(MemcacheProtocol.MAGIC_REQUEST, request.getByte(0), "request magic does not match");
+    assertEquals(
+      MemcacheProtocol.MAGIC_REQUEST,
+      request.getByte(0),
+      "request magic does not match"
+    );
     assertEquals(opcode, request.getByte(1), "opcode does not match");
 
     int keyLength = request.getShort(2);

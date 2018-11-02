@@ -48,9 +48,9 @@ class GetRequestTest {
     GetRequest request = new GetRequest(null, TIMEOUT, null);
     GetResponse decoded = request.decode(response);
 
-    byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\"," +
-      "\"iata\":\"SB\",\"icao\":\"ACI\",\"id\":139," +
-      "\"name\":\"Air Caledonie International\",\"type\":\"airline\"}"
+    byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
+      + "\"iata\":\"SB\",\"icao\":\"ACI\",\"id\":139,"
+      + "\"name\":\"Air Caledonie International\",\"type\":\"airline\"}"
     ).getBytes(CharsetUtil.UTF_8);
 
     assertEquals(ResponseStatus.SUCCESS, decoded.status());

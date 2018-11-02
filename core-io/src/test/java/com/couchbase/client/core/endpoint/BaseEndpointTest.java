@@ -23,14 +23,12 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.AttributeKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +51,7 @@ class BaseEndpointTest {
   private static final NetworkAddress LOCALHOST = NetworkAddress.localhost();
 
   /**
-   * The port used to connect
+   * The port used to connect.
    */
   private static final int PORT = 1234;
 
@@ -92,8 +90,8 @@ class BaseEndpointTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTING);
 
-    final Channel channelMock = mock(Channel.class);
-    cf.complete(channelMock);
+    EmbeddedChannel channel = new EmbeddedChannel();
+    cf.complete(channel);
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
   }
 
@@ -179,7 +177,7 @@ class BaseEndpointTest {
 
     @Override
     protected PipelineInitializer pipelineInitializer() {
-      return pipeline -> {};
+      return pipeline -> { };
     }
 
     @Override
