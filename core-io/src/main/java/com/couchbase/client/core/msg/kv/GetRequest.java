@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -44,7 +45,7 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   private final byte[] key;
 
-  public GetRequest(final byte[] key, final Duration timeout, final RequestContext ctx) {
+  public GetRequest(final byte[] key, final Duration timeout, final CoreContext ctx) {
     super(timeout, ctx);
     this.key = key;
   }

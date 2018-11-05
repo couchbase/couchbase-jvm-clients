@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.RequestContext;
@@ -45,7 +46,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
 
   public UpsertRequest(final byte[] key, final byte[] content, final long expiration,
                        final int flags, final byte datatype, final Duration timeout,
-                       final RequestContext ctx) {
+                       final CoreContext ctx) {
     super(timeout, ctx);
     this.key = key;
     this.content = content;

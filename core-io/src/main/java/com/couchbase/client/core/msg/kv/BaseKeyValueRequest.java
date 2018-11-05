@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
@@ -37,7 +38,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   private volatile short partition;
 
-  BaseKeyValueRequest(final Duration timeout, final RequestContext ctx) {
+  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx) {
     super(timeout, ctx);
   }
 

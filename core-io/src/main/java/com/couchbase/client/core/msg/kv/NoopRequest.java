@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.RequestContext;
 import io.netty.buffer.ByteBuf;
@@ -37,7 +38,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
  */
 public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
-  public NoopRequest(final Duration timeout, final RequestContext ctx) {
+  public NoopRequest(final Duration timeout, final CoreContext ctx) {
     super(timeout, ctx);
   }
 

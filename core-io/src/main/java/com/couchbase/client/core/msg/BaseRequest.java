@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.CoreContext;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,17 +80,18 @@ public class BaseRequest<R extends Response> implements Request<R> {
    * @param timeout the timeout of the request.
    * @param ctx the context if provided.
    */
-  public BaseRequest(final Duration timeout, final RequestContext ctx) {
+  public BaseRequest(final Duration timeout, final CoreContext ctx) {
     if (timeout == null) {
       throw new IllegalArgumentException("A Timeout must be provided");
     }
     if (ctx == null) {
-      throw new IllegalArgumentException("A RequestContext must be provided");
+      throw new IllegalArgumentException("A CoreContext must be provided");
     }
     this.timeout = timeout;
-    this.ctx = ctx;
     this.response = new CompletableFuture<>();
     this.id = REQUEST_ID.incrementAndGet();
+    this.ctx = new RequestContext(ctx, id);
+
   }
 
   @Override

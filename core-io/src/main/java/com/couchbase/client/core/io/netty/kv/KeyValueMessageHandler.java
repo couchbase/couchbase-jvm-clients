@@ -161,7 +161,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
 
     long start = writtenRequestDispatchTimings.remove(opaque);
-    request.context().dispatchDuration(System.nanoTime() - start);
+    request.context().dispatchLatency(System.nanoTime() - start);
 
     Response decoded = request.decode(response);
     request.succeed(decoded);

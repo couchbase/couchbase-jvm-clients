@@ -19,6 +19,8 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.Map;
+
 /**
  * Additional context which might be attached to an individual {@link Request}.
  *
@@ -26,10 +28,19 @@ import com.couchbase.client.core.annotation.Stability;
  */
 public class RequestContext extends CoreContext {
 
-  private volatile long dispatchDuration;
+  /**
+   * Holds the dispatch latency if set already (or at all).
+   */
+  private volatile long dispatchLatency;
 
-  public RequestContext(CoreContext ctx) {
+  /**
+   * The request ID associated.
+   */
+  private final long requestId;
+
+  public RequestContext(CoreContext ctx, final long id) {
     super(ctx.id(), ctx.environment());
+    this.requestId = id;
   }
 
   /**
@@ -38,18 +49,24 @@ public class RequestContext extends CoreContext {
    * @return the duration of the dispatch phase.
    */
   @Stability.Volatile
-  public long dispatchDuration() {
-    return dispatchDuration;
+  public long dispatchLatency() {
+    return dispatchLatency;
   }
 
   /**
    * Allows to set the dispatch duration of the request.
    *
-   * @param dispatchDuration the duration.
+   * @param dispatchLatency the duration.
    */
   @Stability.Internal
-  public void dispatchDuration(long dispatchDuration) {
-    this.dispatchDuration = dispatchDuration;
+  public void dispatchLatency(long dispatchLatency) {
+    this.dispatchLatency = dispatchLatency;
   }
 
+
+  @Override
+  protected void injectExportableParams(final Map<String, Object> input) {
+    super.injectExportableParams(input);
+    input.put("requestId", requestId);
+  }
 }
