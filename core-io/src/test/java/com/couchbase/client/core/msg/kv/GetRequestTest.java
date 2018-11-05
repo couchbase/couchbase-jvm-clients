@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
@@ -28,6 +30,7 @@ import static com.couchbase.client.util.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the encoding and decoding of the {@link GetRequest}.
@@ -37,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class GetRequestTest {
 
   private static final Duration TIMEOUT = Duration.ZERO;
+  private static final CoreContext CTX = mock(CoreContext.class);
 
   @Test
   void decodeSuccessfulResponse() {
@@ -45,7 +49,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, null);
+    GetRequest request = new GetRequest(null, TIMEOUT, new RequestContext(CTX));
     GetResponse decoded = request.decode(response);
 
     byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
@@ -64,7 +68,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, null);
+    GetRequest request = new GetRequest(null, TIMEOUT, new RequestContext(CTX));
     GetResponse decoded = request.decode(response);
 
     assertEquals(ResponseStatus.NOT_FOUND, decoded.status());

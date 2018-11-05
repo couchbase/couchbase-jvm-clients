@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 
 /**
  * Additional context which might be attached to an individual {@link Request}.
@@ -25,8 +26,30 @@ import com.couchbase.client.core.CoreContext;
  */
 public class RequestContext extends CoreContext {
 
+  private volatile long dispatchDuration;
+
   public RequestContext(CoreContext ctx) {
     super(ctx.id(), ctx.environment());
+  }
+
+  /**
+   * Returns the duration of the dispatch phase if set.
+   *
+   * @return the duration of the dispatch phase.
+   */
+  @Stability.Volatile
+  public long dispatchDuration() {
+    return dispatchDuration;
+  }
+
+  /**
+   * Allows to set the dispatch duration of the request.
+   *
+   * @param dispatchDuration the duration.
+   */
+  @Stability.Internal
+  public void dispatchDuration(long dispatchDuration) {
+    this.dispatchDuration = dispatchDuration;
   }
 
 }

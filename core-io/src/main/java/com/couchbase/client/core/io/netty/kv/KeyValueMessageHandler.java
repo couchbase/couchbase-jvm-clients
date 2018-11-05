@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.Compressible;
@@ -60,9 +61,19 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private final IntObjectMap<KeyValueRequest> writtenRequests;
 
   /**
+   * Holds the start timestamps for the outstanding dispatched requests.
+   */
+  private final IntObjectMap<Long> writtenRequestDispatchTimings;
+
+  /**
    * The compression config used for this handler.
    */
   private final CompressionConfig compressionConfig;
+
+  /**
+   * The event bus used to signal events.
+   */
+  private final EventBus eventBus;
 
   /**
    * Creates a new {@link KeyValueMessageHandler}.
@@ -72,7 +83,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   public KeyValueMessageHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
     this.writtenRequests = new IntObjectHashMap<>();
+    this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
     this.compressionConfig = coreContext.environment().ioEnvironment().compressionConfig();
+    this.eventBus = coreContext.environment().eventBus();
   }
 
   /**
@@ -107,6 +120,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       } else {
         ctx.write(request.encode(ctx.alloc(), nextOpaque));
       }
+      writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {
       // todo: terminate this channel and raise an event, this is not supposed to happen
     }
@@ -145,6 +159,10 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       // todo: response.. server error? ignore the request and release its resources
       // todo: but raise event if this happens and keep going...
     }
+
+    long start = writtenRequestDispatchTimings.remove(opaque);
+    request.context().dispatchDuration(System.nanoTime() - start);
+
     Response decoded = request.decode(response);
     request.succeed(decoded);
 

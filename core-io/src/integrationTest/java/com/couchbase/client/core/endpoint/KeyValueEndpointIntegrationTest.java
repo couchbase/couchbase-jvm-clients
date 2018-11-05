@@ -19,6 +19,7 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
@@ -80,11 +81,13 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, new RequestContext(coreContext));
     endpoint.send(request);
 
     NoopResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());
+
+    assertTrue(request.context().dispatchDuration() > 0);
 
     endpoint.disconnect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);

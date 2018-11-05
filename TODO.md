@@ -57,7 +57,6 @@ Loosely keeping track of things:
  - add annotations for at least version
  - add annotation for specific topology type
  
- 
 ## Performance tests
 
  - integrate jmh with gradle

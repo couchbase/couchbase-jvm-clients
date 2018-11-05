@@ -80,6 +80,10 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
   @Override
   public void accept(final Event event) {
+    if (event.severity() == Event.Severity.TRACING) {
+      return;
+    }
+
     StringBuilder logLineBuilder = new StringBuilder();
 
     logLineBuilder.append("[").append(event.category()).append("]");

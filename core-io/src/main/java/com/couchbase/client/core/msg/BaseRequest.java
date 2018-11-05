@@ -71,6 +71,9 @@ public class BaseRequest<R extends Response> implements Request<R> {
     if (timeout == null) {
       throw new IllegalArgumentException("A Timeout must be provided");
     }
+    if (ctx == null) {
+      throw new IllegalArgumentException("A RequestContext must be provided");
+    }
     this.timeout = timeout;
     this.ctx = ctx;
     this.response = new CompletableFuture<>();

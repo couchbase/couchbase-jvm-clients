@@ -98,7 +98,14 @@ public interface Event {
      * Critical errors that require immediate attention and/or
      * problems which are not recoverable by the system itself.
      */
-    ERROR
+    ERROR,
+
+    /**
+     * Events that are created which deal with request and response tracing
+     * (not to be confused with TRACE logging which is on purpose called
+     * VERBOSE here so that they are not easily confused).
+     */
+    TRACING
   }
 
   /**
@@ -113,5 +120,10 @@ public interface Event {
      * Represents an event from the Endpoint layer.
      */
     ENDPOINT,
+    /**
+     * Represents an event around a specific request instance.
+     */
+    REQUEST
   }
+
 }
