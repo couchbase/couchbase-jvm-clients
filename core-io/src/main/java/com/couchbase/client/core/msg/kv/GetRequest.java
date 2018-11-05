@@ -27,10 +27,13 @@ import io.netty.buffer.Unpooled;
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
 
 /**
  * Represents a KV Get operation.
@@ -46,32 +49,23 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
     this.key = key;
   }
 
-  public byte[] key() {
-    return key;
-  }
-
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
-    ByteBuf key = Unpooled.wrappedBuffer(key());
-    ByteBuf r = MemcacheProtocol.request(
-      alloc,
-      MemcacheProtocol.Opcode.GET,
-      noDatatype(),
-      partition(),
-      opaque,
-      noCas(),
-      noExtras(),
-      key,
-      noBody());
+    ByteBuf key = Unpooled.wrappedBuffer(this.key);
+    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
+      partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();
     return r;
   }
 
   @Override
   public GetResponse decode(final ByteBuf response) {
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+    ResponseStatus status = decodeStatus(response);
     byte[] content = status.success()
-      ? body(response).map(ByteBufUtil::getBytes).orElse(new byte[] {})
+      ? body(response)
+          .map(ByteBufUtil::getBytes)
+          .map(bytes -> tryDecompression(bytes, datatype(response)))
+          .orElse(new byte[] {})
       : null;
     return new GetResponse(status, content);
   }

@@ -62,7 +62,7 @@ public class IoEnvironment {
       ? Duration.ofSeconds(5)
       : builder.connectTimeout;
     compressionConfig = builder.compressionConfig == null
-      ? CompressionConfig.disabled() // TODO: switch me to create once implemented
+      ? CompressionConfig.create()
       : builder.compressionConfig;
     securityConfig = builder.securityConfig == null
       ? SecurityConfig.create()

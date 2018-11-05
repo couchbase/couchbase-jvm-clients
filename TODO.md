@@ -5,6 +5,7 @@ Loosely keeping track of things:
 
 ## Requests
 
+ - add unit tests for compression both on upsert request and get response
  - rework delay and retry builder (not rely on the reactor one which logs?)
  - figure out a retry policy per request and use it
  

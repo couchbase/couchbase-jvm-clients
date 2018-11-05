@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import org.iq80.snappy.Snappy;
 
 import java.util.Optional;
 
@@ -62,6 +63,11 @@ public enum MemcacheProtocol {
    * The offset for the opcode.
    */
   static final int OPCODE_OFFSET = 1;
+
+  /**
+   * The offset for the datatype.
+   */
+  static final int DATATYPE_OFFSET = 5;
 
   /**
    * The offset of the status field.
@@ -142,6 +148,16 @@ public enum MemcacheProtocol {
    */
   static byte opcode(final ByteBuf message) {
     return message.getByte(OPCODE_OFFSET);
+  }
+
+  /**
+   * Helper method to return the datatype from a request or response.
+   *
+   * @param message the message to get the datatype from.
+   * @return the datatype as a byte.
+   */
+  public static byte datatype(final ByteBuf message) {
+    return message.getByte(DATATYPE_OFFSET);
   }
 
   /**
@@ -301,6 +317,38 @@ public enum MemcacheProtocol {
   }
 
   /**
+   * Try to compress the input, but if it is below the min ratio then it will return null.
+   *
+   * @param input the input array.
+   * @param minRatio the minimum ratio to accept and return the buffer.
+   * @return a {@link ByteBuf} if compressed, or null if below the min ratio.
+   */
+  public static ByteBuf tryCompression(byte[] input, double minRatio) {
+    byte[] compressed = Snappy.compress(input);
+    if (((double) compressed.length / input.length) > minRatio) {
+      return null;
+    }
+    return Unpooled.wrappedBuffer(compressed);
+  }
+
+  /**
+   * Try to decompress the input if the datatype has the snappy flag enabled.
+   *
+   * <p>If datatype does not indicate snappy enabled, then the input is returned
+   * as presented.</p>
+   *
+   * @param input the input byte array.
+   * @param datatype the datatype for the response.
+   * @return the byte array, either decoded or the input straight.
+   */
+  public static byte[] tryDecompression(byte[] input, byte datatype) {
+    if ((datatype & Datatype.SNAPPY.datatype()) == Datatype.SNAPPY.datatype()) {
+      return Snappy.uncompress(input, 0, input.length);
+    }
+    return input;
+  }
+
+  /**
    * Contains all known/used kv protocol opcodes.
    */
   public enum Opcode {
@@ -308,6 +356,10 @@ public enum MemcacheProtocol {
      * The get command.
      */
     GET((byte) 0x00),
+    /**
+     * The set (upsert) command.
+     */
+    SET((byte) 0x01),
     /**
      * The noop command.
      */
@@ -380,6 +432,28 @@ public enum MemcacheProtocol {
      */
     public short status() {
       return status;
+    }
+  }
+
+  public enum Datatype {
+    /**
+     * Snappy datatype used to signal compression.
+     */
+    SNAPPY((byte) 0x02);
+
+    private final byte datatype;
+
+    Datatype(byte datatype) {
+      this.datatype = datatype;
+    }
+
+    /**
+     * Returns the datatype byte for the given enum.
+     *
+     * @return the datatype.
+     */
+    public byte datatype() {
+      return datatype;
     }
   }
 }

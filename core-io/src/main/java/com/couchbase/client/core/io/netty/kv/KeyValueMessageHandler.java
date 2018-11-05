@@ -17,7 +17,9 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.Compressible;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -26,6 +28,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+
+import java.util.List;
 
 /**
  * This handler is responsible for encoding KV requests and completing them once
@@ -41,6 +45,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private int opaque;
 
   /**
+   * If compression is enabled and should be used.
+   */
+  private boolean compressionEnabled;
+
+  /**
    * Stores the {@link CoreContext} for use.
    */
   private final CoreContext coreContext;
@@ -50,9 +59,20 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private final IntObjectMap<KeyValueRequest> writtenRequests;
 
+  /**
+   * The compression config used for this handler.
+   */
+  private final CompressionConfig compressionConfig;
+
+  /**
+   * Creates a new {@link KeyValueMessageHandler}.
+   *
+   * @param coreContext the parent core context.
+   */
   public KeyValueMessageHandler(final CoreContext coreContext) {
     this.coreContext = coreContext;
     this.writtenRequests = new IntObjectHashMap<>();
+    this.compressionConfig = coreContext.environment().ioEnvironment().compressionConfig();
   }
 
   /**
@@ -67,17 +87,26 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     opaque = Utils.opaque(ctx.channel(), false);
+
+    List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
+    compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
+
     ctx.fireChannelActive();
   }
 
   @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+  public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof KeyValueRequest) {
       KeyValueRequest request = (KeyValueRequest) msg;
 
       int nextOpaque = ++opaque;
       handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
-      ctx.write(request.encode(ctx.alloc(), nextOpaque));
+
+      if (compressionEnabled && request instanceof Compressible) {
+        ctx.write(((Compressible) request).encode(ctx.alloc(), nextOpaque, compressionConfig));
+      } else {
+        ctx.write(request.encode(ctx.alloc(), nextOpaque));
+      }
     } else {
       // todo: terminate this channel and raise an event, this is not supposed to happen
     }
