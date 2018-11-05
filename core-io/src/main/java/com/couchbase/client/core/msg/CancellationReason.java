@@ -36,6 +36,12 @@ public enum CancellationReason {
   TIMEOUT,
 
   /**
+   * The user or some other code proactively cancelled the request by cancelling
+   * it through its attached context.
+   */
+  CANCELLED_VIA_CONTEXT,
+
+  /**
    * For a different reason. Make sure to emit an event so that debugging provides
    * further context.
    */

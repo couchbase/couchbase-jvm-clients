@@ -90,8 +90,7 @@ public class BaseRequest<R extends Response> implements Request<R> {
     this.timeout = timeout;
     this.response = new CompletableFuture<>();
     this.id = REQUEST_ID.incrementAndGet();
-    this.ctx = new RequestContext(ctx, id);
-
+    this.ctx = new RequestContext(ctx, this);
   }
 
   @Override

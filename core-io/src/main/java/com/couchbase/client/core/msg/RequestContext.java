@@ -36,11 +36,18 @@ public class RequestContext extends CoreContext {
   /**
    * The request ID associated.
    */
-  private final long requestId;
+  private final Request<? extends Response> request;
 
-  public RequestContext(CoreContext ctx, final long id) {
+  /**
+   * Creates a new {@link RequestContext}.
+   *
+   * @param ctx the core context.
+   * @param request the linked request.
+   */
+  @Stability.Internal
+  public RequestContext(CoreContext ctx, final Request<? extends Response> request) {
     super(ctx.id(), ctx.environment());
-    this.requestId = id;
+    this.request = request;
   }
 
   /**
@@ -63,10 +70,21 @@ public class RequestContext extends CoreContext {
     this.dispatchLatency = dispatchLatency;
   }
 
-
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("requestId", requestId);
+    input.put("requestId", request.id());
   }
+
+  /**
+   * Allows to cancel the attached {@link Request} from anywhere in the code.
+   *
+   * <p>If the operation is already completed (either successfully or failed) this
+   * is an operation without side-effect.</p>
+   */
+  @Stability.Uncommitted
+  public void cancel() {
+    request.cancel(CancellationReason.CANCELLED_VIA_CONTEXT);
+  }
+
 }
