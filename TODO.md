@@ -6,6 +6,7 @@ Loosely keeping track of things:
 ## Requests
 
  - add test which verifies request cancellation through the attached request context.
+ - add test for user payload attachment..
  - add unit tests for compression both on upsert request and get response
  - rework delay and retry builder (not rely on the reactor one which logs?)
  - figure out a retry policy per request and use it
@@ -49,7 +50,9 @@ Loosely keeping track of things:
 ## Logging
 
  - add log redaction functionality
- 
+ - add functionality that if a payload is attached to a request context AND enabled
+    via config that it is put int he thread local store for the logger...
+    
 ## Integration tests
 
  - add support for the mock! as another managed cluster

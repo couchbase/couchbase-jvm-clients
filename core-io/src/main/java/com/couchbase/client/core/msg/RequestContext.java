@@ -39,6 +39,11 @@ public class RequestContext extends CoreContext {
   private final Request<? extends Response> request;
 
   /**
+   * Allows to attach a custom payload to the request for the user.
+   */
+  private volatile Map<String, Object> payload;
+
+  /**
    * Creates a new {@link RequestContext}.
    *
    * @param ctx the core context.
@@ -66,14 +71,37 @@ public class RequestContext extends CoreContext {
    * @param dispatchLatency the duration.
    */
   @Stability.Internal
-  public void dispatchLatency(long dispatchLatency) {
+  public RequestContext dispatchLatency(long dispatchLatency) {
     this.dispatchLatency = dispatchLatency;
+    return this;
+  }
+
+  /**
+   * Returns the custom user payload of this request.
+   *
+   * @return the payload if set.
+   */
+  public Map<String, Object> payload() {
+    return payload;
+  }
+
+  /**
+   * Allows to set a custom payload for this request.
+   *
+   * @param payload the payload to set.
+   */
+  public RequestContext payload(final Map<String, Object> payload) {
+    this.payload = payload;
+    return this;
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("requestId", request.id());
+    if (payload != null) {
+      input.put("payload", payload);
+    }
   }
 
   /**
@@ -83,8 +111,9 @@ public class RequestContext extends CoreContext {
    * is an operation without side-effect.</p>
    */
   @Stability.Uncommitted
-  public void cancel() {
+  public RequestContext cancel() {
     request.cancel(CancellationReason.CANCELLED_VIA_CONTEXT);
+    return this;
   }
 
 }

@@ -22,3 +22,4 @@
  - Vastly expanded event bus which now also deals with logging and tracing
  - Overhauled environment with builders and suppliers
  - Endpoints now have built-in circuit breaker functionality
+ - Requst Context is available on every request and allows to 1) attach custom data and 2) allows to cancel the request from anywhere the context is in scope.
