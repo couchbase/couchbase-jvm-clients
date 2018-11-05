@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -28,10 +29,20 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class BaseRequest<R extends Response> implements Request<R> {
 
   /**
+   * Generator for each request ID.
+   */
+  private static final AtomicLong REQUEST_ID = new AtomicLong();
+
+  /**
    * Atomic updater for the {@link #state} field.
    */
   private static final AtomicReferenceFieldUpdater<BaseRequest, State> STATE_UPDATER =
     AtomicReferenceFieldUpdater.newUpdater(BaseRequest.class, State.class, "state");
+
+  /**
+   * Holds the unique ID for this request.
+   */
+  private final long id;
 
   /**
    * Holds the timeout of this request.
@@ -77,6 +88,7 @@ public class BaseRequest<R extends Response> implements Request<R> {
     this.timeout = timeout;
     this.ctx = ctx;
     this.response = new CompletableFuture<>();
+    this.id = REQUEST_ID.incrementAndGet();
   }
 
   @Override
@@ -139,6 +151,11 @@ public class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public Duration timeout() {
     return timeout;
+  }
+
+  @Override
+  public long id() {
+    return id;
   }
 
   /**

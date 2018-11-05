@@ -27,6 +27,13 @@ import java.util.concurrent.CompletableFuture;
 public interface Request<R extends Response> {
 
   /**
+   * Holds a unique ID for each request that is assigned automatically.
+   *
+   * @return the unique request ID.
+   */
+  long id();
+
+  /**
    * Holds the response which eventually completes.
    *
    * @return the future containing the response, eventually.
