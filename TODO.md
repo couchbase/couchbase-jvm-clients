@@ -5,7 +5,9 @@ Loosely keeping track of things:
 
 ## Requests
 
-
+ - rework delay and retry builder (not rely on the reactor one which logs?)
+ - figure out a retry policy per request and use it
+ 
 ## Endpoint
 
  - add local to endpoint scope if possible, similar to IO

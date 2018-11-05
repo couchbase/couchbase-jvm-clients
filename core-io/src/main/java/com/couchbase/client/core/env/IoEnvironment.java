@@ -76,14 +76,14 @@ public class IoEnvironment {
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
       || builder.viewEventLoopGroup == null) {
-      httpDefaultGroup = (OwnedSupplier<EventLoopGroup>) () -> createEventLoopGroup(fairThreadCount(), "cb-io-http");
+      httpDefaultGroup = createEventLoopGroup(fairThreadCount(), "cb-io-http");
     }
 
     configEventLoopGroup = builder.configEventLoopGroup == null
-      ? (OwnedSupplier<EventLoopGroup>) () -> createEventLoopGroup(1, "cb-io-config")
+      ? createEventLoopGroup(1, "cb-io-config")
       : builder.configEventLoopGroup;
     kvEventLoopGroup = builder.kvEventLoopGroup == null
-      ? (OwnedSupplier<EventLoopGroup>) () -> createEventLoopGroup(fairThreadCount(), "cb-io-kv")
+      ? createEventLoopGroup(fairThreadCount(), "cb-io-kv")
       : builder.kvEventLoopGroup;
     queryEventLoopGroup = builder.queryEventLoopGroup == null
       ? httpDefaultGroup
@@ -203,15 +203,15 @@ public class IoEnvironment {
    * @param poolName the name of the threads.
    * @return the created group.
    */
-  private static EventLoopGroup createEventLoopGroup(int numThreads, String poolName) {
+  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(int numThreads, String poolName) {
     ThreadFactory threadFactory = new DefaultThreadFactory(poolName);
 
     if (KQueue.isAvailable()) {
-      return new KQueueEventLoopGroup(numThreads, threadFactory);
+      return new OwnedSupplier<>(new KQueueEventLoopGroup(numThreads, threadFactory));
     } else if (Epoll.isAvailable()) {
-      return new EpollEventLoopGroup(numThreads, threadFactory);
+      return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
     } else {
-      return new NioEventLoopGroup(numThreads, threadFactory);
+      return new OwnedSupplier<>(new NioEventLoopGroup(numThreads, threadFactory));
     }
   }
 

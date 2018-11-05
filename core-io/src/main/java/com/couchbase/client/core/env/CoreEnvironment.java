@@ -46,13 +46,7 @@ public class CoreEnvironment {
       ? DEFAULT_USER_AGENT
       : builder.userAgent;
     this.eventBus = builder.eventBus == null
-      ? new OwnedSupplier<EventBus>() {
-        private final EventBus bus = DefaultEventBus.create();
-      @Override
-      public EventBus get() {
-        return bus;
-      }
-    }
+      ? new OwnedSupplier<>(DefaultEventBus.create())
       : builder.eventBus;
     this.timer = builder.timer == null
       ? Timer.createAndStart()

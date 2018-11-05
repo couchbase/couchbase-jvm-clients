@@ -17,8 +17,13 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectAttemptFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
@@ -87,6 +92,14 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   private volatile Channel channel;
 
+  /**
+   * Constructor to create a new endpoint, usually called by subclasses.
+   *
+   * @param hostname the remote hostname.
+   * @param port the remote port.
+   * @param eventLoopGroup the netty event loop group to use.
+   * @param coreContext the core context.
+   */
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
                final CoreContext coreContext) {
     this.endpointContext = new EndpointContext(coreContext, hostname, port);
@@ -163,7 +176,19 @@ public abstract class BaseEndpoint implements Endpoint {
         return channelFutureIntoMono(channelBootstrap.connect());
       })
       .timeout(endpointContext.environment().ioEnvironment().connectTimeout())
-      .onErrorResume(throwable -> disconnect.get() ? Mono.empty() : Mono.error(throwable))
+      .onErrorResume(throwable -> {
+        if (disconnect.get()) {
+          endpointContext.environment().eventBus().publish(
+            new EndpointConnectionAbortedEvent(
+              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              endpointContext,
+              ConnectTimings.toMap(channel))
+          );
+          return Mono.empty();
+        } else {
+          return Mono.error(throwable);
+        }
+      })
       .retryWhen(Retry
         .any()
         .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
@@ -172,45 +197,77 @@ public abstract class BaseEndpoint implements Endpoint {
           Duration duration = retryContext.exception() instanceof TimeoutException
             ? endpointContext.environment().ioEnvironment().connectTimeout()
             : Duration.ofNanos(System.nanoTime() - attemptStart.get());
-          endpointContext.environment().eventBus().publish(new EndpointConnectAttemptFailedEvent(
+          endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             duration,
             endpointContext,
             retryContext.iteration(),
             retryContext.exception()
           ));
         })
-      )
-      .subscribe(channel -> {
-        if (disconnect.get()) {
-          state.set(EndpointState.DISCONNECTED);
-          // todo: we succeeded to connect but got instructed to disconnect in the
-          // todo: meantime
-          // todo: raise a debug event for this and keep going
-        } else {
-          this.channel = channel;
-          endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
-            Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+      ).subscribe(
+        channel -> {
+          if (disconnect.get()) {
+            this.channel = null;
+            endpointContext.environment().eventBus().publish(new EndpointConnectionIgnoredEvent(
+              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              endpointContext,
+              ConnectTimings.toMap(channel)
+            ));
+            closeChannel(channel);
+          } else {
+            this.channel = channel;
+            endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
+              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              endpointContext,
+              ConnectTimings.toMap(channel)
+            ));
+            state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
+          }
+        },
+        error -> endpointContext.environment().eventBus().publish(
+          new UnexpectedEndpointConnectionFailedEvent(Duration.ofNanos(
+            System.nanoTime() - attemptStart.get()),
             endpointContext,
-            ConnectTimings.toMap(channel)
-          ));
-          state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
-        }
-      });
+            error)
+        )
+      );
   }
 
   @Override
   public void disconnect() {
     if (disconnect.compareAndSet(false, true)) {
       state.set(EndpointState.DISCONNECTING);
-      if (channel != null) {
-        channel.disconnect().addListener(new ChannelFutureListener() {
-          @Override
-          public void operationComplete(ChannelFuture future) throws Exception {
-            state.set(EndpointState.DISCONNECTED);
-            // todo: track and log proper shutdown
-          }
-        });
-      }
+      closeChannel(this.channel);
+    }
+  }
+
+  /**
+   * Helper method to close a channel and emit events if needed.
+   *
+   * <p>If no channel has been active already, it directly goes into a disconnected
+   * state. If one has been there before, it waits until the disconnect future
+   * completes.</p>
+   *
+   * @param channel the channel to close.
+   */
+  private void closeChannel(final Channel channel) {
+    if (channel != null) {
+      final long start = System.nanoTime();
+      channel.disconnect().addListener(future -> {
+        Duration latency = Duration.ofNanos(System.nanoTime() - start);
+        state.set(EndpointState.DISCONNECTED);
+        if (future.isSuccess()) {
+          endpointContext.environment().eventBus().publish(
+            new EndpointDisconnectedEvent(latency, endpointContext)
+          );
+        } else {
+          endpointContext.environment().eventBus().publish(
+            new EndpointDisconnectionFailedEvent(latency, endpointContext, future.cause())
+          );
+        }
+      });
+    } else {
+      state.set(EndpointState.DISCONNECTED);
     }
   }
 

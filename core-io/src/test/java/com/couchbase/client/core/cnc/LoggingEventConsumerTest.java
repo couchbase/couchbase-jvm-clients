@@ -90,6 +90,11 @@ class LoggingEventConsumerTest {
     MyEvent(Severity severity, Category category, Duration duration, Context context) {
       super(severity, category, duration, context);
     }
+
+    @Override
+    public String description() {
+      return "";
+    }
   }
 
   static class EventWithDescription extends AbstractEvent {

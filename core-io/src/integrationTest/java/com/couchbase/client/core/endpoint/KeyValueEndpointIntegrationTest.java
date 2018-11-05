@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.util.Utils.waitUntilCondition;
+import static com.couchbase.client.util.Util.waitUntilCondition;
 import static org.junit.Assert.assertTrue;
 
 /**

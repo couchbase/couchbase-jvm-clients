@@ -18,5 +18,17 @@ package com.couchbase.client.core.env;
 
 import java.util.function.Supplier;
 
-interface OwnedSupplier<T> extends Supplier<T> {
+class OwnedSupplier<T> implements Supplier<T> {
+
+  private final T value;
+
+  public OwnedSupplier(T value) {
+    this.value = value;
+  }
+
+  @Override
+  public T get() {
+    return value;
+  }
+
 }

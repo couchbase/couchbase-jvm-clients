@@ -21,7 +21,7 @@ import java.util.function.BooleanSupplier;
 /**
  * Provides a bunch of utility APIs that help with testing.
  */
-public class Utils {
+public class Util {
 
   /**
    * Waits and sleeps for a little bit of time until the given condition is met.
