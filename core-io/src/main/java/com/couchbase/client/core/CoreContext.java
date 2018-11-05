@@ -70,6 +70,6 @@ public class CoreContext extends AbstractContext {
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
-    input.put("core", id);
+    input.put("coreId", id);
   }
 }
