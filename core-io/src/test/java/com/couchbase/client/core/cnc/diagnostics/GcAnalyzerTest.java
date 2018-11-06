@@ -83,6 +83,48 @@ class GcAnalyzerTest {
     assertEquals("end of major GC", event.action());
   }
 
+  @Test
+  void convertCopy() {
+    GarbageCollectionDetectedEvent event = new GcAnalyzer("Copy")
+      .apply(new InfoBuilder()
+        .action("end of minor GC")
+        .cause("System.gc()")
+        .duration(5)
+        .poolBefore("Eden Space", 21497256)
+        .poolAfter("Eden Space", 1)
+        .poolBefore("Survivor Space", 1)
+        .poolAfter("Survivor Space", 2704608)
+        .build()
+      );
+
+    assertEquals(21497257, event.memoryBefore());
+    assertEquals(2704609, event.memoryAfter());
+    assertEquals(Duration.ofMillis(5), event.duration());
+    assertEquals(GcAnalyzer.GcType.COPY, event.type());
+    assertEquals("System.gc()", event.cause());
+    assertEquals("end of minor GC", event.action());
+  }
+
+  @Test
+  void convertMarkSweepCompact() {
+    GarbageCollectionDetectedEvent event = new GcAnalyzer("MarkSweepCompact")
+      .apply(new InfoBuilder()
+        .action("end of major GC")
+        .cause("System.gc()")
+        .duration(200)
+        .poolBefore("Tenured Gen", 16384)
+        .poolAfter("Tenured Gen", 2446680)
+        .build()
+      );
+
+    assertEquals(16384, event.memoryBefore());
+    assertEquals(2446680, event.memoryAfter());
+    assertEquals(Duration.ofMillis(200), event.duration());
+    assertEquals(GcAnalyzer.GcType.MARK_SWEEP_COMPACT, event.type());
+    assertEquals("System.gc()", event.cause());
+    assertEquals("end of major GC", event.action());
+  }
+
   class InfoBuilder {
 
     private String action;

@@ -87,6 +87,13 @@ public class GcAnalyzer
           usage += pools.get("PS Eden Space").getUsed();
           usage += pools.get("PS Survivor Space").getUsed();
           break;
+        case COPY:
+          usage += pools.get("Eden Space").getUsed();
+          usage += pools.get("Survivor Space").getUsed();
+          break;
+        case MARK_SWEEP_COMPACT:
+          usage += pools.get("Tenured Gen").getUsed();
+          break;
       }
     } catch (Exception ex) {
       // ignore, we just return 0 since this is best effort.
@@ -123,7 +130,7 @@ public class GcAnalyzer
     /**
      * We couldn't figure out the concurrency type, sorry.
      */
-    UNKNOWN;
+    UNKNOWN
   }
 
   /**
@@ -131,7 +138,6 @@ public class GcAnalyzer
    * GC logs in textual format.
    */
   public enum GcType {
-
     /**
      * The young generation parallel scavenge collector.
      */
@@ -140,6 +146,14 @@ public class GcAnalyzer
      * The old generation parallel scavenge collector.
      */
     PS_MARK_SWEEP("PS MarkSweep", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
+    /**
+     * The good old serial copy collector (enabled via -XX:+UseSerialGC).
+     */
+    COPY("Copy", GcGeneration.YOUNG, Concurrency.STOP_THE_WORLD),
+    /**
+     * The good old serial mark and sweep compactor (enabled via -XX:+UseSerialGC).
+     */
+    MARK_SWEEP_COMPACT("MarkSweepCompact", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
     /**
      * We couldn't figure out the gc type, sorry!
      */
@@ -165,6 +179,10 @@ public class GcAnalyzer
         return PS_SCAVENGE;
       } else if (name.equals(PS_MARK_SWEEP.identifier)) {
         return PS_MARK_SWEEP;
+      } else if (name.equals(COPY.identifier)) {
+        return COPY;
+      } else if (name.equals(MARK_SWEEP_COMPACT.identifier)) {
+        return MARK_SWEEP_COMPACT;
       } else {
         return UNKNOWN;
       }
