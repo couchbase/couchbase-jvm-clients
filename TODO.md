@@ -3,10 +3,23 @@
 Loosely keeping track of things:
 
 
+## GC Analyzer
+
+ - make the gc analyzer work with all kinds of GCs and be more intelligent what and
+   when to emit (set configurable thresholds).. similar to netflix specator
+ - add allocation rate checking
+ - be intelligent which GC is used and include that in the output
+
+## Diagnostics monitor
+
+ - make it run in its own thread and include in core env by default on
+ - add another analyzer based on the stall detection with latencyUtils. and emit when
+   stalls are detected
+ - would it be possible to add a analyzer for OS-type stuff like overall memory usage, cpu
+   utilization...?
+
 ## Requests
 
- - add test which verifies request cancellation through the attached request context.
- - add test for user payload attachment..
  - add unit tests for compression both on upsert request and get response
  - rework delay and retry builder (not rely on the reactor one which logs?)
  - figure out a retry policy per request and use it

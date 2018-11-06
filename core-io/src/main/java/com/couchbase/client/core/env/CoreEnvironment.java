@@ -18,6 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.DefaultEventBus;
+import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
@@ -40,6 +41,7 @@ public class CoreEnvironment {
   private final Supplier<EventBus> eventBus;
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
+  private final DiagnosticsMonitor diagnosticsMonitor;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -61,6 +63,8 @@ public class CoreEnvironment {
 
     // TODO: make configurable!
     eventBus.get().subscribe(LoggingEventConsumer.create());
+    diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
+    diagnosticsMonitor.start();
   }
 
   public static CoreEnvironment create() {
@@ -121,8 +125,14 @@ public class CoreEnvironment {
   }
 
   public Mono<Void> shutdownAsync(final Duration timeout) {
-    // todo: implement
-    return Mono.empty();
+    return Mono.defer(new Supplier<Mono<? extends Void>>() {
+      @Override
+      public Mono<? extends Void> get() {
+        // todo: implement
+        diagnosticsMonitor.stop();
+        return Mono.empty();
+      }
+    });
   }
 
   public static class Builder<SELF extends Builder<SELF>> {

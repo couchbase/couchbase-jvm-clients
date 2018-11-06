@@ -23,13 +23,18 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEve
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -45,7 +50,9 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the functionality of the {@link BaseEndpoint}.
@@ -96,20 +103,7 @@ class BaseEndpointTest {
    */
   @Test
   void connectSuccessfully() {
-    final CompletableFuture<Channel> cf = new CompletableFuture<>();
-
-    InstrumentedEndpoint endpoint = InstrumentedEndpoint.create(
-      eventLoopGroup,
-      ctx,
-      () -> Mono.fromFuture(cf)
-    );
-
-    endpoint.connect();
-    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTING);
-
-    EmbeddedChannel channel = new EmbeddedChannel();
-    cf.complete(channel);
-    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
+    connectSuccessfully(new EmbeddedChannel());
   }
 
   /**
@@ -286,6 +280,91 @@ class BaseEndpointTest {
     } finally {
       environment.shutdown(Duration.ofSeconds(1));
     }
+  }
+
+  /**
+   * This test tests the happy path, after being connected properly eventually a disconnect
+   * signal comes along.
+   */
+  @Test
+  void disconnectAfterBeingConnected() {
+    EmbeddedChannel channel = new EmbeddedChannel();
+    InstrumentedEndpoint endpoint = connectSuccessfully(channel);
+    assertTrue(channel.isOpen());
+    assertTrue(channel.isActive());
+
+    endpoint.disconnect();
+    waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
+    assertFalse(channel.isOpen());
+    assertFalse(channel.isActive());
+
+    assertEquals(2, eventBus.publishedEvents().size());
+    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    assertTrue(eventBus.publishedEvents().get(1) instanceof EndpointDisconnectedEvent);
+  }
+
+  /**
+   * If the disconnect failed for some reason, make sure the proper warning event
+   * is raised and captured.
+   */
+  @Test
+  void emitsEventOnFailedDisconnect() {
+    final Throwable expectedCause = new Exception("something failed");
+    EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+      @Override
+      public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+        promise.tryFailure(expectedCause);
+      }
+    });
+    InstrumentedEndpoint endpoint = connectSuccessfully(channel);
+
+    endpoint.disconnect();
+    waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
+
+    assertEquals(2, eventBus.publishedEvents().size());
+    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    EndpointDisconnectionFailedEvent event =
+      (EndpointDisconnectionFailedEvent) eventBus.publishedEvents().get(1);
+    assertEquals(expectedCause, event.cause());
+    assertEquals(Event.Severity.WARN, event.severity());
+  }
+
+  /**
+   * If we are fully connected and the circuit breaker is closed, make sure that we can
+   * write the request into the channel and it is flushed as well.
+   */
+  @Test
+  void writeAndFlushToChannelIfFullyConnected() {
+    EmbeddedChannel channel = new EmbeddedChannel();
+    InstrumentedEndpoint endpoint = connectSuccessfully(channel);
+
+    Request<?> request = mock(Request.class);
+    endpoint.send(request);
+    assertEquals(request, channel.readOutbound());
+  }
+
+  /**
+   * Helper method to DRY up the case where we just need to connect properly.
+   *
+   * @param channel the channel into which it should connect.
+   * @return the connected endpoint.
+   */
+  private InstrumentedEndpoint connectSuccessfully(final Channel channel) {
+    final CompletableFuture<Channel> cf = new CompletableFuture<>();
+
+    InstrumentedEndpoint endpoint = InstrumentedEndpoint.create(
+      eventLoopGroup,
+      ctx,
+      () -> Mono.fromFuture(cf)
+    );
+
+    endpoint.connect();
+    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTING);
+
+    cf.complete(channel);
+    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
+    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    return endpoint;
   }
 
   static class InstrumentedEndpoint extends BaseEndpoint {

@@ -274,8 +274,11 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public <R extends Request<? extends Response>> void send(R request) {
     if (state.get() == EndpointState.CONNECTED_CIRCUIT_CLOSED) {
-      // todo: make sure channel is writable and active before writing?
-      channel.writeAndFlush(request);
+      if (channel.isActive() && channel.isWritable()) {
+        channel.writeAndFlush(request);
+      } else {
+        // todo: what to do if the channel is not writable?
+      }
     } else {
       // todo: handle me all cases
     }
@@ -306,7 +309,5 @@ public abstract class BaseEndpoint implements Endpoint {
     });
     return Mono.fromFuture(completableFuture);
   }
-
-
 
 }

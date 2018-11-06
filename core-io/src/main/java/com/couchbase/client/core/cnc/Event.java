@@ -123,7 +123,11 @@ public interface Event {
     /**
      * Represents an event around a specific request instance.
      */
-    REQUEST
+    REQUEST,
+    /**
+     * Represents an event that concerns the JVM/OS/system.
+     */
+    SYSTEM,
   }
 
 }
