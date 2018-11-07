@@ -150,8 +150,6 @@ class BaseEndpointTest {
           assertTrue(event.duration().toNanos() > 0);
           successFound = true;
           System.out.println(event.toString());
-        } else {
-          throw new IllegalStateException("Unexpected Event found!");
         }
       }
       assertTrue(failedFound);
@@ -221,7 +219,7 @@ class BaseEndpointTest {
     cf.complete(channel);
     waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
 
-    assertEquals(2, eventBus.publishedEvents().size());
+    assertTrue(eventBus.publishedEvents().size() >= 2);
     assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectionIgnoredEvent);
 
     assertTrue(eventBus.publishedEvents().get(1) instanceof EndpointDisconnectedEvent);

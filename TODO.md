@@ -36,6 +36,8 @@ Loosely keeping track of things:
 
 ## IO
 
+ - figure out a way if we can support event loop separation for "high priority"
+   requests?
  - add the negotiated hello UUID to the context, if available
  - add test coverage for the ever-incrementing opaque functionality
  - complete select bucket handler test case with error cases
