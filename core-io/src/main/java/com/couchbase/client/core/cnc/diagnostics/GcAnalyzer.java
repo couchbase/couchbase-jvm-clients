@@ -94,6 +94,20 @@ public class GcAnalyzer
         case MARK_SWEEP_COMPACT:
           usage += pools.get("Tenured Gen").getUsed();
           break;
+        case G1_OLD:
+          usage += pools.get("G1 Old Gen").getUsed();
+          break;
+        case G1_YOUNG:
+          usage += pools.get("G1 Eden Space").getUsed();
+          usage += pools.get("G1 Survivor Space").getUsed();
+          break;
+        case PAR_NEW:
+          usage += pools.get("Par Eden Space").getUsed();
+          usage += pools.get("Par Survivor Space").getUsed();
+          break;
+        case CONCURRENT_MARK_SWEEP:
+          usage += pools.get("CMS Old Gen").getUsed();
+          break;
       }
     } catch (Exception ex) {
       // ignore, we just return 0 since this is best effort.
@@ -128,6 +142,10 @@ public class GcAnalyzer
      */
     STOP_THE_WORLD,
     /**
+     * The algorithm is concurrent and not stopping the world.
+     */
+    CONCURRENT,
+    /**
      * We couldn't figure out the concurrency type, sorry.
      */
     UNKNOWN
@@ -155,6 +173,26 @@ public class GcAnalyzer
      */
     MARK_SWEEP_COMPACT("MarkSweepCompact", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
     /**
+     * Young generation collection of the g1 collector.
+     *
+     * TODO: figure out the concurrency type.
+     */
+    G1_YOUNG("G1 Young Generation", GcGeneration.YOUNG, Concurrency.STOP_THE_WORLD),
+    /**
+     * Old generation collection of the g1 collector.
+     *
+     * TODO: figure out the concurrency type.
+     */
+    G1_OLD("G1 Old Generation", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
+    /**
+     * The ParNew collector.
+     */
+    PAR_NEW("ParNew", GcGeneration.YOUNG, Concurrency.STOP_THE_WORLD),
+    /**
+     * The concurrent mark sweep collector.
+     */
+    CONCURRENT_MARK_SWEEP("ConcurrentMarkSweep", GcGeneration.OLD, Concurrency.CONCURRENT),
+    /**
      * We couldn't figure out the gc type, sorry!
      */
     UNKNOWN("Unknown", GcGeneration.UNKNOWN, Concurrency.UNKNOWN);
@@ -174,6 +212,12 @@ public class GcAnalyzer
       return identifier + "(" + generation + ", " + concurrency + ")";
     }
 
+    /**
+     * Helper method to get the {@link GcType} for the string representation.
+     *
+     * @param name the name of the gc type from the JVM.
+     * @return the type if found or UNKNOWN otherwise.
+     */
     public static GcType fromString(final String name) {
       if (name.equals(PS_SCAVENGE.identifier)) {
         return PS_SCAVENGE;
@@ -183,6 +227,14 @@ public class GcAnalyzer
         return COPY;
       } else if (name.equals(MARK_SWEEP_COMPACT.identifier)) {
         return MARK_SWEEP_COMPACT;
+      } else if (name.equals(G1_OLD.identifier)) {
+        return G1_OLD;
+      } else if (name.equals(G1_YOUNG.identifier)) {
+        return G1_YOUNG;
+      } else if (name.equals(PAR_NEW.identifier)) {
+        return PAR_NEW;
+      } else if (name.equals(CONCURRENT_MARK_SWEEP.identifier)) {
+        return CONCURRENT_MARK_SWEEP;
       } else {
         return UNKNOWN;
       }

@@ -5,10 +5,12 @@ Loosely keeping track of things:
 
 ## GC Analyzer
 
- - make the gc analyzer work with all kinds of GCs and be more intelligent what and
-   when to emit (set configurable thresholds).. similar to netflix specator
+ - figure out which type to set for g1 young and old
+ - add tests for the outstanding ones
+ - add shenandoah support
+ - add zgc support?
+ - add azul support?
  - add allocation rate checking
- - be intelligent which GC is used and include that in the output
 
 ## Diagnostics monitor
 

@@ -125,6 +125,10 @@ class GcAnalyzerTest {
     assertEquals("end of major GC", event.action());
   }
 
+  // todo: add tests for g1 young and g1 old
+  // todo: add par new
+  // todo: add CMS
+
   class InfoBuilder {
 
     private String action;
