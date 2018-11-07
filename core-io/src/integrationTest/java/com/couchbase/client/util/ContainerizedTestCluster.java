@@ -58,8 +58,8 @@ public class ContainerizedTestCluster extends TestCluster {
 
 
   ContainerizedTestCluster(final Properties properties) {
-    version = SupportedVersion.fromString(properties.getProperty("cluster.managed.version"));
-    numNodes = Integer.parseInt(properties.getProperty("cluster.managed.numNodes"));
+    version = SupportedVersion.fromString(properties.getProperty("cluster.containerized.version"));
+    numNodes = Integer.parseInt(properties.getProperty("cluster.containerized.numNodes"));
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
   }

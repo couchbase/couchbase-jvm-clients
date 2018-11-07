@@ -39,8 +39,17 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    */
   static TestCluster create() {
     Properties properties = loadProperties();
-    boolean managed = Boolean.parseBoolean(properties.getProperty("cluster.managed"));
-    return managed ? new ContainerizedTestCluster(properties) : new UnmanagedTestCluster(properties);
+    String clusterType = properties.getProperty("cluster.type");
+
+    if (clusterType.equals("containerized")) {
+      return new ContainerizedTestCluster(properties);
+    } else if (clusterType.equals("mocked")) {
+      return new MockTestCluster(properties);
+    } else if (clusterType.equals("unmanaged")) {
+      return new UnmanagedTestCluster(properties);
+    } else {
+      throw new IllegalStateException("Unsupported test cluster type: " + clusterType);
+    }
   }
 
   /**

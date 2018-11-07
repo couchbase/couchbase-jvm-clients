@@ -48,6 +48,7 @@ dependencies {
 
   integrationTestCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
   integrationTestCompile 'org.testcontainers:testcontainers:1.10.0'
+  integrationTestCompile 'com.couchbase.mock:CouchbaseMock:1.5.19'
 }
 
 test {

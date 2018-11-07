@@ -16,25 +16,16 @@
 
 package com.couchbase.client.util;
 
-import com.couchbase.client.core.json.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
 public class UnmanagedTestCluster extends TestCluster {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(UnmanagedTestCluster.class);
 
   private final OkHttpClient httpClient = new OkHttpClient.Builder().build();
   private final String seedHost;
