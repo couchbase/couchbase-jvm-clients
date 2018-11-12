@@ -37,8 +37,6 @@ dependencies {
   compile 'org.iq80.snappy:snappy:0.4'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
 
-  compile 'com.graphql-java:graphql-java:10.0'
-
   testCompile 'io.projectreactor:reactor-test:3.2.2.RELEASE'
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
   testCompile 'org.mockito:mockito-core:2.23.0'
