@@ -16,15 +16,19 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  * The {@link Timer} acts as the main timing facility for various operations, for
@@ -67,10 +71,19 @@ public class Timer {
   }
 
   /**
+   * Schedule an arbitrary task for this timer.
+   */
+  @Stability.Internal
+  public Timeout schedule(Runnable callback, Duration runAfter) {
+    return wheelTimer.newTimeout(timeout -> callback.run(), runAfter.toNanos(), TimeUnit.NANOSECONDS);
+  }
+
+  /**
    * Registers the given request to be tracked with its timeout value.
    *
    * @param request the request to track.
    */
+  @Stability.Internal
   public void register(final Request<Response> request) {
     final Timeout registration = wheelTimer.newTimeout(
       timeout -> request.cancel(CancellationReason.TIMEOUT),

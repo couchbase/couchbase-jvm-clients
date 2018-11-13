@@ -16,34 +16,34 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.msg.Response;
+
+import java.util.concurrent.CompletableFuture;
+
 /**
- * Represents all states an {@link Endpoint} can be in.
+ * A simple noop implementation of the {@link CircuitBreaker} if disabled by the user.
  *
  * @since 2.0.0
  */
-public enum EndpointState {
+public class NoopCircuitBreaker implements CircuitBreaker {
 
-  /**
-   * The endpoint is disconnected and not trying to connect.
-   */
-  DISCONNECTED,
+  static NoopCircuitBreaker INSTANCE = new NoopCircuitBreaker();
 
-  /**
-   * The endpoint is disconnected but trying to connect right now.
-   */
-  CONNECTING,
+  private NoopCircuitBreaker() {}
 
-  /**
-   * The endpoint is connected.
-   *
-   * <p>This is the only state where it can actually try to serve traffic in the
-   * expected way.</p>
-   */
-  CONNECTED,
+  @Override
+  public void track(CompletableFuture<? extends Response> response) { }
 
-  /**
-   * The endpoint is currently disconnecting.
-   */
-  DISCONNECTING
+  @Override
+  public void reset() { }
 
+  @Override
+  public boolean allowsRequest() {
+    return true;
+  }
+
+  @Override
+  public State state() {
+    return State.DISABLED;
+  }
 }

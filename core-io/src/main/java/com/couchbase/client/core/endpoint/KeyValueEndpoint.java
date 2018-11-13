@@ -42,7 +42,8 @@ public class KeyValueEndpoint extends BaseEndpoint {
   public KeyValueEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
                           final int port, final String username,
                           final String bucketname, final String password) {
-    super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(), coreContext);
+    super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(),
+      coreContext, coreContext.environment().ioEnvironment().kvCircuitBreakerConfig());
     this.coreContext = coreContext;
     this.username = username;
     this.bucketname = bucketname;

@@ -88,6 +88,11 @@ public abstract class BaseEndpoint implements Endpoint {
   private final AtomicBoolean disconnect;
 
   /**
+   * The circuit breaker used for this endpoint.
+   */
+  private final CircuitBreaker circuitBreaker;
+
+  /**
    * Once connected, contains the channel to work with.
    */
   private volatile Channel channel;
@@ -99,12 +104,16 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param port the remote port.
    * @param eventLoopGroup the netty event loop group to use.
    * @param coreContext the core context.
+   * @param circuitBreakerConfig the circuit breaker config used.
    */
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
-               final CoreContext coreContext) {
-    this.endpointContext = new EndpointContext(coreContext, hostname, port);
+               final CoreContext coreContext, final CircuitBreakerConfig circuitBreakerConfig) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
+    this.circuitBreaker = circuitBreakerConfig.enabled()
+      ? new LazyCircuitBreaker(circuitBreakerConfig)
+      : NoopCircuitBreaker.INSTANCE;
+    this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker);
 
     long connectTimeoutMs = coreContext.environment().ioEnvironment().connectTimeout().toMillis();
     channelBootstrap = new Bootstrap()
@@ -221,7 +230,8 @@ public abstract class BaseEndpoint implements Endpoint {
               endpointContext,
               ConnectTimings.toMap(channel)
             ));
-            state.set(EndpointState.CONNECTED_CIRCUIT_CLOSED);
+            this.circuitBreaker.reset();
+            state.set(EndpointState.CONNECTED);
           }
         },
         error -> endpointContext.environment().eventBus().publish(
@@ -273,15 +283,24 @@ public abstract class BaseEndpoint implements Endpoint {
 
   @Override
   public <R extends Request<? extends Response>> void send(R request) {
-    if (state.get() == EndpointState.CONNECTED_CIRCUIT_CLOSED) {
-      if (channel.isActive() && channel.isWritable()) {
+    if (canWrite()) {
+        circuitBreaker.track(request.response());
         channel.writeAndFlush(request);
-      } else {
-        // todo: what to do if the channel is not writable?
-      }
     } else {
-      // todo: handle me all cases
+      // TODO: what to do if not connected, active or writable or circuit open
     }
+  }
+
+  /**
+   * Helper method to check if we can write into the channel at this point.
+   *
+   * @return true if we can, false otherwise.
+   */
+  private boolean canWrite() {
+    return state.get() == EndpointState.CONNECTED
+      && channel.isActive()
+      && channel.isWritable()
+      && circuitBreaker.allowsRequest();
   }
 
   @Override

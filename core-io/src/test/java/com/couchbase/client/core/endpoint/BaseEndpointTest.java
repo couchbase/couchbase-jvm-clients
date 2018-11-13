@@ -135,7 +135,7 @@ class BaseEndpointTest {
 
       EmbeddedChannel channel = new EmbeddedChannel();
       cf.complete(channel);
-      waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
+      waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
       assertTrue(eventBus.publishedEvents().size() >= 3);
       boolean failedFound = false;
@@ -176,7 +176,7 @@ class BaseEndpointTest {
     );
 
     endpoint.connect();
-    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
+    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
     assertEquals(4, eventBus.publishedEvents().size());
     int warnings = 0;
@@ -360,7 +360,7 @@ class BaseEndpointTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTING);
 
     cf.complete(channel);
-    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED_CIRCUIT_CLOSED);
+    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
     assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
     return endpoint;
   }
@@ -376,7 +376,7 @@ class BaseEndpointTest {
 
     InstrumentedEndpoint(NetworkAddress hostname, int port, EventLoopGroup eventLoopGroup,
                          CoreContext coreContext, Supplier<Mono<Channel>> channelSupplier) {
-      super(hostname, port, eventLoopGroup, coreContext);
+      super(hostname, port, eventLoopGroup, coreContext, CircuitBreakerConfig.disabled());
       this.channelSupplier = channelSupplier;
     }
 

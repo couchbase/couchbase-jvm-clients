@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -48,6 +49,8 @@ public class IoEnvironment {
   private final Supplier<EventLoopGroup> analyticsEventLoopGroup;
   private final Supplier<EventLoopGroup> searchEventLoopGroup;
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
+
+  private final CircuitBreakerConfig kvCircuitBreakerConfig;
 
   public static IoEnvironment create() {
     return builder().build();
@@ -97,6 +100,10 @@ public class IoEnvironment {
     viewEventLoopGroup = builder.viewEventLoopGroup == null
       ? httpDefaultGroup
       : builder.viewEventLoopGroup;
+
+    kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.kvCircuitBreakerConfig;
   }
 
   /**
@@ -192,6 +199,10 @@ public class IoEnvironment {
     return viewEventLoopGroup;
   }
 
+  public CircuitBreakerConfig kvCircuitBreakerConfig() {
+    return kvCircuitBreakerConfig;
+  }
+
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
@@ -244,6 +255,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
+    private CircuitBreakerConfig kvCircuitBreakerConfig = null;
 
     public Builder connectTimeout(Duration connectTimeout) {
       this.connectTimeout = connectTimeout;

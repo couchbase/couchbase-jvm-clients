@@ -34,22 +34,30 @@ public class EndpointContext extends CoreContext {
   private int remotePort;
 
   /**
+   * The circuit breaker used for this endpoint.
+   */
+  private final CircuitBreaker circuitBreaker;
+
+  /**
    * Creates a new {@link EndpointContext}.
    *
    * @param ctx the parent context to use.
    * @param remoteHostname the remote hostname.
    * @param remotePort the remote port.
    */
-  public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort) {
+  public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
+                         CircuitBreaker circuitBreaker) {
     super(ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
+    this.circuitBreaker = circuitBreaker;
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
+    input.put("circuitBreaker", circuitBreaker.state().toString());
   }
 
   public NetworkAddress remoteHostname() {
@@ -58,5 +66,9 @@ public class EndpointContext extends CoreContext {
 
   public int remotePort() {
     return remotePort;
+  }
+
+  public CircuitBreaker circuitBreaker() {
+    return circuitBreaker;
   }
 }

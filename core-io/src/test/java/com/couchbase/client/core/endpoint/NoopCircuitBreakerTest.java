@@ -16,34 +16,28 @@
 
 package com.couchbase.client.core.endpoint;
 
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 /**
- * Represents all states an {@link Endpoint} can be in.
+ * Verifies that the {@link NoopCircuitBreaker} does not invalidate the required semantics.
  *
  * @since 2.0.0
  */
-public enum EndpointState {
+class NoopCircuitBreakerTest {
 
   /**
-   * The endpoint is disconnected and not trying to connect.
+   * Since it is a noop circuit breaker, it should always allow to write a request.
    */
-  DISCONNECTED,
-
-  /**
-   * The endpoint is disconnected but trying to connect right now.
-   */
-  CONNECTING,
-
-  /**
-   * The endpoint is connected.
-   *
-   * <p>This is the only state where it can actually try to serve traffic in the
-   * expected way.</p>
-   */
-  CONNECTED,
-
-  /**
-   * The endpoint is currently disconnecting.
-   */
-  DISCONNECTING
+  @Test
+  void alwaysAllowsToWrite() {
+    CircuitBreaker cb = NoopCircuitBreaker.INSTANCE;
+    assertTrue(cb.allowsRequest());
+    assertEquals(CircuitBreaker.State.DISABLED, cb.state());
+    cb.reset();
+    assertTrue(cb.allowsRequest());
+    assertEquals(CircuitBreaker.State.DISABLED, cb.state());
+  }
 
 }
