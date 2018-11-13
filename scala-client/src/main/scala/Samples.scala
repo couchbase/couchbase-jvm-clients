@@ -56,7 +56,9 @@ object Samples {
   }
 
 
-  // There are two asynchronous APIs.  This one returns Scala Futures (similar to a Java CompletableFuture)
+  // There are two asynchronous APIs.  This one returns Scala Futures (similar to a Java CompletableFuture).  The API
+  // is basically identical to the synchhronous one above, just returning a Future.  Most of this code is just giving
+  // basic usage for Scala Futures.
   def asyncApi(): Unit = {
 
     // When using Scala Futures you tell them how to run (thread-pools etc.) with an ExecutionContext (similar to a
@@ -111,5 +113,32 @@ object Samples {
       case Success(doc) =>
       case Failure(err) =>
     }
+  }
+
+
+  // Finally, this API wraps the reactive library Project Reactor
+  // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
+  // normal Reactor usage.
+  def reactiveAPI(): Unit = {
+    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
+    val coll = new ReactiveCollection()
+
+    // Get
+    coll.get("id", timeout = 1000.milliseconds)
+      .map(doc => {
+        if (doc.isDefined) println("Got doc")
+        else println("No doc :(")
+      })
+      // As normal with Reactive, blocking is discouraged - just for demoing
+      .block()
+
+    // Get-replace
+    coll.getOrError("id", timeout = 1000.milliseconds)
+      .flatMap(doc => {
+        val newDoc = doc.copy(content = JsonObject.empty())
+        coll.replace(newDoc)
+      })
+      // As normal with Reactive, blocking is discouraged - just for demoing
+      .block()
   }
 }
