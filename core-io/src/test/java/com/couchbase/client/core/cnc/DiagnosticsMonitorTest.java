@@ -40,7 +40,7 @@ class DiagnosticsMonitorTest {
   void capturesGcEvents() {
     assumeTrue(explicitGcEnabled(), "-XX:+DisableExplicitGC set");
 
-    SimpleEventBus eventBus = new SimpleEventBus();
+    SimpleEventBus eventBus = new SimpleEventBus(false);
     DiagnosticsMonitor monitor = DiagnosticsMonitor.create(eventBus);
     monitor.start();
 

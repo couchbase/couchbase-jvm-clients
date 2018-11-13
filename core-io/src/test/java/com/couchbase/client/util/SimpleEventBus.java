@@ -35,9 +35,17 @@ public class SimpleEventBus implements EventBus {
    */
   private List<Event> publishedEvents = new ArrayList<>();
 
+  private final boolean ignoreSystemEvents;
+
+  public SimpleEventBus(boolean ignoreSystemEvents) {
+    this.ignoreSystemEvents = ignoreSystemEvents;
+  }
+
   @Override
   public synchronized PublishResult publish(Event event) {
-    publishedEvents.add(event);
+    if (!ignoreSystemEvents || event.category() != Event.Category.SYSTEM) {
+      publishedEvents.add(event);
+    }
     return PublishResult.SUCCESS;
   }
 

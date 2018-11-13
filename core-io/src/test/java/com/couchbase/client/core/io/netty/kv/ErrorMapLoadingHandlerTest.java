@@ -69,7 +69,7 @@ class ErrorMapLoadingHandlerTest {
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus();
+    simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     IoEnvironment ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
@@ -112,7 +112,7 @@ class ErrorMapLoadingHandlerTest {
   @Test
   void failConnectIfPromiseTimesOut() throws Exception {
     channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus();
+    simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     IoEnvironment ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);

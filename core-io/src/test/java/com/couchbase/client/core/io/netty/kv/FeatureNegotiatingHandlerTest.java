@@ -81,7 +81,7 @@ class FeatureNegotiatingHandlerTest {
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus();
+    simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);

@@ -77,7 +77,7 @@ class BaseEndpointTest {
   @BeforeEach
   void beforeEach() {
     eventLoopGroup = new NioEventLoopGroup(1);
-    eventBus = new SimpleEventBus();
+    eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder().eventBus(eventBus).build();
     ctx = new CoreContext(1, environment);
   }
@@ -113,7 +113,7 @@ class BaseEndpointTest {
    */
   @Test
   void retryOnTimeoutUntilEventuallyConnected() {
-    SimpleEventBus eventBus = new SimpleEventBus();
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
       .ioEnvironment(IoEnvironment.builder()
@@ -235,7 +235,7 @@ class BaseEndpointTest {
    */
   @Test
   void disconnectDuringRetry() {
-    SimpleEventBus eventBus = new SimpleEventBus();
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
       .ioEnvironment(IoEnvironment.builder()

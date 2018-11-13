@@ -86,7 +86,7 @@ class MemcacheProtocolVerificationHandlerTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource
   void shouldCloseOnInvalidResponses(final InputHolder inputHolder) {
-    SimpleEventBus eventBus = new SimpleEventBus();
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     CoreContext ctx = mock(CoreContext.class);
     when(ctx.environment()).thenReturn(env);
