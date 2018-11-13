@@ -3,6 +3,6 @@ rootProject.name = 'couchbase-jvm-clients'
 include 'core-io'
 include 'java-client'
 include 'scala-client'
-include 'kotline-client'
+include 'kotlin-client'
 
 enableFeaturePreview 'STABLE_PUBLISHING'
