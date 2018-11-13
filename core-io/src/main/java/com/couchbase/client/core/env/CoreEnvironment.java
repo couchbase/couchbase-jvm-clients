@@ -42,6 +42,7 @@ public class CoreEnvironment {
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
   private final DiagnosticsMonitor diagnosticsMonitor;
+  private final Duration kvTimeout;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -56,6 +57,9 @@ public class CoreEnvironment {
     this.ioEnvironment = builder.ioEnvironment == null
       ? IoEnvironment.create()
       : builder.ioEnvironment;
+    this.kvTimeout = builder.kvTimeout == null
+      ? Duration.ofMillis(2500)
+      : builder.kvTimeout;
 
     if (this.eventBus instanceof OwnedSupplier) {
       ((DefaultEventBus) eventBus.get()).start();
@@ -120,6 +124,10 @@ public class CoreEnvironment {
     return timer;
   }
 
+  public Duration kvTimeout() {
+    return kvTimeout;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -141,6 +149,7 @@ public class CoreEnvironment {
     private Supplier<EventBus> eventBus = null;
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
+    private Duration kvTimeout = null;
 
     @SuppressWarnings({ "unchecked" })
     protected SELF self() {
@@ -172,6 +181,11 @@ public class CoreEnvironment {
 
     public SELF eventBus(final Supplier<EventBus> eventBus) {
       this.eventBus = eventBus;
+      return self();
+    }
+
+    public SELF kvTimeout(final Duration kvTimeout) {
+      this.kvTimeout = kvTimeout;
       return self();
     }
 

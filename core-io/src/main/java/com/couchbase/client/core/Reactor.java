@@ -23,6 +23,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * This class provides utility methods when working with reactor.
@@ -36,13 +37,14 @@ public enum Reactor {
    * Wraps a {@link Request} and returns it in a {@link Mono}.
    *
    * @param request the request to wrap.
+   * @param response the full response to wrap, might not be the same as in the request.
    * @param propagateCancellation if a cancelled/unsubscribed mono should also cancel the
    *                              request.
    * @return the mono that wraps the request.
    */
-  public static <T extends Response> Mono<T> wrap(final Request<T> request,
-                                                  final boolean propagateCancellation) {
-    Mono<T> mono = Mono.fromFuture(request.response());
+  public static <T> Mono<T> wrap(final Request<?> request, final CompletableFuture<T> response,
+                                 final boolean propagateCancellation) {
+    Mono<T> mono = Mono.fromFuture(response);
     if (propagateCancellation) {
       mono = mono
         .doFinally(st -> {

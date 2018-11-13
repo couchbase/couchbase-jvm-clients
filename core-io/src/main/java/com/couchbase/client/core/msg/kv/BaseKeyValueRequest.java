@@ -17,9 +17,11 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
+import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 
@@ -32,6 +34,8 @@ import java.time.Duration;
 public abstract class BaseKeyValueRequest<R extends Response>
   extends BaseRequest<R>
   implements KeyValueRequest<R> {
+
+  private static byte[] EMPTY_KEY = new byte[] {};
 
   /**
    * Once set, stores the partition where this request should be dispatched against.
@@ -50,6 +54,16 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public void partition(short partition) {
     this.partition = partition;
+  }
+
+  /**
+   * Returns the encoded version of the key in UTF-8.
+   *
+   * @param key the key to encode.
+   * @return the encoded key.
+   */
+  static byte[] encodeKey(final String key) {
+    return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(CharsetUtil.UTF_8);
   }
 
 }

@@ -45,9 +45,9 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   private final byte[] key;
 
-  public GetRequest(final byte[] key, final Duration timeout, final CoreContext ctx) {
+  public GetRequest(final String key, final Duration timeout, final CoreContext ctx) {
     super(timeout, ctx);
-    this.key = key;
+    this.key = encodeKey(key);
   }
 
   @Override

@@ -1,4 +1,4 @@
 package com.couchbase.client.java;
 
-public class Document {
+public class Document<T> {
 }

@@ -35,14 +35,27 @@ public class SimpleEventBus implements EventBus {
    */
   private List<Event> publishedEvents = new ArrayList<>();
 
+  /**
+   * If system event should be ignored, since they add noise and nondeterminism
+   * to the event bus in assertions.
+   */
   private final boolean ignoreSystemEvents;
 
-  public SimpleEventBus(boolean ignoreSystemEvents) {
+  /**
+   * Creates a new {@link SimpleEventBus}.
+   *
+   * <p>Note that in general you want to ignore system events since they add nondeterminism during
+   * assertions when things like garbage collections happen. Of course if you need to test/verify
+   * system events, set the argument to false.</p>
+   *
+   * @param ignoreSystemEvents true if they should be ignored (recommended), false otherwise.
+   */
+  public SimpleEventBus(final boolean ignoreSystemEvents) {
     this.ignoreSystemEvents = ignoreSystemEvents;
   }
 
   @Override
-  public synchronized PublishResult publish(Event event) {
+  public synchronized PublishResult publish(final Event event) {
     if (!ignoreSystemEvents || event.category() != Event.Category.SYSTEM) {
       publishedEvents.add(event);
     }
@@ -50,16 +63,17 @@ public class SimpleEventBus implements EventBus {
   }
 
   @Override
-  public synchronized EventSubscription subscribe(Consumer<Event> consumer) {
+  public synchronized EventSubscription subscribe(final Consumer<Event> consumer) {
     return null;
   }
 
   @Override
-  public synchronized void unsubscribe(EventSubscription subscription) {
+  public synchronized void unsubscribe(final EventSubscription subscription) {
 
   }
 
   public synchronized List<Event> publishedEvents() {
     return publishedEvents;
   }
+
 }

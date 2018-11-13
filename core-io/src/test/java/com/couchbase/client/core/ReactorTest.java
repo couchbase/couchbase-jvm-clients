@@ -40,7 +40,7 @@ class ReactorTest {
   @Test
   void completesWithSuccessAfterSubscription() {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
-    Mono<NoopResponse> mono = Reactor.wrap(request, true);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     NoopResponse response = mock(NoopResponse.class);
     StepVerifier verifier = StepVerifier.create(mono).expectNext(response).expectComplete();
@@ -52,7 +52,7 @@ class ReactorTest {
   @Test
   void completesWithErrorAfterSubscription() {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
-    Mono<NoopResponse> mono = Reactor.wrap(request, true);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     RequestCanceledException exception = mock(RequestCanceledException.class);
     StepVerifier verifier = StepVerifier.create(mono).expectError(RequestCanceledException.class);
@@ -66,7 +66,7 @@ class ReactorTest {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
     NoopResponse response = mock(NoopResponse.class);
     request.succeed(response);
-    Mono<NoopResponse> mono = Reactor.wrap(request, true);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     StepVerifier verifier = StepVerifier.create(mono).expectNext(response).expectComplete();
     verifier.verify();
@@ -77,7 +77,7 @@ class ReactorTest {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
     RequestCanceledException exception = mock(RequestCanceledException.class);
     request.fail(exception);
-    Mono<NoopResponse> mono = Reactor.wrap(request, true);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     StepVerifier verifier = StepVerifier.create(mono).expectError(RequestCanceledException.class);
     verifier.verify();
@@ -86,7 +86,7 @@ class ReactorTest {
   @Test
   void propagatesCancellation() {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
-    Mono<NoopResponse> mono = Reactor.wrap(request, true);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
     assertTrue(request.response().isCompletedExceptionally());
@@ -96,7 +96,7 @@ class ReactorTest {
   @Test
   void ignoresCancellationPropagation() {
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
-    Mono<NoopResponse> mono = Reactor.wrap(request, false);
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), false);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
     assertFalse(request.response().isCompletedExceptionally());
