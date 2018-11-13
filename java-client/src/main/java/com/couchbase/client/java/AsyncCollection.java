@@ -41,7 +41,11 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * async mechanism with the lowest overhead (best performance) but also comes with less
  * bells and whistles as the {@link ReactiveCollection} for example.</p>
  *
- * @since 2.0.0
+ * <p>Most of the time we recommend using the {@link ReactiveCollection} unless you need the
+ * last drop of performance or if you are implementing higher level primitives on top of this
+ * one.</p>
+ *
+ * @since 3.0.0
  */
 public class AsyncCollection {
 

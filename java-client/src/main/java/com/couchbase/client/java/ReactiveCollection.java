@@ -32,10 +32,21 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
+ * The {@link ReactiveCollection} provides sophisticated asynchronous access to all collection APIs.
  *
+ * <p>This API provides more sophisticated async controls over the {@link AsyncCollection}, but
+ * it also comes with a little more overhead. For most use cases we recommend using this API
+ * over the other one, unless you really need that last drop of performance and can live with the
+ * significantly reduced functionality (in terms of the richness of operators). For example, this
+ * {@link ReactiveCollection} is built on top of the {@link AsyncCollection}.</p>
+ *
+ * @since 3.0.0
  */
 public class ReactiveCollection {
 
+  /**
+   * Holds the underlying async collection.
+   */
   private final AsyncCollection asyncCollection;
 
   /**
@@ -55,8 +66,7 @@ public class ReactiveCollection {
   }
 
   /**
-   *
-   * @return
+   * Provides access to the underlying {@link AsyncCollection}.
    */
   public AsyncCollection async() {
     return asyncCollection;

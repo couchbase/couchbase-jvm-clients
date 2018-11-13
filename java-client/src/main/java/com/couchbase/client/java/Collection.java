@@ -25,29 +25,42 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 /**
+ * The {@link Collection} provides blocking, synchronous access to all collection APIs.
  *
+ * <p>If asynchronous access is needed, we recommend looking at the {@link ReactiveCollection} and
+ * if the last drop of performance is needed the {@link AsyncCollection}. This blocking API itself
+ * is just a small layer on top of the {@link AsyncCollection} which blocks the current thread
+ * until the request completes with a response.</p>
+ *
+ * @since 3.0.0
  */
 public class Collection {
 
+  /**
+   * Holds the underlying async collection.
+   */
   private final AsyncCollection asyncCollection;
+
+  /**
+   * Holds the underlying reactive collection.
+   */
   private final ReactiveCollection reactiveCollection;
 
-  Collection(final String name, final String scope, final Core core, final CouchbaseEnvironment environment) {
+  Collection(final String name, final String scope, final Core core,
+             final CouchbaseEnvironment environment) {
     asyncCollection = new AsyncCollection(name, scope, core, environment);
     reactiveCollection = new ReactiveCollection(asyncCollection);
   }
 
   /**
-   *
-   * @return
+   * Provides access to the underlying {@link AsyncCollection}.
    */
   public AsyncCollection async() {
     return asyncCollection;
   }
 
   /**
-   *
-   * @return
+   * Provides access to the underlying {@link ReactiveCollection}.
    */
   public ReactiveCollection reactive() {
     return reactiveCollection;
