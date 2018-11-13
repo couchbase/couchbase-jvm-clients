@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
-  api project(':core-io')
+  compile 'org.scala-lang:scala-library:2.12.7'
+  compile project(':core-io')
 }
