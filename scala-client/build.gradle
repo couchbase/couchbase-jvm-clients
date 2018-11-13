@@ -1,3 +1,7 @@
 plugins {
   id 'scala'
 }
+
+dependencies {
+  api project(':core-io')
+}
