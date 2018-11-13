@@ -28,6 +28,7 @@ import io.netty.buffer.Unpooled;
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
@@ -62,13 +63,15 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
   @Override
   public GetResponse decode(final ByteBuf response) {
     ResponseStatus status = decodeStatus(response);
-    byte[] content = status.success()
-      ? body(response)
-          .map(ByteBufUtil::getBytes)
-          .map(bytes -> tryDecompression(bytes, datatype(response)))
-          .orElse(new byte[] {})
-      : null;
-    return new GetResponse(status, content);
+    if (status.success()) {
+      byte[] content = body(response)
+        .map(ByteBufUtil::getBytes)
+        .map(bytes -> tryDecompression(bytes, datatype(response)))
+        .orElse(new byte[] {});
+      return new GetResponse(status, content, cas(response));
+    } else {
+      return new GetResponse(status, null, 0);
+    }
   }
 
 }

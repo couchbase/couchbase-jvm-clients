@@ -86,7 +86,7 @@ public class ReactiveCollection {
       Duration timeout = options.timeout().orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
 
-      CompletableFuture<Document<T>> response = async().get(request, options.decodeInto());
+      CompletableFuture<Document<T>> response = async().get(id, request, options.decodeInto());
       return Reactor.wrap(request, response, true);
     });
   }

@@ -32,8 +32,8 @@ public class Collection {
   private final AsyncCollection asyncCollection;
   private final ReactiveCollection reactiveCollection;
 
-  public Collection(Core core, CouchbaseEnvironment environment) {
-    asyncCollection = new AsyncCollection(core, environment);
+  Collection(final String name, final String scope, final Core core, final CouchbaseEnvironment environment) {
+    asyncCollection = new AsyncCollection(name, scope, core, environment);
     reactiveCollection = new ReactiveCollection(asyncCollection);
   }
 
@@ -58,7 +58,7 @@ public class Collection {
    * @param id
    * @return
    */
-  public Document<JsonObject> get(String id) {
+  public Document<JsonObject> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -69,10 +69,18 @@ public class Collection {
    * @param <T>
    * @return
    */
-  public <T> Document<T> get(String id, GetOptions<T> options) {
-    return wrapBlockingGet(asyncCollection.get(id, options));
+  public <T> Document<T> get(final String id, final GetOptions<T> options) {
+    return wrapBlockingGet(async().get(id, options));
   }
 
+  /**
+   * Helper method to wrap an async call into a blocking one and make sure to
+   * convert all checked exceptions into their correct runtime counterparts.
+   *
+   * @param input the future as input.
+   * @param <T> the generic type to return.
+   * @return blocks and completes on the given future while converting checked exceptions.
+   */
   private <T> T wrapBlockingGet(final CompletableFuture<T> input) {
     try {
       return input.get();

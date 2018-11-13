@@ -85,6 +85,11 @@ public enum MemcacheProtocol {
   static final int OPAQUE_OFFSET = 12;
 
   /**
+   * The offset for the CAS field.
+   */
+  static final int CAS_OFFSET = 16;
+
+  /**
    * Create a memcached protocol request with all fields necessary.
    *
    * @param alloc
@@ -168,6 +173,16 @@ public enum MemcacheProtocol {
    */
   static int opaque(final ByteBuf message) {
     return message.getInt(OPAQUE_OFFSET);
+  }
+
+  /**
+   * Helper method to extract the cas from a message.
+   *
+   * @param message the message to extract the cas from.
+   * @return the cas as a long.
+   */
+  public static long cas(final ByteBuf message) {
+    return message.getLong(CAS_OFFSET);
   }
 
   /**

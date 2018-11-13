@@ -27,10 +27,12 @@ import com.couchbase.client.core.msg.ResponseStatus;
 public class GetResponse extends BaseResponse {
 
   private final byte[] content;
+  private final long cas;
 
-  GetResponse(final ResponseStatus status, final byte[] content) {
+  GetResponse(final ResponseStatus status, final byte[] content, final long cas) {
     super(status);
     this.content = content;
+    this.cas = cas;
   }
 
   /**
@@ -40,6 +42,15 @@ public class GetResponse extends BaseResponse {
    */
   public byte[] content() {
     return content;
+  }
+
+  /**
+   * Returns the CAS value of the document at the time of the fetch.
+   *
+   * @return the cas value.
+   */
+  public long cas() {
+    return cas;
   }
 
 }

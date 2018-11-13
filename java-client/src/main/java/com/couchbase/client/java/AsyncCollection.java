@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -59,16 +60,41 @@ public class AsyncCollection {
    */
   private final CouchbaseEnvironment environment;
 
-  AsyncCollection(final Core core, final CouchbaseEnvironment environment) {
+  /**
+   * The name of the collection.
+   */
+  private final String name;
+
+  /**
+   * The scope of the collection.
+   */
+  private final String scope;
+
+  /**
+   * Creates a new {@link AsyncCollection}.
+   *
+   * @param core the core into which ops are dispatched.
+   * @param environment the surrounding environment for config options.
+   */
+  AsyncCollection(final String name, final String scope, final Core core,
+                  final CouchbaseEnvironment environment) {
+    this.name = name;
+    this.scope = scope;
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
   }
 
+  /**
+   * Provides access to the underlying {@link Core}.
+   */
   Core core() {
     return core;
   }
 
+  /**
+   * Provides access to the underlying {@link CouchbaseEnvironment}.
+   */
   CouchbaseEnvironment environment() {
     return environment;
   }
@@ -97,17 +123,27 @@ public class AsyncCollection {
 
     Duration timeout = options.timeout().orElse(environment.kvTimeout());
     GetRequest request = new GetRequest(id, timeout, coreContext);
-    return get(request, options.decodeInto());
+    return get(id, request, options.decodeInto());
   }
 
-  <T> CompletableFuture<Document<T>> get(final GetRequest request, final Class<T> convertInto) {
+  /**
+   * Internal: Take a {@link GetRequest} and dispatch, convert and return the result.
+   *
+   * @param id the document ID as a string.
+   * @param request the request to dispatch and analyze.
+   * @param convertInto into which response type it should be converted.
+   * @param <T> the generic type of the response document.
+   * @return a {@link CompletableFuture} once the document is fetched and decoded.
+   */
+  @Stability.Internal
+  <T> CompletableFuture<Document<T>> get(final String id, final GetRequest request,
+                                         final Class<T> convertInto) {
     dispatch(request);
-
     return request
       .response()
       .thenApply(getResponse -> {
-        // todo: implement decoding
-        return new Document<>();
+        // todo: implement decoding and response code checking
+        return new Document<>(id, null, getResponse.cas());
       });
   }
 
