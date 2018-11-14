@@ -18,9 +18,10 @@ object Samples {
     // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     val fetched2 = coll.getOrError("id")
 
-    // All parameters provided by named/default parameters rather than a GetOptions class.  Not wedded to
-    // this, just feel it's more idiomatically Scala
+    // All methods have both a named/default parameters version, and a GetOptions version
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
+    val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
+    val fetched6 = coll.get("id", GetOptions().timeout(1000.milliseconds).build())
 
     // getAndLock and getAndTouch work pretty much the same as get
     val fetched4 = coll.getAndLock("id", 5.seconds)
@@ -44,6 +45,10 @@ object Samples {
     // Insert, providing a subset of parameters
     coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
 
+    // Insert using InsertOptions
+    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
+
     // Basic replaces.  JsonDocument is an immutable Scala case class and it's trivial to copy
     // it with different content:
     if (fetched1.isDefined) {
@@ -52,6 +57,11 @@ object Samples {
 
       // Replace, providing a subset of parameters
       coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+
+      // Replace using ReplaceOptions
+      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
+
     }
   }
 
