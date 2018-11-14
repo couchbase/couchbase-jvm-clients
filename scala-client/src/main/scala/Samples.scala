@@ -5,63 +5,46 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object Samples {
+
+
   def blockingApi(): Unit = {
     // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
     val coll = new Collection()
 
-    // Gets return Option[JsonDocument]
+
+    // All methods have both a named/default parameters version, and an [X]Options version
     val fetched1 = coll.get("id")
-    if (fetched1.isDefined) {
-      // do something with fetched1.get
-    }
-
-    // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
-    val fetched2 = coll.getOrError("id")
-
-    // All methods have both a named/default parameters version, and a GetOptions version
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
     val fetched6 = coll.get("id", GetOptions().timeout(1000.milliseconds).build())
 
+
+    // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
+    val fetched2 = coll.getOrError("id")
+    val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds).build())
+
+
     // getAndLock and getAndTouch work pretty much the same as get
     val fetched4 = coll.getAndLock("id", 5.seconds)
 
-    // Basic insert
+
+    // Various ways of inserting
     val toInsert = JsonDocument.create("id", JsonObject.empty())
-    val docPostInsert = coll.insert(toInsert)
-
-    // Basic insert without creating a JsonDocument
-    // One downside of named/default params is that I have to give this a different name than 'insert'
-    coll.insertContent("id", JsonObject.empty())
-
-    // Insert - showing all parameters
-    coll.insert(toInsert,
-      timeout = 1000.milliseconds,
-      expiration = 10.days,
-      replicateTo = ReplicateTo.ALL,
-      persistTo = PersistTo.MAJORITY
-    )
-
-    // Insert, providing a subset of parameters
+    coll.insert(toInsert)
+    coll.insert(toInsert, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-
-    // Insert using InsertOptions
     coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
     coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
 
-    // Basic replaces.  JsonDocument is an immutable Scala case class and it's trivial to copy
-    // it with different content:
+
+    // Various ways of replacing
     if (fetched1.isDefined) {
+      // JsonDocument is an immutable Scala case class and it's trivial to copy it with different content:
       val toReplace = fetched1.get.copy(content = JsonObject.empty())
       coll.replace(toReplace)
-
-      // Replace, providing a subset of parameters
       coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-
-      // Replace using ReplaceOptions
       coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
       coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
-
     }
   }
 
