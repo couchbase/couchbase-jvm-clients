@@ -9,8 +9,13 @@ object Samples {
 
   def blockingApi(): Unit = {
     // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new Collection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people")
 
+    // As the methods below block on a Scala Future, they need an implicit ExecutionContext in scope
+    implicit val ec = ExecutionContext.Implicits.global
 
     // All methods have both a named/default parameters version, and an [X]Options version
     val fetched1 = coll.get("id")
@@ -59,8 +64,10 @@ object Samples {
     // variable, as it's in-scope, marked implicit, and has the correct type).  This basic one is a simple thread-pool.
     implicit val ec = ExecutionContext.Implicits.global
 
-    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new AsyncCollection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people").async()
 
 
     // Gets return Future[Option[JsonDocument]].  A basic way to handle a Future's result is this:
@@ -113,8 +120,13 @@ object Samples {
   // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
   // normal Reactor usage.
   def reactiveAPI(): Unit = {
-    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new ReactiveCollection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people").reactive()
+
+    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
+    implicit val ec = ExecutionContext.Implicits.global
 
     // Get
     coll.get("id", timeout = 1000.milliseconds)

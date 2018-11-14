@@ -1,10 +1,10 @@
 package com.couchbase.client.scala
 import scala.concurrent.duration._
 
-class CollectionConfig {
+class CouchbaseEnvironment {
   def keyValueTimeout(): FiniteDuration = 1000.milliseconds
 }
 
-object CollectionConfig {
-  def default() = new CollectionConfig()
+object CouchbaseDefaultEnvironment {
+  def create() = new CouchbaseEnvironment()
 }
