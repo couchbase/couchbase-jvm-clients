@@ -32,8 +32,6 @@ Loosely keeping track of things:
  - add the negotiated hello UUID to the context, if available
  - implement endpoint logic
    (continue testing)
- - implement circuit breaker logic
- - test it all in unit tests
  - add integration test for circuit breaker (?)
 
 ## IO
@@ -47,6 +45,8 @@ Loosely keeping track of things:
  - add sasl client unit tests
  - add collection support with tests
  - add snappy support and then reenable
+ - add encryption/SSL
+
 
 ## Env
  

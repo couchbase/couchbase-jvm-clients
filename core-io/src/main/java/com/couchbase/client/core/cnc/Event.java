@@ -128,6 +128,10 @@ public interface Event {
      * Represents an event that concerns the JVM/OS/system.
      */
     SYSTEM,
+    /**
+     * Represents an event from the Service layer.
+     */
+    SERVICE,
   }
 
 }
