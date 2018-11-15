@@ -46,15 +46,16 @@ class AsyncCollection(val collection: Collection) {
     BYTE_ARRAY_TRANSCODER.documentType() -> BYTE_ARRAY_TRANSCODER
   )
 
-  // All methods are placeholders returning null for now
-  def insert(doc: JsonDocument,
+  def insert(id: String,
+             content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
-    val content = JSON_OBJECT_TRANSCODER.encode(doc)
-    val request = new InsertRequest(doc.id(), content.value1(), collection.scope.bucket.name())
+    val doc = JsonDocument.create(id, content)
+    val encoded = JSON_OBJECT_TRANSCODER.encode(doc)
+    val request = new InsertRequest(doc.id(), encoded.value1(), collection.scope.bucket.name())
 
     dispatch[InsertRequest, InsertResponse](request)
       .map(response => {
@@ -78,36 +79,33 @@ class AsyncCollection(val collection: Collection) {
       })
   }
 
-  def insert(doc: JsonDocument,
+  def insert(id: String,
+             content: JsonObject,
              options: InsertOptions
             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
-    insert(doc, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+    insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
-  def insertContent(id: String,
-             content: JsonObject,
-             timeout: FiniteDuration = kvTimeout,
-             expiration: FiniteDuration = 0.seconds,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = null
-
-  def replace(doc: JsonDocument,
+  def replace(id: String,
+              content: JsonObject,
+              cas: Long,
               timeout: FiniteDuration = kvTimeout,
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
              )(implicit ec: ExecutionContext): Future[JsonDocument] = null
 
-  def replace(doc: JsonDocument,
+  def replace(id: String,
+              content: JsonObject,
+              cas: Long,
               options: ReplaceOptions
              )(implicit ec: ExecutionContext): Future[JsonDocument] = {
-    replace(doc, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+    replace(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
   def remove(id: String,
+             cas: Long,
              timeout: FiniteDuration = kvTimeout,
-             cas: Long = 0,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
             )(implicit ec: ExecutionContext): Future[RemoveResult] = {
@@ -137,9 +135,10 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def remove(id: String,
+             cas: Long,
              options: RemoveOptions
             )(implicit ec: ExecutionContext): Future[RemoveResult] = {
-    remove(id, options.timeout, options.cas, options.replicateTo, options.persistTo)
+    remove(id, cas, options.timeout, options.replicateTo, options.persistTo)
   }
 
   def get(id: String,

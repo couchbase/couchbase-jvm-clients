@@ -19,12 +19,25 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
     bucket.bucketManager().flush()
   }
 
+  "a basic blocking remove" should "succeed" in {
+    val id = docId(0)
+    val doc = JsonObject.create().put("value", "INSERTED")
+    val newDoc = coll.insert(id, doc)
+
+    val result = coll.remove(id, 0)
+
+    assert(result.cas != newDoc.cas)
+    assert(result.cas != 0)
+    assert(result.mutationToken.isEmpty)
+    assert(coll.get(id).isEmpty)
+  }
+
   "a basic blocking insert and get" should "succeed" in {
     val id = docId(0)
-    val doc = JsonDocument.create(id, JsonObject.create().put("value", "INSERTED"))
-    val newDoc = coll.insert(doc)
+    val doc = JsonObject.create().put("value", "INSERTED")
+    val newDoc = coll.insert(id, doc)
 
-    assert(newDoc.id() == doc.id())
+    assert(newDoc.id() == id)
     assert(newDoc.cas() != 0)
     assert(newDoc.content().getString("value") == "INSERTED")
 
@@ -33,19 +46,8 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
     assert(docOpt.isDefined)
     assert(docOpt.get.cas != 0)
     assert(docOpt.get.content().getString("value") == "INSERTED")
-  }
 
-  "a basic blocking remove" should "succeed" in {
-    val id = docId(0)
-    val doc = JsonDocument.create(id, JsonObject.create().put("value", "INSERTED"))
-    val newDoc = coll.insert(doc)
-
-    val result = coll.remove(id)
-
-    assert(result.cas != newDoc.cas)
-    assert(result.cas != 0)
-    assert(result.mutationToken.isEmpty)
-    assert(coll.get(id).isEmpty)
+    coll.remove(id, 0)
   }
 
   def docId(idx: Int): String = {

@@ -39,11 +39,10 @@ object Samples {
 
 
     // Various ways of inserting
-    val toInsert = JsonDocument.create("id", JsonObject.empty())
-    coll.insert(toInsert)
-    coll.insert(toInsert, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
-    coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+    coll.insert("id", JsonObject.create())
+    coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
+    coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+    coll.insert("id", JsonObject.create(), InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
 
 
     // Various ways of replacing
@@ -51,9 +50,9 @@ object Samples {
       // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
       // val toReplace = fetched1.get.copy(content = JsonObject.empty())
       val toReplace = fetched1.get
-      coll.replace(toReplace)
-      coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+      coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas())
+      coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+      coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas(), ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
     }
   }
 
@@ -95,11 +94,7 @@ object Samples {
     // Get-and-replace
     val replace = coll.getOrError("id", timeout = 1000.milliseconds)
       .map(doc => {
-        // val toReplace = doc.copy(content = JsonObject.empty())
-        val toReplace = doc
-
-        // Replace, providing a subset of parameters
-        coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+        coll.replace(doc.id(), JsonObject.empty(), doc.cas(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       })
 
     Await.result(replace, atMost = 5.seconds)
@@ -109,15 +104,14 @@ object Samples {
       doc <- coll.getOrError("id", timeout = 1000.milliseconds)
       doc <- {
         // coll.replace(doc.copy(content = JsonObject.empty()))
-        coll.replace(doc)
+        coll.replace(doc.id(), JsonObject.create(), doc.cas())
       }
     } yield doc
 
     Await.result(replace, atMost = 5.seconds)
 
     // Insert
-    val toInsert = JsonDocument.create("id", JsonObject.empty())
-    coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY) onComplete {
+    coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY) onComplete {
       case Success(doc) =>
       case Failure(err) =>
     }
@@ -127,32 +121,33 @@ object Samples {
   // Finally, this API wraps the reactive library Project Reactor
   // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
   // normal Reactor usage.
-  def reactiveAPI(): Unit = {
-    val cluster = CouchbaseCluster.create("localhost")
-    val bucket = cluster.openBucket("default")
-    val scope = new Scope(cluster, bucket, "scope")
-    val coll = scope.openCollection("people").reactive()
-
-    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
-    implicit val ec = ExecutionContext.Implicits.global
-
-    // Get
-    coll.get("id", timeout = 1000.milliseconds)
-      .map(doc => {
-        if (doc.isDefined) println("Got doc")
-        else println("No doc :(")
-      })
-      // As normal with Reactive, blocking is discouraged - just for demoing
-      .block()
-
-    // Get-replace
-    coll.getOrError("id", timeout = 1000.milliseconds)
-      .flatMap(doc => {
-        // val newDoc = doc.copy(content = JsonObject.empty())
-        val newDoc = doc
-        coll.replace(newDoc)
-      })
-      // As normal with Reactive, blocking is discouraged - just for demoing
-      .block()
-  }
+  // Disabled for now to keep up with rapid prototyping, but it'll look something like this
+//  def reactiveAPI(): Unit = {
+//    val cluster = CouchbaseCluster.create("localhost")
+//    val bucket = cluster.openBucket("default")
+//    val scope = new Scope(cluster, bucket, "scope")
+//    val coll = scope.openCollection("people").reactive()
+//
+//    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
+//    implicit val ec = ExecutionContext.Implicits.global
+//
+//    // Get
+//    coll.get("id", timeout = 1000.milliseconds)
+//      .map(doc => {
+//        if (doc.isDefined) println("Got doc")
+//        else println("No doc :(")
+//      })
+//      // As normal with Reactive, blocking is discouraged - just for demoing
+//      .block()
+//
+//    // Get-replace
+//    coll.getOrError("id", timeout = 1000.milliseconds)
+//      .flatMap(doc => {
+//        // val newDoc = doc.copy(content = JsonObject.empty())
+//        val newDoc = doc
+//        coll.replace(newDoc)
+//      })
+//      // As normal with Reactive, blocking is discouraged - just for demoing
+//      .block()
+//  }
 }

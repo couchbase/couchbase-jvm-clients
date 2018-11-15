@@ -19,65 +19,62 @@ class Collection(val name: String,
                  val scope: Scope) {
   private val config: CouchbaseEnvironment = null // scope.cluster.env
   private val asyncColl = new AsyncCollection(this)
-  private val reactiveColl = new ReactiveCollection(this)
+//  private val reactiveColl = new ReactiveCollection(this)
   private val safetyTimeout = 60.minutes
 //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
   // All methods are placeholders returning null for now
-  def insert(doc: JsonDocument,
-             timeout: FiniteDuration = kvTimeout,
-             expiration: FiniteDuration = 0.seconds,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.insert(doc, timeout, expiration, replicateTo, persistTo), safetyTimeout)
-  }
-
-  def insert(doc: JsonDocument,
-             options: InsertOptions,
-            )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.insert(doc, options), safetyTimeout)
-  }
-
-  def insertContent(id: String,
+  def insert(id: String,
              content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
             )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.insertContent(id, content, timeout, expiration, replicateTo, persistTo), safetyTimeout)
+    Await.result(asyncColl.insert(id, content, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
-  def replace(doc: JsonDocument,
+  def insert(id: String,
+             content: JsonObject,
+             options: InsertOptions,
+            )(implicit ec: ExecutionContext): JsonDocument = {
+    Await.result(asyncColl.insert(id, content, options), safetyTimeout)
+  }
+
+  def replace(id: String,
+              content: JsonObject,
+              cas: Long,
               timeout: FiniteDuration = kvTimeout,
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
              )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.replace(doc, timeout, expiration, replicateTo, persistTo), safetyTimeout)
+    Await.result(asyncColl.replace(id, content, cas, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
-  def replace(doc: JsonDocument,
-             options: ReplaceOptions,
+  def replace(id: String,
+              content: JsonObject,
+              cas: Long,
+              options: ReplaceOptions,
             )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.replace(doc, options), safetyTimeout)
+    Await.result(asyncColl.replace(id, content, cas, options), safetyTimeout)
   }
 
   def remove(id: String,
+             cas: Long,
              timeout: FiniteDuration = kvTimeout,
-             cas: Long = 0,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
             )(implicit ec: ExecutionContext): RemoveResult = {
-    Await.result(asyncColl.remove(id, timeout, cas, replicateTo, persistTo), safetyTimeout)
+    Await.result(asyncColl.remove(id, cas, timeout, replicateTo, persistTo), safetyTimeout)
   }
 
   def remove(id: String,
+             cas: Long,
              options: RemoveOptions
             )(implicit ec: ExecutionContext): RemoveResult = {
-    Await.result(asyncColl.remove(id, options), safetyTimeout)
+    Await.result(asyncColl.remove(id, cas, options), safetyTimeout)
   }
 
   def get(id: String,
@@ -119,5 +116,5 @@ class Collection(val name: String,
   }
 
   def async(): AsyncCollection = asyncColl
-  def reactive(): ReactiveCollection = reactiveColl
+//  def reactive(): ReactiveCollection = reactiveColl
 }
