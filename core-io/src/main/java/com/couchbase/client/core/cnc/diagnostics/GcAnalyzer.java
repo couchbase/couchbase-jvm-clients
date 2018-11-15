@@ -201,6 +201,18 @@ public class GcAnalyzer
     final GcGeneration generation;
     final Concurrency concurrency;
 
+    public String identifier() {
+      return identifier;
+    }
+
+    public GcGeneration generation() {
+      return generation;
+    }
+
+    public Concurrency concurrency() {
+      return concurrency;
+    }
+
     GcType(String identifier, GcGeneration generation, Concurrency concurrency) {
       this.identifier = identifier;
       this.generation = generation;

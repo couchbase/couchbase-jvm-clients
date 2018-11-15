@@ -232,6 +232,7 @@ class PooledServiceTest {
    * If a request is completed already, do not attempt to send it in the first place.
    */
   @Test
+  @SuppressWarnings({ "unchecked" })
   void doNotSendRequestIfCompleted() {
     int minEndpoints = 2;
 
