@@ -1,3 +1,7 @@
+import com.couchbase.client.java.CouchbaseCluster
+import com.couchbase.client.java.document.JsonDocument
+import com.couchbase.client.java.document.json.JsonObject
+import com.couchbase.client.java.env.DefaultCouchbaseEnvironment
 import com.couchbase.client.scala._
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -8,11 +12,13 @@ object Samples {
 
 
   def blockingApi(): Unit = {
-    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-    val scope = bucket.openScope("scope")
+    // Opening a scope should look like this, but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here
+    // val scope = bucket.openScope("scope")
+    val scope = new Scope(cluster, bucket, "scope")
     val coll = scope.openCollection("people")
+    // Also supported: val coll = bucket.openCollection("scope", "people")
 
     // As the methods below block on a Scala Future, they need an implicit ExecutionContext in scope
     implicit val ec = ExecutionContext.Implicits.global
@@ -44,8 +50,9 @@ object Samples {
 
     // Various ways of replacing
     if (fetched1.isDefined) {
-      // JsonDocument is an immutable Scala case class and it's trivial to copy it with different content:
-      val toReplace = fetched1.get.copy(content = JsonObject.empty())
+      // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
+      // val toReplace = fetched1.get.copy(content = JsonObject.empty())
+      val toReplace = fetched1.get
       coll.replace(toReplace)
       coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
@@ -64,9 +71,9 @@ object Samples {
     // variable, as it's in-scope, marked implicit, and has the correct type).  This basic one is a simple thread-pool.
     implicit val ec = ExecutionContext.Implicits.global
 
-    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-    val scope = bucket.openScope("scope")
+    val scope = new Scope(cluster, bucket, "scope")
     val coll = scope.openCollection("people").async()
 
 
@@ -91,7 +98,8 @@ object Samples {
     // Get-and-replace
     val replace = coll.getOrError("id", timeout = 1000.milliseconds)
       .map(doc => {
-        val toReplace = doc.copy(content = JsonObject.empty())
+        // val toReplace = doc.copy(content = JsonObject.empty())
+        val toReplace = doc
 
         // Replace, providing a subset of parameters
         coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
@@ -102,7 +110,10 @@ object Samples {
     // Another, maybe tidier way of writing that get-replace
     val replace2 = for {
       doc <- coll.getOrError("id", timeout = 1000.milliseconds)
-      doc <- coll.replace(doc.copy(content = JsonObject.empty()))
+      doc <- {
+        // coll.replace(doc.copy(content = JsonObject.empty()))
+        coll.replace(doc)
+      }
     } yield doc
 
     Await.result(replace, atMost = 5.seconds)
@@ -120,9 +131,9 @@ object Samples {
   // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
   // normal Reactor usage.
   def reactiveAPI(): Unit = {
-    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-    val scope = bucket.openScope("scope")
+    val scope = new Scope(cluster, bucket, "scope")
     val coll = scope.openCollection("people").reactive()
 
     // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
@@ -140,7 +151,8 @@ object Samples {
     // Get-replace
     coll.getOrError("id", timeout = 1000.milliseconds)
       .flatMap(doc => {
-        val newDoc = doc.copy(content = JsonObject.empty())
+        // val newDoc = doc.copy(content = JsonObject.empty())
+        val newDoc = doc
         coll.replace(newDoc)
       })
       // As normal with Reactive, blocking is discouraged - just for demoing

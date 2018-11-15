@@ -1,5 +1,7 @@
 package com.couchbase.client.scala
 
+import com.couchbase.client.java.document.JsonDocument
+import com.couchbase.client.java.document.json.JsonObject
 import reactor.core.scala.publisher.Mono
 
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -7,10 +9,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ReactiveCollection(val coll: Collection) {
   private val async = coll.async()
-  private val config = coll.scope.cluster.env
+  private val kvTimeout = coll.kvTimeout
 
   def insert(doc: JsonDocument,
-             timeout: FiniteDuration = config.keyValueTimeout(),
+             timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
@@ -32,7 +34,7 @@ class ReactiveCollection(val coll: Collection) {
 
   def insertContent(id: String,
              content: JsonObject,
-             timeout: FiniteDuration = config.keyValueTimeout(),
+             timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
@@ -41,7 +43,7 @@ class ReactiveCollection(val coll: Collection) {
   }
 
   def replace(doc: JsonDocument,
-              timeout: FiniteDuration = config.keyValueTimeout(),
+              timeout: FiniteDuration = kvTimeout,
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
@@ -62,7 +64,7 @@ class ReactiveCollection(val coll: Collection) {
   }
 
   def get(id: String,
-          timeout: FiniteDuration = config.keyValueTimeout())
+          timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
     Mono.fromFuture(async.get(id, timeout))
   }
@@ -80,7 +82,7 @@ class ReactiveCollection(val coll: Collection) {
   }
 
   def getOrError(id: String,
-                 timeout: FiniteDuration = config.keyValueTimeout())
+                 timeout: FiniteDuration = kvTimeout)
                 (implicit ec: ExecutionContext): Mono[JsonDocument] = {
     Mono.fromFuture(async.getOrError(id, timeout))
   }
@@ -99,7 +101,7 @@ class ReactiveCollection(val coll: Collection) {
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
-                 timeout: FiniteDuration = config.keyValueTimeout())
+                 timeout: FiniteDuration = kvTimeout)
                 (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
     Mono.fromFuture(async.getAndLock(id, lockFor, timeout))
   }

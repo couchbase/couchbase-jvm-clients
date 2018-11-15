@@ -1,19 +1,27 @@
 package com.couchbase.client.scala
 
+import java.util.concurrent.TimeUnit
+
+import com.couchbase.client.java.document.JsonDocument
+import com.couchbase.client.java.document.json.JsonObject
+import com.couchbase.client.java.env.CouchbaseEnvironment
+
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 
 class Collection(val name: String,
                  val scope: Scope) {
-  private val config = scope.cluster.env
+  private val config: CouchbaseEnvironment = null // scope.cluster.env
   private val asyncColl = new AsyncCollection(this)
   private val reactiveColl = new ReactiveCollection(this)
   private val safetyTimeout = 60.minutes
+//  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
+  val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
   // All methods are placeholders returning null for now
   def insert(doc: JsonDocument,
-             timeout: FiniteDuration = config.keyValueTimeout(),
+             timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
@@ -35,7 +43,7 @@ class Collection(val name: String,
 
   def insertContent(id: String,
              content: JsonObject,
-             timeout: FiniteDuration = config.keyValueTimeout(),
+             timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
@@ -44,7 +52,7 @@ class Collection(val name: String,
   }
 
   def replace(doc: JsonDocument,
-              timeout: FiniteDuration = config.keyValueTimeout(),
+              timeout: FiniteDuration = kvTimeout,
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
@@ -65,7 +73,7 @@ class Collection(val name: String,
   }
 
   def get(id: String,
-          timeout: FiniteDuration = config.keyValueTimeout())
+          timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Option[JsonDocument] = {
     Await.result(asyncColl.get(id, timeout), safetyTimeout)
   }
@@ -83,7 +91,7 @@ class Collection(val name: String,
   }
 
   def getOrError(id: String,
-          timeout: FiniteDuration = config.keyValueTimeout())
+          timeout: FiniteDuration = kvTimeout)
                 (implicit ec: ExecutionContext): JsonDocument = {
     Await.result(asyncColl.getOrError(id, timeout), safetyTimeout)
   }
@@ -102,7 +110,7 @@ class Collection(val name: String,
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
-                 timeout: FiniteDuration = config.keyValueTimeout())
+                 timeout: FiniteDuration = kvTimeout)
                 (implicit ec: ExecutionContext): Option[JsonDocument] = {
     Await.result(asyncColl.getAndLock(id, lockFor, timeout), safetyTimeout)
   }
