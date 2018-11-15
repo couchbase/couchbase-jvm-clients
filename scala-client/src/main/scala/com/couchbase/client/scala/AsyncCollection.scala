@@ -56,10 +56,6 @@ class AsyncCollection(val collection: Collection) {
              options: InsertOptions
             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
 
-  def insert(doc: JsonDocument,
-             options: InsertOptionsBuilt
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = null
-
   def insertContent(id: String,
              content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
@@ -79,10 +75,6 @@ class AsyncCollection(val collection: Collection) {
               options: ReplaceOptions
              )(implicit ec: ExecutionContext): Future[JsonDocument] = null
 
-  def replace(doc: JsonDocument,
-              options: ReplaceOptionsBuilt
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
-
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = {
@@ -99,18 +91,11 @@ class AsyncCollection(val collection: Collection) {
           options: GetOptions
          )(implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
 
-  def get(id: String,
-          options: GetOptionsBuilt
-         )(implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
-
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout): Future[JsonDocument] = null
 
   def getOrError(id: String,
                  options: GetOptions): Future[JsonDocument] = null
-
-  def getOrError(id: String,
-                 options: GetOptionsBuilt): Future[JsonDocument] = null
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
@@ -120,11 +105,6 @@ class AsyncCollection(val collection: Collection) {
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
-
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 options: GetAndLockOptionsBuilt)
                 (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
 
   private def dispatch[REQ <: CouchbaseRequest, RESP <: CouchbaseResponse](request: REQ)

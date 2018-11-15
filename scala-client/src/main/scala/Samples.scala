@@ -27,16 +27,15 @@ object Samples {
     val fetched1 = coll.get("id")
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
-    val fetched6 = coll.get("id", GetOptions().timeout(1000.milliseconds).build())
 
 
     // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     val fetched2 = coll.getOrError("id")
-    val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds).build())
-
+    val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds))
 
     // getAndLock and getAndTouch work pretty much the same as get
     val fetched4 = coll.getAndLock("id", 5.seconds)
+
 
 
     // Various ways of inserting
@@ -45,7 +44,6 @@ object Samples {
     coll.insert(toInsert, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
     coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
-    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
 
 
     // Various ways of replacing
@@ -56,7 +54,6 @@ object Samples {
       coll.replace(toReplace)
       coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
-      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
     }
   }
 

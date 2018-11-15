@@ -35,12 +35,6 @@ class Collection(val name: String,
     Await.result(asyncColl.insert(doc, options), safetyTimeout)
   }
 
-  def insert(doc: JsonDocument,
-             options: InsertOptionsBuilt,
-            )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.insert(doc, options), safetyTimeout)
-  }
-
   def insertContent(id: String,
              content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
@@ -66,22 +60,10 @@ class Collection(val name: String,
     Await.result(asyncColl.replace(doc, options), safetyTimeout)
   }
 
-  def replace(doc: JsonDocument,
-              options: ReplaceOptionsBuilt,
-             )(implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.replace(doc, options), safetyTimeout)
-  }
-
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Option[JsonDocument] = {
     Await.result(asyncColl.get(id, timeout), safetyTimeout)
-  }
-
-  def get(id: String,
-          options: GetOptionsBuilt)
-         (implicit ec: ExecutionContext): Option[JsonDocument] = {
-    Await.result(asyncColl.get(id, options), safetyTimeout)
   }
 
   def get(id: String,
@@ -102,12 +84,6 @@ class Collection(val name: String,
     Await.result(asyncColl.getOrError(id, options), safetyTimeout)
   }
 
-  def getOrError(id: String,
-                 options: GetOptionsBuilt)
-                (implicit ec: ExecutionContext): JsonDocument = {
-    Await.result(asyncColl.getOrError(id, options), safetyTimeout)
-  }
-
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  timeout: FiniteDuration = kvTimeout)
@@ -118,13 +94,6 @@ class Collection(val name: String,
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Option[JsonDocument] = {
-    Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
-  }
-
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 options: GetAndLockOptionsBuilt)
                 (implicit ec: ExecutionContext): Option[JsonDocument] = {
     Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
   }

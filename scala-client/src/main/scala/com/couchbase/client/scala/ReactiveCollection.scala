@@ -26,12 +26,6 @@ class ReactiveCollection(val coll: Collection) {
     Mono.fromFuture(async.insert(doc, options))
   }
 
-  def insert(doc: JsonDocument,
-             options: InsertOptionsBuilt
-            )(implicit ec: ExecutionContext): Mono[JsonDocument] = {
-    Mono.fromFuture(async.insert(doc, options))
-  }
-
   def insertContent(id: String,
              content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
@@ -57,12 +51,6 @@ class ReactiveCollection(val coll: Collection) {
     Mono.fromFuture(async.replace(doc, options))
   }
 
-  def replace(doc: JsonDocument,
-              options: ReplaceOptionsBuilt
-             )(implicit ec: ExecutionContext): Mono[JsonDocument] = {
-    Mono.fromFuture(async.replace(doc, options))
-  }
-
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
@@ -75,12 +63,6 @@ class ReactiveCollection(val coll: Collection) {
     Mono.fromFuture(async.get(id, options))
   }
 
-  def get(id: String,
-          options: GetOptionsBuilt)
-         (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
-    Mono.fromFuture(async.get(id, options))
-  }
-
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
                 (implicit ec: ExecutionContext): Mono[JsonDocument] = {
@@ -89,12 +71,6 @@ class ReactiveCollection(val coll: Collection) {
 
   def getOrError(id: String,
                  options: GetOptions)
-                (implicit ec: ExecutionContext): Mono[JsonDocument] = {
-    Mono.fromFuture(async.getOrError(id, options))
-  }
-
-  def getOrError(id: String,
-                 options: GetOptionsBuilt)
                 (implicit ec: ExecutionContext): Mono[JsonDocument] = {
     Mono.fromFuture(async.getOrError(id, options))
   }
@@ -112,12 +88,4 @@ class ReactiveCollection(val coll: Collection) {
                 (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
     Mono.fromFuture(async.getAndLock(id, lockFor, options))
   }
-
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 options: GetAndLockOptionsBuilt)
-                (implicit ec: ExecutionContext): Mono[Option[JsonDocument]] = {
-    Mono.fromFuture(async.getAndLock(id, lockFor, options))
-  }
-
 }
