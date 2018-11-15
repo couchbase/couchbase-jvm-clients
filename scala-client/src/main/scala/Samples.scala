@@ -5,53 +5,51 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object Samples {
+
+
   def blockingApi(): Unit = {
     // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new Collection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people")
 
-    // Gets return Option[JsonDocument]
+    // As the methods below block on a Scala Future, they need an implicit ExecutionContext in scope
+    implicit val ec = ExecutionContext.Implicits.global
+
+    // All methods have both a named/default parameters version, and an [X]Options version
     val fetched1 = coll.get("id")
-    if (fetched1.isDefined) {
-      // do something with fetched1.get
-    }
-
-    // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
-    val fetched2 = coll.getOrError("id")
-
-    // All parameters provided by named/default parameters rather than a GetOptions class.  Not wedded to
-    // this, just feel it's more idiomatically Scala
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
+    val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
+    val fetched6 = coll.get("id", GetOptions().timeout(1000.milliseconds).build())
+
+
+    // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
+    val fetched2 = coll.getOrError("id")
+    val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds).build())
+
 
     // getAndLock and getAndTouch work pretty much the same as get
     val fetched4 = coll.getAndLock("id", 5.seconds)
 
-    // Basic insert
+
+    // Various ways of inserting
     val toInsert = JsonDocument.create("id", JsonObject.empty())
-    val docPostInsert = coll.insert(toInsert)
-
-    // Basic insert without creating a JsonDocument
-    // One downside of named/default params is that I have to give this a different name than 'insert'
-    coll.insertContent("id", JsonObject.empty())
-
-    // Insert - showing all parameters
-    coll.insert(toInsert,
-      timeout = 1000.milliseconds,
-      expiration = 10.days,
-      replicateTo = ReplicateTo.ALL,
-      persistTo = PersistTo.MAJORITY
-    )
-
-    // Insert, providing a subset of parameters
+    coll.insert(toInsert)
+    coll.insert(toInsert, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert(toInsert, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+    coll.insert(toInsert, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
 
-    // Basic replaces.  JsonDocument is an immutable Scala case class and it's trivial to copy
-    // it with different content:
+
+    // Various ways of replacing
     if (fetched1.isDefined) {
+      // JsonDocument is an immutable Scala case class and it's trivial to copy it with different content:
       val toReplace = fetched1.get.copy(content = JsonObject.empty())
       coll.replace(toReplace)
-
-      // Replace, providing a subset of parameters
       coll.replace(toReplace, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+      coll.replace(toReplace, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY).build())
     }
   }
 
@@ -66,8 +64,10 @@ object Samples {
     // variable, as it's in-scope, marked implicit, and has the correct type).  This basic one is a simple thread-pool.
     implicit val ec = ExecutionContext.Implicits.global
 
-    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new AsyncCollection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people").async()
 
 
     // Gets return Future[Option[JsonDocument]].  A basic way to handle a Future's result is this:
@@ -120,8 +120,13 @@ object Samples {
   // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
   // normal Reactor usage.
   def reactiveAPI(): Unit = {
-    // Just for demoing, really this would come from cluster.openCollection("scope", "people") or similar
-    val coll = new ReactiveCollection()
+    val cluster = CouchbaseCluster.create(CouchbaseDefaultEnvironment.create(), "localhost")
+    val bucket = cluster.openBucket("default")
+    val scope = bucket.openScope("scope")
+    val coll = scope.openCollection("people").reactive()
+
+    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
+    implicit val ec = ExecutionContext.Implicits.global
 
     // Get
     coll.get("id", timeout = 1000.milliseconds)
