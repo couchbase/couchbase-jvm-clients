@@ -2,9 +2,14 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.core.CouchbaseException
+import com.couchbase.client.core.message.ResponseStatus
+import com.couchbase.client.core.message.kv.{RemoveRequest, RemoveResponse}
+import com.couchbase.client.java.bucket.api.Utils.addDetails
 import com.couchbase.client.java.document.JsonDocument
 import com.couchbase.client.java.document.json.JsonObject
 import com.couchbase.client.java.env.CouchbaseEnvironment
+import com.couchbase.client.java.error.{CASMismatchException, CouchbaseOutOfMemoryException, DocumentDoesNotExistException, TemporaryFailureException}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
@@ -58,6 +63,21 @@ class Collection(val name: String,
              options: ReplaceOptions,
             )(implicit ec: ExecutionContext): JsonDocument = {
     Await.result(asyncColl.replace(doc, options), safetyTimeout)
+  }
+
+  def remove(id: String,
+             timeout: FiniteDuration = kvTimeout,
+             cas: Long = 0,
+             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
+             persistTo: PersistTo.Value = PersistTo.NONE
+            )(implicit ec: ExecutionContext): RemoveResult = {
+    Await.result(asyncColl.remove(id, timeout, cas, replicateTo, persistTo), safetyTimeout)
+  }
+
+  def remove(id: String,
+             options: RemoveOptions
+            )(implicit ec: ExecutionContext): RemoveResult = {
+    Await.result(asyncColl.remove(id, options), safetyTimeout)
   }
 
   def get(id: String,

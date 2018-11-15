@@ -1,12 +1,14 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.message.kv.{GetRequest, GetResponse}
-import com.couchbase.client.core.message.{CouchbaseRequest, CouchbaseResponse}
-import com.couchbase.client.core.{CoreContext, CouchbaseCore}
+import com.couchbase.client.core.message.kv._
+import com.couchbase.client.core.message.{CouchbaseRequest, CouchbaseResponse, ResponseStatus}
+import com.couchbase.client.core.{CoreContext, CouchbaseCore, CouchbaseException}
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper
+import com.couchbase.client.java.bucket.api.Utils.addDetails
 import com.couchbase.client.java.document.json.JsonObject
 import com.couchbase.client.java.document.{Document, JsonDocument}
 import com.couchbase.client.java.env.CouchbaseEnvironment
+import com.couchbase.client.java.error._
 import com.couchbase.client.java.transcoder._
 import com.couchbase.client.java.transcoder.subdoc.JacksonFragmentTranscoder
 import reactor.core.scala.publisher.Mono
@@ -50,11 +52,37 @@ class AsyncCollection(val collection: Collection) {
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+            )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+    val content = JSON_OBJECT_TRANSCODER.encode(doc)
+    val request = new InsertRequest(doc.id(), content.value1(), collection.scope.bucket.name())
+
+    dispatch[InsertRequest, InsertResponse](request)
+      .map(response => {
+        if (response.status().isSuccess) {
+          val out = JSON_OBJECT_TRANSCODER.newDocument(doc.id(), doc.expiry(), doc.content(), response.cas(), response.mutationToken())
+          out
+        }
+        // TODO move this to core
+        else response.status() match {
+          case ResponseStatus.TOO_BIG =>
+            throw addDetails(new RequestTooBigException, response)
+          case ResponseStatus.EXISTS =>
+            throw addDetails(new DocumentAlreadyExistsException, response)
+          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY =>
+            throw addDetails(new TemporaryFailureException, response)
+          case ResponseStatus.OUT_OF_MEMORY =>
+            throw addDetails(new CouchbaseOutOfMemoryException, response)
+          case _ =>
+            throw addDetails(new CouchbaseException(response.status.toString), response)
+        }
+      })
+  }
 
   def insert(doc: JsonDocument,
              options: InsertOptions
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+            )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+    insert(doc, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+  }
 
   def insertContent(id: String,
              content: JsonObject,
@@ -73,7 +101,46 @@ class AsyncCollection(val collection: Collection) {
 
   def replace(doc: JsonDocument,
               options: ReplaceOptions
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+    replace(doc, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+  }
+
+  def remove(id: String,
+             timeout: FiniteDuration = kvTimeout,
+             cas: Long = 0,
+             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
+             persistTo: PersistTo.Value = PersistTo.NONE
+            )(implicit ec: ExecutionContext): Future[RemoveResult] = {
+    val request = new RemoveRequest(id, cas, collection.scope.bucket.name())
+
+    dispatch[RemoveRequest, RemoveResponse](request)
+      .map(response => {
+        if (response.status().isSuccess) {
+          val out = RemoveResult(response.cas(), Option(response.mutationToken()))
+          out
+        }
+          // TODO move this to core
+        else response.status() match {
+          case ResponseStatus.NOT_EXISTS =>
+            throw addDetails(new DocumentDoesNotExistException, response)
+          case ResponseStatus.EXISTS | ResponseStatus.LOCKED =>
+            throw addDetails(new CASMismatchException, response)
+          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY =>
+            throw addDetails(new TemporaryFailureException, response)
+          case ResponseStatus.OUT_OF_MEMORY =>
+            throw addDetails(new CouchbaseOutOfMemoryException, response)
+          case _ =>
+            throw addDetails(new CouchbaseException(response.status.toString), response)
+        }
+      })
+
+  }
+
+  def remove(id: String,
+             options: RemoveOptions
+            )(implicit ec: ExecutionContext): Future[RemoveResult] = {
+    remove(id, options.timeout, options.cas, options.replicateTo, options.persistTo)
+  }
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
@@ -82,20 +149,44 @@ class AsyncCollection(val collection: Collection) {
 
     dispatch[GetRequest, GetResponse](request)
       .map(response => {
-        val doc = JSON_OBJECT_TRANSCODER.decode(id, response.content(), response.cas(), 0, response.flags(), response.status())
-        Option(doc)
+        if (response.status().isSuccess) {
+          val doc = JSON_OBJECT_TRANSCODER.decode(id, response.content(), response.cas(), 0, response.flags(), response.status())
+          Option(doc)
+        }
+        // TODO move this to core
+        else response.status match {
+          case ResponseStatus.NOT_EXISTS =>
+            Option.empty[JsonDocument]
+          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY | ResponseStatus.LOCKED =>
+            throw addDetails(new TemporaryFailureException, response)
+          case ResponseStatus.OUT_OF_MEMORY =>
+            throw addDetails(new CouchbaseOutOfMemoryException, response)
+          case _ =>
+            throw addDetails(new CouchbaseException(response.status.toString), response)
+        }
       })
   }
 
   def get(id: String,
           options: GetOptions
-         )(implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
+         )(implicit ec: ExecutionContext): Future[Option[JsonDocument]] = {
+    get(id, options.timeout)
+  }
 
   def getOrError(id: String,
-                 timeout: FiniteDuration = kvTimeout): Future[JsonDocument] = null
+                 timeout: FiniteDuration = kvTimeout)
+                (implicit ec: ExecutionContext): Future[JsonDocument] = {
+    get(id, timeout).map(doc => {
+      if (doc.isEmpty) throw new DocumentDoesNotExistException()
+      else doc.get
+    })
+  }
 
   def getOrError(id: String,
-                 options: GetOptions): Future[JsonDocument] = null
+                 options: GetOptions)
+                (implicit ec: ExecutionContext): Future[JsonDocument] = {
+    getOrError(id, options.timeout)
+  }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
