@@ -77,6 +77,28 @@ class Collection(val name: String,
     Await.result(asyncColl.remove(id, cas, options), safetyTimeout)
   }
 
+  def getFields(id: String,
+                operations: GetFields,
+                timeout: FiniteDuration = kvTimeout)
+                    (implicit ec: ExecutionContext): FieldsResult = {
+    null
+  }
+
+  def getFieldsAs[T](id: String,
+                     operations: GetFields,
+                     timeout: FiniteDuration = kvTimeout)
+                    (implicit ec: ExecutionContext): T = {
+    return null.asInstanceOf[T]
+  }
+
+  def getAs[T](id: String,
+               timeout: FiniteDuration = kvTimeout)
+              (implicit ec: ExecutionContext): Option[T] = null
+
+  def getAs[T](id: String,
+               options: GetOptions)
+              (implicit ec: ExecutionContext): Option[T] = null
+
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
          (implicit ec: ExecutionContext): Option[JsonDocument] = {

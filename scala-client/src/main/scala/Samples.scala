@@ -37,6 +37,29 @@ object Samples {
     val fetched4 = coll.getAndLock("id", 5.seconds)
 
 
+    // Simple subdoc lookup
+    val result: FieldsResult = coll.getFields("id", GetFields()
+      .getString("field1")
+      .getInt("field2"))
+
+    result.content(0).asInstanceOf[String]
+    result.content("field1").asInstanceOf[String]
+    result.field1.asInstanceOf[String]
+
+
+    // Subdoc lookup into a projection class
+    case class MyProjection(field1: String, field2: Int)
+
+    val result2 = coll.getFieldsAs[MyProjection]("id", GetFields()
+      .get("field1")
+      .get("field2"))
+
+
+    // Fulldoc, converted to an entity class
+    case class MyUserEntity(id: String, firstName: String, age: Int)
+
+    val user = coll.getAs[MyUserEntity]("id")
+
 
     // Various ways of inserting
     coll.insert("id", JsonObject.create())
@@ -54,6 +77,8 @@ object Samples {
       coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas(), ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
     }
+
+
   }
 
 
@@ -122,32 +147,32 @@ object Samples {
   // The API is basically identical to the blocking one except returning Reactor Mono's.  Most of this code is showing
   // normal Reactor usage.
   // Disabled for now to keep up with rapid prototyping, but it'll look something like this
-//  def reactiveAPI(): Unit = {
-//    val cluster = CouchbaseCluster.create("localhost")
-//    val bucket = cluster.openBucket("default")
-//    val scope = new Scope(cluster, bucket, "scope")
-//    val coll = scope.openCollection("people").reactive()
-//
-//    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
-//    implicit val ec = ExecutionContext.Implicits.global
-//
-//    // Get
-//    coll.get("id", timeout = 1000.milliseconds)
-//      .map(doc => {
-//        if (doc.isDefined) println("Got doc")
-//        else println("No doc :(")
-//      })
-//      // As normal with Reactive, blocking is discouraged - just for demoing
-//      .block()
-//
-//    // Get-replace
-//    coll.getOrError("id", timeout = 1000.milliseconds)
-//      .flatMap(doc => {
-//        // val newDoc = doc.copy(content = JsonObject.empty())
-//        val newDoc = doc
-//        coll.replace(newDoc)
-//      })
-//      // As normal with Reactive, blocking is discouraged - just for demoing
-//      .block()
-//  }
+  //  def reactiveAPI(): Unit = {
+  //    val cluster = CouchbaseCluster.create("localhost")
+  //    val bucket = cluster.openBucket("default")
+  //    val scope = new Scope(cluster, bucket, "scope")
+  //    val coll = scope.openCollection("people").reactive()
+  //
+  //    // As the methods below wrap a Scala Future, they need an implicit ExecutionContext in scope
+  //    implicit val ec = ExecutionContext.Implicits.global
+  //
+  //    // Get
+  //    coll.get("id", timeout = 1000.milliseconds)
+  //      .map(doc => {
+  //        if (doc.isDefined) println("Got doc")
+  //        else println("No doc :(")
+  //      })
+  //      // As normal with Reactive, blocking is discouraged - just for demoing
+  //      .block()
+  //
+  //    // Get-replace
+  //    coll.getOrError("id", timeout = 1000.milliseconds)
+  //      .flatMap(doc => {
+  //        // val newDoc = doc.copy(content = JsonObject.empty())
+  //        val newDoc = doc
+  //        coll.replace(newDoc)
+  //      })
+  //      // As normal with Reactive, blocking is discouraged - just for demoing
+  //      .block()
+  //  }
 }

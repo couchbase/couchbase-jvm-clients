@@ -19,8 +19,6 @@ import scala.concurrent.{ExecutionContext, Future, JavaConversions}
 import scala.concurrent.duration.{FiniteDuration, _}
 
 
-
-
 class AsyncCollection(val collection: Collection) {
   private val core = collection.scope.cluster.core()
   private val mapper = new ObjectMapper()
@@ -117,7 +115,7 @@ class AsyncCollection(val collection: Collection) {
           val out = RemoveResult(response.cas(), Option(response.mutationToken()))
           out
         }
-          // TODO move this to core
+        // TODO move this to core
         else response.status() match {
           case ResponseStatus.NOT_EXISTS =>
             throw addDetails(new DocumentDoesNotExistException, response)
@@ -139,6 +137,13 @@ class AsyncCollection(val collection: Collection) {
              options: RemoveOptions
             )(implicit ec: ExecutionContext): Future[RemoveResult] = {
     remove(id, cas, options.timeout, options.replicateTo, options.persistTo)
+  }
+
+  def lookupInAs[T](id: String,
+                    operations: GetFields,
+                    timeout: FiniteDuration = kvTimeout)
+                   (implicit ec: ExecutionContext): Future[T] = {
+    return null;
   }
 
   def get(id: String,
@@ -190,12 +195,16 @@ class AsyncCollection(val collection: Collection) {
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
+                (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future {
+    Option.empty
+  }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future { Option.empty }
+                (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = Future {
+    Option.empty
+  }
 
   private def dispatch[REQ <: CouchbaseRequest, RESP <: CouchbaseResponse](request: REQ)
                                                                           (implicit ec: ExecutionContext): Future[RESP] = {
