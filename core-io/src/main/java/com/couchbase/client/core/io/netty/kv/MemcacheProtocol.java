@@ -376,6 +376,14 @@ public enum MemcacheProtocol {
      */
     SET((byte) 0x01),
     /**
+     * The add (insert) command.
+     */
+    ADD((byte) 0x02),
+    /**
+     * The replace command.
+     */
+    REPLACE((byte) 0x03),
+    /**
      * The noop command.
      */
     NOOP((byte) 0x0a),

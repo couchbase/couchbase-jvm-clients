@@ -22,13 +22,22 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.options.GetOptions;
+import com.couchbase.client.java.options.InsertOptions;
+import com.couchbase.client.java.options.ReplaceOptions;
+import com.couchbase.client.java.options.UpsertOptions;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -149,6 +158,118 @@ public class AsyncCollection {
         // todo: implement decoding and response code checking
         return new Document<>(id, null, getResponse.cas());
       });
+  }
+
+  public <T> CompletableFuture<MutationResult> insert(final String id, final T content) {
+    return insert(id, content, InsertOptions.DEFAULT);
+  }
+
+  public <T> CompletableFuture<MutationResult> insert(final String id, final T content,
+                                                      final InsertOptions<T> options) {
+    notNullOrEmpty(id, "ID");
+    notNull(content, "Content");
+    notNull(options, "InsertOptions");
+
+    // todo: deal with flags.
+    // todo: deal with datatype.
+    byte[] encoded;
+    if (options.encoder() == null) {
+      encoded = DefaultEncoder.ENCODER.apply(content);
+    } else {
+      encoded = options.encoder().apply(content);
+    }
+
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    InsertRequest request = new InsertRequest(
+      id,
+      encoded,
+      options.expiry().orElse(Duration.ZERO).getSeconds(),
+      0,
+      (byte) 0,
+      timeout,
+      coreContext
+    );
+
+    dispatch(request);
+    return request.response().thenApply(r -> {
+      // TODO: add cas and mutation token
+      return new MutationResult();
+    });
+  }
+
+  public <T> CompletableFuture<MutationResult> upsert(final String id, final T content) {
+    return upsert(id, content, UpsertOptions.DEFAULT);
+  }
+
+  public <T> CompletableFuture<MutationResult> upsert(final String id, final T content,
+                                                      final UpsertOptions<T> options) {
+    notNullOrEmpty(id, "ID");
+    notNull(content, "Content");
+    notNull(options, "UpsertOptions");
+
+    // todo: deal with flags.
+    // todo: deal with datatype.
+    byte[] encoded;
+    if (options.encoder() == null) {
+      encoded = DefaultEncoder.ENCODER.apply(content);
+    } else {
+      encoded = options.encoder().apply(content);
+    }
+
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    UpsertRequest request = new UpsertRequest(
+      id,
+      encoded,
+      options.expiry().orElse(Duration.ZERO).getSeconds(),
+      0,
+      (byte) 0,
+      timeout,
+      coreContext
+    );
+
+    dispatch(request);
+    return request.response().thenApply(r -> {
+      // TODO: add cas and mutation token
+      return new MutationResult();
+    });
+  }
+
+  public <T> CompletableFuture<MutationResult> replace(final String id, final T content) {
+    return replace(id, content, ReplaceOptions.DEFAULT);
+  }
+
+  public <T> CompletableFuture<MutationResult> replace(final String id, final T content,
+                                                       final ReplaceOptions<T> options) {
+    notNullOrEmpty(id, "ID");
+    notNull(content, "Content");
+    notNull(options, "ReplaceOptions");
+
+    // todo: deal with flags.
+    // todo: deal with datatype.
+    byte[] encoded;
+    if (options.encoder() == null) {
+      encoded = DefaultEncoder.ENCODER.apply(content);
+    } else {
+      encoded = options.encoder().apply(content);
+    }
+
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    ReplaceRequest request = new ReplaceRequest(
+      id,
+      encoded,
+      options.expiry().orElse(Duration.ZERO).getSeconds(),
+      0,
+      (byte) 0,
+      timeout,
+      options.cas(),
+      coreContext
+    );
+
+    dispatch(request);
+    return request.response().thenApply(r -> {
+      // TODO: add cas and mutation token
+      return new MutationResult();
+    });
   }
 
   /**

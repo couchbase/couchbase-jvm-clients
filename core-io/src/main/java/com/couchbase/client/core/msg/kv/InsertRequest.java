@@ -19,24 +19,21 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
- * Uses the KV "set" command to unconditionally replace or insert documents regardless if they
- * exist or not.
+ * Uses the KV "add" command to  insert documents if they do not already exist.
  *
  * @since 2.0.0
  */
-public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implements Compressible {
+public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implements Compressible {
 
   private final byte[] key;
   private final byte[] content;
@@ -44,7 +41,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   private final int flags;
   private final byte datatype;
 
-  public UpsertRequest(final String key, final byte[] content, final long expiration,
+  public InsertRequest(final String key, final byte[] content, final long expiration,
                        final int flags, final byte datatype, final Duration timeout,
                        final CoreContext ctx) {
     super(timeout, ctx);
@@ -78,7 +75,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
     extras.writeInt(flags);
     extras.writeInt((int) expiration);
 
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.SET, datatype, partition(),
+    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.ADD, datatype, partition(),
       opaque, noCas(), extras, key, content);
 
     key.release();
@@ -89,9 +86,9 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   }
 
   @Override
-  public UpsertResponse decode(final ByteBuf response) {
+  public InsertResponse decode(final ByteBuf response) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new UpsertResponse(status);
+    return new InsertResponse(status);
   }
 
   @Override

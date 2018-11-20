@@ -20,6 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.options.GetOptions;
+import com.couchbase.client.java.options.InsertOptions;
+import com.couchbase.client.java.options.ReplaceOptions;
+import com.couchbase.client.java.options.UpsertOptions;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -82,8 +85,80 @@ public class Collection {
    * @param <T>
    * @return
    */
-  public <T> Document<T> get(final String id, final GetOptions<T> options) {
+    public <T> Document<T> get(final String id, final GetOptions<T> options) {
     return wrapBlockingGet(async().get(id, options));
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult insert(final String id, final T content) {
+    return insert(id, content, InsertOptions.DEFAULT);
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param options
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult insert(final String id, final T content,
+                                   final InsertOptions<T> options) {
+    return wrapBlockingGet(async().insert(id, content, options));
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult upsert(final String id, final T content) {
+    return upsert(id, content, UpsertOptions.DEFAULT);
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param options
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult upsert(final String id, final T content,
+                                    final UpsertOptions<T> options) {
+    return wrapBlockingGet(async().upsert(id, content, options));
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult replace(final String id, final T content) {
+    return replace(id, content, ReplaceOptions.DEFAULT);
+  }
+
+  /**
+   *
+   * @param id
+   * @param content
+   * @param options
+   * @param <T>
+   * @return
+   */
+  public <T> MutationResult replace(final String id, final T content,
+                                   final ReplaceOptions<T> options) {
+    return wrapBlockingGet(async().replace(id, content, options));
   }
 
   /**
