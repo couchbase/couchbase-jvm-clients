@@ -16,65 +16,53 @@
 
 package com.couchbase.client.java.options;
 
+
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
-import java.util.Optional;
+import java.util.function.Function;
 
 public class GetOptions<T> {
 
-  public static GetOptions<JsonObject> DEFAULT = GetOptions.create();
+  public static final GetOptions<JsonObject> DEFAULT = new GetOptions<>(JsonObject.class);
 
-  private final Class<T> decodeInto;
+  private final Class<T> target;
 
-  private final Optional<Duration> timeout;
+  private Duration timeout;
+  private Function<byte[], T> decoder;
 
-  private GetOptions(Builder<T> builder) {
-    this.decodeInto = builder.decodeInto;
-    this.timeout = Optional.ofNullable(builder.timeout);
+  public static GetOptions<JsonObject> getOptions() {
+    return getOptions(JsonObject.class);
   }
 
-  public static Builder<JsonObject> builder() {
-    return builder(JsonObject.class);
+  public static <T> GetOptions<T> getOptions(final Class<T> target) {
+    return new GetOptions<>(target);
   }
 
-  public static <T> Builder<T> builder(final Class<T> decodeInto) {
-    return new Builder<>(decodeInto);
+  private GetOptions(final Class<T> target) {
+    this.target = target;
   }
 
-  public static GetOptions<JsonObject> create() {
-    return builder().build();
+  public Class<T> target() {
+    return target;
   }
 
-  public static <T> GetOptions<T> create(final Class<T> decodeInto) {
-    return builder(decodeInto).build();
+  public GetOptions<T> timeout(final Duration timeout) {
+    this.timeout = timeout;
+    return this;
   }
 
-  public Class<T> decodeInto() {
-    return decodeInto;
-  }
-
-  public Optional<Duration> timeout() {
+  public Duration timeout() {
     return timeout;
   }
 
-  public static class Builder<T> {
+  public Function<byte[], T> decoder() {
+    return decoder;
+  }
 
-    private final Class<T> decodeInto;
-    private Duration timeout = null;
-
-    private Builder(Class<T> decodeInto) {
-      this.decodeInto = decodeInto;
-    }
-
-    public Builder timeout(Duration timeout) {
-      this.timeout = timeout;
-      return this;
-    }
-
-    public GetOptions<T> build() {
-      return new GetOptions<>(this);
-    }
+  public GetOptions<T> decoder(final Function<byte[], T> decoder) {
+    this.decoder = decoder;
+    return this;
   }
 
 }

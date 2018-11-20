@@ -86,7 +86,7 @@ public class Collection {
    * @param <T>
    * @return
    */
-    public <T> Document<T> get(final String id, final GetOptions<T> options) {
+  public <T> Document<T> get(final String id, final GetOptions<T> options) {
     return wrapBlockingGet(async().get(id, options));
   }
 

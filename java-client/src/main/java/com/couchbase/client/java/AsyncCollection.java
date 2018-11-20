@@ -37,6 +37,7 @@ import com.couchbase.client.java.options.ReplaceOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -91,7 +92,7 @@ public class AsyncCollection {
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  AsyncCollection(final String name, final String scope, final Core core,
+  public AsyncCollection(final String name, final String scope, final Core core,
                   final CouchbaseEnvironment environment) {
     this.name = name;
     this.scope = scope;
@@ -136,9 +137,9 @@ public class AsyncCollection {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
-    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     GetRequest request = new GetRequest(id, timeout, coreContext);
-    return get(id, request, options.decodeInto());
+    return get(id, request, options.decoder());
   }
 
   /**
@@ -146,13 +147,13 @@ public class AsyncCollection {
    *
    * @param id the document ID as a string.
    * @param request the request to dispatch and analyze.
-   * @param convertInto into which response type it should be converted.
+   * @param decoder the decoder to use.
    * @param <T> the generic type of the response document.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
   @Stability.Internal
   <T> CompletableFuture<Document<T>> get(final String id, final GetRequest request,
-                                         final Class<T> convertInto) {
+                                         final Function<byte[], T> decoder) {
     dispatch(request);
     return request
       .response()
