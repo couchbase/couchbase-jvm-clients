@@ -21,6 +21,7 @@ import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.options.GetOptions;
 import com.couchbase.client.java.options.InsertOptions;
+import com.couchbase.client.java.options.RemoveOptions;
 import com.couchbase.client.java.options.ReplaceOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
@@ -49,7 +50,7 @@ public class Collection {
    */
   private final ReactiveCollection reactiveCollection;
 
-  Collection(final String name, final String scope, final Core core,
+  public Collection(final String name, final String scope, final Core core,
              final CouchbaseEnvironment environment) {
     asyncCollection = new AsyncCollection(name, scope, core, environment);
     reactiveCollection = new ReactiveCollection(asyncCollection);
@@ -159,6 +160,25 @@ public class Collection {
   public <T> MutationResult replace(final String id, final T content,
                                    final ReplaceOptions<T> options) {
     return wrapBlockingGet(async().replace(id, content, options));
+  }
+
+  /**
+   *
+   * @param id
+   * @return
+   */
+  public MutationResult remove(final String id) {
+    return remove(id, RemoveOptions.DEFAULT);
+  }
+
+  /**
+   *
+   * @param id
+   * @param options
+   * @return
+   */
+  public MutationResult remove(final String id, final RemoveOptions options) {
+    return wrapBlockingGet(async().remove(id, options));
   }
 
   /**

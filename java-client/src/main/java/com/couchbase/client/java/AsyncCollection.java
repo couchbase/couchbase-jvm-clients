@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.java.codec.DefaultEncoder;
@@ -31,6 +32,7 @@ import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.options.GetOptions;
 import com.couchbase.client.java.options.InsertOptions;
+import com.couchbase.client.java.options.RemoveOptions;
 import com.couchbase.client.java.options.ReplaceOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
@@ -271,6 +273,25 @@ public class AsyncCollection {
       return new MutationResult();
     });
   }
+
+  public <T> CompletableFuture<MutationResult> remove(final String id) {
+    return remove(id, RemoveOptions.DEFAULT);
+  }
+
+  public <T> CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
+    notNullOrEmpty(id, "ID");
+    notNull(options, "RemoveOptions");
+
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext);
+
+    dispatch(request);
+    return request.response().thenApply(r -> {
+      // TODO: add cas and mutation token
+      return new MutationResult();
+    });
+  }
+
 
   /**
    * Helper method to dispatch the given {@link Request} into the core.

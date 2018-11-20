@@ -384,6 +384,10 @@ public enum MemcacheProtocol {
      */
     REPLACE((byte) 0x03),
     /**
+     * The delete (remove) command.
+     */
+    DELETE((byte) 0x04),
+    /**
      * The noop command.
      */
     NOOP((byte) 0x0a),
