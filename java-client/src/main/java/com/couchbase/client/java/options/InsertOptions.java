@@ -1,89 +1,85 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.couchbase.client.java.options;
 
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.function.Function;
 
 public class InsertOptions<T> {
 
-  public static InsertOptions<Object> DEFAULT = InsertOptions.create();
+  public static InsertOptions<Object> DEFAULT = new InsertOptions<>();
 
   private Function<T, byte[]> encoder;
-  private final Optional<Duration> timeout;
-  private final Optional<Duration> expiry;
-  private final PersistTo persistTo;
-  private final ReplicateTo replicateTo;
+  private Duration timeout;
+  private Duration expiry;
+  private PersistTo persistTo;
+  private ReplicateTo replicateTo;
 
-  private InsertOptions(Builder<T> builder) {
-    this.encoder = builder.encoder;
-    this.timeout = Optional.ofNullable(builder.timeout);
-    this.expiry = Optional.ofNullable(builder.expiry);
-    this.persistTo = builder.persistTo;
-    this.replicateTo = builder.replicateTo;
-  }
+  private InsertOptions() { }
 
-  public static <T> Builder<T> builder() {
-    return new Builder<>();
-  }
-
-  public static <T> InsertOptions<T> create() {
-    return new Builder<T>().build();
+  public static <T> InsertOptions<T> insertOptions() {
+    return new InsertOptions<>();
   }
 
   public Function<T, byte[]> encoder() {
     return encoder;
   }
 
-  public Optional<Duration> timeout() {
+  public InsertOptions<T> encoder(Function<T, byte[]> encoder) {
+    this.encoder = encoder;
+    return this;
+  }
+
+  public Duration timeout() {
     return timeout;
   }
 
-  public Optional<Duration> expiry() {
+  public InsertOptions<T> timeout(final Duration timeout) {
+    this.timeout = timeout;
+    return this;
+  }
+
+  public Duration expiry() {
     return expiry;
   }
 
-  public static class Builder<T> {
+  public InsertOptions<T> expiry(final Duration expiry) {
+    this.expiry = expiry;
+    return this;
+  }
 
-    private Function<T, byte[]> encoder;
-    private Duration timeout = null;
-    private Duration expiry = null;
-    private PersistTo persistTo;
-    private ReplicateTo replicateTo;
+  public PersistTo persistTo() {
+    return persistTo;
+  }
 
-    private Builder() {
-    }
+  public InsertOptions<T> persistTo(final PersistTo persistTo) {
+    this.persistTo = persistTo;
+    return this;
+  }
 
-    public Builder timeout(final Duration timeout) {
-      this.timeout = timeout;
-      return this;
-    }
+  public ReplicateTo replicateTo() {
+    return replicateTo;
+  }
 
-    public Builder expiry(final Duration expiry) {
-      this.expiry = expiry;
-      return this;
-    }
-
-    public Builder encoder(final Function<T, byte[]> encoder) {
-      this.encoder = encoder;
-      return this;
-    }
-
-    public Builder persistTo(final PersistTo persistTo) {
-      this.persistTo = persistTo;
-      return this;
-    }
-
-    public Builder replicateTo(final ReplicateTo replicateTo) {
-      this.replicateTo = replicateTo;
-      return this;
-    }
-
-    public InsertOptions<T> build() {
-      return new InsertOptions<>(this);
-    }
-
+  public InsertOptions<T> replicateTo(final ReplicateTo replicateTo) {
+    this.replicateTo = replicateTo;
+    return this;
   }
 }

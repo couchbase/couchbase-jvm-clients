@@ -25,6 +25,7 @@ import com.couchbase.client.java.options.GetOptions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -93,10 +94,10 @@ public class ReactiveCollection {
     notNull(options, "GetOptions");
 
     return Mono.defer((Supplier<Mono<Document<T>>>) () -> {
-      Duration timeout = options.timeout().orElse(environment.kvTimeout());
+      Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
 
-      CompletableFuture<Document<T>> response = async().get(id, request, options.decodeInto());
+      CompletableFuture<Document<T>> response = async().get(id, request, options.decoder());
       return Reactor.wrap(request, response, true);
     });
   }

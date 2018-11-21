@@ -6,6 +6,7 @@ import com.couchbase.client.java.MutationResult;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.options.GetOptions;
+import com.couchbase.client.java.options.InsertOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
 import java.time.Duration;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.couchbase.client.java.options.GetOptions.getOptions;
+import static com.couchbase.client.java.options.InsertOptions.insertOptions;
 
 public class Samples {
 
@@ -41,7 +43,10 @@ public class Samples {
       getOptions(Integer.class).decoder(bytes -> null)
     );
 
+    CompletableFuture<MutationResult> result = collection.insert("id", new JsonObject());
 
+
+    collection.insert("id", new JsonObject());
 
   }
 

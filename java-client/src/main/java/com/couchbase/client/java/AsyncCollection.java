@@ -158,8 +158,8 @@ public class AsyncCollection {
     return request
       .response()
       .thenApply(getResponse -> {
-        // todo: implement decoding and response code checking
-        return new Document<>(id, null, getResponse.cas());
+        // todo: implement response code checking
+        return new Document<>(id, decoder.apply(getResponse.content()), getResponse.cas());
       });
   }
 
@@ -182,11 +182,11 @@ public class AsyncCollection {
       encoded = options.encoder().apply(content);
     }
 
-    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     InsertRequest request = new InsertRequest(
       id,
       encoded,
-      options.expiry().orElse(Duration.ZERO).getSeconds(),
+      Optional.ofNullable(options.expiry()).orElse(Duration.ZERO).getSeconds(),
       0,
       (byte) 0,
       timeout,
