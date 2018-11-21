@@ -1,3 +1,6 @@
+import com.couchbase.client.core.Core
+import com.couchbase.client.core.env.CoreEnvironment
+import com.couchbase.client.core.io.NetworkAddress
 import com.couchbase.client.java.CouchbaseCluster
 import com.couchbase.client.java.document.JsonDocument
 import com.couchbase.client.java.document.json.JsonObject
@@ -14,9 +17,13 @@ object Samples {
   def blockingApi(): Unit = {
     val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-    // Opening a scope should look like this, but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here
-    // val scope = bucket.openScope("scope")
-    val scope = new Scope(cluster, bucket, "scope")
+
+    // Opening a scope should look like this:
+    // val scope = bucket.openScope("scope").
+    // but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here.  So ignore next 2 lines.
+    val core = Core.create(CoreEnvironment.create(), null)
+    val scope = new Scope(core, cluster, bucket, "scope")
+
     val coll = scope.openCollection("people")
     // Also supported: val coll = bucket.openCollection("scope", "people")
 
@@ -62,7 +69,7 @@ object Samples {
 
 
     // Various ways of inserting
-    coll.insert("id", JsonObject.create())
+    val inserted = coll.insert("id", JsonObject.create())
     coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create(), InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
@@ -78,7 +85,21 @@ object Samples {
       coll.replace(toReplace.id(), JsonObject.create(), toReplace.cas(), ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
     }
 
+    // Queries
+    coll.query("select * from `beer-sample`")
 
+    coll.query("select * from `beer-sample` where beer = $name",
+      QueryOptions().namedParameter("name", "Some beer"))
+
+    coll.query("select * from `beer-sample` where beer = ? and producer = ?",
+      QueryOptions().positionalParameters("Budweiser", "Andheuser-Busch")
+        //        .scanConsistency(AtPlus(consistentWith = List(inserted.mutationToken())))
+        .timeout(5.seconds))
+
+    coll.query("select * from `beer-sample`",
+      QueryOptions().scanConsistency(StatementPlus())
+        .serverSideTimeout(10.seconds))
+  }
   }
 
 
@@ -94,9 +115,14 @@ object Samples {
 
     val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-    val scope = new Scope(cluster, bucket, "scope")
-    val coll = scope.openCollection("people").async()
 
+    // Opening a scope should look like this:
+    // val scope = bucket.openScope("scope").
+    // but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here.  So ignore next 2 lines.
+    val core = Core.create(CoreEnvironment.create(), null)
+    val scope = new Scope(core, cluster, bucket, "scope")
+
+    val coll = scope.openCollection("people").async()
 
     // Gets return Future[Option[JsonDocument]].  A basic way to handle a Future's result is this:
     coll.get("id", timeout = 1000.milliseconds) onComplete {
@@ -140,6 +166,7 @@ object Samples {
       case Success(doc) =>
       case Failure(err) =>
     }
+
   }
 
 

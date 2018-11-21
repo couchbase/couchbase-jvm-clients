@@ -9,9 +9,8 @@ dependencies {
   compile 'org.scala-lang.modules:scala-java8-compat_2.12:0.9.0'
   implementation 'io.reactivex:rxjava-reactive-streams:1.2.1'
   testCompile 'org.scalatest:scalatest_2.12:3.0.5'
-//  compile project(':core-io')
+  compile project(':core-io')
 
   // Pulling this in while bootstrapping
   compile 'com.couchbase.client:java-client:2.7.1'
-  compile 'com.couchbase.client:core-io:1.7.1'
 }

@@ -2,14 +2,12 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.core.CouchbaseException
-import com.couchbase.client.core.message.ResponseStatus
-import com.couchbase.client.core.message.kv.{RemoveRequest, RemoveResponse}
 import com.couchbase.client.java.bucket.api.Utils.addDetails
 import com.couchbase.client.java.document.JsonDocument
 import com.couchbase.client.java.document.json.JsonObject
 import com.couchbase.client.java.env.CouchbaseEnvironment
 import com.couchbase.client.java.error.{CASMismatchException, CouchbaseOutOfMemoryException, DocumentDoesNotExistException, TemporaryFailureException}
+import com.couchbase.client.java.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
@@ -24,7 +22,6 @@ class Collection(val name: String,
 //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
-  // All methods are placeholders returning null for now
   def insert(id: String,
              content: JsonObject,
              timeout: FiniteDuration = kvTimeout,
@@ -93,11 +90,11 @@ class Collection(val name: String,
 
   def getAs[T](id: String,
                timeout: FiniteDuration = kvTimeout)
-              (implicit ec: ExecutionContext): Option[T] = null
+              (implicit ec: ExecutionContext): Option[Document[T]] = null
 
   def getAs[T](id: String,
                options: GetOptions)
-              (implicit ec: ExecutionContext): Option[T] = null
+              (implicit ec: ExecutionContext): Option[Document[T]] = null
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
@@ -136,6 +133,11 @@ class Collection(val name: String,
                 (implicit ec: ExecutionContext): Option[JsonDocument] = {
     Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
   }
+
+  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
+    null
+  }
+
 
   def async(): AsyncCollection = asyncColl
 //  def reactive(): ReactiveCollection = reactiveColl

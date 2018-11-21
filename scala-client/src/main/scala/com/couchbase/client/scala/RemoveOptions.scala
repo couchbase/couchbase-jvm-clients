@@ -1,7 +1,5 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.message.kv.MutationToken
-
 import scala.concurrent.duration.{FiniteDuration, _}
 
 case class RemoveOptions(timeout: FiniteDuration = null,
