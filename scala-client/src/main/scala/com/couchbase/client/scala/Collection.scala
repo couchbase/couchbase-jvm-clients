@@ -41,14 +41,14 @@ class Collection(val name: String,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): JsonDocument = {
+            )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.insert(id, content, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
   def insert[T](id: String,
              content: T,
              options: InsertOptions,
-            )(implicit ec: ExecutionContext): JsonDocument = {
+            )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.insert(id, content, options), safetyTimeout)
   }
 
@@ -59,7 +59,7 @@ class Collection(val name: String,
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
-             )(implicit ec: ExecutionContext): JsonDocument = {
+             )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.replace(id, content, cas, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
@@ -67,7 +67,7 @@ class Collection(val name: String,
               content: T,
               cas: Long,
               options: ReplaceOptions,
-            )(implicit ec: ExecutionContext): JsonDocument = {
+            )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.replace(id, content, cas, options), safetyTimeout)
   }
 
@@ -76,14 +76,14 @@ class Collection(val name: String,
              timeout: FiniteDuration = kvTimeout,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): RemoveResult = {
+            )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.remove(id, cas, timeout, replicateTo, persistTo), safetyTimeout)
   }
 
   def remove(id: String,
              cas: Long,
              options: RemoveOptions
-            )(implicit ec: ExecutionContext): RemoveResult = {
+            )(implicit ec: ExecutionContext): MutationResult = {
     Await.result(asyncColl.remove(id, cas, options), safetyTimeout)
   }
 

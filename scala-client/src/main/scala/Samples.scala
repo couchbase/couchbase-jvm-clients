@@ -31,15 +31,9 @@ object Samples {
   def blockingApi(): Unit = {
     val cluster = CouchbaseCluster.create("localhost")
     val bucket = cluster.openBucket("default")
-
-    // Opening a scope should look like this:
-    // val scope = bucket.openScope("scope").
-    // but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here.  So ignore next 2 lines.
-//    val core = Core.create(CoreEnvironment.create(), null)
-//    val scope = new Scope(core, cluster, bucket, "scope")
     val scope = bucket.openScope("scope")
-
     val coll = scope.openCollection("people")
+    val coll2 = bucket.openCollection("scope", "people")
     // Also supported: val coll = bucket.openCollection("scope", "people")
 
     // As the methods below block on a Scala Future, they need an implicit ExecutionContext in scope
@@ -149,13 +143,7 @@ def asyncApi(): Unit = {
 
   val cluster = CouchbaseCluster.create("localhost")
   val bucket = cluster.openBucket("default")
-
-  // Opening a scope should look like this:
-  // val scope = bucket.openScope("scope").
-  // but for now we're using a mix of SDK2 & prototype SDK3 and need to bridge the gap here.  So ignore next 2 lines.
-  val core = Core.create(CoreEnvironment.create(), null)
-  val scope = new Scope(core, cluster, bucket, "scope")
-
+  val scope = bucket.openScope("scope")
   val coll = scope.openCollection("people").async()
 
   // Gets return Future[Option[JsonDocument]].  A basic way to handle a Future's result is this:

@@ -63,7 +63,7 @@ class AsyncCollection(val collection: Collection) {
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+            )(implicit ec: ExecutionContext): Future[MutationResult] = {
     null
 //    val doc = JsonDocument.create(id, content)
 //    val encoded = JSON_OBJECT_TRANSCODER.encode(doc)
@@ -94,7 +94,7 @@ class AsyncCollection(val collection: Collection) {
   def insert[T](id: String,
              content: T,
              options: InsertOptions
-            )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+            )(implicit ec: ExecutionContext): Future[MutationResult] = {
     insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
@@ -105,13 +105,13 @@ class AsyncCollection(val collection: Collection) {
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+             )(implicit ec: ExecutionContext): Future[MutationResult] = null
 
   def replace[T](id: String,
               content: T,
               cas: Long,
               options: ReplaceOptions
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+             )(implicit ec: ExecutionContext): Future[MutationResult] = {
     replace(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
@@ -122,13 +122,13 @@ class AsyncCollection(val collection: Collection) {
               expiration: FiniteDuration = 0.seconds,
               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
               persistTo: PersistTo.Value = PersistTo.NONE
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+             )(implicit ec: ExecutionContext): Future[MutationResult] = null
 
   def upsert(id: String,
               content: JsonObject,
               cas: Long,
               options: UpsertOptions
-             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+             )(implicit ec: ExecutionContext): Future[MutationResult] = {
     upsert(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
@@ -138,7 +138,7 @@ class AsyncCollection(val collection: Collection) {
              timeout: FiniteDuration = kvTimeout,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
              persistTo: PersistTo.Value = PersistTo.NONE
-            )(implicit ec: ExecutionContext): Future[RemoveResult] = {
+            )(implicit ec: ExecutionContext): Future[MutationResult] = {
 //    val request = new RemoveRequest(id, cas, collection.scope.bucket.name())
 //
 //    dispatch[RemoveRequest, RemoveResponse](request)
@@ -167,7 +167,7 @@ class AsyncCollection(val collection: Collection) {
   def remove(id: String,
              cas: Long,
              options: RemoveOptions
-            )(implicit ec: ExecutionContext): Future[RemoveResult] = {
+            )(implicit ec: ExecutionContext): Future[MutationResult] = {
     remove(id, cas, options.timeout, options.replicateTo, options.persistTo)
   }
 

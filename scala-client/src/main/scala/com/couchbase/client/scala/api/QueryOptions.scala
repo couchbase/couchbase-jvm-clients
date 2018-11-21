@@ -34,7 +34,6 @@ case class AtPlus(consistentWith: List[MutationToken], scanWait: Option[Duration
 case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency
 case class StatementPlus(scanWait: Option[Duration] = None) extends ScanConsistency
 
-case class MutationToken()
 
 case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
                         positionalParameters: Option[List[Any]] = None,

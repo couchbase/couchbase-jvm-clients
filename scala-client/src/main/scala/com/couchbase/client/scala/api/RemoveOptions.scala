@@ -30,4 +30,3 @@ object RemoveOptions {
   def apply(): RemoveOptions = new RemoveOptions()
 }
 
-case class RemoveResult(cas: Long, mutationToken: Option[MutationToken])
