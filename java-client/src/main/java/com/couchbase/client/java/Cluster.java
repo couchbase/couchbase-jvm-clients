@@ -16,5 +16,46 @@
 
 package com.couchbase.client.java;
 
-public interface Cluster {
+import com.couchbase.client.java.options.QueryOptions;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+public class Cluster {
+
+  private final AsyncCluster asyncCluster;
+
+  private Cluster() {
+    this.asyncCluster = new AsyncCluster();
+  }
+
+  public AsyncCluster async() {
+    return asyncCluster;
+  }
+
+  public QueryResult query(final String statement) {
+    return query(statement, QueryOptions.DEFAULT);
+  }
+
+  public QueryResult query(final String statement, final QueryOptions options) {
+    return wrapBlockingGet(async().query(statement, options));
+  }
+
+  /**
+   * Helper method to wrap an async call into a blocking one and make sure to
+   * convert all checked exceptions into their correct runtime counterparts.
+   *
+   * @param input the future as input.
+   * @param <T> the generic type to return.
+   * @return blocks and completes on the given future while converting checked exceptions.
+   */
+  private <T> T wrapBlockingGet(final CompletableFuture<T> input) {
+    try {
+      return input.get();
+    } catch (InterruptedException | ExecutionException e) {
+      // todo: figure out if this is the right strategy
+      throw new RuntimeException(e);
+    }
+  }
+
 }
