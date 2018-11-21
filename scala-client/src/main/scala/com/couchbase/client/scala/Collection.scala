@@ -2,12 +2,8 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.java.bucket.api.Utils.addDetails
-import com.couchbase.client.java.document.JsonDocument
-import com.couchbase.client.java.document.json.JsonObject
-import com.couchbase.client.java.env.CouchbaseEnvironment
-import com.couchbase.client.java.error.{CASMismatchException, CouchbaseOutOfMemoryException, DocumentDoesNotExistException, TemporaryFailureException}
-import com.couchbase.client.java.query.N1qlQueryResult
+import com.couchbase.client.scala.document.{Document, JsonDocument, JsonObject}
+import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration

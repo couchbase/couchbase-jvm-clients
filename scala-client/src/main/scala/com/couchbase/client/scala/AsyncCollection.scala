@@ -3,14 +3,7 @@ package com.couchbase.client.scala
 import java.time.Duration
 
 import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExistException}
-import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{BaseKeyValueRequest, GetRequest, GetResponse}
-import com.couchbase.client.java.bucket.api.Utils.addDetails
-import com.couchbase.client.java.document.json.JsonObject
-import com.couchbase.client.java.document.{JsonDocument}
-import com.couchbase.client.java.env.CouchbaseEnvironment
-import com.couchbase.client.java.transcoder._
-import com.couchbase.client.java.transcoder.subdoc.JacksonFragmentTranscoder
+import com.couchbase.client.scala.document.{JsonDocument, JsonObject}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono

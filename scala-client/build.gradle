@@ -12,5 +12,5 @@ dependencies {
   compile project(':core-io')
 
   // Pulling this in while bootstrapping
-  compile 'com.couchbase.client:java-client:2.7.1'
+//  compile 'com.couchbase.client:java-client:2.7.1'
 }

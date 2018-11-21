@@ -1,7 +1,5 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.java.document.JsonDocument
-import com.couchbase.client.java.document.json.JsonObject
 import org.scalatest.{FlatSpec, FunSuite}
 
 import scala.reflect.ClassTag
@@ -30,7 +28,7 @@ trait N1QL {
 }
 
 
-class GetExperimentSpec extends FunSuite with N1QL  {
+class DslExperimentSpec extends FunSuite with N1QL  {
 
   test("dsl") {
 //    val query = select *() from "default" where "age > 5"
@@ -43,6 +41,6 @@ class GetExperimentSpec extends FunSuite with N1QL  {
   }
 
   test("java") {
-    com.couchbase.client.java.query.Select.select("*").from("default").where("age > 5")
+//    com.couchbase.client.java.query.Select.select("*").from("default").where("age > 5")
   }
 }

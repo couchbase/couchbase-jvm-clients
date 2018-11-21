@@ -1,7 +1,5 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.java.document.JsonDocument
-import com.couchbase.client.java.document.json.JsonObject
 import reactor.core.scala.publisher.Mono
 
 import scala.concurrent.duration.{FiniteDuration, _}

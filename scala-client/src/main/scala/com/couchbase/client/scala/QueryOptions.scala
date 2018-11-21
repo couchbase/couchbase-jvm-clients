@@ -2,7 +2,6 @@ package com.couchbase.client.scala
 
 import java.util.Objects
 
-
 import scala.concurrent.duration.Duration
 
 case class Credential(login: String, password: String)
