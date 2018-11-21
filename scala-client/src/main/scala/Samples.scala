@@ -16,10 +16,10 @@
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
-import com.couchbase.client.scala._
+import com.couchbase.client.scala.{FieldsResult, _}
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.document.JsonObject
-import com.couchbase.client.scala.query.N1qlResult
+import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
@@ -45,54 +45,60 @@ object Samples {
     // As the methods below block on a Scala Future, they need an implicit ExecutionContext in scope
     implicit val ec = ExecutionContext.Implicits.global
 
+
     // All methods have both a named/default parameters version, and an [X]Options version
     val fetched1 = coll.get("id")
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
 
+
     // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     val fetched2 = coll.getOrError("id")
     val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds))
+
 
     // getAndLock and getAndTouch work pretty much the same as get
     val fetched4 = coll.getAndLock("id", 5.seconds)
 
 
     // Simple subdoc lookup
-    val result: FieldsResult = coll.getFields("id", GetFields()
-      .getString("field1")
-      .getInt("field2"))
-
-    result.content(0).asInstanceOf[String]
-    result.content("field1").asInstanceOf[String]
-    result.field1.asInstanceOf[String]
+    val result: FieldsResult = coll.getFields("id", GetFields().get("field1", "field2"))
+    println(result.content(0).asInstanceOf[String])
+    println(result.content("field1").asInstanceOf[String])
+    println(result.field1.asInstanceOf[String])
+    result match {
+      case FieldsResult(field1, field2) =>
+        println(field1.asInstanceOf[String])
+        println(field2.asInstanceOf[Int])
+    }
 
 
     // Subdoc lookup into a projection class
     case class MyProjection(field1: String, field2: Int)
-
-    val result2 = coll.getFieldsAs[MyProjection]("id", GetFields()
-      .get("field1")
-      .get("field2"))
+    val result2 = coll.getFieldsAs[MyProjection]("id", GetFields().get("field1").get("field2"))
 
 
     // Fulldoc, converted to an entity class
     case class MyUserEntity(id: String, firstName: String, age: Int)
-
     val user = coll.getAs[MyUserEntity]("id")
+
 
     // JsonObject works pretty much as in SDK2, though it's now immutable
     val age: Option[Any] = fetched5.get.content.get("age")
     val age2: Option[Int] = fetched5.get.content.getInt("age")
     // And Scala's Dynamic feature lets us do some cool stuff:
     val age3: Option[Any] = fetched5.get.content.age
+    // JsonObject is immutable so each of these puts creates a new copy
     JsonObject.create().put("key", "value").put("key2", "value2").age = 5
+
 
     // Various ways of inserting
     val inserted = coll.insert("id", JsonObject.create())
     coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create(), InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+    case class User(name: String, age: Int)
+    coll.insert("john", User("John", 25), timeout = 5.seconds)
 
 
     // Various ways of replacing
@@ -103,16 +109,18 @@ object Samples {
       coll.replace(toReplace.id, JsonObject.create(), toReplace.cas)
       coll.replace(toReplace.id, JsonObject.create(), toReplace.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       coll.replace(toReplace.id, JsonObject.create(), toReplace.cas, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+      coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)
     }
 
+
     // Queries
-    cluster.query("select * from `beer-sample`")
+    val queryResult: N1qlQueryResult = cluster.query("select * from `beer-sample`")
 
     cluster.query("select * from `beer-sample` where beer = $name",
-      QueryOptions().namedParameter("name", "Some beer"))
+      QueryOptions().namedParameter("name", "Speckled Hen"))
 
     cluster.query("select * from `beer-sample` where beer = ? and producer = ?",
-      QueryOptions().positionalParameters("Budweiser", "Andheuser-Busch")
+      QueryOptions().positionalParameters("Budweiser", "Anheuser-Busch")
         //        .scanConsistency(AtPlus(consistentWith = List(inserted.mutationToken())))
         .timeout(5.seconds))
 
@@ -120,9 +128,12 @@ object Samples {
       QueryOptions().scanConsistency(StatementPlus())
         .serverSideTimeout(10.seconds))
 
+    bucket.query(s"select * from {} where beer = 'Speckled Hen'")
+
     case class BeerProjection(name: String, producer: String)
 
-    val beers: N1qlResult[BeerProjection] = cluster.queryAs[BeerProjection]("select name, producer from `beer-sample`")
+    val beers1: N1qlResult[BeerProjection] = cluster.queryAs[BeerProjection]("select name, producer from `beer-sample`")
+    val beers2: N1qlResult[BeerProjection] = cluster.queryAs[BeerProjection]("select {} from {}")
   }
 
 

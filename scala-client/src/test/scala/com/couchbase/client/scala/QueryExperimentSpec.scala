@@ -14,14 +14,20 @@ case class SelectParams(params: String) {
   def from(bucket: String) = new FromClause(bucket)
 }
 case class FromClause(bucket: String) {
-  def where(clause: String) = WhereClause(clause)
-  def where = WhereClause("")
+//  def where(clause: String) = WhereClause(clause)
+//  def where = WhereClause("")
+  def where() = WhereClause("")
 }
 case class WhereClause(clause: String) extends Dynamic {
-  def applyDynamic(v: String): WhereSubClause = WhereSubClause(v)
-  def updateDynamic(v: String): WhereSubClause = WhereSubClause(v)
+//  def applyDynamic(v: String): WhereSubClause = WhereSubClause(v)
+  def selectDynamic(key: String) = null
+def updateDynamic(key: String)(v: Any): WhereSubClause = WhereSubClause(v)
 }
-case class WhereSubClause(v: String)
+case class WhereSubClause(v: Any) extends Dynamic {
+  def and: WhereSubClause = WhereSubClause()
+  def selectDynamic(key: String) = null
+  def updateDynamic(key: String)(v: Any): WhereSubClause = WhereSubClause(v)
+}
 
 trait N1QL {
   def select = Select
@@ -36,7 +42,10 @@ class DslExperimentSpec extends FunSuite with N1QL  {
 //    val query = (select *() from "default" where).age = 5
 //    val query = select *() from "default" where age = 5
 
-//    val query select.*().from("default").where age = 5
+//    val query = select *() from "default" where() age = 5 and name = "John"
+
+//    val x = WhereClause("").age = 5
+//    "name" = "John"
 
   }
 

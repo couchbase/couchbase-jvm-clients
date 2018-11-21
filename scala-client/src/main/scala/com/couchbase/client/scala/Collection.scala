@@ -35,8 +35,8 @@ class Collection(val name: String,
 //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
-  def insert(id: String,
-             content: JsonObject,
+  def insert[T](id: String,
+             content: T,
              timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
@@ -45,15 +45,15 @@ class Collection(val name: String,
     Await.result(asyncColl.insert(id, content, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
-  def insert(id: String,
-             content: JsonObject,
+  def insert[T](id: String,
+             content: T,
              options: InsertOptions,
             )(implicit ec: ExecutionContext): JsonDocument = {
     Await.result(asyncColl.insert(id, content, options), safetyTimeout)
   }
 
-  def replace(id: String,
-              content: JsonObject,
+  def replace[T](id: String,
+              content: T,
               cas: Long,
               timeout: FiniteDuration = kvTimeout,
               expiration: FiniteDuration = 0.seconds,
@@ -63,8 +63,8 @@ class Collection(val name: String,
     Await.result(asyncColl.replace(id, content, cas, timeout, expiration, replicateTo, persistTo), safetyTimeout)
   }
 
-  def replace(id: String,
-              content: JsonObject,
+  def replace[T](id: String,
+              content: T,
               cas: Long,
               options: ReplaceOptions,
             )(implicit ec: ExecutionContext): JsonDocument = {

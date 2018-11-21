@@ -19,7 +19,9 @@ package com.couchbase.client.scala.api
 import scala.concurrent.duration.FiniteDuration
 
 case class GetOptions(timeout: FiniteDuration = null) {
-  def timeout(timeout: FiniteDuration) = copy(timeout = timeout)
+  def timeout(timeout: FiniteDuration) = {
+    copy(timeout = timeout)
+  }
 }
 //
 //case class GetOptions() {

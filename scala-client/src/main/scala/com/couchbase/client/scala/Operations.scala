@@ -25,6 +25,10 @@ case class GetIntOperation(path: String, xattr: Boolean) extends Operation
 case class ExistsOperation(path: String, xattr: Boolean) extends Operation
 
 case class GetFields(operations: List[Operation]) {
+  def get(path: String*): GetFields = {
+    copy(operations = operations ++ path.map(v => GetOperation(v, false)))
+  }
+
   def get(path: String, xattr: Boolean = false): GetFields = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
@@ -51,4 +55,9 @@ class FieldsResult extends Dynamic {
   def content(idx: String): Any = null
 
   def selectDynamic(name: String): Any = content(name)
+
+}
+
+object FieldsResult {
+  def unapplySeq(m: FieldsResult): Option[Seq[Any]] = null
 }

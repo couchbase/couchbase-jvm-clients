@@ -16,7 +16,18 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.scala.api.QueryOptions
+import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
+
 class Bucket(cluster: Cluster,
              name: String) {
   def openScope(name: String) = new Scope(cluster.core, cluster, this, name)
+
+  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
+    null
+  }
+
+  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
+    null
+  }
 }

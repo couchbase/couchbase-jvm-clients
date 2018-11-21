@@ -57,8 +57,8 @@ class AsyncCollection(val collection: Collection) {
 //    BYTE_ARRAY_TRANSCODER.documentType() -> BYTE_ARRAY_TRANSCODER
 //  )
 
-  def insert(id: String,
-             content: JsonObject,
+  def insert[T](id: String,
+             content: T,
              timeout: FiniteDuration = kvTimeout,
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
@@ -91,14 +91,31 @@ class AsyncCollection(val collection: Collection) {
 //      })
   }
 
-  def insert(id: String,
-             content: JsonObject,
+  def insert[T](id: String,
+             content: T,
              options: InsertOptions
             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
     insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
-  def replace(id: String,
+  def replace[T](id: String,
+              content: T,
+              cas: Long,
+              timeout: FiniteDuration = kvTimeout,
+              expiration: FiniteDuration = 0.seconds,
+              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
+              persistTo: PersistTo.Value = PersistTo.NONE
+             )(implicit ec: ExecutionContext): Future[JsonDocument] = null
+
+  def replace[T](id: String,
+              content: T,
+              cas: Long,
+              options: ReplaceOptions
+             )(implicit ec: ExecutionContext): Future[JsonDocument] = {
+    replace(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+  }
+
+  def upsert(id: String,
               content: JsonObject,
               cas: Long,
               timeout: FiniteDuration = kvTimeout,
@@ -107,13 +124,14 @@ class AsyncCollection(val collection: Collection) {
               persistTo: PersistTo.Value = PersistTo.NONE
              )(implicit ec: ExecutionContext): Future[JsonDocument] = null
 
-  def replace(id: String,
+  def upsert(id: String,
               content: JsonObject,
               cas: Long,
-              options: ReplaceOptions
+              options: UpsertOptions
              )(implicit ec: ExecutionContext): Future[JsonDocument] = {
-    replace(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+    upsert(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
+
 
   def remove(id: String,
              cas: Long,
