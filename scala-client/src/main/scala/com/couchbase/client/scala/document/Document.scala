@@ -20,14 +20,14 @@ package com.couchbase.client.scala.document
 
 case class Document[T](id: String,
                        content: T,
-                       cas: Long
-                       // TODO expiry
-                      // TODO mutation token?
-                      ) {
-}
+                       cas: Long) {}
 
 class JsonDocument(id: String,
                         content: JsonObject,
                         cas: Long) extends Document[JsonObject](id, content, cas) {
 
+}
+
+object JsonDocument {
+  def create(id: String, content: JsonObject, cas: Long = 0) = new JsonDocument(id, content, cas)
 }

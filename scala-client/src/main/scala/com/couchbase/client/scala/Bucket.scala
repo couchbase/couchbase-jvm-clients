@@ -21,8 +21,8 @@ import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
 class Bucket(cluster: Cluster,
              name: String) {
-  def openCollection(scope: String, collection: String) = {
-    val scope = new Scope(cluster.core, cluster, this, scope)
+  def openCollection(scopeName: String, collection: String) = {
+    val scope = new Scope(cluster.core, cluster, this, scopeName)
     scope.openCollection(collection)
   }
 
