@@ -14,9 +14,25 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala
+package com.couchbase.client.scala.api
 
-class Bucket(cluster: Cluster,
-             name: String) {
-  def openScope(name: String) = new Scope(cluster.core, cluster, this, name)
+import scala.concurrent.duration.FiniteDuration
+
+case class GetOptions(timeout: FiniteDuration = null) {
+  def timeout(timeout: FiniteDuration) = copy(timeout = timeout)
+}
+//
+//case class GetOptions() {
+//  private var timeout: FiniteDuration = null
+//
+//  def timeout(timeout: FiniteDuration): GetOptions = {
+//    this.timeout = timeout
+//    this
+//  }
+//
+//  def build(): GetOptionsBuilt = GetOptionsBuilt(timeout)
+//}
+
+object GetOptions {
+  def apply() = new GetOptions()
 }

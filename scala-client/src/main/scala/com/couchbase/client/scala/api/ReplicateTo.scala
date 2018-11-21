@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala
+package com.couchbase.client.scala.api
 
-class Bucket(cluster: Cluster,
-             name: String) {
-  def openScope(name: String) = new Scope(cluster.core, cluster, this, name)
+object ReplicateTo extends Enumeration {
+  val NONE, ONE, TWO, THREE, ALL, MAJORITY = Value
+}
+
+object PersistTo extends Enumeration {
+  val NONE, ONE, TWO, THREE, ALL, MAJORITY = Value
 }

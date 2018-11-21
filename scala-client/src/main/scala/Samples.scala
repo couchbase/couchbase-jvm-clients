@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.scala._
+import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.document.JsonObject
 import com.couchbase.client.scala.query.N1qlResult
 
@@ -33,7 +50,6 @@ object Samples {
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
 
-
     // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     val fetched2 = coll.getOrError("id")
     val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds))
@@ -65,6 +81,12 @@ object Samples {
 
     val user = coll.getAs[MyUserEntity]("id")
 
+    // JsonObject works pretty much as in SDK2, though it's now immutable
+    val age: Option[Any] = fetched5.get.content.get("age")
+    val age2: Option[Int] = fetched5.get.content.getInt("age")
+    // And Scala's Dynamic feature lets us do some cool stuff:
+    val age3: Option[Any] = fetched5.get.content.age
+    JsonObject.create().put("key", "value").put("key2", "value2").age = 5
 
     // Various ways of inserting
     val inserted = coll.insert("id", JsonObject.create())
