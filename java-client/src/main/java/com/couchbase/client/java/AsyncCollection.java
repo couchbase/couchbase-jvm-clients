@@ -121,7 +121,7 @@ public class AsyncCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once the document is loaded.
    */
-  public CompletableFuture<Document<JsonObject>> get(final String id) {
+  public CompletableFuture<GetResult> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -130,16 +130,15 @@ public class AsyncCollection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
-   * @param <T> the content type of the returned {@link Document}.
    * @return a {@link CompletableFuture} indicating once the document is loaded.
    */
-  public <T> CompletableFuture<Document<T>> get(final String id, final GetOptions<T> options) {
+  public CompletableFuture<GetResult> get(final String id, final GetOptions options) {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     GetRequest request = new GetRequest(id, timeout, coreContext);
-    return get(id, request, options.decoder());
+    return get(id, request);
   }
 
   /**
@@ -147,19 +146,17 @@ public class AsyncCollection {
    *
    * @param id the document ID as a string.
    * @param request the request to dispatch and analyze.
-   * @param decoder the decoder to use.
    * @param <T> the generic type of the response document.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
   @Stability.Internal
-  <T> CompletableFuture<Document<T>> get(final String id, final GetRequest request,
-                                         final Function<byte[], T> decoder) {
+  CompletableFuture<GetResult> get(final String id, final GetRequest request) {
     dispatch(request);
     return request
       .response()
       .thenApply(getResponse -> {
         // todo: implement response code checking
-        return new Document<>(id, decoder.apply(getResponse.content()), getResponse.cas());
+        return new GetResult(getResponse.cas(), getResponse.content());
       });
   }
 

@@ -75,7 +75,7 @@ public class Collection {
    * @param id
    * @return
    */
-  public Document<JsonObject> get(final String id) {
+  public GetResult get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -83,10 +83,10 @@ public class Collection {
    *
    * @param id
    * @param options
-   * @param <T>
+
    * @return
    */
-  public <T> Document<T> get(final String id, final GetOptions<T> options) {
+  public GetResult get(final String id, final GetOptions options) {
     return wrapBlockingGet(async().get(id, options));
   }
 

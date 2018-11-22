@@ -16,67 +16,45 @@
 
 package com.couchbase.client.java.options;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
-import java.util.function.Function;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Allows to customize a get request.
- *
- * @param <T> the type into which the response will be converted.
  */
-public class GetOptions<T> {
+public class GetOptions {
 
   /**
    * The default options, used most of the time.
    */
-  public static final GetOptions<JsonObject> DEFAULT = new GetOptions<>(JsonObject.class);
-
-  /**
-   * The selected target class for a get request to decode into.
-   */
-  private final Class<T> target;
+  public static final GetOptions DEFAULT = new GetOptions();
 
   /**
    * Optionally set if a custom timeout is provided.
    */
   private Duration timeout;
 
-  /**
-   * Optionally set if a custom decoder for the target is provided.
-   */
-  private Function<byte[], T> decoder;
+  private final Map<String, FieldType> fields;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
    *
    * @return options to customize.
    */
-  public static GetOptions<JsonObject> getOptions() {
-    return getOptions(JsonObject.class);
+  public static GetOptions getOptions() {
+    return new GetOptions();
   }
 
-  /**
-   * Creates a new set of {@link GetOptions} with a custom target.
-   *
-   * @param target the custom target.
-   * @param <T> the generic custom target type.
-   * @return options to customize.
-   */
-  public static <T> GetOptions<T> getOptions(final Class<T> target) {
-    return new GetOptions<>(target);
+
+  private GetOptions() {
+    fields = new HashMap<>();
   }
 
-  private GetOptions(final Class<T> target) {
-    this.target = target;
-  }
-
-  public Class<T> target() {
-    return target;
-  }
-
-  public GetOptions<T> timeout(final Duration timeout) {
+  public GetOptions timeout(final Duration timeout) {
     this.timeout = timeout;
     return this;
   }
@@ -85,13 +63,37 @@ public class GetOptions<T> {
     return timeout;
   }
 
-  public Function<byte[], T> decoder() {
-    return decoder;
-  }
-
-  public GetOptions<T> decoder(final Function<byte[], T> decoder) {
-    this.decoder = decoder;
+  public GetOptions field(String path) {
+    fields.put(path, FieldType.GET);
     return this;
   }
 
+  public GetOptions fieldExists(String path) {
+    fields.put(path, FieldType.EXISTS);
+    return this;
+  }
+
+  public GetOptions fields(String... paths) {
+    for (String p : paths) {
+      field(p);
+    }
+    return this;
+  }
+
+  public GetOptions fieldsExist(String... paths) {
+    for (String p : paths) {
+      fieldExists(p);
+    }
+    return this;
+  }
+
+  @Stability.Internal
+  public Map<String, FieldType> fields() {
+    return fields;
+  }
+
+  enum FieldType {
+    GET,
+    EXISTS
+  }
 }

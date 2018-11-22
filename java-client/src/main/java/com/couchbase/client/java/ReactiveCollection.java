@@ -78,7 +78,7 @@ public class ReactiveCollection {
    * @param id
    * @return
    */
-  public Mono<Document<JsonObject>> get(final String id) {
+  public Mono<GetResult> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -86,18 +86,17 @@ public class ReactiveCollection {
    *
    * @param id
    * @param options
-   * @param <T>
    * @return
    */
-  public <T> Mono<Document<T>> get(final String id, final GetOptions<T> options) {
+  public Mono<GetResult> get(final String id, final GetOptions options) {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
-    return Mono.defer((Supplier<Mono<Document<T>>>) () -> {
+    return Mono.defer((Supplier<Mono<GetResult>>) () -> {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
 
-      CompletableFuture<Document<T>> response = async().get(id, request, options.decoder());
+      CompletableFuture<GetResult> response = async().get(id, request);
       return Reactor.wrap(request, response, true);
     });
   }
