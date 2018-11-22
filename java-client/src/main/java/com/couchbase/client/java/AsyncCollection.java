@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
@@ -121,7 +122,7 @@ public class AsyncCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once the document is loaded.
    */
-  public CompletableFuture<GetResult> get(final String id) {
+  public CompletableFuture<Optional<GetResult>> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -132,31 +133,35 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} indicating once the document is loaded.
    */
-  public CompletableFuture<GetResult> get(final String id, final GetOptions options) {
+  public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     GetRequest request = new GetRequest(id, timeout, coreContext);
-    return get(id, request);
+    return get(request);
   }
 
   /**
    * Internal: Take a {@link GetRequest} and dispatch, convert and return the result.
    *
-   * @param id the document ID as a string.
    * @param request the request to dispatch and analyze.
-   * @param <T> the generic type of the response document.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
   @Stability.Internal
-  CompletableFuture<GetResult> get(final String id, final GetRequest request) {
+  CompletableFuture<Optional<GetResult>> get(final GetRequest request) {
     dispatch(request);
     return request
       .response()
       .thenApply(getResponse -> {
-        // todo: implement response code checking
-        return new GetResult(getResponse.cas(), getResponse.content());
+        if (getResponse.status().success()) {
+          return Optional.of(new GetResult(getResponse.cas(), getResponse.content()));
+        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
+          return Optional.empty();
+        } else {
+          // todo: implement me
+          throw new UnsupportedOperationException("fixme");
+        }
       });
   }
 

@@ -27,6 +27,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -96,8 +97,10 @@ public class ReactiveCollection {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
 
-      CompletableFuture<GetResult> response = async().get(id, request);
-      return Reactor.wrap(request, response, true);
+      CompletableFuture<Optional<GetResult>> response = async().get(request);
+      return Reactor
+        .wrap(request, response, true)
+        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }
 

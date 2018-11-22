@@ -12,6 +12,7 @@ import com.couchbase.client.java.options.InsertOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -36,7 +37,7 @@ public class Samples {
     /**
      * Full Doc Fetch
      */
-    GetResult r1 = collection.get("id").get();
+    GetResult r1 = collection.get("id").get().get();
 
     JsonObject fullContent = r1.content();
     JsonArray users = r1.contentAs("users", JsonArray.class);
@@ -50,7 +51,7 @@ public class Samples {
     GetResult r2 = collection.get(
       "id",
       getOptions().fields("firstname", "lastname").fieldExists("admin")
-    ).get();
+    ).get().get();
     JsonObject values = r1.content();
 
 

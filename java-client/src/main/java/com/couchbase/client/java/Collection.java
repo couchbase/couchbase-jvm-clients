@@ -25,6 +25,7 @@ import com.couchbase.client.java.options.RemoveOptions;
 import com.couchbase.client.java.options.ReplaceOptions;
 import com.couchbase.client.java.options.UpsertOptions;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -75,7 +76,7 @@ public class Collection {
    * @param id
    * @return
    */
-  public GetResult get(final String id) {
+  public Optional<GetResult> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
@@ -86,7 +87,7 @@ public class Collection {
 
    * @return
    */
-  public GetResult get(final String id, final GetOptions options) {
+  public Optional<GetResult> get(final String id, final GetOptions options) {
     return wrapBlockingGet(async().get(id, options));
   }
 
