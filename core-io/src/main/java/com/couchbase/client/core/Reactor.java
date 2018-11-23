@@ -51,9 +51,9 @@ public enum Reactor {
           if (st == SignalType.CANCEL) {
             request.cancel(CancellationReason.STOPPED_LISTENING);
           }
-        })
+        });
         // this is a workaround for https://github.com/reactor/reactor/issues/652
-        .onErrorResume(e -> e instanceof CancellationException ? Mono.empty() : Mono.error(e));
+        //.onErrorResume(e -> e instanceof CancellationException ? Mono.empty() : Mono.error(e));
     }
     return mono;
   }

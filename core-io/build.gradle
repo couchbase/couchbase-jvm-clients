@@ -32,7 +32,7 @@ dependencies {
   compile 'io.netty:netty-all:4.1.31.Final'
   compile 'org.jctools:jctools-core:2.1.2'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
-  compile 'io.projectreactor:reactor-core:3.2.2.RELEASE'
+  compile 'io.projectreactor:reactor-core:3.2.3.RELEASE'
   compile 'io.projectreactor.addons:reactor-extra:3.2.0.RELEASE'
   compile 'org.iq80.snappy:snappy:0.4'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
