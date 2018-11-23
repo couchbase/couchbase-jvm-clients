@@ -15,16 +15,29 @@
  */
 
 package com.couchbase.client.scala.document
-import scala.language.dynamics
 
+import scala.language.dynamics
 import java.util.Objects
 
-// TODO
-case class JsonArray()
+import com.couchbase.client.java._
+import com.fasterxml.jackson.databind.ObjectMapper
 
-case class JsonObject(private val content: Map[String, Any]) extends Dynamic {
-  def selectDynamic(name: String): Option[Any] = get(name)
-  def updateDynamic(name: String)(value: Any): Unit = put(name, value)
+import scala.annotation.tailrec
+
+
+case class JsonObject(private val content: Map[String, Any]) extends Convertable with Dynamic {
+  // For Jackson
+  private def this() {
+    this(Map.empty)
+  }
+
+  // Don't make this Dynamic, it makes it easy to misuse
+  // TODO going back and forwards on this
+  //  def dyn(): GetSelecter = GetSelecter(this, "")
+
+  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
+
+  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 
   def put(name: String, value: Any): JsonObject = {
     Objects.requireNonNull(name)
@@ -88,6 +101,87 @@ case class JsonObject(private val content: Map[String, Any]) extends Dynamic {
     content.isEmpty
   }
 
+  //  override def contentAs[T](path: String): T = contentAs(path, null)
+
+  private type ContentType = Map[String, Any]
+
+  @tailrec
+  private def contentAsRecurse[T](cur: ContentType, paths: List[PathElement]): T = {
+    paths match {
+      case Nil =>
+        throw new PathNotFound()
+      case x :: Nil =>
+        x match {
+          case x: PathArray =>
+            cur.get(x.name).map(_.asInstanceOf[JsonArray]) match {
+              case Some(y: JsonArray) => y.get(x.index).asInstanceOf[T]
+              case _ => throw new PathNotFound()
+            }
+          case x: PathObjectOrField =>
+            cur.get(x.toString) match {
+              case Some(y) => y.asInstanceOf[T]
+              case _ => throw new PathNotFound()
+            }
+        }
+      case x :: rest =>
+        x match {
+          case x: PathArray =>
+            cur.get(x.name) match {
+              case None => throw new PathNotFound()
+              case Some(y: JsonArray) =>
+                val arr = y.get(x.index).asInstanceOf[JsonObject]
+                contentAsRecurse(arr.content, rest)
+
+            }
+
+          case x: PathObjectOrField =>
+            val y = cur.get(x.toString)
+            if (y.isEmpty) throw new PathNotFound()
+            else {
+              val z = y.get
+              //          if (z.isInstanceOf[T]) {
+              //            z.asInstanceOf[T]
+              //          }
+              //          else {
+              val next = if (z.isInstanceOf[JsonObject]) z.asInstanceOf[JsonObject].content
+              else z.asInstanceOf[ContentType]
+              contentAsRecurse(next, rest)
+              //          }
+            }
+        }
+    }
+  }
+
+
+  override def contentAs[T](path: PathElements): T = {
+
+    //    val paths = path.split("\\.").toList
+    contentAsRecurse[T](content, path.paths)
+  }
+
+  override def exists(path: PathElements): Boolean = {
+    //    type ContentType = Map[String,Any]
+    //
+    //    @tailrec
+    //    def go(cur: ContentType, paths: PathElements): Boolean = {
+    //      paths match {
+    //        case x => true
+    //        case x :: rest =>
+    //          val y = cur.get(x)
+    //          if (y.isEmpty) false
+    //          else {
+    //            go(y.get.asInstanceOf[ContentType], rest)
+    //          }
+    //      }
+    //    }
+    //
+    //    val paths = path.split(".").toList
+    //    go(content, paths)
+    // TODO
+    true
+  }
+
+
   // TODO toMap
   // TODO toString
 
@@ -117,12 +211,17 @@ case class JsonObject(private val content: Map[String, Any]) extends Dynamic {
 
 
 object JsonObject {
-  private val EMPTY = JsonObject.create()
+  private val mapper = new ObjectMapper()
 
-  def empty(): JsonObject = EMPTY
+  def fromJson(json: String): JsonObject = {
+    mapper.readValue(json, classOf[JsonObject])
+  }
 
-  def create(): JsonObject = EMPTY
+  private val EMPTY = JsonObject.create
+
+  def empty: JsonObject = EMPTY
+
+  def create: JsonObject = new JsonObject(Map.empty)
 
   // TODO from(Map)
-  // TODO fromJson
 }

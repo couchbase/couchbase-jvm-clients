@@ -59,7 +59,7 @@ object Samples {
     case class MyUsersEntity(users: List[User])
     val users = getResult.contentAs[MyUsersEntity]
 
-    getResult.some.field.getString()
+    getResult.some.field.getString
 
 
     // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
@@ -91,16 +91,15 @@ object Samples {
     val age: Option[Any] = fetched5.get.content.get("age")
     val age2: Option[Int] = fetched5.get.content.getInt("age")
     // And Scala's Dynamic feature lets us do some cool stuff:
-    val age3: Option[Any] = fetched5.get.content.age
+    val age3: Int = fetched5.get.content.age.getInt
     // JsonObject is immutable so each of these puts creates a new copy
-    JsonObject.create().put("key", "value").put("key2", "value2").age = 5
 
 
     // Various ways of inserting
-    val inserted = coll.insert("id", JsonObject.create())
-    coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
-    coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-    coll.insert("id", JsonObject.create(), InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+    val inserted = coll.insert("id", JsonObject.create)
+    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
+    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+    coll.insert("id", JsonObject.create, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
     case class User(name: String, age: Int)
     coll.insert("john", User("John", 25), timeout = 5.seconds)
 
@@ -110,9 +109,9 @@ object Samples {
       // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
       // val toReplace = fetched1.get.copy(content = JsonObject.empty())
       val toReplace = fetched1.get
-      coll.replace(toReplace.id, JsonObject.create(), toReplace.cas)
-      coll.replace(toReplace.id, JsonObject.create(), toReplace.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
-      coll.replace(toReplace.id, JsonObject.create(), toReplace.cas, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
+      coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
+      coll.replace(toReplace.id, JsonObject.create, toReplace.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+      coll.replace(toReplace.id, JsonObject.create, toReplace.cas, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
       coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)
     }
 
@@ -177,7 +176,7 @@ def asyncApi(): Unit = {
   // Get-and-replace
   val replace = coll.getOrError("id", timeout = 1000.milliseconds)
     .map(doc => {
-      coll.replace(doc.id, JsonObject.empty(), doc.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
+      coll.replace(doc.id, JsonObject.empty, doc.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
     })
 
   Await.result(replace, atMost = 5.seconds)
@@ -187,14 +186,14 @@ def asyncApi(): Unit = {
     doc <- coll.getOrError("id", timeout = 1000.milliseconds)
     doc <- {
       // coll.replace(doc.copy(content = JsonObject.empty()))
-      coll.replace(doc.id, JsonObject.create(), doc.cas)
+      coll.replace(doc.id, JsonObject.create, doc.cas)
     }
   } yield doc
 
   Await.result(replace, atMost = 5.seconds)
 
   // Insert
-  coll.insert("id", JsonObject.create(), timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY) onComplete {
+  coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY) onComplete {
     case Success(doc) =>
     case Failure(err) =>
   }

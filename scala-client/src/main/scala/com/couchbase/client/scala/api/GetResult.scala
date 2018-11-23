@@ -2,36 +2,66 @@ package com.couchbase.client.java
 
 import java.util.function.Function
 
+import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.document.JsonObject
+
+import scala.annotation.tailrec
 import scala.language.dynamics
 
-
-case class GetSelecter(private val result: GetResult, thisName: String) extends Dynamic {
-  def selectDynamic(name: String): GetSelecter = GetSelecter(result, thisName + "." + name)
-  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(result, thisName + "[" + index + "]." + name)
-
-  def getString() = result.contentAs[String](thisName)
-  def getInt() = result.contentAs[Int](thisName)
-  def getAs[T]() = result.contentAs[T](thisName)
+trait Convertable {
+  def contentAs[T](path: PathElements): T
+  def exists(path: PathElements): Boolean
 }
 
-/**
-  * Experimental prototype for a different result type on fetch.
-  */
+class PathNotFound extends CouchbaseException
+
+sealed trait PathElement
+case class PathObjectOrField(name: String) extends PathElement {
+  override def toString: String = name
+}
+case class PathArray(name: String, index: Int) extends PathElement {
+  override def toString: String = name + "[" + index + "]"
+}
+
+case class PathElements(paths: List[PathElement]) {
+  def add(elem: PathElement) = copy(paths :+ elem)
+
+  override def toString: String = {
+    paths.map(_.toString).mkString(".")
+  }
+}
+
+// TODO much more implementation required
+case class GetSelecter(private val result: Convertable, path: PathElements) extends Dynamic {
+  def selectDynamic(name: String): GetSelecter = GetSelecter(result, path.add(PathObjectOrField(name)))
+  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(result, path.add(PathArray(name, index)))
+
+  def exists: Boolean = result.exists(path)
+  def getString: String = result.contentAs[String](path)
+  // TODO see what Jackson transcoding produces in terms of ints, longs, floats, doubles
+  def getInt: Int = result.contentAs[Int](path)
+  def getObject: JsonObject = result.contentAs[JsonObject](path)
+  def getAs[T]: T = result.contentAs[T](path)
+}
+
 class GetResult(val id: String,
                 val cas: Long,
-                private val _content: Array[Byte]) extends Dynamic {
+                private val _content: Array[Byte]) extends Dynamic with Convertable {
 
   def content: JsonObject = contentAs[JsonObject]
 
   def content(path: String): JsonObject = contentAs[JsonObject](path)
 
-  def contentAs[T]: T = contentAs(null)
+  def contentAs[T]: T = None.asInstanceOf[T]
 
-  def contentAs[T](path: String): T = contentAs(path, null)
+  def contentAs[T](path: String): T = None.asInstanceOf[T]
 
-  def contentAs[T](path: String, decoder: (Array[Byte]) => T): T = None.asInstanceOf[T]
+  def contentAs[T](path: String, decoder: Array[Byte] => T): T = None.asInstanceOf[T]
 
-  def selectDynamic(name: String): GetSelecter = GetSelecter(this, name)
-  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, name + "[" + index + "]")
+  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
+  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
+
+  override def exists(path: PathElements): Boolean = ???
+
+  override def contentAs[T](path: PathElements): T = ???
 }

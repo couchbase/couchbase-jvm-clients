@@ -1,6 +1,5 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.scala.document.Document
 import org.scalatest.{FlatSpec, FunSuite}
 
 import scala.reflect.ClassTag
