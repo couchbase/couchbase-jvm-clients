@@ -18,13 +18,13 @@ package com.couchbase.client.scala
 
 import scala.language.dynamics
 
-sealed trait Operation
-case class GetOperation(path: String, xattr: Boolean) extends Operation
-case class GetStringOperation(path: String, xattr: Boolean) extends Operation
-case class GetIntOperation(path: String, xattr: Boolean) extends Operation
-case class ExistsOperation(path: String, xattr: Boolean) extends Operation
+sealed trait LookupOperation
+case class GetOperation(path: String, xattr: Boolean) extends LookupOperation
+case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperation
+case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
+case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
 
-case class GetFields(operations: List[Operation]) {
+case class GetFields(operations: List[LookupOperation]) {
   def get(path: String*): GetFields = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
@@ -47,12 +47,18 @@ case class GetFields(operations: List[Operation]) {
 }
 
 object GetFields {
-  def apply() = new GetFields(List.empty[Operation])
+  def apply() = new GetFields(List.empty[LookupOperation])
 }
 
 class FieldsResult extends Dynamic {
   def content(idx: Int): Any = null
   def content(idx: String): Any = null
+
+  def contentAs[T]: T = contentAs(null)
+
+  def contentAs[T](path: String): T = contentAs(path, null)
+
+  def contentAs[T](path: String, decoder: (Array[Byte]) => T): T = None.asInstanceOf[T]
 
   def selectDynamic(name: String): Any = content(name)
 

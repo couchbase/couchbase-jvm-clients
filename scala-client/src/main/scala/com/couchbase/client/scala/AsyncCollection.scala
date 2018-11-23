@@ -23,10 +23,11 @@ import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExist
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.util.Validators
+import com.couchbase.client.java.GetResult
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{JsonDocument, JsonObject}
+import com.couchbase.client.scala.document.JsonObject
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -221,7 +222,7 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Future[Option[JsonDocument]] = {
+         (implicit ec: ExecutionContext): Future[Option[GetResult]] = {
 
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
@@ -240,7 +241,7 @@ class AsyncCollection(val collection: Collection) {
         else {
           // TODO
           val content = JsonObject.create()
-          Some(JsonDocument.create(id, content, v.cas()))
+          Some(new GetResult(id, v.cas(), v.content()))
         }
       })
 
@@ -266,13 +267,13 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           options: GetOptions
-         )(implicit ec: ExecutionContext): Future[Option[JsonDocument]] = {
+         )(implicit ec: ExecutionContext): Future[Option[GetResult]] = {
     get(id, options.timeout)
   }
 
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[JsonDocument] = {
+                (implicit ec: ExecutionContext): Future[GetResult] = {
     get(id, timeout).map(doc => {
       if (doc.isEmpty) throw new DocumentDoesNotExistException()
       else doc.get
@@ -281,7 +282,7 @@ class AsyncCollection(val collection: Collection) {
 
   def getOrError(id: String,
                  options: GetOptions)
-                (implicit ec: ExecutionContext): Future[JsonDocument] = {
+                (implicit ec: ExecutionContext): Future[GetResult] = {
     getOrError(id, options.timeout)
   }
 

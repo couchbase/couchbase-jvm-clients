@@ -16,6 +16,7 @@
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
+import com.couchbase.client.java.GetResult
 import com.couchbase.client.scala.{FieldsResult, _}
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.document.JsonObject
@@ -41,12 +42,28 @@ object Samples {
 
 
     // All methods have both a named/default parameters version, and an [X]Options version
-    val fetched1 = coll.get("id")
+    val fetched1: Option[GetResult] = coll.get("id")
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
 
 
-    // Gets return Option[JsonDocument].  getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
+    // GetResult contains the raw bytes, plus metadata.  Defers conversion to the last moment.
+    val getResult: GetResult = fetched1.get
+    val doc: JsonObject = getResult.content
+
+    case class MyUserEntity(id: String, firstName: String, age: Int)
+    getResult.contentAs[MyUserEntity]("users[0]")
+    getResult.users(0).getAs[User]
+    getResult.users.getAs[List[User]]
+
+    case class MyUsersEntity(users: List[User])
+    val users = getResult.contentAs[MyUsersEntity]
+
+    getResult.some.field.getString()
+
+
+    // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
+    // TODO May remove these
     val fetched2 = coll.getOrError("id")
     val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds))
 
@@ -56,6 +73,7 @@ object Samples {
 
 
     // Simple subdoc lookup
+    // TODO see how Michael handles subdoc field lookups in a standard GetResult
     val result: FieldsResult = coll.getFields("id", GetFields().get("field1", "field2"))
     println(result.content(0).asInstanceOf[String])
     println(result.content("field1").asInstanceOf[String])
@@ -65,16 +83,8 @@ object Samples {
         println(field1.asInstanceOf[String])
         println(field2.asInstanceOf[Int])
     }
-
-
-    // Subdoc lookup into a projection class
     case class MyProjection(field1: String, field2: Int)
-    val result2 = coll.getFieldsAs[MyProjection]("id", GetFields().get("field1").get("field2"))
-
-
-    // Fulldoc, converted to an entity class
-    case class MyUserEntity(id: String, firstName: String, age: Int)
-    val user = coll.getAs[MyUserEntity]("id")
+    val proj = result.contentAs[MyProjection]
 
 
     // JsonObject works pretty much as in SDK2, though it's now immutable

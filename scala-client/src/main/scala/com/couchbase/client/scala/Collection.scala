@@ -18,8 +18,8 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.java.GetResult
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{Document, JsonDocument, JsonObject}
 import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -87,6 +87,11 @@ class Collection(val name: String,
     Await.result(asyncColl.remove(id, cas, options), safetyTimeout)
   }
 
+  def mutateIn(id: String,
+               spec: MutateFields,
+               options: MutateInOptions = MutateInOptions())
+              (implicit ec: ExecutionContext): MutationResult = null
+
   def getFields(id: String,
                 operations: GetFields,
                 timeout: FiniteDuration = kvTimeout)
@@ -94,56 +99,41 @@ class Collection(val name: String,
     null
   }
 
-  def getFieldsAs[T](id: String,
-                     operations: GetFields,
-                     timeout: FiniteDuration = kvTimeout)
-                    (implicit ec: ExecutionContext): T = {
-    return null.asInstanceOf[T]
-  }
-
-  def getAs[T](id: String,
-               timeout: FiniteDuration = kvTimeout)
-              (implicit ec: ExecutionContext): Option[Document[T]] = null
-
-  def getAs[T](id: String,
-               options: GetOptions)
-              (implicit ec: ExecutionContext): Option[Document[T]] = null
-
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Option[JsonDocument] = {
+         (implicit ec: ExecutionContext): Option[GetResult] = {
     Await.result(asyncColl.get(id, timeout), safetyTimeout)
   }
 
   def get(id: String,
           options: GetOptions)
-         (implicit ec: ExecutionContext): Option[JsonDocument] = {
+         (implicit ec: ExecutionContext): Option[GetResult] = {
     Await.result(asyncColl.get(id, options), safetyTimeout)
   }
 
   def getOrError(id: String,
           timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): JsonDocument = {
+                (implicit ec: ExecutionContext): GetResult = {
     Await.result(asyncColl.getOrError(id, timeout), safetyTimeout)
   }
 
   def getOrError(id: String,
                  options: GetOptions)
-                (implicit ec: ExecutionContext): JsonDocument = {
+                (implicit ec: ExecutionContext): GetResult = {
     Await.result(asyncColl.getOrError(id, options), safetyTimeout)
   }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Option[JsonDocument] = {
+                (implicit ec: ExecutionContext): Option[GetResult] = {
     Await.result(asyncColl.getAndLock(id, lockFor, timeout), safetyTimeout)
   }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Option[JsonDocument] = {
+                (implicit ec: ExecutionContext): Option[GetResult] = {
     Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
   }
 
