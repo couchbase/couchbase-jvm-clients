@@ -4,6 +4,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Document;
 import com.couchbase.client.java.GetResult;
 import com.couchbase.client.java.MutationResult;
+import com.couchbase.client.java.MutationSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -33,7 +34,6 @@ public class Samples {
 
     AsyncCollection collection = new AsyncCollection(null, null, null, null);
 
-
     /**
      * Full Doc Fetch
      */
@@ -55,13 +55,13 @@ public class Samples {
     JsonObject values = r1.content();
 
 
+    // convenience
+    CompletableFuture<MutationResult> fullInsert = collection.insert("id", new JsonObject());
+    // for something like
+    collection.insert("id", new MutationSpec().upsert("", new JsonObject()));
 
-
-
-    CompletableFuture<MutationResult> result = collection.insert("id", new JsonObject());
-
-
-    collection.insert("id", new JsonObject());
+    // subdoc
+    collection.insert("id", new MutationSpec().upsert("bla.blaz", true));
 
   }
 

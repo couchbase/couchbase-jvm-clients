@@ -16,11 +16,13 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.options.GetOptions;
 import reactor.core.publisher.Mono;
 
@@ -61,10 +63,16 @@ public class ReactiveCollection {
    */
   private final CouchbaseEnvironment environment;
 
+  /**
+   * Holds a direct reference to the core.
+   */
+  private final Core core;
+
   ReactiveCollection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
     this.environment = asyncCollection.environment();
+    this.core = asyncCollection.core();
   }
 
   /**
@@ -75,31 +83,35 @@ public class ReactiveCollection {
   }
 
   /**
+   * Fetches a Document (or a fragment of it) from a collection with default options.
    *
-   * @param id
-   * @return
+   * <p>If the document has not been found, this {@link Mono} will be empty.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link Mono} indicating once loaded or failed.
    */
   public Mono<GetResult> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
   /**
+   * Fetches a Document (or a fragment of it) from a collection with custom options.
    *
-   * @param id
-   * @param options
-   * @return
+   * <p>If the document has not been found, this {@link Mono} will be empty.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a {@link Mono} indicating once loaded or failed.
    */
   public Mono<GetResult> get(final String id, final GetOptions options) {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
-    return Mono.defer((Supplier<Mono<GetResult>>) () -> {
+    return Mono.defer(() -> {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
-
-      CompletableFuture<Optional<GetResult>> response = async().get(request);
       return Reactor
-        .wrap(request, response, true)
+        .wrap(request, GetAccessor.get(core, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }

@@ -14,33 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java;
+package com.couchbase.client.java.kv;
 
-public class Document<T> {
+import com.couchbase.client.core.annotation.Stability;
 
-  public Document(String id, T content, long cas) {
-    this.id = id;
-    this.content = content;
-    this.cas = cas;
-  }
+@Stability.Internal
+public enum InsertAccessor {
+  ;
 
-  private final String id;
-
-  private final T content;
-
-  private final long cas;
-
-
-  public String id() {
-    return id;
-  }
-
-  public T content() {
-    return content;
-  }
-
-  public long cas() {
-    return cas;
-  }
 
 }

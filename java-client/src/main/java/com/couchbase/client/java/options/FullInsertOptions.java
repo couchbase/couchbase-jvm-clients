@@ -20,28 +20,43 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 
 import java.time.Duration;
+import java.util.function.Function;
 
-public class InsertOptions {
+/**
+ * todo: make this extend the regular insert options.
+ *
+ * @param <T>
+ */
+public class FullInsertOptions<T> {
 
-  public static InsertOptions DEFAULT = new InsertOptions();
+  public static FullInsertOptions<Object> DEFAULT = new FullInsertOptions<>();
 
+  private Function<T, byte[]> encoder;
   private Duration timeout;
   private Duration expiry;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
 
-  private InsertOptions() { }
+  private FullInsertOptions() { }
 
-  public static InsertOptions insertOptions() {
-    return new InsertOptions();
+  public static <T> FullInsertOptions<T> insertOptions() {
+    return new FullInsertOptions<>();
   }
 
+  public Function<T, byte[]> encoder() {
+    return encoder;
+  }
+
+  public FullInsertOptions<T> encoder(Function<T, byte[]> encoder) {
+    this.encoder = encoder;
+    return this;
+  }
 
   public Duration timeout() {
     return timeout;
   }
 
-  public InsertOptions timeout(final Duration timeout) {
+  public FullInsertOptions<T> timeout(final Duration timeout) {
     this.timeout = timeout;
     return this;
   }
@@ -50,7 +65,7 @@ public class InsertOptions {
     return expiry;
   }
 
-  public InsertOptions expiry(final Duration expiry) {
+  public FullInsertOptions<T> expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
@@ -59,7 +74,7 @@ public class InsertOptions {
     return persistTo;
   }
 
-  public InsertOptions persistTo(final PersistTo persistTo) {
+  public FullInsertOptions<T> persistTo(final PersistTo persistTo) {
     this.persistTo = persistTo;
     return this;
   }
@@ -68,7 +83,7 @@ public class InsertOptions {
     return replicateTo;
   }
 
-  public InsertOptions replicateTo(final ReplicateTo replicateTo) {
+  public FullInsertOptions<T> replicateTo(final ReplicateTo replicateTo) {
     this.replicateTo = replicateTo;
     return this;
   }

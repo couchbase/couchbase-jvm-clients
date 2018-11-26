@@ -18,12 +18,10 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.options.FullInsertOptions;
 import com.couchbase.client.java.options.GetOptions;
 import com.couchbase.client.java.options.InsertOptions;
 import com.couchbase.client.java.options.RemoveOptions;
-import com.couchbase.client.java.options.ReplaceOptions;
-import com.couchbase.client.java.options.UpsertOptions;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -72,114 +70,101 @@ public class Collection {
   }
 
   /**
+   * Fetches a Document (or a fragment of it) from a collection with default options.
    *
-   * @param id
-   * @return
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link GetResult} once the document has been loaded.
    */
   public Optional<GetResult> get(final String id) {
-    return get(id, GetOptions.DEFAULT);
+    return block(async().get(id));
   }
 
   /**
+   * Fetches a Document (or a fragment of it) from a collection with custom options.
    *
-   * @param id
-   * @param options
-
-   * @return
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a {@link GetResult} once the document has been loaded.
    */
   public Optional<GetResult> get(final String id, final GetOptions options) {
-    return wrapBlockingGet(async().get(id, options));
+    return block(async().get(id, options));
   }
 
   /**
+   * Removes a Document from a collection with default options.
    *
-   * @param id
-   * @param content
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult insert(final String id, final T content) {
-    return insert(id, content, InsertOptions.DEFAULT);
-  }
-
-  /**
-   *
-   * @param id
-   * @param content
-   * @param options
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult insert(final String id, final T content,
-                                   final InsertOptions<T> options) {
-    return wrapBlockingGet(async().insert(id, content, options));
-  }
-
-  /**
-   *
-   * @param id
-   * @param content
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult upsert(final String id, final T content) {
-    return upsert(id, content, UpsertOptions.DEFAULT);
-  }
-
-  /**
-   *
-   * @param id
-   * @param content
-   * @param options
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult upsert(final String id, final T content,
-                                    final UpsertOptions<T> options) {
-    return wrapBlockingGet(async().upsert(id, content, options));
-  }
-
-  /**
-   *
-   * @param id
-   * @param content
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult replace(final String id, final T content) {
-    return replace(id, content, ReplaceOptions.DEFAULT);
-  }
-
-  /**
-   *
-   * @param id
-   * @param content
-   * @param options
-   * @param <T>
-   * @return
-   */
-  public <T> MutationResult replace(final String id, final T content,
-                                   final ReplaceOptions<T> options) {
-    return wrapBlockingGet(async().replace(id, content, options));
-  }
-
-  /**
-   *
-   * @param id
-   * @return
+   * @param id the id of the document to remove.
+   * @return a {@link MutationResult} once removed.
    */
   public MutationResult remove(final String id) {
-    return remove(id, RemoveOptions.DEFAULT);
+    return block(async().remove(id));
   }
 
   /**
+   * Removes a Document from a collection with custom options.
    *
-   * @param id
-   * @param options
-   * @return
+   * @param id the id of the document to remove.
+   * @param options custom options to change the default behavior.
+   * @return a {@link MutationResult} once removed.
    */
   public MutationResult remove(final String id, final RemoveOptions options) {
-    return wrapBlockingGet(async().remove(id, options));
+    return block(async().remove(id, options));
+  }
+
+  /**
+   * Inserts a document fragment into a document which does not exist yet with default options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @return a {@link MutationResult} once inserted.
+   */
+  public MutationResult insert(final String id, final MutationSpec content) {
+    return block(async().insert(id, content));
+  }
+
+  /**
+   * Inserts a full document which does not exist yet with default options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @param <T> the generic type of the content to be inserted.
+   * @return a {@link MutationResult} once inserted.
+   */
+  public <T> MutationResult insert(final String id, final T content) {
+    return block(async().insert(id, content));
+  }
+
+  /**
+   * Inserts a document fragment into a document which does not exist yet with custom options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param spec the content to be inserted.
+   * @param options custom options to customize the insert behavior.
+   * @return a {@link MutationResult} once inserted.
+   */
+  public MutationResult insert(final String id, final MutationSpec spec,
+                               final InsertOptions options) {
+    return block(async().insert(id, spec, options));
+  }
+
+  /**
+   * Inserts a full document which does not exist yet with custom options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @param options custom options to customize the insert behavior.
+   * @param <T> the generic type of the content to be inserted.
+   * @return a {@link MutationResult} once inserted.
+   */
+  public <T> MutationResult insert(final String id, final T content,
+                                   final FullInsertOptions<T> options) {
+    return block(async().insert(id, content, options));
   }
 
   /**
@@ -190,7 +175,7 @@ public class Collection {
    * @param <T> the generic type to return.
    * @return blocks and completes on the given future while converting checked exceptions.
    */
-  private <T> T wrapBlockingGet(final CompletableFuture<T> input) {
+  private static <T> T block(final CompletableFuture<T> input) {
     try {
       return input.get();
     } catch (InterruptedException | ExecutionException e) {

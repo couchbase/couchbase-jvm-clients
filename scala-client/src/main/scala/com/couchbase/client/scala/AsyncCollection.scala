@@ -62,10 +62,10 @@ class AsyncCollection(val collection: Collection) {
 
     // TODO custom encoders
     val encoded = encode(content)
-    // TODO is expiration in nanos?
+    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new InsertRequest(id, encoded, expiration.toNanos, 0, 0.toByte, timeout, coreContext)
+    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -114,10 +114,10 @@ class AsyncCollection(val collection: Collection) {
 
     // TODO custom encoders
     val encoded = encode(content)
-    // TODO is expiration in nanos?
+    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new ReplaceRequest(id, encoded, expiration.toNanos, 0, 0.toByte, timeout, cas, coreContext)
+    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, cas, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -148,10 +148,10 @@ class AsyncCollection(val collection: Collection) {
 
     // TODO custom encoders
     val encoded = encode(content)
-    // TODO is expiration in nanos?
+    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new UpsertRequest(id, encoded, expiration.toNanos, 0, 0.toByte, timeout, coreContext)
+    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {

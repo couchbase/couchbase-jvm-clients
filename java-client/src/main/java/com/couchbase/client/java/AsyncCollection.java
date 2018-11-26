@@ -18,30 +18,19 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.InsertRequest;
-import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.core.msg.kv.ReplaceRequest;
-import com.couchbase.client.core.msg.kv.UpsertRequest;
-import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.RemoveAccessor;
+import com.couchbase.client.java.options.FullInsertOptions;
 import com.couchbase.client.java.options.GetOptions;
 import com.couchbase.client.java.options.InsertOptions;
 import com.couchbase.client.java.options.RemoveOptions;
-import com.couchbase.client.java.options.ReplaceOptions;
-import com.couchbase.client.java.options.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -50,7 +39,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * The {@link AsyncCollection} provides basic asynchronous access to all collection APIs.
  *
  * <p>This type of API provides asynchronous support through the concurrency mechanisms
- * that ship with Java 8 and later, notably the async {@link CompletionStage}. It is the
+ * that ship with Java 8 and later, notably the async {@link CompletableFuture}. It is the
  * async mechanism with the lowest overhead (best performance) but also comes with less
  * bells and whistles as the {@link ReactiveCollection} for example.</p>
  *
@@ -117,192 +106,120 @@ public class AsyncCollection {
   }
 
   /**
-   * Fetches a {@link Document} from a collection with default options.
+   * Fetches a Document (or a fragment of it) from a collection with default options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @return a {@link CompletableFuture} indicating once the document is loaded.
+   * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
   public CompletableFuture<Optional<GetResult>> get(final String id) {
     return get(id, GetOptions.DEFAULT);
   }
 
   /**
-   * Fetches a {@link Document} from a collection with custom options.
+   * Fetches a Document (or a fragment of it) from a collection with custom options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
-   * @return a {@link CompletableFuture} indicating once the document is loaded.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
-    notNullOrEmpty(id, "ID");
+    notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     GetRequest request = new GetRequest(id, timeout, coreContext);
-    return get(request);
+    return GetAccessor.get(core, request);
   }
 
   /**
-   * Internal: Take a {@link GetRequest} and dispatch, convert and return the result.
+   * Removes a Document from a collection with default options.
    *
-   * @param request the request to dispatch and analyze.
-   * @return a {@link CompletableFuture} once the document is fetched and decoded.
+   * @param id the id of the document to remove.
+   * @return a {@link CompletableFuture} completing once removed or failed.
    */
-  @Stability.Internal
-  CompletableFuture<Optional<GetResult>> get(final GetRequest request) {
-    dispatch(request);
-    return request
-      .response()
-      .thenApply(getResponse -> {
-        if (getResponse.status().success()) {
-          return Optional.of(new GetResult(getResponse.cas(), getResponse.content()));
-        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
-          return Optional.empty();
-        } else {
-          // todo: implement me
-          throw new UnsupportedOperationException("fixme");
-        }
-      });
-  }
-
-  public <T> CompletableFuture<MutationResult> insert(final String id, final T content) {
-    return insert(id, content, InsertOptions.DEFAULT);
-  }
-
-  public <T> CompletableFuture<MutationResult> insert(final String id, final T content,
-                                                      final InsertOptions<T> options) {
-    notNullOrEmpty(id, "ID");
-    notNull(content, "Content");
-    notNull(options, "InsertOptions");
-
-    // todo: deal with flags.
-    // todo: deal with datatype.
-    byte[] encoded;
-    if (options.encoder() == null) {
-      encoded = DefaultEncoder.ENCODER.apply(content);
-    } else {
-      encoded = options.encoder().apply(content);
-    }
-
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    InsertRequest request = new InsertRequest(
-      id,
-      encoded,
-      Optional.ofNullable(options.expiry()).orElse(Duration.ZERO).getSeconds(),
-      0,
-      (byte) 0,
-      timeout,
-      coreContext
-    );
-
-    dispatch(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult();
-    });
-  }
-
-  public <T> CompletableFuture<MutationResult> upsert(final String id, final T content) {
-    return upsert(id, content, UpsertOptions.DEFAULT);
-  }
-
-  public <T> CompletableFuture<MutationResult> upsert(final String id, final T content,
-                                                      final UpsertOptions<T> options) {
-    notNullOrEmpty(id, "ID");
-    notNull(content, "Content");
-    notNull(options, "UpsertOptions");
-
-    // todo: deal with flags.
-    // todo: deal with datatype.
-    byte[] encoded;
-    if (options.encoder() == null) {
-      encoded = DefaultEncoder.ENCODER.apply(content);
-    } else {
-      encoded = options.encoder().apply(content);
-    }
-
-    Duration timeout = options.timeout().orElse(environment.kvTimeout());
-    UpsertRequest request = new UpsertRequest(
-      id,
-      encoded,
-      options.expiry().orElse(Duration.ZERO).getSeconds(),
-      0,
-      (byte) 0,
-      timeout,
-      coreContext
-    );
-
-    dispatch(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult();
-    });
-  }
-
-  public <T> CompletableFuture<MutationResult> replace(final String id, final T content) {
-    return replace(id, content, ReplaceOptions.DEFAULT);
-  }
-
-  public <T> CompletableFuture<MutationResult> replace(final String id, final T content,
-                                                       final ReplaceOptions<T> options) {
-    notNullOrEmpty(id, "ID");
-    notNull(content, "Content");
-    notNull(options, "ReplaceOptions");
-
-    // todo: deal with flags.
-    // todo: deal with datatype.
-    byte[] encoded;
-    if (options.encoder() == null) {
-      encoded = DefaultEncoder.ENCODER.apply(content);
-    } else {
-      encoded = options.encoder().apply(content);
-    }
-
-    Duration timeout = options.timeout().orElse(environment.kvTimeout());
-    ReplaceRequest request = new ReplaceRequest(
-      id,
-      encoded,
-      options.expiry().orElse(Duration.ZERO).getSeconds(),
-      0,
-      (byte) 0,
-      timeout,
-      options.cas(),
-      coreContext
-    );
-
-    dispatch(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult();
-    });
-  }
-
-  public <T> CompletableFuture<MutationResult> remove(final String id) {
+  public CompletableFuture<MutationResult> remove(final String id) {
     return remove(id, RemoveOptions.DEFAULT);
   }
 
-  public <T> CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
-    notNullOrEmpty(id, "ID");
+  /**
+   * Removes a Document from a collection with custom options.
+   *
+   * @param id the id of the document to remove.
+   * @param options custom options to change the default behavior.
+   * @return a {@link CompletableFuture} completing once removed or failed.
+   */
+  public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
+    notNullOrEmpty(id, "Id");
     notNull(options, "RemoveOptions");
 
     Duration timeout = options.timeout().orElse(environment.kvTimeout());
     RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext);
-
-    dispatch(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult();
-    });
+    return RemoveAccessor.remove(core, request);
   }
-
 
   /**
-   * Helper method to dispatch the given {@link Request} into the core.
+   * Inserts a document fragment into a document which does not exist yet with default options.
    *
-   * @param request the request to send/dispatch.
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @return a {@link CompletableFuture} completing once inserted or failed.
    */
-  private void dispatch(final Request<? extends Response> request) {
-    core.send(request);
+  public CompletableFuture<MutationResult> insert(final String id, final MutationSpec content) {
+    return insert(id, content, InsertOptions.DEFAULT);
   }
+
+  /**
+   * Inserts a full document which does not exist yet with default options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @param <T> the generic type of the content to be inserted.
+   * @return a {@link CompletableFuture} completing once inserted or failed.
+   */
+  public <T> CompletableFuture<MutationResult> insert(final String id, final T content) {
+    return insert(id, content, FullInsertOptions.DEFAULT);
+  }
+
+  /**
+   * Inserts a document fragment into a document which does not exist yet with custom options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param spec the content to be inserted.
+   * @param options custom options to customize the insert behavior.
+   * @return a {@link CompletableFuture} completing once inserted or failed.
+   */
+  public CompletableFuture<MutationResult> insert(final String id, final MutationSpec spec,
+                                                  final InsertOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(spec, "MutationSpec");
+    notNull(options, "InsertOptions");
+
+    throw new UnsupportedOperationException("Not Implemented yet: subdoc insert");
+  }
+
+  /**
+   * Inserts a full document which does not exist yet with custom options.
+   *
+   * @param id the unique ID of the document which will be created.
+   * @param content the content to be inserted.
+   * @param options custom options to customize the insert behavior.
+   * @param <T> the generic type of the content to be inserted.
+   * @return a {@link CompletableFuture} completing once inserted or failed.
+   */
+  public <T> CompletableFuture<MutationResult> insert(final String id, final T content,
+                                                      final FullInsertOptions<T> options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "InsertOptions");
+
+    throw new UnsupportedOperationException("Not implemented yet: fulldoc insert");
+  }
+
 
 }
