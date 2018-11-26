@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.options;
+package com.couchbase.client.java.query;
 
 import java.time.Duration;
 

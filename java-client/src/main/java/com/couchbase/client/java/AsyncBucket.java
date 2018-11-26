@@ -19,30 +19,27 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 
-public class Bucket {
+public class AsyncBucket {
 
-  private final AsyncBucket asyncBucket;
-  private final ReactiveBucket reactiveBucket;
-  private final Core core;
+  private final String name;
   private final CouchbaseEnvironment environment;
+  private final Core core;
 
-  Bucket(AsyncBucket asyncBucket) {
-    this.asyncBucket = asyncBucket;
-    this.reactiveBucket = new ReactiveBucket(asyncBucket);
-    this.core = asyncBucket.core();
-    this.environment = asyncBucket.environment();
+  AsyncBucket(String name, Core core, CouchbaseEnvironment environment) {
+    this.core = core;
+    this.environment = environment;
+    this.name = name;
   }
 
-  public AsyncBucket async() {
-    return asyncBucket;
+  public AsyncCollection collection(final String name, final String scope) {
+    return new AsyncCollection(name, scope, core, environment);
   }
 
-  public ReactiveBucket reactive() {
-    return reactiveBucket;
+  CouchbaseEnvironment environment() {
+    return environment;
   }
 
-  public Collection collection(String name, String scope) {
-    return new Collection(new AsyncCollection(name, scope, core, environment));
+  Core core() {
+    return core;
   }
-
 }

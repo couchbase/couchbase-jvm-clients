@@ -16,46 +16,46 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.options.QueryOptions;
+import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import static com.couchbase.client.java.AsyncUtils.block;
 
 public class Cluster {
 
   private final AsyncCluster asyncCluster;
+  private final ReactiveCluster reactiveCluster;
 
-  private Cluster() {
-    this.asyncCluster = new AsyncCluster();
+  public static Cluster connect(final String connectionString, final String username,
+                                final String password, final CouchbaseEnvironment environment) {
+    return new Cluster(connectionString, username, password, environment);
+  }
+
+  private Cluster(final String connectionString, final String username,
+                  final String password, final CouchbaseEnvironment environment) {
+    this.asyncCluster = AsyncCluster.connect(connectionString, username, password, environment);
+    this.reactiveCluster = new ReactiveCluster(asyncCluster);
   }
 
   public AsyncCluster async() {
     return asyncCluster;
   }
 
+  public ReactiveCluster reactive() {
+    return reactiveCluster;
+  }
+
   public QueryResult query(final String statement) {
-    return query(statement, QueryOptions.DEFAULT);
+    return block(async().query(statement));
   }
 
   public QueryResult query(final String statement, final QueryOptions options) {
-    return wrapBlockingGet(async().query(statement, options));
+    return block(async().query(statement, options));
   }
 
-  /**
-   * Helper method to wrap an async call into a blocking one and make sure to
-   * convert all checked exceptions into their correct runtime counterparts.
-   *
-   * @param input the future as input.
-   * @param <T> the generic type to return.
-   * @return blocks and completes on the given future while converting checked exceptions.
-   */
-  private <T> T wrapBlockingGet(final CompletableFuture<T> input) {
-    try {
-      return input.get();
-    } catch (InterruptedException | ExecutionException e) {
-      // todo: figure out if this is the right strategy
-      throw new RuntimeException(e);
-    }
+  public Bucket bucket(String name) {
+    return new Bucket(asyncCluster.bucket(name));
   }
 
 }

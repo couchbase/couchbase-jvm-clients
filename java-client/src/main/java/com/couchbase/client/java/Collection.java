@@ -18,14 +18,17 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.options.FullInsertOptions;
-import com.couchbase.client.java.options.GetOptions;
-import com.couchbase.client.java.options.InsertOptions;
-import com.couchbase.client.java.options.RemoveOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationSpec;
+import com.couchbase.client.java.kv.FullInsertOptions;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.RemoveOptions;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+
+import static com.couchbase.client.java.AsyncUtils.block;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -49,9 +52,8 @@ public class Collection {
    */
   private final ReactiveCollection reactiveCollection;
 
-  public Collection(final String name, final String scope, final Core core,
-             final CouchbaseEnvironment environment) {
-    asyncCollection = new AsyncCollection(name, scope, core, environment);
+  public Collection(final AsyncCollection asyncCollection) {
+    this.asyncCollection = asyncCollection;
     reactiveCollection = new ReactiveCollection(asyncCollection);
   }
 
@@ -169,23 +171,6 @@ public class Collection {
   public <T> MutationResult insert(final String id, final T content,
                                    final FullInsertOptions<T> options) {
     return block(async().insert(id, content, options));
-  }
-
-  /**
-   * Helper method to wrap an async call into a blocking one and make sure to
-   * convert all checked exceptions into their correct runtime counterparts.
-   *
-   * @param input the future as input.
-   * @param <T> the generic type to return.
-   * @return blocks and completes on the given future while converting checked exceptions.
-   */
-  private static <T> T block(final CompletableFuture<T> input) {
-    try {
-      return input.get();
-    } catch (InterruptedException | ExecutionException e) {
-      // todo: figure out if this is the right strategy
-      throw new RuntimeException(e);
-    }
   }
 
 }

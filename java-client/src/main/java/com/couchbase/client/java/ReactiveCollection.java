@@ -21,16 +21,13 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.options.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.GetOptions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;

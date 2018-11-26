@@ -16,23 +16,6 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.RemoveRequest;
-
-import java.util.concurrent.CompletableFuture;
-
-@Stability.Internal
-public enum RemoveAccessor {
-  ;
-
-
-  public static CompletableFuture<MutationResult> remove(final Core core,
-                                                         final RemoveRequest request) {
-    core.send(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult();
-    });
-  }
+public enum PersistTo {
+  NONE
 }

@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.options;
-
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
+package com.couchbase.client.java.kv;
 
 import java.time.Duration;
 import java.util.function.Function;

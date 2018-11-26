@@ -22,11 +22,14 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
-import com.couchbase.client.java.options.FullInsertOptions;
-import com.couchbase.client.java.options.GetOptions;
-import com.couchbase.client.java.options.InsertOptions;
-import com.couchbase.client.java.options.RemoveOptions;
+import com.couchbase.client.java.kv.FullInsertOptions;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.RemoveOptions;
 
 import java.time.Duration;
 import java.util.Optional;

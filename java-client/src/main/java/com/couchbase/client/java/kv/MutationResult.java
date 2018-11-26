@@ -14,8 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java;
+package com.couchbase.client.java.kv;
 
-public enum ReplicateTo {
-  NONE
+import com.couchbase.client.java.MutationToken;
+
+public class MutationResult {
+
+  long cas;
+
+  MutationToken mutationToken;
+
 }

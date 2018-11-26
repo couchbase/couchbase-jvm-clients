@@ -1,4 +1,4 @@
-package com.couchbase.client.java;
+package com.couchbase.client.java.kv;
 
 public class MutationSpec {
 

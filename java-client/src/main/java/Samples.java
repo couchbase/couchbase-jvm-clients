@@ -1,62 +1,42 @@
-import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
-import com.couchbase.client.java.AsyncCollection;
-import com.couchbase.client.java.GetResult;
-import com.couchbase.client.java.MutationResult;
-import com.couchbase.client.java.MutationSpec;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.PersistTo;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
 
-import static com.couchbase.client.java.options.GetOptions.getOptions;
+import static com.couchbase.client.java.kv.FullInsertOptions.insertOptions;
+
 
 public class Samples {
 
-  public static void main(String... args) throws Exception {
+  public static void main(String... args) {
 
-    CouchbaseEnvironment environment = CouchbaseEnvironment
-      .builder()
-      .userAgent(() -> "foobar")
-      .load(new ConnectionStringPropertyLoader("foo"))
-      .build();
+    CouchbaseEnvironment environment = CouchbaseEnvironment.builder().build();
 
+    Cluster cluster = Cluster.connect(
+      "couchbase://127.0.0.1",
+      "Administrator",
+      "password",
+      environment
+    );
 
-    AsyncCollection collection = new AsyncCollection(null, null, null, null);
+    Bucket bucket = cluster.bucket("travel-sample");
+    Collection collection = bucket.collection("collection", "scope");
 
-    /**
-     * Full Doc Fetch
-     */
-    GetResult r1 = collection.get("id").get().get();
+    Optional<GetResult> getResult = collection.get("id");
 
-    JsonObject fullContent = r1.content();
-    JsonArray users = r1.contentAs("users", JsonArray.class);
-    JsonObject firstUser = r1.content("users[0]");
-    JsonArray alsoUsers = r1.path("users").contentAs(JsonArray.class);
-    Entity customUser = r1.contentAs("users[0]", Entity.class, bytes -> new Entity());
-
-    /**
-     * Sub doc Fetch
-     */
-    GetResult r2 = collection.get(
+    MutationResult mutationResult = collection.insert(
       "id",
-      getOptions().fields("firstname", "lastname").fieldExists("admin")
-    ).get().get();
-    JsonObject values = r1.content();
-
-
-    // convenience
-    CompletableFuture<MutationResult> fullInsert = collection.insert("id", new JsonObject());
-    // for something like
-    collection.insert("id", new MutationSpec().upsert("", new JsonObject()));
-
-    // subdoc
-    collection.insert("id", new MutationSpec().upsert("bla.blaz", true));
+      new JsonObject(),
+      insertOptions().persistTo(PersistTo.NONE)
+    );
 
   }
 
-  static class Entity {
-
-  }
 
 }

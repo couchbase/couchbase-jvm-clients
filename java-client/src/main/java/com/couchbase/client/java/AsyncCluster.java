@@ -16,11 +16,34 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.options.QueryOptions;
+import com.couchbase.client.core.Core;
+import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
 
 import java.util.concurrent.CompletableFuture;
 
 public class AsyncCluster {
+
+  private final String connectionString;
+  private final String username;
+  private final String password;
+  private final CouchbaseEnvironment environment;
+  private final Core core;
+
+  public static AsyncCluster connect(final String connectionString, final String username,
+                                final String password, final CouchbaseEnvironment environment) {
+    return new AsyncCluster(connectionString, username, password, environment);
+  }
+
+  private AsyncCluster(final String connectionString, final String username,
+               final String password, final CouchbaseEnvironment environment) {
+    this.connectionString = connectionString;
+    this.username = username;
+    this.password = password;
+    this.environment = environment;
+    this.core = Core.create(environment, null);
+  }
 
   public CompletableFuture<QueryResult> query(final String statement) {
     return query(statement, QueryOptions.DEFAULT);
@@ -28,6 +51,10 @@ public class AsyncCluster {
 
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     return null;
+  }
+
+  public AsyncBucket bucket(String name) {
+    return new AsyncBucket(name, core, environment);
   }
 
 }

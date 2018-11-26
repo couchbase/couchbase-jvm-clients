@@ -1,11 +1,7 @@
-package com.couchbase.client.java.options;
-
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
+package com.couchbase.client.java.kv;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.Function;
 
 public class RemoveOptions {
 

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java;
+package com.couchbase.client.java.kv;
 
-public class QueryResult {
+public enum ReplicateTo {
+  NONE
 }

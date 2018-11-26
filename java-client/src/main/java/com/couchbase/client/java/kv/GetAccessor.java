@@ -20,7 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.java.GetResult;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;

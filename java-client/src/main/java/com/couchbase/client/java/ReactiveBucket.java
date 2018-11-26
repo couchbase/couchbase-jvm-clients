@@ -16,6 +16,27 @@
 
 package com.couchbase.client.java;
 
-public enum PersistTo {
-  NONE
+import com.couchbase.client.core.Core;
+import com.couchbase.client.java.env.CouchbaseEnvironment;
+
+public class ReactiveBucket {
+
+  private final AsyncBucket asyncBucket;
+  private final Core core;
+  private final CouchbaseEnvironment environment;
+
+  ReactiveBucket(AsyncBucket asyncBucket) {
+    this.asyncBucket = asyncBucket;
+    this.core = asyncBucket.core();
+    this.environment = asyncBucket.environment();
+  }
+
+  public AsyncBucket async() {
+    return asyncBucket;
+  }
+
+  public ReactiveCollection collection(String name, String scope) {
+    return new ReactiveCollection(new AsyncCollection(name, scope, core, environment));
+  }
+
 }
