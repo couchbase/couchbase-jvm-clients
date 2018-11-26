@@ -35,7 +35,15 @@ public class ReactiveBucket {
     return asyncBucket;
   }
 
-  public ReactiveCollection collection(String name, String scope) {
+  public ReactiveCollection defaultCollection() {
+    return collection(null, null);
+  }
+
+  public ReactiveCollection collection(final String name) {
+    return collection(name, null);
+  }
+
+  public ReactiveCollection collection(final String name, final String scope) {
     return new ReactiveCollection(new AsyncCollection(name, scope, core, environment));
   }
 

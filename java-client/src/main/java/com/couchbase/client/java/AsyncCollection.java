@@ -19,10 +19,12 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
@@ -223,7 +225,15 @@ public class AsyncCollection {
     notNull(content, "Content");
     notNull(options, "InsertOptions");
 
-    throw new UnsupportedOperationException("Not implemented yet: fulldoc insert");
+    byte[] encoded = null; // TODO: implement me
+    long expiration = options.expiry().getSeconds();
+    int flags = 0; // TODO
+    byte datatype = 0; // TODO
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+
+    InsertRequest request = new InsertRequest(id, encoded, expiration, flags, datatype,
+      timeout, coreContext);
+    return InsertAccessor.insert(core, request);
   }
 
 

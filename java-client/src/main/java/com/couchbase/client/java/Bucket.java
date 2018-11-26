@@ -41,7 +41,15 @@ public class Bucket {
     return reactiveBucket;
   }
 
-  public Collection collection(String name, String scope) {
+  public Collection defaultCollection() {
+    return collection(null, null);
+  }
+
+  public Collection collection(final String name) {
+    return collection(name, null);
+  }
+
+  public Collection collection(final String name, final String scope) {
     return new Collection(new AsyncCollection(name, scope, core, environment));
   }
 

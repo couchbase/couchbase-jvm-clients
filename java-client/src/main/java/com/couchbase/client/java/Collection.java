@@ -16,8 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationSpec;

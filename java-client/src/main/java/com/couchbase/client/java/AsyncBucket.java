@@ -31,6 +31,14 @@ public class AsyncBucket {
     this.name = name;
   }
 
+  public AsyncCollection defaultCollection() {
+    return collection(null, null);
+  }
+
+  public AsyncCollection collection(final String name) {
+    return collection(name, null);
+  }
+
   public AsyncCollection collection(final String name, final String scope) {
     return new AsyncCollection(name, scope, core, environment);
   }

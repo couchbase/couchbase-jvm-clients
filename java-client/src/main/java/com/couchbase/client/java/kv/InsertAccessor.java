@@ -16,11 +16,24 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+
+import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
 public enum InsertAccessor {
   ;
 
+  public static CompletableFuture<MutationResult> insert(final Core core, final InsertRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(response -> {
+        // todo: implement me
+        return new MutationResult();
+      });
+  }
 
 }

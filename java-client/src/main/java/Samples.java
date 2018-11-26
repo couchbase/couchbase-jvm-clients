@@ -26,7 +26,7 @@ public class Samples {
     );
 
     Bucket bucket = cluster.bucket("travel-sample");
-    Collection collection = bucket.collection("collection", "scope");
+    Collection collection = bucket.defaultCollection();
 
     Optional<GetResult> getResult = collection.get("id");
 
