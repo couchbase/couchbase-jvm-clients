@@ -57,6 +57,8 @@ public class Collection {
 
   /**
    * Provides access to the underlying {@link AsyncCollection}.
+   *
+   * @return returns the underlying {@link AsyncCollection}.
    */
   public AsyncCollection async() {
     return asyncCollection;
@@ -64,6 +66,8 @@ public class Collection {
 
   /**
    * Provides access to the underlying {@link ReactiveCollection}.
+   *
+   * @return returns the underlying {@link ReactiveCollection}.
    */
   public ReactiveCollection reactive() {
     return reactiveCollection;

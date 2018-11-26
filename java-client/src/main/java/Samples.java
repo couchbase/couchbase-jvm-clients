@@ -1,25 +1,15 @@
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.java.AsyncCollection;
-import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.Document;
 import com.couchbase.client.java.GetResult;
 import com.couchbase.client.java.MutationResult;
 import com.couchbase.client.java.MutationSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.options.GetOptions;
-import com.couchbase.client.java.options.InsertOptions;
-import com.couchbase.client.java.options.UpsertOptions;
 
-import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static com.couchbase.client.java.options.GetOptions.getOptions;
-import static com.couchbase.client.java.options.InsertOptions.insertOptions;
 
 public class Samples {
 

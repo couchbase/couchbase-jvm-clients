@@ -32,6 +32,7 @@ public enum GetAccessor {
   /**
    * Takes a {@link GetRequest} and dispatches, converts and returns the result.
    *
+   * @param core the core reference to dispatch into.
    * @param request the request to dispatch and convert once a response arrives.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */

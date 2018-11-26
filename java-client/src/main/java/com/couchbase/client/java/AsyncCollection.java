@@ -79,6 +79,8 @@ public class AsyncCollection {
   /**
    * Creates a new {@link AsyncCollection}.
    *
+   * @param name the name of the collection.
+   * @param scope the scope of the collection.
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */

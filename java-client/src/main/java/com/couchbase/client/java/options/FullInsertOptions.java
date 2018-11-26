@@ -25,7 +25,7 @@ import java.util.function.Function;
 /**
  * todo: make this extend the regular insert options.
  *
- * @param <T>
+ * @param <T> the generic encoder type.
  */
 public class FullInsertOptions<T> {
 

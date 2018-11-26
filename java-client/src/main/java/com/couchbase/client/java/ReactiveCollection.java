@@ -77,6 +77,8 @@ public class ReactiveCollection {
 
   /**
    * Provides access to the underlying {@link AsyncCollection}.
+   *
+   * @return returns the underlying {@link AsyncCollection}.
    */
   public AsyncCollection async() {
     return asyncCollection;
