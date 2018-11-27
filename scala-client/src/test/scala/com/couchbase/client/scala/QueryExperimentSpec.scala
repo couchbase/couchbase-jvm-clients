@@ -19,7 +19,7 @@ case class FromClause(bucket: String) {
   def where() = WhereClause("")
 }
 case class WhereClause(clause: String) extends Dynamic {
-//  def applyDynamic(v: String): WhereSubClause = WhereSubClause(v)
+  def applyDynamic(v: String): WhereSubClause = WhereSubClause(v)
   def selectDynamic(key: String) = null
 def updateDynamic(key: String)(v: Any): WhereSubClause = WhereSubClause(v)
 }

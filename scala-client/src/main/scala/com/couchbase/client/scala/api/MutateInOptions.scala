@@ -19,14 +19,17 @@ package com.couchbase.client.scala.api
 import scala.concurrent.duration.{FiniteDuration, _}
 
 case class MutateInOptions(timeout: FiniteDuration = null,
-                          expiration: FiniteDuration = 0.seconds,
-                          replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-                          persistTo: PersistTo.Value = PersistTo.NONE) {
-                            def timeout(timeout: FiniteDuration): MutateInOptions = copy(timeout = timeout)
-                            def expiration(expiration: FiniteDuration): MutateInOptions = copy(expiration = expiration)
-                            def replicateTo(replicateTo: ReplicateTo.Value): MutateInOptions = copy(replicateTo = replicateTo)
-                            def persistTo(persistTo: PersistTo.Value): MutateInOptions = copy(persistTo = persistTo)
-                          }
+                           expiration: FiniteDuration = 0.seconds,
+                           replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
+                           persistTo: PersistTo.Value = PersistTo.NONE) {
+  def timeout(timeout: FiniteDuration): MutateInOptions = copy(timeout = timeout)
+
+  def expiration(expiration: FiniteDuration): MutateInOptions = copy(expiration = expiration)
+
+  def replicateTo(replicateTo: ReplicateTo.Value): MutateInOptions = copy(replicateTo = replicateTo)
+
+  def persistTo(persistTo: PersistTo.Value): MutateInOptions = copy(persistTo = persistTo)
+}
 
 object MutateInOptions {
   def apply(): MutateInOptions = new MutateInOptions()

@@ -73,10 +73,11 @@ object Samples {
 
 
     // Simple subdoc lookup
-    // TODO see how Michael handles subdoc field lookups in a standard GetResult
+    // TODO this may change, subdoc discussions in flux
     val result: FieldsResult = coll.getFields("id", GetFields().get("field1", "field2"))
     println(result.content(0).asInstanceOf[String])
     println(result.content("field1").asInstanceOf[String])
+    println(result.contentAs[String]("field1"))
     println(result.field1.asInstanceOf[String])
     result match {
       case FieldsResult(field1, field2) =>
@@ -96,7 +97,7 @@ object Samples {
 
 
     // Various ways of inserting
-    val inserted = coll.insert("id", JsonObject.create)
+    val inserted: MutationResult = coll.insert("id", JsonObject.create)
     coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, expiration = 10.days, replicateTo = ReplicateTo.ALL, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
     coll.insert("id", JsonObject.create, InsertOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
@@ -109,7 +110,7 @@ object Samples {
       // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
       // val toReplace = fetched1.get.copy(content = JsonObject.empty())
       val toReplace = fetched1.get
-      coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
+      val replaced: MutationResult = coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
       coll.replace(toReplace.id, JsonObject.create, toReplace.cas, timeout = 1000.milliseconds, persistTo = PersistTo.MAJORITY)
       coll.replace(toReplace.id, JsonObject.create, toReplace.cas, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
       coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)

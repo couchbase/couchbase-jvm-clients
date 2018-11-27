@@ -65,7 +65,7 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, coreContext)
+    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -117,7 +117,7 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, cas, coreContext)
+    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, timeout, cas, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -151,7 +151,7 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, 0.toByte, timeout, coreContext)
+    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -240,8 +240,9 @@ class AsyncCollection(val collection: Collection) {
         }
         else {
           // TODO
-          val content = JsonObject.create()
-          Some(new GetResult(id, v.cas(), v.content()))
+//          val content = JsonObject.create()
+//          Some(new GetResult(id, v.cas(), v.content()))
+          null
         }
       })
 

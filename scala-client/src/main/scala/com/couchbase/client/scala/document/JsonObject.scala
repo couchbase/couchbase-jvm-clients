@@ -101,28 +101,28 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
     content.isEmpty
   }
 
-  //  override def contentAs[T](path: String): T = contentAs(path, null)
-
   private type ContentType = Map[String, Any]
 
   @tailrec
-  private def contentAsRecurse[T](cur: ContentType, paths: List[PathElement]): T = {
+  private def contentRecurse(cur: ContentType, paths: List[PathElement]): Any = {
     paths match {
       case Nil =>
         throw new PathNotFound()
+
       case x :: Nil =>
         x match {
           case x: PathArray =>
             cur.get(x.name).map(_.asInstanceOf[JsonArray]) match {
-              case Some(y: JsonArray) => y.get(x.index).asInstanceOf[T]
+              case Some(y) => y.get(x.index)
               case _ => throw new PathNotFound()
             }
           case x: PathObjectOrField =>
             cur.get(x.toString) match {
-              case Some(y) => y.asInstanceOf[T]
+              case Some(y) => y
               case _ => throw new PathNotFound()
             }
         }
+
       case x :: rest =>
         x match {
           case x: PathArray =>
@@ -130,23 +130,18 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
               case None => throw new PathNotFound()
               case Some(y: JsonArray) =>
                 val arr = y.get(x.index).asInstanceOf[JsonObject]
-                contentAsRecurse(arr.content, rest)
-
+                contentRecurse(arr.content, rest)
             }
 
           case x: PathObjectOrField =>
-            val y = cur.get(x.toString)
-            if (y.isEmpty) throw new PathNotFound()
-            else {
-              val z = y.get
-              //          if (z.isInstanceOf[T]) {
-              //            z.asInstanceOf[T]
-              //          }
-              //          else {
-              val next = if (z.isInstanceOf[JsonObject]) z.asInstanceOf[JsonObject].content
-              else z.asInstanceOf[ContentType]
-              contentAsRecurse(next, rest)
-              //          }
+            cur.get(x.toString) match {
+              case None => throw new PathNotFound()
+              case Some(z) =>
+                val next = z match {
+                  case jo: JsonObject => jo.content
+                  case _ => z.asInstanceOf[ContentType]
+                }
+                contentRecurse(next, rest)
             }
         }
     }
@@ -154,31 +149,18 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
 
 
   override def contentAs[T](path: PathElements): T = {
-
-    //    val paths = path.split("\\.").toList
-    contentAsRecurse[T](content, path.paths)
+    contentRecurse(content, path.paths).asInstanceOf[T]
   }
 
   override def exists(path: PathElements): Boolean = {
-    //    type ContentType = Map[String,Any]
-    //
-    //    @tailrec
-    //    def go(cur: ContentType, paths: PathElements): Boolean = {
-    //      paths match {
-    //        case x => true
-    //        case x :: rest =>
-    //          val y = cur.get(x)
-    //          if (y.isEmpty) false
-    //          else {
-    //            go(y.get.asInstanceOf[ContentType], rest)
-    //          }
-    //      }
-    //    }
-    //
-    //    val paths = path.split(".").toList
-    //    go(content, paths)
-    // TODO
-    true
+    // TODO more performant implementation without catch
+    try {
+      contentRecurse(content, path.paths)
+      true
+    }
+    catch {
+      case e: PathNotFound => false
+    }
   }
 
 
