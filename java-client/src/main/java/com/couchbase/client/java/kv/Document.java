@@ -80,6 +80,7 @@ public class Document {
     return contentAs(JsonArray.class);
   }
 
+  @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
     return contentAs(target, (Decoder<T>) DefaultDecoder.INSTANCE);
   }
