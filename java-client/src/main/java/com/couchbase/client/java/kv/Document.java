@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.codec.DefaultDecoder;
 import com.couchbase.client.java.codec.DefaultEncoder;
+import com.couchbase.client.java.codec.Encoder;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
@@ -36,7 +38,11 @@ public class Document {
   private final Optional<Duration> expiration;
 
   public static <T> Document create(final String id, final T content) {
-    EncodedDocument encoded = DefaultEncoder.INSTANCE.encode(content);
+    return create(id, content, DefaultEncoder.INSTANCE);
+  }
+
+  public static <T> Document create(final String id, final T content, final Encoder<T> encoder) {
+    EncodedDocument encoded = encoder.encode(content);
     return new Document(id, encoded, Optional.empty(), Optional.empty());
   }
 
@@ -58,24 +64,28 @@ public class Document {
     return id;
   }
 
-  public JsonObject content() {
-    return content(JsonObject.class);
-  }
-
-  public <T> T content(final Class<T> target) {
-    return content(target, (Decoder<T>) DefaultDecoder.INSTANCE);
-  }
-
-  public <T> T content(final Class<T> target, final Decoder<T> decoder) {
-    return decoder.decode(target, encoded);
-  }
-
   public Optional<Long> cas() {
     return cas;
   }
 
   public Optional<Duration> expiration() {
     return expiration;
+  }
+
+  public JsonObject contentAsObject() {
+    return contentAs(JsonObject.class);
+  }
+
+  public JsonArray contentAsArray() {
+    return contentAs(JsonArray.class);
+  }
+
+  public <T> T contentAs(final Class<T> target) {
+    return contentAs(target, (Decoder<T>) DefaultDecoder.INSTANCE);
+  }
+
+  public <T> T contentAs(final Class<T> target, final Decoder<T> decoder) {
+    return decoder.decode(target, encoded);
   }
 
   @Stability.Uncommitted
