@@ -18,7 +18,12 @@ package com.couchbase.client.java.kv;
 
 public class MutationSpec {
 
-  public <T> MutationSpec upsert(String path, T value) {
-    return null;
+  public <T> MutationSpec replace(final String path, final T fragment) {
+    return this;
   }
+
+  public <T> MutationSpec insert(final String path, final T fragment) {
+    return this;
+  }
+
 }

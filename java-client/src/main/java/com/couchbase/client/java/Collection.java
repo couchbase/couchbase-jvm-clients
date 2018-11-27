@@ -16,15 +16,18 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.Document;
+import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupSpec;
+import com.couchbase.client.java.kv.MutationOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationSpec;
-import com.couchbase.client.java.kv.FullInsertOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.MutationSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
@@ -80,9 +83,9 @@ public class Collection {
    * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @return a {@link GetResult} once the document has been loaded.
+   * @return a {@link Document} once the document has been loaded.
    */
-  public Optional<GetResult> get(final String id) {
+  public Optional<Document> get(final String id) {
     return block(async().get(id));
   }
 
@@ -94,9 +97,9 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
-   * @return a {@link GetResult} once the document has been loaded.
+   * @return a {@link Document} once the document has been loaded.
    */
-  public Optional<GetResult> get(final String id, final GetOptions options) {
+  public Optional<Document> get(final String id, final GetOptions options) {
     return block(async().get(id, options));
   }
 
@@ -122,53 +125,71 @@ public class Collection {
   }
 
   /**
-   * Inserts a document fragment into a document which does not exist yet with default options.
-   *
-   * @param id the unique ID of the document which will be created.
-   * @param content the content to be inserted.
-   * @return a {@link MutationResult} once inserted.
-   */
-  public MutationResult insert(final String id, final MutationSpec content) {
-    return block(async().insert(id, content));
-  }
-
-  /**
    * Inserts a full document which does not exist yet with default options.
    *
-   * @param id the unique ID of the document which will be created.
-   * @param content the content to be inserted.
-   * @param <T> the generic type of the content to be inserted.
+   * @param document the document to insert.
    * @return a {@link MutationResult} once inserted.
    */
-  public <T> MutationResult insert(final String id, final T content) {
-    return block(async().insert(id, content));
-  }
-
-  /**
-   * Inserts a document fragment into a document which does not exist yet with custom options.
-   *
-   * @param id the unique ID of the document which will be created.
-   * @param spec the content to be inserted.
-   * @param options custom options to customize the insert behavior.
-   * @return a {@link MutationResult} once inserted.
-   */
-  public MutationResult insert(final String id, final MutationSpec spec,
-                               final InsertOptions options) {
-    return block(async().insert(id, spec, options));
+  public MutationResult insert(final Document document) {
+    return block(async().insert(document));
   }
 
   /**
    * Inserts a full document which does not exist yet with custom options.
    *
-   * @param id the unique ID of the document which will be created.
-   * @param content the content to be inserted.
+   * @param document the document to insert.
    * @param options custom options to customize the insert behavior.
-   * @param <T> the generic type of the content to be inserted.
    * @return a {@link MutationResult} once inserted.
    */
-  public <T> MutationResult insert(final String id, final T content,
-                                   final FullInsertOptions<T> options) {
-    return block(async().insert(id, content, options));
+  public MutationResult insert(final Document document, final InsertOptions options) {
+    return block(async().insert(document, options));
+  }
+
+  /**
+   * Performs mutations to document fragments with default options.
+   *
+   * @param id the outer document ID.
+   * @param spec the spec which specifies the type of mutations to perform.
+   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   */
+  public MutationResult mutateIn(final String id, final MutationSpec spec) {
+    return block(async().mutateIn(id, spec));
+  }
+
+  /**
+   * Performs mutations to document fragments with custom options.
+   *
+   * @param id the outer document ID.
+   * @param spec the spec which specifies the type of mutations to perform.
+   * @param options custom options to modify the mutation options.
+   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   */
+  public MutationResult mutateIn(final String id, final MutationSpec spec,
+                                 final MutationOptions options) {
+    return block(async().mutateIn(id, spec, options));
+  }
+
+  /**
+   * Performs document fragment lookups with default options.
+   *
+   * @param id the outer document ID.
+   * @param spec the spec which specifies the fields to look up and how.
+   * @return a {@link Document} with the fetched fragments and metadata.
+   */
+  public Document lookupIn(final String id, final LookupSpec spec) {
+    return block(async().lookupIn(id, spec));
+  }
+
+  /**
+   * Performs document fragment lookups with custom options.
+   *
+   * @param id the outer document ID.
+   * @param spec the spec which specifies the fields to look up and how.
+   * @param options custom options to modify the lookup options.
+   * @return a {@link Document} with the fetched fragments and metadata.
+   */
+  public Document lookupIn(final String id, final LookupSpec spec, final LookupOptions options) {
+    return block(async().lookupIn(id, spec, options));
   }
 
 }

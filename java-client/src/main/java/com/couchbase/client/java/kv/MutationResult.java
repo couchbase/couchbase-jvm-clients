@@ -18,10 +18,24 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.MutationToken;
 
+import java.util.Optional;
+
 public class MutationResult {
 
-  long cas;
+  private final long cas;
 
-  MutationToken mutationToken;
+  private final Optional<MutationToken> mutationToken;
 
+  public MutationResult(long cas, Optional<MutationToken> mutationToken) {
+    this.cas = cas;
+    this.mutationToken = mutationToken;
+  }
+
+  public long cas() {
+    return cas;
+  }
+
+  public Optional<MutationToken> mutationToken() {
+    return mutationToken;
+  }
 }

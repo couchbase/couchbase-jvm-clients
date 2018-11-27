@@ -1,0 +1,83 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.java.kv;
+
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.codec.Decoder;
+import com.couchbase.client.java.codec.DefaultDecoder;
+import com.couchbase.client.java.codec.DefaultEncoder;
+import com.couchbase.client.java.json.JsonObject;
+
+import java.time.Duration;
+import java.util.Optional;
+
+/**
+ * Experimental prototype for a different result type on fetch.
+ */
+public class Document {
+
+  private final String id;
+  private final Optional<Long> cas;
+  private final EncodedDocument encoded;
+  private final Optional<Duration> expiration;
+
+  public static Document create(String id, Object content) {
+    EncodedDocument encoded = DefaultEncoder.INSTANCE.encode(content);
+    return new Document(id, encoded, Optional.empty(), Optional.empty());
+  }
+
+  public static Document fromEncoded(String id, EncodedDocument encoded, Optional<Long> cas,
+                                     Optional<Duration> expiration) {
+    return new Document(id, encoded, cas, expiration);
+  }
+
+  private Document(String id, EncodedDocument encoded, Optional<Long> cas, Optional<Duration> expiration) {
+    this.id = id;
+    this.cas = cas;
+    this.encoded = encoded;
+    this.expiration = expiration;
+  }
+
+  public String id() {
+    return id;
+  }
+
+  public JsonObject content() {
+    return content(JsonObject.class);
+  }
+
+  public <T> T content(Class<T> target) {
+    return content(target, (Decoder<T>) DefaultDecoder.INSTANCE);
+  }
+
+  public <T> T content(Class<T> target, Decoder<T> decoder) {
+    return decoder.decode(target, encoded);
+  }
+
+  public Optional<Long> cas() {
+    return cas;
+  }
+
+  public Optional<Duration> expiration() {
+    return expiration;
+  }
+
+  @Stability.Uncommitted
+  public EncodedDocument encoded() {
+    return encoded;
+  }
+}

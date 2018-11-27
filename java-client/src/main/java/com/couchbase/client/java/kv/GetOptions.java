@@ -16,12 +16,9 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Allows to customize a get request.
@@ -38,7 +35,10 @@ public class GetOptions {
    */
   private Duration timeout;
 
-  private final Map<String, FieldType> fields;
+  /**
+   * If the expiration should also fetched with a get.
+   */
+  private boolean withExpiration;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
@@ -49,9 +49,8 @@ public class GetOptions {
     return new GetOptions();
   }
 
-
   private GetOptions() {
-    fields = new HashMap<>();
+    withExpiration = false;
   }
 
   public GetOptions timeout(final Duration timeout) {
@@ -63,37 +62,13 @@ public class GetOptions {
     return timeout;
   }
 
-  public GetOptions field(String path) {
-    fields.put(path, FieldType.GET);
+  public GetOptions withExpiration(boolean expiration) {
+    withExpiration = true;
     return this;
   }
 
-  public GetOptions fieldExists(String path) {
-    fields.put(path, FieldType.EXISTS);
-    return this;
+  public boolean withExpiration() {
+    return withExpiration;
   }
 
-  public GetOptions fields(String... paths) {
-    for (String p : paths) {
-      field(p);
-    }
-    return this;
-  }
-
-  public GetOptions fieldsExist(String... paths) {
-    for (String p : paths) {
-      fieldExists(p);
-    }
-    return this;
-  }
-
-  @Stability.Internal
-  public Map<String, FieldType> fields() {
-    return fields;
-  }
-
-  enum FieldType {
-    GET,
-    EXISTS
-  }
 }

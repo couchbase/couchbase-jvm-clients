@@ -3,13 +3,13 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.Document;
+import com.couchbase.client.java.kv.LookupSpec;
+import com.couchbase.client.java.kv.MutationSpec;
 
-import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.java.kv.FullInsertOptions.insertOptions;
+import static com.couchbase.client.java.kv.GetOptions.getOptions;
 
 
 public class Samples {
@@ -28,15 +28,12 @@ public class Samples {
     Bucket bucket = cluster.bucket("travel-sample");
     Collection collection = bucket.defaultCollection();
 
-    Optional<GetResult> getResult = collection.get("id");
 
-    MutationResult mutationResult = collection.insert(
-      "id",
-      new JsonObject(),
-      insertOptions().persistTo(PersistTo.NONE)
-    );
+    CompletableFuture<Document> future = collection.async().lookupIn("id", new LookupSpec().get("foo.bar"));
+
+    collection.async().mutateIn("id", new MutationSpec().insert("foo.bar", new JsonObject()));
+
 
   }
-
 
 }
