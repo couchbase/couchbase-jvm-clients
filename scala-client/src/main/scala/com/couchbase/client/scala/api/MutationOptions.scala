@@ -13,33 +13,37 @@ case class ArrayPrependOperation(path: String, value: Any, options: MutateOption
 case class ContentOperation(content: JsonObject) extends MutateOperation
 case class MutateOptions(xattrs: Boolean = false, expandMacros: Boolean = false, createPath: Boolean = false)
 
-case class MutateFields(operations: List[MutateOperation]) {
-  def insert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateFields = {
+case class MutateInSpec(private val operations: List[MutateOperation]) {
+  def insert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ InsertOperation(path, value, options))
   }
 
-  def replace(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateFields = {
+  def replace(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ ReplaceOperation(path, value, options))
   }
 
-  def upsert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateFields = {
+  def upsert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ UpsertOperation(path, value, options))
   }
 
-  def remove(path: String, options: MutateOptions = MutateOptions()): MutateFields = {
+  def remove(path: String, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ RemoveOperation(path, options))
   }
 
-  def counter(path: String, delta: Long, options: MutateOptions = MutateOptions()): MutateFields = {
+  def counter(path: String, delta: Long, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ CounterOperation(path, delta, options))
   }
 
-  def arrayPrepend(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateFields = {
+  def arrayPrepend(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ ArrayPrependOperation(path, value, options))
   }
 
-  def content(content: JsonObject): MutateFields = {
+  def content(content: JsonObject): MutateInSpec = {
     copy(operations = operations :+ ContentOperation(content))
   }
 
+}
+
+object MutateInSpec {
+  def apply() = new MutateInSpec(List.empty)
 }

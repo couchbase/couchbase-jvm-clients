@@ -19,7 +19,6 @@ package com.couchbase.client.scala.document
 import scala.language.dynamics
 import java.util.Objects
 
-import com.couchbase.client.java._
 import com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.annotation.tailrec

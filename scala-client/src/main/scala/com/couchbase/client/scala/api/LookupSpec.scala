@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala
+package com.couchbase.client.scala.api
 
 import scala.language.dynamics
 
@@ -24,33 +24,33 @@ case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperat
 case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
 case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
 
-case class GetFields(operations: List[LookupOperation]) {
-  def get(path: String*): GetFields = {
+case class LookupSpec(operations: List[LookupOperation]) {
+  def get(path: String*): LookupSpec = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
 
-  def get(path: String, xattr: Boolean = false): GetFields = {
+  def get(path: String, xattr: Boolean = false): LookupSpec = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
-  def getString(path: String, xattr: Boolean = false): GetFields = {
+  def getString(path: String, xattr: Boolean = false): LookupSpec = {
     copy(operations = operations :+ GetStringOperation(path, xattr))
   }
 
-  def getInt(path: String, xattr: Boolean = false): GetFields = {
+  def getInt(path: String, xattr: Boolean = false): LookupSpec = {
     copy(operations = operations :+ GetIntOperation(path, xattr))
   }
 
-  def exists(path: String, xattr: Boolean = false): GetFields = {
+  def exists(path: String, xattr: Boolean = false): LookupSpec = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
   }
 }
 
-object GetFields {
-  def apply() = new GetFields(List.empty[LookupOperation])
+object LookupSpec {
+  def apply() = new LookupSpec(List.empty[LookupOperation])
 }
 
-class FieldsResult extends Dynamic {
+class LookupInResult extends Dynamic {
   def content(idx: Int): Any = null
   def content(idx: String): Any = null
 
@@ -64,6 +64,6 @@ class FieldsResult extends Dynamic {
 
 }
 
-object FieldsResult {
-  def unapplySeq(m: FieldsResult): Option[Seq[Any]] = null
+object LookupInResult {
+  def unapplySeq(m: LookupInResult): Option[Seq[Any]] = null
 }

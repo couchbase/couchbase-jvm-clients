@@ -16,10 +16,9 @@
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
-import com.couchbase.client.java.GetResult
-import com.couchbase.client.scala.{FieldsResult, _}
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.JsonObject
+import com.couchbase.client.scala.CouchbaseCluster
+import com.couchbase.client.scala.document.{Document, JsonObject}
 import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -42,13 +41,13 @@ object Samples {
 
 
     // All methods have both a named/default parameters version, and an [X]Options version
-    val fetched1: Option[GetResult] = coll.get("id")
+    val fetched1: Option[Document] = coll.get("id")
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
     val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
 
 
-    // GetResult contains the raw bytes, plus metadata.  Defers conversion to the last moment.
-    val getResult: GetResult = fetched1.get
+    // Document contains the raw bytes, plus metadata.  Defers conversion to the last moment.
+    val getResult: Document = fetched1.get
     val doc: JsonObject = getResult.content
 
     case class MyUserEntity(id: String, firstName: String, age: Int)
@@ -73,14 +72,18 @@ object Samples {
 
 
     // Simple subdoc lookup
-    // TODO this may change, subdoc discussions in flux
-    val result: FieldsResult = coll.getFields("id", GetFields().get("field1", "field2"))
+    val result: LookupInResult = coll.lookupIn("id", LookupSpec().get("field1", "field2"))
+    coll.lookupIn("id", LookupSpec().get("field1", "field2"), timeout = 10.seconds)
+    coll.lookupIn("id", LookupSpec().get("field1", "field2"), LookupInOptions().timeout(10.seconds))
+
+
+    // Parsing subdoc results.  LookupInResult is similar to a Document.
     println(result.content(0).asInstanceOf[String])
     println(result.content("field1").asInstanceOf[String])
     println(result.contentAs[String]("field1"))
     println(result.field1.asInstanceOf[String])
     result match {
-      case FieldsResult(field1, field2) =>
+      case LookupInResult(field1, field2) =>
         println(field1.asInstanceOf[String])
         println(field2.asInstanceOf[Int])
     }
@@ -115,6 +118,12 @@ object Samples {
       coll.replace(toReplace.id, JsonObject.create, toReplace.cas, ReplaceOptions().timeout(1000.milliseconds).persistTo(PersistTo.MAJORITY))
       coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)
     }
+
+
+    // Subdoc mutations
+    val mutateResult: MutationResult = coll.mutateIn("id", MutateInSpec().insert("hello", "world").upsert("foo", "bar"))
+    coll.mutateIn("id", MutateInSpec().insert("hello", "world"), MutateInOptions().timeout(10.seconds))
+    coll.mutateIn("id", MutateInSpec().insert("hello", "world"), cas = 42, timeout = 10.seconds)
 
 
     // Queries

@@ -23,11 +23,10 @@ import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExist
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.util.Validators
-import com.couchbase.client.java.GetResult
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.JsonObject
+import com.couchbase.client.scala.document.{Document, JsonObject}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -214,7 +213,7 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def lookupInAs[T](id: String,
-                    operations: GetFields,
+                    operations: LookupSpec,
                     timeout: FiniteDuration = kvTimeout)
                    (implicit ec: ExecutionContext): Future[T] = {
     return null;
@@ -222,7 +221,7 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Future[Option[GetResult]] = {
+         (implicit ec: ExecutionContext): Future[Option[Document]] = {
 
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
@@ -268,13 +267,13 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           options: GetOptions
-         )(implicit ec: ExecutionContext): Future[Option[GetResult]] = {
+         )(implicit ec: ExecutionContext): Future[Option[Document]] = {
     get(id, options.timeout)
   }
 
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[GetResult] = {
+                (implicit ec: ExecutionContext): Future[Document] = {
     get(id, timeout).map(doc => {
       if (doc.isEmpty) throw new DocumentDoesNotExistException()
       else doc.get
@@ -283,7 +282,7 @@ class AsyncCollection(val collection: Collection) {
 
   def getOrError(id: String,
                  options: GetOptions)
-                (implicit ec: ExecutionContext): Future[GetResult] = {
+                (implicit ec: ExecutionContext): Future[Document] = {
     getOrError(id, options.timeout)
   }
 
