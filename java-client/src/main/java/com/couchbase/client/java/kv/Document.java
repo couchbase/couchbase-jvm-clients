@@ -89,8 +89,24 @@ public class Document {
     return decoder.decode(target, encoded);
   }
 
+  /**
+   * Returns the encoded, raw data and flags.
+   *
+   * @return encoded, raw data.
+   */
   @Stability.Uncommitted
   public EncodedDocument encoded() {
     return encoded;
   }
+
+  /**
+   * Enriches the current {@link Document} with a cas value.
+   *
+   * @param cas the cas value to add to this document.
+   * @return a new document with the same properties as the current one but with the cas set.
+   */
+  public Document withCas(final long cas) {
+    return fromEncoded(id, encoded, Optional.of(cas), expiration);
+  }
+
 }
