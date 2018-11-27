@@ -39,18 +39,16 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
   private final byte[] content;
   private final long expiration;
   private final int flags;
-  private final byte datatype;
   private final long cas;
 
   public ReplaceRequest(final String key, final byte[] content, final long expiration,
-                        final int flags, final byte datatype, final Duration timeout,
+                        final int flags, final Duration timeout,
                         final long cas, final CoreContext ctx) {
     super(timeout, ctx);
     this.key = encodeKey(key);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
-    this.datatype = datatype;
     this.cas = cas;
   }
 
@@ -59,7 +57,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
                         final CompressionConfig config) {
     ByteBuf key = Unpooled.wrappedBuffer(this.key);
 
-    byte datatype = this.datatype;
+    byte datatype = 0;
     ByteBuf content;
     if (config != null && config.enabled() && this.content.length >= config.minSize()) {
       ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());

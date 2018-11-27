@@ -147,7 +147,7 @@ public class AsyncCollection {
     } else {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
-      return GetAccessor.get(core, request);
+      return GetAccessor.get(core, id, request);
     }
   }
 
@@ -204,21 +204,18 @@ public class AsyncCollection {
         + "full document to avoid overriding the rest of the document unintentionally");
     }
 
-    long expiration = options.expiry().getSeconds();
-    byte datatype = 0;
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-
     InsertRequest request = new InsertRequest(
       document.id(),
       document.encoded().content(),
-      expiration,
+      options.expiry().getSeconds(),
       document.encoded().flags(),
-      datatype,
-      timeout,
+      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
       coreContext
     );
+
     return InsertAccessor.insert(core, request);
   }
+
   /**
    * Performs mutations to document fragments with default options.
    *

@@ -31,21 +31,23 @@ import java.util.Optional;
 public class Document {
 
   private final String id;
-  private final Optional<Long> cas;
   private final EncodedDocument encoded;
+  private final Optional<Long> cas;
   private final Optional<Duration> expiration;
 
-  public static Document create(String id, Object content) {
+  public static <T> Document create(final String id, final T content) {
     EncodedDocument encoded = DefaultEncoder.INSTANCE.encode(content);
     return new Document(id, encoded, Optional.empty(), Optional.empty());
   }
 
-  public static Document fromEncoded(String id, EncodedDocument encoded, Optional<Long> cas,
-                                     Optional<Duration> expiration) {
+  public static Document fromEncoded(final String id, final EncodedDocument encoded,
+                                     final Optional<Long> cas, final Optional<Duration> expiration)
+  {
     return new Document(id, encoded, cas, expiration);
   }
 
-  private Document(String id, EncodedDocument encoded, Optional<Long> cas, Optional<Duration> expiration) {
+  private Document(final String id, final EncodedDocument encoded, final Optional<Long> cas,
+                   final Optional<Duration> expiration) {
     this.id = id;
     this.cas = cas;
     this.encoded = encoded;
@@ -60,11 +62,11 @@ public class Document {
     return content(JsonObject.class);
   }
 
-  public <T> T content(Class<T> target) {
+  public <T> T content(final Class<T> target) {
     return content(target, (Decoder<T>) DefaultDecoder.INSTANCE);
   }
 
-  public <T> T content(Class<T> target, Decoder<T> decoder) {
+  public <T> T content(final Class<T> target, final Decoder<T> decoder) {
     return decoder.decode(target, encoded);
   }
 

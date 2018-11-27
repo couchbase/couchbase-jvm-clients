@@ -27,7 +27,6 @@ import com.couchbase.client.java.kv.MutationSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 

@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
@@ -32,7 +33,7 @@ public enum RemoveAccessor {
     core.send(request);
     return request.response().thenApply(r -> {
       // TODO: add cas and mutation token
-      return new MutationResult();
+      return new MutationResult(0, Optional.empty());
     });
   }
 }

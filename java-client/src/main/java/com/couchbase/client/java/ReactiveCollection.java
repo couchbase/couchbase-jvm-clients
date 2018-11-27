@@ -110,7 +110,7 @@ public class ReactiveCollection {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       GetRequest request = new GetRequest(id, timeout, coreContext);
       return Reactor
-        .wrap(request, GetAccessor.get(core, request), true)
+        .wrap(request, GetAccessor.get(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }

@@ -39,17 +39,15 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
   private final byte[] content;
   private final long expiration;
   private final int flags;
-  private final byte datatype;
 
   public InsertRequest(final String key, final byte[] content, final long expiration,
-                       final int flags, final byte datatype, final Duration timeout,
+                       final int flags, final Duration timeout,
                        final CoreContext ctx) {
     super(timeout, ctx);
     this.key = encodeKey(key);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
-    this.datatype = datatype;
   }
 
   @Override
@@ -57,7 +55,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
                         final CompressionConfig config) {
     ByteBuf key = Unpooled.wrappedBuffer(this.key);
 
-    byte datatype = this.datatype;
+    byte datatype = 0;
     ByteBuf content;
     if (config != null && config.enabled() && this.content.length >= config.minSize()) {
       ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());

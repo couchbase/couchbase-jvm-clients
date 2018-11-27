@@ -7,11 +7,6 @@ import com.couchbase.client.java.kv.Document;
 import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutationSpec;
 
-import java.util.concurrent.CompletableFuture;
-
-import static com.couchbase.client.java.kv.GetOptions.getOptions;
-
-
 public class Samples {
 
   public static void main(String... args) {
@@ -29,9 +24,9 @@ public class Samples {
     Collection collection = bucket.defaultCollection();
 
 
-    CompletableFuture<Document> future = collection.async().lookupIn("id", new LookupSpec().get("foo.bar"));
+    Document document = collection.lookupIn("id", new LookupSpec().get("foo.bar"));
 
-    collection.async().mutateIn("id", new MutationSpec().insert("foo.bar", new JsonObject()));
+    collection.mutateIn("id", new MutationSpec().insert("foo.bar", new JsonObject()));
 
 
   }
