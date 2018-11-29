@@ -162,6 +162,7 @@ class Scenarios {
     }
   }
 
+
   def scenarioD(): Unit = {
     retryOperationOnCASMismatch(() => {
       coll.get("id", timeout = 10.seconds) match {
@@ -222,11 +223,11 @@ class Scenarios {
         val user: User = doc.contentAs[User]
         val changed = user.copy(age = 25)
 
+        // Is this too dangerous?  What if a newer client has added 'phoneNumber' to user that this older client doesn't know about?
         coll.replace(doc.id, changed, doc.cas)
 
       case _ => println("could not find doc")
     }
-
   }
 
 

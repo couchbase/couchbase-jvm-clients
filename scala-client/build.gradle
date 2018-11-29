@@ -20,7 +20,8 @@ dependencies {
   compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0'
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0'
   compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0'
-  compile group: 'org.scalamacros', name: 'paradise', version: '2.1.1'
+  compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1'
+
 
 
 
