@@ -7,7 +7,6 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.Document;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationSpec;
 import com.couchbase.client.java.kv.PersistTo;
 
 import java.util.Optional;
