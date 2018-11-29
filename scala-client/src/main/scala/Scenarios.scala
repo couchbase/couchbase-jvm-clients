@@ -24,7 +24,7 @@ class Scenarios {
 
     val content: JsonObject = doc.content.put("field", "value")
 
-    coll.replace(doc.id, content, doc.cas, ReplaceOptions().timeout(10.seconds))
+    val result: MutationResult = coll.replace(doc.id, content, doc.cas, ReplaceOptions().timeout(10.seconds))
 
 
     // Default params also supported for all methods
@@ -59,7 +59,7 @@ class Scenarios {
       val arr: JsonArray = subdoc.contentAsArray
       arr.add("foo")
 
-      coll.mutateIn("id", MutateInSpec().upsert("someArray", arr), MutateInOptions().timeout(10.seconds))
+      val result: MutationResult = coll.mutateIn("id", MutateInSpec().upsert("someArray", arr), MutateInOptions().timeout(10.seconds))
     })
   }
 
@@ -69,7 +69,7 @@ class Scenarios {
     // Use a helper wrapper to retry our operation in the face of durability failures
     // TODO Michael points out remove is *not* an idempotent operation, as a new doc with the same ID may have been written
     retryIdempotentOperationClientSide((replicateTo: ReplicateTo.Value) => {
-      coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, PersistTo.None))
+      val result: MutationResult = coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, PersistTo.None))
     }, ReplicateTo.Two, ReplicateTo.Two, System.nanoTime().nanos.plus(30.seconds))
   }
 

@@ -1,4 +1,4 @@
-import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -78,7 +78,7 @@ public class Samples {
         MutationResult result = collection.insert(
           Document.create("id", content).withCas(document.cas().get())
         );
-      } catch (CasMismatchException ex) {
+      } catch (CASMismatchException ex) {
         continue;
       }
     } while(false);
