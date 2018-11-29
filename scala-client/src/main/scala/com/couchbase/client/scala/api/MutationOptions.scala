@@ -28,7 +28,7 @@ case class MutateInSpec(private val operations: List[MutateOperation]) {
     copy(operations = operations :+ UpsertOperation(path, value, options))
   }
 
-  def merge(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
+  def mergeUpsert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ MergeOperation(path, value, options))
   }
 

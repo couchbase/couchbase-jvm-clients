@@ -11,12 +11,13 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
 class Scenarios {
-  implicit val ec = ExecutionContext.Implicits.global
+  private implicit val ec = ExecutionContext.Implicits.global
 
-  val cluster = CouchbaseCluster.create("localhost")
-  val bucket = cluster.openBucket("default")
-  val scope = bucket.openScope("scope")
-  val coll = scope.openCollection("people")
+  private val cluster = CouchbaseCluster.create("localhost")
+  private val bucket = cluster.openBucket("default")
+  private val scope = bucket.openScope("scope")
+  private val coll = scope.openCollection("people")
+
 
   def scenarioA(): Unit = {
     val doc: Document = coll.getOrError("id", GetOptions().timeout(10.seconds))
@@ -50,11 +51,14 @@ class Scenarios {
     }
   }
 
+
   def scenarioB(): Unit = {
     val subdocOpt: Option[SubDocument] = coll.lookupIn("id", LookupInSpec().get("someArray"), timeout = 10.seconds)
+
     subdocOpt.map(subdoc => {
       val arr: JsonArray = subdoc.contentAsArray
       arr.add("foo")
+
       coll.mutateIn("id", MutateInSpec().upsert("someArray", arr), MutateInOptions().timeout(10.seconds))
     })
   }
@@ -63,10 +67,10 @@ class Scenarios {
 
   def scenarioC_clientSideDurability(): Unit = {
     // Use a helper wrapper to retry our operation in the face of durability failures
-    // TODO Michael points out remove is *not* an idempotent operation
+    // TODO Michael points out remove is *not* an idempotent operation, as a new doc with the same ID may have been written
     retryIdempotentOperationClientSide((replicateTo: ReplicateTo.Value) => {
       coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, PersistTo.None))
-    }, ReplicateTo.Two, ReplicateTo.Two, guard = 50)
+    }, ReplicateTo.Two, ReplicateTo.Two, System.nanoTime().nanos.plus(30.seconds))
   }
 
   /**
@@ -75,10 +79,10 @@ class Scenarios {
     * @param callback an idempotent operation to perform
     * @param replicateTo the current ReplicateTo setting being tried
     * @param originalReplicateTo the originally requested ReplicateTo setting
-    * @param guard prevent the operation looping indefinitely
+    * @param until prevent the operation looping indefinitely
     */
-  private def retryIdempotentOperationClientSide(callback: (ReplicateTo.Value) => Unit, replicateTo: ReplicateTo.Value, originalReplicateTo: ReplicateTo.Value, guard: Int): Unit = {
-    if (guard <= 0) {
+  private def retryIdempotentOperationClientSide(callback: (ReplicateTo.Value) => Unit, replicateTo: ReplicateTo.Value, originalReplicateTo: ReplicateTo.Value, until: FiniteDuration): Unit = {
+    if (System.nanoTime().nanos >= until) {
       // Depending on the durability requirements, may want to also log this to an external system for human review
       // and reconciliation
       throw new RuntimeException("Failed to durably write operation")
@@ -93,12 +97,12 @@ class Scenarios {
 
       case err: DocumentConcurrentlyModifiedException =>
         // Just retry
-        retryIdempotentOperationClientSide(callback, replicateTo, originalReplicateTo, guard - 1)
+        retryIdempotentOperationClientSide(callback, replicateTo, originalReplicateTo, until)
 
       case err: DocumentMutationLostException =>
         // Mutation lost during a hard failover.  I *think* we just retry with the original replicateTo.  If enough replicas
         // still aren't available, it will presumably raise ReplicaNotAvailableException and retry with lower.
-        retryIdempotentOperationClientSide(callback, originalReplicateTo, originalReplicateTo, guard - 1)
+        retryIdempotentOperationClientSide(callback, originalReplicateTo, originalReplicateTo, until)
 
       case err: ReplicaNotAvailableException =>
         println("Temporary replica failure, retrying with lower durability")
@@ -108,26 +112,27 @@ class Scenarios {
           case ReplicateTo.Three => ReplicateTo.Two
           case _ => ReplicateTo.None
         }
-        retryIdempotentOperationClientSide(callback, newReplicateTo, originalReplicateTo, guard - 1)
+        retryIdempotentOperationClientSide(callback, newReplicateTo, originalReplicateTo, until)
     }
   }
 
+
   def scenarioC_serverSideDurability(): Unit = {
     // Use a helper wrapper to retry our operation in the face of durability failures
-    // TODO Michael points out remove is *not* an idempotent operation
+    // TODO Michael points out remove is *not* an idempotent operation, as a new doc with the same ID may have been written
     retryIdempotentOperationServerSide(() => {
       coll.remove("id", cas = 0, RemoveOptions().durabilityServer(Durability.MajorityAndPersistActive))
-    }, guard = 50)
+    }, System.nanoTime().nanos.plus(30.seconds))
   }
 
   /**
     * Automatically retries an idempotent operation in the face of durability failures
     * TODO Should this be folded into the client as a per-operation retry strategy?
     * @param callback an idempotent operation to perform
-    * @param guard prevent the operation looping indefinitely
+    * @param until prevent the operation looping indefinitely
     */
-  private def retryIdempotentOperationServerSide(callback: () => Unit, guard: Int): Unit = {
-    if (guard <= 0) {
+  private def retryIdempotentOperationServerSide(callback: () => Unit, until: FiniteDuration): Unit = {
+    if (System.nanoTime().nanos >= until) {
       // Depending on the durability requirements, may want to also log this to an external system for human review
       // and reconciliation
       throw new RuntimeException("Failed to durably write operation")
@@ -141,14 +146,15 @@ class Scenarios {
       // logic
       case err: DocumentConcurrentlyModifiedException =>
         // Just retry
-        retryIdempotentOperationServerSide(callback, guard)
+        retryIdempotentOperationServerSide(callback, until)
 
       case err: DocumentMutationLostException =>
         // Mutation lost during a hard failover.  I *think* we just retry with the original replicateTo.  If enough replicas
         // still aren't available, it will presumably raise ReplicaNotAvailableException and retry with lower.
-        retryIdempotentOperationServerSide(callback, guard)
+        retryIdempotentOperationServerSide(callback, until)
     }
   }
+
 
   def scenarioD(): Unit = {
     retryOperationOnCASMismatch(() => {
@@ -179,6 +185,7 @@ class Scenarios {
     }
   }
 
+
   def scenarioE(): Unit = {
     case class User(name: String, age: Int, address: String, phoneNumber: String)
 
@@ -192,7 +199,8 @@ class Scenarios {
     }
   }
 
-  def scenarioF_simple(): Unit = {
+
+  def scenarioF(): Unit = {
     // {
     //   user: {
     //     name = "bob",
@@ -205,7 +213,7 @@ class Scenarios {
     val subdoc: SubDocument = coll.lookupIn("id", LookupInSpec().get("user.name", "user.age")).get
     val user: UserProjection = subdoc.contentAs[UserProjection]
     val changed = user.copy(age = 25)
-    // merge will upsert fields user.name & user.age, leaving user.address alone
-    coll.mutateIn(subdoc.id, MutateInSpec().merge("user", changed))
+    // mergeUpsert will upsert fields user.name & user.age, leaving user.address alone
+    coll.mutateIn(subdoc.id, MutateInSpec().mergeUpsert("user", changed))
   }
 }
