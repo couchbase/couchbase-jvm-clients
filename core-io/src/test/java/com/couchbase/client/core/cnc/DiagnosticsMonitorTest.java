@@ -42,7 +42,7 @@ class DiagnosticsMonitorTest {
 
     SimpleEventBus eventBus = new SimpleEventBus(false);
     DiagnosticsMonitor monitor = DiagnosticsMonitor.create(eventBus);
-    monitor.start();
+    monitor.start().block();
 
     Supplier<Optional<GarbageCollectionDetectedEvent>> s = () -> eventBus.publishedEvents()
       .stream()
@@ -59,7 +59,7 @@ class DiagnosticsMonitorTest {
     assertTrue(event.memoryBefore() != 0 || event.memoryAfter() != 0);
     assertTrue(event.duration().toNanos() > 0);
 
-    monitor.stop();
+    monitor.stop().block();
   }
 
   /**

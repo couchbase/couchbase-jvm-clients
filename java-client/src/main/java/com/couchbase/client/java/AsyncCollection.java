@@ -172,7 +172,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "RemoveOptions");
 
-    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext);
     return RemoveAccessor.remove(core, request);
   }
