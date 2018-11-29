@@ -17,4 +17,8 @@
 package com.couchbase.client.java.json;
 
 public class JsonArray {
+
+  public JsonArray insert(int index, boolean value) {
+    return this;
+  }
 }

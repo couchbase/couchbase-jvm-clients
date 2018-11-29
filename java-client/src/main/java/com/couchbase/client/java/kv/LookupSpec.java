@@ -9,7 +9,11 @@ public class LookupSpec {
 
   private final Map<String, SpecType> specs;
 
-  public LookupSpec() {
+  public static LookupSpec lookupSpec() {
+    return new LookupSpec();
+  }
+
+  private LookupSpec() {
     this.specs = new HashMap<>();
   }
 

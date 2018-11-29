@@ -22,7 +22,7 @@ class OwnedSupplier<T> implements Supplier<T> {
 
   private final T value;
 
-  public OwnedSupplier(T value) {
+  public OwnedSupplier(final T value) {
     this.value = value;
   }
 

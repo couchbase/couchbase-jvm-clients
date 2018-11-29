@@ -17,5 +17,6 @@
 package com.couchbase.client.java.kv;
 
 public enum PersistTo {
-  NONE
+  NONE,
+  ONE
 }

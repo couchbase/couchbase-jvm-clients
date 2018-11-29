@@ -21,78 +21,63 @@ import java.util.Optional;
 
 public class RemoveOptions {
 
-  public static RemoveOptions DEFAULT = RemoveOptions.create();
+  public static RemoveOptions DEFAULT = new RemoveOptions();
 
-  private final Optional<Duration> timeout;
-  private final PersistTo persistTo;
-  private final ReplicateTo replicateTo;
-  private final long cas;
+  private Duration timeout;
+  private Duration expiry;
+  private PersistTo persistTo;
+  private ReplicateTo replicateTo;
+  private long cas;
 
-  private RemoveOptions(Builder builder) {
-    this.timeout = Optional.ofNullable(builder.timeout);
-    this.persistTo = builder.persistTo;
-    this.replicateTo = builder.replicateTo;
-    this.cas = builder.cas;
+  private RemoveOptions() { }
+
+  public static RemoveOptions removeOptions() {
+    return new RemoveOptions();
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
 
-  public static RemoveOptions create() {
-    return new Builder().build();
-  }
-
-  public Optional<Duration> timeout() {
+  public Duration timeout() {
     return timeout;
   }
 
+  public RemoveOptions timeout(final Duration timeout) {
+    this.timeout = timeout;
+    return this;
+  }
 
-  public long cas() {
-    return cas;
+  public Duration expiry() {
+    return expiry;
+  }
+
+  public RemoveOptions expiry(final Duration expiry) {
+    this.expiry = expiry;
+    return this;
   }
 
   public PersistTo persistTo() {
     return persistTo;
   }
 
+  public RemoveOptions persistTo(final PersistTo persistTo) {
+    this.persistTo = persistTo;
+    return this;
+  }
+
   public ReplicateTo replicateTo() {
     return replicateTo;
   }
 
-  public static class Builder {
+  public RemoveOptions replicateTo(final ReplicateTo replicateTo) {
+    this.replicateTo = replicateTo;
+    return this;
+  }
 
-    private Duration timeout = null;
-    private PersistTo persistTo;
-    private ReplicateTo replicateTo;
-    private long cas;
+  public long cas() {
+    return cas;
+  }
 
-    private Builder() {
-    }
-
-    public Builder timeout(final Duration timeout) {
-      this.timeout = timeout;
-      return this;
-    }
-
-    public Builder cas(final long cas) {
-      this.cas = cas;
-      return this;
-    }
-
-    public Builder persistTo(final PersistTo persistTo) {
-      this.persistTo = persistTo;
-      return this;
-    }
-
-    public Builder replicateTo(final ReplicateTo replicateTo) {
-      this.replicateTo = replicateTo;
-      return this;
-    }
-
-    public RemoveOptions build() {
-      return new RemoveOptions(this);
-    }
-
+  public RemoveOptions cas(long cas) {
+    this.cas = cas;
+    return this;
   }
 }

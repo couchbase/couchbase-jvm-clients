@@ -17,4 +17,8 @@
 package com.couchbase.client.java.json;
 
 public class JsonObject {
+
+  public JsonObject put(String key, boolean value) {
+    return this;
+  }
 }

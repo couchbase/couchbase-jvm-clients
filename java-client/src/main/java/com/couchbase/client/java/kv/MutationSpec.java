@@ -18,6 +18,14 @@ package com.couchbase.client.java.kv;
 
 public class MutationSpec {
 
+  public static MutationSpec mutationSpec() {
+    return new MutationSpec();
+  }
+
+  private MutationSpec() {
+
+  }
+
   public <T> MutationSpec replace(final String path, final T fragment) {
     return this;
   }
