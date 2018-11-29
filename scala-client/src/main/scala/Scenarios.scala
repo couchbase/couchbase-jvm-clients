@@ -109,13 +109,13 @@ class Scenarios {
         retryIdempotentRemoveClientSide(callback, originalReplicateTo, originalReplicateTo, until)
 
       case err: ReplicaNotAvailableException =>
-        println("Temporary replica failure, retrying with lower durability")
         val newReplicateTo = replicateTo match {
           case ReplicateTo.One => ReplicateTo.None
           case ReplicateTo.Two => ReplicateTo.One
           case ReplicateTo.Three => ReplicateTo.Two
           case _ => ReplicateTo.None
         }
+        println("Temporary replica failure, retrying with lower durability " + newReplicateTo)
         retryIdempotentRemoveClientSide(callback, newReplicateTo, originalReplicateTo, until)
     }
   }
@@ -206,19 +206,38 @@ class Scenarios {
   }
 
 
-  def scenarioF(): Unit = {
-    // {
-    //   user: {
-    //     name = "bob",
-    //     age = 23,
-    //     address = "123 Fake Street"
-    //   }
-    // }
+  // {
+  //   user: {
+  //     name = "bob",
+  //     age = 23,
+  //     address = "123 Fake Street"
+  //   }
+  // }
 
-    case class UserProjection(name: String, age: Int)
+  def scenarioF_fulldoc(): Unit = {
+    case class User(name: String, age: Int, address: String)
+
+    coll.get("id") match {
+      case Some(doc) =>
+        val user: User = doc.contentAs[User]
+        val changed = user.copy(age = 25)
+
+        coll.replace(doc.id, changed, doc.cas)
+
+      case _ => println("could not find doc")
+    }
+
+  }
+
+
+  def scenarioF_subdoc(): Unit = {
+    case class UserPartial(name: String, age: Int)
+
     val subdoc: SubDocument = coll.lookupIn("id", LookupInSpec().get("user.name", "user.age")).get
-    val user: UserProjection = subdoc.contentAs[UserProjection]
+
+    val user: UserPartial = subdoc.contentAs[UserPartial]
     val changed = user.copy(age = 25)
+
     // mergeUpsert will upsert fields user.name & user.age, leaving user.address alone
     coll.mutateIn(subdoc.id, MutateInSpec().mergeUpsert("user", changed))
   }
