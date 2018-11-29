@@ -254,7 +254,7 @@ public class AsyncCollection {
    * @param spec the spec which specifies the fields to look up and how.
    * @return a {@link Document} with the fetched fragments and metadata.
    */
-  public CompletableFuture<Document> lookupIn(final String id, final LookupSpec spec) {
+  public CompletableFuture<Optional<Document>> lookupIn(final String id, final LookupSpec spec) {
     return lookupIn(id, spec, LookupOptions.DEFAULT);
   }
 
@@ -266,20 +266,20 @@ public class AsyncCollection {
    * @param options custom options to modify the lookup options.
    * @return a {@link Document} with the fetched fragments and metadata.
    */
-  public CompletableFuture<Document> lookupIn(final String id, final LookupSpec spec,
+  public CompletableFuture<Optional<Document>> lookupIn(final String id, final LookupSpec spec,
                                               final LookupOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "LookupSpec");
     notNull(options, "LookupOptions");
 
     // TODO: fixme.. this is just mocking
-    CompletableFuture<Document> f = new CompletableFuture<>();
-    f.complete(Document.fromEncoded(
+    CompletableFuture<Optional<Document>> f = new CompletableFuture<>();
+    f.complete(Optional.of(Document.fromEncoded(
       id,
       new EncodedFragment(0, new byte[] {}),
       Optional.empty(),
       Optional.empty())
-    );
+    ));
     return f;
   }
 

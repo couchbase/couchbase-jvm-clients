@@ -175,7 +175,7 @@ public class Collection {
    * @param spec the spec which specifies the fields to look up and how.
    * @return a {@link Document} with the fetched fragments and metadata.
    */
-  public Document lookupIn(final String id, final LookupSpec spec) {
+  public Optional<Document> lookupIn(final String id, final LookupSpec spec) {
     return block(async().lookupIn(id, spec));
   }
 
@@ -187,7 +187,7 @@ public class Collection {
    * @param options custom options to modify the lookup options.
    * @return a {@link Document} with the fetched fragments and metadata.
    */
-  public Document lookupIn(final String id, final LookupSpec spec, final LookupOptions options) {
+  public Optional<Document> lookupIn(final String id, final LookupSpec spec, final LookupOptions options) {
     return block(async().lookupIn(id, spec, options));
   }
 

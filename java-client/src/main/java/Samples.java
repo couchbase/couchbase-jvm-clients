@@ -52,14 +52,16 @@ public class Samples {
 
   // TODO: lookupIn also needs to return an optional, since the outer doc might not be found
   static void scenarioB(final Collection collection) {
-    Document document = collection.lookupIn("id", lookupSpec().get("users"));
+    Optional<Document> document = collection.lookupIn("id", lookupSpec().get("users"));
 
-    JsonArray content = document.contentAsArray();
-    content.insert(0, true);
-    MutationResult result = collection.mutateIn(
-      "id",
-      mutationSpec().replace("users", content)
-    );
+    if (document.isPresent()) {
+      JsonArray content = document.get().contentAsArray();
+      content.insert(0, true);
+      MutationResult result = collection.mutateIn(
+        "id",
+        mutationSpec().replace("users", content)
+      );
+    }
   }
 
   static void scenarioC(final Collection collection) {
