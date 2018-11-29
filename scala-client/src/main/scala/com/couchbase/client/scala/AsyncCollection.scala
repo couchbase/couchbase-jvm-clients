@@ -50,11 +50,11 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def insert[T](id: String,
-             content: T,
-             timeout: FiniteDuration = kvTimeout,
-             expiration: FiniteDuration = 0.seconds,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
+                content: T,
+                timeout: FiniteDuration = kvTimeout,
+                expiration: FiniteDuration = 0.seconds,
+                replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                persistTo: PersistTo.Value = PersistTo.None
             )(implicit ec: ExecutionContext): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
@@ -100,12 +100,12 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def replace[T](id: String,
-              content: T,
-              cas: Long,
-              timeout: FiniteDuration = kvTimeout,
-              expiration: FiniteDuration = 0.seconds,
-              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-              persistTo: PersistTo.Value = PersistTo.NONE
+                 content: T,
+                 cas: Long,
+                 timeout: FiniteDuration = kvTimeout,
+                 expiration: FiniteDuration = 0.seconds,
+                 replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                 persistTo: PersistTo.Value = PersistTo.None
              )(implicit ec: ExecutionContext): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
@@ -134,12 +134,12 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def upsert(id: String,
-              content: JsonObject,
-              cas: Long,
-              timeout: FiniteDuration = kvTimeout,
-              expiration: FiniteDuration = 0.seconds,
-              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-              persistTo: PersistTo.Value = PersistTo.NONE
+             content: JsonObject,
+             cas: Long,
+             timeout: FiniteDuration = kvTimeout,
+             expiration: FiniteDuration = 0.seconds,
+             replicateTo: ReplicateTo.Value = ReplicateTo.None,
+             persistTo: PersistTo.Value = PersistTo.None
              )(implicit ec: ExecutionContext): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
@@ -171,8 +171,8 @@ class AsyncCollection(val collection: Collection) {
   def remove(id: String,
              cas: Long,
              timeout: FiniteDuration = kvTimeout,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
+             replicateTo: ReplicateTo.Value = ReplicateTo.None,
+             persistTo: PersistTo.Value = PersistTo.None
             )(implicit ec: ExecutionContext): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(cas, "cas")
@@ -209,11 +209,11 @@ class AsyncCollection(val collection: Collection) {
              cas: Long,
              options: RemoveOptions
             )(implicit ec: ExecutionContext): Future[MutationResult] = {
-    remove(id, cas, options.timeout, options.replicateTo, options.persistTo)
+    remove(id, cas, options.timeout)
   }
 
   def lookupInAs[T](id: String,
-                    operations: LookupSpec,
+                    operations: LookupInSpec,
                     timeout: FiniteDuration = kvTimeout)
                    (implicit ec: ExecutionContext): Future[T] = {
     return null;

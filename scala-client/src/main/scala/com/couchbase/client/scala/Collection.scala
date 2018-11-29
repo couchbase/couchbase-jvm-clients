@@ -30,19 +30,18 @@ class Collection(val name: String,
                  val scope: Scope) {
   private val config: CouchbaseEnvironment = null // scope.cluster.env
   private val asyncColl = new AsyncCollection(this)
-//  private val reactiveColl = new ReactiveCollection(this)
+  private val reactiveColl = new ReactiveCollection(this)
   private val safetyTimeout = 60.minutes
 //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
   def insert[T](id: String,
-             content: T,
-             timeout: FiniteDuration = kvTimeout,
-             expiration: FiniteDuration = 0.seconds,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
+                content: T,
+                timeout: FiniteDuration = kvTimeout,
+                expiration: FiniteDuration = 0.seconds
+               // TODO durability
             )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.insert(id, content, timeout, expiration, replicateTo, persistTo), safetyTimeout)
+    Await.result(asyncColl.insert(id, content, timeout, expiration), safetyTimeout)
   }
 
   def insert[T](id: String,
@@ -53,14 +52,13 @@ class Collection(val name: String,
   }
 
   def replace[T](id: String,
-              content: T,
-              cas: Long,
-              timeout: FiniteDuration = kvTimeout,
-              expiration: FiniteDuration = 0.seconds,
-              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-              persistTo: PersistTo.Value = PersistTo.NONE
-             )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.replace(id, content, cas, timeout, expiration, replicateTo, persistTo), safetyTimeout)
+                 content: T,
+                 cas: Long,
+                 timeout: FiniteDuration = kvTimeout,
+                 expiration: FiniteDuration = 0.seconds,
+                 // TODO durability
+                )(implicit ec: ExecutionContext): MutationResult = {
+    Await.result(asyncColl.replace(id, content, cas, timeout, expiration), safetyTimeout)
   }
 
   def replace[T](id: String,
@@ -74,10 +72,9 @@ class Collection(val name: String,
   def remove(id: String,
              cas: Long,
              timeout: FiniteDuration = kvTimeout,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
+             // TODO durability
             )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.remove(id, cas, timeout, replicateTo, persistTo), safetyTimeout)
+    Await.result(asyncColl.remove(id, cas, timeout), safetyTimeout)
   }
 
   def remove(id: String,
@@ -96,19 +93,19 @@ class Collection(val name: String,
                spec: MutateInSpec,
                cas: Long = 0,
                timeout: FiniteDuration = kvTimeout,
-             replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-             persistTo: PersistTo.Value = PersistTo.NONE
+               replicateTo: ReplicateTo.Value = ReplicateTo.None,
+               persistTo: PersistTo.Value = PersistTo.None
             )(implicit ec: ExecutionContext): MutationResult = ???
 
   def lookupIn(id: String,
-               operations: LookupSpec,
+               operations: LookupInSpec,
                timeout: FiniteDuration = kvTimeout)
-              (implicit ec: ExecutionContext): LookupInResult = ???
+              (implicit ec: ExecutionContext): Option[SubDocument] = ???
 
   def lookupIn(id: String,
-               operations: LookupSpec,
+               operations: LookupInSpec,
                options: LookupInOptions)
-              (implicit ec: ExecutionContext): LookupInResult = ???
+              (implicit ec: ExecutionContext): Option[SubDocument] = ???
 
 
   def get(id: String,
@@ -153,5 +150,5 @@ class Collection(val name: String,
 
 
   def async(): AsyncCollection = asyncColl
-//  def reactive(): ReactiveCollection = reactiveColl
+  def reactive(): ReactiveCollection = reactiveColl
 }

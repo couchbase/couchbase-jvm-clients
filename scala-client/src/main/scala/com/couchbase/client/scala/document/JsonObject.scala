@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.annotation.tailrec
 
-
+// TODO ujson has some cool ideas http://www.lihaoyi.com/post/uJsonfastflexibleandintuitiveJSONforScala.html
+// TODO think very hard about whether I want immutability. Changing a random field in the middle of the json will require lenses or a fluent API or something
+// TODO maybe a toMutable()
 case class JsonObject(private val content: Map[String, Any]) extends Convertable with Dynamic {
   // For Jackson
   private def this() {
@@ -42,10 +44,6 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
     Objects.requireNonNull(name)
     if (!checkType(value)) throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass)
     copy(content + (name -> value))
-  }
-
-  def putNull(name: String): JsonObject = {
-    put(name, null)
   }
 
   def get(name: String): Option[Any] = {
@@ -188,6 +186,9 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
       case _ => false
     }
   }
+
+  // TODO this also needs to walk through recursively and find any JsonArrays & JsonObjects and convert them.  Am I sure I want immutability.
+//  def mutable = JsonObjectMutable(collection.mutable.Map(content.toSeq: _*))
 }
 
 

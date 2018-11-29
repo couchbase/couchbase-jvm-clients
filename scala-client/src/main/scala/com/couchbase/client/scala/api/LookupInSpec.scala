@@ -16,6 +16,8 @@
 
 package com.couchbase.client.scala.api
 
+import com.couchbase.client.scala.document.{JsonArray, JsonObject}
+
 import scala.language.dynamics
 
 sealed trait LookupOperation
@@ -24,35 +26,41 @@ case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperat
 case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
 case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
 
-case class LookupSpec(operations: List[LookupOperation]) {
-  def get(path: String*): LookupSpec = {
+case class LookupInSpec(operations: List[LookupOperation]) {
+  def get(path: String*): LookupInSpec = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
 
-  def get(path: String, xattr: Boolean = false): LookupSpec = {
+  def get(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
-  def getString(path: String, xattr: Boolean = false): LookupSpec = {
+  def getString(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ GetStringOperation(path, xattr))
   }
 
-  def getInt(path: String, xattr: Boolean = false): LookupSpec = {
+  def getInt(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ GetIntOperation(path, xattr))
   }
 
-  def exists(path: String, xattr: Boolean = false): LookupSpec = {
+  def exists(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
   }
 }
 
-object LookupSpec {
-  def apply() = new LookupSpec(List.empty[LookupOperation])
+object LookupInSpec {
+  def apply() = new LookupInSpec(List.empty[LookupOperation])
 }
 
-class LookupInResult extends Dynamic {
+class SubDocument extends Dynamic {
+  def id: String = ???
+  def cas: Int = ???
+
   def content(idx: Int): Any = null
   def content(idx: String): Any = null
+
+  def contentAsArray: JsonArray = contentAs[JsonArray](null)
+  def contentAsObject: JsonObject = contentAs[JsonObject](null)
 
   def contentAs[T]: T = contentAs(null)
 
@@ -64,6 +72,6 @@ class LookupInResult extends Dynamic {
 
 }
 
-object LookupInResult {
-  def unapplySeq(m: LookupInResult): Option[Seq[Any]] = null
+object SubDocument {
+  def unapplySeq(m: SubDocument): Option[Seq[Any]] = null
 }

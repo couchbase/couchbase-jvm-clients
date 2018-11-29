@@ -6,6 +6,7 @@ sealed trait MutateOperation
 case class InsertOperation(path: String, value: Any, options: MutateOptions) extends MutateOperation
 case class ReplaceOperation(path: String, value: Any, options: MutateOptions) extends MutateOperation
 case class UpsertOperation(path: String, value: Any, options: MutateOptions) extends MutateOperation
+case class MergeOperation(path: String, value: Any, options: MutateOptions) extends MutateOperation
 case class RemoveOperation(path: String, options: MutateOptions) extends MutateOperation
 case class CounterOperation(path: String, delta: Long, options: MutateOptions) extends MutateOperation
 case class ArrayPrependOperation(path: String, value: Any, options: MutateOptions) extends MutateOperation
@@ -22,8 +23,13 @@ case class MutateInSpec(private val operations: List[MutateOperation]) {
     copy(operations = operations :+ ReplaceOperation(path, value, options))
   }
 
+  // Given `case class(name: String, age: Int)`, merge will upsert only fields name and age
   def upsert(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
     copy(operations = operations :+ UpsertOperation(path, value, options))
+  }
+
+  def merge(path: String, value: Any, options: MutateOptions = MutateOptions()): MutateInSpec = {
+    copy(operations = operations :+ MergeOperation(path, value, options))
   }
 
   def remove(path: String, options: MutateOptions = MutateOptions()): MutateInSpec = {

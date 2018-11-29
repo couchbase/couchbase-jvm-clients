@@ -4,7 +4,7 @@ import org.scalatest.{FlatSpec, FunSuite}
 
 import scala.reflect.ClassTag
 
-case class User(name: String, age: Int)
+//case class User(name: String, age: Int)
 
 //class GetExperimentSpec extends FunSuite {
 //

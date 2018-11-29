@@ -2,6 +2,8 @@ package com.couchbase.client.scala.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
 
+import scala.collection.parallel.immutable
+
 // Choosing vector as we'll mostly be adding to the end of it
 case class JsonArray(private val values: Vector[Any]) {
   def add(item: Any): JsonArray = copy(values :+ item)
@@ -17,6 +19,7 @@ case class JsonArray(private val values: Vector[Any]) {
   def isEmpty: Boolean = values.isEmpty
   def iterator: Iterator[Any] = values.iterator
   def toSeq: Seq[Any] = values
+  // TODO add immutable variant
 }
 
 object JsonArray {

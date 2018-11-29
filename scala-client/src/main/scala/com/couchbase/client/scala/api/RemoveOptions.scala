@@ -18,12 +18,23 @@ package com.couchbase.client.scala.api
 
 import scala.concurrent.duration.FiniteDuration
 
+case class DurabilityClient(replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                            persistTo: PersistTo.Value = PersistTo.None)
+
+case class DurabilityServer(value: Durability.Value)
+
 case class RemoveOptions(timeout: FiniteDuration = null,
-                               replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-                               persistTo: PersistTo.Value = PersistTo.NONE) {
+                         durabilityClient: Option[DurabilityClient] = None,
+                         durabilityServer: Option[DurabilityServer] = None) {
   def timeout(timeout: FiniteDuration): RemoveOptions = copy(timeout = timeout)
-  def replicateTo(replicateTo: ReplicateTo.Value): RemoveOptions = copy(replicateTo = replicateTo)
-  def persistTo(persistTo: PersistTo.Value): RemoveOptions = copy(persistTo = persistTo)
+
+  def durabilityClient(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value): RemoveOptions = {
+    copy(durabilityClient = Some(DurabilityClient(replicateTo, persistTo)), durabilityServer = None)
+  }
+
+  def durabilityServer(value: Durability.Value): RemoveOptions = {
+    copy(durabilityServer = Some(DurabilityServer(value)), durabilityClient = None)
+  }
 }
 
 object RemoveOptions {

@@ -20,8 +20,8 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 case class UpsertOptions(timeout: FiniteDuration = null,
                          expiration: FiniteDuration = 0.seconds,
-                         replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-                         persistTo: PersistTo.Value = PersistTo.NONE) {
+                         replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                         persistTo: PersistTo.Value = PersistTo.None) {
   def timeout(timeout: FiniteDuration): UpsertOptions = copy(timeout = timeout)
 
   def expiration(expiration: FiniteDuration): UpsertOptions = copy(expiration = expiration)

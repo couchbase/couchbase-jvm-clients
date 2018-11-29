@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.core.error;
 
-package com.couchbase.client.scala.api
+public class DocumentMutationLostException extends CouchbaseException {
 
-// TODO Enumeration is frowned upon in Scala...
-object ReplicateTo extends Enumeration {
-  val None, One, Two, Three = Value
-}
+    public DocumentMutationLostException() {
+        super();
+    }
 
-object PersistTo extends Enumeration {
-  val None, One, Two, Three = Value
-}
+    public DocumentMutationLostException(String message) {
+        super(message);
+    }
 
-object Durability extends Enumeration {
-  val Majority, MajorityAndPersistActive, PersistToMajority = Value
+    public DocumentMutationLostException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public DocumentMutationLostException(Throwable cause) {
+        super(cause);
+    }
 }

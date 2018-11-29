@@ -20,8 +20,8 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 case class MutateInOptions(timeout: FiniteDuration = null,
                            expiration: FiniteDuration = 0.seconds,
-                           replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-                           persistTo: PersistTo.Value = PersistTo.NONE) {
+                           replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                           persistTo: PersistTo.Value = PersistTo.None) {
   def timeout(timeout: FiniteDuration): MutateInOptions = copy(timeout = timeout)
 
   def expiration(expiration: FiniteDuration): MutateInOptions = copy(expiration = expiration)

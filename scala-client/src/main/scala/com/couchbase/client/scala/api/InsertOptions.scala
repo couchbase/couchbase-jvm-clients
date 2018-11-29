@@ -20,9 +20,9 @@ package com.couchbase.client.scala.api
 import scala.concurrent.duration.{FiniteDuration, _}
 
 case class InsertOptions(timeout: FiniteDuration = null,
-                              expiration: FiniteDuration = 0.seconds,
-                              replicateTo: ReplicateTo.Value = ReplicateTo.NONE,
-                              persistTo: PersistTo.Value = PersistTo.NONE) {
+                         expiration: FiniteDuration = 0.seconds,
+                         replicateTo: ReplicateTo.Value = ReplicateTo.None,
+                         persistTo: PersistTo.Value = PersistTo.None) {
     def timeout(timeout: FiniteDuration): InsertOptions = copy(timeout = timeout)
     def expiration(expiration: FiniteDuration): InsertOptions = copy(expiration = expiration)
     def replicateTo(replicateTo: ReplicateTo.Value): InsertOptions = copy(replicateTo = replicateTo)
