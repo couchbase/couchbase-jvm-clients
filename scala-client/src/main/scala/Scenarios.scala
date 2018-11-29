@@ -143,18 +143,15 @@ class Scenarios {
     }
     catch {
       // Not entirely clear what failures need to be handled yet, but will be considerably easier than observe() based
-      // logic
-      case err: DocumentConcurrentlyModifiedException =>
-        // Just retry
-        retryIdempotentOperationServerSide(callback, until)
+      // logic.  I think the only case to handle is:
 
-      case err: DocumentMutationLostException =>
-        // Mutation lost during a hard failover.  I *think* we just retry with the original replicateTo.  If enough replicas
-        // still aren't available, it will presumably raise ReplicaNotAvailableException and retry with lower.
+      case err: DurabilityAmbiguous =>
+        // A guarantee is that the mutation is either written to a majority of nodes, or none.  But we don't know which.
+        // And, we don't know if the remove option was successful, and a document has been written straight after with
+        // the same ID.
         retryIdempotentOperationServerSide(callback, until)
     }
   }
-
 
   def scenarioD(): Unit = {
     retryOperationOnCASMismatch(() => {
