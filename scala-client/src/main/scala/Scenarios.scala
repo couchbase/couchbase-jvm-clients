@@ -67,8 +67,9 @@ class Scenarios {
 
   def scenarioC_clientSideDurability(): Unit = {
     // Use a helper wrapper to retry our operation in the face of durability failures
-    // TODO Michael points out remove is *not* an idempotent operation, as a new doc with the same ID may have been written
-    retryIdempotentOperationClientSide((replicateTo: ReplicateTo.Value) => {
+    // remove is idempotent iff the app guarantees that the doc's id won't be reused (e.g. if it's a UUID).  This seems
+    // a reasonable restriction.
+    retryIdempotentRemoveClientSide((replicateTo: ReplicateTo.Value) => {
       val result: MutationResult = coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, PersistTo.None))
     }, ReplicateTo.Two, ReplicateTo.Two, System.nanoTime().nanos.plus(30.seconds))
   }
@@ -76,12 +77,12 @@ class Scenarios {
   /**
     * Automatically retries an idempotent operation in the face of durability failures
     * TODO this is quite complex logic.  Should this be folded into the client as a per-operation retry strategy?
-    * @param callback an idempotent operation to perform
+    * @param callback an idempotent remove operation to perform
     * @param replicateTo the current ReplicateTo setting being tried
     * @param originalReplicateTo the originally requested ReplicateTo setting
     * @param until prevent the operation looping indefinitely
     */
-  private def retryIdempotentOperationClientSide(callback: (ReplicateTo.Value) => Unit, replicateTo: ReplicateTo.Value, originalReplicateTo: ReplicateTo.Value, until: FiniteDuration): Unit = {
+  private def retryIdempotentRemoveClientSide(callback: (ReplicateTo.Value) => Unit, replicateTo: ReplicateTo.Value, originalReplicateTo: ReplicateTo.Value, until: FiniteDuration): Unit = {
     if (System.nanoTime().nanos >= until) {
       // Depending on the durability requirements, may want to also log this to an external system for human review
       // and reconciliation
@@ -92,17 +93,20 @@ class Scenarios {
       callback(replicateTo)
     }
     catch {
+      case err: DocumentDoesNotExistException =>
+        println("Our work here is done")
+
       case err: ReplicaNotConfiguredException =>
         println("Not enough replicas configured, aborting")
 
       case err: DocumentConcurrentlyModifiedException =>
         // Just retry
-        retryIdempotentOperationClientSide(callback, replicateTo, originalReplicateTo, until)
+        retryIdempotentRemoveClientSide(callback, replicateTo, originalReplicateTo, until)
 
       case err: DocumentMutationLostException =>
         // Mutation lost during a hard failover.  I *think* we just retry with the original replicateTo.  If enough replicas
         // still aren't available, it will presumably raise ReplicaNotAvailableException and retry with lower.
-        retryIdempotentOperationClientSide(callback, originalReplicateTo, originalReplicateTo, until)
+        retryIdempotentRemoveClientSide(callback, originalReplicateTo, originalReplicateTo, until)
 
       case err: ReplicaNotAvailableException =>
         println("Temporary replica failure, retrying with lower durability")
@@ -112,15 +116,16 @@ class Scenarios {
           case ReplicateTo.Three => ReplicateTo.Two
           case _ => ReplicateTo.None
         }
-        retryIdempotentOperationClientSide(callback, newReplicateTo, originalReplicateTo, until)
+        retryIdempotentRemoveClientSide(callback, newReplicateTo, originalReplicateTo, until)
     }
   }
 
 
   def scenarioC_serverSideDurability(): Unit = {
     // Use a helper wrapper to retry our operation in the face of durability failures
-    // TODO Michael points out remove is *not* an idempotent operation, as a new doc with the same ID may have been written
-    retryIdempotentOperationServerSide(() => {
+    // remove is idempotent iff the app guarantees that the doc's id won't be reused (e.g. if it's a UUID).  This seems
+    // a reasonable restriction.
+    retryIdempotentRemoveServerSide(() => {
       coll.remove("id", cas = 0, RemoveOptions().durabilityServer(Durability.MajorityAndPersistActive))
     }, System.nanoTime().nanos.plus(30.seconds))
   }
@@ -128,10 +133,10 @@ class Scenarios {
   /**
     * Automatically retries an idempotent operation in the face of durability failures
     * TODO Should this be folded into the client as a per-operation retry strategy?
-    * @param callback an idempotent operation to perform
+    * @param callback an idempotent remove operation to perform
     * @param until prevent the operation looping indefinitely
     */
-  private def retryIdempotentOperationServerSide(callback: () => Unit, until: FiniteDuration): Unit = {
+  private def retryIdempotentRemoveServerSide(callback: () => Unit, until: FiniteDuration): Unit = {
     if (System.nanoTime().nanos >= until) {
       // Depending on the durability requirements, may want to also log this to an external system for human review
       // and reconciliation
@@ -147,9 +152,13 @@ class Scenarios {
 
       case err: DurabilityAmbiguous =>
         // A guarantee is that the mutation is either written to a majority of nodes, or none.  But we don't know which.
-        // And, we don't know if the remove option was successful, and a document has been written straight after with
-        // the same ID.
-        retryIdempotentOperationServerSide(callback, until)
+        coll.get("id") match {
+          case Some(doc) => retryIdempotentRemoveServerSide(callback, until)
+          case _ => println("Our work here is done")
+        }
+
+      case err: DocumentDoesNotExistException =>
+        println("Our work here is done")
     }
   }
 
