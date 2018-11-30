@@ -26,7 +26,7 @@ import com.couchbase.client.core.util.Validators
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{Document, JsonObject}
+import com.couchbase.client.scala.document.{ReadResult, JsonObject}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -213,7 +213,7 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def lookupInAs[T](id: String,
-                    operations: LookupInSpec,
+                    operations: ReadSpec,
                     timeout: FiniteDuration = kvTimeout)
                    (implicit ec: ExecutionContext): Future[T] = {
     return null;
@@ -221,7 +221,7 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Future[Option[Document]] = {
+         (implicit ec: ExecutionContext): Future[Option[ReadResult]] = {
 
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
@@ -266,14 +266,14 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def get(id: String,
-          options: GetOptions
-         )(implicit ec: ExecutionContext): Future[Option[Document]] = {
+          options: ReadOptions
+         )(implicit ec: ExecutionContext): Future[Option[ReadResult]] = {
     get(id, options.timeout)
   }
 
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[Document] = {
+                (implicit ec: ExecutionContext): Future[ReadResult] = {
     get(id, timeout).map(doc => {
       if (doc.isEmpty) throw new DocumentDoesNotExistException()
       else doc.get
@@ -281,8 +281,8 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def getOrError(id: String,
-                 options: GetOptions)
-                (implicit ec: ExecutionContext): Future[Document] = {
+                 options: ReadOptions)
+                (implicit ec: ExecutionContext): Future[ReadResult] = {
     getOrError(id, options.timeout)
   }
 

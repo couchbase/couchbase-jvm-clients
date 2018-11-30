@@ -18,12 +18,12 @@ package com.couchbase.client.scala.api
 
 import scala.concurrent.duration.FiniteDuration
 
-case class GetOptions(timeout: FiniteDuration = null) {
+case class ReadOptions(timeout: FiniteDuration = null) {
   def timeout(timeout: FiniteDuration) = {
     copy(timeout = timeout)
   }
 }
 
-object GetOptions {
-  def apply() = new GetOptions()
+object ReadOptions {
+  def apply() = new ReadOptions()
 }

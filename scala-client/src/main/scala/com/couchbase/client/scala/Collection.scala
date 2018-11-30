@@ -97,52 +97,44 @@ class Collection(val name: String,
                persistTo: PersistTo.Value = PersistTo.None
             )(implicit ec: ExecutionContext): MutationResult = ???
 
-  def lookupIn(id: String,
-               operations: LookupInSpec,
-               timeout: FiniteDuration = kvTimeout)
-              (implicit ec: ExecutionContext): Option[SubDocument] = ???
 
-  def lookupIn(id: String,
-               operations: LookupInSpec,
-               options: LookupInOptions)
-              (implicit ec: ExecutionContext): Option[SubDocument] = ???
-
-
-  def get(id: String,
-          timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Option[Document] = {
+  def read(id: String,
+           operations: ReadSpec = ReadSpec().getFullDocument,
+           timeout: FiniteDuration = kvTimeout)
+          (implicit ec: ExecutionContext): Option[ReadResult] = {
     Await.result(asyncColl.get(id, timeout), safetyTimeout)
   }
 
-  def get(id: String,
-          options: GetOptions)
-         (implicit ec: ExecutionContext): Option[Document] = {
+  def read(id: String,
+           operations: ReadSpec,
+           options: ReadOptions)
+          (implicit ec: ExecutionContext): Option[ReadResult] = {
     Await.result(asyncColl.get(id, options), safetyTimeout)
   }
 
-  def getOrError(id: String,
-          timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Document = {
+  def readOrError(id: String,
+                  timeout: FiniteDuration = kvTimeout)
+                 (implicit ec: ExecutionContext): ReadResult = {
     Await.result(asyncColl.getOrError(id, timeout), safetyTimeout)
   }
 
-  def getOrError(id: String,
-                 options: GetOptions)
-                (implicit ec: ExecutionContext): Document = {
+  def readOrError(id: String,
+                  options: ReadOptions)
+                 (implicit ec: ExecutionContext): ReadResult = {
     Await.result(asyncColl.getOrError(id, options), safetyTimeout)
   }
 
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Option[Document] = {
+  def readAndLock(id: String,
+                  lockFor: FiniteDuration,
+                  timeout: FiniteDuration = kvTimeout)
+                 (implicit ec: ExecutionContext): Option[ReadResult] = {
     Await.result(asyncColl.getAndLock(id, lockFor, timeout), safetyTimeout)
   }
 
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Option[Document] = {
+  def readAndLock(id: String,
+                  lockFor: FiniteDuration,
+                  options: GetAndLockOptions)
+                 (implicit ec: ExecutionContext): Option[ReadResult] = {
     Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
   }
 

@@ -41,14 +41,20 @@ case class GetSelecter(private val result: Convertable, path: PathElements) exte
   def getAs[T]: T = result.contentAs[T](path)
 }
 
-class Document(val id: String,
-               val cas: Long,
-               private val _content: Array[Byte],
-               val expiry: Option[Duration]) extends Dynamic with Convertable {
+class ReadResult(val id: String,
+                 val cas: Long,
+                 private val _content: Array[Byte],
+                 val expiry: Option[Duration]) extends Dynamic with Convertable {
 
-  def content: JsonObject = contentAs[JsonObject]
+  def contentAsObject: JsonObject = contentAs[JsonObject]
 
-  def content(path: String): JsonObject = contentAs[JsonObject](path)
+  def contentAsObject(path: String): JsonObject = contentAs[JsonObject](path)
+
+  def contentAsArray: JsonArray = contentAs[JsonArray]
+
+  def contentAsArray(path: String): JsonArray = contentAs[JsonArray](path)
+
+  def content(idx: Int): Any = ???
 
   def contentAs[T]: T = ???
 
@@ -62,4 +68,13 @@ class Document(val id: String,
   override def exists(path: PathElements): Boolean = ???
 
   override def contentAs[T](path: PathElements): T = ???
+}
+
+object ReadResult {
+  def unapply[T](document: ReadResult): Option[(String, JsonObject, Long, Option[Duration])] = {
+    Some(document.id, document.contentAsObject, document.cas, document.expiry)
+  }
+
+  // TODO can get this working along with unapply
+//    def unapplySeq(doc: ReadResult): Option[Seq[Any]] = null
 }

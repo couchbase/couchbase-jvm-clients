@@ -4,7 +4,7 @@ import java.time.temporal.ChronoUnit
 import com.couchbase.client.core.error._
 import com.couchbase.client.scala.CouchbaseCluster
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{Document, JsonArray, JsonObject}
+import com.couchbase.client.scala.document.{ReadResult, JsonArray, JsonObject}
 import reactor.retry.{Jitter, Retry, RetryContext}
 
 import scala.concurrent.duration._
@@ -20,28 +20,19 @@ class Scenarios {
 
 
   def scenarioA(): Unit = {
-    val doc: Document = coll.getOrError("id", GetOptions().timeout(10.seconds))
+    val doc: ReadResult = coll.readOrError("id", ReadOptions().timeout(10.seconds))
 
-    val content: JsonObject = doc.content.put("field", "value")
+    val content: JsonObject = doc.contentAsObject.put("field", "value")
 
     val result: MutationResult = coll.replace(doc.id, content, doc.cas, ReplaceOptions().timeout(10.seconds))
 
 
-    // Default params also supported for all methods
-    val doc2: Document = coll.getOrError("id", timeout = 10.seconds)
-
-    val content2: JsonObject = doc2.content
-      .put("field", "value")
-      .put("foo", "bar")
-
-    coll.replace(doc2.id, content2, doc2.cas, timeout = 10.seconds)
-
-
     // I include type annotations and getOrError above to make things clearer, but it'd be more idiomatic to write this:
-    coll.get("id", timeout = 10.seconds) match {
+    // (note default params are supported for all methods along with the *Options builders)
+    coll.read("id", timeout = 10.seconds) match {
       case Some(doc3) =>
         coll.replace(doc3.id,
-          doc3.content
+          doc3.contentAsObject
             .put("field", "value")
             .put("foo", "bar"),
           doc3.cas,
@@ -53,7 +44,7 @@ class Scenarios {
 
 
   def scenarioB(): Unit = {
-    val subdocOpt: Option[SubDocument] = coll.lookupIn("id", LookupInSpec().get("someArray"), timeout = 10.seconds)
+    val subdocOpt: Option[ReadResult] = coll.read("id", ReadSpec().get("someArray"), timeout = 10.seconds)
 
     subdocOpt.map(subdoc => {
       val arr: JsonArray = subdoc.contentAsArray
@@ -152,7 +143,7 @@ class Scenarios {
 
       case err: DurabilityAmbiguous =>
         // A guarantee is that the mutation is either written to a majority of nodes, or none.  But we don't know which.
-        coll.get("id") match {
+        coll.read("id") match {
           case Some(doc) => retryIdempotentRemoveServerSide(callback, until)
           case _ => println("Our work here is done")
         }
@@ -165,10 +156,10 @@ class Scenarios {
 
   def scenarioD(): Unit = {
     retryOperationOnCASMismatch(() => {
-      coll.get("id", timeout = 10.seconds) match {
+      coll.read("id", timeout = 10.seconds) match {
         case Some(doc) =>
           coll.replace(doc.id,
-            doc.content
+            doc.contentAsObject
               .put("field", "value")
               .put("foo", "bar"),
             doc.cas,
@@ -196,7 +187,7 @@ class Scenarios {
   def scenarioE(): Unit = {
     case class User(name: String, age: Int, address: String, phoneNumber: String)
 
-    coll.get("id", timeout = 10.seconds) match {
+    coll.read("id", timeout = 10.seconds) match {
       case Some(doc) =>
         val user: User = doc.contentAs[User]
         val changed = user.copy(age = 25)
@@ -218,7 +209,7 @@ class Scenarios {
   def scenarioF_fulldoc(): Unit = {
     case class User(name: String, age: Int, address: String)
 
-    coll.get("id") match {
+    coll.read("id") match {
       case Some(doc) =>
         val user: User = doc.contentAs[User]
         val changed = user.copy(age = 25)
@@ -234,11 +225,12 @@ class Scenarios {
   def scenarioF_subdoc(): Unit = {
     case class UserPartial(name: String, age: Int)
 
-    val subdoc: SubDocument = coll.lookupIn("id", LookupInSpec().get("user.name", "user.age")).get
+    val subdoc: ReadResult = coll.read("id", ReadSpec().get("user.name", "user.age")).get
 
     val user: UserPartial = subdoc.contentAs[UserPartial]
     val changed = user.copy(age = 25)
 
+    // Note: I have misgivings over whether this update-with-a-projection should be allowed
     // mergeUpsert will upsert fields user.name & user.age, leaving user.address alone
     coll.mutateIn(subdoc.id, MutateInSpec().mergeUpsert("user", changed))
   }

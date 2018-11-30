@@ -11,6 +11,7 @@ dependencies {
   testCompile 'org.scalatest:scalatest_2.12:3.0.5'
   compile project(':core-io')
 
+  // TODO Can remove some of these when settled on a json lib
   // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
   compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
   compile "org.scala-lang:scala-reflect:2.12.7"
@@ -21,12 +22,4 @@ dependencies {
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0'
   compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0'
   compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1'
-
-
-
-
-
-  // Pulling this in while bootstrapping
-//  compile 'com.couchbase.client:java-client:2.7.1'
-
 }

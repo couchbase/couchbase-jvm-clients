@@ -18,7 +18,7 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.CouchbaseCluster
-import com.couchbase.client.scala.document.{Document, JsonObject}
+import com.couchbase.client.scala.document.{ReadResult, JsonObject}
 import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -41,14 +41,15 @@ object Samples {
 
 
     // All methods have both a named/default parameters version, and an [X]Options version
-    val fetched1: Option[Document] = coll.get("id")
-    val fetched3 = coll.get("id", timeout = 1000.milliseconds)
-    val fetched5 = coll.get("id", GetOptions().timeout(1000.milliseconds))
+    val fetched1: Option[ReadResult] = coll.read("id")
+    val fetched2 = coll.read("id", ReadSpec().getFullDocument)
+    val fetched3 = coll.read("id", timeout = 1000.milliseconds)
+    val fetched5 = coll.read("id", ReadSpec().getFullDocument, ReadOptions().timeout(1000.milliseconds))
 
 
-    // Document contains the raw bytes, plus metadata.  Defers conversion to the last moment.
-    val getResult: Document = fetched1.get
-    val doc: JsonObject = getResult.content
+    // ReadResult contains the raw bytes, plus metadata.  Defers conversion to the last moment.
+    val getResult: ReadResult = fetched1.get
+    val doc: JsonObject = getResult.contentAsObject
 
     case class MyUserEntity(id: String, firstName: String, age: Int)
     getResult.contentAs[MyUserEntity]("users[0]")
@@ -60,44 +61,44 @@ object Samples {
 
     getResult.some.field.getString
 
+    fetched1 match {
+      case Some(ReadResult(id, content, cas, expiry)) => print("Doc has id " + id + " cas " + cas)
+      case _ => println("Could not find doc")
+    }
 
-    // getOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
+
+    // readOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     // TODO May remove these
-    val fetched2 = coll.getOrError("id")
-    val fetched7 = coll.getOrError("id", GetOptions().timeout(1000.milliseconds))
+    val fetched4 = coll.readOrError("id")
+    val fetched7 = coll.readOrError("id", ReadOptions().timeout(1000.milliseconds))
 
 
     // getAndLock and getAndTouch work pretty much the same as get
-    val fetched4 = coll.getAndLock("id", 5.seconds)
+    val fetched6 = coll.readAndLock("id", 5.seconds)
 
 
     // Simple subdoc lookup
-    val resultOpt: Option[SubDocument] = coll.lookupIn("id", LookupInSpec().get("field1", "field2"))
-    coll.lookupIn("id", LookupInSpec().get("field1", "field2"), timeout = 10.seconds)
-    coll.lookupIn("id", LookupInSpec().get("field1", "field2"), LookupInOptions().timeout(10.seconds))
+    val resultOpt: Option[ReadResult] = coll.read("id", ReadSpec().get("field1", "field2"))
+    coll.read("id", ReadSpec().get("field1", "field2"), timeout = 10.seconds)
+    coll.read("id", ReadSpec().get("field1", "field2"), ReadOptions().timeout(10.seconds))
 
 
     // Parsing subdoc results.  LookupInResult is similar to a Document.
-    resultOpt.map(result => {
+    resultOpt.foreach(result => {
       println(result.content(0).asInstanceOf[String])
-      println(result.content("field1").asInstanceOf[String])
+      println(result.contentAsObject("field1").asInstanceOf[String])
       println(result.contentAs[String]("field1"))
       println(result.field1.asInstanceOf[String])
-      result match {
-        case SubDocument(field1, field2) =>
-          println(field1.asInstanceOf[String])
-          println(field2.asInstanceOf[Int])
-      }
       case class MyProjection(field1: String, field2: Int)
       val proj = result.contentAs[MyProjection]
     })
 
 
     // JsonObject works pretty much as in SDK2, though it's now immutable
-    val age: Option[Any] = fetched5.get.content.get("age")
-    val age2: Option[Int] = fetched5.get.content.getInt("age")
+    val age: Option[Any] = fetched5.get.contentAsObject.get("age")
+    val age2: Option[Int] = fetched5.get.contentAsObject.getInt("age")
     // And Scala's Dynamic feature lets us do some cool stuff:
-    val age3: Int = fetched5.get.content.age.getInt
+    val age3: Int = fetched5.get.contentAsObject.age.getInt
 
 
     // Various ways of inserting
