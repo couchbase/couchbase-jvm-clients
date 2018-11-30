@@ -16,15 +16,14 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.kv.Document;
-import com.couchbase.client.java.kv.LookupOptions;
-import com.couchbase.client.java.kv.LookupSpec;
+import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.MutationOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.ReadOptions;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutationSpec;
+import com.couchbase.client.java.kv.MutationScript;
 import com.couchbase.client.java.kv.RemoveOptions;
+import com.couchbase.client.java.kv.ReplaceOptions;
 
 import java.util.Optional;
 
@@ -82,10 +81,10 @@ public class Collection {
    * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @return a {@link Document} once the document has been loaded.
+   * @return a {@link ReadResult} once the document has been loaded.
    */
-  public Optional<Document> get(final String id) {
-    return block(async().get(id));
+  public Optional<ReadResult> read(final String id) {
+    return block(async().read(id));
   }
 
   /**
@@ -96,10 +95,10 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
-   * @return a {@link Document} once the document has been loaded.
+   * @return a {@link ReadResult} once the document has been loaded.
    */
-  public Optional<Document> get(final String id, final GetOptions options) {
-    return block(async().get(id, options));
+  public Optional<ReadResult> read(final String id, final ReadOptions options) {
+    return block(async().read(id, options));
   }
 
   /**
@@ -126,23 +125,49 @@ public class Collection {
   /**
    * Inserts a full document which does not exist yet with default options.
    *
-   * @param document the document to insert.
+   * @param id the document id to insert.
+   * @param content the document content to insert.
    * @return a {@link MutationResult} once inserted.
    */
-  public MutationResult insert(final Document document) {
-    return block(async().insert(document));
+  public MutationResult insert(final String id, final Object content) {
+    return block(async().insert(id, content));
   }
 
   /**
    * Inserts a full document which does not exist yet with custom options.
    *
-   * @param document the document to insert.
+   * @param id the document id to insert.
+   * @param content the document content to insert.
    * @param options custom options to customize the insert behavior.
    * @return a {@link MutationResult} once inserted.
    */
-  public MutationResult insert(final Document document, final InsertOptions options) {
-    return block(async().insert(document, options));
+  public MutationResult insert(final String id, final Object content, final InsertOptions options) {
+    return block(async().insert(id, content, options));
   }
+
+  /**
+   * Replaces a full document which already exists with default options.
+   *
+   * @param id the document id to replace.
+   * @param content the document content to replace.
+   * @return a {@link MutationResult} once replaced.
+   */
+  public MutationResult replace(final String id, final Object content) {
+    return block(async().replace(id, content));
+  }
+
+  /**
+   * Replaces a full document which already exists with custom options.
+   *
+   * @param id the document id to replace.
+   * @param content the document content to replace.
+   * @param options custom options to customize the replace behavior.
+   * @return a {@link MutationResult} once replaced.
+   */
+  public MutationResult replace(final String id, final Object content, final ReplaceOptions options) {
+    return block(async().replace(id, content, options));
+  }
+
 
   /**
    * Performs mutations to document fragments with default options.
@@ -151,7 +176,7 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationSpec spec) {
+  public MutationResult mutateIn(final String id, final MutationScript spec) {
     return block(async().mutateIn(id, spec));
   }
 
@@ -163,32 +188,9 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationSpec spec,
+  public MutationResult mutateIn(final String id, final MutationScript spec,
                                  final MutationOptions options) {
     return block(async().mutateIn(id, spec, options));
-  }
-
-  /**
-   * Performs document fragment lookups with default options.
-   *
-   * @param id the outer document ID.
-   * @param spec the spec which specifies the fields to look up and how.
-   * @return a {@link Document} with the fetched fragments and metadata.
-   */
-  public Optional<Document> lookupIn(final String id, final LookupSpec spec) {
-    return block(async().lookupIn(id, spec));
-  }
-
-  /**
-   * Performs document fragment lookups with custom options.
-   *
-   * @param id the outer document ID.
-   * @param spec the spec which specifies the fields to look up and how.
-   * @param options custom options to modify the lookup options.
-   * @return a {@link Document} with the fetched fragments and metadata.
-   */
-  public Optional<Document> lookupIn(final String id, final LookupSpec spec, final LookupOptions options) {
-    return block(async().lookupIn(id, spec, options));
   }
 
 }

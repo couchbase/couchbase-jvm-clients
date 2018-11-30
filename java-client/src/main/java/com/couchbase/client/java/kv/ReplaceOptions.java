@@ -23,20 +23,21 @@ import java.time.Duration;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class InsertOptions {
+public class ReplaceOptions {
 
-  public static InsertOptions DEFAULT = new InsertOptions();
+  public static ReplaceOptions DEFAULT = new ReplaceOptions();
 
   private Duration timeout;
   private Duration expiry;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
   private Encoder encoder = DefaultEncoder.INSTANCE;
+  private long cas;
 
-  private InsertOptions() { }
+  private ReplaceOptions() { }
 
-  public static InsertOptions insertOptions() {
-    return new InsertOptions();
+  public static ReplaceOptions replaceOptions() {
+    return new ReplaceOptions();
   }
 
 
@@ -44,7 +45,7 @@ public class InsertOptions {
     return timeout;
   }
 
-  public InsertOptions timeout(final Duration timeout) {
+  public ReplaceOptions timeout(final Duration timeout) {
     this.timeout = timeout;
     return this;
   }
@@ -53,7 +54,7 @@ public class InsertOptions {
     return expiry;
   }
 
-  public InsertOptions expiry(final Duration expiry) {
+  public ReplaceOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
@@ -62,7 +63,7 @@ public class InsertOptions {
     return persistTo;
   }
 
-  public InsertOptions persistTo(final PersistTo persistTo) {
+  public ReplaceOptions persistTo(final PersistTo persistTo) {
     this.persistTo = persistTo;
     return this;
   }
@@ -71,7 +72,7 @@ public class InsertOptions {
     return replicateTo;
   }
 
-  public InsertOptions replicateTo(final ReplicateTo replicateTo) {
+  public ReplaceOptions replicateTo(final ReplicateTo replicateTo) {
     this.replicateTo = replicateTo;
     return this;
   }
@@ -80,10 +81,19 @@ public class InsertOptions {
     return encoder;
   }
 
-  public InsertOptions encoder(final Encoder encoder) {
+  public ReplaceOptions encoder(final Encoder encoder) {
     notNull(encoder, "Encoder");
 
     this.encoder = encoder;
+    return this;
+  }
+
+  public long cas() {
+    return cas;
+  }
+
+  public ReplaceOptions cas(long cas) {
+    this.cas = cas;
     return this;
   }
 }

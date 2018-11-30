@@ -22,19 +22,18 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.kv.EncodedFragment;
+import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.kv.Document;
+import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.InsertAccessor;
-import com.couchbase.client.java.kv.LookupOptions;
-import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutationOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationSpec;
+import com.couchbase.client.java.kv.MutationScript;
 import com.couchbase.client.java.kv.RemoveAccessor;
-import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.ReadOptions;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
+import com.couchbase.client.java.kv.ReplaceOptions;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -124,8 +123,8 @@ public class AsyncCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
-  public CompletableFuture<Optional<Document>> get(final String id) {
-    return get(id, GetOptions.DEFAULT);
+  public CompletableFuture<Optional<ReadResult>> read(final String id) {
+    return read(id, ReadOptions.DEFAULT);
   }
 
   /**
@@ -138,7 +137,7 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<Document>> get(final String id, final GetOptions options) {
+  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
@@ -180,40 +179,68 @@ public class AsyncCollection {
   /**
    * Inserts a full document which does not exist yet with default options.
    *
-   * @param document the document to insert.
+   * @param id the document id to insert.
+   * @param content the document content to insert.
    * @return a {@link CompletableFuture} completing once inserted or failed.
    */
-  public CompletableFuture<MutationResult> insert(final Document document) {
-    return insert(document, InsertOptions.DEFAULT);
+  public CompletableFuture<MutationResult> insert(final String id, Object content) {
+    return insert(id, content, InsertOptions.DEFAULT);
   }
 
   /**
    * Inserts a full document which does not exist yet with custom options.
    *
-   * @param document the document to insert.
+   * @param id the document id to insert.
+   * @param content the document content to insert.
    * @param options custom options to customize the insert behavior.
    * @return a {@link CompletableFuture} completing once inserted or failed.
    */
-  public CompletableFuture<MutationResult> insert(final Document document,
+  public CompletableFuture<MutationResult> insert(final String id, Object content,
                                                   final InsertOptions options) {
-    notNull(document, "Document");
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
     notNull(options, "InsertOptions");
 
-    if (document.encoded() instanceof EncodedFragment) {
-      throw new IllegalStateException("A document Fragment cannot be re-inserted as a "
-        + "full document to avoid overriding the rest of the document unintentionally");
-    }
-
+    EncodedDocument encoded = options.encoder().encode(content);
     InsertRequest request = new InsertRequest(
-      document.id(),
-      document.encoded().content(),
+      id,
+      encoded.content(),
       options.expiry().getSeconds(),
-      document.encoded().flags(),
+      encoded.flags(),
       Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
       coreContext
     );
 
     return InsertAccessor.insert(core, request);
+  }
+
+  /**
+   * Replaces a full document which already exists with default options.
+   *
+   * @param id the document id to replace.
+   * @param content the document content to replace.
+   * @return a {@link CompletableFuture} completing once replaced or failed.
+   */
+  public CompletableFuture<MutationResult> replace(final String id, Object content) {
+    return replace(id, content, ReplaceOptions.DEFAULT);
+  }
+
+  /**
+   * Replaces a full document which already exists with custom options.
+   *
+   * @param id the document id to replace.
+   * @param content the document content to replace.
+   * @param options custom options to customize the replace behavior.
+   * @return a {@link CompletableFuture} completing once replaced or failed.
+   */
+  public CompletableFuture<MutationResult> replace(final String id, Object content,
+                                                  final ReplaceOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "ReplaceOptions");
+
+    // TODO:
+    return null;
   }
 
   /**
@@ -223,7 +250,7 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec) {
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationScript spec) {
     return mutateIn(id, spec, MutationOptions.DEFAULT);
   }
 
@@ -235,7 +262,7 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec,
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationScript spec,
                                                     final MutationOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutationSpec");
@@ -244,42 +271,6 @@ public class AsyncCollection {
     // TODO: fixme.. this is just mocking
     CompletableFuture<MutationResult> f = new CompletableFuture<>();
     f.complete(new MutationResult(0, Optional.empty()));
-    return f;
-  }
-
-  /**
-   * Performs document fragment lookups with default options.
-   *
-   * @param id the outer document ID.
-   * @param spec the spec which specifies the fields to look up and how.
-   * @return a {@link Document} with the fetched fragments and metadata.
-   */
-  public CompletableFuture<Optional<Document>> lookupIn(final String id, final LookupSpec spec) {
-    return lookupIn(id, spec, LookupOptions.DEFAULT);
-  }
-
-  /**
-   * Performs document fragment lookups with custom options.
-   *
-   * @param id the outer document ID.
-   * @param spec the spec which specifies the fields to look up and how.
-   * @param options custom options to modify the lookup options.
-   * @return a {@link Document} with the fetched fragments and metadata.
-   */
-  public CompletableFuture<Optional<Document>> lookupIn(final String id, final LookupSpec spec,
-                                              final LookupOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(spec, "LookupSpec");
-    notNull(options, "LookupOptions");
-
-    // TODO: fixme.. this is just mocking
-    CompletableFuture<Optional<Document>> f = new CompletableFuture<>();
-    f.complete(Optional.of(Document.fromEncoded(
-      id,
-      new EncodedFragment(0, new byte[] {}),
-      Optional.empty(),
-      Optional.empty())
-    ));
     return f;
   }
 

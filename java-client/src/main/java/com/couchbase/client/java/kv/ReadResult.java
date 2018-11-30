@@ -16,11 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.codec.DefaultDecoder;
-import com.couchbase.client.java.codec.DefaultEncoder;
-import com.couchbase.client.java.codec.Encoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -30,30 +27,21 @@ import java.util.Optional;
 /**
  * Experimental prototype for a different result type on fetch.
  */
-public class Document {
+public class ReadResult {
 
   private final String id;
   private final EncodedDocument encoded;
-  private final Optional<Long> cas;
+  private final long cas;
   private final Optional<Duration> expiration;
 
-  public static <T> Document create(final String id, final T content) {
-    return create(id, content, DefaultEncoder.INSTANCE);
-  }
-
-  public static <T> Document create(final String id, final T content, final Encoder<T> encoder) {
-    EncodedDocument encoded = encoder.encode(content);
-    return new Document(id, encoded, Optional.empty(), Optional.empty());
-  }
-
-  public static Document fromEncoded(final String id, final EncodedDocument encoded,
-                                     final Optional<Long> cas, final Optional<Duration> expiration)
+  static ReadResult create(final String id, final EncodedDocument encoded,
+                                       final long cas, final Optional<Duration> expiration)
   {
-    return new Document(id, encoded, cas, expiration);
+    return new ReadResult(id, encoded, cas, expiration);
   }
 
-  private Document(final String id, final EncodedDocument encoded, final Optional<Long> cas,
-                   final Optional<Duration> expiration) {
+  private ReadResult(final String id, final EncodedDocument encoded, final long cas,
+                     final Optional<Duration> expiration) {
     this.id = id;
     this.cas = cas;
     this.encoded = encoded;
@@ -64,7 +52,7 @@ public class Document {
     return id;
   }
 
-  public Optional<Long> cas() {
+  public long cas() {
     return cas;
   }
 
@@ -87,26 +75,6 @@ public class Document {
 
   public <T> T contentAs(final Class<T> target, final Decoder<T> decoder) {
     return decoder.decode(target, encoded);
-  }
-
-  /**
-   * Returns the encoded, raw data and flags.
-   *
-   * @return encoded, raw data.
-   */
-  @Stability.Uncommitted
-  public EncodedDocument encoded() {
-    return encoded;
-  }
-
-  /**
-   * Enriches the current {@link Document} with a cas value.
-   *
-   * @param cas the cas value to add to this document.
-   * @return a new document with the same properties as the current one but with the cas set.
-   */
-  public Document withCas(final long cas) {
-    return fromEncoded(id, encoded, Optional.of(cas), expiration);
   }
 
 }

@@ -36,17 +36,17 @@ public enum GetAccessor {
    * @param request the request to dispatch and convert once a response arrives.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
-  public static CompletableFuture<Optional<Document>> get(final Core core, final String id,
-                                                          final GetRequest request) {
+  public static CompletableFuture<Optional<ReadResult>> get(final Core core, final String id,
+                                                            final GetRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(getResponse -> {
         if (getResponse.status().success()) {
-          return Optional.of(Document.fromEncoded(
+          return Optional.of(ReadResult.create(
             id,
             new EncodedDocument(0, getResponse.content()),
-            Optional.of(getResponse.cas()),
+            getResponse.cas(),
             Optional.empty()
           ));
         } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {

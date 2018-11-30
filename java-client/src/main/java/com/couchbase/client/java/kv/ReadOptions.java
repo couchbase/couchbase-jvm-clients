@@ -23,12 +23,12 @@ import java.time.Duration;
 /**
  * Allows to customize a get request.
  */
-public class GetOptions {
+public class ReadOptions {
 
   /**
    * The default options, used most of the time.
    */
-  public static final GetOptions DEFAULT = new GetOptions();
+  public static final ReadOptions DEFAULT = new ReadOptions();
 
   /**
    * Optionally set if a custom timeout is provided.
@@ -41,19 +41,19 @@ public class GetOptions {
   private boolean withExpiration;
 
   /**
-   * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
+   * Creates a new set of {@link ReadOptions} with a {@link JsonObject} target.
    *
    * @return options to customize.
    */
-  public static GetOptions getOptions() {
-    return new GetOptions();
+  public static ReadOptions readOptions() {
+    return new ReadOptions();
   }
 
-  private GetOptions() {
+  private ReadOptions() {
     withExpiration = false;
   }
 
-  public GetOptions timeout(final Duration timeout) {
+  public ReadOptions timeout(final Duration timeout) {
     this.timeout = timeout;
     return this;
   }
@@ -62,13 +62,53 @@ public class GetOptions {
     return timeout;
   }
 
-  public GetOptions withExpiration(boolean expiration) {
+  public ReadOptions withExpiration(boolean expiration) {
     withExpiration = true;
     return this;
   }
 
   public boolean withExpiration() {
     return withExpiration;
+  }
+
+
+  public ReadOptions getFields(String... paths) {
+    for (String p : paths) {
+      getField(p);
+    }
+    return this;
+  }
+
+  public ReadOptions countFields(String... paths) {
+    for (String p : paths) {
+      countField(p);
+    }
+    return this;
+  }
+
+  public ReadOptions checkFields(String... paths) {
+    for (String p : paths) {
+      checkField(p);
+    }
+    return this;
+  }
+
+  public ReadOptions getField(String path, FieldOption... options) {
+    return this;
+  }
+
+  public ReadOptions countField(String path, FieldOption... options) {
+    return this;
+  }
+
+  public ReadOptions checkField(String path, FieldOption... options) {
+    return this;
+  }
+
+  public enum FieldOption {
+    XATTR,
+    ACCESS_DELETED,
+    EXPAND_MACROS,
   }
 
 }

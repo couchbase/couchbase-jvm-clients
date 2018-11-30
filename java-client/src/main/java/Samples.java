@@ -5,15 +5,16 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.Document;
+import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 
 import java.util.Optional;
 
-import static com.couchbase.client.java.kv.LookupSpec.lookupSpec;
-import static com.couchbase.client.java.kv.MutationSpec.mutationSpec;
+import static com.couchbase.client.java.kv.MutationScript.mutationScript;
+import static com.couchbase.client.java.kv.ReadOptions.readOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
 public class Samples {
 
@@ -35,30 +36,25 @@ public class Samples {
     return bucket.defaultCollection();
   }
 
-  // TODO: with lazy decode, need to create a new document here??
-  // .. people might then store the original object and be confused why it hasn't changed
   static void scenarioA(final Collection collection) {
-    Optional<Document> document = collection.get("id");
+    Optional<ReadResult> document = collection.read("id");
 
     if (document.isPresent()) {
       JsonObject content = document.get().contentAsObject();
       content.put("modified", true);
-      MutationResult result = collection.insert(
-        Document.create("id", content)
-      );
+      MutationResult result = collection.replace("id", content);
     }
   }
 
-  // TODO: lookupIn also needs to return an optional, since the outer doc might not be found
   static void scenarioB(final Collection collection) {
-    Optional<Document> document = collection.lookupIn("id", lookupSpec().get("users"));
+    Optional<ReadResult> document = collection.read("id", readOptions().getField("users"));
 
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
       content.insert(0, true);
       MutationResult result = collection.mutateIn(
         "id",
-        mutationSpec().replace("users", content)
+        mutationScript().replace("users", content)
       );
     }
   }
@@ -67,16 +63,13 @@ public class Samples {
     MutationResult result = collection.remove("id", removeOptions().persistTo(PersistTo.ONE));
   }
 
-  // todo: cas.get() kinda redundant since we know it can be returned from a get?
   static void scenarioD(final Collection collection) {
     do {
-      Document document = collection.get("id").get();
-      JsonObject content = document.contentAsObject();
+      ReadResult read = collection.read("id").get();
+      JsonObject content = read.contentAsObject();
       content.put("modified", true);
       try {
-        MutationResult result = collection.insert(
-          Document.create("id", content).withCas(document.cas().get())
-        );
+        MutationResult result = collection.replace("id", content, replaceOptions().cas(read.cas()));
       } catch (CASMismatchException ex) {
         continue;
       }
@@ -84,26 +77,22 @@ public class Samples {
   }
 
   static void scenarioE(final Collection collection) {
-    Optional<Document> document = collection.get("id");
+    Optional<ReadResult> document = collection.read("id");
 
     if (document.isPresent()) {
       Entity content = document.get().contentAs(Entity.class);
       content.modified = true;
-      MutationResult result = collection.insert(
-        Document.create("id", content)
-      );
+      MutationResult result = collection.replace("id", content);
     }
   }
 
   static void scenarioF(final Collection collection) {
-    Optional<Document> document = collection.get("id");
+    Optional<ReadResult> document = collection.read("id");
 
     if (document.isPresent()) {
       Entity content = document.get().contentAs(Entity.class);
       content.modified = true;
-      MutationResult result = collection.insert(
-        Document.create("id", content)
-      );
+      MutationResult result = collection.replace("id", content);
     }
   }
 

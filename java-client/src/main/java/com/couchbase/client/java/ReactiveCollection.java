@@ -22,8 +22,8 @@ import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.kv.Document;
-import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.ReadResult;
+import com.couchbase.client.java.kv.ReadOptions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -89,8 +89,8 @@ public class ReactiveCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link Mono} indicating once loaded or failed.
    */
-  public Mono<Document> get(final String id) {
-    return get(id, GetOptions.DEFAULT);
+  public Mono<ReadResult> get(final String id) {
+    return get(id, ReadOptions.DEFAULT);
   }
 
   /**
@@ -102,7 +102,7 @@ public class ReactiveCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} indicating once loaded or failed.
    */
-  public Mono<Document> get(final String id, final GetOptions options) {
+  public Mono<ReadResult> get(final String id, final ReadOptions options) {
     notNullOrEmpty(id, "ID");
     notNull(options, "GetOptions");
 
