@@ -77,4 +77,6 @@ public class ReadResult {
     return decoder.decode(target, encoded);
   }
 
+  // todo: index-based access
+
 }

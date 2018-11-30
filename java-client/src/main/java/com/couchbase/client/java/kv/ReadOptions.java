@@ -71,44 +71,4 @@ public class ReadOptions {
     return withExpiration;
   }
 
-
-  public ReadOptions getFields(String... paths) {
-    for (String p : paths) {
-      getField(p);
-    }
-    return this;
-  }
-
-  public ReadOptions countFields(String... paths) {
-    for (String p : paths) {
-      countField(p);
-    }
-    return this;
-  }
-
-  public ReadOptions checkFields(String... paths) {
-    for (String p : paths) {
-      checkField(p);
-    }
-    return this;
-  }
-
-  public ReadOptions getField(String path, FieldOption... options) {
-    return this;
-  }
-
-  public ReadOptions countField(String path, FieldOption... options) {
-    return this;
-  }
-
-  public ReadOptions checkField(String path, FieldOption... options) {
-    return this;
-  }
-
-  public enum FieldOption {
-    XATTR,
-    ACCESS_DELETED,
-    EXPAND_MACROS,
-  }
-
 }

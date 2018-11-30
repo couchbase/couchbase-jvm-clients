@@ -28,7 +28,8 @@ import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.MutationOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationScript;
+import com.couchbase.client.java.kv.MutationSpec;
+import com.couchbase.client.java.kv.ReadSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.ReadOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -115,7 +116,7 @@ public class AsyncCollection {
   }
 
   /**
-   * Fetches a Document from a collection with default options.
+   * Fetches a full Document from a collection with default options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -124,11 +125,11 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
   public CompletableFuture<Optional<ReadResult>> read(final String id) {
-    return read(id, ReadOptions.DEFAULT);
+    return read(id, ReadSpec.FULL_DOC, ReadOptions.DEFAULT);
   }
 
   /**
-   * Fetches a Document from a collection with custom options.
+   * Fetches a full Document from a collection with custom options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -138,9 +139,19 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadOptions options) {
+    return read(id, ReadSpec.FULL_DOC, options);
+  }
+
+  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadSpec spec) {
+    return read(id, spec, ReadOptions.DEFAULT);
+  }
+
+  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadSpec spec,
+                                                      final ReadOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
+    // TODO: fold subdoc in here
     if (options.withExpiration()) {
       throw new UnsupportedOperationException("this needs a subdoc fetch, not implemented yet.");
     } else {
@@ -250,7 +261,7 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationScript spec) {
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec) {
     return mutateIn(id, spec, MutationOptions.DEFAULT);
   }
 
@@ -262,7 +273,7 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationScript spec,
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec,
                                                     final MutationOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutationSpec");

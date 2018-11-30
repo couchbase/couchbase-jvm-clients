@@ -11,8 +11,9 @@ import com.couchbase.client.java.kv.PersistTo;
 
 import java.util.Optional;
 
-import static com.couchbase.client.java.kv.MutationScript.mutationScript;
+import static com.couchbase.client.java.kv.MutationSpec.mutationSpec;
 import static com.couchbase.client.java.kv.ReadOptions.readOptions;
+import static com.couchbase.client.java.kv.ReadSpec.readSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
@@ -23,7 +24,7 @@ public class Samples {
   }
 
   static Collection connect() {
-    CouchbaseEnvironment environment = CouchbaseEnvironment.builder().build();
+    CouchbaseEnvironment environment = CouchbaseEnvironment.create();
 
     Cluster cluster = Cluster.connect(
       "couchbase://127.0.0.1",
@@ -47,14 +48,14 @@ public class Samples {
   }
 
   static void scenarioB(final Collection collection) {
-    Optional<ReadResult> document = collection.read("id", readOptions().getField("users"));
+    Optional<ReadResult> document = collection.read("id", readSpec().getField("users"));
 
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
       content.insert(0, true);
       MutationResult result = collection.mutateIn(
         "id",
-        mutationScript().replace("users", content)
+        mutationSpec().replace("users", content)
       );
     }
   }

@@ -21,7 +21,8 @@ import com.couchbase.client.java.kv.MutationOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.ReadOptions;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutationScript;
+import com.couchbase.client.java.kv.MutationSpec;
+import com.couchbase.client.java.kv.ReadSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 
@@ -75,7 +76,7 @@ public class Collection {
   }
 
   /**
-   * Fetches a Document (or a fragment of it) from a collection with default options.
+   * Fetches a full Document from a collection with default options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -88,7 +89,7 @@ public class Collection {
   }
 
   /**
-   * Fetches a Document (or a fragment of it) from a collection with custom options.
+   * Fetches a full Document from a collection with custom options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -99,6 +100,15 @@ public class Collection {
    */
   public Optional<ReadResult> read(final String id, final ReadOptions options) {
     return block(async().read(id, options));
+  }
+
+  public Optional<ReadResult> read(final String id, final ReadSpec spec) {
+    return block(async().read(id, spec));
+  }
+
+  public Optional<ReadResult> read(final String id, final ReadSpec spec,
+                                                      final ReadOptions options) {
+    return block(async().read(id, spec, options));
   }
 
   /**
@@ -176,7 +186,7 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationScript spec) {
+  public MutationResult mutateIn(final String id, final MutationSpec spec) {
     return block(async().mutateIn(id, spec));
   }
 
@@ -188,7 +198,7 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationScript spec,
+  public MutationResult mutateIn(final String id, final MutationSpec spec,
                                  final MutationOptions options) {
     return block(async().mutateIn(id, spec, options));
   }
