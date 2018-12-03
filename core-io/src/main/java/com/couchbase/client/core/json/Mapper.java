@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.json;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -115,6 +116,11 @@ public class Mapper {
     } catch (Exception ex) {
       throw new MapperException("Could not decode from JSON: " + input, ex);
     }
+  }
+
+  @Stability.Internal
+  public static ObjectMapper mapper() {
+    return MAPPER;
   }
 
 }

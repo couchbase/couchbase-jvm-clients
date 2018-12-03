@@ -23,6 +23,9 @@ import reactor.core.publisher.Mono;
  * The {@link ConfigurationProvider} is responsible for grabbing, converting and managing
  * bucket and cluster configurations.
  *
+ * <p>This interface has been around since the 1.0 days, but it has been adapted to fit the
+ * 2.x types and process.</p>
+ *
  * @since 1.0.0
  */
 public interface ConfigurationProvider  {
@@ -35,7 +38,38 @@ public interface ConfigurationProvider  {
    */
   Flux<ClusterConfig> configs();
 
+  /**
+   * Returns the current {@link ClusterConfig}.
+   *
+   * @return the current cluster configuration.
+   */
+  ClusterConfig config();
+
+  /**
+   * Initiates the bucket opening process.
+   *
+   * <p>Note that when this mono completes, it does not mean that the process is completely
+   * finished yet, just that it has been initiated and no hard error has been found at the
+   * time.</p>
+   *
+   * @param name the name of the bucket to open.
+   * @return a Mono that completes once the bucket has been logically opened.
+   */
   Mono<Void> openBucket(final String name);
 
+  /**
+   * Initiates the bucket closing process.
+   *
+   * @param name the name of the bucket.
+   * @return a Mono that completes once the bucket has been logically closed.
+   */
   Mono<Void> closeBucket(final String name);
+
+  /**
+   * Shuts down the configuration provider and all its associated resources and timers.
+   *
+   * @return the mono completes once shut down properly.
+   */
+  Mono<Void> shutdown();
+
 }

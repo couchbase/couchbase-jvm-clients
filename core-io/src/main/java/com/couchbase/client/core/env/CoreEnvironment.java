@@ -23,6 +23,8 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -52,6 +54,7 @@ public class CoreEnvironment {
   private final DiagnosticsMonitor diagnosticsMonitor;
   private final Duration kvTimeout;
   private final Credentials credentials;
+  private final MemcachedHashingStrategy memcachedHashingStrategy;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -72,6 +75,9 @@ public class CoreEnvironment {
     this.seedNodes = builder.seedNodes == null
       ? DEFAULT_SEED_NODES
       : builder.seedNodes;
+    this.memcachedHashingStrategy = builder.memcachedHashingStrategy == null
+      ? StandardMemcachedHashingStrategy.INSTANCE
+      : builder.memcachedHashingStrategy;
 
     this.credentials = builder.credentials;
 
@@ -169,6 +175,15 @@ public class CoreEnvironment {
     return seedNodes.get();
   }
 
+  /**
+   * Allows to specify a custom strategy to hash memcached bucket documents.
+   *
+   * @return the memcached hashing strategy.
+   */
+  public MemcachedHashingStrategy memcachedHashingStrategy() {
+    return memcachedHashingStrategy;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -189,6 +204,7 @@ public class CoreEnvironment {
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
+    private MemcachedHashingStrategy memcachedHashingStrategy;
 
     private final Credentials credentials;
 
@@ -255,6 +271,11 @@ public class CoreEnvironment {
      */
     public SELF timer(final Timer timer) {
       this.timer = timer;
+      return self();
+    }
+
+    public SELF memcachedHashingStrategy(final MemcachedHashingStrategy strategy) {
+      this.memcachedHashingStrategy = strategy;
       return self();
     }
 

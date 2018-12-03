@@ -70,7 +70,8 @@ public class Core {
    * @return by default returns the default config provider.
    */
   protected ConfigurationProvider configurationProvider() {
-    return DefaultConfigurationProvider.create(this, coreContext.environment().seedNodes());
+    // toDO
+    return null;
   }
 
   public <R extends Response> void send(final Request<R> request) {
