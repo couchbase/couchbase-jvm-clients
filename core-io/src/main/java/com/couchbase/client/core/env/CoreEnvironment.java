@@ -22,9 +22,14 @@ import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.io.NetworkAddress;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -36,13 +41,17 @@ import java.util.function.Supplier;
 public class CoreEnvironment {
 
   private static final Supplier<String> DEFAULT_USER_AGENT = () -> "foobar";
+  private static final Supplier<Set<NetworkAddress>> DEFAULT_SEED_NODES = () ->
+    new HashSet<>(Collections.singletonList(NetworkAddress.localhost()));
 
   private final Supplier<String> userAgent;
   private final Supplier<EventBus> eventBus;
+  private final Supplier<Set<NetworkAddress>> seedNodes;
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
   private final DiagnosticsMonitor diagnosticsMonitor;
   private final Duration kvTimeout;
+  private final Credentials credentials;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -60,6 +69,11 @@ public class CoreEnvironment {
     this.kvTimeout = builder.kvTimeout == null
       ? Duration.ofMillis(2500)
       : builder.kvTimeout;
+    this.seedNodes = builder.seedNodes == null
+      ? DEFAULT_SEED_NODES
+      : builder.seedNodes;
+
+    this.credentials = builder.credentials;
 
     if (this.eventBus instanceof OwnedSupplier) {
       ((DefaultEventBus) eventBus.get()).start();
@@ -71,18 +85,40 @@ public class CoreEnvironment {
     diagnosticsMonitor.start();
   }
 
-  public static CoreEnvironment create() {
-    return builder().build();
+  public static CoreEnvironment create(final String username, final String password) {
+    return builder(username, password).build();
   }
 
-  public static CoreEnvironment create(final String connectionString) {
-    return builder()
-      .load(new ConnectionStringPropertyLoader(connectionString))
-      .build();
+  public static CoreEnvironment create(final Credentials credentials) {
+    return builder(credentials).build();
   }
 
-  public static CoreEnvironment.Builder builder() {
-    return new Builder();
+  public static CoreEnvironment create(final String connectionString, String username, String password) {
+    return builder(connectionString, username, password).build();
+  }
+
+  public static CoreEnvironment create(final String connectionString, Credentials credentials) {
+    return builder(connectionString, credentials).build();
+  }
+
+  public static CoreEnvironment.Builder builder(final String username, final String password) {
+    return builder(new RoleBasedCredentials(username, password));
+  }
+
+  public static CoreEnvironment.Builder builder(final Credentials credentials) {
+    return new Builder(credentials);
+  }
+
+  public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
+    return builder(connectionString, new RoleBasedCredentials(username, password));
+  }
+
+  public static CoreEnvironment.Builder builder(final String connectionString, final Credentials credentials) {
+    return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
+  }
+
+  public Credentials credentials() {
+    return credentials;
   }
 
   /**
@@ -128,18 +164,20 @@ public class CoreEnvironment {
     return kvTimeout;
   }
 
+
+  public Set<NetworkAddress> seedNodes() {
+    return seedNodes.get();
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
 
   public Mono<Void> shutdownAsync(final Duration timeout) {
-    return Mono.defer(new Supplier<Mono<? extends Void>>() {
-      @Override
-      public Mono<? extends Void> get() {
-        // todo: implement
-        diagnosticsMonitor.stop();
-        return Mono.empty();
-      }
+    return Mono.defer(() -> {
+      // todo: implement
+      diagnosticsMonitor.stop();
+      return Mono.empty();
     });
   }
 
@@ -147,9 +185,16 @@ public class CoreEnvironment {
 
     private Supplier<String> userAgent = null;
     private Supplier<EventBus> eventBus = null;
+    private Supplier<Set<NetworkAddress>> seedNodes = null;
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
+
+    private final Credentials credentials;
+
+    protected Builder(Credentials credentials) {
+      this.credentials = credentials;
+    }
 
     @SuppressWarnings({ "unchecked" })
     protected SELF self() {
@@ -182,6 +227,15 @@ public class CoreEnvironment {
     public SELF eventBus(final Supplier<EventBus> eventBus) {
       this.eventBus = eventBus;
       return self();
+    }
+
+    public SELF seedNodes(Supplier<Set<NetworkAddress>> seedNodes) {
+      this.seedNodes = seedNodes;
+      return self();
+    }
+
+    public SELF seedNodes(Set<NetworkAddress> seedNodes) {
+      return seedNodes(() -> seedNodes);
     }
 
     public SELF kvTimeout(final Duration kvTimeout) {

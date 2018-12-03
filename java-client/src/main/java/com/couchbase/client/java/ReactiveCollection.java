@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.ReadOptions;
@@ -58,7 +58,7 @@ public class ReactiveCollection {
   /**
    * Holds the environment for this collection.
    */
-  private final CouchbaseEnvironment environment;
+  private final ClusterEnvironment environment;
 
   /**
    * Holds a direct reference to the core.

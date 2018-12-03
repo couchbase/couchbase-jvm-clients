@@ -17,15 +17,15 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
 
 public class AsyncBucket {
 
   private final String name;
-  private final CouchbaseEnvironment environment;
+  private final ClusterEnvironment environment;
   private final Core core;
 
-  AsyncBucket(String name, Core core, CouchbaseEnvironment environment) {
+  AsyncBucket(String name, Core core, ClusterEnvironment environment) {
     this.core = core;
     this.environment = environment;
     this.name = name;
@@ -43,7 +43,7 @@ public class AsyncBucket {
     return new AsyncCollection(name, scope, core, environment);
   }
 
-  CouchbaseEnvironment environment() {
+  ClusterEnvironment environment() {
     return environment;
   }
 

@@ -16,9 +16,12 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.util.function.Supplier;
 
-class OwnedSupplier<T> implements Supplier<T> {
+@Stability.Internal
+public class OwnedSupplier<T> implements Supplier<T> {
 
   private final T value;
 

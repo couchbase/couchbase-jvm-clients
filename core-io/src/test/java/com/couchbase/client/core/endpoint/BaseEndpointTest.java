@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEv
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
@@ -73,12 +74,13 @@ class BaseEndpointTest {
   private SimpleEventBus eventBus;
   private CoreEnvironment environment;
   private CoreContext ctx;
+  private Credentials credentials = mock(Credentials.class);
 
   @BeforeEach
   void beforeEach() {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true);
-    environment = CoreEnvironment.builder().eventBus(eventBus).build();
+    environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     ctx = new CoreContext(1, environment);
   }
 
@@ -114,7 +116,7 @@ class BaseEndpointTest {
   @Test
   void retryOnTimeoutUntilEventuallyConnected() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    CoreEnvironment env = CoreEnvironment.builder()
+    CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
       .ioEnvironment(IoEnvironment.builder()
         .connectTimeout(Duration.ofMillis(10))
@@ -236,7 +238,7 @@ class BaseEndpointTest {
   @Test
   void disconnectDuringRetry() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    CoreEnvironment env = CoreEnvironment.builder()
+    CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
       .ioEnvironment(IoEnvironment.builder()
         .connectTimeout(Duration.ofMillis(10))

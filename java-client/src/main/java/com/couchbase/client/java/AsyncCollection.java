@@ -21,7 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.ReadResult;
@@ -72,7 +72,7 @@ public class AsyncCollection {
   /**
    * Holds the environment for this collection.
    */
-  private final CouchbaseEnvironment environment;
+  private final ClusterEnvironment environment;
 
   /**
    * The name of the collection.
@@ -93,7 +93,7 @@ public class AsyncCollection {
    * @param environment the surrounding environment for config options.
    */
   public AsyncCollection(final String name, final String scope, final Core core,
-                  final CouchbaseEnvironment environment) {
+                  final ClusterEnvironment environment) {
     this.name = name;
     this.scope = scope;
     this.core = core;
@@ -109,9 +109,9 @@ public class AsyncCollection {
   }
 
   /**
-   * Provides access to the underlying {@link CouchbaseEnvironment}.
+   * Provides access to the underlying {@link ClusterEnvironment}.
    */
-  CouchbaseEnvironment environment() {
+  ClusterEnvironment environment() {
     return environment;
   }
 

@@ -16,9 +16,13 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+
+import java.util.function.Supplier;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
@@ -27,14 +31,28 @@ public class Cluster {
   private final AsyncCluster asyncCluster;
   private final ReactiveCluster reactiveCluster;
 
-  public static Cluster connect(final String connectionString, final String username,
-                                final String password, final CouchbaseEnvironment environment) {
-    return new Cluster(connectionString, username, password, environment);
+  public static Cluster connect(final String username, final String password) {
+    return new Cluster(new OwnedSupplier<>(ClusterEnvironment.create(username, password)));
   }
 
-  private Cluster(final String connectionString, final String username,
-                  final String password, final CouchbaseEnvironment environment) {
-    this.asyncCluster = AsyncCluster.connect(connectionString, username, password, environment);
+  public static Cluster connect(final Credentials credentials) {
+    return new Cluster(new OwnedSupplier<>(ClusterEnvironment.create(credentials)));
+  }
+
+  public static Cluster connect(final String connectionString, final String username, final String password) {
+    return new Cluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, username, password)));
+  }
+
+  public static Cluster connect(final String connectionString, final Credentials credentials) {
+    return new Cluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, credentials)));
+  }
+
+  public static Cluster connect(final ClusterEnvironment environment) {
+    return new Cluster(() -> environment);
+  }
+
+  private Cluster(final Supplier<ClusterEnvironment> environment) {
+    this.asyncCluster = new AsyncCluster(environment);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
   }
 
@@ -56,6 +74,11 @@ public class Cluster {
 
   public Bucket bucket(String name) {
     return new Bucket(asyncCluster.bucket(name));
+  }
+
+
+  public void shutdown() {
+    block(asyncCluster.shutdown());
   }
 
 }

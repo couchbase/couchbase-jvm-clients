@@ -106,8 +106,7 @@ public class Collection {
     return block(async().read(id, spec));
   }
 
-  public Optional<ReadResult> read(final String id, final ReadSpec spec,
-                                                      final ReadOptions options) {
+  public Optional<ReadResult> read(final String id, final ReadSpec spec, final ReadOptions options) {
     return block(async().read(id, spec, options));
   }
 

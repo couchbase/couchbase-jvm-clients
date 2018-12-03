@@ -24,12 +24,12 @@ import com.couchbase.client.core.io.NetworkAddress
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
-// TODO
+// TODO (michael: made the compiler happy, but obviously this needs fixing ;-))
 class Cluster(env: CouchbaseEnvironment, node: String) {
-  private val coreEnv = CoreEnvironment.create()
+  private val coreEnv = CoreEnvironment.create("ADMIN-TODO", "PASSWORD-TODO")
   private val networkSet = new util.HashSet[NetworkAddress]()
   networkSet.add(NetworkAddress.create(node))
-  val core = Core.create(coreEnv, networkSet)
+  val core = Core.create(coreEnv)
 
   def openBucket(name: String) = new Bucket(this, name)
 

@@ -16,24 +16,41 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
+
+import java.util.function.Supplier;
 
 public class ReactiveCluster {
 
   private final AsyncCluster asyncCluster;
 
-  public static ReactiveCluster connect(final String connectionString, final String username,
-                                        final String password,
-                                        final CouchbaseEnvironment environment) {
-    return new ReactiveCluster(connectionString, username, password, environment);
+  public static ReactiveCluster connect(final String username, final String password) {
+    return new ReactiveCluster(new OwnedSupplier<>(ClusterEnvironment.create(username, password)));
   }
 
-  private ReactiveCluster(final String connectionString, final String username,
-                          final String password, final CouchbaseEnvironment environment) {
-    this.asyncCluster = AsyncCluster.connect(connectionString, username, password, environment);
+  public static ReactiveCluster connect(final Credentials credentials) {
+    return new ReactiveCluster(new OwnedSupplier<>(ClusterEnvironment.create(credentials)));
+  }
+
+  public static ReactiveCluster connect(final String connectionString, final String username, final String password) {
+    return new ReactiveCluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, username, password)));
+  }
+
+  public static ReactiveCluster connect(final String connectionString, final Credentials credentials) {
+    return new ReactiveCluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, credentials)));
+  }
+
+  public static ReactiveCluster connect(final ClusterEnvironment environment) {
+    return new ReactiveCluster(() -> environment);
+  }
+
+  private ReactiveCluster(final Supplier<ClusterEnvironment> environment) {
+    this.asyncCluster = new AsyncCluster(environment);
   }
 
   ReactiveCluster(final AsyncCluster asyncCluster) {
@@ -49,6 +66,10 @@ public class ReactiveCluster {
   }
 
   public Mono<QueryResult> query(final String statement, final QueryOptions options) {
+    return null;
+  }
+
+  public Mono<Void> shutdown() {
     return null;
   }
 

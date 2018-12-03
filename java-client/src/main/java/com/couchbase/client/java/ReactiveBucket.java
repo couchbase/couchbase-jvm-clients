@@ -17,13 +17,13 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
 
 public class ReactiveBucket {
 
   private final AsyncBucket asyncBucket;
   private final Core core;
-  private final CouchbaseEnvironment environment;
+  private final ClusterEnvironment environment;
 
   ReactiveBucket(AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;

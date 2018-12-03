@@ -2,9 +2,10 @@ import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.ReadOptions;
 import com.couchbase.client.java.kv.ReadResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
@@ -24,14 +25,7 @@ public class Samples {
   }
 
   static Collection connect() {
-    CouchbaseEnvironment environment = CouchbaseEnvironment.create();
-
-    Cluster cluster = Cluster.connect(
-      "couchbase://127.0.0.1",
-      "Administrator",
-      "password",
-      environment
-    );
+    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
 
     Bucket bucket = cluster.bucket("travel-sample");
     return bucket.defaultCollection();

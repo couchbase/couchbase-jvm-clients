@@ -54,13 +54,13 @@ public class Core {
    */
   private final ConfigurationProvider configurationProvider;
 
-  public static Core create(final CoreEnvironment environment, final Set<NetworkAddress> seedNodes) {
-    return new Core(environment, seedNodes);
+  public static Core create(final CoreEnvironment environment) {
+    return new Core(environment);
   }
 
-  private Core(final CoreEnvironment environment, final Set<NetworkAddress> seedNodes) {
+  private Core(final CoreEnvironment environment) {
     this.coreContext = new CoreContext(CORE_IDS.incrementAndGet(), environment);
-    this.configurationProvider = configurationProvider(seedNodes);
+    this.configurationProvider = configurationProvider();
   }
 
   /**
@@ -69,8 +69,8 @@ public class Core {
    *
    * @return by default returns the default config provider.
    */
-  protected ConfigurationProvider configurationProvider(final Set<NetworkAddress> seedNodes) {
-    return DefaultConfigurationProvider.create(this, seedNodes);
+  protected ConfigurationProvider configurationProvider() {
+    return DefaultConfigurationProvider.create(this, coreContext.environment().seedNodes());
   }
 
   public <R extends Response> void send(final Request<R> request) {

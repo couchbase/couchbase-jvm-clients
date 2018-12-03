@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiated;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
@@ -55,11 +56,12 @@ class PooledServiceTest {
   private CoreEnvironment environment;
   private SimpleEventBus eventBus;
   private ServiceContext serviceContext;
+  private Credentials credentials = mock(Credentials.class);
 
   @BeforeEach
   void setup() {
     eventBus = new SimpleEventBus(true);
-    environment = CoreEnvironment.builder().eventBus(eventBus).build();
+    environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(1, environment);
     serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234);
   }
