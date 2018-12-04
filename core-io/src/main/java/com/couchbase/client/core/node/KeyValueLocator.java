@@ -38,7 +38,7 @@ public class KeyValueLocator implements Locator {
       } else if (bucketConfig instanceof MemcachedBucketConfig) {
         throw new UnsupportedOperationException("Implement me");
       } else {
-        throw new IllegalStateException("Unsupported Bucket Type: " + bucket + " for request " + request);
+        throw new IllegalStateException("Unsupported Bucket Type: " + bucketConfig + " for request " + request);
       }
     }
   }

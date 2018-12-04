@@ -171,8 +171,9 @@ public class Core {
    * Shuts down this core and all associated, owned resources.
    */
   @Stability.Internal
-  public Mono<Void> shutdown(final String name) {
-    throw new UnsupportedOperationException("implement me!");
+  public Mono<Void> shutdown() {
+    // tODO: implement me
+    return Mono.empty();
   }
 
   private static Locator locator(final ServiceType serviceType) {

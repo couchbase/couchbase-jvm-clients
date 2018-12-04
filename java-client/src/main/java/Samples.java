@@ -13,7 +13,6 @@ import com.couchbase.client.java.kv.PersistTo;
 import java.util.Optional;
 
 import static com.couchbase.client.java.kv.MutationSpec.mutationSpec;
-import static com.couchbase.client.java.kv.ReadOptions.readOptions;
 import static com.couchbase.client.java.kv.ReadSpec.readSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
