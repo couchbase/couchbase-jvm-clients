@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -42,8 +43,8 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
 
   public InsertRequest(final String key, final byte[] content, final long expiration,
                        final int flags, final Duration timeout,
-                       final CoreContext ctx) {
-    super(timeout, ctx);
+                       final CoreContext ctx, final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
     this.key = encodeKey(key);
     this.content = content;
     this.expiration = expiration;

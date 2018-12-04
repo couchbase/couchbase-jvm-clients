@@ -2,6 +2,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -19,8 +20,9 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
 
 public class BucketConfigRequest extends BaseKeyValueRequest<BucketConfigResponse> {
 
-  public BucketConfigRequest(final Duration timeout, final CoreContext ctx) {
-    super(timeout, ctx);
+  public BucketConfigRequest(final Duration timeout, final CoreContext ctx,
+                             final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
   }
 
   @Override

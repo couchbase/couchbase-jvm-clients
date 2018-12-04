@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
@@ -156,7 +157,8 @@ public class AsyncCollection {
       throw new UnsupportedOperationException("this needs a subdoc fetch, not implemented yet.");
     } else {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-      GetRequest request = new GetRequest(id, timeout, coreContext);
+      RetryStrategy retryStrategy = environment.retryStrategy();
+      GetRequest request = new GetRequest(id, timeout, coreContext, retryStrategy);
       return GetAccessor.get(core, id, request);
     }
   }
@@ -183,7 +185,8 @@ public class AsyncCollection {
     notNull(options, "RemoveOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext);
+    RetryStrategy retryStrategy = environment.retryStrategy();
+    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
 
@@ -213,13 +216,16 @@ public class AsyncCollection {
     notNull(options, "InsertOptions");
 
     EncodedDocument encoded = options.encoder().encode(content);
+    RetryStrategy retryStrategy = environment.retryStrategy();
+
     InsertRequest request = new InsertRequest(
       id,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),
       Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      coreContext
+      coreContext,
+      retryStrategy
     );
 
     return InsertAccessor.insert(core, request);

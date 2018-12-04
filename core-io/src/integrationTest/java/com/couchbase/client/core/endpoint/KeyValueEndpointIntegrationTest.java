@@ -79,7 +79,7 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext);
+    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, null);
     assertTrue(request.id() > 0);
     endpoint.send(request);
 

@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -43,8 +44,8 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
 
   public ReplaceRequest(final String key, final byte[] content, final long expiration,
                         final int flags, final Duration timeout,
-                        final long cas, final CoreContext ctx) {
-    super(timeout, ctx);
+                        final long cas, final CoreContext ctx, final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
     this.key = encodeKey(key);
     this.content = content;
     this.expiration = expiration;

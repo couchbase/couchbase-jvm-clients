@@ -19,6 +19,8 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.sun.org.apache.regexp.internal.RE;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,7 @@ class GetRequestTest {
 
   private static final Duration TIMEOUT = Duration.ZERO;
   private static final CoreContext CTX = mock(CoreContext.class);
+  private static final RetryStrategy RETRY = mock(RetryStrategy.class);
 
   @Test
   void decodeSuccessfulResponse() {
@@ -49,7 +52,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, CTX);
+    GetRequest request = new GetRequest(null, TIMEOUT, CTX, RETRY);
     GetResponse decoded = request.decode(response);
 
     byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
@@ -68,7 +71,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, CTX);
+    GetRequest request = new GetRequest(null, TIMEOUT, CTX, RETRY);
     GetResponse decoded = request.decode(response);
 
     assertEquals(ResponseStatus.NOT_FOUND, decoded.status());

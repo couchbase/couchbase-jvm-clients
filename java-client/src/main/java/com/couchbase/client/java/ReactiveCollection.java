@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.ReadResult;
@@ -108,7 +109,8 @@ public class ReactiveCollection {
 
     return Mono.defer(() -> {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-      GetRequest request = new GetRequest(id, timeout, coreContext);
+      RetryStrategy retryStrategy = environment.retryStrategy();
+      GetRequest request = new GetRequest(id, timeout, coreContext, retryStrategy);
       return Reactor
         .wrap(request, GetAccessor.get(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));

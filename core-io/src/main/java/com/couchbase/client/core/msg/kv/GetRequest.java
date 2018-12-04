@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -46,8 +47,9 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   private final byte[] key;
 
-  public GetRequest(final String key, final Duration timeout, final CoreContext ctx) {
-    super(timeout, ctx);
+  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
+                    final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
     this.key = encodeKey(key);
   }
 

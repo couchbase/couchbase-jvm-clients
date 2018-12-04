@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -62,6 +63,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   private final CompletableFuture<R> response;
 
   /**
+   * Holds the current retry strategy in use.
+   */
+  private final RetryStrategy retryStrategy;
+
+  /**
    * The {@link State} this {@link Request} is in at the moment.
    *
    * <p>Do not rename this field without updating the {@link #STATE_UPDATER}!</p>
@@ -80,7 +86,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    * @param timeout the timeout of the request.
    * @param ctx the context if provided.
    */
-  public BaseRequest(final Duration timeout, final CoreContext ctx) {
+  public BaseRequest(final Duration timeout, final CoreContext ctx,
+                     final RetryStrategy retryStrategy) {
     if (timeout == null) {
       throw new IllegalArgumentException("A Timeout must be provided");
     }
@@ -91,6 +98,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.response = new CompletableFuture<>();
     this.id = REQUEST_ID.incrementAndGet();
     this.ctx = new RequestContext(ctx, this);
+    this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
   }
 
   @Override
@@ -158,6 +166,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public long id() {
     return id;
+  }
+
+  @Override
+  public RetryStrategy retryStrategy() {
+    return retryStrategy;
   }
 
   /**

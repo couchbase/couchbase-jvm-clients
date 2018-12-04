@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
@@ -117,5 +118,12 @@ public interface Request<R extends Response> {
    * @return the service type for this request.
    */
   ServiceType serviceType();
+
+  /**
+   * The retry strategy for this particular request.
+   *
+   * @return the retry strategy for this request.
+   */
+  RetryStrategy retryStrategy();
 
 }

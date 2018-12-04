@@ -18,9 +18,11 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 
@@ -43,8 +45,9 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   private volatile short partition;
 
-  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx) {
-    super(timeout, ctx);
+  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx,
+                      final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
   }
 
   @Override

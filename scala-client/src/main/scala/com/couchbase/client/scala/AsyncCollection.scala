@@ -22,11 +22,12 @@ import java.util.Optional
 import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExistException}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
+import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.core.util.Validators
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{ReadResult, JsonObject}
+import com.couchbase.client.scala.document.{JsonObject, ReadResult}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -64,7 +65,8 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext)
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -116,7 +118,8 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, timeout, cas, coreContext)
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, timeout, cas, coreContext, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -150,7 +153,9 @@ class AsyncCollection(val collection: Collection) {
     // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
     // TODO flags
     // TODO datatype
-    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext)
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+
+    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -177,7 +182,9 @@ class AsyncCollection(val collection: Collection) {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(cas, "cas")
 
-    val request = new RemoveRequest(id, cas, timeout, coreContext)
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+
+    val request = new RemoveRequest(id, cas, timeout, coreContext, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -226,7 +233,8 @@ class AsyncCollection(val collection: Collection) {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
 
-    val request = new GetRequest(id, timeout, coreContext)
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+    val request = new GetRequest(id, timeout, coreContext, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {

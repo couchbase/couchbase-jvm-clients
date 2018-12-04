@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Additional context which might be attached to an individual {@link Request}.
@@ -44,6 +45,11 @@ public class RequestContext extends CoreContext {
   private volatile Map<String, Object> payload;
 
   /**
+   * The number of times the attached request has been retried.
+   */
+  private final AtomicInteger retryAttempts;
+
+  /**
    * Creates a new {@link RequestContext}.
    *
    * @param ctx the core context.
@@ -53,6 +59,7 @@ public class RequestContext extends CoreContext {
   public RequestContext(CoreContext ctx, final Request<? extends Response> request) {
     super(ctx.id(), ctx.environment());
     this.request = request;
+    this.retryAttempts = new AtomicInteger(0);
   }
 
   /**
@@ -73,6 +80,15 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext dispatchLatency(long dispatchLatency) {
     this.dispatchLatency = dispatchLatency;
+    return this;
+  }
+
+  public int retryAttempts() {
+    return retryAttempts.get();
+  }
+
+  public RequestContext incrementRetryAttempt() {
+    retryAttempts.incrementAndGet();
     return this;
   }
 
@@ -102,6 +118,7 @@ public class RequestContext extends CoreContext {
     if (payload != null) {
       input.put("payload", payload);
     }
+    input.put("retried", retryAttempts());
   }
 
   /**

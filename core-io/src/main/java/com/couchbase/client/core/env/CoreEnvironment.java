@@ -23,8 +23,11 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -45,6 +48,7 @@ public class CoreEnvironment {
   private static final Supplier<String> DEFAULT_USER_AGENT = () -> "foobar";
   private static final Supplier<Set<NetworkAddress>> DEFAULT_SEED_NODES = () ->
     new HashSet<>(Collections.singletonList(NetworkAddress.localhost()));
+  private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   private final Supplier<String> userAgent;
   private final Supplier<EventBus> eventBus;
@@ -55,6 +59,7 @@ public class CoreEnvironment {
   private final Duration kvTimeout;
   private final Credentials credentials;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
+  private final RetryStrategy retryStrategy;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -78,6 +83,9 @@ public class CoreEnvironment {
     this.memcachedHashingStrategy = builder.memcachedHashingStrategy == null
       ? StandardMemcachedHashingStrategy.INSTANCE
       : builder.memcachedHashingStrategy;
+    this.retryStrategy = builder.retryStrategy == null
+      ? BestEffortRetryStrategy.INSTANCE
+      : builder.retryStrategy;
 
     this.credentials = builder.credentials;
 
@@ -184,6 +192,10 @@ public class CoreEnvironment {
     return memcachedHashingStrategy;
   }
 
+  public RetryStrategy retryStrategy() {
+    return retryStrategy;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -205,6 +217,7 @@ public class CoreEnvironment {
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
     private MemcachedHashingStrategy memcachedHashingStrategy;
+    private RetryStrategy retryStrategy;
 
     private final Credentials credentials;
 
@@ -276,6 +289,11 @@ public class CoreEnvironment {
 
     public SELF memcachedHashingStrategy(final MemcachedHashingStrategy strategy) {
       this.memcachedHashingStrategy = strategy;
+      return self();
+    }
+
+    public SELF retryStrategy(final RetryStrategy retryStrategy) {
+      this.retryStrategy = retryStrategy;
       return self();
     }
 

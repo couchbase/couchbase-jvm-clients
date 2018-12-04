@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
+import com.couchbase.client.core.retry.RetryStrategy;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.FluxSink;
@@ -47,7 +48,7 @@ class ReactorTest {
 
   @Test
   void completesWithSuccessAfterSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     NoopResponse response = mock(NoopResponse.class);
@@ -59,7 +60,7 @@ class ReactorTest {
 
   @Test
   void completesWithErrorAfterSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     RequestCanceledException exception = mock(RequestCanceledException.class);
@@ -71,7 +72,7 @@ class ReactorTest {
 
   @Test
   void completesWithSuccessBeforeSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     NoopResponse response = mock(NoopResponse.class);
     request.succeed(response);
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
@@ -82,7 +83,7 @@ class ReactorTest {
 
   @Test
   void completesWithErrorBeforeSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     RequestCanceledException exception = mock(RequestCanceledException.class);
     request.fail(exception);
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
@@ -93,7 +94,7 @@ class ReactorTest {
 
   @Test
   void propagatesCancellation() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
@@ -103,7 +104,7 @@ class ReactorTest {
 
   @Test
   void ignoresCancellationPropagation() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class));
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class), mock(RetryStrategy.class));
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), false);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
