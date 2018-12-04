@@ -48,7 +48,7 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
-    coreContext = new CoreContext(1, env);
+    coreContext = new CoreContext(null, 1, env);
   }
 
   @AfterEach
