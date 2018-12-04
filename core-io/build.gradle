@@ -29,7 +29,7 @@ idea {
 }
 
 dependencies {
-  compile 'io.netty:netty-all:4.1.31.Final'
+  compile 'io.netty:netty-all:4.1.32.Final'
   compile 'org.jctools:jctools-core:2.1.2'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
   compile 'io.projectreactor:reactor-core:3.2.3.RELEASE'
@@ -37,15 +37,15 @@ dependencies {
   compile 'org.iq80.snappy:snappy:0.4'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
 
-  testCompile 'io.projectreactor:reactor-test:3.2.2.RELEASE'
+  testCompile 'io.projectreactor:reactor-test:3.2.3.RELEASE'
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
-  testCompile 'org.mockito:mockito-core:2.23.0'
-  testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.1'
-  testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.1'
-  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+  testCompile 'org.mockito:mockito-core:2.23.4'
+  testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
+  testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.2'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
 
   integrationTestCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
-  integrationTestCompile 'org.testcontainers:testcontainers:1.10.0'
+  integrationTestCompile 'org.testcontainers:testcontainers:1.10.2'
   integrationTestCompile 'com.couchbase.mock:CouchbaseMock:1.5.19'
 }
 
