@@ -35,7 +35,7 @@ public abstract class BaseLoader implements Loader {
     this.serviceType = serviceType;
   }
 
-  protected abstract Mono<String> discoverConfig(String bucket);
+  protected abstract Mono<String> discoverConfig(NetworkAddress seed, String bucket);
 
   protected abstract int port();
 
@@ -43,7 +43,7 @@ public abstract class BaseLoader implements Loader {
   public Mono<BucketConfig> load(final NetworkAddress seed, final String name) {
     return core
       .ensureServiceAt(seed, serviceType, port(), Optional.of(name))
-      .then(discoverConfig(name))
+      .then(discoverConfig(seed, name))
       .map(raw -> {
         String converted = raw.replace("$HOST", seed.address());
         return BucketConfigParser.parse(converted, core.context().environment(), seed);

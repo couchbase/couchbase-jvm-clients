@@ -41,7 +41,7 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
   public NoopRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                      final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy);
+    super(timeout, ctx, bucket, retryStrategy, null);
   }
 
   @Override

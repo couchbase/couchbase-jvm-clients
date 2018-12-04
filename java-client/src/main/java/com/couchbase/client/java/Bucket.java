@@ -50,7 +50,7 @@ public class Bucket {
   }
 
   public Collection collection(final String name, final String scope) {
-    return new Collection(new AsyncCollection(name, scope, core, environment));
+    return new Collection(new AsyncCollection(name, scope, asyncBucket.name(), core, environment), asyncBucket.name());
   }
 
 }

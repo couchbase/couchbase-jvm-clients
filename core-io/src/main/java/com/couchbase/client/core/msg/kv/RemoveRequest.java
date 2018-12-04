@@ -44,20 +44,18 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
  */
 public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
 
-  private final byte[] key;
   private final long cas;
 
   public RemoveRequest(final String key, final long cas, final Duration timeout,
                        final CoreContext ctx, final String bucket,
                        final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy);
-    this.key = encodeKey(key);
+    super(timeout, ctx, bucket, retryStrategy, key);
     this.cas = cas;
   }
 
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
-    ByteBuf key = Unpooled.wrappedBuffer(this.key);
+    ByteBuf key = Unpooled.wrappedBuffer(key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
     key.release();

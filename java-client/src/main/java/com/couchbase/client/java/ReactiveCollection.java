@@ -66,11 +66,14 @@ public class ReactiveCollection {
    */
   private final Core core;
 
-  ReactiveCollection(final AsyncCollection asyncCollection) {
+  private final String bucketName;
+
+  ReactiveCollection(final AsyncCollection asyncCollection, final String bucketName) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
     this.environment = asyncCollection.environment();
     this.core = asyncCollection.core();
+    this.bucketName = bucketName;
   }
 
   /**
@@ -110,7 +113,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       RetryStrategy retryStrategy = environment.retryStrategy();
-      GetRequest request = new GetRequest(id, timeout, coreContext, retryStrategy);
+      GetRequest request = new GetRequest(id, timeout, coreContext, bucketName, retryStrategy);
       return Reactor
         .wrap(request, GetAccessor.get(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));

@@ -36,7 +36,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
  */
 public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implements Compressible {
 
-  private final byte[] key;
   private final byte[] content;
   private final long expiration;
   private final int flags;
@@ -46,8 +45,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
                         final int flags, final Duration timeout,
                         final long cas, final CoreContext ctx, final String bucket,
                         final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy);
-    this.key = encodeKey(key);
+    super(timeout, ctx, bucket, retryStrategy, key);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
@@ -57,7 +55,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque,
                         final CompressionConfig config) {
-    ByteBuf key = Unpooled.wrappedBuffer(this.key);
+    ByteBuf key = Unpooled.wrappedBuffer(key());
 
     byte datatype = 0;
     ByteBuf content;

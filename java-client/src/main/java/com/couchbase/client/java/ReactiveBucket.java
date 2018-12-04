@@ -44,7 +44,7 @@ public class ReactiveBucket {
   }
 
   public ReactiveCollection collection(final String name, final String scope) {
-    return new ReactiveCollection(new AsyncCollection(name, scope, core, environment));
+    return new ReactiveCollection(new AsyncCollection(name, scope, asyncBucket.name(), core, environment), asyncBucket.name());
   }
 
 }

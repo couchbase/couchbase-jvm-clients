@@ -52,9 +52,9 @@ public class Collection {
    */
   private final ReactiveCollection reactiveCollection;
 
-  public Collection(final AsyncCollection asyncCollection) {
+  public Collection(final AsyncCollection asyncCollection, String bucketName) {
     this.asyncCollection = asyncCollection;
-    reactiveCollection = new ReactiveCollection(asyncCollection);
+    reactiveCollection = new ReactiveCollection(asyncCollection, bucketName);
   }
 
   /**

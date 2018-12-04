@@ -59,4 +59,11 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    */
   R decode(ByteBuf response);
 
+  /**
+   * The key of the kv request.
+   *
+   * @return the key of the request.
+   */
+  byte[] key();
+
 }

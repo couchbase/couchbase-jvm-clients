@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
 
@@ -27,7 +28,7 @@ public class HttpLoader extends BaseLoader {
   }
 
   @Override
-  protected Mono<String> discoverConfig(String bucket) {
+  protected Mono<String> discoverConfig(NetworkAddress seed, String bucket) {
     return null;
   }
 

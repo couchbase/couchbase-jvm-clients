@@ -31,16 +31,20 @@ public class AsyncBucket {
     this.name = name;
   }
 
+  public String name() {
+    return name;
+  }
+
   public AsyncCollection defaultCollection() {
     return collection(null, null);
   }
 
-  public AsyncCollection collection(final String name) {
-    return collection(name, null);
+  public AsyncCollection collection(final String collection) {
+    return collection(collection, null);
   }
 
-  public AsyncCollection collection(final String name, final String scope) {
-    return new AsyncCollection(name, scope, core, environment);
+  public AsyncCollection collection(final String collection, final String scope) {
+    return new AsyncCollection(collection, scope, name, core, environment);
   }
 
   ClusterEnvironment environment() {

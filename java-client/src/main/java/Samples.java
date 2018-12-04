@@ -21,14 +21,12 @@ import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 public class Samples {
 
   public static void main(String... args) {
-
-  }
-
-  static Collection connect() {
-    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+    Cluster cluster = Cluster.connect("Administrator", "password");
 
     Bucket bucket = cluster.bucket("travel-sample");
-    return bucket.defaultCollection();
+    Collection collection = bucket.defaultCollection();
+
+    System.err.println(collection.read("airline_10"));
   }
 
   static void scenarioA(final Collection collection) {

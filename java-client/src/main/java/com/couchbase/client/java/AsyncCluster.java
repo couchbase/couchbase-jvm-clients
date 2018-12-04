@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class AsyncCluster {
@@ -67,8 +68,11 @@ public class AsyncCluster {
     return null;
   }
 
-  public AsyncBucket bucket(String name) {
-    return new AsyncBucket(name, core, environment.get());
+  public CompletableFuture<AsyncBucket> bucket(final String name) {
+    return core
+      .openBucket(name)
+      .thenReturn(new AsyncBucket(name, core, environment.get()))
+      .toFuture();
   }
 
   public CompletableFuture<Void> shutdown() {

@@ -77,6 +77,16 @@ public class ReadResult {
     return decoder.decode(target, encoded);
   }
 
+  @Override
+  public String toString() {
+    return "ReadResult{" +
+      "id='" + id + '\'' +
+      ", encoded=" + encoded +
+      ", cas=" + cas +
+      ", expiration=" + expiration +
+      '}';
+  }
+
   // todo: index-based access
 
 }

@@ -16,8 +16,15 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.config.loader.CarrierLoader;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+
+import java.util.function.Function;
 
 
 /**
@@ -27,19 +34,39 @@ import reactor.core.publisher.Mono;
  */
 public class DefaultConfigurationProvider implements ConfigurationProvider {
 
+  private final Core core;
+  private final DirectProcessor<ClusterConfig> configs;
+  private final FluxSink<ClusterConfig> configsSink;
+  private final ClusterConfig currentConfig;
+
+  public DefaultConfigurationProvider(Core core) {
+    this.configs = DirectProcessor.create();
+    this.configsSink = configs.sink();
+    currentConfig = new ClusterConfig();
+    this.core = core;
+  }
+
   @Override
   public Flux<ClusterConfig> configs() {
-    return null;
+    return configs;
   }
 
   @Override
   public ClusterConfig config() {
-    return null;
+    return currentConfig;
   }
 
   @Override
   public Mono<Void> openBucket(String name) {
-    return null;
+    CarrierLoader loader = new CarrierLoader(core);
+    // TODO this is a hack and not the proper functionality
+    return loader
+      .load(core.context().environment().seedNodes().iterator().next(), name)
+      .flatMap(config -> {
+        currentConfig.setBucketConfig(name, config);
+        configs.onNext(currentConfig);
+        return Mono.empty();
+      });
   }
 
   @Override

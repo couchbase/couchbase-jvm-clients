@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.BucketConfigRequest;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
@@ -37,7 +38,7 @@ public class CarrierLoader extends BaseLoader {
   }
 
   @Override
-  protected Mono<String> discoverConfig(String bucket) {
+  protected Mono<String> discoverConfig(NetworkAddress seed, String bucket) {
     final CoreContext ctx = core().context();
     final CoreEnvironment environment = ctx.environment();
     return Mono.defer(() -> {
@@ -45,7 +46,8 @@ public class CarrierLoader extends BaseLoader {
         environment.kvTimeout(),
         ctx,
         bucket,
-        environment.retryStrategy()
+        environment.retryStrategy(),
+        seed
       );
       core().send(request);
       return Reactor.wrap(request, request.response(), true);

@@ -50,7 +50,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, CTX, RETRY);
+    GetRequest request = new GetRequest(null, TIMEOUT, CTX, null, RETRY);
     GetResponse decoded = request.decode(response);
 
     byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
@@ -69,7 +69,7 @@ class GetRequestTest {
       GetRequestTest.class
     ));
 
-    GetRequest request = new GetRequest(null, TIMEOUT, CTX, RETRY);
+    GetRequest request = new GetRequest(null, TIMEOUT, CTX, null, RETRY);
     GetResponse decoded = request.decode(response);
 
     assertEquals(ResponseStatus.NOT_FOUND, decoded.status());

@@ -85,6 +85,8 @@ public class AsyncCollection {
    */
   private final String scope;
 
+  private final String bucket;
+
   /**
    * Creates a new {@link AsyncCollection}.
    *
@@ -93,13 +95,14 @@ public class AsyncCollection {
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  public AsyncCollection(final String name, final String scope, final Core core,
+  public AsyncCollection(final String name, final String scope, final String bucket, final Core core,
                   final ClusterEnvironment environment) {
     this.name = name;
     this.scope = scope;
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
+    this.bucket = bucket;
   }
 
   /**
@@ -158,7 +161,7 @@ public class AsyncCollection {
     } else {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       RetryStrategy retryStrategy = environment.retryStrategy();
-      GetRequest request = new GetRequest(id, timeout, coreContext, retryStrategy);
+      GetRequest request = new GetRequest(id, timeout, coreContext, bucket, retryStrategy);
       return GetAccessor.get(core, id, request);
     }
   }
@@ -186,7 +189,7 @@ public class AsyncCollection {
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     RetryStrategy retryStrategy = environment.retryStrategy();
-    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext, retryStrategy);
+    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext, bucket, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
 
@@ -225,6 +228,7 @@ public class AsyncCollection {
       encoded.flags(),
       Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
       coreContext,
+      bucket,
       retryStrategy
     );
 

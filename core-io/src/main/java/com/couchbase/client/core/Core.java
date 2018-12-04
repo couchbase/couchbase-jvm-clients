@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -68,6 +70,8 @@ public class Core {
    */
   private final ConfigurationProvider configurationProvider;
 
+  private volatile ClusterConfig currentConfig;
+
   /**
    * The list of currently managed nodes against the cluster.
    */
@@ -81,6 +85,8 @@ public class Core {
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
     this.configurationProvider = configurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
+    currentConfig = configurationProvider.config();
+    configurationProvider.configs().subscribe(config -> Core.this.currentConfig = config);
   }
 
   /**
@@ -90,8 +96,7 @@ public class Core {
    * @return by default returns the default config provider.
    */
   protected ConfigurationProvider configurationProvider() {
-    // toDO
-    return null;
+    return new DefaultConfigurationProvider(this);
   }
 
   public <R extends Response> void send(final Request<R> request) {
@@ -105,7 +110,7 @@ public class Core {
       context().environment().timer().register((Request<Response>) request);
     }
 
-    locator(request.serviceType()).dispatch(request, nodes, null, context());
+    locator(request.serviceType()).dispatch(request, nodes, currentConfig, context());
   }
 
   /**

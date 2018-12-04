@@ -73,7 +73,8 @@ public class Cluster {
   }
 
   public Bucket bucket(String name) {
-    return new Bucket(asyncCluster.bucket(name));
+    AsyncBucket b = block(asyncCluster.bucket(name));
+    return new Bucket(b);
   }
 
 

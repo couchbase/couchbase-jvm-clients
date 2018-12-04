@@ -40,6 +40,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
 
   private static byte[] EMPTY_KEY = new byte[] {};
   private final String bucket;
+  private final byte[] key;
 
   /**
    * Once set, stores the partition where this request should be dispatched against.
@@ -47,9 +48,10 @@ public abstract class BaseKeyValueRequest<R extends Response>
   private volatile short partition;
 
   BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final String bucket,
-                      final RetryStrategy retryStrategy) {
+                      final RetryStrategy retryStrategy, String key) {
     super(timeout, ctx, retryStrategy);
     this.bucket = bucket;
+    this.key = encodeKey(key);
   }
 
   @Override
@@ -80,5 +82,10 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public String bucket() {
     return bucket;
+  }
+
+  @Override
+  public byte[] key() {
+    return key;
   }
 }
