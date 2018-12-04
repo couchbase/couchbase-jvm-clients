@@ -39,15 +39,17 @@ public abstract class BaseKeyValueRequest<R extends Response>
   implements KeyValueRequest<R> {
 
   private static byte[] EMPTY_KEY = new byte[] {};
+  private final String bucket;
 
   /**
    * Once set, stores the partition where this request should be dispatched against.
    */
   private volatile short partition;
 
-  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx,
+  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                       final RetryStrategy retryStrategy) {
     super(timeout, ctx, retryStrategy);
+    this.bucket = bucket;
   }
 
   @Override
@@ -73,5 +75,10 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public ServiceType serviceType() {
     return ServiceType.KV;
+  }
+
+  @Override
+  public String bucket() {
+    return bucket;
   }
 }

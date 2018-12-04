@@ -26,31 +26,40 @@ public enum ServiceType {
   /**
    * The Key/Value Service ("kv").
    */
-  KV,
+  KV(ServiceScope.BUCKET),
 
   /**
    * The Query Service ("n1ql").
    */
-  QUERY,
+  QUERY(ServiceScope.CLUSTER),
 
   /**
    * The Analytics Service.
    */
-  ANALYTICS,
+  ANALYTICS(ServiceScope.CLUSTER),
 
   /**
    * The Search Service ("fts").
    */
-  SEARCH,
+  SEARCH(ServiceScope.CLUSTER),
 
   /**
    * The View Service.
    */
-  VIEWS,
+  VIEWS(ServiceScope.CLUSTER),
 
   /**
    * The Config Service ("cluster manager").
    */
-  CONFIG,
+  CONFIG(ServiceScope.CLUSTER);
 
+  private final ServiceScope scope;
+
+  ServiceType(ServiceScope scope) {
+    this.scope = scope;
+  }
+
+  public ServiceScope scope() {
+    return scope;
+  }
 }

@@ -43,8 +43,9 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
 
   public InsertRequest(final String key, final byte[] content, final long expiration,
                        final int flags, final Duration timeout,
-                       final CoreContext ctx, final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy);
+                       final CoreContext ctx, final String bucket,
+                       final RetryStrategy retryStrategy) {
+    super(timeout, ctx, bucket, retryStrategy);
     this.key = encodeKey(key);
     this.content = content;
     this.expiration = expiration;

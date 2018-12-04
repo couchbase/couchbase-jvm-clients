@@ -20,9 +20,9 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
 
 public class BucketConfigRequest extends BaseKeyValueRequest<BucketConfigResponse> {
 
-  public BucketConfigRequest(final Duration timeout, final CoreContext ctx,
+  public BucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                              final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy);
+    super(timeout, ctx, bucket, retryStrategy);
   }
 
   @Override

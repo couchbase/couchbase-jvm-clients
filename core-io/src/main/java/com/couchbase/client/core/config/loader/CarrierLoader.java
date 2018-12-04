@@ -32,13 +32,19 @@ public class CarrierLoader extends BaseLoader {
   }
 
   @Override
-  protected Mono<String> discoverConfig() {
+  protected int port() {
+    return 11210;
+  }
+
+  @Override
+  protected Mono<String> discoverConfig(String bucket) {
     final CoreContext ctx = core().context();
     final CoreEnvironment environment = ctx.environment();
     return Mono.defer(() -> {
       BucketConfigRequest request = new BucketConfigRequest(
         environment.kvTimeout(),
         ctx,
+        bucket,
         environment.retryStrategy()
       );
       core().send(request);

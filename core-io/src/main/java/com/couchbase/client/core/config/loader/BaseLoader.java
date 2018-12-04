@@ -23,6 +23,8 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 public abstract class BaseLoader implements Loader {
 
   private final Core core;
@@ -33,13 +35,15 @@ public abstract class BaseLoader implements Loader {
     this.serviceType = serviceType;
   }
 
-  protected abstract Mono<String> discoverConfig();
+  protected abstract Mono<String> discoverConfig(String bucket);
+
+  protected abstract int port();
 
   @Override
   public Mono<BucketConfig> load(final NetworkAddress seed, final String name) {
     return core
-      .ensureServiceAt(seed, serviceType)
-      .then(discoverConfig())
+      .ensureServiceAt(seed, serviceType, port(), Optional.of(name))
+      .then(discoverConfig(name))
       .map(raw -> {
         String converted = raw.replace("$HOST", seed.address());
         return BucketConfigParser.parse(converted, core.context().environment(), seed);

@@ -27,8 +27,12 @@ public class HttpLoader extends BaseLoader {
   }
 
   @Override
-  protected Mono<String> discoverConfig() {
+  protected Mono<String> discoverConfig(String bucket) {
     return null;
   }
 
+  @Override
+  protected int port() {
+    return 0;
+  }
 }

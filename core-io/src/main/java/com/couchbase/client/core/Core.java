@@ -34,6 +34,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -146,24 +147,18 @@ public class Core {
    * @return a {@link Mono} which completes once initiated.
    */
   @Stability.Internal
-  public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType) {
+  public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType,
+                                    int port, Optional<String> bucket) {
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.address().equals(target))
-      .switchIfEmpty(Mono.defer(new Supplier<Mono< Node>>() {
-        @Override
-        public Mono<Node> get() {
-          // todo: create new node if it does not exist, and connect it
-          return Mono.just(new Node());
-        }
+      .switchIfEmpty(Mono.defer(() -> {
+        Node node = Node.create(coreContext, target, coreContext.environment().credentials());
+        node.connect();
+        nodes.add(node);
+        return Mono.just(node);
       }))
-      .flatMap(new Function<Node, Publisher<Node>>() {
-        @Override
-        public Publisher<Node> apply(Node node) {
-          // todo: add services to that node which will connect automatically
-          return null;
-        }
-      })
+      .flatMap(node -> node.addService(serviceType, port, bucket))
       .then();
   }
 

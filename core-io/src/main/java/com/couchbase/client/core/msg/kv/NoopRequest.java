@@ -39,9 +39,9 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
  */
 public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
-  public NoopRequest(final Duration timeout, final CoreContext ctx,
+  public NoopRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                      final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy);
+    super(timeout, ctx, bucket, retryStrategy);
   }
 
   @Override

@@ -75,7 +75,7 @@ class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest {
     service.connect();
     waitUntilCondition(() -> service.state() == ServiceState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, config().bucketname(), null);
     assertTrue(request.id() > 0);
     service.send(request);
 

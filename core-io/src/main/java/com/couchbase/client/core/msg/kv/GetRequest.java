@@ -48,8 +48,8 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
   private final byte[] key;
 
   public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
-                    final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy);
+                    final String bucket, final RetryStrategy retryStrategy) {
+    super(timeout, ctx, bucket, retryStrategy);
     this.key = encodeKey(key);
   }
 

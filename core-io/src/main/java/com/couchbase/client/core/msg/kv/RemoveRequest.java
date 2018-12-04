@@ -48,8 +48,9 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
   private final long cas;
 
   public RemoveRequest(final String key, final long cas, final Duration timeout,
-                       final CoreContext ctx, final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy);
+                       final CoreContext ctx, final String bucket,
+                       final RetryStrategy retryStrategy) {
+    super(timeout, ctx, bucket, retryStrategy);
     this.key = encodeKey(key);
     this.cas = cas;
   }

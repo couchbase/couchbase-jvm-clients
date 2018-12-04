@@ -28,6 +28,7 @@ import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.KeyValueServiceConfig;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -60,6 +61,7 @@ public class CoreEnvironment {
   private final Credentials credentials;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
   private final RetryStrategy retryStrategy;
+  private final KeyValueServiceConfig keyValueServiceConfig;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -86,6 +88,9 @@ public class CoreEnvironment {
     this.retryStrategy = builder.retryStrategy == null
       ? BestEffortRetryStrategy.INSTANCE
       : builder.retryStrategy;
+    this.keyValueServiceConfig = builder.keyValueServiceConfig == null
+      ? KeyValueServiceConfig.create()
+      : builder.keyValueServiceConfig;
 
     this.credentials = builder.credentials;
 
@@ -196,6 +201,10 @@ public class CoreEnvironment {
     return retryStrategy;
   }
 
+  public KeyValueServiceConfig keyValueServiceConfig() {
+    return keyValueServiceConfig;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -218,6 +227,7 @@ public class CoreEnvironment {
     private Duration kvTimeout = null;
     private MemcachedHashingStrategy memcachedHashingStrategy;
     private RetryStrategy retryStrategy;
+    private KeyValueServiceConfig keyValueServiceConfig;
 
     private final Credentials credentials;
 
@@ -294,6 +304,11 @@ public class CoreEnvironment {
 
     public SELF retryStrategy(final RetryStrategy retryStrategy) {
       this.retryStrategy = retryStrategy;
+      return self();
+    }
+
+    public SELF keyValueServiceConfig(final KeyValueServiceConfig config) {
+      this.keyValueServiceConfig = config;
       return self();
     }
 

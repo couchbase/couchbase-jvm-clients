@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.ScopedRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
@@ -27,7 +28,7 @@ import io.netty.buffer.ByteBufAllocator;
  * @param <R> the generic type of the response.
  * @since 1.0.0
  */
-public interface KeyValueRequest<R extends Response> extends Request<R> {
+public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedRequest {
 
   /**
    * Reads the currently set partition this request is targeted against.

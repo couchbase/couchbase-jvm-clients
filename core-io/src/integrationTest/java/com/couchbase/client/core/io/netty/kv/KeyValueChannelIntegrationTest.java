@@ -100,7 +100,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
     assertTrue(channel.isActive());
     assertTrue(channel.isOpen());
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, config().bucketname(), null);
     channel.writeAndFlush(request);
     NoopResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());
