@@ -34,14 +34,14 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.util.Util.waitUntilCondition;
 import static org.junit.Assert.assertTrue;
 
-public class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest {
+class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest {
 
   private CoreEnvironment env;
   private CoreContext coreContext;
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create();
+    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
     coreContext = new CoreContext(1, env);
   }
 
@@ -68,9 +68,8 @@ public class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest 
       coreContext,
       NetworkAddress.create(node.hostname()),
       node.ports().get(ServiceType.KV),
-      config().adminUsername(),
       config().bucketname(),
-      config().adminPassword()
+      env.credentials()
     );
 
     service.connect();

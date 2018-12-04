@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
@@ -35,39 +36,33 @@ import java.util.Set;
 public class KeyValueEndpoint extends BaseEndpoint {
 
   private final CoreContext coreContext;
-  private final String username;
   private final String bucketname;
-  private final String password;
+  private final Credentials credentials;
 
   public KeyValueEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
-                          final int port, final String username,
-                          final String bucketname, final String password) {
+                          final int port, final String bucketname, final Credentials credentials) {
     super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(),
       coreContext, coreContext.environment().ioEnvironment().kvCircuitBreakerConfig());
     this.coreContext = coreContext;
-    this.username = username;
+    this.credentials = credentials;
     this.bucketname = bucketname;
-    this.password = password;
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new KeyValuePipelineInitializer(coreContext, username, bucketname, password);
+    return new KeyValuePipelineInitializer(coreContext, bucketname, credentials);
   }
 
   public static class KeyValuePipelineInitializer implements PipelineInitializer {
 
     private final CoreContext coreContext;
-    private final String username;
     private final String bucketname;
-    private final String password;
+    private final Credentials credentials;
 
-    public KeyValuePipelineInitializer(CoreContext coreContext, String username, String bucketname,
-                                       String password) {
+    public KeyValuePipelineInitializer(CoreContext coreContext, String bucketname, Credentials credentials) {
       this.coreContext = coreContext;
-      this.username = username;
+      this.credentials = credentials;
       this.bucketname = bucketname;
-      this.password = password;
     }
 
     @Override
@@ -79,7 +74,11 @@ public class KeyValueEndpoint extends BaseEndpoint {
       pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
 
       if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
-        pipeline.addLast(new SaslAuthenticationHandler(coreContext, username, password));
+        pipeline.addLast(new SaslAuthenticationHandler(
+          coreContext,
+          credentials.usernameForBucket(bucketname),
+          credentials.passwordForBucket(bucketname)
+        ));
       }
 
       pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));

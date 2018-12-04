@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.PartitionSelectionStrategy;
@@ -33,9 +34,8 @@ public class KeyValueService extends PooledService {
   private final CoreContext coreContext;
   private final NetworkAddress hostname;
   private final int port;
-  private final String username;
-  private final String password;
   private final String bucketname;
+  private final Credentials credentials;
 
   /**
    *
@@ -43,25 +43,23 @@ public class KeyValueService extends PooledService {
    * @param coreContext
    * @param hostname
    * @param port
-   * @param username
    * @param bucketname
-   * @param password
+   * @param credentials
    */
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
-                         final NetworkAddress hostname, final int port, final String username,
-                         final String bucketname, final String password) {
+                         final NetworkAddress hostname, final int port, final String bucketname,
+                         final Credentials credentials) {
     super(serviceConfig, new ServiceContext(coreContext, hostname, port));
     this.coreContext = coreContext;
     this.hostname = hostname;
     this.port = port;
     this.bucketname = bucketname;
-    this.username = username;
-    this.password = password;
+    this.credentials = credentials;
   }
 
   @Override
   protected Endpoint createEndpoint() {
-    return new KeyValueEndpoint(coreContext, hostname, port, username, bucketname, password);
+    return new KeyValueEndpoint(coreContext, hostname, port, bucketname, credentials);
   }
 
   @Override

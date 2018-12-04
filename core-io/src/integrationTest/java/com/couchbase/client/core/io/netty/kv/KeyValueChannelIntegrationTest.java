@@ -19,8 +19,8 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
@@ -58,7 +58,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create();
+    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
     coreContext = new CoreContext(1, env);
     eventLoopGroup = new NioEventLoopGroup(1);
   }
@@ -90,9 +90,8 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             coreContext,
-            config().adminUsername(),
             config().bucketname(),
-            config().adminPassword()
+            env.credentials()
           ).init(ch.pipeline());
         }
       });
@@ -121,9 +120,8 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             coreContext,
-            config().adminUsername(),
             config().bucketname(),
-            "djslkfsdfsoufhoshfoishgs"
+            new RoleBasedCredentials(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
           ).init(ch.pipeline());
         }
       });
@@ -143,9 +141,8 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             coreContext,
-            "vfwmf42343rew",
             config().bucketname(),
-            config().adminPassword()
+            new RoleBasedCredentials("vfwmf42343rew", config().adminPassword())
           ).init(ch.pipeline());
         }
       });
@@ -165,9 +162,8 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             coreContext,
-            config().adminUsername(),
             "42eredwefrfe",
-            config().adminPassword()
+            env.credentials()
           ).init(ch.pipeline());
         }
       });

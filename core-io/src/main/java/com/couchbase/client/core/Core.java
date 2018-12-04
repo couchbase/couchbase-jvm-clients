@@ -23,11 +23,22 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.node.KeyValueLocator;
+import com.couchbase.client.core.node.Locator;
+import com.couchbase.client.core.node.Node;
+import com.couchbase.client.core.service.ServiceType;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * The main entry point into the core layer.
@@ -44,6 +55,8 @@ public class Core {
    */
   private static final AtomicLong CORE_IDS = new AtomicLong();
 
+  private static final KeyValueLocator KEY_VALUE_LOCATOR = new KeyValueLocator();
+
   /**
    * Holds the current core context.
    */
@@ -54,6 +67,11 @@ public class Core {
    */
   private final ConfigurationProvider configurationProvider;
 
+  /**
+   * The list of currently managed nodes against the cluster.
+   */
+  private final CopyOnWriteArrayList<Node> nodes;
+
   public static Core create(final CoreEnvironment environment) {
     return new Core(environment);
   }
@@ -61,6 +79,7 @@ public class Core {
   private Core(final CoreEnvironment environment) {
     this.coreContext = new CoreContext(CORE_IDS.incrementAndGet(), environment);
     this.configurationProvider = configurationProvider();
+    this.nodes = new CopyOnWriteArrayList<>();
   }
 
   /**
@@ -75,7 +94,7 @@ public class Core {
   }
 
   public <R extends Response> void send(final Request<R> request) {
-    return;
+    locator(request.serviceType()).dispatch(request, nodes, null, context());
   }
 
   /**
@@ -106,11 +125,53 @@ public class Core {
   }
 
   /**
+   * This method can be used by a caller to make sure a certain service is enabled at the given
+   * target node.
+   *
+   * <p>This is advanced, internal functionality and should only be used if the caller knows
+   * what they are doing.</p>
+   *
+   * @param target the node to check.
+   * @param serviceType the service type to enable if not enabled already.
+   * @return a {@link Mono} which completes once initiated.
+   */
+  @Stability.Internal
+  public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType) {
+    return Flux
+      .fromIterable(nodes)
+      .filter(n -> n.address().equals(target))
+      .switchIfEmpty(Mono.defer(new Supplier<Mono< Node>>() {
+        @Override
+        public Mono<Node> get() {
+          // todo: create new node if it does not exist, and connect it
+          return Mono.just(new Node());
+        }
+      }))
+      .flatMap(new Function<Node, Publisher<Node>>() {
+        @Override
+        public Publisher<Node> apply(Node node) {
+          // todo: add services to that node which will connect automatically
+          return null;
+        }
+      })
+      .then();
+  }
+
+  /**
    * Shuts down this core and all associated, owned resources.
    */
   @Stability.Internal
   public Mono<Void> shutdown(final String name) {
     throw new UnsupportedOperationException("implement me!");
+  }
+
+  private static Locator locator(final ServiceType serviceType) {
+    switch (serviceType) {
+      case KV:
+        return KEY_VALUE_LOCATOR;
+      default:
+        throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
+    }
   }
 
 }

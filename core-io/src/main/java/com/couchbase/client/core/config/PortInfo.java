@@ -38,8 +38,8 @@ public class PortInfo {
     /**
      * Creates a new {@link PortInfo}.
      *
-     * Note that if the hostname is null (not provided by the server), it is explicitly set to null because otherwise
-     * the loaded InetAddress would point to localhost.
+     * <p>Note that if the hostname is null (not provided by the server), it is explicitly set to
+     * null because otherwise the loaded InetAddress would point to localhost.</p>
      *
      * @param services the list of services mapping to ports.
      */
@@ -51,7 +51,7 @@ public class PortInfo {
     ) {
         ports = new HashMap<>();
         sslPorts = new HashMap<>();
-        alternateAddresses = aa == null ? Collections.<String, AlternateAddress>emptyMap() : aa;
+        alternateAddresses = aa == null ? Collections.emptyMap() : aa;
         try {
             this.hostname = hostname == null ? null : NetworkAddress.create(hostname);
         } catch (Exception e) {
@@ -68,36 +68,50 @@ public class PortInfo {
      * @param ports the output direct ports
      * @param sslPorts the output ssl ports
      */
-    static void extractPorts(final Map<String, Integer> input, final Map<ServiceType, Integer> ports,
+    static void extractPorts(final Map<String, Integer> input,
+                             final Map<ServiceType, Integer> ports,
                              final Map<ServiceType, Integer> sslPorts) {
         for (Map.Entry<String, Integer> entry : input.entrySet()) {
             String service = entry.getKey();
             int port = entry.getValue();
-            if (service.equals("mgmt")) {
-                ports.put(ServiceType.CONFIG, port);
-            } else if (service.equals("capi")) {
-                ports.put(ServiceType.VIEWS, port);
-            } else if (service.equals("kv")) {
-                ports.put(ServiceType.KV, port);
-            } else if (service.equals("kvSSL")) {
-                sslPorts.put(ServiceType.KV, port);
-            } else if (service.equals("capiSSL")) {
-                sslPorts.put(ServiceType.VIEWS, port);
-            } else if (service.equals("mgmtSSL")) {
-                sslPorts.put(ServiceType.CONFIG, port);
-            } else if (service.equals("n1ql")) {
-                ports.put(ServiceType.QUERY, port);
-            } else if (service.equals("n1qlSSL")) {
-                sslPorts.put(ServiceType.QUERY, port);
-            } else if (service.equals("fts")) {
-                ports.put(ServiceType.SEARCH, port);
-            } else if (service.equals("ftsSSL")) {
-                sslPorts.put(ServiceType.SEARCH, port);
-            } else if (service.equals("cbas")) {
-                ports.put(ServiceType.ANALYTICS, port);
-            } else if (service.equals("cbasSSL")) {
-                sslPorts.put(ServiceType.ANALYTICS, port);
-            }
+          switch (service) {
+            case "mgmt":
+              ports.put(ServiceType.CONFIG, port);
+              break;
+            case "capi":
+              ports.put(ServiceType.VIEWS, port);
+              break;
+            case "kv":
+              ports.put(ServiceType.KV, port);
+              break;
+            case "kvSSL":
+              sslPorts.put(ServiceType.KV, port);
+              break;
+            case "capiSSL":
+              sslPorts.put(ServiceType.VIEWS, port);
+              break;
+            case "mgmtSSL":
+              sslPorts.put(ServiceType.CONFIG, port);
+              break;
+            case "n1ql":
+              ports.put(ServiceType.QUERY, port);
+              break;
+            case "n1qlSSL":
+              sslPorts.put(ServiceType.QUERY, port);
+              break;
+            case "fts":
+              ports.put(ServiceType.SEARCH, port);
+              break;
+            case "ftsSSL":
+              sslPorts.put(ServiceType.SEARCH, port);
+              break;
+            case "cbas":
+              ports.put(ServiceType.ANALYTICS, port);
+              break;
+            case "cbasSSL":
+              sslPorts.put(ServiceType.ANALYTICS, port);
+              break;
+          }
         }
     }
 
@@ -119,7 +133,7 @@ public class PortInfo {
 
     @Override
     public String toString() {
-        return "DefaultPortInfo{"
+        return "PortInfo{"
             + "ports=" + ports
             + ", sslPorts=" + sslPorts
             + ", hostname='" + hostname

@@ -17,10 +17,8 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
@@ -49,7 +47,7 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create();
+    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
     coreContext = new CoreContext(1, env);
   }
 
@@ -74,9 +72,8 @@ class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
       coreContext,
       NetworkAddress.create(node.hostname()),
       node.ports().get(ServiceType.KV),
-      config().adminUsername(),
       config().bucketname(),
-      config().adminPassword()
+      env.credentials()
     );
 
     endpoint.connect();

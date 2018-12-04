@@ -10,11 +10,14 @@ public class RoleBasedCredentials implements Credentials {
     this.password = password;
   }
 
-  public String username() {
+  @Override
+  public String usernameForBucket(String bucket) {
     return username;
   }
 
-  public String password() {
+  @Override
+  public String passwordForBucket(String bucket) {
     return password;
   }
+
 }

@@ -414,7 +414,11 @@ public enum MemcacheProtocol {
     /**
      * Subsequent steps in the SASL negotiation.
      */
-    SASL_STEP((byte) 0x22);
+    SASL_STEP((byte) 0x22),
+    /**
+     * Returns the current configuration for the bucket ("cccp").
+     */
+    GET_CONFIG((byte) 0xb5);
 
     private final byte opcode;
 

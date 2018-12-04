@@ -21,6 +21,7 @@ import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
@@ -66,4 +67,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
     return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(CharsetUtil.UTF_8);
   }
 
+  @Override
+  public ServiceType serviceType() {
+    return ServiceType.KV;
+  }
 }

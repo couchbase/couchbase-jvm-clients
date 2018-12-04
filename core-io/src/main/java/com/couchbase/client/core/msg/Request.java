@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.service.ServiceType;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -108,5 +110,12 @@ public interface Request<R extends Response> {
    * @return the cancellation reason if cancelled, null otherwise.
    */
   CancellationReason cancellationReason();
+
+  /**
+   * The service type of this request.
+   *
+   * @return the service type for this request.
+   */
+  ServiceType serviceType();
 
 }

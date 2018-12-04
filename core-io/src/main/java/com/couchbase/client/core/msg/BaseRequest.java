@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  *
  * @since 2.0.0
  */
-public class BaseRequest<R extends Response> implements Request<R> {
+public abstract class BaseRequest<R extends Response> implements Request<R> {
 
   /**
    * Generator for each request ID.

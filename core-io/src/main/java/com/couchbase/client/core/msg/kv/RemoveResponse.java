@@ -5,7 +5,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 public class RemoveResponse extends BaseResponse {
 
-  public RemoveResponse(ResponseStatus status) {
+  RemoveResponse(ResponseStatus status) {
     super(status);
   }
 }

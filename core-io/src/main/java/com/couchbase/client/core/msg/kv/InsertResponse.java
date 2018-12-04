@@ -5,7 +5,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 public class InsertResponse extends BaseResponse {
 
-  public InsertResponse(ResponseStatus status) {
+  InsertResponse(ResponseStatus status) {
     super(status);
   }
 }
