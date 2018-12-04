@@ -42,6 +42,11 @@ public enum CancellationReason {
   CANCELLED_VIA_CONTEXT,
 
   /**
+   * The retry strategy decided that no more retries were allowed/possible.
+   */
+  NO_MORE_RETRIES,
+
+  /**
    * For a different reason. Make sure to emit an event so that debugging provides
    * further context.
    */

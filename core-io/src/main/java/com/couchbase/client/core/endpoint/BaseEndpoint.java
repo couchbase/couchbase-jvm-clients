@@ -28,6 +28,7 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -287,7 +288,7 @@ public abstract class BaseEndpoint implements Endpoint {
         circuitBreaker.track(request.response());
         channel.writeAndFlush(request);
     } else {
-      // TODO: what to do if not connected, active or writable or circuit open
+      RetryOrchestrator.maybeRetry(endpointContext, request);
     }
   }
 

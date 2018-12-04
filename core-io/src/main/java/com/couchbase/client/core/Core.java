@@ -77,7 +77,7 @@ public class Core {
   }
 
   private Core(final CoreEnvironment environment) {
-    this.coreContext = new CoreContext(CORE_IDS.incrementAndGet(), environment);
+    this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
     this.configurationProvider = configurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
   }
@@ -94,6 +94,16 @@ public class Core {
   }
 
   public <R extends Response> void send(final Request<R> request) {
+    send(request, true);
+  }
+
+  @Stability.Internal
+  @SuppressWarnings({"unchecked"})
+  public <R extends Response> void send(final Request<R> request, boolean registerForTimeout) {
+    if (registerForTimeout) {
+      context().environment().timer().register((Request<Response>) request);
+    }
+
     locator(request.serviceType()).dispatch(request, nodes, null, context());
   }
 

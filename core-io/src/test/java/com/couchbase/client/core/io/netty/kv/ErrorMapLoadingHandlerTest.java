@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
@@ -75,7 +76,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    coreContext = new CoreContext(1, env);
+    coreContext = new CoreContext(mock(Core.class), 1, env);
   }
 
   @AfterEach
@@ -118,7 +119,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(100));
-    coreContext = new CoreContext(1, env);
+    coreContext = new CoreContext(mock(Core.class), 1, env);
 
     ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
 

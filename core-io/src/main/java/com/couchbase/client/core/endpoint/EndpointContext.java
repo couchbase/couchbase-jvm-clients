@@ -47,7 +47,7 @@ public class EndpointContext extends CoreContext {
    */
   public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
                          CircuitBreaker circuitBreaker) {
-    super(ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
     this.circuitBreaker = circuitBreaker;

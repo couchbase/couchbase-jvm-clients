@@ -34,7 +34,7 @@ public class ServiceContext extends CoreContext {
   private int remotePort;
 
   public ServiceContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort) {
-    super(ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
   }

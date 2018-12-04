@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
@@ -87,7 +88,7 @@ class FeatureNegotiatingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    coreContext = new CoreContext(1, env);
+    coreContext = new CoreContext(mock(Core.class), 1, env);
   }
 
   @AfterEach

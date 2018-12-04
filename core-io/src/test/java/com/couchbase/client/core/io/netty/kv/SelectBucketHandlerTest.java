@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
@@ -70,7 +71,7 @@ class SelectBucketHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(10));
-    coreContext = new CoreContext(1, env);
+    coreContext = new CoreContext(mock(Core.class), 1, env);
   }
 
   @AfterEach

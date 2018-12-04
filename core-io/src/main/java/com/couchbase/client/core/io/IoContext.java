@@ -42,7 +42,7 @@ public class IoContext extends CoreContext {
    */
   public IoContext(final CoreContext ctx, final SocketAddress localSocket,
                    final SocketAddress remoteSocket) {
-    super(ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment());
     this.localSocket = localSocket;
     this.remoteSocket = remoteSocket;
   }

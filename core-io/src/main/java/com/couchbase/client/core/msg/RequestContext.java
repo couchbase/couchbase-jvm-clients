@@ -57,7 +57,7 @@ public class RequestContext extends CoreContext {
    */
   @Stability.Internal
   public RequestContext(CoreContext ctx, final Request<? extends Response> request) {
-    super(ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment());
     this.request = request;
     this.retryAttempts = new AtomicInteger(0);
   }
@@ -115,10 +115,15 @@ public class RequestContext extends CoreContext {
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("requestId", request.id());
+    input.put("retried", retryAttempts());
+    input.put("completed", request.completed());
+    if (request.cancelled()) {
+      input.put("cancelled", true);
+      input.put("reason", request.cancellationReason());
+    }
     if (payload != null) {
       input.put("payload", payload);
     }
-    input.put("retried", retryAttempts());
   }
 
   /**

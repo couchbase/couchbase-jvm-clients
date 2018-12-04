@@ -17,10 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.sun.org.apache.regexp.internal.RE;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;

@@ -17,8 +17,8 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import org.apache.logging.log4j.core.Core;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -39,7 +39,8 @@ class RequestContextTest {
   @Test
   void requestCancellation() {
     Request<?> request = mock(Request.class);
-    RequestContext ctx = new RequestContext(new CoreContext(1, null), request);
+    Core core = mock(Core.class);
+    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null), request);
 
     ctx.cancel();
     verify(request, times(1)).cancel(CancellationReason.CANCELLED_VIA_CONTEXT);
@@ -48,7 +49,8 @@ class RequestContextTest {
   @Test
   void customPayloadCanBeAttached() {
     Request<?> request = mock(Request.class);
-    RequestContext ctx = new RequestContext(new CoreContext(1, null), request);
+    Core core = mock(Core.class);
+    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null), request);
     assertNull(ctx.payload());
 
     Map<String, Object> payload = new HashMap<>();

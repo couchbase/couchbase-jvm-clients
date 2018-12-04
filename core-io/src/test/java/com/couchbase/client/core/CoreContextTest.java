@@ -32,8 +32,10 @@ class CoreContextTest {
   void getAndExportProperties() {
     long id = 12345;
     CoreEnvironment env = mock(CoreEnvironment.class);
-    CoreContext ctx = new CoreContext(id, env);
+    Core core = mock(Core.class);
+    CoreContext ctx = new CoreContext(core, id, env);
 
+    assertEquals(core, ctx.core());
     assertEquals(id, ctx.id());
     assertEquals(env, ctx.environment());
 

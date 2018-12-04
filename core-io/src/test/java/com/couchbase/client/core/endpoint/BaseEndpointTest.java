@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
@@ -81,7 +82,7 @@ class BaseEndpointTest {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
-    ctx = new CoreContext(1, environment);
+    ctx = new CoreContext(mock(Core.class), 1, environment);
   }
 
   @AfterEach
@@ -122,7 +123,7 @@ class BaseEndpointTest {
         .connectTimeout(Duration.ofMillis(10))
         .build())
       .build();
-    CoreContext ctx = new CoreContext(1, env);
+    CoreContext ctx = new CoreContext(mock(Core.class), 1, env);
 
     try {
       final CompletableFuture<Channel> cf = new CompletableFuture<>();
@@ -244,7 +245,7 @@ class BaseEndpointTest {
         .connectTimeout(Duration.ofMillis(10))
         .build())
       .build();
-    CoreContext ctx = new CoreContext(1, env);
+    CoreContext ctx = new CoreContext(mock(Core.class), 1, env);
 
     try {
       final CompletableFuture<Channel> cf = new CompletableFuture<>();

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiated;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiated;
@@ -62,7 +63,7 @@ class PooledServiceTest {
   void setup() {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
-    CoreContext coreContext = new CoreContext(1, environment);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
     serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234);
   }
 

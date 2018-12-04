@@ -40,14 +40,20 @@ public class CoreContext extends AbstractContext {
   private final CoreEnvironment env;
 
   /**
+   * Back reference to the core itself.
+   */
+  private final Core core;
+
+  /**
   * Creates a new {@link CoreContext}.
   *
   * @param id the core id.
   * @param env the core environment.
   */
-  public CoreContext(final long id, final CoreEnvironment env) {
+  public CoreContext(final Core core, final long id, final CoreEnvironment env) {
     this.id = id;
     this.env = env;
+    this.core = core;
   }
 
   /**
@@ -66,6 +72,10 @@ public class CoreContext extends AbstractContext {
    */
   public CoreEnvironment environment() {
     return env;
+  }
+
+  public Core core() {
+    return core;
   }
 
   @Override
