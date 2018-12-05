@@ -144,13 +144,13 @@ class QueryMessageHandlerBackpressureTest {
                   HttpVersion.HTTP_1_1,
                   HttpResponseStatus.OK
                 );
-                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, "{\"results\": [{},{}]}".length());
                 ctx.write(response);
                 ctx.write(new DefaultHttpContent(
-                  Unpooled.copiedBuffer("a", CharsetUtil.UTF_8)
+                  Unpooled.copiedBuffer("{\"results\": [{},", CharsetUtil.UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultLastHttpContent(
-                  Unpooled.copiedBuffer("b", CharsetUtil.UTF_8)
+                  Unpooled.copiedBuffer("{}]}", CharsetUtil.UTF_8)
                 ));
               }
             });

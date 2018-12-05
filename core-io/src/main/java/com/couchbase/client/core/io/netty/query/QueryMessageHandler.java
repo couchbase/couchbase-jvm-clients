@@ -19,6 +19,10 @@ package com.couchbase.client.core.io.netty.query;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
+import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
+import com.couchbase.client.core.util.yasjl.JsonPointer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -27,6 +31,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
+import java.io.EOFException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -40,6 +45,19 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   private QueryRequest currentRequest;
   private QueryResponse currentResponse;
   private final AtomicLong toRead;
+  private ByteBuf responseContent;
+
+  private ByteBufJsonParser parser = new ByteBufJsonParser(new JsonPointer[] {
+    new JsonPointer("/results/-", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        byte[] data = new byte[value.readableBytes()];
+        value.readBytes(data);
+        value.release();
+        currentResponse.consumer().accept(new QueryResponse.Row(QueryResponse.RowType.ROW, data));
+      }
+    })
+  });
 
   public QueryMessageHandler() {
     toRead = new AtomicLong(0);
@@ -48,6 +66,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ctx.fireChannelActive();
+    responseContent = ctx.alloc().buffer();
+    parser.initialize(responseContent);
   }
 
   @Override
@@ -74,16 +94,20 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       currentRequest.succeed(currentResponse);
       ctx.channel().config().setAutoRead(false);
     } else if (msg instanceof HttpContent) {
-      HttpContent content = (HttpContent) msg;
       boolean last = msg instanceof LastHttpContent;
+      responseContent.writeBytes(((HttpContent) msg).content());
 
-      // todo: this needs to be fed through the streaming parser !! ...
-      byte[] chunk = new byte[content.content().readableBytes()];
-      content.content().readBytes(chunk);
-      currentResponse.consumer().accept(new QueryResponse.Row(QueryResponse.RowType.ROW, chunk));
+      try {
+        parser.parse();
+        //discard only if EOF is not thrown
+        responseContent.discardReadBytes();
+      } catch (EOFException e) {
+        // ignore, we are waiting for more data.
+      }
 
       if (last) {
         currentResponse.consumer().accept(new QueryResponse.Row(QueryResponse.RowType.END, null));
+        responseContent.clear();
       } else {
         if (toRead.decrementAndGet() <= 0) {
           ctx.channel().config().setAutoRead(false);
