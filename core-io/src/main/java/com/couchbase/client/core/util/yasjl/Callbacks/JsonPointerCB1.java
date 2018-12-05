@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.core.util.yasjl.Callbacks;
 
-public class QueryResult {
+import io.netty.buffer.ByteBuf;
 
-  private final AsyncQueryResult asyncQueryResult;
-
-  public QueryResult(AsyncQueryResult asyncQueryResult) {
-    this.asyncQueryResult = asyncQueryResult;
-  }
+/**
+ * @author Subhashni Balakrishnan
+ */
+public interface JsonPointerCB1 extends JsonPointerCB {
+    void call(ByteBuf value);
 }

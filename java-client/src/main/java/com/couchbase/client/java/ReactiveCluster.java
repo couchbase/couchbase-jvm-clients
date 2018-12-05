@@ -18,12 +18,22 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.search.ReactiveSearchResult;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class ReactiveCluster {
 
@@ -61,12 +71,41 @@ public class ReactiveCluster {
     return asyncCluster;
   }
 
-  public Mono<QueryResult> query(final String statement) {
+  public Mono<ReactiveQueryResult> query(final String statement) {
+    return query(statement, QueryOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "QueryOptions");
+
     return null;
   }
 
-  public Mono<QueryResult> query(final String statement, final QueryOptions options) {
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "AnalyticsOptions");
+
     return null;
+  }
+
+  public Mono<ReactiveSearchResult> searchQuery(final SearchQuery query) {
+    return searchQuery(query, SearchOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveSearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SearchQuery");
+    notNull(options, "SearchOptions");
+
+    return null;
+  }
+
+  public Mono<ReactiveBucket> bucket(String name) {
+    return Mono.fromFuture(asyncCluster.bucket(name)).map(ReactiveBucket::new);
   }
 
   public Mono<Void> shutdown() {

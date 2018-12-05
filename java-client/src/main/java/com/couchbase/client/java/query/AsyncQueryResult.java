@@ -16,11 +16,5 @@
 
 package com.couchbase.client.java.query;
 
-public class QueryResult {
-
-  private final AsyncQueryResult asyncQueryResult;
-
-  public QueryResult(AsyncQueryResult asyncQueryResult) {
-    this.asyncQueryResult = asyncQueryResult;
-  }
+public class AsyncQueryResult {
 }

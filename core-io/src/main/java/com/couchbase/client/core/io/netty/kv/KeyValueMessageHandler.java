@@ -33,8 +33,8 @@ import io.netty.util.collection.IntObjectMap;
 import java.util.List;
 
 /**
- * This handler is responsible for encoding KV requests and completing them once
- * a response arrives.
+ * This handler is responsible for writing KV requests and completing their associated responses
+ * once they arrive.
  *
  * @since 2.0.0
  */

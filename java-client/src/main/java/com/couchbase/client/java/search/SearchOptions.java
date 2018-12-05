@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.search;
 
-public class QueryResult {
+import com.couchbase.client.java.CommonOptions;
 
-  private final AsyncQueryResult asyncQueryResult;
+public class SearchOptions extends CommonOptions<SearchOptions> {
 
-  public QueryResult(AsyncQueryResult asyncQueryResult) {
-    this.asyncQueryResult = asyncQueryResult;
-  }
+  public static SearchOptions DEFAULT = new SearchOptions();
+
+  private SearchOptions() {}
+
 }

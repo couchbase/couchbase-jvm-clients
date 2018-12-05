@@ -16,27 +16,12 @@
 
 package com.couchbase.client.java.query;
 
-import java.time.Duration;
+import com.couchbase.client.java.CommonOptions;
 
-public class QueryOptions {
+public class QueryOptions extends CommonOptions<QueryOptions> {
 
   public static QueryOptions DEFAULT = new QueryOptions();
 
-  /**
-   * Optionally set if a custom timeout is provided.
-   */
-  private Duration timeout;
-
   private QueryOptions() {}
-
-  public QueryOptions timeout(final Duration timeout) {
-    this.timeout = timeout;
-    return this;
-  }
-
-  public Duration timeout() {
-    return timeout;
-  }
-
 
 }

@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.search;
 
-public class QueryResult {
-
-  private final AsyncQueryResult asyncQueryResult;
-
-  public QueryResult(AsyncQueryResult asyncQueryResult) {
-    this.asyncQueryResult = asyncQueryResult;
-  }
+public class ReactiveSearchResult {
 }

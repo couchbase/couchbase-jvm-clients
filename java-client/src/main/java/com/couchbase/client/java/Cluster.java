@@ -18,9 +18,14 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.SearchResult;
 
 import java.util.function.Supplier;
 
@@ -65,11 +70,27 @@ public class Cluster {
   }
 
   public QueryResult query(final String statement) {
-    return block(async().query(statement));
+    return new QueryResult(block(async().query(statement)));
   }
 
   public QueryResult query(final String statement, final QueryOptions options) {
-    return block(async().query(statement, options));
+    return new QueryResult(block(async().query(statement, options)));
+  }
+
+  public AnalyticsResult analyticsQuery(final String statement) {
+    return new AnalyticsResult(block(async().analyticsQuery(statement)));
+  }
+
+  public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
+    return new AnalyticsResult(block(async().analyticsQuery(statement, options)));
+  }
+
+  public SearchResult searchQuery(final SearchQuery query) {
+    return new SearchResult(block(async().searchQuery(query)));
+  }
+
+  public SearchResult searchQuery(final SearchQuery query, final SearchOptions options) {
+    return new SearchResult(block(async().searchQuery(query, options)));
   }
 
   public Bucket bucket(String name) {

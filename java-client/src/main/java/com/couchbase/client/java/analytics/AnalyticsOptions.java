@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.analytics;
 
-public class QueryResult {
+import com.couchbase.client.java.CommonOptions;
 
-  private final AsyncQueryResult asyncQueryResult;
+public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
-  public QueryResult(AsyncQueryResult asyncQueryResult) {
-    this.asyncQueryResult = asyncQueryResult;
-  }
+  public static AnalyticsOptions DEFAULT = new AnalyticsOptions();
+
+  private AnalyticsOptions() {}
+
 }

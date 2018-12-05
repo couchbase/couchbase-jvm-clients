@@ -19,15 +19,26 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AnalyticsResult;
+import com.couchbase.client.java.analytics.AsyncAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.AsyncSearchResult;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.SearchResult;
 import reactor.core.publisher.Mono;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class AsyncCluster {
 
@@ -60,11 +71,37 @@ public class AsyncCluster {
     this.core = Core.create(environment.get());
   }
 
-  public CompletableFuture<QueryResult> query(final String statement) {
+  public CompletableFuture<AsyncQueryResult> query(final String statement) {
     return query(statement, QueryOptions.DEFAULT);
   }
 
-  public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
+  public CompletableFuture<AsyncQueryResult> query(final String statement, final QueryOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "QueryOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement,
+                                                           final AnalyticsOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "AnalyticsOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<AsyncSearchResult> searchQuery(final SearchQuery query) {
+    return searchQuery(query, SearchOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncSearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SearchQuery");
+    notNull(options, "SearchOptions");
+
     return null;
   }
 
@@ -76,6 +113,7 @@ public class AsyncCluster {
   }
 
   public CompletableFuture<Void> shutdown() {
+
     // TODO: implement me!
     return null;
   }
