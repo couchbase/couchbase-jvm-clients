@@ -32,25 +32,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Subhashni Balakrishnan
  */
-public class SimpleParserTest {
+class SimpleParserTest {
 
     static {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
 
 
-    public Map<String, Object> writeSimpleJsonAndParse(String path) throws Exception {
+    private Map<String, Object> writeSimpleJsonAndParse(String path) {
         ByteBuf inBuf = Unpooled.buffer();
 
         final Map<String, Object> results = new HashMap<String, Object>();
         final int[] parseCount = new int[1];
         parseCount[0] = 0;
-        JsonPointer[] jp = { new JsonPointer(path, new JsonPointerCB1() {
-            public void call(ByteBuf buf) {
-                results.put("value", buf.toString(Charset.defaultCharset()));
-                results.put("parseCount", parseCount[0]);
-                buf.release();
-            }
+        JsonPointer[] jp = { new JsonPointer(path, (JsonPointerCB1) buf -> {
+            results.put("value", buf.toString(Charset.defaultCharset()));
+            results.put("parseCount", parseCount[0]);
+            buf.release();
         })};
         ByteBufJsonParser parser = new ByteBufJsonParser(jp);
         parser.initialize(inBuf);
@@ -142,35 +140,35 @@ public class SimpleParserTest {
     }
 
     @Test
-    void testJsonArrayPointerValue() throws Exception {
+    void testJsonArrayPointerValue() {
         Map<String, Object> results = writeSimpleJsonAndParse("/foo");
         assertEquals("[\"bar\", \"baz\"]", results.get("value").toString());
         assertEquals(1, results.get("parseCount"));
     }
 
     @Test
-    void testJsonArrayElementPointerValue() throws Exception {
+    void testJsonArrayElementPointerValue() {
         Map<String, Object> results = writeSimpleJsonAndParse("/foo/0");
         assertEquals("\"bar\"", results.get("value").toString());
         assertEquals(1, results.get("parseCount"));
     }
 
     @Test
-    void testEscapedPathValue() throws Exception {
+    void testEscapedPathValue() {
         Map<String, Object> results = writeSimpleJsonAndParse("/a~1b");
         assertEquals("1", results.get("value").toString());
         assertEquals(3, results.get("parseCount"));
     }
 
     @Test
-    void testSpecialCharPathValue_1() throws Exception {
+    void testSpecialCharPathValue_1() {
         Map<String, Object> results = writeSimpleJsonAndParse("/c%d");
         assertEquals("2", results.get("value").toString());
         assertEquals(4, results.get("parseCount"));
     }
 
     @Test
-    void testSpecialCharPathValue_2() throws Exception {
+    void testSpecialCharPathValue_2() {
         Map<String, Object> results = writeSimpleJsonAndParse("/e^f");
         assertEquals("3", results.get("value").toString());
         assertEquals(5, results.get("parseCount"));
@@ -178,28 +176,28 @@ public class SimpleParserTest {
 
 
     @Test
-    void testSpecialCharPathValue_3() throws Exception {
+    void testSpecialCharPathValue_3() {
         Map<String, Object> results = writeSimpleJsonAndParse("/g|h");
         assertEquals("4", results.get("value").toString());
         assertEquals(6, results.get("parseCount"));
     }
 
     @Test
-    void testSpecialCharPathValue_4() throws Exception {
+    void testSpecialCharPathValue_4() {
         Map<String, Object> results = writeSimpleJsonAndParse("/i\\j");
         assertEquals("5", results.get("value").toString());
         assertEquals(7, results.get("parseCount"));
     }
 
     @Test
-    void testSpecialCharPathValue_5() throws Exception {
+    void testSpecialCharPathValue_5() {
         Map<String, Object> results = writeSimpleJsonAndParse("/k\\\"l");
         assertEquals("6", results.get("value").toString());
         assertEquals(8, results.get("parseCount"));
     }
 
     @Test
-    void testSpecialCharPathValue_6() throws Exception {
+    void testSpecialCharPathValue_6() {
         Map<String, Object> results = writeSimpleJsonAndParse("/ ");
         assertEquals("7", results.get("value").toString());
         assertEquals(9, results.get("parseCount"));
@@ -207,7 +205,7 @@ public class SimpleParserTest {
 
 
     @Test
-    void testSpecialCharPathValue_7() throws Exception {
+    void testSpecialCharPathValue_7() {
         Map<String, Object> results = writeSimpleJsonAndParse("/m~n");
         assertEquals("8", results.get("value").toString());
         assertEquals(10, results.get("parseCount"));

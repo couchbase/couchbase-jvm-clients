@@ -17,7 +17,6 @@
 package com.couchbase.client.core.util.yasjl;
 
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
-import io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -52,14 +51,8 @@ class JsonPointerTest {
 
     @Test
     void shouldSetCallback() {
-        JsonPointerCB1 cb1 = new JsonPointerCB1() {
-            @Override
-            public void call(ByteBuf value) { }
-        };
-        JsonPointerCB1 cb2 = new JsonPointerCB1() {
-            @Override
-            public void call(ByteBuf value) { }
-        };
+        JsonPointerCB1 cb1 = value -> { };
+        JsonPointerCB1 cb2 = value -> { };
         JsonPointer jp = new JsonPointer("/", cb1);
         assertEquals(cb1, jp.jsonPointerCB());
 
@@ -81,7 +74,7 @@ class JsonPointerTest {
     void shouldReturnStringRepresentation() {
         assertEquals("JsonPointer{path=}", new JsonPointer().toString());
         assertEquals("JsonPointer{path=/foo/bar}", new JsonPointer("/foo/bar").toString());
-        assertEquals("JsonPointer{path=}", new JsonPointer(new ArrayList<String>()).toString());
+        assertEquals("JsonPointer{path=}", new JsonPointer(new ArrayList<>()).toString());
     }
 
     @Test
