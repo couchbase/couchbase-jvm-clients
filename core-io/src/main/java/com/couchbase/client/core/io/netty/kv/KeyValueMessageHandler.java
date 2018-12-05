@@ -58,7 +58,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * Holds all outstanding requests based on their opaque.
    */
-  private final IntObjectMap<KeyValueRequest> writtenRequests;
+  private final IntObjectMap<KeyValueRequest<Response>> writtenRequests;
 
   /**
    * Holds the start timestamps for the outstanding dispatched requests.
@@ -153,7 +153,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
     int opaque = MemcacheProtocol.opaque(response);
-    KeyValueRequest request = writtenRequests.remove(opaque);
+    KeyValueRequest<Response> request = writtenRequests.remove(opaque);
     if (request == null) {
       // todo: this is a problem! no request found with the opaque for a given
       // todo: response.. server error? ignore the request and release its resources

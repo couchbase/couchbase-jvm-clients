@@ -16,17 +16,19 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.kv.ReadResult;
-import com.couchbase.client.java.kv.MutationOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.ReadOptions;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutationSpec;
-import com.couchbase.client.java.kv.ReadSpec;
+import com.couchbase.client.java.kv.MutateSpec;
+import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
@@ -82,10 +84,10 @@ public class Collection {
    * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @return a {@link ReadResult} once the document has been loaded.
+   * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<ReadResult> read(final String id) {
-    return block(async().read(id));
+  public Optional<GetResult> get(final String id) {
+    return block(async().get(id));
   }
 
   /**
@@ -96,18 +98,39 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
-   * @return a {@link ReadResult} once the document has been loaded.
+   * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<ReadResult> read(final String id, final ReadOptions options) {
-    return block(async().read(id, options));
+  public Optional<GetResult> get(final String id, final GetOptions options) {
+    return block(async().get(id, options));
   }
 
-  public Optional<ReadResult> read(final String id, final ReadSpec spec) {
-    return block(async().read(id, spec));
+  /**
+   * Fetches parts of a document with default options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param spec the spec which allows to configure what should be loaded.
+   * @return a {@link GetResult} once the document has been loaded.
+   */
+  public Optional<GetResult> get(final String id, final GetSpec spec) {
+    return block(async().get(id, spec));
   }
 
-  public Optional<ReadResult> read(final String id, final ReadSpec spec, final ReadOptions options) {
-    return block(async().read(id, spec, options));
+  /**
+   * Fetches parts of a document with custom options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param spec the spec which allows to configure what should be loaded.
+   * @param options custom options to change the default behavior.
+   * @return a {@link GetResult} once the document has been loaded.
+   */
+  public Optional<GetResult> get(final String id, final GetSpec spec, final GetOptions options) {
+    return block(async().get(id, spec, options));
   }
 
   /**
@@ -155,6 +178,29 @@ public class Collection {
   }
 
   /**
+   * Upserts a full document which might or might not exist yet with default options.
+   *
+   * @param id the document id to upsert.
+   * @param content the document content to upsert.
+   * @return a {@link MutationResult} once upserted.
+   */
+  public MutationResult upsert(final String id, final Object content) {
+    return block(async().upsert(id, content));
+  }
+
+  /**
+   * Upserts a full document which might or might not exist yet with custom options.
+   *
+   * @param id the document id to upsert.
+   * @param content the document content to upsert.
+   * @param options custom options to customize the upsert behavior.
+   * @return a {@link MutationResult} once upserted.
+   */
+  public MutationResult upsert(final String id, final Object content, final UpsertOptions options) {
+    return block(async().upsert(id, content, options));
+  }
+
+  /**
    * Replaces a full document which already exists with default options.
    *
    * @param id the document id to replace.
@@ -177,7 +223,6 @@ public class Collection {
     return block(async().replace(id, content, options));
   }
 
-
   /**
    * Performs mutations to document fragments with default options.
    *
@@ -185,8 +230,8 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationSpec spec) {
-    return block(async().mutateIn(id, spec));
+  public MutationResult mutate(final String id, final MutateSpec spec) {
+    return block(async().mutate(id, spec));
   }
 
   /**
@@ -197,9 +242,9 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutationSpec spec,
-                                 final MutationOptions options) {
-    return block(async().mutateIn(id, spec, options));
+  public MutationResult mutate(final String id, final MutateSpec spec,
+                                 final MutateOptions options) {
+    return block(async().mutate(id, spec, options));
   }
 
 }

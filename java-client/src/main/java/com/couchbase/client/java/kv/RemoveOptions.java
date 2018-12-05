@@ -16,14 +16,15 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.java.CommonOptions;
+
 import java.time.Duration;
 import java.util.Optional;
 
-public class RemoveOptions {
+public class RemoveOptions extends CommonOptions<RemoveOptions> {
 
   public static RemoveOptions DEFAULT = new RemoveOptions();
 
-  private Duration timeout;
   private Duration expiry;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
@@ -33,16 +34,6 @@ public class RemoveOptions {
 
   public static RemoveOptions removeOptions() {
     return new RemoveOptions();
-  }
-
-
-  public Duration timeout() {
-    return timeout;
-  }
-
-  public RemoveOptions timeout(final Duration timeout) {
-    this.timeout = timeout;
-    return this;
   }
 
   public Duration expiry() {

@@ -21,21 +21,26 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.kv.ReadResult;
+import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
-import com.couchbase.client.java.kv.MutationOptions;
+import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationSpec;
-import com.couchbase.client.java.kv.ReadSpec;
+import com.couchbase.client.java.kv.MutateSpec;
+import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
-import com.couchbase.client.java.kv.ReadOptions;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
+import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.UpsertAccessor;
+import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -85,6 +90,9 @@ public class AsyncCollection {
    */
   private final String scope;
 
+  /**
+   * The name of the bucket.
+   */
   private final String bucket;
 
   /**
@@ -95,8 +103,8 @@ public class AsyncCollection {
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  public AsyncCollection(final String name, final String scope, final String bucket, final Core core,
-                  final ClusterEnvironment environment) {
+  public AsyncCollection(final String name, final String scope, final String bucket,
+                         final Core core, final ClusterEnvironment environment) {
     this.name = name;
     this.scope = scope;
     this.core = core;
@@ -120,6 +128,15 @@ public class AsyncCollection {
   }
 
   /**
+   * The name of the collection in use.
+   *
+   * @return the name of the collection.
+   */
+  public String name() {
+    return name;
+  }
+
+  /**
    * Fetches a full Document from a collection with default options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
@@ -128,8 +145,8 @@ public class AsyncCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
-  public CompletableFuture<Optional<ReadResult>> read(final String id) {
-    return read(id, ReadSpec.FULL_DOC, ReadOptions.DEFAULT);
+  public CompletableFuture<Optional<GetResult>> get(final String id) {
+    return get(id, GetOptions.DEFAULT);
   }
 
   /**
@@ -142,28 +159,54 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadOptions options) {
-    return read(id, ReadSpec.FULL_DOC, options);
-  }
-
-  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadSpec spec) {
-    return read(id, spec, ReadOptions.DEFAULT);
-  }
-
-  public CompletableFuture<Optional<ReadResult>> read(final String id, final ReadSpec spec,
-                                                      final ReadOptions options) {
+  public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
-    // TODO: fold subdoc in here
     if (options.withExpiration()) {
-      throw new UnsupportedOperationException("this needs a subdoc fetch, not implemented yet.");
-    } else {
-      Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-      RetryStrategy retryStrategy = environment.retryStrategy();
-      GetRequest request = new GetRequest(id, timeout, coreContext, bucket, retryStrategy);
-      return GetAccessor.get(core, id, request);
+      throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
     }
+
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    GetRequest request = new GetRequest(id, timeout, coreContext, bucket, retryStrategy);
+    return GetAccessor.get(core, id, request);
+  }
+
+  /**
+   * Fetches parts of a document with default options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param spec the spec which allows to configure what should be loaded.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
+  public CompletableFuture<Optional<GetResult>> get(final String id, final GetSpec spec) {
+    return get(id, spec, GetOptions.DEFAULT);
+  }
+
+  /**
+   * Fetches parts of a document with custom options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param spec the spec which allows to configure what should be loaded.
+   * @param options custom options to change the default behavior.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
+  public CompletableFuture<Optional<GetResult>> get(final String id, final GetSpec spec,
+                                                    final GetOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(spec, "GetSpec");
+    notNull(options, "GetOptions");
+
+    throw new UnsupportedOperationException("Implement me -> subdoc get");
   }
 
   /**
@@ -188,7 +231,9 @@ public class AsyncCollection {
     notNull(options, "RemoveOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = environment.retryStrategy();
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
     RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext, bucket, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
@@ -219,7 +264,9 @@ public class AsyncCollection {
     notNull(options, "InsertOptions");
 
     EncodedDocument encoded = options.encoder().encode(content);
-    RetryStrategy retryStrategy = environment.retryStrategy();
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
 
     InsertRequest request = new InsertRequest(
       id,
@@ -233,6 +280,50 @@ public class AsyncCollection {
     );
 
     return InsertAccessor.insert(core, request);
+  }
+
+  /**
+   * Upserts a full document which might or might not exist yet with default options.
+   *
+   * @param id the document id to upsert.
+   * @param content the document content to upsert.
+   * @return a {@link CompletableFuture} completing once upserted or failed.
+   */
+  public CompletableFuture<MutationResult> upsert(final String id, Object content) {
+    return upsert(id, content, UpsertOptions.DEFAULT);
+  }
+
+  /**
+   * Upserts a full document which might or might not exist yet with custom options.
+   *
+   * @param id the document id to upsert.
+   * @param content the document content to upsert.
+   * @param options custom options to customize the upsert behavior.
+   * @return a {@link CompletableFuture} completing once upserted or failed.
+   */
+  public CompletableFuture<MutationResult> upsert(final String id, Object content,
+                                                  final UpsertOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "UpsertOptions");
+
+    EncodedDocument encoded = options.encoder().encode(content);
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+
+    UpsertRequest request = new UpsertRequest(
+      id,
+      encoded.content(),
+      options.expiry().getSeconds(),
+      encoded.flags(),
+      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
+      coreContext,
+      bucket,
+      retryStrategy
+    );
+
+    return UpsertAccessor.upsert(core, request);
   }
 
   /**
@@ -255,13 +346,28 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once replaced or failed.
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content,
-                                                  final ReplaceOptions options) {
+                                                   final ReplaceOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "ReplaceOptions");
 
-    // TODO:
-    return null;
+    EncodedDocument encoded = options.encoder().encode(content);
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+
+    ReplaceRequest request = new ReplaceRequest(
+      id,
+      encoded.content(),
+      options.expiry().getSeconds(),
+      encoded.flags(),
+      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
+      options.cas(),
+      coreContext,
+      bucket,
+      retryStrategy
+    );
+    return ReplaceAccessor.replace(core, request);
   }
 
   /**
@@ -271,8 +377,8 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec) {
-    return mutateIn(id, spec, MutationOptions.DEFAULT);
+  public CompletableFuture<MutationResult> mutate(final String id, final MutateSpec spec) {
+    return mutate(id, spec, MutateOptions.DEFAULT);
   }
 
   /**
@@ -283,16 +389,13 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutationSpec spec,
-                                                    final MutationOptions options) {
+  public CompletableFuture<MutationResult> mutate(final String id, final MutateSpec spec,
+                                                  final MutateOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "MutationSpec");
-    notNull(options, "MutationOptions");
+    notNull(spec, "MutateSpec");
+    notNull(options, "MutateOptions");
 
-    // TODO: fixme.. this is just mocking
-    CompletableFuture<MutationResult> f = new CompletableFuture<>();
-    f.complete(new MutationResult(0, Optional.empty()));
-    return f;
+    throw new UnsupportedOperationException("Implement me -> subdoc mutate");
   }
 
 }

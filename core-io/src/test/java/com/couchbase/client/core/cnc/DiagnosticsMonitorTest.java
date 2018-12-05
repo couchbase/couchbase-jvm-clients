@@ -21,6 +21,7 @@ import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -44,7 +45,7 @@ class DiagnosticsMonitorTest {
     DiagnosticsMonitor monitor = DiagnosticsMonitor.create(eventBus);
     monitor.start().block();
 
-    Supplier<Optional<GarbageCollectionDetectedEvent>> s = () -> eventBus.publishedEvents()
+    Supplier<Optional<GarbageCollectionDetectedEvent>> s = () -> new ArrayList<>(eventBus.publishedEvents())
       .stream()
       .filter(event -> event instanceof GarbageCollectionDetectedEvent)
       .map(event -> (GarbageCollectionDetectedEvent) event)

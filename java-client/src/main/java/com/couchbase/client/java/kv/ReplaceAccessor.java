@@ -16,27 +16,26 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.java.MutationToken;
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
-public class MutationResult {
+@Stability.Internal
+public enum ReplaceAccessor {
+  ;
 
-  private final long cas;
-
-  private final Optional<MutationToken> mutationToken;
-
-  public MutationResult(long cas, Optional<MutationToken> mutationToken) {
-    this.cas = cas;
-    this.mutationToken = mutationToken;
-  }
-
-  public long cas() {
-    return cas;
-  }
-
-  public Optional<MutationToken> mutationToken() {
-    return mutationToken;
+  public static CompletableFuture<MutationResult> replace(final Core core, final ReplaceRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(response -> {
+        // todo: implement me
+        return new MutationResult(0, Optional.empty());
+      });
   }
 
 }

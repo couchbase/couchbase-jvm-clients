@@ -28,20 +28,12 @@ import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.service.ServiceType;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * The main entry point into the core layer.

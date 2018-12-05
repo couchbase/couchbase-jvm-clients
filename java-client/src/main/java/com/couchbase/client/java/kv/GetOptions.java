@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
@@ -23,17 +24,12 @@ import java.time.Duration;
 /**
  * Allows to customize a get request.
  */
-public class ReadOptions {
+public class GetOptions extends CommonOptions<GetOptions> {
 
   /**
    * The default options, used most of the time.
    */
-  public static final ReadOptions DEFAULT = new ReadOptions();
-
-  /**
-   * Optionally set if a custom timeout is provided.
-   */
-  private Duration timeout;
+  public static final GetOptions DEFAULT = new GetOptions();
 
   /**
    * If the expiration should also fetched with a get.
@@ -41,28 +37,19 @@ public class ReadOptions {
   private boolean withExpiration;
 
   /**
-   * Creates a new set of {@link ReadOptions} with a {@link JsonObject} target.
+   * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
    *
    * @return options to customize.
    */
-  public static ReadOptions readOptions() {
-    return new ReadOptions();
+  public static GetOptions getOptions() {
+    return new GetOptions();
   }
 
-  private ReadOptions() {
+  private GetOptions() {
     withExpiration = false;
   }
 
-  public ReadOptions timeout(final Duration timeout) {
-    this.timeout = timeout;
-    return this;
-  }
-
-  public Duration timeout() {
-    return timeout;
-  }
-
-  public ReadOptions withExpiration(boolean expiration) {
+  public GetOptions withExpiration(boolean expiration) {
     withExpiration = true;
     return this;
   }

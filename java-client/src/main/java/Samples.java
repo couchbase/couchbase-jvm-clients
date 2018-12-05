@@ -2,18 +2,16 @@ import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.ReadOptions;
-import com.couchbase.client.java.kv.ReadResult;
+import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 
 import java.util.Optional;
 
-import static com.couchbase.client.java.kv.MutationSpec.mutationSpec;
-import static com.couchbase.client.java.kv.ReadSpec.readSpec;
+import static com.couchbase.client.java.kv.GetSpec.getSpec;
+import static com.couchbase.client.java.kv.MutateSpec.mutationSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
@@ -25,11 +23,11 @@ public class Samples {
     Bucket bucket = cluster.bucket("travel-sample");
     Collection collection = bucket.defaultCollection();
 
-    System.err.println(collection.read("airline_10"));
+    System.err.println(collection.get("airline_10"));
   }
 
   static void scenarioA(final Collection collection) {
-    Optional<ReadResult> document = collection.read("id");
+    Optional<GetResult> document = collection.get("id");
 
     if (document.isPresent()) {
       JsonObject content = document.get().contentAsObject();
@@ -39,15 +37,12 @@ public class Samples {
   }
 
   static void scenarioB(final Collection collection) {
-    Optional<ReadResult> document = collection.read("id", readSpec().getField("users"));
+    Optional<GetResult> document = collection.get("id", getSpec().getField("users"));
 
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
       content.insert(0, true);
-      MutationResult result = collection.mutateIn(
-        "id",
-        mutationSpec().replace("users", content)
-      );
+      MutationResult result = collection.mutate("id", mutationSpec().replace("users", content));
     }
   }
 
@@ -57,7 +52,7 @@ public class Samples {
 
   static void scenarioD(final Collection collection) {
     do {
-      ReadResult read = collection.read("id").get();
+      GetResult read = collection.get("id").get();
       JsonObject content = read.contentAsObject();
       content.put("modified", true);
       try {
@@ -69,7 +64,7 @@ public class Samples {
   }
 
   static void scenarioE(final Collection collection) {
-    Optional<ReadResult> document = collection.read("id");
+    Optional<GetResult> document = collection.get("id");
 
     if (document.isPresent()) {
       Entity content = document.get().contentAs(Entity.class);
@@ -79,7 +74,7 @@ public class Samples {
   }
 
   static void scenarioF(final Collection collection) {
-    Optional<ReadResult> document = collection.read("id");
+    Optional<GetResult> document = collection.get("id");
 
     if (document.isPresent()) {
       Entity content = document.get().contentAs(Entity.class);

@@ -24,19 +24,19 @@ import java.time.Duration;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class InsertOptions extends CommonOptions<InsertOptions> {
+public class UpsertOptions extends CommonOptions<UpsertOptions> {
 
-  public static InsertOptions DEFAULT = new InsertOptions();
+  public static UpsertOptions DEFAULT = new UpsertOptions();
 
   private Duration expiry;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
   private Encoder encoder = DefaultEncoder.INSTANCE;
 
-  private InsertOptions() { }
+  private UpsertOptions() { }
 
-  public static InsertOptions insertOptions() {
-    return new InsertOptions();
+  public static UpsertOptions upsertOptions() {
+    return new UpsertOptions();
   }
 
 
@@ -44,7 +44,7 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
     return expiry;
   }
 
-  public InsertOptions expiry(final Duration expiry) {
+  public UpsertOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
@@ -53,7 +53,7 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
     return persistTo;
   }
 
-  public InsertOptions persistTo(final PersistTo persistTo) {
+  public UpsertOptions persistTo(final PersistTo persistTo) {
     this.persistTo = persistTo;
     return this;
   }
@@ -62,7 +62,7 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
     return replicateTo;
   }
 
-  public InsertOptions replicateTo(final ReplicateTo replicateTo) {
+  public UpsertOptions replicateTo(final ReplicateTo replicateTo) {
     this.replicateTo = replicateTo;
     return this;
   }
@@ -71,7 +71,7 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
     return encoder;
   }
 
-  public InsertOptions encoder(final Encoder encoder) {
+  public UpsertOptions encoder(final Encoder encoder) {
     notNull(encoder, "Encoder");
 
     this.encoder = encoder;

@@ -118,6 +118,14 @@ public class Mapper {
     }
   }
 
+  /**
+   * Returns the jackson mapper.
+   *
+   * <p>This call should only be used if the other available methods do not provide
+   * what's needed.</p>
+   *
+   * @return the jackson object mapper.
+   */
   @Stability.Internal
   public static ObjectMapper mapper() {
     return MAPPER;

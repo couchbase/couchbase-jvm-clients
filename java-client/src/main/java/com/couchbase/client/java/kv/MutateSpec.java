@@ -16,21 +16,21 @@
 
 package com.couchbase.client.java.kv;
 
-public class MutationSpec {
+public class MutateSpec {
 
-  public static MutationSpec mutationSpec() {
-    return new MutationSpec();
+  public static MutateSpec mutationSpec() {
+    return new MutateSpec();
   }
 
-  private MutationSpec() {
+  private MutateSpec() {
 
   }
 
-  public <T> MutationSpec replace(final String path, final T fragment) {
+  public <T> MutateSpec replace(final String path, final T fragment) {
     return this;
   }
 
-  public <T> MutationSpec insert(final String path, final T fragment) {
+  public <T> MutateSpec insert(final String path, final T fragment) {
     return this;
   }
 

@@ -20,12 +20,12 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 
-public class BucketConfigRequest extends BaseKeyValueRequest<BucketConfigResponse> implements TargetedRequest {
+public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest {
 
   private final NetworkAddress target;
 
-  public BucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
-                             final RetryStrategy retryStrategy, final NetworkAddress target) {
+  public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+                                    final RetryStrategy retryStrategy, final NetworkAddress target) {
     super(timeout, ctx, bucket, retryStrategy, null);
     this.target = target;
   }
@@ -37,9 +37,9 @@ public class BucketConfigRequest extends BaseKeyValueRequest<BucketConfigRespons
   }
 
   @Override
-  public BucketConfigResponse decode(final ByteBuf response) {
+  public CarrierBucketConfigResponse decode(final ByteBuf response) {
     byte[] content = body(response).map(ByteBufUtil::getBytes).orElse(new byte[] {});
-    return new BucketConfigResponse(decodeStatus(response), content);
+    return new CarrierBucketConfigResponse(decodeStatus(response), content);
   }
 
   @Override

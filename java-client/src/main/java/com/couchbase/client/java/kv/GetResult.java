@@ -27,21 +27,21 @@ import java.util.Optional;
 /**
  * Experimental prototype for a different result type on fetch.
  */
-public class ReadResult {
+public class GetResult {
 
   private final String id;
   private final EncodedDocument encoded;
   private final long cas;
   private final Optional<Duration> expiration;
 
-  static ReadResult create(final String id, final EncodedDocument encoded,
-                                       final long cas, final Optional<Duration> expiration)
+  static GetResult create(final String id, final EncodedDocument encoded,
+                          final long cas, final Optional<Duration> expiration)
   {
-    return new ReadResult(id, encoded, cas, expiration);
+    return new GetResult(id, encoded, cas, expiration);
   }
 
-  private ReadResult(final String id, final EncodedDocument encoded, final long cas,
-                     final Optional<Duration> expiration) {
+  private GetResult(final String id, final EncodedDocument encoded, final long cas,
+                    final Optional<Duration> expiration) {
     this.id = id;
     this.cas = cas;
     this.encoded = encoded;
@@ -79,7 +79,7 @@ public class ReadResult {
 
   @Override
   public String toString() {
-    return "ReadResult{" +
+    return "GetResult{" +
       "id='" + id + '\'' +
       ", encoded=" + encoded +
       ", cas=" + cas +

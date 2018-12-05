@@ -6,11 +6,9 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
-import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
-import com.couchbase.client.core.msg.kv.BucketConfigRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 

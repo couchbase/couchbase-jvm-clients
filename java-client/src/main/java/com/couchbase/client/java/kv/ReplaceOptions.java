@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
 
@@ -23,7 +24,7 @@ import java.time.Duration;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class ReplaceOptions {
+public class ReplaceOptions extends CommonOptions<ReplaceOptions> {
 
   public static ReplaceOptions DEFAULT = new ReplaceOptions();
 
@@ -38,16 +39,6 @@ public class ReplaceOptions {
 
   public static ReplaceOptions replaceOptions() {
     return new ReplaceOptions();
-  }
-
-
-  public Duration timeout() {
-    return timeout;
-  }
-
-  public ReplaceOptions timeout(final Duration timeout) {
-    this.timeout = timeout;
-    return this;
   }
 
   public Duration expiry() {
