@@ -92,7 +92,8 @@ public class AsyncCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.get().queryTimeout());
+    Duration timeout = Optional.ofNullable(options.timeout())
+      .orElse(environment.get().queryTimeout());
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.get().retryStrategy()
       : options.retryStrategy();

@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.loader.CarrierLoader;
+import com.couchbase.client.core.io.NetworkAddress;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -60,8 +61,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public Mono<Void> openBucket(String name) {
     CarrierLoader loader = new CarrierLoader(core);
     // TODO this is a hack and not the proper functionality
+
+    NetworkAddress host = NetworkAddress.create(core.context().environment().seedNodes().iterator().next());
     return loader
-      .load(core.context().environment().seedNodes().iterator().next(), name)
+      .load(host, name)
       .flatMap(config -> {
         currentConfig.setBucketConfig(name, config);
         configs.onNext(currentConfig);

@@ -16,6 +16,11 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.util.ConnectionString;
+
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * This {@link PropertyLoader} takes a connection string and applies all properties
  * that are supported and it knows about.
@@ -27,14 +32,20 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
   /**
    * Holds the connection string provided by the application.
    */
-  private final String connectionString;
+  private final ConnectionString connectionString;
 
   public ConnectionStringPropertyLoader(final String connectionString) {
-    this.connectionString = connectionString;
+    this.connectionString = ConnectionString.create(connectionString);
   }
 
   @Override
-  public void load(CoreEnvironment.Builder builder) {
+  public void load(final CoreEnvironment.Builder builder) {
+    Set<String> seeds = connectionString
+      .allHosts()
+      .stream()
+      .map(a -> a.getAddress().getHostAddress())
+      .collect(Collectors.toSet());
 
+    builder.seedNodes(seeds);
   }
 }

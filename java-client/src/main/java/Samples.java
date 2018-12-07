@@ -25,12 +25,8 @@ import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 public class Samples {
 
   public static void main(String... args) throws Exception {
-    HashSet<NetworkAddress> seeds = new HashSet<>();
-    seeds.add(NetworkAddress.create("10.143.192.101"));
 
-    ClusterEnvironment.Builder env = ClusterEnvironment.builder("Administrator", "password")
-      .seedNodes(seeds);
-    Cluster cluster = Cluster.connect(env.build());
+    Cluster cluster = Cluster.connect("10.143.192.101", "Administrator", "password");
 
     Bucket bucket = cluster.bucket("travel-sample");
 
