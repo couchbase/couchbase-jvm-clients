@@ -26,7 +26,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
@@ -54,7 +56,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.consumer().accept(new QueryResponse.Row(QueryResponse.RowType.ROW, data));
+        currentResponse.subscriber().onNext(new QueryResponse.QueryEvent(QueryResponse.QueryEventType.ROW, data));
       }
     })
   });
@@ -74,7 +76,9 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof QueryRequest) {
       currentRequest = (QueryRequest) msg;
-      ctx.write(((QueryRequest) msg).encode());
+      FullHttpRequest encoded = ((QueryRequest) msg).encode();
+      encoded.headers().set(HttpHeaderNames.HOST, "127.0.0.1");
+      ctx.write(encoded);
     } else {
       // todo: terminate this channel and raise an event, this is not supposed to happen
     }
@@ -83,11 +87,17 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof HttpResponse) {
-      currentResponse = new QueryResponse(ResponseStatus.SUCCESS, currentRequest.consumer()) {
+      currentResponse = new QueryResponse(ResponseStatus.SUCCESS, currentRequest.subscriber()) {
         @Override
         public void request(long rows) {
           toRead.set(rows + toRead.get());
           ctx.channel().config().setAutoRead(true);
+        }
+
+        @Override
+        public void cancel() {
+          // TODO:
+          System.err.println("--> cancelled! if not done ensure proper cleanup");
         }
       };
 
@@ -106,7 +116,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       }
 
       if (last) {
-        currentResponse.consumer().accept(new QueryResponse.Row(QueryResponse.RowType.END, null));
+        currentResponse.cancel();
+        currentResponse.subscriber().onComplete();
         responseContent.clear();
       } else {
         if (toRead.decrementAndGet() <= 0) {

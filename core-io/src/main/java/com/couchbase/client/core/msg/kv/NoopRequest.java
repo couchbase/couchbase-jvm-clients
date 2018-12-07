@@ -41,11 +41,11 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
   public NoopRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                      final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, null);
+    super(timeout, ctx, bucket, retryStrategy, null, null);
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, final boolean collections) {
     return MemcacheProtocol.request(
       alloc,
       MemcacheProtocol.Opcode.NOOP,

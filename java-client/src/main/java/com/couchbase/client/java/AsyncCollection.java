@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
@@ -95,15 +96,20 @@ public class AsyncCollection {
    */
   private final String bucket;
 
+  private final byte[] encodedId;
+
+  private final long collectionId;
+
   /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
+   * @param id the id
    * @param scope the scope of the collection.
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  public AsyncCollection(final String name, final String scope, final String bucket,
+  public AsyncCollection(final String name, final long id, final String scope, final String bucket,
                          final Core core, final ClusterEnvironment environment) {
     this.name = name;
     this.scope = scope;
@@ -111,6 +117,8 @@ public class AsyncCollection {
     this.coreContext = core.context();
     this.environment = environment;
     this.bucket = bucket;
+    this.encodedId = UnsignedLEB128.encode(id);
+    this.collectionId = id;
   }
 
   /**
@@ -125,6 +133,10 @@ public class AsyncCollection {
    */
   ClusterEnvironment environment() {
     return environment;
+  }
+
+  byte[] encodedId() {
+    return encodedId;
   }
 
   /**
@@ -171,7 +183,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    GetRequest request = new GetRequest(id, timeout, coreContext, bucket, retryStrategy);
+    GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucket, retryStrategy);
     return GetAccessor.get(core, id, request);
   }
 
@@ -234,7 +246,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext, bucket, retryStrategy);
+    RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout, coreContext, bucket, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
 
@@ -270,6 +282,7 @@ public class AsyncCollection {
 
     InsertRequest request = new InsertRequest(
       id,
+      encodedId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),
@@ -314,6 +327,7 @@ public class AsyncCollection {
 
     UpsertRequest request = new UpsertRequest(
       id,
+      encodedId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),
@@ -358,6 +372,7 @@ public class AsyncCollection {
 
     ReplaceRequest request = new ReplaceRequest(
       id,
+      encodedId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),

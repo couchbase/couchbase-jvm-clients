@@ -4,39 +4,47 @@ import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Arrays;
-import java.util.function.Consumer;
 
 
 public abstract class QueryResponse extends BaseResponse {
 
-  private final Consumer<Row> consumer;
+  private final QueryEventSubscriber subscriber;
 
-  public QueryResponse(ResponseStatus status, Consumer<Row> consumer) {
+  public QueryResponse(ResponseStatus status, QueryEventSubscriber subscriber) {
     super(status);
-    this.consumer = consumer;
+    this.subscriber = subscriber;
   }
 
   public abstract void request(long rows);
 
-  public Consumer<Row> consumer() {
-    return consumer;
+  public abstract void cancel();
+
+  public QueryEventSubscriber subscriber() {
+    return subscriber;
   }
 
-  public enum RowType {
-    ROW,
-    END
+  public enum QueryEventType {
+    ROW
   }
 
-  public static class Row {
-    private final RowType rowType;
+  public interface QueryEventSubscriber {
+
+    void onNext(QueryEvent row);
+
+    void onComplete();
+
+  }
+
+  public static class QueryEvent {
+    private final QueryEventType rowType;
     private final byte[] data;
 
-    public Row(RowType rowType, byte[] data) {
+    public QueryEvent(QueryEventType rowType, byte[] data) {
       this.rowType = rowType;
       this.data = data;
     }
 
-    public RowType rowType() {
+    public QueryEventType rowType() {
       return rowType;
     }
 

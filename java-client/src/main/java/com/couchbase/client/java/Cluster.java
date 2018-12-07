@@ -70,11 +70,11 @@ public class Cluster {
   }
 
   public QueryResult query(final String statement) {
-    return new QueryResult(block(async().query(statement)));
+    return new QueryResult(block(async().query(statement, null)));
   }
 
   public QueryResult query(final String statement, final QueryOptions options) {
-    return new QueryResult(block(async().query(statement, options)));
+    return new QueryResult(block(async().query(statement, null, options)));
   }
 
   public AnalyticsResult analyticsQuery(final String statement) {

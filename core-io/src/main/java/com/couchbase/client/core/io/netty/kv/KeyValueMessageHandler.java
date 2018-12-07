@@ -51,6 +51,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private boolean compressionEnabled;
 
   /**
+   * If collection usage is enabled.
+   */
+  private boolean collectionsEnabled;
+
+  /**
    * Stores the {@link CoreContext} for use.
    */
   private final CoreContext coreContext;
@@ -103,6 +108,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
+    collectionsEnabled = features != null && features.contains(ServerFeature.COLLECTIONS);
 
     ctx.fireChannelActive();
   }
@@ -116,9 +122,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
 
       if (compressionEnabled && request instanceof Compressible) {
-        ctx.write(((Compressible) request).encode(ctx.alloc(), nextOpaque, compressionConfig));
+        ctx.write(((Compressible) request).encode(ctx.alloc(), nextOpaque, compressionConfig, collectionsEnabled));
       } else {
-        ctx.write(request.encode(ctx.alloc(), nextOpaque));
+        ctx.write(request.encode(ctx.alloc(), nextOpaque, collectionsEnabled));
       }
       writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {

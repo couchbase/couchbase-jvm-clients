@@ -17,6 +17,8 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -96,13 +98,24 @@ class QueryMessageHandlerBackpressureTest {
       });
     Channel channel = client.connect().awaitUninterruptibly().channel();
 
-    final List<QueryResponse.Row> rows = Collections.synchronizedList(new ArrayList<>());
+    final List<QueryResponse.QueryEvent> rows = Collections.synchronizedList(new ArrayList<>());
     QueryRequest request = new QueryRequest(
       Duration.ofSeconds(1),
       mock(CoreContext.class),
       mock(RetryStrategy.class),
+      new RoleBasedCredentials("admin", "password"),
       "myquery".getBytes(CharsetUtil.UTF_8),
-      rows::add
+      new QueryResponse.QueryEventSubscriber() {
+        @Override
+        public void onNext(QueryResponse.QueryEvent row) {
+          rows.add(row);
+        }
+
+        @Override
+        public void onComplete() {
+
+        }
+      }
     );
     channel.writeAndFlush(request);
 
@@ -113,10 +126,9 @@ class QueryMessageHandlerBackpressureTest {
     response.request(1);
     waitUntilCondition(() -> rows.size() == 1);
     response.request(1);
-    waitUntilCondition(() -> rows.size() == 3);
+    waitUntilCondition(() -> rows.size() == 2);
 
-    assertEquals(3, rows.size());
-    assertEquals(QueryResponse.RowType.END, rows.get(2).rowType());
+    assertEquals(2, rows.size());
   }
 
   static class ChunkServer {

@@ -36,8 +36,10 @@ public interface Compressible {
    * @param alloc the allocator where to grab the buffers from.
    * @param opaque the opaque value to use.
    * @param compressionConfig if compression should be attempted.
+   * @param useCollections use collections.
    * @return the encoded request as a {@link ByteBuf}.
    */
-  ByteBuf encode(ByteBufAllocator alloc, int opaque, CompressionConfig compressionConfig);
+  ByteBuf encode(ByteBufAllocator alloc, int opaque, CompressionConfig compressionConfig,
+                 boolean useCollections);
 
 }

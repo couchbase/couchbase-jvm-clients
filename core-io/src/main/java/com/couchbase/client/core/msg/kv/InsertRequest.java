@@ -40,11 +40,11 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
   private final long expiration;
   private final int flags;
 
-  public InsertRequest(final String key, final byte[] content, final long expiration,
+  public InsertRequest(final String key, final byte[] collection, final byte[] content, final long expiration,
                        final int flags, final Duration timeout,
                        final CoreContext ctx, final String bucket,
                        final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, key);
+    super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
@@ -52,8 +52,8 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
 
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque,
-                        final CompressionConfig config) {
-    ByteBuf key = Unpooled.wrappedBuffer(key());
+                        final CompressionConfig config, final boolean collections) {
+    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
 
     byte datatype = 0;
     ByteBuf content;
@@ -90,8 +90,8 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
-    return encode(alloc, opaque, null);
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
+    return encode(alloc, opaque, null, collections);
   }
 
 }

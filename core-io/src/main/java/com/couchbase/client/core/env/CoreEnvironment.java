@@ -55,6 +55,7 @@ public class CoreEnvironment {
   private final IoEnvironment ioEnvironment;
   private final DiagnosticsMonitor diagnosticsMonitor;
   private final Duration kvTimeout;
+  private final Duration queryTimeout;
   private final Credentials credentials;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
   private final RetryStrategy retryStrategy;
@@ -76,6 +77,9 @@ public class CoreEnvironment {
     this.kvTimeout = builder.kvTimeout == null
       ? Duration.ofMillis(2500)
       : builder.kvTimeout;
+    this.queryTimeout = builder.queryTimeout == null
+      ? Duration.ofMillis(75000)
+      : builder.queryTimeout;
     this.seedNodes = builder.seedNodes == null
       ? DEFAULT_SEED_NODES
       : builder.seedNodes;
@@ -180,6 +184,9 @@ public class CoreEnvironment {
     return kvTimeout;
   }
 
+  public Duration queryTimeout() {
+    return queryTimeout;
+  }
 
   public Set<NetworkAddress> seedNodes() {
     return seedNodes.get();
@@ -222,6 +229,8 @@ public class CoreEnvironment {
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
+    private Duration queryTimeout = null;
+
     private MemcachedHashingStrategy memcachedHashingStrategy;
     private RetryStrategy retryStrategy;
     private KeyValueServiceConfig keyValueServiceConfig;
@@ -278,6 +287,12 @@ public class CoreEnvironment {
       this.kvTimeout = kvTimeout;
       return self();
     }
+
+    public SELF queryTimeout(final Duration queryTimeout) {
+      this.queryTimeout = queryTimeout;
+      return self();
+    }
+
 
     /**
      * Allows to pass in a custom {@link Timer}.

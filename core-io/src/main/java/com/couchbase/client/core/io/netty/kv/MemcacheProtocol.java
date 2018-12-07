@@ -213,6 +213,21 @@ public enum MemcacheProtocol {
     }
   }
 
+  public static Optional<ByteBuf> extras(final ByteBuf message) {
+    boolean flexible = message.getByte(0) == MAGIC_FLEXIBLE;
+    byte extrasLength = message.getByte(4);
+    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
+
+    if (extrasLength > 0) {
+      return Optional.of(message.slice(
+        MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength,
+        extrasLength
+      ));
+    } else {
+      return Optional.empty();
+    }
+  }
+
   /**
    * Performs simple sanity checking of a key/value request.
    *
@@ -364,6 +379,85 @@ public enum MemcacheProtocol {
   }
 
   /**
+   * Helper method during development and debugging to dump the raw message as a
+   * verbose string.
+   */
+  public static String messageToString(final ByteBuf message) {
+    StringBuilder sb = new StringBuilder();
+
+    byte magic = message.getByte(MAGIC_OFFSET);
+    sb.append(String.format("Magic: 0x%x (%s)\n", magic, Magic.of(magic)));
+    sb.append(String.format("Opcode: 0x%x\n", opcode(message)));
+
+    if (Magic.of(magic).isFlexible()) {
+      sb.append(String.format("Framing Extras Length: %d\n", message.getByte(2)));
+      sb.append(String.format("Key Length: %d\n", message.getByte(3)));
+    } else {
+      sb.append(String.format("Key Length: %d\n", message.getShort(2)));
+    }
+
+    sb.append(String.format("Extras Length: %d\n", message.getByte(4)));
+    sb.append(String.format("Datatype: 0x%x\n", datatype(message)));
+
+    if (Magic.of(magic).isRequest()) {
+      sb.append(String.format("VBucket ID: 0x%x\n", status(message)));
+    } else {
+      sb.append(String.format("Status: 0x%x\n", status(message)));
+    }
+
+    sb.append(String.format("Total Body Length: %d\n", message.getByte(TOTAL_LENGTH_OFFSET)));
+    sb.append(String.format("Opaque: 0x%x\n", opaque(message)));
+    sb.append(String.format("CAS: 0x%x\n", cas(message)));
+
+    return sb.toString();
+  }
+
+  public enum Magic {
+    REQUEST((byte) 0x80),
+    RESPONSE((byte) 0x81),
+    FLEXIBLE_REQUEST((byte) 0x08),
+    FLEXIBLE_RESPONSE((byte) 0x18);
+
+    private final byte magic;
+
+    Magic(byte magic) {
+      this.magic = magic;
+    }
+
+    /**
+     * Returns the magic for the given command.
+     *
+     * @return the magic for the command.
+     */
+    public byte magic() {
+      return magic;
+    }
+
+    public static Magic of(byte input) {
+      switch (input) {
+        case (byte) 0x80:
+          return Magic.REQUEST;
+        case (byte) 0x81:
+          return Magic.RESPONSE;
+        case 0x08:
+          return Magic.FLEXIBLE_REQUEST;
+        case 0x18:
+          return Magic.FLEXIBLE_RESPONSE;
+      }
+      return null;
+    }
+
+    public boolean isFlexible() {
+      return this == FLEXIBLE_REQUEST || this == FLEXIBLE_RESPONSE;
+    }
+
+    public boolean isRequest() {
+      return this == REQUEST || this == FLEXIBLE_REQUEST;
+    }
+
+  }
+
+  /**
    * Contains all known/used kv protocol opcodes.
    */
   public enum Opcode {
@@ -418,7 +512,11 @@ public enum MemcacheProtocol {
     /**
      * Returns the current configuration for the bucket ("cccp").
      */
-    GET_CONFIG((byte) 0xb5);
+    GET_CONFIG((byte) 0xb5),
+    /**
+     * Returns the ID of a collection/scope combination
+     */
+    COLLECTIONS_GET_CID((byte) 0xbb);
 
     private final byte opcode;
 

@@ -51,6 +51,7 @@ public class IoEnvironment {
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
 
   private final CircuitBreakerConfig kvCircuitBreakerConfig;
+  private final CircuitBreakerConfig queryCircuitBreakerConfig;
 
   public static IoEnvironment create() {
     return builder().build();
@@ -104,6 +105,10 @@ public class IoEnvironment {
     kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig == null
       ? CircuitBreakerConfig.disabled()
       : builder.kvCircuitBreakerConfig;
+
+    queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.queryCircuitBreakerConfig;
   }
 
   /**
@@ -203,6 +208,10 @@ public class IoEnvironment {
     return kvCircuitBreakerConfig;
   }
 
+  public CircuitBreakerConfig queryCircuitBreakerConfig() {
+    return queryCircuitBreakerConfig;
+  }
+
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
@@ -256,6 +265,8 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
     private CircuitBreakerConfig kvCircuitBreakerConfig = null;
+    private CircuitBreakerConfig queryCircuitBreakerConfig = null;
+
 
     public Builder connectTimeout(Duration connectTimeout) {
       this.connectTimeout = connectTimeout;

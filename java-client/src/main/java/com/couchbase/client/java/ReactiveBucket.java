@@ -18,6 +18,10 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import reactor.core.publisher.Mono;
+
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class ReactiveBucket {
 
@@ -35,16 +39,18 @@ public class ReactiveBucket {
     return asyncBucket;
   }
 
-  public ReactiveCollection defaultCollection() {
-    return collection(null, null);
+  public Mono<ReactiveCollection> defaultCollection() {
+    return collection("_default");
   }
 
-  public ReactiveCollection collection(final String name) {
-    return collection(name, null);
+  public Mono<ReactiveCollection> collection(final String name) {
+    return collection(name, "_default");
   }
 
-  public ReactiveCollection collection(final String name, final String scope) {
-    return new ReactiveCollection(new AsyncCollection(name, scope, asyncBucket.name(), core, environment), asyncBucket.name());
+  public Mono<ReactiveCollection> collection(final String name, final String scope) {
+    return Mono
+      .defer(() -> Mono.fromFuture(asyncBucket.collection(name, scope))
+      .map(asyncCollection -> new ReactiveCollection(asyncCollection, asyncBucket.name())));
   }
 
 }

@@ -16,5 +16,56 @@
 
 package com.couchbase.client.java.query;
 
-public class AsyncQueryResult {
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.query.QueryResponse;
+
+import java.util.function.Consumer;
+
+public class AsyncQueryResult implements QueryResponse.QueryEventSubscriber {
+
+  private final Consumer<QueryRow> rowConsumer;
+  private volatile boolean complete;
+  private volatile QueryResponse response;
+
+  public AsyncQueryResult(final Consumer<QueryRow> rowConsumer) {
+    this.rowConsumer = rowConsumer;
+    complete = false;
+  }
+
+  @Stability.Internal
+  public void result(final QueryResponse response) {
+    this.response = response;
+  }
+
+  @Override
+  public void onNext(final QueryResponse.QueryEvent event) {
+    if (event.rowType() == QueryResponse.QueryEventType.ROW) {
+      rowConsumer.accept(new QueryRow(event.data()));
+    }
+  }
+
+  public void request(long num) {
+    response.request(num);
+  }
+
+  // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
+  // mechanism to be consistent?
+  public void cancel() {
+    response.cancel();
+  }
+
+  /**
+   * Returns true if this result is completed.
+   *
+   * @return true once completed.
+   */
+  public boolean completed() {
+    return complete;
+  }
+
+  @Override
+  public void onComplete() {
+    complete = true;
+  }
+
 }

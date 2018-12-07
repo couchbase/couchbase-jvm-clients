@@ -37,7 +37,8 @@ public enum BucketCapabilities {
     NODES_EXT("nodesExt"),
     DCP("dcp"),
     XATTR("xattr"),
-    SNAPPY("snappy");
+    SNAPPY("snappy"),
+    COLLECTIONS("collections");
 
     private final String raw;
 

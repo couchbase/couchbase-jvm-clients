@@ -86,12 +86,15 @@ public class ReactiveCollection {
 
   private final String bucketName;
 
+  private final byte[] encodedId;
+
   ReactiveCollection(final AsyncCollection asyncCollection, final String bucketName) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
     this.environment = asyncCollection.environment();
     this.core = asyncCollection.core();
     this.bucketName = bucketName;
+    this.encodedId = asyncCollection.encodedId();
   }
 
   /**
@@ -133,7 +136,7 @@ public class ReactiveCollection {
       RetryStrategy retryStrategy = options.retryStrategy() == null
         ? environment.retryStrategy()
         : options.retryStrategy();
-      GetRequest request = new GetRequest(id, timeout, coreContext, bucketName, retryStrategy);
+      GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucketName, retryStrategy);
       return Reactor
         .wrap(request, GetAccessor.get(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
@@ -197,7 +200,7 @@ public class ReactiveCollection {
       RetryStrategy retryStrategy = options.retryStrategy() == null
         ? environment.retryStrategy()
         : options.retryStrategy();
-      RemoveRequest request = new RemoveRequest(id, options.cas(), timeout, coreContext,
+      RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout, coreContext,
         bucketName, retryStrategy);
       return Reactor.wrap(request, RemoveAccessor.remove(core, request), true);
     });
@@ -237,6 +240,7 @@ public class ReactiveCollection {
 
       InsertRequest request = new InsertRequest(
         id,
+        encodedId,
         encoded.content(),
         options.expiry().getSeconds(),
         encoded.flags(),
@@ -282,6 +286,7 @@ public class ReactiveCollection {
 
       UpsertRequest request = new UpsertRequest(
         id,
+        encodedId,
         encoded.content(),
         options.expiry().getSeconds(),
         encoded.flags(),
@@ -327,6 +332,7 @@ public class ReactiveCollection {
 
       ReplaceRequest request = new ReplaceRequest(
         id,
+        encodedId,
         encoded.content(),
         options.expiry().getSeconds(),
         encoded.flags(),

@@ -17,7 +17,13 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
+import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.java.env.ClusterEnvironment;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class AsyncBucket {
 
@@ -35,16 +41,20 @@ public class AsyncBucket {
     return name;
   }
 
-  public AsyncCollection defaultCollection() {
-    return collection(null, null);
+  public CompletableFuture<AsyncCollection> defaultCollection() {
+    return collection("_default");
   }
 
-  public AsyncCollection collection(final String collection) {
-    return collection(collection, null);
+  public CompletableFuture<AsyncCollection> collection(final String collection) {
+    return collection(collection, "_default");
   }
 
-  public AsyncCollection collection(final String collection, final String scope) {
-    return new AsyncCollection(collection, scope, name, core, environment);
+  public CompletableFuture<AsyncCollection> collection(final String collection, final String scope) {
+    GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1), core.context(), name, environment.retryStrategy(), scope, collection);
+    core.send(request);
+    return request
+      .response()
+      .thenApply(res -> new AsyncCollection(collection, res.collectionId(), scope, name, core, environment));
   }
 
   ClusterEnvironment environment() {

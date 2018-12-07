@@ -47,9 +47,10 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    *
    * @param alloc the allocator where to grab the buffers from.
    * @param opaque the opaque value to use.
+   * @param useCollections use collections.
    * @return the encoded request as a {@link ByteBuf}.
    */
-  ByteBuf encode(ByteBufAllocator alloc, int opaque);
+  ByteBuf encode(ByteBufAllocator alloc, int opaque, boolean useCollections);
 
   /**
    * Decode the encoded response into its message representation.

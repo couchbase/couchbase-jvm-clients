@@ -19,22 +19,25 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
-import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AsyncAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryRow;
 import com.couchbase.client.java.search.AsyncSearchResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.SearchResult;
-import reactor.core.publisher.Mono;
+import io.netty.util.CharsetUtil;
+import reactor.core.publisher.EmitterProcessor;
 
-import java.util.Set;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -71,15 +74,49 @@ public class AsyncCluster {
     this.core = Core.create(environment.get());
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final String statement) {
-    return query(statement, QueryOptions.DEFAULT);
+  public Supplier<ClusterEnvironment> environment() {
+    return environment;
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final String statement, final QueryOptions options) {
+  public Core core() {
+    return core;
+  }
+
+  public CompletableFuture<AsyncQueryResult> query(final String statement, final Consumer<QueryRow> consumer) {
+    return query(statement, consumer, QueryOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncQueryResult> query(final String statement,
+                                                   final Consumer<QueryRow> consumer,
+                                                   final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.get().queryTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.get().retryStrategy()
+      : options.retryStrategy();
+
+    // FIXME: proper jackson encoding with options
+    byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);
+
+    // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
+    // mechanism to be consistent?
+
+    AsyncQueryResult result = new AsyncQueryResult(consumer);
+    QueryRequest request = new QueryRequest(
+      timeout,
+      core.context(),
+      retryStrategy,
+      environment.get().credentials(),
+      query,
+      result
+    );
+    core.send(request);
+    return request.response().thenApply(r -> {
+      result.result(r);
+      return result;
+    });
   }
 
   public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
@@ -90,7 +127,6 @@ public class AsyncCluster {
                                                            final AnalyticsOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
-
     return null;
   }
 

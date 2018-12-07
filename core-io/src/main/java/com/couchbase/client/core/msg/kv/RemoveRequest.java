@@ -46,16 +46,16 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
 
   private final long cas;
 
-  public RemoveRequest(final String key, final long cas, final Duration timeout,
+  public RemoveRequest(final String key, final byte[] collection, final long cas, final Duration timeout,
                        final CoreContext ctx, final String bucket,
                        final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, key);
+    super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.cas = cas;
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
-    ByteBuf key = Unpooled.wrappedBuffer(key());
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
+    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
     key.release();

@@ -45,14 +45,14 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
  */
 public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
-  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
-                    final String bucket, final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, key);
+  public GetRequest(final String key, final byte[] collection, final Duration timeout,
+                    final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy) {
+    super(timeout, ctx, bucket, retryStrategy, key, collection);
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
-    ByteBuf key = Unpooled.wrappedBuffer(key());
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
+    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

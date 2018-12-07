@@ -26,12 +26,12 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
 
   public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                                     final RetryStrategy retryStrategy, final NetworkAddress target) {
-    super(timeout, ctx, bucket, retryStrategy, null);
+    super(timeout, ctx, bucket, retryStrategy, null, null);
     this.target = target;
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque) {
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
     return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_CONFIG, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
   }

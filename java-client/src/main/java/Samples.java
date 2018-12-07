@@ -1,13 +1,20 @@
 import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
+import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
 
 import static com.couchbase.client.java.kv.GetSpec.getSpec;
@@ -17,13 +24,21 @@ import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
 public class Samples {
 
-  public static void main(String... args) {
-    Cluster cluster = Cluster.connect("Administrator", "password");
+  public static void main(String... args) throws Exception {
+    HashSet<NetworkAddress> seeds = new HashSet<>();
+    seeds.add(NetworkAddress.create("10.143.192.101"));
+
+    ClusterEnvironment.Builder env = ClusterEnvironment.builder("Administrator", "password")
+      .seedNodes(seeds);
+    Cluster cluster = Cluster.connect(env.build());
 
     Bucket bucket = cluster.bucket("travel-sample");
-    Collection collection = bucket.defaultCollection();
 
-    System.err.println(collection.get("airline_10"));
+    Collection airlines = bucket.collection("airlines");
+    System.out.println(airlines.get("airline_10"));
+
+    Collection dc = bucket.defaultCollection();
+    System.out.println(dc.get("airline_10"));
   }
 
   static void scenarioA(final Collection collection) {

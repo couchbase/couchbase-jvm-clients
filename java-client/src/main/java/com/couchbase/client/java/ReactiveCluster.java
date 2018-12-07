@@ -16,8 +16,12 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -27,8 +31,12 @@ import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.ReactiveSearchResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
+import io.netty.util.CharsetUtil;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -60,7 +68,7 @@ public class ReactiveCluster {
   }
 
   private ReactiveCluster(final Supplier<ClusterEnvironment> environment) {
-    this.asyncCluster = new AsyncCluster(environment);
+    this(new AsyncCluster(environment));
   }
 
   ReactiveCluster(final AsyncCluster asyncCluster) {
@@ -79,6 +87,48 @@ public class ReactiveCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
+    /*return Mono.defer(new Supplier<Mono<? extends ReactiveQueryResult>>() {
+      @Override
+      public Mono<? extends ReactiveQueryResult> get() {
+        return null;
+      }
+    });*/
+
+
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(asyncCluster.environment().get().queryTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? asyncCluster.environment().get().retryStrategy()
+      : options.retryStrategy();
+
+    // FIXME: proper jackson encoding with options
+    byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);
+
+    // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
+    // mechanism to be consistent?
+
+    EmitterProcessor<QueryResponse.QueryEvent> processor = EmitterProcessor.create();
+    QueryRequest request = new QueryRequest(
+      timeout,
+      asyncCluster.core().context(),
+      retryStrategy,
+      asyncCluster.environment().get().credentials(),
+      query,
+      new QueryResponse.QueryEventSubscriber() {
+        @Override
+        public void onNext(QueryResponse.QueryEvent row) {
+          processor.onNext(row);
+        }
+
+        @Override
+        public void onComplete() {
+          processor.onComplete();
+        }
+      }
+    );
+
+    asyncCluster.core().send(request);
+
+    // TODO
     return null;
   }
 

@@ -19,6 +19,10 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
+import java.util.function.Function;
+
+import static com.couchbase.client.java.AsyncUtils.block;
+
 public class Bucket {
 
   private final AsyncBucket asyncBucket;
@@ -42,15 +46,16 @@ public class Bucket {
   }
 
   public Collection defaultCollection() {
-    return collection(null, null);
+    return collection("_default");
   }
 
   public Collection collection(final String name) {
-    return collection(name, null);
+    return collection(name, "_default");
   }
 
   public Collection collection(final String name, final String scope) {
-    return new Collection(new AsyncCollection(name, scope, asyncBucket.name(), core, environment), asyncBucket.name());
+    return block(asyncBucket.collection(name, scope)
+      .thenApply(asyncCollection -> new Collection(asyncCollection, asyncBucket.name())));
   }
 
 }
