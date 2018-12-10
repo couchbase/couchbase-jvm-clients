@@ -27,9 +27,9 @@ import java.util.function.Function;
 
 public class AsyncBucket {
 
-  private static final String DEFAULT_SCOPE = "_default";
-  private static final String DEFAULT_COLLECTION = "_default";
-  private static final long DEFAULT_COLLECTION_ID = 0;
+  static final String DEFAULT_SCOPE = "_default";
+  static final String DEFAULT_COLLECTION = "_default";
+  static final long DEFAULT_COLLECTION_ID = 0;
 
   private final String name;
   private final ClusterEnvironment environment;
@@ -45,33 +45,18 @@ public class AsyncBucket {
     return name;
   }
 
+  public CompletableFuture<AsyncScope> scope(final String scope) {
+    CompletableFuture<AsyncScope> s = new CompletableFuture<>();
+    s.complete(new AsyncScope(scope, name, core, environment));
+    return s;
+  }
+
   public CompletableFuture<AsyncCollection> defaultCollection() {
-    return collection(DEFAULT_COLLECTION);
+    return new AsyncScope(DEFAULT_SCOPE, name, core, environment).defaultCollection();
   }
 
   public CompletableFuture<AsyncCollection> collection(final String collection) {
-    return collection(collection, DEFAULT_SCOPE);
-  }
-
-  public CompletableFuture<AsyncCollection> collection(final String collection, final String scope) {
-    if (DEFAULT_COLLECTION.equals(collection) && DEFAULT_SCOPE.equals(scope)) {
-      CompletableFuture<AsyncCollection> future = new CompletableFuture<>();
-      future.complete(new AsyncCollection(collection, DEFAULT_COLLECTION_ID, scope, name, core, environment));
-      return future;
-    } else {
-      GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1), core.context(), name, environment.retryStrategy(), scope, collection);
-      core.send(request);
-      return request
-        .response()
-        .thenApply(res -> {
-          if (res.status().success()) {
-            return new AsyncCollection(collection, res.collectionId().get(), scope, name, core, environment);
-          } else {
-            // TODO: delay into collection!
-            throw new IllegalStateException("Do not raise me.. propagate into collection.. collection error");
-          }
-        });
-    }
+    return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
   }
 
   ClusterEnvironment environment() {

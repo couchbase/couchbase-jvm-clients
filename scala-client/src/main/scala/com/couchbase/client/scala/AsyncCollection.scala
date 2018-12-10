@@ -67,7 +67,8 @@ class AsyncCollection(val collection: Collection) {
     // TODO datatype
     val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
     val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val request = new InsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
+    val collection = null
+    val request = new InsertRequest(id, collection, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -121,8 +122,9 @@ class AsyncCollection(val collection: Collection) {
     // TODO datatype
     val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
     val bucketName = "BUCKETNAME" // todo fixme from constructor chain
+    val collection = null
 
-    val request = new ReplaceRequest(id, encoded, expiration.toSeconds, 0, timeout, cas, coreContext, bucketName, retryStrategy)
+    val request = new ReplaceRequest(id, null, encoded, expiration.toSeconds, 0, timeout, cas, coreContext, bucketName, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -158,8 +160,9 @@ class AsyncCollection(val collection: Collection) {
     // TODO datatype
     val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
     val bucketName = "BUCKETNAME" // todo fixme from constructor chain
+    val collection = null
 
-    val request = new UpsertRequest(id, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
+    val request = new UpsertRequest(id, collection, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -188,8 +191,9 @@ class AsyncCollection(val collection: Collection) {
 
     val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
     val bucketName = "BUCKETNAME" // todo fixme from constructor chain
+    val collection = null
 
-    val request = new RemoveRequest(id, cas, timeout, coreContext, bucketName, retryStrategy)
+    val request = new RemoveRequest(id, collection, cas, timeout, coreContext, bucketName, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {
@@ -240,8 +244,9 @@ class AsyncCollection(val collection: Collection) {
 
     val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
     val bucketName = "BUCKETNAME" // todo fixme from constructor chain
+    val collection = null
 
-    val request = new GetRequest(id, timeout, coreContext, bucketName, retryStrategy)
+    val request = new GetRequest(id,collection, timeout, coreContext, bucketName, retryStrategy)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(v => {

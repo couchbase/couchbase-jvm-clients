@@ -21,6 +21,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 
 import java.util.function.Function;
 
+import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 import static com.couchbase.client.java.AsyncUtils.block;
 
 public class Bucket {
@@ -45,17 +46,18 @@ public class Bucket {
     return reactiveBucket;
   }
 
+  public Scope scope(final String name) {
+    return block(asyncBucket.scope(name)
+      .thenApply(asyncScope -> new Scope(asyncScope, asyncBucket.name()))
+    );
+  }
+
   public Collection defaultCollection() {
-    return collection("_default");
+    return scope(DEFAULT_SCOPE).defaultCollection();
   }
 
   public Collection collection(final String name) {
-    return collection(name, "_default");
-  }
-
-  public Collection collection(final String name, final String scope) {
-    return block(asyncBucket.collection(name, scope)
-      .thenApply(asyncCollection -> new Collection(asyncCollection, asyncBucket.name())));
+    return scope(DEFAULT_SCOPE).collection(name);
   }
 
 }

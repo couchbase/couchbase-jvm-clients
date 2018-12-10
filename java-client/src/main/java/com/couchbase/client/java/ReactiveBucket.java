@@ -23,6 +23,8 @@ import reactor.core.publisher.Mono;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
+
 public class ReactiveBucket {
 
   private final AsyncBucket asyncBucket;
@@ -39,18 +41,16 @@ public class ReactiveBucket {
     return asyncBucket;
   }
 
+  public Mono<ReactiveScope> scope(String name) {
+    return Mono.fromFuture(asyncBucket.scope(name)).map(asyncScope -> new ReactiveScope(asyncScope, asyncBucket.name()));
+  }
+
   public Mono<ReactiveCollection> defaultCollection() {
-    return collection("_default");
+    return scope(DEFAULT_SCOPE).flatMap(ReactiveScope::defaultCollection);
   }
 
   public Mono<ReactiveCollection> collection(final String name) {
-    return collection(name, "_default");
-  }
-
-  public Mono<ReactiveCollection> collection(final String name, final String scope) {
-    return Mono
-      .defer(() -> Mono.fromFuture(asyncBucket.collection(name, scope))
-      .map(asyncCollection -> new ReactiveCollection(asyncCollection, asyncBucket.name())));
+    return scope(DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
   }
 
 }
