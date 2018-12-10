@@ -131,7 +131,7 @@ public enum MemcacheProtocol {
    * @param message the memcache message to extract from.
    * @return the status field.
    */
-  static short status(final ByteBuf message) {
+  public static short status(final ByteBuf message) {
     return message.getShort(STATUS_OFFSET);
   }
 
@@ -141,7 +141,7 @@ public enum MemcacheProtocol {
    * @param message the memcache message to extract from.
    * @return true if success.
    */
-  static boolean successful(final ByteBuf message) {
+  public static boolean successful(final ByteBuf message) {
     return status(message) == Status.SUCCESS.status();
   }
 
@@ -534,7 +534,7 @@ public enum MemcacheProtocol {
     }
   }
 
-  enum Status {
+  public enum Status {
     /**
      * Successful message.
      */
@@ -561,6 +561,18 @@ public enum MemcacheProtocol {
      */
     public short status() {
       return status;
+    }
+
+    public static Status fromShort(short value) {
+      switch (value) {
+        case 0x00:
+          return SUCCESS;
+        case 0x01:
+          return NOT_FOUND;
+        case 0x24:
+          return ACCESS_ERROR;
+      }
+      throw new UnsupportedOperationException("unsupported status " + value);
     }
   }
 

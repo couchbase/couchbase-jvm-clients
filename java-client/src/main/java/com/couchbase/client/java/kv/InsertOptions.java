@@ -28,7 +28,7 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
 
   public static InsertOptions DEFAULT = new InsertOptions();
 
-  private Duration expiry;
+  private Duration expiry = Duration.ZERO;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
   private Encoder encoder = DefaultEncoder.INSTANCE;

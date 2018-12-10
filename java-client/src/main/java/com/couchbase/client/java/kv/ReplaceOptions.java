@@ -29,7 +29,7 @@ public class ReplaceOptions extends CommonOptions<ReplaceOptions> {
   public static ReplaceOptions DEFAULT = new ReplaceOptions();
 
   private Duration timeout;
-  private Duration expiry;
+  private Duration expiry = Duration.ZERO;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
   private Encoder encoder = DefaultEncoder.INSTANCE;

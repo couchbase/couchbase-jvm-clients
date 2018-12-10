@@ -27,6 +27,10 @@ import java.util.function.Function;
 
 public class AsyncBucket {
 
+  private static final String DEFAULT_SCOPE = "_default";
+  private static final String DEFAULT_COLLECTION = "_default";
+  private static final long DEFAULT_COLLECTION_ID = 0;
+
   private final String name;
   private final ClusterEnvironment environment;
   private final Core core;
@@ -42,19 +46,32 @@ public class AsyncBucket {
   }
 
   public CompletableFuture<AsyncCollection> defaultCollection() {
-    return collection("_default");
+    return collection(DEFAULT_COLLECTION);
   }
 
   public CompletableFuture<AsyncCollection> collection(final String collection) {
-    return collection(collection, "_default");
+    return collection(collection, DEFAULT_SCOPE);
   }
 
   public CompletableFuture<AsyncCollection> collection(final String collection, final String scope) {
-    GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1), core.context(), name, environment.retryStrategy(), scope, collection);
-    core.send(request);
-    return request
-      .response()
-      .thenApply(res -> new AsyncCollection(collection, res.collectionId(), scope, name, core, environment));
+    if (DEFAULT_COLLECTION.equals(collection) && DEFAULT_SCOPE.equals(scope)) {
+      CompletableFuture<AsyncCollection> future = new CompletableFuture<>();
+      future.complete(new AsyncCollection(collection, DEFAULT_COLLECTION_ID, scope, name, core, environment));
+      return future;
+    } else {
+      GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1), core.context(), name, environment.retryStrategy(), scope, collection);
+      core.send(request);
+      return request
+        .response()
+        .thenApply(res -> {
+          if (res.status().success()) {
+            return new AsyncCollection(collection, res.collectionId().get(), scope, name, core, environment);
+          } else {
+            // TODO: delay into collection!
+            throw new IllegalStateException("Do not raise me.. propagate into collection.. collection error");
+          }
+        });
+    }
   }
 
   ClusterEnvironment environment() {

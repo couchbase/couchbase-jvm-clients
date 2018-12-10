@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 
 import java.util.Optional;
@@ -32,8 +33,7 @@ public enum InsertAccessor {
     return request
       .response()
       .thenApply(response -> {
-        // todo: implement me
-        return new MutationResult(0, Optional.empty());
+        return new MutationResult(response.cas(), Optional.empty());
       });
   }
 

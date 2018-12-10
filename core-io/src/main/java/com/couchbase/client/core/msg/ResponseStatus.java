@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+
 /**
  * The {@link ResponseStatus} describes what kind of response came back for a specific
  * request.
@@ -40,7 +42,12 @@ public enum ResponseStatus {
    * Indicates an unknown status returned from the server, please check the
    * events/logs for further information.
    */
-  UNKNOWN;
+  UNKNOWN,
+  /**
+   * The server indicated that the given message failed because of a permission
+   * violation.
+   */
+  NO_ACCESS;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

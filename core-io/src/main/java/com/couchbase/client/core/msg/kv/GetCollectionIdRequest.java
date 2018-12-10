@@ -10,6 +10,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
@@ -18,6 +19,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
 
@@ -43,8 +45,11 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
 
   @Override
   public GetCollectionIdResponse decode(ByteBuf response) {
-    ByteBuf extras = extras(response).get();
-    long cid = extras.getUnsignedInt(8);
-    return new GetCollectionIdResponse(ResponseStatus.SUCCESS, cid);
+    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+    Optional<Long> cid = Optional.empty();
+    if (status.success()) {
+      cid = Optional.of(extras(response).get().getUnsignedInt(8));
+    }
+    return new GetCollectionIdResponse(status, cid);
   }
 }

@@ -39,4 +39,11 @@ public class MutationResult {
     return mutationToken;
   }
 
+  @Override
+  public String toString() {
+    return "MutationResult{" +
+      "cas=" + cas +
+      ", mutationToken=" + mutationToken +
+      '}';
+  }
 }

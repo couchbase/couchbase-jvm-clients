@@ -28,7 +28,7 @@ public class UpsertOptions extends CommonOptions<UpsertOptions> {
 
   public static UpsertOptions DEFAULT = new UpsertOptions();
 
-  private Duration expiry;
+  private Duration expiry = Duration.ZERO;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
   private Encoder encoder = DefaultEncoder.INSTANCE;
