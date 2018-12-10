@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
-import com.couchbase.client.core.json.Mapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -44,6 +44,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * @since 2.0.0
  */
 public class ContainerizedTestCluster extends TestCluster {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContainerizedTestCluster.class);
 
@@ -152,12 +154,18 @@ public class ContainerizedTestCluster extends TestCluster {
       .forPath("/pools/default/")
       .withBasicCredentials(adminUsername, adminPassword)
       .forStatusCode(HTTP_OK)
-      .forResponsePredicate(response -> Optional.of(
-        Mapper.decodeIntoTree(response.getBytes(CharsetUtil.UTF_8)))
-          .map(n -> n.at("/nodes/0/status"))
-          .map(JsonNode::asText)
-          .map("healthy"::equals)
-          .orElse(false)
+      .forResponsePredicate(response -> {
+          try {
+            return Optional.of(
+              MAPPER.readTree(response.getBytes(CharsetUtil.UTF_8)))
+                .map(n -> n.at("/nodes/0/status"))
+                .map(JsonNode::asText)
+                .map("healthy"::equals)
+                .orElse(false);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
       );
   }
 

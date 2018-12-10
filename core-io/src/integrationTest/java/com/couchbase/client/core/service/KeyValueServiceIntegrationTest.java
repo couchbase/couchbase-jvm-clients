@@ -22,8 +22,9 @@ import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.util.ClusterAwareIntegrationTest;
-import com.couchbase.client.util.TestNodeConfig;
+import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.test.Services;
+import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.util.Util.waitUntilCondition;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertTrue;
 
 class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest {
@@ -67,7 +68,7 @@ class KeyValueServiceIntegrationTest extends ClusterAwareIntegrationTest {
       serviceConfig,
       coreContext,
       NetworkAddress.create(node.hostname()),
-      node.ports().get(ServiceType.KV),
+      node.ports().get(Services.KV),
       config().bucketname(),
       env.credentials()
     );

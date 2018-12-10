@@ -5,7 +5,7 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
-import com.couchbase.client.util.ClusterAwareIntegrationTest;
+import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,14 +43,14 @@ public class KeyValueIntegrationTest extends ClusterAwareIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+    InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
 
-    GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1), core.context(),
+    GetRequest getRequest = new GetRequest(id, null, Duration.ofSeconds(1), core.context(),
       config().bucketname(), env.retryStrategy());
     core.send(getRequest);
 

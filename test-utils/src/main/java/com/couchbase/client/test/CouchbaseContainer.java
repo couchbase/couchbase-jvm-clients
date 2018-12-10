@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.core.command.ExecStartResultCallback;

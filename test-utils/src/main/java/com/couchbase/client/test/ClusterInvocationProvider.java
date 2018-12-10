@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;

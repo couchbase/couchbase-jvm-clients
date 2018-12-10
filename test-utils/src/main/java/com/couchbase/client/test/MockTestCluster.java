@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.mock.Bucket;
 import com.couchbase.mock.BucketConfiguration;
 import com.couchbase.mock.CouchbaseMock;
@@ -65,8 +64,8 @@ public class MockTestCluster extends TestCluster {
     mock.start();
     mock.waitForStartup();
 
-    Map<ServiceType, Integer> ports = new HashMap<>();
-    ports.put(ServiceType.KV, mock.getCarrierPort(bucketConfig.name));
+    Map<Services, Integer> ports = new HashMap<>();
+    ports.put(Services.KV, mock.getCarrierPort(bucketConfig.name));
 
     return new TestClusterConfig(
       bucketConfig.name,

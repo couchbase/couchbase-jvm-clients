@@ -44,9 +44,8 @@ dependencies {
   testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.2'
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
 
+  integrationTestCompile project(':test-utils')
   integrationTestCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
-  integrationTestCompile 'org.testcontainers:testcontainers:1.10.2'
-  integrationTestCompile 'com.couchbase.mock:CouchbaseMock:1.5.19'
 }
 
 test {

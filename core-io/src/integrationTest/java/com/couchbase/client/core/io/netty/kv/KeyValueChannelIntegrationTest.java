@@ -23,9 +23,9 @@ import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.util.ClusterAwareIntegrationTest;
-import com.couchbase.client.util.TestNodeConfig;
+import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.test.Services;
+import com.couchbase.client.test.TestNodeConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -82,7 +82,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
   void connectNoopAndDisconnect() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
-      .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
+      .remoteAddress(node.hostname(), node.ports().get(Services.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
       .handler(new ChannelInitializer<SocketChannel>() {
@@ -112,7 +112,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
   void failWithInvalidPasswordCredential() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
-      .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
+      .remoteAddress(node.hostname(), node.ports().get(Services.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
       .handler(new ChannelInitializer<SocketChannel>() {
@@ -133,7 +133,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
   void failWithInvalidUsernameCredential() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
-      .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
+      .remoteAddress(node.hostname(), node.ports().get(Services.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
       .handler(new ChannelInitializer<SocketChannel>() {
@@ -154,7 +154,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
   void failWithInvalidBucketCredential() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
-      .remoteAddress(node.hostname(), node.ports().get(ServiceType.KV))
+      .remoteAddress(node.hostname(), node.ports().get(Services.KV))
       .group(eventLoopGroup)
       .channel(NioSocketChannel.class)
       .handler(new ChannelInitializer<SocketChannel>() {

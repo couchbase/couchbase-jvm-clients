@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;

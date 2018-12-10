@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    compile 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    compile 'org.testcontainers:testcontainers:1.10.2'
+    compile 'com.couchbase.mock:CouchbaseMock:1.5.19'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
+}

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.service.ServiceType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Properties;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /**
    * The topology spec defined by the child implementations.
@@ -80,8 +82,13 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   @SuppressWarnings({"unchecked"})
   protected List<TestNodeConfig> nodesFromRaw(final String inputHost, final String config) {
     List<TestNodeConfig> result = new ArrayList<>();
-    Map<String, Object> decoded = (Map<String, Object>)
-      Mapper.decodeInto(config.getBytes(CharsetUtil.UTF_8), Map.class);
+    Map<String, Object> decoded = null;
+    try {
+      decoded = (Map<String, Object>)
+        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
     for (Map<String, Object> node : ext) {
       Map<String, Integer> services = (Map<String, Integer>) node.get("services");
@@ -89,9 +96,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       if (hostname == null) {
         hostname = inputHost;
       }
-      Map<ServiceType, Integer> ports = new HashMap<>();
-      ports.put(ServiceType.KV, services.get("kv"));
-      ports.put(ServiceType.CONFIG, services.get("mgmt"));
+      Map<Services, Integer> ports = new HashMap<>();
+      ports.put(Services.KV, services.get("kv"));
+      ports.put(Services.CONFIG, services.get("mgmt"));
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;

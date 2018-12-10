@@ -4,5 +4,6 @@ include 'core-io'
 include 'java-client'
 include 'scala-client'
 include 'kotlin-client'
+include 'test-utils'
 
 enableFeaturePreview 'STABLE_PUBLISHING'

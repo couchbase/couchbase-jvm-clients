@@ -94,8 +94,8 @@ public class KeyValueEndpoint extends BaseEndpoint {
       Set<ServerFeature> features = new HashSet<>(Arrays.asList(
         ServerFeature.SELECT_BUCKET,
         ServerFeature.XATTR,
-        ServerFeature.XERROR,
-        ServerFeature.COLLECTIONS
+        ServerFeature.XERROR
+        // ServerFeature.COLLECTIONS
       ));
 
       if (coreContext.environment().ioEnvironment().compressionConfig().enabled()) {

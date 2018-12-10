@@ -1,4 +1,4 @@
-package com.couchbase.client.util;
+package com.couchbase.client.test;
 
 /**
  * Represents the currently supported (tested) versions which can be used

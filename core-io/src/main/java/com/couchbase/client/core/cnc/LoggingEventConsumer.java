@@ -32,7 +32,7 @@ import java.util.regex.Matcher;
  * way but can always be swapped out or changed to implement custom functionality.</p>
  *
  * <p>If SLF4J is detected on the classpath it will be used, otherwise it will fall back to
- * java.util.logging or the console depending on the configuration.</p>
+ * java.com.couchbase.client.test.util.logging or the console depending on the configuration.</p>
  */
 public class LoggingEventConsumer implements Consumer<Event> {
 
