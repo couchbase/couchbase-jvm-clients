@@ -112,42 +112,13 @@ public class Collection {
     return block(async().get(id, options));
   }
 
-  /**
-   * Fetches parts of a document with default options.
-   *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @return a {@link GetResult} once the document has been loaded.
-   */
-  public Optional<GetResult> get(final String id, final GetSpec spec) {
-    return block(async().get(id, spec));
+  public Optional<GetResult> getAndLock(final String id, final Duration lockFor) {
+    return block(async().getAndLock(id, lockFor));
   }
 
-  /**
-   * Fetches parts of a document with custom options.
-   *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @param options custom options to change the default behavior.
-   * @return a {@link GetResult} once the document has been loaded.
-   */
-  public Optional<GetResult> get(final String id, final GetSpec spec, final GetOptions options) {
-    return block(async().get(id, spec, options));
-  }
-
-  public Optional<GetResult> getAndLock(final String id, final int lockTime) {
-    return block(async().getAndLock(id, lockTime));
-  }
-
-  public Optional<GetResult> getAndLock(final String id, final int lockTime,
+  public Optional<GetResult> getAndLock(final String id, final Duration lockFor,
                                         final GetAndLockOptions options) {
-    return block(async().getAndLock(id, lockTime, options));
+    return block(async().getAndLock(id, lockFor, options));
   }
 
 

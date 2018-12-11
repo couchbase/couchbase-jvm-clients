@@ -19,8 +19,6 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.time.Duration;
-
 /**
  * Allows to customize a get request.
  */
@@ -35,6 +33,11 @@ public class GetOptions extends CommonOptions<GetOptions> {
    * If the expiration should also fetched with a get.
    */
   private boolean withExpiration;
+
+  /**
+   * Holds a possible projection.
+   */
+  private Projections projections;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
@@ -56,6 +59,20 @@ public class GetOptions extends CommonOptions<GetOptions> {
 
   public boolean withExpiration() {
     return withExpiration;
+  }
+
+  public GetOptions project(final Projections projections) {
+    this.projections = projections;
+    return this;
+  }
+
+  public GetOptions project(final String... get) {
+    this.project(Projections.projections().get(get));
+    return this;
+  }
+
+  public Projections projections() {
+    return projections;
   }
 
 }

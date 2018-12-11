@@ -26,8 +26,12 @@ import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.AppendOptions;
+import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAndLockOptions;
+import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetSpec;
@@ -36,10 +40,13 @@ import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutateSpec;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.PrependOptions;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 import reactor.core.publisher.Mono;
@@ -131,6 +138,14 @@ public class ReactiveCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
+    if (options.projections() != null) {
+      throw new UnsupportedOperationException("TODO: implement subdoc get!");
+    }
+
+    if (options.withExpiration()) {
+      throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
+    }
+
     return Mono.defer(() -> {
       Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
       RetryStrategy retryStrategy = options.retryStrategy() == null
@@ -143,35 +158,30 @@ public class ReactiveCollection {
     });
   }
 
-  /**
-   * Fetches parts of a document with default options.
-   *
-   * <p>If the document has not been found, this {@link Mono} will be empty.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @return a {@link Mono} indicating once loaded or failed.
-   */
-  public Mono<GetResult> get(final String id, final GetSpec spec) {
-    return get(id, spec, GetOptions.DEFAULT);
+  public Mono<GetResult> getAndLock(final String id, final Duration lockFor) {
+    return getAndLock(id, lockFor, GetAndLockOptions.DEFAULT);
   }
 
-  /**
-   * Fetches parts of a document with custom options.
-   *
-   * <p>If the document has not been found, this {@link Mono} will be empty.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @param options custom options to change the default behavior.
-   * @return a {@link Mono} indicating once loaded or failed.
-   */
-  public Mono<GetResult> get(final String id, final GetSpec spec, final GetOptions options) {
+  public Mono<GetResult> getAndLock(final String id, final Duration lockFor,
+                                    final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "GetSpec");
-    notNull(options, "GetOptions");
+    notNull(lockFor, "LockTime");
+    notNull(options, "GetAndLockOptions");
 
-    throw new UnsupportedOperationException("Implement me -> subdoc get");
+    return null;
+  }
+
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiration) {
+    return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
+  }
+
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiration,
+                                     final GetAndTouchOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(expiration, "Expiration");
+    notNull(options, "GetAndTouchOptions");
+
+    return null;
   }
 
   /**
@@ -345,6 +355,66 @@ public class ReactiveCollection {
       return Reactor.wrap(request, ReplaceAccessor.replace(core, request), true);
     });
   }
+
+  public Mono<MutationResult> append(final String id, final byte[] content) {
+    return append(id, content, AppendOptions.DEFAULT);
+  }
+
+  public Mono<MutationResult> append(final String id, final byte[] content,
+                                                  final AppendOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "AppendOptions");
+
+    return null;
+  }
+
+  public Mono<MutationResult> prepend(final String id, final byte[] content) {
+    return prepend(id, content, PrependOptions.DEFAULT);
+  }
+
+  public Mono<MutationResult> prepend(final String id, final byte[] content,
+                                                   final PrependOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "PrependOptions");
+
+    return null;
+  }
+
+  public Mono<Void> touch(final String id) {
+    return touch(id, TouchOptions.DEFAULT);
+  }
+
+  public Mono<Void> touch(final String id, final TouchOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "TouchOptions");
+
+    return null;
+  }
+
+  public Mono<MutationResult> unlock(final String id) {
+    return unlock(id, UnlockOptions.DEFAULT);
+  }
+
+  public Mono<MutationResult> unlock(final String id, final UnlockOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "UnlockOptions");
+
+    return null;
+  }
+
+  public Mono<MutationResult> counter(final String id, long delta) {
+    return counter(id, delta, CounterOptions.DEFAULT);
+  }
+
+  public Mono<MutationResult> counter(final String id, long delta, final CounterOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "CounterOptions");
+
+    return null;
+  }
+
 
   /**
    * Performs mutations to document fragments with default options.

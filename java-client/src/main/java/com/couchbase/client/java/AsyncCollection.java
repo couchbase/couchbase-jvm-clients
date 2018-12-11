@@ -37,7 +37,6 @@ import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutateSpec;
-import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.PrependOptions;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.GetOptions;
@@ -182,6 +181,10 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
+    if (options.projections() != null) {
+      throw new UnsupportedOperationException("TODO: implement subdoc get!");
+    }
+
     if (options.withExpiration()) {
       throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
     }
@@ -194,47 +197,15 @@ public class AsyncCollection {
     return GetAccessor.get(core, id, request);
   }
 
-  /**
-   * Fetches parts of a document with default options.
-   *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @return a {@link CompletableFuture} completing once loaded or failed.
-   */
-  public CompletableFuture<Optional<GetResult>> get(final String id, final GetSpec spec) {
-    return get(id, spec, GetOptions.DEFAULT);
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor) {
+    return getAndLock(id, lockFor, GetAndLockOptions.DEFAULT);
   }
 
-  /**
-   * Fetches parts of a document with custom options.
-   *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param spec the spec which allows to configure what should be loaded.
-   * @param options custom options to change the default behavior.
-   * @return a {@link CompletableFuture} completing once loaded or failed.
-   */
-  public CompletableFuture<Optional<GetResult>> get(final String id, final GetSpec spec,
-                                                    final GetOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(spec, "GetSpec");
-    notNull(options, "GetOptions");
-
-    throw new UnsupportedOperationException("Implement me -> subdoc get");
-  }
-
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final int lockTime) {
-    return getAndLock(id, lockTime, GetAndLockOptions.DEFAULT);
-  }
-
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final int lockTime,
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor,
                                                            final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
+    notNull(lockFor, "LockTime");
+
     notNull(options, "GetAndLockOptions");
 
     return null;
