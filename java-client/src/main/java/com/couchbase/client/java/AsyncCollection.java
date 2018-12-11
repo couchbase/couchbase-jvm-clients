@@ -26,20 +26,27 @@ import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.AppendOptions;
+import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAndLockOptions;
+import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutateSpec;
 import com.couchbase.client.java.kv.GetSpec;
+import com.couchbase.client.java.kv.PrependOptions;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 
@@ -221,6 +228,35 @@ public class AsyncCollection {
     throw new UnsupportedOperationException("Implement me -> subdoc get");
   }
 
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final int lockTime) {
+    return getAndLock(id, lockTime, GetAndLockOptions.DEFAULT);
+  }
+
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final int lockTime,
+                                                           final GetAndLockOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "GetAndLockOptions");
+
+    return null;
+  }
+
+
+  public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
+                                                            final Duration expiration) {
+    return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
+  }
+
+  public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
+                                                            final Duration expiration,
+                                                            final GetAndTouchOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(expiration, "Expiration");
+    notNull(options, "GetAndTouchOptions");
+
+    return null;
+  }
+
+
   /**
    * Removes a Document from a collection with default options.
    *
@@ -246,7 +282,8 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout, coreContext, bucket, retryStrategy);
+    RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout,
+      coreContext, bucket, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
 
@@ -383,6 +420,65 @@ public class AsyncCollection {
       retryStrategy
     );
     return ReplaceAccessor.replace(core, request);
+  }
+
+  public CompletableFuture<MutationResult> append(final String id, final byte[] content) {
+    return append(id, content, AppendOptions.DEFAULT);
+  }
+
+  public CompletableFuture<MutationResult> append(final String id, final byte[] content,
+                                                  final AppendOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "AppendOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content) {
+    return prepend(id, content, PrependOptions.DEFAULT);
+  }
+
+  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
+                                                  final PrependOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(content, "Content");
+    notNull(options, "PrependOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<Void> touch(final String id) {
+    return touch(id, TouchOptions.DEFAULT);
+  }
+
+  public CompletableFuture<Void> touch(final String id, final TouchOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "TouchOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<MutationResult> unlock(final String id) {
+    return unlock(id, UnlockOptions.DEFAULT);
+  }
+
+  public CompletableFuture<MutationResult> unlock(final String id, final UnlockOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "UnlockOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<MutationResult> counter(final String id, long delta) {
+    return counter(id, delta, CounterOptions.DEFAULT);
+  }
+
+  public CompletableFuture<MutationResult> counter(final String id, long delta, final CounterOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "CounterOptions");
+
+    return null;
   }
 
   /**

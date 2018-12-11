@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.java.kv.CounterOptions;
+import com.couchbase.client.java.kv.GetAndLockOptions;
+import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
@@ -25,11 +28,16 @@ import com.couchbase.client.java.kv.MutateSpec;
 import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncUtils.block;
 
 /**
@@ -133,6 +141,25 @@ public class Collection {
     return block(async().get(id, spec, options));
   }
 
+  public Optional<GetResult> getAndLock(final String id, final int lockTime) {
+    return block(async().getAndLock(id, lockTime));
+  }
+
+  public Optional<GetResult> getAndLock(final String id, final int lockTime,
+                                        final GetAndLockOptions options) {
+    return block(async().getAndLock(id, lockTime, options));
+  }
+
+
+  public Optional<GetResult> getAndTouch(final String id, final Duration expiration) {
+    return block(async().getAndTouch(id, expiration));
+  }
+
+  public Optional<GetResult> getAndTouch(final String id, final Duration expiration,
+                                         final GetAndTouchOptions options) {
+    return block(async().getAndTouch(id, expiration, options));
+  }
+
   /**
    * Removes a Document from a collection with default options.
    *
@@ -221,6 +248,30 @@ public class Collection {
    */
   public MutationResult replace(final String id, final Object content, final ReplaceOptions options) {
     return block(async().replace(id, content, options));
+  }
+
+  public void touch(final String id) {
+    block(async().touch(id));
+  }
+
+  public void touch(final String id, final TouchOptions options) {
+    block(async().touch(id, options));
+  }
+
+  public MutationResult unlock(final String id) {
+    return block(async().unlock(id));
+  }
+
+  public MutationResult unlock(final String id, final UnlockOptions options) {
+    return block(async().unlock(id, options));
+  }
+
+  public MutationResult counter(final String id, long delta) {
+    return block(async().counter(id, delta));
+  }
+
+  public MutationResult counter(final String id, long delta, final CounterOptions options) {
+    return block(async().counter(id, delta, options));
   }
 
   /**
