@@ -21,10 +21,10 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,14 +41,14 @@ import static org.junit.Assert.assertTrue;
  *
  * @since 2.0.0
  */
-class KeyValueEndpointIntegrationTest extends ClusterAwareIntegrationTest {
+class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
   private CoreContext coreContext;
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
+    env = environment().build();
     coreContext = new CoreContext(null, 1, env);
   }
 

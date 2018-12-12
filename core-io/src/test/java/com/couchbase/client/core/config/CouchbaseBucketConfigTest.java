@@ -99,9 +99,9 @@ class CouchbaseBucketConfigTest {
         assertEquals(1024, config.numberOfPartitions());
         assertEquals(2, config.nodes().size());
         assertEquals("192.168.1.194", config.nodes().get(0).hostname().address());
-        assertEquals(9000, (int)config.nodes().get(0).services().get(ServiceType.CONFIG));
+        assertEquals(9000, (int)config.nodes().get(0).services().get(ServiceType.MANAGER));
         assertEquals("192.168.1.194", config.nodes().get(1).hostname().address());
-        assertEquals(9001, (int)config.nodes().get(1).services().get(ServiceType.CONFIG));
+        assertEquals(9001, (int)config.nodes().get(1).services().get(ServiceType.MANAGER));
     }
 
     @Test

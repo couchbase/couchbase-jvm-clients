@@ -41,7 +41,7 @@ class NodeInfoTest {
         NodeInfo info = new NodeInfo(viewBase, "localhost:8091", ports, null);
 
         assertEquals(2, info.services().size());
-        assertEquals(8091, (long) info.services().get(ServiceType.CONFIG));
+        assertEquals(8091, (long) info.services().get(ServiceType.MANAGER));
         assertEquals(8092, (long) info.services().get(ServiceType.VIEWS));
     }
 
@@ -51,7 +51,7 @@ class NodeInfoTest {
         NodeInfo info = new NodeInfo(null, "localhost:8091", ports, null);
 
         assertEquals(1, info.services().size());
-        assertEquals(8091, (long) info.services().get(ServiceType.CONFIG));
+        assertEquals(8091, (long) info.services().get(ServiceType.MANAGER));
     }
 
     @Test
@@ -76,7 +76,7 @@ class NodeInfoTest {
 
         assertEquals(1, info.services().size());
         assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", info.hostname().address());
-        assertEquals(8091, (long) info.services().get(ServiceType.CONFIG));
+        assertEquals(8091, (long) info.services().get(ServiceType.MANAGER));
     }
 
 }

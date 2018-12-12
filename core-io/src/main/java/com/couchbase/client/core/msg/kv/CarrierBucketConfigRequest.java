@@ -11,14 +11,7 @@ import io.netty.buffer.ByteBufUtil;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest {
 
@@ -38,6 +31,7 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
 
   @Override
   public CarrierBucketConfigResponse decode(final ByteBuf response) {
+    System.err.println(String.format("%x", status(response)));
     byte[] content = body(response).map(ByteBufUtil::getBytes).orElse(new byte[] {});
     return new CarrierBucketConfigResponse(decodeStatus(response), content);
   }

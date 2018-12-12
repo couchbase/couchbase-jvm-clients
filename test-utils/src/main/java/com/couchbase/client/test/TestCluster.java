@@ -59,6 +59,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    */
   abstract TestClusterConfig _start() throws Exception;
 
+  abstract ClusterType type();
+
   TestCluster() { }
 
   void start() {
@@ -98,7 +100,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       }
       Map<Services, Integer> ports = new HashMap<>();
       ports.put(Services.KV, services.get("kv"));
-      ports.put(Services.CONFIG, services.get("mgmt"));
+      ports.put(Services.MANAGER, services.get("mgmt"));
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;

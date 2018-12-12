@@ -35,6 +35,6 @@ public interface Loader {
    * @param name the name of the bucket.
    * @return a {@link Mono} eventually completing with a config or failing.
    */
-  Mono<BucketConfig> load(final NetworkAddress seed, final String name);
+  Mono<BucketConfig> load(final NetworkAddress seed, int port, final String name);
 
 }

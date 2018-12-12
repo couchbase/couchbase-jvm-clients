@@ -67,6 +67,11 @@ public class ContainerizedTestCluster extends TestCluster {
   }
 
   @Override
+  ClusterType type() {
+    return ClusterType.CONTAINERIZED;
+  }
+
+  @Override
   TestClusterConfig _start() throws Exception {
     LOGGER.info("Starting Containerized Cluster of {} nodes", numNodes);
     long start = System.nanoTime();

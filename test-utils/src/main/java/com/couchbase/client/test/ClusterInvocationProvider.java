@@ -16,10 +16,10 @@
 
 package com.couchbase.client.test;
 
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.*;
+import org.junit.platform.commons.support.AnnotationSupport;
+
+import java.util.Optional;
 
 /**
  * This invocation provider starts and stops the couchbase cluster before and after
@@ -31,7 +31,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
  *
  * @since 2.0.0
  */
-public class ClusterInvocationProvider implements BeforeAllCallback, ParameterResolver {
+public class ClusterInvocationProvider implements BeforeAllCallback, ParameterResolver, ExecutionCondition {
 
   /**
    * Identifier for the container in the root store.
@@ -39,17 +39,22 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
   private static final String STORE_KEY = "db";
 
   /**
-   * The cluster container, once set.
+   * Helper method to initialize the test cluster when not initialized yet.
+   *
+   * @param ctx the junit extension context.
+   * @return the test cluster initialized.
    */
-  private volatile TestCluster testCluster;
-
-  @Override
-  public void beforeAll(final ExtensionContext ctx) {
-    rootStore(ctx).getOrComputeIfAbsent(STORE_KEY, key -> {
-      testCluster = TestCluster.create();
+  private TestCluster initializeTestCluster(final ExtensionContext ctx) {
+    return (TestCluster) rootStore(ctx).getOrComputeIfAbsent(STORE_KEY, key -> {
+      TestCluster testCluster = TestCluster.create();
       testCluster.start();
       return testCluster;
     });
+  }
+
+  @Override
+  public void beforeAll(final ExtensionContext ctx) {
+    initializeTestCluster(ctx);
   }
 
   /**
@@ -71,5 +76,23 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
   public Object resolveParameter(final ParameterContext pCtx, final ExtensionContext eCtx) {
     return ((TestCluster) rootStore(eCtx).get(STORE_KEY)).config();
   }
+
+  @Override
+  public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+    TestCluster testCluster = initializeTestCluster(context);
+
+    Optional<IgnoreWhen> annotation = AnnotationSupport.findAnnotation(context.getElement(), IgnoreWhen.class);
+    if (annotation.isPresent()) {
+      IgnoreWhen found = annotation.get();
+      for (ClusterType type : found.clusterTypes()) {
+        if (testCluster.type().equals(type)) {
+          return ConditionEvaluationResult.disabled("Test disabled on this ClusterType (" + type
+            + ") based on @IgnoreWhen");
+        }
+      }
+    }
+    return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
+  }
+
 
 }

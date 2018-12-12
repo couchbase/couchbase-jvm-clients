@@ -37,12 +37,10 @@ public abstract class BaseLoader implements Loader {
 
   protected abstract Mono<String> discoverConfig(NetworkAddress seed, String bucket);
 
-  protected abstract int port();
-
   @Override
-  public Mono<BucketConfig> load(final NetworkAddress seed, final String name) {
+  public Mono<BucketConfig> load(final NetworkAddress seed, final int port, final String name) {
     return core
-      .ensureServiceAt(seed, serviceType, port(), Optional.of(name))
+      .ensureServiceAt(seed, serviceType, port, Optional.of(name))
       .then(discoverConfig(seed, name))
       .map(raw -> {
         String converted = raw.replace("$HOST", seed.address());

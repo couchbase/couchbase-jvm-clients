@@ -45,6 +45,11 @@ public class MockTestCluster extends TestCluster {
   }
 
   @Override
+  ClusterType type() {
+    return ClusterType.MOCKED;
+  }
+
+  @Override
   TestClusterConfig _start() throws Exception {
     BucketConfiguration bucketConfig = new BucketConfiguration();
     bucketConfig.type = Bucket.BucketType.COUCHBASE;
@@ -66,6 +71,7 @@ public class MockTestCluster extends TestCluster {
 
     Map<Services, Integer> ports = new HashMap<>();
     ports.put(Services.KV, mock.getCarrierPort(bucketConfig.name));
+    ports.put(Services.MANAGER, mock.getHttpPort());
 
     return new TestClusterConfig(
       bucketConfig.name,

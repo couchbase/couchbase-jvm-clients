@@ -5,7 +5,7 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
-import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.core.util.CoreIntegrationTest;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,14 +17,14 @@ import java.util.UUID;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-public class KeyValueIntegrationTest extends ClusterAwareIntegrationTest {
+class KeyValueIntegrationTest extends CoreIntegrationTest {
 
   private Core core;
   private CoreEnvironment env;
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
+    env = environment().build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
   }

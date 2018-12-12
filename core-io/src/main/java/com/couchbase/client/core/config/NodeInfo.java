@@ -122,7 +122,7 @@ public class NodeInfo {
                 services.put(ServiceType.KV, port);
             }
         }
-        services.put(ServiceType.CONFIG, configPort);
+        services.put(ServiceType.MANAGER, configPort);
         if (viewUri != null) {
             services.put(ServiceType.VIEWS, URI.create(viewUri).getPort());
         }

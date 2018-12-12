@@ -23,7 +23,7 @@ import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import io.netty.bootstrap.Bootstrap;
@@ -50,7 +50,7 @@ import static org.junit.Assert.assertTrue;
  *
  * @since 2.0.0
  */
-class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
+class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
   private CoreContext coreContext;
@@ -58,7 +58,7 @@ class KeyValueChannelIntegrationTest extends ClusterAwareIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
+    env = environment().build();
     coreContext = new CoreContext(null, 1, env);
     eventLoopGroup = new NioEventLoopGroup(1);
   }

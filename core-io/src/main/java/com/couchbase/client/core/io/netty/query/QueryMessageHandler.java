@@ -124,6 +124,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
           ctx.channel().config().setAutoRead(false);
         }
       }
+    } else {
+      // todo: error since a type returned that was not expected
     }
 
     ReferenceCountUtil.release(msg);

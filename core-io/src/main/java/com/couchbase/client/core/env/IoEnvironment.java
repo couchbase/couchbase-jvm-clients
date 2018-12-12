@@ -43,7 +43,7 @@ public class IoEnvironment {
   private final SecurityConfig securityConfig;
   private final Set<SaslMechanism> allowedSaslMechanisms;
 
-  private final Supplier<EventLoopGroup> configEventLoopGroup;
+  private final Supplier<EventLoopGroup> managerEventLoopGroup;
   private final Supplier<EventLoopGroup> kvEventLoopGroup;
   private final Supplier<EventLoopGroup> queryEventLoopGroup;
   private final Supplier<EventLoopGroup> analyticsEventLoopGroup;
@@ -52,6 +52,8 @@ public class IoEnvironment {
 
   private final CircuitBreakerConfig kvCircuitBreakerConfig;
   private final CircuitBreakerConfig queryCircuitBreakerConfig;
+  private final CircuitBreakerConfig managerCircuitBreakerConfig;
+
 
   public static IoEnvironment create() {
     return builder().build();
@@ -83,9 +85,9 @@ public class IoEnvironment {
       httpDefaultGroup = createEventLoopGroup(fairThreadCount(), "cb-io-http");
     }
 
-    configEventLoopGroup = builder.configEventLoopGroup == null
-      ? createEventLoopGroup(1, "cb-io-config")
-      : builder.configEventLoopGroup;
+    managerEventLoopGroup = builder.managerEventLoopGroup == null
+      ? createEventLoopGroup(1, "cb-io-manager")
+      : builder.managerEventLoopGroup;
     kvEventLoopGroup = builder.kvEventLoopGroup == null
       ? createEventLoopGroup(fairThreadCount(), "cb-io-kv")
       : builder.kvEventLoopGroup;
@@ -109,6 +111,10 @@ public class IoEnvironment {
     queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig == null
       ? CircuitBreakerConfig.disabled()
       : builder.queryCircuitBreakerConfig;
+
+    managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.managerCircuitBreakerConfig;
   }
 
   /**
@@ -155,8 +161,8 @@ public class IoEnvironment {
    *
    * @return the selected event loop group.
    */
-  public Supplier<EventLoopGroup> configEventLoopGroup() {
-    return configEventLoopGroup;
+  public Supplier<EventLoopGroup> managerEventLoopGroup() {
+    return managerEventLoopGroup;
   }
 
   /**
@@ -212,6 +218,11 @@ public class IoEnvironment {
     return queryCircuitBreakerConfig;
   }
 
+  public CircuitBreakerConfig managerCircuitBreakerConfig() {
+    return managerCircuitBreakerConfig;
+  }
+
+
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
@@ -258,7 +269,7 @@ public class IoEnvironment {
     private CompressionConfig compressionConfig = null;
     private SecurityConfig securityConfig = null;
     private Set<SaslMechanism> allowedSaslMechanisms = null;
-    private Supplier<EventLoopGroup> configEventLoopGroup = null;
+    private Supplier<EventLoopGroup> managerEventLoopGroup = null;
     private Supplier<EventLoopGroup> kvEventLoopGroup = null;
     private Supplier<EventLoopGroup> queryEventLoopGroup = null;
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
@@ -266,6 +277,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
     private CircuitBreakerConfig kvCircuitBreakerConfig = null;
     private CircuitBreakerConfig queryCircuitBreakerConfig = null;
+    private CircuitBreakerConfig managerCircuitBreakerConfig = null;
 
 
     public Builder connectTimeout(Duration connectTimeout) {

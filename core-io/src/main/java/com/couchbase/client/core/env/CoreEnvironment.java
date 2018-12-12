@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * The {@link CoreEnvironment} is an extendable, configurable and stateful
@@ -44,13 +45,13 @@ import java.util.function.Supplier;
 public class CoreEnvironment {
 
   private static final Supplier<String> DEFAULT_USER_AGENT = () -> "foobar";
-  private static final Supplier<Set<String>> DEFAULT_SEED_NODES = () ->
-    new HashSet<>(Collections.singletonList("127.0.0.1"));
+  private static final Supplier<Set<SeedNode>> DEFAULT_SEED_NODES = () ->
+    new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   private final Supplier<String> userAgent;
   private final Supplier<EventBus> eventBus;
-  private final Supplier<Set<String>> seedNodes;
+  private final Supplier<Set<SeedNode>> seedNodes;
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
   private final DiagnosticsMonitor diagnosticsMonitor;
@@ -188,7 +189,7 @@ public class CoreEnvironment {
     return queryTimeout;
   }
 
-  public Set<String> seedNodes() {
+  public Set<SeedNode> seedNodes() {
     return seedNodes.get();
   }
 
@@ -225,7 +226,7 @@ public class CoreEnvironment {
 
     private Supplier<String> userAgent = null;
     private Supplier<EventBus> eventBus = null;
-    private Supplier<Set<String>> seedNodes = null;
+    private Supplier<Set<SeedNode>> seedNodes = null;
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
@@ -274,14 +275,15 @@ public class CoreEnvironment {
       return self();
     }
 
-    public SELF seedNodes(Supplier<Set<String>> seedNodes) {
+    public SELF seedNodes(Supplier<Set<SeedNode>> seedNodes) {
       this.seedNodes = seedNodes;
       return self();
     }
 
-    public SELF seedNodes(Set<String> seedNodes) {
+    public SELF seedNodes(Set<SeedNode> seedNodes) {
       return seedNodes(() -> seedNodes);
     }
+
 
     public SELF kvTimeout(final Duration kvTimeout) {
       this.kvTimeout = kvTimeout;

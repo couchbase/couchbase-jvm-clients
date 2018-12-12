@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.config.loader;
+package com.couchbase.client.core.msg.manager;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import reactor.core.publisher.Mono;
 
-public class HttpLoader extends BaseLoader {
+import java.time.Duration;
 
-  public HttpLoader(final Core core) {
-    super(core, ServiceType.MANAGER);
+public abstract class BaseManagerRequest<R extends Response> extends BaseRequest<R> implements ManagerRequest<R> {
+
+  public BaseManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy);
   }
 
   @Override
-  protected Mono<String> discoverConfig(NetworkAddress seed, String bucket) {
-    return Mono.just("hello, world");
+  public ServiceType serviceType() {
+    return ServiceType.MANAGER;
   }
 
 }

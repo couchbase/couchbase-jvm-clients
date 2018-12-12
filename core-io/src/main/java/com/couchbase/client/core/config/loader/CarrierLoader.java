@@ -20,7 +20,10 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
@@ -30,11 +33,6 @@ public class CarrierLoader extends BaseLoader {
 
   public CarrierLoader(final Core core) {
     super(core, ServiceType.KV);
-  }
-
-  @Override
-  protected int port() {
-    return 11210;
   }
 
   @Override
@@ -52,7 +50,15 @@ public class CarrierLoader extends BaseLoader {
       core().send(request);
       return Reactor.wrap(request, request.response(), true);
     })
-    .map(response -> new String(response.content(), CharsetUtil.UTF_8));
+    .map(response -> {
+      if (response.status().success()) {
+        return new String(response.content(), CharsetUtil.UTF_8);
+      } else if (response.status() == ResponseStatus.UNSUPPORTED) {
+        throw new UnsupportedConfigMechanismException();
+      } else {
+        throw new CouchbaseException("Unknown status from loader: " + response);
+      }
+    });
   }
 
 }

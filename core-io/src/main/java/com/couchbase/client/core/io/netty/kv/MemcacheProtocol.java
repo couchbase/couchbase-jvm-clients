@@ -341,6 +341,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.SUCCESS;
     } else if (status == Status.NOT_FOUND.status) {
       return ResponseStatus.NOT_FOUND;
+    } else if (status == Status.NOT_SUPPORTED.status) {
+      return ResponseStatus.UNSUPPORTED;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -558,7 +560,11 @@ public enum MemcacheProtocol {
     /**
      * Access problem.
      */
-    ACCESS_ERROR((short) 0x24);
+    ACCESS_ERROR((short) 0x24),
+    /**
+     * Not supported.
+     */
+    NOT_SUPPORTED((short) 0x83);
 
     private final short status;
 

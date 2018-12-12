@@ -20,7 +20,10 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.test.ClusterAwareIntegrationTest;
+import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Services;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,13 +33,13 @@ import java.time.Duration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-class CarrierLoaderIntegrationTest extends ClusterAwareIntegrationTest {
+class CarrierLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
+    env = environment().build();
   }
 
   @AfterEach
@@ -49,12 +52,17 @@ class CarrierLoaderIntegrationTest extends ClusterAwareIntegrationTest {
    * {@link CarrierLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void loadConfigViaCarrierPublication() {
     NetworkAddress hostname = NetworkAddress.create(config().nodes().get(0).hostname());
 
     Core core = Core.create(env);
     CarrierLoader loader = new CarrierLoader(core);
-    BucketConfig loaded = loader.load(hostname, config().bucketname()).block();
+    BucketConfig loaded = loader.load(
+      hostname,
+      config().nodes().get(0).ports().get(Services.KV),
+      config().bucketname()
+    ).block();
 
     assertNotNull(loaded);
     assertEquals(config().bucketname(), loaded.name());

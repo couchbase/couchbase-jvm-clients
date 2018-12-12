@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-
 /**
  * The {@link ResponseStatus} describes what kind of response came back for a specific
  * request.
@@ -47,7 +45,11 @@ public enum ResponseStatus {
    * The server indicated that the given message failed because of a permission
    * violation.
    */
-  NO_ACCESS;
+  NO_ACCESS,
+  /**
+   * The server indicated that the given message is not supported.
+   */
+  UNSUPPORTED;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

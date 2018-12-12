@@ -42,6 +42,11 @@ public class UnmanagedTestCluster extends TestCluster {
   }
 
   @Override
+  ClusterType type() {
+    return ClusterType.UNMANAGED;
+  }
+
+  @Override
   TestClusterConfig _start() throws Exception {
     bucketname = UUID.randomUUID().toString();
 

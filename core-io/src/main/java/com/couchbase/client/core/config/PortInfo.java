@@ -76,7 +76,7 @@ public class PortInfo {
             int port = entry.getValue();
           switch (service) {
             case "mgmt":
-              ports.put(ServiceType.CONFIG, port);
+              ports.put(ServiceType.MANAGER, port);
               break;
             case "capi":
               ports.put(ServiceType.VIEWS, port);
@@ -91,7 +91,7 @@ public class PortInfo {
               sslPorts.put(ServiceType.VIEWS, port);
               break;
             case "mgmtSSL":
-              sslPorts.put(ServiceType.CONFIG, port);
+              sslPorts.put(ServiceType.MANAGER, port);
               break;
             case "n1ql":
               ports.put(ServiceType.QUERY, port);

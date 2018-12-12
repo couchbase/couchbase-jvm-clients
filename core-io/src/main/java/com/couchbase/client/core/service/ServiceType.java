@@ -49,9 +49,9 @@ public enum ServiceType {
   VIEWS(ServiceScope.CLUSTER),
 
   /**
-   * The Config Service ("cluster manager").
+   * The Cluster Manager service ("ns server")
    */
-  CONFIG(ServiceScope.CLUSTER);
+  MANAGER(ServiceScope.CLUSTER);
 
   private final ServiceScope scope;
 

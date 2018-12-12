@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.service;
+package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.msg.kv.NoopRequest;
-import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
+import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
+import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -35,14 +34,14 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertTrue;
 
-class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
+class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
   private CoreEnvironment env;
   private CoreContext coreContext;
 
   @BeforeEach
   void beforeEach() {
-    env = environment().build();
+    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
     coreContext = new CoreContext(null, 1, env);
   }
 
@@ -52,40 +51,36 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
   }
 
   /**
-   * The most simplistic end-to-end test for a KV service.
+   * This integration test attempts to load a "terse" bucket config from the cluster manager.
    *
-   * <p>This integration test connects to a node and then performs a NOOP and
-   * waits for a successful response.</p>
-   *
-   * @throws Exception if waiting on the response fails.
+   * <p>Note that the actual response is not checked here, since this handles at the higher levels. We just make sure
+   * that the config returned is not empty.</p>
    */
   @Test
-  void connectNoopAndDisconnect() throws Exception {
+  void fetchTerseConfig() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
 
-    ServiceConfig serviceConfig = KeyValueServiceConfig.create();
-    KeyValueService service = new KeyValueService(
-      serviceConfig,
+    ManagerEndpoint endpoint = new ManagerEndpoint(
       coreContext,
       NetworkAddress.create(node.hostname()),
-      node.ports().get(Services.KV),
-      config().bucketname(),
-      env.credentials()
+      node.ports().get(Services.MANAGER)
     );
 
-    service.connect();
-    waitUntilCondition(() -> service.state() == ServiceState.CONNECTED);
+    endpoint.connect();
+    waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, config().bucketname(), null);
+    TerseBucketConfigRequest request = new TerseBucketConfigRequest(Duration.ofSeconds(1), coreContext, null,
+      config().bucketname(), env.credentials());
+
     assertTrue(request.id() > 0);
-    service.send(request);
+    endpoint.send(request);
 
-    NoopResponse response = request.response().get(1, TimeUnit.SECONDS);
+    TerseBucketConfigResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());
+    assertTrue(response.config().length > 0);
 
-    assertTrue(request.context().dispatchLatency() > 0);
-
-    service.disconnect();
-    waitUntilCondition(() -> service.state() == ServiceState.DISCONNECTED);
+    endpoint.disconnect();
+    waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
   }
+
 }
