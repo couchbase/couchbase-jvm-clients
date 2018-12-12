@@ -44,7 +44,7 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
    * @param ctx the junit extension context.
    * @return the test cluster initialized.
    */
-  private TestCluster initializeTestCluster(final ExtensionContext ctx) {
+  private TestCluster accessAndMaybeInitTestCluster(final ExtensionContext ctx) {
     return (TestCluster) rootStore(ctx).getOrComputeIfAbsent(STORE_KEY, key -> {
       TestCluster testCluster = TestCluster.create();
       testCluster.start();
@@ -54,7 +54,7 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
 
   @Override
   public void beforeAll(final ExtensionContext ctx) {
-    initializeTestCluster(ctx);
+    accessAndMaybeInitTestCluster(ctx);
   }
 
   /**
@@ -79,7 +79,7 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
 
   @Override
   public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-    TestCluster testCluster = initializeTestCluster(context);
+    TestCluster testCluster = accessAndMaybeInitTestCluster(context);
 
     Optional<IgnoreWhen> annotation = AnnotationSupport.findAnnotation(context.getElement(), IgnoreWhen.class);
     if (annotation.isPresent()) {
@@ -93,6 +93,5 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
   }
-
 
 }
