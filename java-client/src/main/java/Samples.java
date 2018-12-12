@@ -38,11 +38,6 @@ public class Samples {
     Collection dc = bucket.defaultCollection();
     System.out.println(dc.get("airport_1291"));
     System.out.println(dc.get("airport_1291", getOptions().project("geo", "airportname")));
-
-
-    ByteBuf msg = Unpooled.wrappedBuffer(new byte[] {
-      (byte) 0x81, (byte) 0x20, 00, 00, 00, 00, 00, (byte) 0x83, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 });
-    System.err.println(MemcacheProtocol.messageToString(msg));
   }
 
   static void scenarioA(final Collection collection) {
