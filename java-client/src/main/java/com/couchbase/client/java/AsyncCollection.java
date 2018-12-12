@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
@@ -181,20 +182,24 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
-    if (options.projections() != null) {
-      throw new UnsupportedOperationException("TODO: implement subdoc get!");
-    }
-
-    if (options.withExpiration()) {
-      throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
-    }
-
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucket, retryStrategy);
-    return GetAccessor.get(core, id, request);
+
+    if (options.projections() != null) {
+      byte flags = 0; // TODO
+      SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy,
+        id, encodedId, flags, options.projections().commands());
+      return GetAccessor.subdocGet(core, id, request);
+    } else {
+      if (options.withExpiration()) {
+        throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
+      }
+
+      GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucket, retryStrategy);
+      return GetAccessor.get(core, id, request);
+    }
   }
 
   public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor) {

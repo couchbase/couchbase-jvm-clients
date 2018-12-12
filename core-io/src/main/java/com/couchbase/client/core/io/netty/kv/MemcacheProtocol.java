@@ -516,7 +516,11 @@ public enum MemcacheProtocol {
     /**
      * Returns the ID of a collection/scope combination
      */
-    COLLECTIONS_GET_CID((byte) 0xbb);
+    COLLECTIONS_GET_CID((byte) 0xbb),
+    /**
+     * Subdocument lookup with more than one element.
+     */
+    SUBDOC_MULTI_LOOKUP((byte) 0xd0);
 
     private final byte opcode;
 

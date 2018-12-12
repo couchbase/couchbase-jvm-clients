@@ -1,5 +1,6 @@
 import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.java.Bucket;
@@ -8,15 +9,19 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 
+import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.GetSpec.getSpec;
 import static com.couchbase.client.java.kv.MutateSpec.mutationSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
@@ -26,15 +31,18 @@ public class Samples {
 
   public static void main(String... args) throws Exception {
 
-    Cluster cluster = Cluster.connect("10.143.192.101", "Administrator", "password");
+    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
 
     Bucket bucket = cluster.bucket("travel-sample");
 
-    Collection airlines = bucket.collection("airlines");
-    System.out.println(airlines.get("airline_10"));
-
     Collection dc = bucket.defaultCollection();
-    System.out.println(dc.get("airline_10"));
+    System.out.println(dc.get("airport_1291"));
+    System.out.println(dc.get("airport_1291", getOptions().project("geo", "airportname")));
+
+
+    ByteBuf msg = Unpooled.wrappedBuffer(new byte[] {
+      (byte) 0x81, (byte) 0x20, 00, 00, 00, 00, 00, (byte) 0x83, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 });
+    System.err.println(MemcacheProtocol.messageToString(msg));
   }
 
   static void scenarioA(final Collection collection) {
@@ -48,7 +56,7 @@ public class Samples {
   }
 
   static void scenarioB(final Collection collection) {
-    Optional<GetResult> document = collection.get("id", getSpec().getField("users"));
+    Optional<GetResult> document = collection.get("id", getOptions().project("users"));
 
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
