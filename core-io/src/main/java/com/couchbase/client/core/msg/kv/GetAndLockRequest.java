@@ -18,7 +18,6 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -28,39 +27,37 @@ import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 /**
- * Represents a KV Get operation.
+ * Represents a KV GetAndTouch operation.
  *
  * @since 2.0.0
  */
-public class GetRequest extends BaseKeyValueRequest<GetResponse> {
+public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
 
-  public GetRequest(final String key, final byte[] collection, final Duration timeout,
-                    final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy) {
+  private final Duration lockFor;
+
+  public GetAndLockRequest(final String key, final byte[] collection, final Duration timeout,
+                           final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy,
+                           final Duration lockFor) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
+    this.lockFor = lockFor;
   }
 
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
     ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
-      partition(), opaque, noCas(), noExtras(), key, noBody());
+    ByteBuf extras = alloc.buffer(4).writeInt((int) lockFor.getSeconds());
+    ByteBuf r = MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
+      partition(), opaque, noCas(), extras, key, noBody());
+    extras.release();
     key.release();
     return r;
   }
 
   @Override
-  public GetResponse decode(final ByteBuf response) {
+  public GetAndLockResponse decode(final ByteBuf response) {
     ResponseStatus status = decodeStatus(response);
     long cas = cas(response);
 
@@ -69,9 +66,9 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
         .map(ByteBufUtil::getBytes)
         .map(bytes -> tryDecompression(bytes, datatype(response)))
         .orElse(new byte[] {});
-      return new GetResponse(status, content, cas);
+      return new GetAndLockResponse(status, content, cas);
     } else {
-      return new GetResponse(status, null, cas);
+      return new GetAndLockResponse(status, null, cas);
     }
   }
 

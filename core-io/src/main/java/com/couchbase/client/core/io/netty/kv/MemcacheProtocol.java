@@ -520,7 +520,15 @@ public enum MemcacheProtocol {
     /**
      * Subdocument lookup with more than one element.
      */
-    SUBDOC_MULTI_LOOKUP((byte) 0xd0);
+    SUBDOC_MULTI_LOOKUP((byte) 0xd0),
+    /**
+     * Allows to get a document and reset its expiry at the same time.
+     */
+    GET_AND_TOUCH((byte) 0x1d),
+    /**
+     * Allows to get a document and perform a write lock at the same time.
+     */
+    GET_AND_LOCK((byte) 0x94);
 
     private final byte opcode;
 

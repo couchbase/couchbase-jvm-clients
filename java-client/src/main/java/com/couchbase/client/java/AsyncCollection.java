@@ -18,12 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.InsertRequest;
-import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.core.msg.kv.ReplaceRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -94,56 +90,54 @@ public class AsyncCollection {
   private final String name;
 
   /**
-   * The scope of the collection.
-   */
-  private final String scope;
-
-  /**
    * The name of the bucket.
    */
   private final String bucket;
 
-  private final byte[] encodedId;
-
-  private final long collectionId;
+  /**
+   * Holds the collection id in an encoded format.
+   */
+  private final byte[] collectionId;
 
   /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
    * @param id the id
-   * @param scope the scope of the collection.
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  public AsyncCollection(final String name, final long id, final String scope, final String bucket,
+  public AsyncCollection(final String name, final long id, final String bucket,
                          final Core core, final ClusterEnvironment environment) {
     this.name = name;
-    this.scope = scope;
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
     this.bucket = bucket;
-    this.encodedId = UnsignedLEB128.encode(id);
-    this.collectionId = id;
+    this.collectionId = UnsignedLEB128.encode(id);
   }
 
   /**
    * Provides access to the underlying {@link Core}.
    */
-  Core core() {
+  @Stability.Internal
+  public Core core() {
     return core;
   }
 
   /**
    * Provides access to the underlying {@link ClusterEnvironment}.
    */
-  ClusterEnvironment environment() {
+  public ClusterEnvironment environment() {
     return environment;
   }
 
-  byte[] encodedId() {
-    return encodedId;
+  /**
+   * Returns the encoded collection id used for KV operations.
+   */
+  @Stability.Internal
+  byte[] collectionId() {
+    return collectionId;
   }
 
   /**
@@ -156,7 +150,7 @@ public class AsyncCollection {
   }
 
   /**
-   * Fetches a full Document from a collection with default options.
+   * Fetches a full document (or a projection of it) from a collection with default options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -169,7 +163,7 @@ public class AsyncCollection {
   }
 
   /**
-   * Fetches a full Document from a collection with custom options.
+   * Fetches a full document (or a projection of it) from a collection with custom options.
    *
    * <p>The {@link Optional} indicates if the document has been found or not. If the document
    * has not been found, an empty optional will be returned.</p>
@@ -190,38 +184,78 @@ public class AsyncCollection {
     if (options.projections() != null) {
       byte flags = 0; // TODO
       SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy,
-        id, encodedId, flags, options.projections().commands());
+        id, collectionId, flags, options.projections().commands());
       return GetAccessor.subdocGet(core, id, request);
     } else {
       if (options.withExpiration()) {
         throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
       }
 
-      GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucket, retryStrategy);
+      GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
       return GetAccessor.get(core, id, request);
     }
   }
 
+  /**
+   * Fetches a full document and write-locks it for the given duration with default options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param lockFor the duration the write lock should be automatically released after.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
   public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor) {
     return getAndLock(id, lockFor, GetAndLockOptions.DEFAULT);
   }
 
+  /**
+   * Fetches a full document and write-locks it for the given duration with custom options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param lockFor the duration the write lock should be automatically released after.
+   * @param options custom options to change the default behavior.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
   public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor,
                                                            final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(lockFor, "LockTime");
-
     notNull(options, "GetAndLockOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    GetAndLockRequest request = new GetAndLockRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy,
+      lockFor);
+    return GetAccessor.getAndLock(core, id, request);
   }
 
-
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with default options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiration the new expiration time for the document.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration) {
     return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
   }
 
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with default options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiration the new expiration time for the document.
+   * @param options custom options to change the default behavior.
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
@@ -229,8 +263,13 @@ public class AsyncCollection {
     notNull(expiration, "Expiration");
     notNull(options, "GetAndTouchOptions");
 
-    return null;
-  }
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy,
+      expiration);
+    return GetAccessor.getAndTouch(core, id, request);  }
 
 
   /**
@@ -258,7 +297,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout,
+    RemoveRequest request = new RemoveRequest(id, collectionId, options.cas(), timeout,
       coreContext, bucket, retryStrategy);
     return RemoveAccessor.remove(core, request);
   }
@@ -295,7 +334,7 @@ public class AsyncCollection {
 
     InsertRequest request = new InsertRequest(
       id,
-      encodedId,
+            collectionId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),
@@ -340,7 +379,7 @@ public class AsyncCollection {
 
     UpsertRequest request = new UpsertRequest(
       id,
-      encodedId,
+            collectionId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),
@@ -385,7 +424,7 @@ public class AsyncCollection {
 
     ReplaceRequest request = new ReplaceRequest(
       id,
-      encodedId,
+            collectionId,
       encoded.content(),
       options.expiry().getSeconds(),
       encoded.flags(),

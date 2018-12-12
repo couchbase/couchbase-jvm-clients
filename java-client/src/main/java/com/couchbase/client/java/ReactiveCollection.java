@@ -34,7 +34,6 @@ import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutateOptions;
@@ -53,7 +52,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -101,7 +99,7 @@ public class ReactiveCollection {
     this.environment = asyncCollection.environment();
     this.core = asyncCollection.core();
     this.bucketName = bucketName;
-    this.encodedId = asyncCollection.encodedId();
+    this.encodedId = asyncCollection.collectionId();
   }
 
   /**

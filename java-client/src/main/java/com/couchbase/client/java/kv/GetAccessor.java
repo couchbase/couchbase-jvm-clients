@@ -20,9 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
+import com.couchbase.client.core.msg.kv.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -45,6 +43,50 @@ public enum GetAccessor {
    */
   public static CompletableFuture<Optional<GetResult>> get(final Core core, final String id,
                                                            final GetRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(getResponse -> {
+        if (getResponse.status().success()) {
+          return Optional.of(GetResult.create(
+            id,
+            new EncodedDocument(0, getResponse.content()),
+            getResponse.cas(),
+            Optional.empty()
+          ));
+        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
+          return Optional.empty();
+        } else {
+          // todo: implement me
+          throw new UnsupportedOperationException("fixme");
+        }
+      });
+  }
+
+  public static CompletableFuture<Optional<GetResult>> getAndLock(final Core core, final String id,
+                                                                  final GetAndLockRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(getResponse -> {
+        if (getResponse.status().success()) {
+          return Optional.of(GetResult.create(
+            id,
+            new EncodedDocument(0, getResponse.content()),
+            getResponse.cas(),
+            Optional.empty()
+          ));
+        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
+          return Optional.empty();
+        } else {
+          // todo: implement me
+          throw new UnsupportedOperationException("fixme");
+        }
+      });
+  }
+
+  public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core, final String id,
+                                                                   final GetAndTouchRequest request) {
     core.send(request);
     return request
       .response()
