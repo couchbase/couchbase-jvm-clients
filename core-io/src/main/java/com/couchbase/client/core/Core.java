@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
+import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -51,6 +52,8 @@ public class Core {
   private static final AtomicLong CORE_IDS = new AtomicLong();
 
   private static final KeyValueLocator KEY_VALUE_LOCATOR = new KeyValueLocator();
+
+  private static final ManagerLocator MANAGER_LOCATOR = new ManagerLocator();
 
   /**
    * Holds the current core context.
@@ -172,6 +175,8 @@ public class Core {
     switch (serviceType) {
       case KV:
         return KEY_VALUE_LOCATOR;
+      case MANAGER:
+        return MANAGER_LOCATOR;
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
     }

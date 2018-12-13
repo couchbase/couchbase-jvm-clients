@@ -17,9 +17,18 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
+import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
 import com.couchbase.client.core.service.ServiceType;
+import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
+
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class HttpLoader extends BaseLoader {
 
@@ -29,7 +38,29 @@ public class HttpLoader extends BaseLoader {
 
   @Override
   protected Mono<String> discoverConfig(NetworkAddress seed, String bucket) {
-    return Mono.just("hello, world");
+    final CoreContext ctx = core().context();
+    final CoreEnvironment environment = ctx.environment();
+
+    return Mono.defer(() -> {
+      // todo: fixme proper timeout
+      // todo: fail fast here on the retry strategy?
+      TerseBucketConfigRequest request = new TerseBucketConfigRequest(
+        environment.kvTimeout(),
+        ctx,
+        environment.retryStrategy(),
+        bucket,
+        environment.credentials(),
+        seed
+      );
+      core().send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).map(new Function<TerseBucketConfigResponse, String>() {
+      @Override
+      public String apply(TerseBucketConfigResponse response) {
+        // todo: error handling
+        return new String(response.config(), CharsetUtil.UTF_8);
+      }
+    });
   }
 
 }

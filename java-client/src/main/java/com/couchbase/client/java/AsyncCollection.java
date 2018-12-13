@@ -31,6 +31,9 @@ import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
+import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutateSpec;
@@ -51,7 +54,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -189,8 +191,11 @@ public class AsyncCollection {
       List<SubdocGetRequest.Command> commands = options
         .projections()
         .stream()
+        .filter(s -> s != null && !s.isEmpty())
         .map(s -> new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, s, false))
         .collect(Collectors.toList());
+
+      // todo: if over 16 fields, degrade to fulldoc and do the projection in java
 
       return getProjection(id, options, timeout, retryStrategy, commands);
     } else {
@@ -523,9 +528,23 @@ public class AsyncCollection {
     return counter(id, delta, CounterOptions.DEFAULT);
   }
 
-  public CompletableFuture<MutationResult> counter(final String id, long delta, final CounterOptions options) {
+  public CompletableFuture<MutationResult> counter(final String id, long delta,
+                                                   final CounterOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "CounterOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<Optional<LookupResult>> lookup(final String id, final LookupSpec spec) {
+    return lookup(id, spec, LookupOptions.DEFAULT);
+  }
+
+  public CompletableFuture<Optional<LookupResult>> lookup(final String id, final LookupSpec spec,
+                                                          final LookupOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(spec, "LookupSpec");
+    notNull(options, "LookupOptions");
 
     return null;
   }

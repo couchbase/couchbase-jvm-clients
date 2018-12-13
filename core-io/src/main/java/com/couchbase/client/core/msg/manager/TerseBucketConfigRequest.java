@@ -2,7 +2,9 @@ package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -12,18 +14,20 @@ import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 
-public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConfigResponse> {
+public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConfigResponse> implements TargetedRequest {
 
   private static final String TERSE_URI = "/pools/default/b/%s";
 
   private final String bucketName;
   private final Credentials credentials;
+  private final NetworkAddress target;
 
   public TerseBucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                                  String bucketName, Credentials credentials) {
+                                  String bucketName, Credentials credentials, final NetworkAddress target) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
     this.credentials = credentials;
+    this.target = target;
   }
 
   @Override
@@ -31,6 +35,11 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, String.format(TERSE_URI, bucketName));
     addHttpBasicAuth(request, credentials.usernameForBucket(bucketName), credentials.passwordForBucket(bucketName));
     return request;
+  }
+
+  @Override
+  public NetworkAddress target() {
+    return target;
   }
 
   @Override
@@ -52,7 +61,7 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
     ByteBuf raw = Unpooled.buffer(user.length() + pw.length() + 1);
     raw.writeBytes((user + ":" + pw).getBytes(CharsetUtil.UTF_8));
     ByteBuf encoded = Base64.encode(raw, false);
-    request.headers().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
+    request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
     encoded.release();
     raw.release();
   }

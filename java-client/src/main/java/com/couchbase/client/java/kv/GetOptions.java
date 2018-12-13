@@ -27,6 +27,8 @@ import java.util.List;
 
 /**
  * Allows to customize a get request.
+ *
+ * @since 3.0.0
  */
 public class GetOptions extends CommonOptions<GetOptions> {
 
@@ -58,21 +60,35 @@ public class GetOptions extends CommonOptions<GetOptions> {
     withExpiration = false;
   }
 
+  /**
+   * If set to true, the get will fetch the expiration for the document as well and return
+   * it as part of the {@link GetResult}.
+   *
+   * @param expiration true if it should be fetched.
+   * @return the {@link GetOptions} to allow method chaining.
+   */
   public GetOptions withExpiration(boolean expiration) {
-    withExpiration = true;
+    withExpiration = expiration;
     return this;
   }
 
-  public boolean withExpiration() {
-    return withExpiration;
-  }
-
+  /**
+   * Allows to specify a custom list paths to fetch from the document instead of the whole.
+   *
+   * @param paths each individual path that should be loaded if present.
+   * @return the {@link GetOptions} to allow method chaining.
+   */
   public GetOptions project(final String... paths) {
     if (projections == null) {
       projections = new ArrayList<>(paths.length);
     }
     Collections.addAll(projections, paths);
     return this;
+  }
+
+  @Stability.Internal
+  public boolean withExpiration() {
+    return withExpiration;
   }
 
   @Stability.Internal

@@ -70,7 +70,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
     TerseBucketConfigRequest request = new TerseBucketConfigRequest(Duration.ofSeconds(1), coreContext, null,
-      config().bucketname(), env.credentials());
+      config().bucketname(), env.credentials(), null);
 
     assertTrue(request.id() > 0);
     endpoint.send(request);

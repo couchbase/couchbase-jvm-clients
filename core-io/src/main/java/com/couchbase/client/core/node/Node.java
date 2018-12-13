@@ -23,6 +23,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.service.KeyValueService;
+import com.couchbase.client.core.service.ManagerService;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceType;
@@ -91,7 +92,7 @@ public class Node {
       return Mono.empty();
     }
 
-    String name = bucket.orElse(GLOBAL_SCOPE);
+    String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.get();
     Map<ServiceType, Service> localMap = services.get(name);
     if (localMap == null) {
       localMap = new ConcurrentHashMap<>();
@@ -143,6 +144,8 @@ public class Node {
       case KV:
         return new KeyValueService(ctx.environment().keyValueServiceConfig(), ctx, address, port,
           bucket.get(), credentials);
+      case MANAGER:
+        return new ManagerService(ctx, address, port);
       default:
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }
