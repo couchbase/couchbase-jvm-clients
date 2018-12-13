@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -124,11 +125,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public void cancel(CancellationReason reason) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.CANCELLED)) {
-      response.completeExceptionally(new RequestCanceledException(
-        this.getClass().getSimpleName(),
-        context()
-      ));
       cancellationReason = reason;
+      Exception exception = reason == CancellationReason.TIMEOUT
+        ? new RequestTimeoutException(this.getClass().getSimpleName(), context())
+        : new RequestCanceledException(this.getClass().getSimpleName(), context());
+      response.completeExceptionally(exception);
     }
   }
 

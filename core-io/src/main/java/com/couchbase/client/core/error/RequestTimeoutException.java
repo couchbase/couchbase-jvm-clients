@@ -21,26 +21,10 @@ import com.couchbase.client.core.msg.RequestContext;
 
 import java.util.concurrent.CancellationException;
 
-public class RequestCanceledException extends CancellationException {
+public class RequestTimeoutException extends RequestCanceledException {
 
-  private final String name;
-  private final RequestContext requestContext;
-
-  public RequestCanceledException(String name, RequestContext context) {
-    this.requestContext = context;
-    this.name = name;
+  public RequestTimeoutException(String name, RequestContext context) {
+    super(name, context);
   }
 
-  public String name() {
-    return name;
-  }
-
-  public RequestContext requestContext() {
-    return requestContext;
-  }
-
-  @Override
-  public String getMessage() {
-    return name + " " + requestContext.exportAsString(Context.ExportFormat.JSON);
-  }
 }

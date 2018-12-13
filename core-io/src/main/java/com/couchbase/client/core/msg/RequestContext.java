@@ -118,6 +118,7 @@ public class RequestContext extends CoreContext {
     input.put("requestId", request.id());
     input.put("retried", retryAttempts());
     input.put("completed", request.completed());
+    input.put("timeoutMs", request.timeout().toMillis());
     if (request.cancelled()) {
       input.put("cancelled", true);
       input.put("reason", request.cancellationReason());
