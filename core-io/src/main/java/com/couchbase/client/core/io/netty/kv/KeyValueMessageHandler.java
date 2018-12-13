@@ -18,10 +18,14 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.Compressible;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,21 +43,6 @@ import java.util.List;
  * @since 2.0.0
  */
 public class KeyValueMessageHandler extends ChannelDuplexHandler {
-
-  /**
-   * Stores the current opaque value.
-   */
-  private int opaque;
-
-  /**
-   * If compression is enabled and should be used.
-   */
-  private boolean compressionEnabled;
-
-  /**
-   * If collection usage is enabled.
-   */
-  private boolean collectionsEnabled;
 
   /**
    * Stores the {@link CoreContext} for use.
@@ -81,6 +70,26 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private final EventBus eventBus;
 
   /**
+   * Stores the current IO context.
+   */
+  private IoContext ioContext;
+
+  /**
+   * Stores the current opaque value.
+   */
+  private int opaque;
+
+  /**
+   * If compression is enabled and should be used.
+   */
+  private boolean compressionEnabled;
+
+  /**
+   * If collection usage is enabled.
+   */
+  private boolean collectionsEnabled;
+
+  /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
    * @param coreContext the parent core context.
@@ -104,6 +113,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
+    ioContext = new IoContext(
+      coreContext,
+      ctx.channel().localAddress(),
+      ctx.channel().remoteAddress()
+    );
+
     opaque = Utils.opaque(ctx.channel(), false);
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
@@ -128,7 +143,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       }
       writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {
-      // todo: terminate this channel and raise an event, this is not supposed to happen
+      eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));
+      ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(
+        ioContext,
+        ChannelClosedProactivelyEvent.Reason.INVALID_REQUEST_DETECTED)
+      ));
     }
   }
 

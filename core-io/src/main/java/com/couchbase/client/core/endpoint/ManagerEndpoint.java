@@ -32,7 +32,7 @@ public class ManagerEndpoint extends BaseEndpoint {
     @Override
     public void init(ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new ManagerMessageHandler());
+      pipeline.addLast(new ManagerMessageHandler(coreContext));
     }
   }
 }

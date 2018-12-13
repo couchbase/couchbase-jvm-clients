@@ -32,7 +32,7 @@ public class Samples {
 
   public static void main(String... args) throws Exception {
 
-    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+    Cluster cluster = Cluster.connect("127.0.0.2", "Administrator", "password");
 
     Bucket bucket = cluster.bucket("travel-sample");
 

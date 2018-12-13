@@ -16,10 +16,19 @@
 
 package com.couchbase.client.core.io.netty.config;
 
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
+import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpContent;
@@ -27,6 +36,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * This handler dispatches requests and responses against the cluster manager service.
@@ -39,24 +50,48 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class ManagerMessageHandler extends ChannelDuplexHandler {
 
-  private ManagerRequest currentRequest;
+  private final CoreContext coreContext;
+  private IoContext ioContext;
+  private ManagerRequest<Response> currentRequest;
   private HttpResponseStatus lastStatus;
   private ByteBuf currentContent;
+  private final EventBus eventBus;
+
+  public ManagerMessageHandler(CoreContext coreContext) {
+    this.coreContext = coreContext;
+    this.eventBus = coreContext.environment().eventBus();
+  }
 
   @Override
-  public void channelActive(ChannelHandlerContext ctx) {
+  public void channelActive(final ChannelHandlerContext ctx) {
+    ioContext = new IoContext(
+      coreContext,
+      ctx.channel().localAddress(),
+      ctx.channel().remoteAddress()
+    );
+
     currentContent = ctx.alloc().buffer();
     ctx.fireChannelActive();
   }
 
   @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+  @SuppressWarnings({ "unchecked" })
+  public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof ManagerRequest) {
-      currentRequest = (ManagerRequest) msg;
+      if (currentRequest != null) {
+        RetryOrchestrator.maybeRetry(coreContext, (ManagerRequest<Response>) msg);
+        return;
+      }
+
+      currentRequest = (ManagerRequest<Response>) msg;
       ctx.writeAndFlush(((ManagerRequest) msg).encode());
       currentContent.clear();
     } else {
-      // todo: terminate this channel and raise an event, this is not supposed to happen
+      eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.MANAGER, msg));
+      ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(
+        ioContext,
+        ChannelClosedProactivelyEvent.Reason.INVALID_REQUEST_DETECTED)
+      ));
     }
   }
 
@@ -71,6 +106,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
         currentContent.readBytes(copy);
         Response response = currentRequest.decode(copy);
         currentRequest.succeed(response);
+        currentRequest = null;
       }
     } else {
       // todo: error since a type returned that was not expected

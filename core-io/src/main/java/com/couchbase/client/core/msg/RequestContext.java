@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -123,6 +124,9 @@ public class RequestContext extends CoreContext {
     }
     if (payload != null) {
       input.put("payload", payload);
+    }
+    if (dispatchLatency != 0) {
+      input.put("timings", new HashMap<>().put("dispatch", dispatchLatency));
     }
   }
 
