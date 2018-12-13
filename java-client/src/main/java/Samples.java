@@ -37,8 +37,8 @@ public class Samples {
     Bucket bucket = cluster.bucket("travel-sample");
 
     Collection dc = bucket.defaultCollection();
-    System.out.println(dc.get("airport_1291", getOptions()));
-    System.out.println(dc.get("airport_1291", getOptions().project("airportname")));
+    System.out.println(dc.get("airport_1291", getOptions().withExpiration(true)));
+    System.out.println(dc.get("airport_1291", getOptions().project("airportname").withExpiration(true)));
   }
 
   static void scenarioA(final Collection collection) {

@@ -87,6 +87,4 @@ public class GetResult {
       '}';
   }
 
-  // todo: index-based access
-
 }
