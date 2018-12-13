@@ -13,6 +13,7 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.Projections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -36,8 +37,8 @@ public class Samples {
     Bucket bucket = cluster.bucket("travel-sample");
 
     Collection dc = bucket.defaultCollection();
-    System.out.println(dc.get("airport_1291"));
-    System.out.println(dc.get("airport_1291", getOptions().project("geo", "airportname")));
+    System.out.println(dc.get("airport_1291", getOptions()));
+    System.out.println(dc.get("airport_1291", getOptions().project("airportname")));
   }
 
   static void scenarioA(final Collection collection) {

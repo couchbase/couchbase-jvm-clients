@@ -47,8 +47,12 @@ import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -182,18 +186,48 @@ public class AsyncCollection {
       : options.retryStrategy();
 
     if (options.projections() != null) {
-      byte flags = 0; // TODO
-      SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy,
-        id, collectionId, flags, options.projections().commands());
-      return GetAccessor.subdocGet(core, id, request);
-    } else {
-      if (options.withExpiration()) {
-        throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
-      }
+      List<SubdocGetRequest.Command> commands = options
+        .projections()
+        .stream()
+        .map(s -> new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, s, false))
+        .collect(Collectors.toList());
 
-      GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
-      return GetAccessor.get(core, id, request);
+      return getProjection(id, options, timeout, retryStrategy, commands);
+    } else {
+      return getFullDoc(id, options, timeout, retryStrategy);
     }
+  }
+
+  private CompletableFuture<Optional<GetResult>> getFullDoc(final String id,
+                                                            final GetOptions options,
+                                                            final Duration timeout,
+                                                            final RetryStrategy retryStrategy) {
+    if (options.withExpiration()) {
+      List<SubdocGetRequest.Command> command = new ArrayList<>();
+      command.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false));
+      return getProjection(id, options, timeout, retryStrategy, command);
+    }
+
+    GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
+    return GetAccessor.get(core, id, request);
+  }
+
+  private CompletableFuture<Optional<GetResult>> getProjection(final String id,
+                                                               final GetOptions options,
+                                                               final Duration timeout,
+                                                               final RetryStrategy retryStrategy,
+                                                               final List<SubdocGetRequest.Command> commands) {
+    if (options.withExpiration()) {
+      commands.add(0, new SubdocGetRequest.Command(
+        SubdocGetRequest.CommandType.GET,
+        "$document.exptime",
+        true)
+      );
+    }
+
+    SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy,
+      id, collectionId, (byte) 0, commands);
+    return GetAccessor.subdocGet(core, id, request);
   }
 
   /**

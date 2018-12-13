@@ -36,7 +36,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
@@ -61,12 +60,19 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       ? alloc.buffer(1, 1).writeByte(flags)
       : noExtras();
 
-    CompositeByteBuf body = alloc.compositeBuffer(commands.size());
-    for (Command command : commands) {
-      ByteBuf commandBuffer = command.encode(alloc);
-      body.addComponent(commandBuffer);
-      body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
+    ByteBuf body;
+    if (commands.size() == 1) {
+      // todo: Optimize into single get request only?
+      body = commands.get(0).encode(alloc);
+    } else {
+      body = alloc.compositeBuffer(commands.size());
+      for (Command command : commands) {
+        ByteBuf commandBuffer = command.encode(alloc);
+        ((CompositeByteBuf) body).addComponent(commandBuffer);
+        body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
+      }
     }
+
 
     ByteBuf request = request(
       alloc,

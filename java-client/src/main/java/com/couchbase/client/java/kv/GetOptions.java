@@ -16,8 +16,14 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonObject;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Allows to customize a get request.
@@ -37,7 +43,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Holds a possible projection.
    */
-  private Projections projections;
+  private List<String> projections;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
@@ -61,17 +67,16 @@ public class GetOptions extends CommonOptions<GetOptions> {
     return withExpiration;
   }
 
-  public GetOptions project(final Projections projections) {
-    this.projections = projections;
+  public GetOptions project(final String... paths) {
+    if (projections == null) {
+      projections = new ArrayList<>(paths.length);
+    }
+    Collections.addAll(projections, paths);
     return this;
   }
 
-  public GetOptions project(final String... get) {
-    this.project(Projections.projections().get(get));
-    return this;
-  }
-
-  public Projections projections() {
+  @Stability.Internal
+  public List<String> projections() {
     return projections;
   }
 

@@ -23,9 +23,12 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -117,20 +120,42 @@ public enum GetAccessor {
           long cas = subdocResponse.cas();
 
           try {
-            // TODO: this is not very efficient and a hack - fix me
-            ObjectNode node = Mapper.mapper().createObjectNode();
-            for (SubdocGetResponse.ResponseValue value : subdocResponse.values()) {
-              if (value.path().contains(".")) {
-                throw new UnsupportedOperationException("nested paths are not working mapped yet");
+            List<SubdocGetResponse.ResponseValue> values = subdocResponse.values();
+            byte[] exptime = null;
+            byte[] content = null;
+            for (SubdocGetResponse.ResponseValue value : values) {
+              if (value.path().equals("$document.exptime")) {
+                exptime = value.value();
+
+              } else if (value.path().isEmpty()) {
+                content = value.value();
               }
-              node.set(value.path(), Mapper.mapper().readTree(value.value()));
+            }
+
+            if (content == null) {
+              // TODO: this is not very efficient and a hack - fix me
+
+              ObjectNode node = Mapper.mapper().createObjectNode();
+              for (SubdocGetResponse.ResponseValue value : values) {
+                if (value.path().isEmpty() || value.path().equals("$document.exptime")) {
+                  continue;
+                }
+
+                if (value.path().contains(".")) {
+                  throw new UnsupportedOperationException("nested paths are not working mapped yet");
+                }
+                node.set(value.path(), Mapper.mapper().readTree(value.value()));
+              }
+              content = Mapper.mapper().writeValueAsBytes(node);
             }
 
             return Optional.of(GetResult.create(
               id,
-              new EncodedDocument(0, Mapper.mapper().writeValueAsBytes(node)),
+              new EncodedDocument(0, content),
               cas,
-              Optional.empty())
+              exptime == null
+                ? Optional.empty()
+                : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, CharsetUtil.UTF_8)))))
             );
           } catch (IOException e) {
             // TODO: fixme

@@ -31,7 +31,6 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
 
   @Override
   public CarrierBucketConfigResponse decode(final ByteBuf response) {
-    System.err.println(String.format("%x", status(response)));
     byte[] content = body(response).map(ByteBufUtil::getBytes).orElse(new byte[] {});
     return new CarrierBucketConfigResponse(decodeStatus(response), content);
   }

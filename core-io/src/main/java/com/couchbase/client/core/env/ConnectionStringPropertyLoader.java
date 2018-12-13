@@ -40,10 +40,10 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
 
   @Override
   public void load(final CoreEnvironment.Builder builder) {
-    Set<String> seeds = connectionString
+    Set<SeedNode> seeds = connectionString
       .allHosts()
       .stream()
-      .map(a -> a.getAddress().getHostAddress())
+      .map(a -> SeedNode.create(a.getAddress().getHostAddress()))
       .collect(Collectors.toSet());
 
     builder.seedNodes(seeds);
