@@ -20,7 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.events.request.RequestRetryEvent;
+import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
+import com.couchbase.client.core.cnc.events.request.RequestRetriedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -68,11 +69,22 @@ class RetryOrchestratorTest {
     Request<?> request = mock(Request.class);
     when(request.completed()).thenReturn(false);
     when(request.retryStrategy()).thenReturn(retryStrategy);
+    RequestContext requestContext = mock(RequestContext.class);
+    when(request.context()).thenReturn(requestContext);
 
-    RetryOrchestrator.maybeRetry(null, request);
+    CoreEnvironment env = mock(CoreEnvironment.class);
+    SimpleEventBus eventBus = new SimpleEventBus(true);
+    when(env.eventBus()).thenReturn(eventBus);
+    CoreContext context = new CoreContext(mock(Core.class), 1, env);
+    RetryOrchestrator.maybeRetry(context, request);
 
-    verify(request, never()).context();
     verify(request, times(1)).cancel(CancellationReason.NO_MORE_RETRIES);
+
+    assertEquals(1, eventBus.publishedEvents().size());
+    RequestNotRetriedEvent retryEvent = (RequestNotRetriedEvent) eventBus.publishedEvents().get(0);
+    assertEquals(Event.Severity.WARN, retryEvent.severity());
+    assertEquals(Event.Category.REQUEST, retryEvent.category());
+    assertEquals(requestContext, retryEvent.context());
   }
 
   @Test
@@ -112,9 +124,8 @@ class RetryOrchestratorTest {
     assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 200);
     timer.stop();
 
-
     assertEquals(1, eventBus.publishedEvents().size());
-    RequestRetryEvent retryEvent = (RequestRetryEvent) eventBus.publishedEvents().get(0);
+    RequestRetriedEvent retryEvent = (RequestRetriedEvent) eventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.DEBUG, retryEvent.severity());
     assertEquals(Event.Category.REQUEST, retryEvent.category());
     assertEquals(requestContext, retryEvent.context());

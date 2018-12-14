@@ -21,14 +21,14 @@ import com.couchbase.client.core.msg.RequestContext;
 
 import java.time.Duration;
 
-public class RequestRetryEvent extends AbstractEvent {
+public class RequestRetriedEvent extends AbstractEvent {
 
-  public RequestRetryEvent(Duration duration, RequestContext context) {
+  public RequestRetriedEvent(Duration duration, RequestContext context) {
     super(Severity.DEBUG, Category.REQUEST, duration, context);
   }
 
   @Override
   public String description() {
-    return "The Request is being retried";
+    return "Request retried per RetryStrategy";
   }
 }
