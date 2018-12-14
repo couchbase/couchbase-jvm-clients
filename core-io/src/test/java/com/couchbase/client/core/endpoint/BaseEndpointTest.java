@@ -30,6 +30,7 @@ import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -55,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Verifies the functionality of the {@link BaseEndpoint}.
@@ -335,13 +337,26 @@ class BaseEndpointTest {
    * write the request into the channel and it is flushed as well.
    */
   @Test
+  @SuppressWarnings({"unchecked"})
   void writeAndFlushToChannelIfFullyConnected() {
     EmbeddedChannel channel = new EmbeddedChannel();
     InstrumentedEndpoint endpoint = connectSuccessfully(channel);
+    assertEquals(0, endpoint.lastResponseReceived());
 
-    Request<?> request = mock(Request.class);
+    Request<Response> request = mock(Request.class);
+    CompletableFuture<Response> response = new CompletableFuture<>();
+    when(request.response()).thenReturn(response);
+
+    assertTrue(endpoint.free());
     endpoint.send(request);
+    assertFalse(endpoint.free());
+
     assertEquals(request, channel.readOutbound());
+
+    assertEquals(0, endpoint.lastResponseReceived());
+    response.complete(mock(Response.class));
+    assertTrue(endpoint.lastResponseReceived() > 0);
+    assertTrue(endpoint.free());
   }
 
   /**

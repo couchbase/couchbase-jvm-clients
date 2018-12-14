@@ -18,6 +18,7 @@ package com.couchbase.client.core.retry;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.request.RequestRetryEvent;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -51,6 +52,9 @@ public class RetryOrchestrator {
 
     Optional<Duration> duration = request.retryStrategy().shouldRetry(request);
     if (duration.isPresent()) {
+      ctx.environment().eventBus().publish(
+        new RequestRetryEvent(duration.get(), request.context())
+      );
       request.context().incrementRetryAttempt();
       ctx.environment().timer().schedule(
         () -> ctx.core().send(request,false),

@@ -16,14 +16,11 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.msg.Response;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the functionality of the {@link LazyCircuitBreaker}.
@@ -60,16 +57,12 @@ class LazyCircuitBreakerTest {
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
     for (int i = 0; i < config.volumeThreshold() - 1; i++) {
-      CompletableFuture<Response> future = new CompletableFuture<>();
-      cb.track(future);
-      future.completeExceptionally(new Exception());
+      cb.markFailure();
       assertEquals(CircuitBreaker.State.CLOSED, cb.state());
       assertTrue(cb.allowsRequest());
     }
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
     assertFalse(cb.allowsRequest());
   }
@@ -89,9 +82,7 @@ class LazyCircuitBreakerTest {
 
     // Make good 100 requests to add some seeds
     for (int i = 0; i < 100; i++) {
-      CompletableFuture<Response> future = new CompletableFuture<>();
-      cb.track(future);
-      future.complete(mock(Response.class));
+      cb.markSuccess();
       assertTrue(cb.allowsRequest());
       assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     }
@@ -100,23 +91,19 @@ class LazyCircuitBreakerTest {
     // divided by 500 total is 0,8 -> 80% ratio).. minus one so the next one
     // will trip it below.
     for (int i = 0; i < 399; i++) {
-      CompletableFuture<Response> future = new CompletableFuture<>();
-      cb.track(future);
-      future.completeExceptionally(new Exception());
+      cb.markFailure();
       assertTrue(cb.allowsRequest());
       assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     }
 
     // This one trips it.
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
     assertFalse(cb.allowsRequest());
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
   }
 
   /**
-   * Makes sure that after the configued sleep time, a new request is allowed to
+   * Makes sure that after the configured sleep time, a new request is allowed to
    * go in as a canary.
    */
   @Test
@@ -131,9 +118,7 @@ class LazyCircuitBreakerTest {
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
     assertFalse(cb.allowsRequest());
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
 
@@ -141,8 +126,7 @@ class LazyCircuitBreakerTest {
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
     assertTrue(cb.allowsRequest());
 
-    future = new CompletableFuture<>();
-    cb.track(future);
+    cb.track();
 
     assertEquals(CircuitBreaker.State.HALF_OPEN, cb.state());
     assertFalse(cb.allowsRequest());
@@ -162,18 +146,15 @@ class LazyCircuitBreakerTest {
 
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     Thread.sleep(config.sleepWindow().toMillis() + 1);
-    future = new CompletableFuture<>();
-    cb.track(future);
+    cb.track();
 
     assertEquals(CircuitBreaker.State.HALF_OPEN, cb.state());
     assertFalse(cb.allowsRequest());
 
-    future.complete(mock(Response.class));
+    cb.markSuccess();
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());
   }
@@ -192,18 +173,15 @@ class LazyCircuitBreakerTest {
 
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     Thread.sleep(config.sleepWindow().toMillis() + 1);
-    future = new CompletableFuture<>();
-    cb.track(future);
+    cb.track();
 
     assertEquals(CircuitBreaker.State.HALF_OPEN, cb.state());
     assertFalse(cb.allowsRequest());
 
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
     assertFalse(cb.allowsRequest());
 
@@ -224,9 +202,7 @@ class LazyCircuitBreakerTest {
 
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     assertEquals(CircuitBreaker.State.OPEN, cb.state());
     assertFalse(cb.allowsRequest());
@@ -250,13 +226,10 @@ class LazyCircuitBreakerTest {
 
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     Thread.sleep(config.sleepWindow().toMillis() + 1);
-    future = new CompletableFuture<>();
-    cb.track(future);
+    cb.track();
 
     assertEquals(CircuitBreaker.State.HALF_OPEN, cb.state());
     assertFalse(cb.allowsRequest());
@@ -281,18 +254,14 @@ class LazyCircuitBreakerTest {
 
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());
 
     Thread.sleep(config.rollingWindow().toMillis() + 1);
 
-    future = new CompletableFuture<>();
-    cb.track(future);
-    future.completeExceptionally(new Exception());
+    cb.markFailure();
 
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());

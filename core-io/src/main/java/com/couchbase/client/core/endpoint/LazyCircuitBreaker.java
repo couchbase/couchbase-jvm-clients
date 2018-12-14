@@ -16,12 +16,8 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.msg.Response;
-
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 /**
  * This {@link CircuitBreaker} tracks its states in a lazy fashion.
@@ -106,15 +102,8 @@ class LazyCircuitBreaker implements CircuitBreaker {
   }
 
   @Override
-  public void track(CompletableFuture<? extends Response> response) {
+  public void track() {
     state.compareAndSet(State.OPEN, State.HALF_OPEN);
-    response.whenComplete((BiConsumer<Response, Throwable>) (r, t) -> {
-      if (r != null) {
-        markSuccess();
-      } else {
-        markFailure();
-      }
-    });
   }
 
   @Override
@@ -170,7 +159,8 @@ class LazyCircuitBreaker implements CircuitBreaker {
   /**
    * Mark a tracked request as failed.
    */
-  private void markFailure() {
+  @Override
+  public void markFailure() {
     long now = System.nanoTime();
     if (state.compareAndSet(State.HALF_OPEN, State.OPEN)) {
       circuitOpened = now;
@@ -185,7 +175,8 @@ class LazyCircuitBreaker implements CircuitBreaker {
   /**
    * Mark a tracked request as success.
    */
-  private void markSuccess() {
+  @Override
+  public void markSuccess() {
     if (state.compareAndSet(State.HALF_OPEN, State.CLOSED)) {
       reset();
     } else {

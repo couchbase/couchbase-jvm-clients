@@ -36,6 +36,9 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutateSpec;
 import com.couchbase.client.java.kv.MutationResult;
@@ -413,6 +416,15 @@ public class ReactiveCollection {
     return null;
   }
 
+  public Mono<LookupResult> lookupIn(final String id, final LookupSpec spec) {
+    return lookupIn(id, spec, LookupOptions.DEFAULT);
+  }
+
+  public Mono<LookupResult> lookupIn(final String id, final LookupSpec spec,
+                                     final LookupOptions options) {
+
+    throw new UnsupportedOperationException("Implement me -> subdoc lookupIn");
+  }
 
   /**
    * Performs mutations to document fragments with default options.
@@ -421,8 +433,8 @@ public class ReactiveCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutate(final String id, final MutateSpec spec) {
-    return mutate(id, spec, MutateOptions.DEFAULT);
+  public Mono<MutationResult> mutateIn(final String id, final MutateSpec spec) {
+    return mutateIn(id, spec, MutateOptions.DEFAULT);
   }
 
   /**
@@ -433,13 +445,13 @@ public class ReactiveCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutate(final String id, final MutateSpec spec,
-                                                  final MutateOptions options) {
+  public Mono<MutationResult> mutateIn(final String id, final MutateSpec spec,
+                                       final MutateOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateSpec");
     notNull(options, "MutateOptions");
 
-    throw new UnsupportedOperationException("Implement me -> subdoc mutate");
+    throw new UnsupportedOperationException("Implement me -> subdoc mutateIn");
   }
 
 

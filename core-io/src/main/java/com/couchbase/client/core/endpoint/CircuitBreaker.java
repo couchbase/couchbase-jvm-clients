@@ -33,11 +33,19 @@ import java.util.concurrent.CompletableFuture;
 interface CircuitBreaker {
 
   /**
-   * Tracks the given response for either success or failure.
-   *
-   * @param response the response to track.
+   * Marks that a circuit breaker should start tracking.
    */
-  void track(CompletableFuture<? extends Response> response);
+  void track();
+
+  /**
+   * The tracked request is marked succeeded.
+   */
+  void markSuccess();
+
+  /**
+   * The tracked request is marked failure.
+   */
+  void markFailure();
 
   /**
    * Resets this circuit breaker to its initial state.

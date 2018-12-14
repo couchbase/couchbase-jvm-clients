@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2018 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.cnc.events.request;
 
-public class ReplicaNotAvailableException extends CouchbaseException {
+import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.msg.RequestContext;
 
-    public ReplicaNotAvailableException() {
-        super();
-    }
+import java.time.Duration;
 
-    public ReplicaNotAvailableException(String message) {
-        super(message);
-    }
+public class RequestRetryEvent extends AbstractEvent {
 
-    public ReplicaNotAvailableException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  public RequestRetryEvent(Duration duration, RequestContext context) {
+    super(Severity.DEBUG, Category.REQUEST, duration, context);
+  }
 
-    public ReplicaNotAvailableException(Throwable cause) {
-        super(cause);
-    }
+  @Override
+  public String description() {
+    return "The Request is being retried";
+  }
 }

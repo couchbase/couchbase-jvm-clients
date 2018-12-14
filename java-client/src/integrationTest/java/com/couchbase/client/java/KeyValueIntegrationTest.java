@@ -16,13 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.ClusterAwareIntegrationTest;
-import com.couchbase.client.test.Services;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

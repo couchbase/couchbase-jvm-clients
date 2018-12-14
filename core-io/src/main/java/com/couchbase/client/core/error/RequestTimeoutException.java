@@ -16,10 +16,7 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.msg.RequestContext;
-
-import java.util.concurrent.CancellationException;
 
 public class RequestTimeoutException extends RequestCanceledException {
 

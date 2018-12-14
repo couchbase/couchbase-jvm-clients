@@ -16,10 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.msg.Response;
-
-import java.util.concurrent.CompletableFuture;
-
 /**
  * A simple noop implementation of the {@link CircuitBreaker} if disabled by the user.
  *
@@ -32,7 +28,13 @@ public class NoopCircuitBreaker implements CircuitBreaker {
   private NoopCircuitBreaker() {}
 
   @Override
-  public void track(CompletableFuture<? extends Response> response) { }
+  public void track() { }
+
+  @Override
+  public void markSuccess() { }
+
+  @Override
+  public void markFailure() { }
 
   @Override
   public void reset() { }

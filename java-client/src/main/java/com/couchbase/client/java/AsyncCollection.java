@@ -536,12 +536,12 @@ public class AsyncCollection {
     return null;
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookup(final String id, final LookupSpec spec) {
-    return lookup(id, spec, LookupOptions.DEFAULT);
+  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupSpec spec) {
+    return lookupIn(id, spec, LookupOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookup(final String id, final LookupSpec spec,
-                                                          final LookupOptions options) {
+  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupSpec spec,
+                                                            final LookupOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "LookupSpec");
     notNull(options, "LookupOptions");
@@ -556,8 +556,8 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutate(final String id, final MutateSpec spec) {
-    return mutate(id, spec, MutateOptions.DEFAULT);
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateSpec spec) {
+    return mutateIn(id, spec, MutateOptions.DEFAULT);
   }
 
   /**
@@ -568,13 +568,13 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutate(final String id, final MutateSpec spec,
-                                                  final MutateOptions options) {
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateSpec spec,
+                                                    final MutateOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateSpec");
     notNull(options, "MutateOptions");
 
-    throw new UnsupportedOperationException("Implement me -> subdoc mutate");
+    throw new UnsupportedOperationException("Implement me -> subdoc mutateIn");
   }
 
 }

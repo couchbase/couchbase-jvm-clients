@@ -19,10 +19,13 @@ package com.couchbase.client.core.retry;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.request.RequestRetryEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -31,6 +34,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.util.Utils.waitUntilCondition;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -88,7 +92,10 @@ class RetryOrchestratorTest {
 
     Core core = mock(Core.class);
     CoreEnvironment env = mock(CoreEnvironment.class);
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     when(env.timer()).thenReturn(timer);
+    when(env.eventBus()).thenReturn(eventBus);
+
     CoreContext ctx = new CoreContext(core, 1, env);
 
     long start = System.nanoTime();
@@ -104,6 +111,13 @@ class RetryOrchestratorTest {
     verify(core, never()).send(request);
     assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 200);
     timer.stop();
+
+
+    assertEquals(1, eventBus.publishedEvents().size());
+    RequestRetryEvent retryEvent = (RequestRetryEvent) eventBus.publishedEvents().get(0);
+    assertEquals(Event.Severity.DEBUG, retryEvent.severity());
+    assertEquals(Event.Category.REQUEST, retryEvent.category());
+    assertEquals(requestContext, retryEvent.context());
   }
 
 }

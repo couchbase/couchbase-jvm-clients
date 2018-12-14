@@ -20,12 +20,14 @@ import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutateSpec;
-import com.couchbase.client.java.kv.GetSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -34,10 +36,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncUtils.block;
 
 /**
@@ -245,6 +244,15 @@ public class Collection {
     return block(async().counter(id, delta, options));
   }
 
+  public Optional<LookupResult> lookupIn(final String id, final LookupSpec spec) {
+    return block(async().lookupIn(id, spec));
+  }
+
+  public Optional<LookupResult> lookupIn(final String id, final LookupSpec spec,
+                                         final LookupOptions options) {
+    return block(async().lookupIn(id, spec, options));
+  }
+
   /**
    * Performs mutations to document fragments with default options.
    *
@@ -252,8 +260,8 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutate(final String id, final MutateSpec spec) {
-    return block(async().mutate(id, spec));
+  public MutationResult mutateIn(final String id, final MutateSpec spec) {
+    return block(async().mutateIn(id, spec));
   }
 
   /**
@@ -264,9 +272,9 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutate(final String id, final MutateSpec spec,
+  public MutationResult mutateIn(final String id, final MutateSpec spec,
                                  final MutateOptions options) {
-    return block(async().mutate(id, spec, options));
+    return block(async().mutateIn(id, spec, options));
   }
 
 }

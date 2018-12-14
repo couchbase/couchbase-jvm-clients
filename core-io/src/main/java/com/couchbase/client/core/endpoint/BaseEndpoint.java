@@ -51,6 +51,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -94,9 +95,19 @@ public abstract class BaseEndpoint implements Endpoint {
   private final CircuitBreaker circuitBreaker;
 
   /**
+   * If the current endpoint is free or not.
+   */
+  private final AtomicInteger outstandingRequests;
+
+  /**
    * Once connected, contains the channel to work with.
    */
   private volatile Channel channel;
+
+  /**
+   * Holds the unix nanotime when the last response completed.
+   */
+  private volatile long lastResponseTimestamp;
 
   /**
    * Constructor to create a new endpoint, usually called by subclasses.
@@ -115,6 +126,8 @@ public abstract class BaseEndpoint implements Endpoint {
       ? new LazyCircuitBreaker(circuitBreakerConfig)
       : NoopCircuitBreaker.INSTANCE;
     this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker);
+    this.outstandingRequests = new AtomicInteger(0);
+    this.lastResponseTimestamp = 0;
 
     long connectTimeoutMs = coreContext.environment().ioEnvironment().connectTimeout().toMillis();
     channelBootstrap = new Bootstrap()
@@ -285,11 +298,31 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public <R extends Request<? extends Response>> void send(R request) {
     if (canWrite()) {
-        circuitBreaker.track(request.response());
+        circuitBreaker.track();
+        outstandingRequests.incrementAndGet();
+        request.response().whenComplete((r, t) -> {
+          if (r != null) {
+            circuitBreaker.markSuccess();
+          } else {
+            circuitBreaker.markFailure();
+          }
+          outstandingRequests.decrementAndGet();
+          lastResponseTimestamp = System.nanoTime();
+        });
         channel.writeAndFlush(request);
     } else {
       RetryOrchestrator.maybeRetry(endpointContext, request);
     }
+  }
+
+  @Override
+  public boolean free() {
+    return outstandingRequests.get() == 0;
+  }
+
+  @Override
+  public long lastResponseReceived() {
+    return lastResponseTimestamp;
   }
 
   /**

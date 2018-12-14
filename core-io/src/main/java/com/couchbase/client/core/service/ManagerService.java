@@ -35,13 +35,12 @@ public class ManagerService extends PooledService {
   static class ManagerServiceConfig implements ServiceConfig {
     @Override
     public int minEndpoints() {
-      // TODO: set this to 0 once the actual dynamic pool is back implemented
-      return 1;
+      return 0;
     }
 
     @Override
     public int maxEndpoints() {
-      return 8;
+      return 16;
     }
 
     @Override

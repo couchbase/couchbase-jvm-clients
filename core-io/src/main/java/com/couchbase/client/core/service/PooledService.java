@@ -22,9 +22,14 @@ import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -61,11 +66,22 @@ abstract class PooledService implements Service {
   private final ServiceContext serviceContext;
 
   /**
+   * If the pool cannot grow because min and max are the same.
+   */
+  private final boolean fixedPool;
+
+  /**
    * If disconnect called by a caller, set to true.
    */
   private volatile AtomicBoolean disconnected;
 
-  PooledService(final ServiceConfig serviceConfig, ServiceContext serviceContext) {
+  /**
+   * Creates a new {@link PooledService}.
+   *
+   * @param serviceConfig the underlying service config.
+   * @param serviceContext the service context.
+   */
+  PooledService(final ServiceConfig serviceConfig, final ServiceContext serviceContext) {
     this.serviceConfig = serviceConfig;
     this.endpoints = new CopyOnWriteArrayList<>();
     this.initialState = serviceConfig.minEndpoints() > 0
@@ -73,6 +89,48 @@ abstract class PooledService implements Service {
       : ServiceState.IDLE;
     this.disconnected = new AtomicBoolean(false);
     this.serviceContext = serviceContext;
+    this.fixedPool = serviceConfig.minEndpoints() == serviceConfig.maxEndpoints();
+
+    scheduleCleanIdleConnections();
+  }
+
+  /**
+   * Helper method to schedule cleaning up idle connections per interval.
+   */
+  private void scheduleCleanIdleConnections() {
+    final Duration idleTime = serviceConfig.idleTime();
+    if (idleTime != null && !idleTime.isZero()) {
+      serviceContext.environment().timer().schedule(this::cleanIdleConnections, idleTime);
+    }
+  }
+
+  /**
+   * Go through the connections and clean up all the idle connections.
+   */
+  private synchronized void cleanIdleConnections() {
+    if (disconnected.get()) {
+      return;
+    }
+
+    List<Endpoint> endpoints = new ArrayList<>(this.endpoints);
+    Collections.shuffle(endpoints);
+
+    for (Endpoint endpoint : endpoints) {
+      if (this.endpoints.size() == serviceConfig.minEndpoints()) {
+        break;
+      }
+
+      long timespan = TimeUnit.NANOSECONDS.toSeconds(
+        System.nanoTime() - endpoint.lastResponseReceived()
+      );
+
+      if (endpoint.free() && timespan >= serviceConfig.idleTime().toNanos()) {
+        this.endpoints.remove(endpoint);
+        endpoint.disconnect();
+      }
+    }
+
+    scheduleCleanIdleConnections();
   }
 
   /**
@@ -95,15 +153,24 @@ abstract class PooledService implements Service {
       return;
     }
 
-    Endpoint selected = selectionStrategy().select(request, endpoints);
+    Endpoint found = endpoints.isEmpty() ? null : selectionStrategy().select(request, endpoints);
 
-    if (selected != null) {
-      selected.send(request);
-    } else {
-      // todo: what to do if endpoint not found?
+    if (found != null) {
+      found.send(request);
+      return;
     }
 
-    // TODO: implement actual dynamic pooling and handling of pipelining!!
+    if (!fixedPool && endpoints.size() < serviceConfig.maxEndpoints()) {
+      synchronized (this) {
+        if (!disconnected.get()) {
+          Endpoint endpoint = createEndpoint();
+          endpoint.connect();
+          endpoints.add(endpoint);
+        }
+      }
+    }
+
+    RetryOrchestrator.maybeRetry(serviceContext, request);
   }
 
   @Override

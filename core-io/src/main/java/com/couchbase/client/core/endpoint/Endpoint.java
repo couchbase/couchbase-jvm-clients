@@ -65,4 +65,19 @@ public interface Endpoint {
    */
   EndpointState state();
 
+  /**
+   * If this endpoint has currently one or more requests outstanding.
+   *
+   * @return true if free, false otherwise.
+   */
+  boolean free();
+
+  /**
+   * Holds the timestamp of the last response received (or 0 if no request ever sent).
+   *
+   * @return the timestamp of the last response received.
+   */
+  long lastResponseReceived();
+
+
 }
