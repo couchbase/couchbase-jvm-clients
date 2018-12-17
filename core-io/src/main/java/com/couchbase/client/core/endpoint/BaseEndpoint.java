@@ -79,11 +79,6 @@ public abstract class BaseEndpoint implements Endpoint {
   private final EndpointContext endpointContext;
 
   /**
-   * Stores the common bootstrap logic for a channel.
-   */
-  private final Bootstrap channelBootstrap;
-
-  /**
    * If instructed to disconnect, disrupts any connecting attempts
    * and shuts down the underlying channel if any.
    */
@@ -98,6 +93,11 @@ public abstract class BaseEndpoint implements Endpoint {
    * If the current endpoint is free or not.
    */
   private final AtomicInteger outstandingRequests;
+
+  /**
+   * The event loop group used for this endpoint, passed to netty.
+   */
+  private final EventLoopGroup eventLoopGroup;
 
   /**
    * Once connected, contains the channel to work with.
@@ -128,20 +128,7 @@ public abstract class BaseEndpoint implements Endpoint {
     this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker);
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
-
-    long connectTimeoutMs = coreContext.environment().ioEnvironment().connectTimeout().toMillis();
-    channelBootstrap = new Bootstrap()
-      .remoteAddress(hostname.nameOrAddress(), port)
-      .group(eventLoopGroup)
-      .channel(channelFrom(eventLoopGroup))
-      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
-      .handler(new ChannelInitializer<SocketChannel>() {
-        @Override
-        protected void initChannel(SocketChannel ch) {
-          ChannelPipeline pipeline = ch.pipeline();
-          pipelineInitializer().init(pipeline);
-        }
-      });
+    this.eventLoopGroup = eventLoopGroup;
   }
 
   /**
@@ -195,6 +182,26 @@ public abstract class BaseEndpoint implements Endpoint {
     final AtomicLong attemptStart = new AtomicLong();
     Mono
       .defer((Supplier<Mono<Channel>>) () -> {
+        long connectTimeoutMs = endpointContext
+          .environment()
+          .ioEnvironment()
+          .connectTimeout()
+          .toMillis();
+
+
+        final Bootstrap channelBootstrap = new Bootstrap()
+          .remoteAddress(endpointContext.remoteHostname().nameOrAddress(), endpointContext.remotePort())
+          .group(eventLoopGroup)
+          .channel(channelFrom(eventLoopGroup))
+          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
+          .handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) {
+              ChannelPipeline pipeline = ch.pipeline();
+              pipelineInitializer().init(pipeline);
+            }
+          });
+
         attemptStart.set(System.nanoTime());
         return channelFutureIntoMono(channelBootstrap.connect());
       })

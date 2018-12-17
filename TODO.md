@@ -1,9 +1,13 @@
 # TODOs
 
-Loosely keeping track of things:
+## Service Level
 
+ - add unit tests for the pooling behavior (dynaimc add until limit and remove idle)
+ - add integration tests for n1ql which shows the pooling in action
 
-## GC Analyzer
+## Supportability
+
+### GC Analyzer
 
  - figure out which type to set for g1 young and old
  - add tests for the outstanding ones
@@ -12,19 +16,30 @@ Loosely keeping track of things:
  - add azul support?
  - add allocation rate checking
 
-## Diagnostics monitor
+### Diagnostics monitor
 
+ - make diagnostics print in interval debug by default, but if there is a timeout or some
+   other weird condition -> print in higher intervals at INFO level so we get it captured.
+   
  - make it run in its own thread and include in core env by default on
  - add another analyzer based on the stall detection with latencyUtils. and emit when
    stalls are detected
  - would it be possible to add a analyzer for OS-type stuff like overall memory usage, cpu
    utilization...?
+   
+### OS Resource Analyzer
+
+ - can we figure out more infos about the system (i.e. cpu usage, memory,...)
+ 
+### JVM Stall Analyzers
+
+ - see if we can use the azul tools to detect stalls and if so report on them in the diagnostics
+   report.
 
 ## Requests
 
  - add unit tests for compression both on upsert request and get response
  - rework delay and retry builder (not rely on the reactor one which logs?)
- - figure out a retry policy per request and use it
  
 ## Endpoint
 
@@ -72,8 +87,7 @@ Loosely keeping track of things:
     
 ## Integration tests
 
- - add support for the mock! as another managed cluster
- - Finish work to get an initial managed integration build going
+ - make the containerized version work in testing
  - add support for N nodes to bootstrap on managed
  - add annotations for at least version
  - add annotation for specific topology type
