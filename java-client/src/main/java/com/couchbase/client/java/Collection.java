@@ -17,6 +17,8 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.kv.CounterOptions;
+import com.couchbase.client.java.kv.ExistsOptions;
+import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetResult;
@@ -36,6 +38,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
@@ -128,6 +131,26 @@ public class Collection {
   public Optional<GetResult> getAndTouch(final String id, final Duration expiration,
                                          final GetAndTouchOptions options) {
     return block(async().getAndTouch(id, expiration, options));
+  }
+
+  /**
+   * Checks if the given document ID exists on the active partition with default options.
+   *
+   * @param id the document ID
+   * @return a {@link ExistsResult} completing once loaded or failed.
+   */
+  public Optional<ExistsResult> exists(final String id) {
+    return block(async().exists(id));
+  }
+
+  /**
+   * Checks if the given document ID exists on the active partition with custom options.
+   *
+   * @param id the document ID
+   * @return a {@link ExistsResult} completing once loaded or failed.
+   */
+  public Optional<ExistsResult> exists(final String id, final ExistsOptions options) {
+    return block(async().exists(id, options));
   }
 
   /**

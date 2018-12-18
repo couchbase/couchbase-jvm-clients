@@ -26,6 +26,9 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
+import com.couchbase.client.java.kv.ExistsAccessor;
+import com.couchbase.client.java.kv.ExistsOptions;
+import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
@@ -306,9 +309,40 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy,
-      expiration);
-    return GetAccessor.getAndTouch(core, id, request);  }
+    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
+      bucket, retryStrategy, expiration);
+    return GetAccessor.getAndTouch(core, id, request);
+  }
+
+  /**
+   * Checks if the given document ID exists on the active partition with default options.
+   *
+   * @param id the document ID
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
+  public CompletableFuture<Optional<ExistsResult>> exists(final String id) {
+    return exists(id, ExistsOptions.DEFAULT);
+  }
+
+  /**
+   * Checks if the given document ID exists on the active partition with custom options.
+   *
+   * @param id the document ID
+   * @return a {@link CompletableFuture} completing once loaded or failed.
+   */
+  public CompletableFuture<Optional<ExistsResult>> exists(final String id,
+                                                          final ExistsOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "ExistsOptions");
+
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, bucket,
+      retryStrategy, id, collectionId);
+    return ExistsAccessor.exists(core, id, request);
+  }
 
 
   /**

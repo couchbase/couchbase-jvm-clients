@@ -530,7 +530,11 @@ public enum MemcacheProtocol {
     /**
      * Allows to get a document and perform a write lock at the same time.
      */
-    GET_AND_LOCK((byte) 0x94);
+    GET_AND_LOCK((byte) 0x94),
+    /**
+     * Performs an observe call with the CAS option.
+     */
+    OBSERVE_CAS((byte) 0x92);
 
     private final byte opcode;
 

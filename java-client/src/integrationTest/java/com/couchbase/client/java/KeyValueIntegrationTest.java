@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -59,7 +60,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     cluster.shutdown();
   }
 
-
   @Test
   void insertAndGet() {
     String id = UUID.randomUUID().toString();
@@ -75,4 +75,20 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertFalse(getResult.expiration().isPresent());
   }
 
+  @Test
+  void exists() {
+    String id = UUID.randomUUID().toString();
+
+    Optional<ExistsResult> existsResult = collection.exists(id);
+    assertFalse(existsResult.isPresent());
+
+    MutationResult insertResult = collection.insert(id, "Hello, World");
+    assertTrue(insertResult.cas() != 0);
+
+    existsResult = collection.exists(id);
+    assertTrue(existsResult.isPresent());
+
+    assertEquals(id, existsResult.get().id());
+    assertEquals(insertResult.cas(), existsResult.get().cas());
+  }
 }
