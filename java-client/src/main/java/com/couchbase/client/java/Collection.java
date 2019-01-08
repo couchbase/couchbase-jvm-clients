@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -38,7 +37,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
@@ -64,9 +62,12 @@ public class Collection {
    */
   private final ReactiveCollection reactiveCollection;
 
+  private final BinaryCollection binaryCollection;
+
   public Collection(final AsyncCollection asyncCollection, String bucketName) {
     this.asyncCollection = asyncCollection;
     reactiveCollection = new ReactiveCollection(asyncCollection, bucketName);
+    this.binaryCollection = new BinaryCollection(asyncCollection.binary());
   }
 
   /**
@@ -85,6 +86,15 @@ public class Collection {
    */
   public ReactiveCollection reactive() {
     return reactiveCollection;
+  }
+
+  /**
+   * Provides access to the binary APIs, not used for JSON documents.
+   *
+   * @return the {@link BinaryCollection}.
+   */
+  public BinaryCollection binary() {
+    return binaryCollection;
   }
 
   /**
@@ -257,14 +267,6 @@ public class Collection {
 
   public MutationResult unlock(final String id, final UnlockOptions options) {
     return block(async().unlock(id, options));
-  }
-
-  public MutationResult counter(final String id, long delta) {
-    return block(async().counter(id, delta));
-  }
-
-  public MutationResult counter(final String id, long delta, final CounterOptions options) {
-    return block(async().counter(id, delta, options));
   }
 
   public Optional<LookupResult> lookupIn(final String id, final LookupSpec spec) {

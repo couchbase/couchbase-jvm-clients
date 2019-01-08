@@ -23,8 +23,6 @@ import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.AppendOptions;
-import com.couchbase.client.java.kv.CounterOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
@@ -40,7 +38,6 @@ import com.couchbase.client.java.kv.LookupSpec;
 import com.couchbase.client.java.kv.MutateOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutateSpec;
-import com.couchbase.client.java.kv.PrependOptions;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -109,6 +106,11 @@ public class AsyncCollection {
   private final byte[] collectionId;
 
   /**
+   * Holds the async binary collection object.
+   */
+  private final AsyncBinaryCollection asyncBinaryCollection;
+
+  /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
@@ -124,6 +126,7 @@ public class AsyncCollection {
     this.environment = environment;
     this.bucket = bucket;
     this.collectionId = UnsignedLEB128.encode(id);
+    this.asyncBinaryCollection = new AsyncBinaryCollection();
   }
 
   /**
@@ -156,6 +159,15 @@ public class AsyncCollection {
    */
   public String name() {
     return name;
+  }
+
+  /**
+   * Provides access to the binary APIs, not used for JSON documents.
+   *
+   * @return the {@link AsyncBinaryCollection}.
+   */
+  public AsyncBinaryCollection binary() {
+    return asyncBinaryCollection;
   }
 
   /**
@@ -510,32 +522,6 @@ public class AsyncCollection {
     return ReplaceAccessor.replace(core, request);
   }
 
-  public CompletableFuture<MutationResult> append(final String id, final byte[] content) {
-    return append(id, content, AppendOptions.DEFAULT);
-  }
-
-  public CompletableFuture<MutationResult> append(final String id, final byte[] content,
-                                                  final AppendOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "AppendOptions");
-
-    return null;
-  }
-
-  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content) {
-    return prepend(id, content, PrependOptions.DEFAULT);
-  }
-
-  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
-                                                  final PrependOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "PrependOptions");
-
-    return null;
-  }
-
   public CompletableFuture<Void> touch(final String id) {
     return touch(id, TouchOptions.DEFAULT);
   }
@@ -554,18 +540,6 @@ public class AsyncCollection {
   public CompletableFuture<MutationResult> unlock(final String id, final UnlockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "UnlockOptions");
-
-    return null;
-  }
-
-  public CompletableFuture<MutationResult> counter(final String id, long delta) {
-    return counter(id, delta, CounterOptions.DEFAULT);
-  }
-
-  public CompletableFuture<MutationResult> counter(final String id, long delta,
-                                                   final CounterOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "CounterOptions");
 
     return null;
   }

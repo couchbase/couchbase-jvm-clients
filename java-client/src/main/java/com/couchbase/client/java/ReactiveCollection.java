@@ -27,7 +27,7 @@ import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.AppendOptions;
-import com.couchbase.client.java.kv.CounterOptions;
+import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -96,6 +96,8 @@ public class ReactiveCollection {
 
   private final byte[] encodedId;
 
+  private final ReactiveBinaryCollection reactiveBinaryCollection;
+
   ReactiveCollection(final AsyncCollection asyncCollection, final String bucketName) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
@@ -103,6 +105,7 @@ public class ReactiveCollection {
     this.core = asyncCollection.core();
     this.bucketName = bucketName;
     this.encodedId = asyncCollection.collectionId();
+    this.reactiveBinaryCollection = new ReactiveBinaryCollection(asyncCollection.binary());
   }
 
   /**
@@ -112,6 +115,15 @@ public class ReactiveCollection {
    */
   public AsyncCollection async() {
     return asyncCollection;
+  }
+
+  /**
+   * Provides access to the binary APIs, not used for JSON documents.
+   *
+   * @return the {@link ReactiveBinaryCollection}.
+   */
+  public ReactiveBinaryCollection binary() {
+    return reactiveBinaryCollection;
   }
 
   /**
@@ -357,32 +369,6 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<MutationResult> append(final String id, final byte[] content) {
-    return append(id, content, AppendOptions.DEFAULT);
-  }
-
-  public Mono<MutationResult> append(final String id, final byte[] content,
-                                                  final AppendOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "AppendOptions");
-
-    return null;
-  }
-
-  public Mono<MutationResult> prepend(final String id, final byte[] content) {
-    return prepend(id, content, PrependOptions.DEFAULT);
-  }
-
-  public Mono<MutationResult> prepend(final String id, final byte[] content,
-                                                   final PrependOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "PrependOptions");
-
-    return null;
-  }
-
   public Mono<Void> touch(final String id) {
     return touch(id, TouchOptions.DEFAULT);
   }
@@ -401,17 +387,6 @@ public class ReactiveCollection {
   public Mono<MutationResult> unlock(final String id, final UnlockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "UnlockOptions");
-
-    return null;
-  }
-
-  public Mono<MutationResult> counter(final String id, long delta) {
-    return counter(id, delta, CounterOptions.DEFAULT);
-  }
-
-  public Mono<MutationResult> counter(final String id, long delta, final CounterOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "CounterOptions");
 
     return null;
   }
