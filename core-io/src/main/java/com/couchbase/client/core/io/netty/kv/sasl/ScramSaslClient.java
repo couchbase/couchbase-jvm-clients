@@ -317,10 +317,10 @@ class ScramSaslClient implements SaslClient  {
 
   /**
    * Generate the Server Signature. It is computed as:
-   * <p/>
-   * SaltedPassword  := Hi(Normalize(password), salt, i)
+   *
+   * <p>SaltedPassword  := Hi(Normalize(password), salt, i)
    * ServerKey       := HMAC(SaltedPassword, "Server Key")
-   * ServerSignature := HMAC(ServerKey, AuthMessage)
+   * ServerSignature := HMAC(ServerKey, AuthMessage)</p>
    */
   private byte[] getServerSignature() {
     byte[] serverKey = hmac(saltedPassword, SERVER_KEY);
@@ -329,15 +329,15 @@ class ScramSaslClient implements SaslClient  {
 
   /**
    * Generate the Client Proof. It is computed as:
-   * <p/>
-   * SaltedPassword  := Hi(Normalize(password), salt, i)
+   *
+   * <p>SaltedPassword  := Hi(Normalize(password), salt, i)
    * ClientKey       := HMAC(SaltedPassword, "Client Key")
    * StoredKey       := H(ClientKey)
    * AuthMessage     := client-first-message-bare + "," +
    * server-first-message + "," +
    * client-final-message-without-proof
    * ClientSignature := HMAC(StoredKey, AuthMessage)
-   * ClientProof     := ClientKey XOR ClientSignature
+   * ClientProof     := ClientKey XOR ClientSignature</p>
    */
   private byte[] getClientProof() {
     byte[] clientKey = hmac(saltedPassword, CLIENT_KEY);

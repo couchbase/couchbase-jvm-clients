@@ -21,7 +21,7 @@ package com.couchbase.client.core.endpoint;
  *
  * @since 2.0.0
  */
-public class NoopCircuitBreaker implements CircuitBreaker {
+class NoopCircuitBreaker implements CircuitBreaker {
 
   static NoopCircuitBreaker INSTANCE = new NoopCircuitBreaker();
 
@@ -48,4 +48,5 @@ public class NoopCircuitBreaker implements CircuitBreaker {
   public State state() {
     return State.DISABLED;
   }
+
 }

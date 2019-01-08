@@ -151,8 +151,6 @@ public class ConnectTimings {
 
     /**
      * Holds the class which is responsible for the timing.
-     *
-     * @return The class type responsible for the timing.
      */
     private final Class<?> clazz;
 

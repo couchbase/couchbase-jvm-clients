@@ -25,14 +25,20 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>Lazy means that its state is evaluated at the time of a request, so there is no overhead
  * to be paid if no traffic is flowing through the associated endpoint.</p>
  *
- * <p>The way this circuit breaker works is the following: it starts out as CLOSED, so operations
- * can flow through freely. For every succeeding op we track it towards a total rolling count, and
- * every configured window we clear the counts for the next window. If a response fails, then it
- * is counted towards the failed requests as well and we check if the circuit is over threshold
- * and should be tripped. If we trip, then it goes into an OPEN state. At this point, requests
- * are not allowed to go through until the sleep window elapsed. The next request can go through
- * and sets it into HALF_OPEN. this request acts as a canary! If it completes the circuit closes
- * again. if it fails, then it goes back into OPEN and the whole sleep process starts again.</p>
+ * <p>It works like this:</p>
+ *
+ * <ul>
+ *   <li>The circuit starts out as <code>CLOSED</code>, so operations can pass freely. Every
+ *    succeeding operation gets tracked towards a total rolling count, and every configured window
+ *    it clears the counts for the next window.</li>
+ *   <li>If a response fails, then it is counted towards the failed requests as well and checked
+ *    if the circuit is over threshold and should be opened.</li>
+ *   <li>If the circuit trips, then it goes into an <code>OPEN</code> state. At this point, requests
+ *    are not allowed to go through until the sleep window elapses.</li>
+ *   <li>The next request can go through and sets it into <code>HALF_OPEN</code>. this request acts
+ *    as a canary! If it completes the circuit closes again. if it fails, then it goes back into
+ *    <code>OPEN</code> and the whole sleep process starts again.</li>
+ * </ul>
  *
  * <p>In addition, the endpoint can always {@link #reset()} its state, which usually happens
  * when the channel is reset.</p>

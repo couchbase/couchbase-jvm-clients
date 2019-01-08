@@ -17,7 +17,7 @@
 package com.couchbase.client.core.env;
 
 /**
- * Configuration options for {@link CoreEnvironment#networkResolution()}.
+ * Configuration options for the network resolution setting.
  *
  * @author Michael Nitschinger
  * @since 1.6.0

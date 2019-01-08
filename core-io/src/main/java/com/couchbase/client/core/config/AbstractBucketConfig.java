@@ -60,8 +60,8 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     /**
      * Helper method to create the {@link NodeInfo}s from from the extended node information.
      *
-     * In older server versions (< 3.0.2) the nodesExt part does not carry a hostname, so as a fallback the hostname
-     * is loaded from the node info if needed.
+     * <p>In older server versions (&lt; 3.0.2) the nodesExt part does not carry a hostname, so as
+     * a fallback the hostname is loaded from the node info if needed.</p>
      *
      * @param nodesExt the extended information.
      * @return the generated node infos.

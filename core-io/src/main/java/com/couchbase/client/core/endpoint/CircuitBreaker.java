@@ -16,17 +16,13 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.msg.Response;
-
-import java.util.concurrent.CompletableFuture;
-
 /**
  * The {@link CircuitBreaker} interface defines the external integration points between an
  * implementation and its calling {@link BaseEndpoint}.
  *
  * <p>See the individual implementation for details on how they work. Note that they are all
  * configured through the {@link CircuitBreakerConfig} that is configured on the environment on
- * a per service basis.</p>
+ * a per service basis and applied on a per endpoint basis.</p>
  *
  * @since 2.0.0
  */
@@ -83,4 +79,5 @@ interface CircuitBreaker {
      */
     OPEN
   }
+
 }
