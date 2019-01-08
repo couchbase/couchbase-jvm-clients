@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <ul>
  *   <li>The circuit starts out as <code>CLOSED</code>, so operations can pass freely. Every
- *    succeeding operation gets tracked towards a total rolling count, and every configured window
+ *    succeeding operation gets tracked towards a total rolling count, and after every configured window
  *    it clears the counts for the next window.</li>
  *   <li>If a response fails, then it is counted towards the failed requests as well and checked
  *    if the circuit is over threshold and should be opened.</li>
