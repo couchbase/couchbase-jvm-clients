@@ -24,6 +24,7 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
+import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,10 @@ import java.time.Duration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-class CarrierLoaderIntegrationTest extends CoreIntegrationTest {
+/**
+ * Verifies the functionality of the {@link KeyValueLoader}.
+ */
+class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
@@ -49,18 +53,18 @@ class CarrierLoaderIntegrationTest extends CoreIntegrationTest {
 
   /**
    * This is a very simplistic test that makes sure that we can "round trip" in the
-   * {@link CarrierLoader} by grabbing a JSON decodable config through the full stack.
+   * {@link KeyValueLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void loadConfigViaCarrierPublication() {
-    NetworkAddress hostname = NetworkAddress.create(config().nodes().get(0).hostname());
+    TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     Core core = Core.create(env);
-    CarrierLoader loader = new CarrierLoader(core);
+    KeyValueLoader loader = new KeyValueLoader(core);
     BucketConfig loaded = loader.load(
-      hostname,
-      config().nodes().get(0).ports().get(Services.KV),
+      NetworkAddress.create(config.hostname()),
+      config.ports().get(Services.KV),
       config().bucketname()
     ).block();
 

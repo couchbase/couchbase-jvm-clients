@@ -19,8 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -29,22 +28,39 @@ import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 
-public class CarrierLoader extends BaseLoader {
+/**
+ * This loader is responsible for initially loading a configuration through the kv protocol.
+ *
+ * <p>The main and primary mechanism to bootstrap a good configuration is through the kv
+ * protocol with a special command, since those connections need to be open anyways and it
+ * is more efficient at large scale than the cluster manager (who is the authority).</p>
+ *
+ * <p>Note that this loader can fail (hence the {@link ClusterManagerLoader} as a backup), either because
+ * the current seed node does not have the data service enabled or it is a memcached bucket which
+ * does not support the special command.</p>
+ *
+ * <p>In 1.x this loader used to be called Carrier Loader (from CCCP "couchbase carrier config
+ * publication"), but the new name more accurately reflects from which service it is loading it
+ * rather than how.</p>
+ *
+ * @since 1.0.0
+ */
+public class KeyValueLoader extends BaseLoader {
 
-  public CarrierLoader(final Core core) {
+  public KeyValueLoader(final Core core) {
     super(core, ServiceType.KV);
   }
 
   @Override
-  protected Mono<String> discoverConfig(NetworkAddress seed, String bucket) {
+  protected Mono<byte[]> discoverConfig(final NetworkAddress seed, final String bucket) {
     final CoreContext ctx = core().context();
-    final CoreEnvironment environment = ctx.environment();
+
     return Mono.defer(() -> {
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
-        environment.kvTimeout(),
+        ctx.environment().kvTimeout(),
         ctx,
         bucket,
-        environment.retryStrategy(),
+        ctx.environment().retryStrategy(),
         seed
       );
       core().send(request);
@@ -52,11 +68,11 @@ public class CarrierLoader extends BaseLoader {
     })
     .map(response -> {
       if (response.status().success()) {
-        return new String(response.content(), CharsetUtil.UTF_8);
+        return response.content();
       } else if (response.status() == ResponseStatus.UNSUPPORTED) {
         throw new UnsupportedConfigMechanismException();
       } else {
-        throw new CouchbaseException("Unknown status from loader: " + response);
+        throw new ConfigException("Received error status from KeyValueLoader: " + response);
       }
     });
   }

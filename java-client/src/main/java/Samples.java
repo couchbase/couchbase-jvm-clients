@@ -30,15 +30,23 @@ import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
 public class Samples {
 
-  public static void main(String... args) throws Exception {
+  public static void main(String... args) {
 
-    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+    Cluster cluster = Cluster.connect(
+      "127.0.0.1", "Administrator", "password"
+    );
 
     Bucket bucket = cluster.bucket("travel-sample");
 
-    Collection dc = bucket.defaultCollection();
-    System.out.println(dc.get("airport_1291", getOptions().withExpiration(true)));
-    System.out.println(dc.get("airport_1291", getOptions().project("airportname").withExpiration(true)));
+    Collection collection = bucket.defaultCollection();
+
+    Optional<GetResult> airport = collection.get("airport_1291", getOptions()
+      .project("airportname", "city")
+      .withExpiration(true)
+    );
+
+    System.out.println(airport);
+
   }
 
   static void scenarioA(final Collection collection) {

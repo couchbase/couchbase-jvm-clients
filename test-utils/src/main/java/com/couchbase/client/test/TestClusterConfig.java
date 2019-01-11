@@ -17,6 +17,7 @@
 package com.couchbase.client.test;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This configuration is populated from the cluster container and represents the
@@ -52,5 +53,17 @@ public class TestClusterConfig {
 
   public List<TestNodeConfig> nodes() {
     return nodes;
+  }
+
+  /**
+   * Finds the first node with a given service enabled in the config.
+   *
+   * <p>This method can be used to find bootstrap nodes and similar.</p>
+   *
+   * @param service the service to find.
+   * @return a node config if found, empty otherwise.
+   */
+  public Optional<TestNodeConfig> firstNodeWith(Services service) {
+    return nodes.stream().filter(n -> n.ports().containsKey(service)).findFirst();
   }
 }

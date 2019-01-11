@@ -31,10 +31,14 @@ public interface Loader {
   /**
    * Attempts to load a config for the given seed node.
    *
+   * <p>If something fails during the process, the error is propagated to the caller (i.e.
+   * the service could not be enabled or fetching the config failed for some other reason
+   * that was not recoverable in this loader specifically).</p>
+   *
    * @param seed the seed node to attempt loading from.
-   * @param name the name of the bucket.
+   * @param bucket the name of the bucket.
    * @return a {@link Mono} eventually completing with a config or failing.
    */
-  Mono<BucketConfig> load(final NetworkAddress seed, int port, final String name);
+  Mono<BucketConfig> load(final NetworkAddress seed, int port, final String bucket);
 
 }

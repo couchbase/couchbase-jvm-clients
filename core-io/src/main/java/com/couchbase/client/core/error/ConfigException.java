@@ -16,21 +16,21 @@
 
 package com.couchbase.client.core.error;
 
-public class ConfigurationException extends CouchbaseException {
+public class ConfigException extends CouchbaseException {
 
-    public ConfigurationException() {
+    public ConfigException() {
         super();
     }
 
-    public ConfigurationException(String message) {
+    public ConfigException(String message) {
         super(message);
     }
 
-    public ConfigurationException(String message, Throwable cause) {
+    public ConfigException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public ConfigurationException(Throwable cause) {
+    public ConfigException(Throwable cause) {
         super(cause);
     }
 }

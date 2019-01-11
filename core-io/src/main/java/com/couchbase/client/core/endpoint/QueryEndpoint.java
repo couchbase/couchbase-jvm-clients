@@ -63,6 +63,7 @@ public class QueryEndpoint extends BaseEndpoint {
 
     @Override
     public void init(ChannelPipeline pipeline) {
+      pipeline.addLast(new LoggingHandler(LogLevel.ERROR));
       pipeline.addLast(new HttpClientCodec());
       pipeline.addLast(new QueryMessageHandler());
     }

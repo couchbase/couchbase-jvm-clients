@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.error.ConfigurationException;
+import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.fasterxml.jackson.annotation.JacksonInject;
@@ -136,7 +136,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
                     directPort = 0;
                 }
             } catch (Exception e) {
-                throw new ConfigurationException("Could not resolve " + rawHost + "on config building.", e);
+                throw new ConfigException("Could not resolve " + rawHost + "on config building.", e);
             }
             for (NodeInfo nodeInfo : nodeInfos) {
                 // Make sure we only take into account nodes which contain KV
@@ -151,7 +151,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             }
         }
         if (partitionHosts.size() != partitionInfo.partitionHosts().length) {
-            throw new ConfigurationException("Partition size is not equal after conversion, this is a bug.");
+            throw new ConfigException("Partition size is not equal after conversion, this is a bug.");
         }
         return partitionHosts;
     }

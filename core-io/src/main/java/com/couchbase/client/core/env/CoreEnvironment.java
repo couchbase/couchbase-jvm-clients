@@ -56,6 +56,7 @@ public class CoreEnvironment {
   private final IoEnvironment ioEnvironment;
   private final DiagnosticsMonitor diagnosticsMonitor;
   private final Duration kvTimeout;
+  private final Duration managerTimeout;
   private final Duration queryTimeout;
   private final Credentials credentials;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
@@ -78,6 +79,9 @@ public class CoreEnvironment {
     this.kvTimeout = builder.kvTimeout == null
       ? Duration.ofMillis(2500)
       : builder.kvTimeout;
+    this.managerTimeout = builder.managerTimeout == null
+      ? Duration.ofSeconds(5)
+      : builder.managerTimeout;
     this.queryTimeout = builder.queryTimeout == null
       ? Duration.ofMillis(75000)
       : builder.queryTimeout;
@@ -185,6 +189,10 @@ public class CoreEnvironment {
     return kvTimeout;
   }
 
+  public Duration managerTimeout() {
+    return managerTimeout;
+  }
+
   public Duration queryTimeout() {
     return queryTimeout;
   }
@@ -230,6 +238,7 @@ public class CoreEnvironment {
     private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
     private Duration kvTimeout = null;
+    private Duration managerTimeout = null;
     private Duration queryTimeout = null;
 
     private MemcachedHashingStrategy memcachedHashingStrategy;
@@ -287,6 +296,11 @@ public class CoreEnvironment {
 
     public SELF kvTimeout(final Duration kvTimeout) {
       this.kvTimeout = kvTimeout;
+      return self();
+    }
+
+    public SELF managerTimeout(final Duration managerTimeout) {
+      this.managerTimeout = managerTimeout;
       return self();
     }
 
