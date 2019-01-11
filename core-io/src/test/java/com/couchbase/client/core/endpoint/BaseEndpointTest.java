@@ -154,7 +154,6 @@ class BaseEndpointTest {
           assertEquals(Event.Severity.DEBUG, event.severity());
           assertTrue(event.duration().toNanos() > 0);
           successFound = true;
-          System.out.println(event.toString());
         }
       }
       assertTrue(failedFound);
