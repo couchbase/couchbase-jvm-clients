@@ -54,7 +54,7 @@ public class RetryOrchestrator {
     Optional<Duration> duration = request.retryStrategy().shouldRetry(request);
     if (duration.isPresent()) {
       ctx.environment().eventBus().publish(
-        new RequestRetriedEvent(duration.get(), request.context())
+        new RequestRetriedEvent(duration.get(), request.context(), request.getClass())
       );
       request.context().incrementRetryAttempt();
       ctx.environment().timer().schedule(

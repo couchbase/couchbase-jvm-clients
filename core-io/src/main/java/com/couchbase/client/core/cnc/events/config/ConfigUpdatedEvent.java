@@ -14,24 +14,29 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.cnc.events.request;
+package com.couchbase.client.core.cnc.events.config;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
-import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.config.BucketConfig;
 
 import java.time.Duration;
 
-public class RequestRetriedEvent extends AbstractEvent {
+public class ConfigUpdatedEvent extends AbstractEvent {
 
-  private final Class<?> request;
+  private final BucketConfig config;
 
-  public RequestRetriedEvent(Duration duration, RequestContext context, Class<?> request) {
-    super(Severity.DEBUG, Category.REQUEST, duration, context);
-    this.request = request;
+  public ConfigUpdatedEvent(Context context, BucketConfig config) {
+    super(Severity.DEBUG, Category.CONFIG, Duration.ZERO, context);
+    this.config = config;
+  }
+
+  public BucketConfig config() {
+    return config;
   }
 
   @Override
   public String description() {
-    return "Request " + request.getSimpleName() + " retried per RetryStrategy";
+    return "Bucket configuration updated: " + config;
   }
 }

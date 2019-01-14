@@ -132,6 +132,10 @@ public interface Event {
      * Represents an event from the Service layer.
      */
     SERVICE,
+    /**
+     * Represents an event from the config subsystem.
+     */
+    CONFIG,
   }
 
 }

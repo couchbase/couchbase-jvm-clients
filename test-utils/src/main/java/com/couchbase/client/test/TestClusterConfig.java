@@ -66,4 +66,14 @@ public class TestClusterConfig {
   public Optional<TestNodeConfig> firstNodeWith(Services service) {
     return nodes.stream().filter(n -> n.ports().containsKey(service)).findFirst();
   }
+
+  @Override
+  public String toString() {
+    return "TestClusterConfig{" +
+      "bucketname='" + bucketname + '\'' +
+      ", adminUsername='" + adminUsername + '\'' +
+      ", adminPassword='" + adminPassword + '\'' +
+      ", nodes=" + nodes +
+      '}';
+  }
 }

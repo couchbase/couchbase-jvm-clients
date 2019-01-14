@@ -20,4 +20,12 @@ public class TestNodeConfig {
   public Map<Services, Integer> ports() {
     return ports;
   }
+
+  @Override
+  public String toString() {
+    return "TestNodeConfig{" +
+      "hostname='" + hostname + '\'' +
+      ", ports=" + ports +
+      '}';
+  }
 }

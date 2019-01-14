@@ -16,8 +16,11 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 /**
  * The {@link ConfigurationProvider} is responsible for grabbing, converting and managing
@@ -28,6 +31,7 @@ import reactor.core.publisher.Mono;
  *
  * @since 1.0.0
  */
+@Stability.Internal
 public interface ConfigurationProvider  {
 
   /**
@@ -55,7 +59,7 @@ public interface ConfigurationProvider  {
    * @param name the name of the bucket to open.
    * @return a Mono that completes once the bucket has been logically opened.
    */
-  Mono<Void> openBucket(final String name);
+  Mono<Void> openBucket(String name);
 
   /**
    * Initiates the bucket closing process.
@@ -63,7 +67,7 @@ public interface ConfigurationProvider  {
    * @param name the name of the bucket.
    * @return a Mono that completes once the bucket has been logically closed.
    */
-  Mono<Void> closeBucket(final String name);
+  Mono<Void> closeBucket(String name);
 
   /**
    * Shuts down the configuration provider and all its associated resources and timers.
@@ -71,5 +75,15 @@ public interface ConfigurationProvider  {
    * @return the mono completes once shut down properly.
    */
   Mono<Void> shutdown();
+
+  /**
+   * Allows to propose a bucket config to the provider from an external context.
+   *
+   * <p>This method is usually only called when a "not my vbucket" response is received and
+   * the corresponding config is extracted. Do not call this method with arbitrary configs.</p>
+   *
+   * @param ctx the bucket config and surrounding context.
+   */
+  void proposeBucketConfig(ProposedBucketConfigContext ctx);
 
 }
