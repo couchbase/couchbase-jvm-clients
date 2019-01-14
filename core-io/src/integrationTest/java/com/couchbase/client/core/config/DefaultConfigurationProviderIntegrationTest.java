@@ -83,6 +83,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
     openAndClose(bucketName, provider);
+    provider.shutdown().block();
   }
 
   /**
@@ -108,6 +109,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
     openAndClose(bucketName, provider);
+    provider.shutdown().block();
   }
 
   /**
@@ -133,6 +135,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
     openAndClose(bucketName, provider);
+    provider.shutdown().block();
   }
 
   /**
@@ -148,8 +151,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .kvTimeout(Duration.ofSeconds(1))
-      .managerTimeout(Duration.ofSeconds(1))
+      .kvTimeout(Duration.ofMillis(500))
+      .managerTimeout(Duration.ofMillis(500))
       .build();
     core = Core.create(environment);
 
@@ -160,7 +163,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
     long end = System.nanoTime();
 
-    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 2);
+    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 1);
+    provider.shutdown().block();
   }
 
   /**
@@ -177,8 +181,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .kvTimeout(Duration.ofSeconds(1))
-      .managerTimeout(Duration.ofSeconds(1))
+      .kvTimeout(Duration.ofMillis(500))
+      .managerTimeout(Duration.ofMillis(500))
       .build();
     core = Core.create(environment);
 
@@ -189,7 +193,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
     long end = System.nanoTime();
 
-    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 2);
+    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 1);
+    provider.shutdown().block();
   }
 
   /**

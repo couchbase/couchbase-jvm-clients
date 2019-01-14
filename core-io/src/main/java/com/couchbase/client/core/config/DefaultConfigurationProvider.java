@@ -22,8 +22,12 @@ import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigUpdatedEvent;
 import com.couchbase.client.core.config.loader.KeyValueLoader;
 import com.couchbase.client.core.config.loader.ClusterManagerLoader;
+import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
+import com.couchbase.client.core.config.refresher.KeyValueRefresher;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
+
+import com.couchbase.client.core.error.CouchbaseException;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -59,9 +63,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private static final int MAX_PARALLEL_LOADERS = 5;
 
   private final Core core;
+  private final EventBus eventBus;
+
   private final KeyValueLoader keyValueLoader;
   private final ClusterManagerLoader clusterManagerLoader;
-  private final EventBus eventBus;
+  private final KeyValueRefresher keyValueRefresher;
+  private final ClusterManagerRefresher clusterManagerRefresher;
 
   private final DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
   private final FluxSink<ClusterConfig> configsSink = configs.sink();
@@ -71,9 +78,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   public DefaultConfigurationProvider(final Core core) {
     this.core = core;
+    eventBus = core.context().environment().eventBus();
+
     keyValueLoader = new KeyValueLoader(core);
     clusterManagerLoader = new ClusterManagerLoader(core);
-    eventBus = core.context().environment().eventBus();
+    keyValueRefresher = new KeyValueRefresher(this, core);
+    clusterManagerRefresher = new ClusterManagerRefresher(this, core);
   }
 
   @Override
@@ -104,7 +114,9 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
           ))
           .doOnNext(this::checkAndApplyConfig)
-          .then();
+          .then(registerRefresher(name))
+          .then()
+          .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -159,11 +171,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @return completed mono once done.
    */
   private Mono<Void> closeBucketIgnoreShutdown(final String name) {
-    return Mono.defer(() -> {
-      currentConfig.deleteBucketConfig(name);
-      pushConfig();
-      return Mono.empty();
-    });
+    return Mono
+      .defer(() -> {
+        currentConfig.deleteBucketConfig(name);
+        pushConfig();
+        return Mono.empty();
+      })
+      .then(keyValueRefresher.deregister(name))
+      .then(clusterManagerRefresher.deregister(name));
   }
 
   @Override
@@ -174,6 +189,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .fromIterable(currentConfig.bucketConfigs().values())
           .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name()))
           .doOnComplete(configsSink::complete)
+          .then(keyValueRefresher.shutdown())
+          .then(clusterManagerRefresher.shutdown())
           .then();
       } else {
         return Mono.error(new AlreadyShutdownException());
@@ -187,7 +204,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @param newConfig the config to apply.
    */
   private void checkAndApplyConfig(final BucketConfig newConfig) {
-    final BucketConfig oldConfig = currentConfig.bucketConfig(newConfig.name());
+    final String name = newConfig.name();
+    final BucketConfig oldConfig = currentConfig.bucketConfig(name);
 
     if (newConfig.rev() > 0 && oldConfig != null && newConfig.rev() <= oldConfig.rev()) {
       eventBus.publish(new ConfigIgnoredEvent(
@@ -199,8 +217,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       return;
     }
 
+    if (newConfig.tainted()) {
+      keyValueRefresher.markTainted(name);
+      clusterManagerRefresher.markTainted(name);
+    } else {
+      keyValueRefresher.markUntainted(name);
+      clusterManagerRefresher.markUntainted(name);
+    }
+
     eventBus.publish(new ConfigUpdatedEvent(core.context(), newConfig));
-    currentConfig.setBucketConfig(newConfig.name(), newConfig);
+    currentConfig.setBucketConfig(name, newConfig);
     pushConfig();
   }
 
@@ -209,6 +235,37 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   private void pushConfig() {
     configsSink.next(currentConfig);
+  }
+
+  /**
+   * Registers the given bucket for refreshing.
+   *
+   * <p>Note that this changes the implementation from the 1.x series a bit. In the past, whatever
+   * loader succeeded automatically registered the same type of refresher. This is still the case
+   * for situations like a memcache bucket, but in cases where we bootstrap from i.e. a query node
+   * only the manager loader will work but we'll be able to use the key value refresher going
+   * forward.</p>
+   *
+   * <p>As a result, this method is a bit more intelligent in selecting the right refresher based
+   * on the loaded configuration.</p>
+   *
+   * @param bucket the name of the bucket.
+   * @return a {@link Mono} once registered.
+   */
+  private Mono<Void> registerRefresher(final String bucket) {
+    return Mono.defer(() -> {
+      BucketConfig config = currentConfig.bucketConfig(bucket);
+      if (config == null) {
+        return Mono.error(new CouchbaseException("Bucket for registration does not exist, "
+          + "this is an error! Please report"));
+      }
+
+      if (config instanceof CouchbaseBucketConfig) {
+        return keyValueRefresher.register(bucket);
+      } else {
+        return clusterManagerRefresher.register(bucket);
+      }
+    });
   }
 
 }

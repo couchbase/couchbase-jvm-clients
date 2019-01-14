@@ -58,6 +58,7 @@ public class CoreEnvironment {
   private final Duration kvTimeout;
   private final Duration managerTimeout;
   private final Duration queryTimeout;
+  private final Duration configPollInterval;
   private final Credentials credentials;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
   private final RetryStrategy retryStrategy;
@@ -88,6 +89,9 @@ public class CoreEnvironment {
     this.seedNodes = builder.seedNodes == null
       ? DEFAULT_SEED_NODES
       : builder.seedNodes;
+    this.configPollInterval = builder.configPollInterval == null
+      ? Duration.ofMillis(2500)
+      : builder.configPollInterval;
     this.memcachedHashingStrategy = builder.memcachedHashingStrategy == null
       ? StandardMemcachedHashingStrategy.INSTANCE
       : builder.memcachedHashingStrategy;
@@ -201,6 +205,10 @@ public class CoreEnvironment {
     return seedNodes.get();
   }
 
+  public Duration configPollInterval() {
+    return configPollInterval;
+  }
+
   /**
    * Allows to specify a custom strategy to hash memcached bucket documents.
    *
@@ -240,6 +248,7 @@ public class CoreEnvironment {
     private Duration kvTimeout = null;
     private Duration managerTimeout = null;
     private Duration queryTimeout = null;
+    private Duration configPollInterval = null;
 
     private MemcachedHashingStrategy memcachedHashingStrategy;
     private RetryStrategy retryStrategy;
@@ -309,6 +318,10 @@ public class CoreEnvironment {
       return self();
     }
 
+    public SELF configPollInterval(final Duration configPollInterval) {
+      this.configPollInterval = configPollInterval;
+      return self();
+    }
 
     /**
      * Allows to pass in a custom {@link Timer}.
