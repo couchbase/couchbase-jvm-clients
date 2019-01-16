@@ -84,6 +84,9 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     clusterManagerLoader = new ClusterManagerLoader(core);
     keyValueRefresher = new KeyValueRefresher(this, core);
     clusterManagerRefresher = new ClusterManagerRefresher(this, core);
+
+    keyValueRefresher.configs().subscribe(this::proposeBucketConfig);
+    clusterManagerRefresher.configs().subscribe(this::proposeBucketConfig);
   }
 
   @Override

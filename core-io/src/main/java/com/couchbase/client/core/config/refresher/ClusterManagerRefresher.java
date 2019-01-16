@@ -18,9 +18,16 @@ package com.couchbase.client.core.config.refresher;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 public class ClusterManagerRefresher implements Refresher {
+
+  private final DirectProcessor<ProposedBucketConfigContext> configs = DirectProcessor.create();
+  private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
 
   private final Core core;
 
@@ -44,6 +51,11 @@ public class ClusterManagerRefresher implements Refresher {
   public Mono<Void> shutdown() {
     // TODO
     return Mono.empty();
+  }
+
+  @Override
+  public Flux<ProposedBucketConfigContext> configs() {
+    return configs;
   }
 
   /**

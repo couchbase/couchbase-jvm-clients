@@ -21,8 +21,6 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -56,7 +54,6 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
    * {@link KeyValueLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void loadConfigViaCarrierPublication() {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 

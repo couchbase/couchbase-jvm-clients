@@ -17,9 +17,11 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
+import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
@@ -29,13 +31,19 @@ import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.service.ServiceType;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * The main entry point into the core layer.
@@ -73,6 +81,8 @@ public class Core {
    */
   private final CopyOnWriteArrayList<Node> nodes;
 
+  private final AtomicBoolean reconfigureInProgress = new AtomicBoolean(false);
+
   public static Core create(final CoreEnvironment environment) {
     return new Core(environment);
   }
@@ -82,7 +92,10 @@ public class Core {
     this.configurationProvider = configurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
     currentConfig = configurationProvider.config();
-    configurationProvider.configs().subscribe(config -> Core.this.currentConfig = config);
+    configurationProvider
+      .configs()
+      .doOnNext(c -> currentConfig = c)
+      .subscribe(c -> reconfigure());
   }
 
   /**
@@ -150,6 +163,15 @@ public class Core {
   @Stability.Internal
   public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType,
                                     int port, Optional<String> bucket) {
+
+    // TODO: fixme these services need to be implemented
+    if (serviceType == ServiceType.VIEWS
+      || serviceType == ServiceType.QUERY
+      || serviceType == ServiceType.SEARCH
+      || serviceType == ServiceType.ANALYTICS) {
+      return Mono.empty();
+    }
+
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.address().equals(target))
@@ -170,6 +192,51 @@ public class Core {
   public Mono<Void> shutdown() {
     // tODO: implement me
     return Mono.empty();
+  }
+
+  /**
+   * Reconfigures the SDK topology to align with the current server configuration.
+   *
+   * <p>When reconfigure is called, it will grab a current configuration and then add/remove
+   * nodes/services to mirror the current topology and configuration settings.</p>
+   *
+   * <p>This is a eventually consistent process, so in-flight operations might still be rescheduled
+   * and then picked up later (or cancelled, depending on the strategy). For those coming from 1.x,
+   * it works very similar.</p>
+   */
+  private void reconfigure() {
+    if (reconfigureInProgress.compareAndSet(false, true)) {
+      Flux
+        .just(currentConfig)
+        .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()))
+        .flatMap(bc -> Flux.fromIterable(bc.nodes())
+          .flatMap(ni -> Flux
+            .fromIterable(ni.services().entrySet())
+            .flatMap(s -> ensureServiceAt(ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())))))
+        .subscribe(new Subscriber<Void>() {
+          @Override
+          public void onSubscribe(Subscription s) {
+            System.err.println("s");
+          }
+
+          @Override
+          public void onNext(Void aVoid) {
+            System.err.println("n");
+          }
+
+          @Override
+          public void onError(Throwable t) {
+            System.err.println("e: " + t);
+          }
+
+          @Override
+          public void onComplete() {
+            System.err.println("oc");
+          }
+        });
+    } else {
+      // todo: trace log that reconfigure attempt ignored since one is already in progress
+    }
   }
 
   private static Locator locator(final ServiceType serviceType) {

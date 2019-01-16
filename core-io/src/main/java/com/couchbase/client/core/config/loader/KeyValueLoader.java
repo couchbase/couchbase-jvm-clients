@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
@@ -60,7 +61,7 @@ public class KeyValueLoader extends BaseLoader {
         ctx.environment().kvTimeout(),
         ctx,
         bucket,
-        ctx.environment().retryStrategy(),
+        BestEffortRetryStrategy.INSTANCE,
         seed
       );
       core().send(request);

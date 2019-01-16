@@ -22,6 +22,7 @@ import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
 
@@ -57,7 +58,7 @@ public class ClusterManagerLoader extends BaseLoader {
       TerseBucketConfigRequest request = new TerseBucketConfigRequest(
         ctx.environment().managerTimeout(),
         ctx,
-        ctx.environment().retryStrategy(),
+        BestEffortRetryStrategy.INSTANCE,
         bucket,
         ctx.environment().credentials(),
         seed

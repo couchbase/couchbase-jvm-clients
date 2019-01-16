@@ -19,6 +19,9 @@ package com.couchbase.client.test;
 import com.couchbase.mock.Bucket;
 import com.couchbase.mock.BucketConfiguration;
 import com.couchbase.mock.CouchbaseMock;
+import com.couchbase.mock.memcached.MemcachedServer;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -68,6 +71,12 @@ public class MockTestCluster extends TestCluster {
 
     mock.start();
     mock.waitForStartup();
+
+    for (Bucket bucket : mock.getBuckets().values()) {
+      for (MemcachedServer server : bucket.getServers()) {
+        server.setCccpEnabled(true);
+      }
+    }
 
     Map<Services, Integer> ports = new HashMap<>();
     ports.put(Services.KV, mock.getCarrierPort(bucketConfig.name));

@@ -21,14 +21,18 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 import reactor.core.Disposable;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -96,6 +100,16 @@ public class KeyValueRefresher implements Refresher {
    */
   private final Set<String> tainted = Collections.synchronizedSet(new HashSet<>());
 
+  /**
+   * Holds the config stream to be subscribed to for the config events on this refresher.
+   */
+  private final DirectProcessor<ProposedBucketConfigContext> configs = DirectProcessor.create();
+
+  /**
+   * This sink should be used to push configs out to subscribers to be thread-safe.
+   */
+  private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
+
   private final long configPollInterval;
 
 
@@ -111,7 +125,12 @@ public class KeyValueRefresher implements Refresher {
         .fromIterable(registrations.keySet())
         .flatMap(KeyValueRefresher.this::maybeUpdateBucket)
       )
-      .subscribe(provider::proposeBucketConfig);
+      .subscribe(configsSink::next);
+  }
+
+  @Override
+  public Flux<ProposedBucketConfigContext> configs() {
+    return configs;
   }
 
   /**
@@ -178,17 +197,21 @@ public class KeyValueRefresher implements Refresher {
         ctx.environment().kvTimeout(),
         ctx,
         name,
-        ctx.environment().retryStrategy(),
+        BestEffortRetryStrategy.INSTANCE,
         nodeInfo.hostname()
       );
       core.send(request);
       return Reactor
         .wrap(request, request.response(), true)
-        .map(response -> new ProposedBucketConfigContext(
-          name,
-          new String(response.content(), CharsetUtil.UTF_8),
-          nodeInfo.hostname())
-        ).onErrorResume(t -> {
+        .filter(response -> {
+          // TODO: debug event that it got ignored.
+          return response.status().success();
+        })
+        .map(response -> {
+          String raw = new String(response.content(), CharsetUtil.UTF_8);
+          raw = raw.replace("$HOST", nodeInfo.hostname().address());
+          return new ProposedBucketConfigContext(name, raw, nodeInfo.hostname());
+        }).onErrorResume(t -> {
           // TODO: raise a warning that fetching a config individual failed.
           return Mono.empty();
         });
@@ -240,6 +263,7 @@ public class KeyValueRefresher implements Refresher {
       if (!pollRegistration.isDisposed()) {
         pollRegistration.dispose();
       }
+      configsSink.complete();
       return Mono.empty();
     });
   }

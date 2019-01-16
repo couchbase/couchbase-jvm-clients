@@ -21,7 +21,6 @@ import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -34,7 +33,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * The {@link CoreEnvironment} is an extendable, configurable and stateful
