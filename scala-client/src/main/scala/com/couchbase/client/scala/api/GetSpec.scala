@@ -26,35 +26,40 @@ case class GetFullDocumentOperation() extends LookupOperation
 case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperation
 case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
 case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
+case class WithExpiryOperation() extends LookupOperation
 
-case class ReadSpec(operations: List[LookupOperation]) {
-  def getFullDocument: ReadSpec = {
+case class GetSpec(operations: List[LookupOperation]) {
+  def getDoc: GetSpec = {
     copy(operations = operations :+ GetFullDocumentOperation())
   }
 
-  def get(path: String*): ReadSpec = {
+  def getMany(path: String*): GetSpec = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
 
-  def get(path: String, xattr: Boolean = false): ReadSpec = {
+  def get(path: String, xattr: Boolean = false): GetSpec = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
-  def getString(path: String, xattr: Boolean = false): ReadSpec = {
+  def getString(path: String, xattr: Boolean = false): GetSpec = {
     copy(operations = operations :+ GetStringOperation(path, xattr))
   }
 
-  def getInt(path: String, xattr: Boolean = false): ReadSpec = {
+  def getInt(path: String, xattr: Boolean = false): GetSpec = {
     copy(operations = operations :+ GetIntOperation(path, xattr))
   }
 
-  def exists(path: String, xattr: Boolean = false): ReadSpec = {
+  def exists(path: String, xattr: Boolean = false): GetSpec = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
+  }
+
+  def withExpiry: GetSpec = {
+    copy(operations = operations :+ WithExpiryOperation())
   }
 }
 
-object ReadSpec {
-  def apply() = new ReadSpec(List.empty[LookupOperation])
+object GetSpec {
+  def apply() = new GetSpec(List.empty[LookupOperation])
 }
 
 //class SubDocument extends Dynamic {

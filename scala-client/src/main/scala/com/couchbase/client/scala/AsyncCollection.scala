@@ -27,7 +27,7 @@ import com.couchbase.client.core.util.Validators
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{JsonObject, ReadResult}
+import com.couchbase.client.scala.document.{JsonObject, GetResult}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -39,7 +39,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 
 
-class AsyncCollection(val collection: Collection) {
+class AsyncCollection(private val collection: Collection) {
   private val core = collection.scope.core
   private val mapper = new ObjectMapper()
   private var coreContext = null
@@ -229,7 +229,7 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def lookupInAs[T](id: String,
-                    operations: ReadSpec,
+                    operations: GetSpec,
                     timeout: FiniteDuration = kvTimeout)
                    (implicit ec: ExecutionContext): Future[T] = {
     return null;
@@ -237,7 +237,7 @@ class AsyncCollection(val collection: Collection) {
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Future[Option[ReadResult]] = {
+         (implicit ec: ExecutionContext): Future[Option[GetResult]] = {
 
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
@@ -286,14 +286,14 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def get(id: String,
-          options: ReadOptions
-         )(implicit ec: ExecutionContext): Future[Option[ReadResult]] = {
+          options: GetOptions
+         )(implicit ec: ExecutionContext): Future[Option[GetResult]] = {
     get(id, options.timeout)
   }
 
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[ReadResult] = {
+                (implicit ec: ExecutionContext): Future[GetResult] = {
     get(id, timeout).map(doc => {
       if (doc.isEmpty) throw new DocumentDoesNotExistException()
       else doc.get
@@ -301,8 +301,8 @@ class AsyncCollection(val collection: Collection) {
   }
 
   def getOrError(id: String,
-                 options: ReadOptions)
-                (implicit ec: ExecutionContext): Future[ReadResult] = {
+                 options: GetOptions)
+                (implicit ec: ExecutionContext): Future[GetResult] = {
     getOrError(id, options.timeout)
   }
 

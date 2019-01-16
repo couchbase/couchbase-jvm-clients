@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{ReadResult, JsonObject}
+import com.couchbase.client.scala.document.{GetResult, JsonObject}
 import reactor.core.scala.publisher.Mono
 
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -40,43 +40,43 @@ class ReactiveCollection(val coll: Collection) {
 
   def remove(id: String,
              cas: Long,
-             options: RemoveOptions): Mono[MutationResult] = ???
+             options: RemoveOptions = RemoveOptions()): Mono[MutationResult] = ???
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Mono[Option[ReadResult]] = {
+         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
     Mono.fromFuture(async.get(id, timeout))
   }
 
   def get(id: String,
-          options: ReadOptions)
-         (implicit ec: ExecutionContext): Mono[Option[ReadResult]] = {
+          options: GetOptions)
+         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
     Mono.fromFuture(async.get(id, options))
   }
 
   def getOrError(id: String,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Mono[ReadResult] = {
+                (implicit ec: ExecutionContext): Mono[GetResult] = {
     Mono.fromFuture(async.getOrError(id, timeout))
   }
 
   def getOrError(id: String,
-                 options: ReadOptions)
-                (implicit ec: ExecutionContext): Mono[ReadResult] = {
+                 options: GetOptions)
+                (implicit ec: ExecutionContext): Mono[GetResult] = {
     Mono.fromFuture(async.getOrError(id, options))
   }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Mono[Option[ReadResult]] = {
+                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
     Mono.fromFuture(async.getAndLock(id, lockFor, timeout))
   }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Mono[Option[ReadResult]] = {
+                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
     Mono.fromFuture(async.getAndLock(id, lockFor, options))
   }
 }

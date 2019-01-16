@@ -40,10 +40,11 @@ class Cluster(env: CouchbaseEnvironment, node: String) {
   def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
     null
   }
+
 }
 
-object CouchbaseCluster {
-  def create(node: String) = {
+object Cluster {
+  def connect(node: String, username: String, password: String) = {
     new Cluster(CouchbaseEnvironment.default(), node)
   }
 }

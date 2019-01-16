@@ -16,7 +16,6 @@
 
 package com.couchbase.client.scala.api
 
-// TODO Enumeration is frowned upon in Scala...
 object ReplicateTo extends Enumeration {
   val None, One, Two, Three = Value
 }
@@ -26,5 +25,5 @@ object PersistTo extends Enumeration {
 }
 
 object Durability extends Enumeration {
-  val Majority, MajorityAndPersistActive, PersistToMajority = Value
+  val None, Majority, MajorityAndPersistActive, PersistToMajority = Value
 }

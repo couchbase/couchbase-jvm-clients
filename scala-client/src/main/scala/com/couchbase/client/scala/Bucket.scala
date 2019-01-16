@@ -26,6 +26,11 @@ class Bucket(cluster: Cluster,
     scope.openCollection(collection)
   }
 
+  def defaultCollection() = {
+    val scope = openScope("default")
+    scope.openCollection("default")
+  }
+
   def openScope(name: String) = new Scope(cluster.core, cluster, this, name)
 
   def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {

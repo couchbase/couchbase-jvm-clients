@@ -17,8 +17,8 @@
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.CouchbaseCluster
-import com.couchbase.client.scala.document.{ReadResult, JsonObject}
+import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.document._
 import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -29,7 +29,7 @@ object Samples {
 
 
   def blockingApi(): Unit = {
-    val cluster = CouchbaseCluster.create("localhost")
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
     val bucket = cluster.openBucket("default")
     val scope = bucket.openScope("scope")
     val coll = scope.openCollection("people")
@@ -41,17 +41,22 @@ object Samples {
 
 
     // All methods have both a named/default parameters version, and an [X]Options version
-    val fetched1: Option[ReadResult] = coll.read("id")
-    val fetched2 = coll.read("id", ReadSpec().getFullDocument)
-    val fetched3 = coll.read("id", timeout = 1000.milliseconds)
-    val fetched5 = coll.read("id", ReadSpec().getFullDocument, ReadOptions().timeout(1000.milliseconds))
+    coll.get("id", timeout = 10 seconds)
+    val fetched1: Option[GetResult] = coll.get("id")
+    val fetched2 = coll.get("id", GetSpec().getDoc)
+    val fetched3 = coll.get("id", timeout = 1000.milliseconds)
+    val fetched5 = coll.get("id", GetSpec().getDoc, GetOptions().timeout(1000.milliseconds))
+
 
 
     // ReadResult contains the raw bytes, plus metadata.  Defers conversion to the last moment.
-    val getResult: ReadResult = fetched1.get
+    val getResult: GetResult = fetched1.get
     val doc: JsonObject = getResult.contentAsObject
 
+
+
     case class MyUserEntity(id: String, firstName: String, age: Int)
+
     getResult.contentAs[MyUserEntity]("users[0]")
     getResult.users(0).getAs[User]
     getResult.users.getAs[List[User]]
@@ -62,7 +67,7 @@ object Samples {
     getResult.some.field.getString
 
     fetched1 match {
-      case Some(ReadResult(id, content, cas, expiry)) => print("Doc has id " + id + " cas " + cas)
+      case Some(GetResult(id, content, cas, expiry)) => print("Doc has id " + id + " cas " + cas)
       case _ => println("Could not find doc")
     }
 
@@ -70,7 +75,9 @@ object Samples {
     // readOrError is a convenience method that either returns JsonDocument (no Option) or throws DocumentNotFoundException
     // TODO May remove these
     val fetched4 = coll.readOrError("id")
-    val fetched7 = coll.readOrError("id", ReadOptions().timeout(1000.milliseconds))
+    val fetched7 = coll.readOrError("id", GetOptions().timeout(1000.milliseconds))
+
+
 
 
     // getAndLock and getAndTouch work pretty much the same as get
@@ -78,9 +85,9 @@ object Samples {
 
 
     // Simple subdoc lookup
-    val resultOpt: Option[ReadResult] = coll.read("id", ReadSpec().get("field1", "field2"))
-    coll.read("id", ReadSpec().get("field1", "field2"), timeout = 10.seconds)
-    coll.read("id", ReadSpec().get("field1", "field2"), ReadOptions().timeout(10.seconds))
+    val resultOpt: Option[GetResult] = coll.get("id", GetSpec().getMany("field1", "field2"))
+    coll.get("id", GetSpec().getMany("field1", "field2"), timeout = 10.seconds)
+    coll.get("id", GetSpec().getMany("field1", "field2"), GetOptions().timeout(10.seconds))
 
 
     // Parsing subdoc results.  LookupInResult is similar to a Document.
@@ -196,11 +203,11 @@ object Samples {
     // Another, maybe tidier way of writing that get-replace
     val replace2 = for {
       doc <- coll.getOrError("id", timeout = 1000.milliseconds)
-      doc <- {
+      result <- {
         // coll.replace(doc.copy(content = JsonObject.empty()))
         coll.replace(doc.id, JsonObject.create, doc.cas)
       }
-    } yield doc
+    } yield result
 
     Await.result(replace, atMost = 5.seconds)
 

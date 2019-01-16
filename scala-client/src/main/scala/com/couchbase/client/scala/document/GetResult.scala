@@ -41,10 +41,10 @@ case class GetSelecter(private val result: Convertable, path: PathElements) exte
   def getAs[T]: T = result.contentAs[T](path)
 }
 
-class ReadResult(val id: String,
-                 val cas: Long,
-                 private val _content: Array[Byte],
-                 val expiry: Option[Duration]) extends Dynamic with Convertable {
+class GetResult(val id: String,
+                val cas: Long,
+                private val _content: Array[Byte],
+                val expiry: Option[Duration]) extends Dynamic with Convertable {
 
   def contentAsObject: JsonObject = contentAs[JsonObject]
 
@@ -54,7 +54,11 @@ class ReadResult(val id: String,
 
   def contentAsArray(path: String): JsonArray = contentAs[JsonArray](path)
 
-  def content(idx: Int): Any = ???
+  def content: JsonType = ???
+
+  def content(idx: Int): JsonType = ???
+
+  def content(path: String): JsonType = ???
 
   def contentAs[T]: T = ???
 
@@ -70,8 +74,8 @@ class ReadResult(val id: String,
   override def contentAs[T](path: PathElements): T = ???
 }
 
-object ReadResult {
-  def unapply[T](document: ReadResult): Option[(String, JsonObject, Long, Option[Duration])] = {
+object GetResult {
+  def unapply[T](document: GetResult): Option[(String, JsonObject, Long, Option[Duration])] = {
     Some(document.id, document.contentAsObject, document.cas, document.expiry)
   }
 

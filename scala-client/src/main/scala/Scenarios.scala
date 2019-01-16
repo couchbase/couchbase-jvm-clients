@@ -4,7 +4,7 @@ import java.time.temporal.ChronoUnit
 import com.couchbase.client.core.error._
 import com.couchbase.client.scala.CouchbaseCluster
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{ReadResult, JsonArray, JsonObject}
+import com.couchbase.client.scala.document.{GetResult, JsonArray, JsonObject}
 import reactor.retry.{Jitter, Retry, RetryContext}
 
 import scala.concurrent.duration._
@@ -20,16 +20,16 @@ class Scenarios {
 
 
   def scenarioA(): Unit = {
-    val doc: ReadResult = coll.readOrError("id", ReadOptions().timeout(10.seconds))
+    val doc: GetResult = coll.readOrError("id", GetOptions().timeout(10.seconds))
 
     val content: JsonObject = doc.contentAsObject.put("field", "value")
 
     val result: MutationResult = coll.replace(doc.id, content, doc.cas, ReplaceOptions().timeout(10.seconds))
 
 
-    // I include type annotations and getOrError above to make things clearer, but it'd be more idiomatic to write this:
+    // I include type annotations and readOrError above to make things clearer, but it'd be more idiomatic to write this:
     // (note default params are supported for all methods along with the *Options builders)
-    coll.read("id", timeout = 10.seconds) match {
+    coll.get("id", timeout = 10.seconds) match {
       case Some(doc3) =>
         coll.replace(doc3.id,
           doc3.contentAsObject
@@ -44,7 +44,7 @@ class Scenarios {
 
 
   def scenarioB(): Unit = {
-    val subdocOpt: Option[ReadResult] = coll.read("id", ReadSpec().get("someArray"), timeout = 10.seconds)
+    val subdocOpt: Option[GetResult] = coll.get("id", GetSpec().get("someArray"), timeout = 10.seconds)
 
     subdocOpt.map(subdoc => {
       val arr: JsonArray = subdoc.contentAsArray
@@ -100,6 +100,7 @@ class Scenarios {
         retryIdempotentRemoveClientSide(callback, originalReplicateTo, originalReplicateTo, until)
 
       case err: ReplicaNotAvailableException =>
+        // TODO this isn't necessary.  If replica is not available, the write will still go to as many as possible.
         val newReplicateTo = replicateTo match {
           case ReplicateTo.One => ReplicateTo.None
           case ReplicateTo.Two => ReplicateTo.One
@@ -143,7 +144,7 @@ class Scenarios {
 
       case err: DurabilityAmbiguous =>
         // A guarantee is that the mutation is either written to a majority of nodes, or none.  But we don't know which.
-        coll.read("id") match {
+        coll.get("id") match {
           case Some(doc) => retryIdempotentRemoveServerSide(callback, until)
           case _ => println("Our work here is done")
         }
@@ -156,7 +157,7 @@ class Scenarios {
 
   def scenarioD(): Unit = {
     retryOperationOnCASMismatch(() => {
-      coll.read("id", timeout = 10.seconds) match {
+      coll.get("id", timeout = 10.seconds) match {
         case Some(doc) =>
           coll.replace(doc.id,
             doc.contentAsObject
@@ -167,19 +168,20 @@ class Scenarios {
 
         case _ => println("could not get doc")
       }
-    }, guard = 50)
+    }, System.nanoTime().nanos.plus(30.seconds))
   }
 
-  private def retryOperationOnCASMismatch(callback: () => Unit, guard: Int): Unit = {
-    if (guard <= 0) {
-      throw new RuntimeException("Failed to perform exception")
+  private def retryOperationOnCASMismatch(callback: () => Unit, until: FiniteDuration): Unit = {
+    if (System.nanoTime().nanos >= until) {
+        // What to do here is too app dependent to make a call on: return an error to the user, log for future human reconcilation, etc.
+      throw new RuntimeException("Failed to perform operation")
     }
 
     try {
       callback()
     }
     catch {
-      case err: CASMismatchException => retryOperationOnCASMismatch(callback, guard - 1)
+      case err: CASMismatchException => retryOperationOnCASMismatch(callback, until)
     }
   }
 
@@ -187,7 +189,7 @@ class Scenarios {
   def scenarioE(): Unit = {
     case class User(name: String, age: Int, address: String, phoneNumber: String)
 
-    coll.read("id", timeout = 10.seconds) match {
+    coll.get("id", timeout = 10.seconds) match {
       case Some(doc) =>
         val user: User = doc.contentAs[User]
         val changed = user.copy(age = 25)
@@ -209,13 +211,15 @@ class Scenarios {
   def scenarioF_fulldoc(): Unit = {
     case class User(name: String, age: Int, address: String)
 
-    coll.read("id") match {
+    coll.get("id") match {
       case Some(doc) =>
         val user: User = doc.contentAs[User]
         val changed = user.copy(age = 25)
 
         // Is this too dangerous?  What if a newer client has added 'phoneNumber' to user that this older client doesn't know about?
         coll.replace(doc.id, changed, doc.cas)
+
+        coll.replace("id", changed, 0)
 
       case _ => println("could not find doc")
     }
@@ -225,7 +229,7 @@ class Scenarios {
   def scenarioF_subdoc(): Unit = {
     case class UserPartial(name: String, age: Int)
 
-    val subdoc: ReadResult = coll.read("id", ReadSpec().get("user.name", "user.age")).get
+    val subdoc: GetResult = coll.get("id", GetSpec().getMany("user.name", "user.age")).get
 
     val user: UserPartial = subdoc.contentAs[UserPartial]
     val changed = user.copy(age = 25)

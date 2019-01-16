@@ -23,10 +23,22 @@ import com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.annotation.tailrec
 
+sealed trait JsonType
+
+// TODO decide if the neatness of an algebraic data type makes up for the extra object creation
+case class JsonString(value: String) extends JsonType
+case class JsonBoolean(value: Boolean) extends JsonType
+case class JsonNull() extends JsonType
+case class JsonNumber(number: Double) extends JsonType {
+  def asInt = number.toInt
+  def asLong = number.toLong
+  def asFloat = number.toFloat
+}
+
 // TODO ujson has some cool ideas http://www.lihaoyi.com/post/uJsonfastflexibleandintuitiveJSONforScala.html
 // TODO think very hard about whether I want immutability. Changing a random field in the middle of the json will require lenses or a fluent API or something
 // TODO maybe a toMutable()
-case class JsonObject(private val content: Map[String, Any]) extends Convertable with Dynamic {
+case class JsonObject(private val content: Map[String, JsonType]) extends Convertable with Dynamic with JsonType {
   // For Jackson
   private def this() {
     this(Map.empty)
@@ -37,16 +49,21 @@ case class JsonObject(private val content: Map[String, Any]) extends Convertable
   //  def dyn(): GetSelecter = GetSelecter(this, "")
 
   def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
-
   def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 
-  def put(name: String, value: Any): JsonObject = {
+  def put(name: String, value: String): JsonObject = {
     Objects.requireNonNull(name)
-    if (!checkType(value)) throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass)
-    copy(content + (name -> value))
+//    if (!checkType(value)) throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass)
+    copy(content + (name -> JsonString(value)))
   }
 
-  def get(name: String): Option[Any] = {
+  def put(name: String, value: Int): JsonObject = {
+    Objects.requireNonNull(name)
+    //    if (!checkType(value)) throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass)
+    copy(content + (name -> JsonNumber(value)))
+  }
+
+  def get(name: String): Option[JsonType] = {
     content.get(name)
   }
 
@@ -204,6 +221,46 @@ object JsonObject {
   def empty: JsonObject = EMPTY
 
   def create: JsonObject = new JsonObject(Map.empty)
+
+  // TODO from(Map)
+}
+
+
+// Choosing vector as we'll mostly be adding to the end of it
+case class JsonArray(val values: Vector[JsonType]) extends JsonType {
+  def add(item: String): JsonArray = copy(values :+ JsonString(item))
+  def add(item: Int): JsonArray = copy(values :+ JsonNumber(item))
+  def addNull: JsonArray = copy(values :+ null)
+  def get(idx: Int): Option[JsonType] = Some(values(idx))
+  def getString(idx: Int): String = values(idx).asInstanceOf[String]
+  // TODO does getLong & getInt make sense?  Always using wrong one...
+  def getLong(idx: Int): Long = values(idx).asInstanceOf[Long]
+  def getInt(idx: Int): Int = values(idx).asInstanceOf[Int]
+  def getDouble(idx: Int): Double = values(idx).asInstanceOf[Double]
+  def getFloat(idx: Int): Float = values(idx).asInstanceOf[Float]
+  def getObject(idx: Int): JsonObject = values(idx).asInstanceOf[JsonObject]
+  def isEmpty: Boolean = values.isEmpty
+  def iterator: Iterator[Any] = values.iterator
+//  def toSeq: Seq[JsonType] = values
+  // TODO add immutable variant
+}
+
+object JsonArray {
+  private val mapper = new ObjectMapper()
+
+  def fromJson(json: String): JsonArray = {
+    mapper.readValue(json, classOf[JsonArray])
+  }
+
+  // TODO checkItems
+  def from(items: Any*) = new JsonArray(items.toVector)
+  // TODO more advanced from that converts into JsonObjects etc
+
+  private val EMPTY = JsonArray.create
+
+  def empty: JsonArray = EMPTY
+
+  def create: JsonArray = new JsonArray(Vector.empty)
 
   // TODO from(Map)
 }
