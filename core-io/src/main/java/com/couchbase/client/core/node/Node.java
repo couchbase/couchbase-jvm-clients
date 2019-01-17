@@ -19,6 +19,7 @@ package com.couchbase.client.core.node;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
@@ -36,6 +37,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.service.ViewService;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,9 +53,7 @@ public class Node {
   private final NetworkAddress address;
   private final CoreContext ctx;
   private final Credentials credentials;
-
   private final Map<String, Map<ServiceType, Service>> services;
-
   private final AtomicBoolean disconnect;
 
   /**
@@ -75,17 +75,6 @@ public class Node {
   }
 
   /**
-   * Instruct this {@link Node} to connect.
-   *
-   * <p>This method is async and will return immediately. Use the other methods available to
-   * inspect the current state of the node, signaling potential successful connection
-   * attempts.</p>
-   */
-  public void connect() {
-
-  }
-
-  /**
    * Instruct this {@link Node} to disconnect.
    *
    * <p>This method is async and will return immediately. Use the other methods available to
@@ -94,7 +83,7 @@ public class Node {
    */
   public void disconnect() {
     if (disconnect.compareAndSet(false, true)) {
-      // handle disconnect
+      // todo: handle disconnect
     }
   }
 
@@ -125,10 +114,15 @@ public class Node {
         services.put(name, localMap);
       }
       if (!localMap.containsKey(type)) {
+        long start = System.nanoTime();
         Service service = createService(type, port, bucket);
         localMap.put(type, service);
         enabledServices |= 1 << type.ordinal();
         service.connect();
+        long end = System.nanoTime();
+        ctx.environment().eventBus().publish(
+          new ServiceAddedEvent(Duration.ofNanos(end - start), service.context())
+        );
         // todo: only return once the service is connected?
         return Mono.empty();
       } else {
@@ -142,8 +136,14 @@ public class Node {
     });
   }
 
-  public void removeService() {
+  public synchronized Mono<Void> removeService() {
     // todo: don't forget enabledServices &= ~(1 << service.type().ordinal());
+    return Mono.empty();
+  }
+
+  public NodeState state() {
+    // TODO: fixme (needs to be aggregate)
+    return NodeState.CONNECTED;
   }
 
   /**
@@ -162,22 +162,33 @@ public class Node {
     service.send(request);
   }
 
-  public NodeState state() {
-    // TODO: fixme
-    return NodeState.CONNECTED;
-  }
-
+  /**
+   * Returns the address of the current node.
+   */
   public NetworkAddress address() {
     return address;
   }
 
-  public boolean serviceEnabled(final ServiceType type) {
+  /**
+   * If a given {@link ServiceType} is enabled on this node.
+   *
+   * @param type the service type to check.
+   * @return true if enabled, false otherwise.
+   */
+  boolean serviceEnabled(final ServiceType type) {
     return (enabledServices & (1 << type.ordinal())) != 0;
   }
 
-  protected Service createService(final ServiceType serviceType, final int port,
-                                  final Optional<String> bucket) {
-
+  /**
+   * Helper method to create the {@link Service} based on the service type provided.
+   *
+   * @param serviceType the type of service to create.
+   * @param port the port for that service.
+   * @param bucket optionally the bucket name.
+   * @return a created service, but not yet connected or anything.
+   */
+  private Service createService(final ServiceType serviceType, final int port,
+                                final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
     switch (serviceType) {
       case KV:

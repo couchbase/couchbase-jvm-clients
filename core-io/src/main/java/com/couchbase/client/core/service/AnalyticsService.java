@@ -17,20 +17,28 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.endpoint.AnalyticsEndpoint;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.RoundRobinSelectionStrategy;
 
 public class AnalyticsService extends PooledService {
 
+  private final CoreContext context;
+  private final NetworkAddress hostname;
+  private final int port;
+
   public AnalyticsService(final AnalyticsServiceConfig config, final CoreContext context,
                           final NetworkAddress hostname, final int port) {
-    super(config, new ServiceContext(context, hostname, port));
+    super(config, new ServiceContext(context, hostname, port, ServiceType.ANALYTICS));
+    this.context = context;
+    this.hostname = hostname;
+    this.port = port;
   }
 
   @Override
   protected Endpoint createEndpoint() {
-    return null;
+    return new AnalyticsEndpoint(context, hostname, port);
   }
 
   @Override

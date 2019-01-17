@@ -16,7 +16,7 @@ public class ManagerService extends PooledService {
   private final int port;
 
   public ManagerService(CoreContext coreContext, final NetworkAddress hostname, final int port) {
-    super(new ManagerServiceConfig(), new ServiceContext(coreContext, hostname, port));
+    super(new ManagerServiceConfig(), new ServiceContext(coreContext, hostname, port, ServiceType.MANAGER));
     this.coreContext = coreContext;
     this.hostname = hostname;
     this.port = port;

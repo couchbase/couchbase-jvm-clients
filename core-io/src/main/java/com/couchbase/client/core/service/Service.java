@@ -65,4 +65,6 @@ public interface Service {
    */
   ServiceState state();
 
+  ServiceContext context();
+
 }

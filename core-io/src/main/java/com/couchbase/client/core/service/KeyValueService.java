@@ -40,7 +40,7 @@ public class KeyValueService extends PooledService {
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
                          final NetworkAddress hostname, final int port, final String bucketname,
                          final Credentials credentials) {
-    super(serviceConfig, new ServiceContext(coreContext, hostname, port));
+    super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV));
     this.coreContext = coreContext;
     this.hostname = hostname;
     this.port = port;

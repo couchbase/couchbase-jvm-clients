@@ -205,6 +205,11 @@ abstract class PooledService implements Service {
   }
 
   @Override
+  public ServiceContext context() {
+    return serviceContext;
+  }
+
+  @Override
   public ServiceState state() {
     if (endpoints.isEmpty()) {
       return initialState;

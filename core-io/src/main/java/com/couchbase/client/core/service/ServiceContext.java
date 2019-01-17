@@ -26,17 +26,24 @@ public class ServiceContext extends CoreContext {
   /**
    * The hostname of this service.
    */
-  private NetworkAddress remoteHostname;
+  private final NetworkAddress remoteHostname;
 
   /**
    * The port of this service.
    */
-  private int remotePort;
+  private final int remotePort;
 
-  public ServiceContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort) {
+  /**
+   * The service type of this context.
+   */
+  private final ServiceType serviceType;
+
+  public ServiceContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
+                        ServiceType serviceType) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
+    this.serviceType = serviceType;
   }
 
   public NetworkAddress remoteHostname() {
@@ -51,6 +58,7 @@ public class ServiceContext extends CoreContext {
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
+    input.put("type", serviceType);
   }
 
 }

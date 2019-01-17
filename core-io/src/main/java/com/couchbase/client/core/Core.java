@@ -171,7 +171,6 @@ public class Core {
       .filter(n -> n.address().equals(target))
       .switchIfEmpty(Mono.defer(() -> {
         Node node = Node.create(coreContext, target, coreContext.environment().credentials());
-        node.connect();
         nodes.add(node);
         return Mono.just(node);
       }))

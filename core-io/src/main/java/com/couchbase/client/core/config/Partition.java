@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class Partition {
 
@@ -47,6 +48,10 @@ public class Partition {
 
     @Override
     public String toString() {
-        return "[m: " + master + ", r: " + Arrays.toString(replicas) + "]";
+        StringBuilder result = new StringBuilder("[" + master);
+        for (short replica : replicas) {
+            result.append(",").append(replica);
+        }
+        return result + "]";
     }
 }

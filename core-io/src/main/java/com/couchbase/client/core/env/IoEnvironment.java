@@ -52,6 +52,9 @@ public class IoEnvironment {
 
   private final CircuitBreakerConfig kvCircuitBreakerConfig;
   private final CircuitBreakerConfig queryCircuitBreakerConfig;
+  private final CircuitBreakerConfig viewCircuitBreakerConfig;
+  private final CircuitBreakerConfig searchCircuitBreakerConfig;
+  private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
 
 
@@ -111,6 +114,15 @@ public class IoEnvironment {
     queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig == null
       ? CircuitBreakerConfig.disabled()
       : builder.queryCircuitBreakerConfig;
+    analyticsCircuitBreakerConfig = builder.analyticsCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.analyticsCircuitBreakerConfig;
+    searchCircuitBreakerConfig = builder.searchCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.searchCircuitBreakerConfig;
+    viewCircuitBreakerConfig = builder.viewCircuitBreakerConfig == null
+      ? CircuitBreakerConfig.disabled()
+      : builder.viewCircuitBreakerConfig;
 
     managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig == null
       ? CircuitBreakerConfig.disabled()
@@ -218,6 +230,18 @@ public class IoEnvironment {
     return queryCircuitBreakerConfig;
   }
 
+  public CircuitBreakerConfig viewCircuitBreakerConfig() {
+    return viewCircuitBreakerConfig;
+  }
+
+  public CircuitBreakerConfig analyticsCircuitBreakerConfig() {
+    return analyticsCircuitBreakerConfig;
+  }
+
+  public CircuitBreakerConfig searchCircuitBreakerConfig() {
+    return searchCircuitBreakerConfig;
+  }
+
   public CircuitBreakerConfig managerCircuitBreakerConfig() {
     return managerCircuitBreakerConfig;
   }
@@ -277,6 +301,9 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
     private CircuitBreakerConfig kvCircuitBreakerConfig = null;
     private CircuitBreakerConfig queryCircuitBreakerConfig = null;
+    private CircuitBreakerConfig searchCircuitBreakerConfig = null;
+    private CircuitBreakerConfig viewCircuitBreakerConfig = null;
+    private CircuitBreakerConfig analyticsCircuitBreakerConfig = null;
     private CircuitBreakerConfig managerCircuitBreakerConfig = null;
 
 

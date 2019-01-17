@@ -18,19 +18,27 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.endpoint.ViewEndpoint;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.RoundRobinSelectionStrategy;
 
 public class ViewService extends PooledService {
 
+  private final CoreContext context;
+  private final NetworkAddress hostname;
+  private final int port;
+
   public ViewService(final ViewServiceConfig config, final CoreContext context,
                      final NetworkAddress hostname, final int port) {
-    super(config, new ServiceContext(context, hostname, port));
+    super(config, new ServiceContext(context, hostname, port, ServiceType.VIEWS));
+    this.context = context;
+    this.hostname = hostname;
+    this.port = port;
   }
 
   @Override
   protected Endpoint createEndpoint() {
-    return null;
+    return new ViewEndpoint(context, hostname, port);
   }
 
   @Override
