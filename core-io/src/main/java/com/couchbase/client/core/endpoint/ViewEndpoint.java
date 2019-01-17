@@ -19,6 +19,7 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.logging.LogLevel;
@@ -31,7 +32,7 @@ public class ViewEndpoint extends BaseEndpoint {
   public ViewEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
                       final int port) {
     super(hostname, port, coreContext.environment().ioEnvironment().viewEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().viewCircuitBreakerConfig());
+      coreContext, coreContext.environment().ioEnvironment().viewCircuitBreakerConfig(), ServiceType.VIEWS);
     this.coreContext = coreContext;
   }
 

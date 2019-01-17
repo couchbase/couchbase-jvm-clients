@@ -28,6 +28,7 @@ import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.logging.LogLevel;
@@ -44,7 +45,7 @@ public class QueryEndpoint extends BaseEndpoint {
   public QueryEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
                        final int port) {
     super(hostname, port, coreContext.environment().ioEnvironment().queryEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().queryCircuitBreakerConfig());
+      coreContext, coreContext.environment().ioEnvironment().queryCircuitBreakerConfig(), ServiceType.QUERY);
     this.coreContext = coreContext;
   }
 

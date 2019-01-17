@@ -18,6 +18,7 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Map;
 
@@ -26,17 +27,22 @@ public class EndpointContext extends CoreContext {
   /**
    * The hostname of this endpoint.
    */
-  private NetworkAddress remoteHostname;
+  private final NetworkAddress remoteHostname;
 
   /**
    * The port of this endpoint.
    */
-  private int remotePort;
+  private final int remotePort;
 
   /**
    * The circuit breaker used for this endpoint.
    */
   private final CircuitBreaker circuitBreaker;
+
+  /**
+   * The service type of this endpoint.
+   */
+  private final ServiceType serviceType;
 
   /**
    * Creates a new {@link EndpointContext}.
@@ -46,11 +52,12 @@ public class EndpointContext extends CoreContext {
    * @param remotePort the remote port.
    */
   public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
-                         CircuitBreaker circuitBreaker) {
+                         CircuitBreaker circuitBreaker, ServiceType serviceType) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
     this.circuitBreaker = circuitBreaker;
+    this.serviceType = serviceType;
   }
 
   @Override
@@ -58,6 +65,7 @@ public class EndpointContext extends CoreContext {
     super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
     input.put("circuitBreaker", circuitBreaker.state().toString());
+    input.put("type", serviceType);
   }
 
   public NetworkAddress remoteHostname() {
@@ -70,5 +78,9 @@ public class EndpointContext extends CoreContext {
 
   public CircuitBreaker circuitBreaker() {
     return circuitBreaker;
+  }
+
+  public ServiceType serviceType() {
+    return serviceType;
   }
 }

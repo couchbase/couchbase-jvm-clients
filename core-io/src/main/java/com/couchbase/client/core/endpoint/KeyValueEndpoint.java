@@ -27,6 +27,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 
 import java.util.Arrays;
@@ -42,7 +43,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
   public KeyValueEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
                           final int port, final String bucketname, final Credentials credentials) {
     super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().kvCircuitBreakerConfig());
+      coreContext, coreContext.environment().ioEnvironment().kvCircuitBreakerConfig(), ServiceType.KV);
     this.coreContext = coreContext;
     this.credentials = credentials;
     this.bucketname = bucketname;

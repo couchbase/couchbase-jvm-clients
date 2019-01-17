@@ -29,6 +29,7 @@ import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -59,7 +60,7 @@ import java.util.function.Supplier;
 /**
  * This {@link BaseEndpoint} implements all common logic for endpoints that wrap the IO layer.
  *
- * <p>In addition to just wrapping a netty channel, this implementaiton is also a circuit breaker
+ * <p>In addition to just wrapping a netty channel, this implementation is also a circuit breaker
  * which is configurable and then determines base on the config if the circuit should be open
  * or closed. Half-Open states will allow canaries to go in and eventually open it again if they
  * are deemed okay.</p>
@@ -119,13 +120,14 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param circuitBreakerConfig the circuit breaker config used.
    */
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
-               final CoreContext coreContext, final CircuitBreakerConfig circuitBreakerConfig) {
+               final CoreContext coreContext, final CircuitBreakerConfig circuitBreakerConfig,
+               final ServiceType serviceType) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
     this.circuitBreaker = circuitBreakerConfig.enabled()
       ? new LazyCircuitBreaker(circuitBreakerConfig)
       : NoopCircuitBreaker.INSTANCE;
-    this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker);
+    this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker, serviceType);
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
     this.eventLoopGroup = eventLoopGroup;
