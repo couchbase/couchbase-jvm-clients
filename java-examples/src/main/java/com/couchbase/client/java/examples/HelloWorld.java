@@ -23,17 +23,42 @@ import com.couchbase.client.java.kv.GetResult;
 
 import java.util.Optional;
 
+/**
+ * This example connects to a bucket, opens a collection and performs a simple operation.
+ *
+ * <p>If this program fails executing properly, there is a good chance your cluster is not set up
+ * yet with the travel-sample bucket or you are pointing the code at the wrong hostname (or you
+ * use wrong credentials).</p>
+ */
 public class HelloWorld {
 
   public static void main(String... args) {
+
+    /*
+     * Connect to the cluster with a hostname and credentials.
+     */
     Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
 
+    /*
+     * Open a bucket with the bucket name.
+     */
     Bucket bucket = cluster.bucket("travel-sample");
 
+    /*
+     * Open a collection - here the default collection which is also backwards compatible to
+     * servers which do not support collections.
+     */
     Collection collection = bucket.defaultCollection();
 
+    /*
+     * Fetch a document from the travel-sample bucket.
+     */
     Optional<GetResult> airport_10 = collection.get("airport_1291");
 
+    /*
+     * Print the fetched document.
+     */
     System.err.println(airport_10);
+
   }
 }

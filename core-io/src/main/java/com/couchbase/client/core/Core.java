@@ -17,11 +17,9 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
-import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
@@ -30,20 +28,17 @@ import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
+import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.service.ServiceType;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * The main entry point into the core layer.
@@ -63,6 +58,14 @@ public class Core {
   private static final KeyValueLocator KEY_VALUE_LOCATOR = new KeyValueLocator();
 
   private static final ManagerLocator MANAGER_LOCATOR = new ManagerLocator();
+
+  private static final RoundRobinLocator QUERY_LOCATOR = new RoundRobinLocator(ServiceType.QUERY);
+
+  private static final RoundRobinLocator ANALYTICS_LOCATOR = new RoundRobinLocator(ServiceType.ANALYTICS);
+
+  private static final RoundRobinLocator SEARCH_LOCATOR = new RoundRobinLocator(ServiceType.SEARCH);
+
+  private static final RoundRobinLocator VIEWS_LOCATOR = new RoundRobinLocator(ServiceType.VIEWS);
 
   /**
    * Holds the current core context.
@@ -163,15 +166,6 @@ public class Core {
   @Stability.Internal
   public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType,
                                     int port, Optional<String> bucket) {
-
-    // TODO: fixme these services need to be implemented
-    if (serviceType == ServiceType.VIEWS
-      || serviceType == ServiceType.QUERY
-      || serviceType == ServiceType.SEARCH
-      || serviceType == ServiceType.ANALYTICS) {
-      return Mono.empty();
-    }
-
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.address().equals(target))
@@ -206,6 +200,7 @@ public class Core {
    */
   private void reconfigure() {
     if (reconfigureInProgress.compareAndSet(false, true)) {
+      // TODO: proper error handling/logging!!
       Flux
         .just(currentConfig)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()))
@@ -245,6 +240,14 @@ public class Core {
         return KEY_VALUE_LOCATOR;
       case MANAGER:
         return MANAGER_LOCATOR;
+      case QUERY:
+        return QUERY_LOCATOR;
+      case ANALYTICS:
+        return ANALYTICS_LOCATOR;
+      case SEARCH:
+        return SEARCH_LOCATOR;
+      case VIEWS:
+        return VIEWS_LOCATOR;
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
     }

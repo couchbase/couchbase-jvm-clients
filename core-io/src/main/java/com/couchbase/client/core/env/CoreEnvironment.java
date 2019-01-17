@@ -25,7 +25,11 @@ import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.AnalyticsServiceConfig;
 import com.couchbase.client.core.service.KeyValueServiceConfig;
+import com.couchbase.client.core.service.QueryServiceConfig;
+import com.couchbase.client.core.service.SearchServiceConfig;
+import com.couchbase.client.core.service.ViewServiceConfig;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -61,6 +65,10 @@ public class CoreEnvironment {
   private final MemcachedHashingStrategy memcachedHashingStrategy;
   private final RetryStrategy retryStrategy;
   private final KeyValueServiceConfig keyValueServiceConfig;
+  private final QueryServiceConfig queryServiceConfig;
+  private final ViewServiceConfig viewServiceConfig;
+  private final SearchServiceConfig searchServiceConfig;
+  private final AnalyticsServiceConfig analyticsServiceConfig;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -99,6 +107,18 @@ public class CoreEnvironment {
     this.keyValueServiceConfig = builder.keyValueServiceConfig == null
       ? KeyValueServiceConfig.create()
       : builder.keyValueServiceConfig;
+    this.queryServiceConfig = builder.queryServiceConfig == null
+      ? QueryServiceConfig.create()
+      : builder.queryServiceConfig;
+    this.viewServiceConfig = builder.viewServiceConfig == null
+      ? ViewServiceConfig.create()
+      : builder.viewServiceConfig;
+    this.searchServiceConfig = builder.searchServiceConfig == null
+      ? SearchServiceConfig.create()
+      : builder.searchServiceConfig;
+    this.analyticsServiceConfig = builder.analyticsServiceConfig == null
+      ? AnalyticsServiceConfig.create()
+      : builder.analyticsServiceConfig;
 
     this.credentials = builder.credentials;
 
@@ -224,6 +244,22 @@ public class CoreEnvironment {
     return keyValueServiceConfig;
   }
 
+  public AnalyticsServiceConfig analyticsServiceConfig() {
+    return analyticsServiceConfig;
+  }
+
+  public ViewServiceConfig viewServiceConfig() {
+    return viewServiceConfig;
+  }
+
+  public QueryServiceConfig queryServiceConfig() {
+    return queryServiceConfig;
+  }
+
+  public SearchServiceConfig searchServiceConfig() {
+    return searchServiceConfig;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -251,6 +287,10 @@ public class CoreEnvironment {
     private MemcachedHashingStrategy memcachedHashingStrategy;
     private RetryStrategy retryStrategy;
     private KeyValueServiceConfig keyValueServiceConfig;
+    private QueryServiceConfig queryServiceConfig;
+    private ViewServiceConfig viewServiceConfig;
+    private SearchServiceConfig searchServiceConfig;
+    private AnalyticsServiceConfig analyticsServiceConfig;
 
     private final Credentials credentials;
 
@@ -348,6 +388,26 @@ public class CoreEnvironment {
 
     public SELF keyValueServiceConfig(final KeyValueServiceConfig config) {
       this.keyValueServiceConfig = config;
+      return self();
+    }
+
+    public SELF analyticsServiceConfig(final AnalyticsServiceConfig config) {
+      this.analyticsServiceConfig = config;
+      return self();
+    }
+
+    public SELF searchServiceConfig(final SearchServiceConfig config) {
+      this.searchServiceConfig = config;
+      return self();
+    }
+
+    public SELF queryServiceConfig(final QueryServiceConfig config) {
+      this.queryServiceConfig = config;
+      return self();
+    }
+
+    public SELF viewServiceConfig(final ViewServiceConfig config) {
+      this.viewServiceConfig = config;
       return self();
     }
 

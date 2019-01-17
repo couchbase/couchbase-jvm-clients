@@ -5,11 +5,11 @@ import com.couchbase.client.core.service.ServiceContext;
 
 import java.time.Duration;
 
-public class ServiceDisconnectInitiated extends AbstractEvent {
+public class ServiceDisconnectInitiatedEvent extends AbstractEvent {
 
   private final int disconnectingEndpoints;
 
-  public ServiceDisconnectInitiated(final ServiceContext context, final int disconnectingEndpoints) {
+  public ServiceDisconnectInitiatedEvent(final ServiceContext context, final int disconnectingEndpoints) {
     super(Severity.DEBUG, Category.SERVICE, Duration.ZERO, context);
     this.disconnectingEndpoints = disconnectingEndpoints;
   }

@@ -21,7 +21,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;

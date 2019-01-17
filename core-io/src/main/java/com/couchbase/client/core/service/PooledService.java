@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiated;
-import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiated;
+import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.msg.Request;
@@ -176,7 +176,7 @@ abstract class PooledService implements Service {
   @Override
   public synchronized void connect() {
     if (state() == ServiceState.DISCONNECTED && !disconnected.get()) {
-      serviceContext.environment().eventBus().publish(new ServiceConnectInitiated(
+      serviceContext.environment().eventBus().publish(new ServiceConnectInitiatedEvent(
         serviceContext,
         serviceConfig.minEndpoints()
       ));
@@ -192,7 +192,7 @@ abstract class PooledService implements Service {
   @Override
   public synchronized void disconnect() {
     if (disconnected.compareAndSet(false, true)) {
-      serviceContext.environment().eventBus().publish(new ServiceDisconnectInitiated(
+      serviceContext.environment().eventBus().publish(new ServiceDisconnectInitiatedEvent(
         serviceContext,
         endpoints.size()
       ));

@@ -17,16 +17,23 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
+import com.couchbase.client.core.service.AnalyticsService;
 import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.ManagerService;
+import com.couchbase.client.core.service.QueryService;
+import com.couchbase.client.core.service.SearchService;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.service.ViewService;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -48,6 +55,11 @@ public class Node {
   private final Map<String, Map<ServiceType, Service>> services;
 
   private final AtomicBoolean disconnect;
+
+  /**
+   * Contains the enabled {@link Service}s on a node level.
+   */
+  private volatile int enabledServices;
 
   public static Node create(final CoreContext ctx, final NetworkAddress address,
                             final Credentials credentials) {
@@ -86,32 +98,52 @@ public class Node {
     }
   }
 
-  public synchronized Mono<Void> addService(ServiceType type, int port, Optional<String> bucket) {
-    if (disconnect.get()) {
-      // todo: emit event already disconnected
-      return Mono.empty();
-    }
+  /**
+   * Adds a {@link Service} to this {@link Node}.
+   *
+   * @param type the type of the service.
+   * @param port the port of the service.
+   * @param bucket the bucket name (if present).
+   * @return a {@link Mono} that completes once the service is added.
+   */
+  public synchronized Mono<Void> addService(final ServiceType type, final int port,
+                                            final Optional<String> bucket) {
+    return Mono.defer(() -> {
+      if (disconnect.get()) {
+        ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
+          Event.Severity.DEBUG,
+          ServiceAddIgnoredEvent.Reason.DISCONNECTED,
+          ctx
+        ));
+        return Mono.empty();
+      }
 
-    String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.get();
-    Map<ServiceType, Service> localMap = services.get(name);
-    if (localMap == null) {
-      localMap = new ConcurrentHashMap<>();
-      services.put(name, localMap);
-    }
-    if (!localMap.containsKey(type)) {
-      Service service = createService(type, port, bucket);
-      localMap.put(type, service);
-      service.connect();
-      // todo: only return once the service is connected?
-      return Mono.empty();
-    } else {
-      // todo: emit event service already registered
-      return Mono.empty();
-    }
+      String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.get();
+      Map<ServiceType, Service> localMap = services.get(name);
+      if (localMap == null) {
+        localMap = new ConcurrentHashMap<>();
+        services.put(name, localMap);
+      }
+      if (!localMap.containsKey(type)) {
+        Service service = createService(type, port, bucket);
+        localMap.put(type, service);
+        enabledServices |= 1 << type.ordinal();
+        service.connect();
+        // todo: only return once the service is connected?
+        return Mono.empty();
+      } else {
+        ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
+          Event.Severity.VERBOSE,
+          ServiceAddIgnoredEvent.Reason.ALREADY_ADDED,
+          ctx
+        ));
+        return Mono.empty();
+      }
+    });
   }
 
   public void removeService() {
-
+    // todo: don't forget enabledServices &= ~(1 << service.type().ordinal());
   }
 
   /**
@@ -131,6 +163,7 @@ public class Node {
   }
 
   public NodeState state() {
+    // TODO: fixme
     return NodeState.CONNECTED;
   }
 
@@ -138,14 +171,28 @@ public class Node {
     return address;
   }
 
+  public boolean serviceEnabled(final ServiceType type) {
+    return (enabledServices & (1 << type.ordinal())) != 0;
+  }
+
   protected Service createService(final ServiceType serviceType, final int port,
                                   final Optional<String> bucket) {
+
+    CoreEnvironment env = ctx.environment();
     switch (serviceType) {
       case KV:
-        return new KeyValueService(ctx.environment().keyValueServiceConfig(), ctx, address, port,
+        return new KeyValueService(env.keyValueServiceConfig(), ctx, address, port,
           bucket.get(), credentials);
       case MANAGER:
         return new ManagerService(ctx, address, port);
+      case QUERY:
+        return new QueryService(env.queryServiceConfig(), ctx, address, port);
+      case VIEWS:
+        return new ViewService(env.viewServiceConfig(), ctx, address, port);
+      case SEARCH:
+        return new SearchService(env.searchServiceConfig(), ctx, address, port);
+      case ANALYTICS:
+        return new AnalyticsService(env.analyticsServiceConfig(), ctx, address, port);
       default:
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }

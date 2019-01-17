@@ -1,11 +1,29 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.events.node.NodePartitionLengthNotEqualEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -15,34 +33,55 @@ import com.couchbase.client.core.retry.RetryOrchestrator;
 import java.util.List;
 import java.util.zip.CRC32;
 
+/**
+ * A {@link Locator} responsible for locating the right node based on the partition of the
+ * key.
+ *
+ * <p>Coming from 1.0, this locator has not really changed - only minor details have been
+ * modified in the refactoring process.</p>
+ *
+ * @since 1.0.0
+ */
 public class KeyValueLocator implements Locator {
 
   @Override
   public void dispatch(final Request<? extends Response> request, final List<Node> nodes,
                        final ClusterConfig config, final CoreContext ctx) {
     if (request instanceof TargetedRequest) {
-      for (Node n : nodes) {
-        if (n.address().equals(((TargetedRequest) request).target())) {
-          n.send(request);
-        }
-      }
-      // toDO: not found (also check for connected?) .. retry?
+      dispatchTargeted((TargetedRequest) request, nodes, ctx);
     } else {
       KeyValueRequest r = (KeyValueRequest) request;
       String bucket = r.bucket();
       BucketConfig bucketConfig = config.bucketConfig(bucket);
       if (bucketConfig instanceof CouchbaseBucketConfig) {
-        locateForCouchbaseBucket(r, nodes, (CouchbaseBucketConfig) bucketConfig, ctx);
+        couchbaseBucket(r, nodes, (CouchbaseBucketConfig) bucketConfig, ctx);
       } else if (bucketConfig instanceof MemcachedBucketConfig) {
-        throw new UnsupportedOperationException("Implement me");
+        memcacheBucket(r, nodes, (MemcachedBucketConfig) bucketConfig, ctx);
       } else {
-        throw new IllegalStateException("Unsupported Bucket Type: " + bucketConfig + " for request " + request);
+        throw new IllegalStateException("Unsupported Bucket Type: " + bucketConfig
+          + " for request " + request);
       }
     }
   }
 
-  private static void locateForCouchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,
-                                               final CouchbaseBucketConfig config, CoreContext ctx) {
+  @SuppressWarnings({ "unchecked" })
+  private static void dispatchTargeted(final TargetedRequest request, final List<Node> nodes,
+                                       final CoreContext ctx) {
+    for (Node node : nodes) {
+      if (node.state() == NodeState.CONNECTED || node.state() == NodeState.DEGRADED) {
+        if (!request.target().equals(node.address())) {
+          continue;
+        }
+        node.send((Request) request);
+        return;
+      }
+    }
+
+    RetryOrchestrator.maybeRetry(ctx, (Request) request);
+  }
+
+  private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,
+                                      final CouchbaseBucketConfig config, CoreContext ctx) {
     int partitionId = partitionForKey(request.key(), config.numberOfPartitions());
     request.partition((short) partitionId);
 
@@ -54,7 +93,6 @@ public class KeyValueLocator implements Locator {
     }
 
     NodeInfo nodeInfo = config.nodeAtIndex(nodeId);
-
     for (Node node : nodes) {
       if (node.address().equals(nodeInfo.hostname())) {
         node.send(request);
@@ -62,7 +100,34 @@ public class KeyValueLocator implements Locator {
       }
     }
 
-    if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size())) {
+    if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
+      RetryOrchestrator.maybeRetry(ctx, request);
+      return;
+    }
+
+    throw new IllegalStateException("Node not found for request" + request);
+  }
+
+  /**
+   * Locates the proper {@link Node}s for a Memcache bucket.
+   *
+   * @param request the request.
+   * @param nodes the managed nodes.
+   * @param config the bucket configuration.
+   */
+  private static void memcacheBucket(final KeyValueRequest<?> request, final List<Node> nodes,
+                                     final MemcachedBucketConfig config, final CoreContext ctx) {
+    NetworkAddress hostname = config.nodeForId(request.key());
+    request.partition((short) 0);
+
+    for (Node node : nodes) {
+      if (node.address().equals(hostname)) {
+        node.send(request);
+        return;
+      }
+    }
+
+    if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
       RetryOrchestrator.maybeRetry(ctx, request);
       return;
     }
@@ -75,33 +140,29 @@ public class KeyValueLocator implements Locator {
    *
    * @return true if they are not equal, false if they are.
    */
-  private static boolean handleNotEqualNodeSizes(int configNodeSize, int actualNodeSize) {
+  private static boolean handleNotEqualNodeSizes(final int configNodeSize, final int actualNodeSize,
+                                                 final CoreContext ctx) {
     if (configNodeSize != actualNodeSize) {
-      // TODO event bus
-      /*if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("Node list and configuration's partition hosts sizes : {} <> {}, rescheduling",
-          actualNodeSize, configNodeSize);
-      }*/
+      ctx.environment().eventBus().publish(
+        new NodePartitionLengthNotEqualEvent(ctx, actualNodeSize, configNodeSize)
+      );
       return true;
     }
     return false;
   }
 
   /**
-   * Calculate the vbucket for the given key.
+   * Calculate the partition offset for the given key.
    *
-   * @param key the key to calculate from.
+   * @param id the document id to calculate from.
    * @param numPartitions the number of partitions in the bucket.
    * @return the calculated partition.
    */
-  private static int partitionForKey(byte[] key, int numPartitions) {
+  private static int partitionForKey(final byte[] id, final int numPartitions) {
     CRC32 crc32 = new CRC32();
-    crc32.update(key);
+    crc32.update(id);
     long rv = (crc32.getValue() >> 16) & 0x7fff;
     return (int) rv &numPartitions - 1;
   }
-
-
-
 
 }

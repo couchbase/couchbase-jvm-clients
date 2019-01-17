@@ -37,15 +37,6 @@ public class KeyValueService extends PooledService {
   private final String bucketname;
   private final Credentials credentials;
 
-  /**
-   *
-   * @param serviceConfig
-   * @param coreContext
-   * @param hostname
-   * @param port
-   * @param bucketname
-   * @param credentials
-   */
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
                          final NetworkAddress hostname, final int port, final String bucketname,
                          final Credentials credentials) {

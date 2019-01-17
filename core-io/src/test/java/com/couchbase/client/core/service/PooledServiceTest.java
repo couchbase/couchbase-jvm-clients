@@ -18,8 +18,8 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiated;
-import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiated;
+import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -129,7 +129,7 @@ class PooledServiceTest {
     verify(mock1, times(1)).connect();
     verify(mock2, times(1)).connect();
 
-    ServiceConnectInitiated event = (ServiceConnectInitiated) eventBus.publishedEvents().get(0);
+    ServiceConnectInitiatedEvent event = (ServiceConnectInitiatedEvent) eventBus.publishedEvents().get(0);
     assertEquals(2, event.minimumEndpoints());
     assertEquals(
       "Starting to connect service with 2 minimum endpoints",
@@ -167,7 +167,7 @@ class PooledServiceTest {
     verify(mock2, times(1)).disconnect();
 
     assertEquals(2, eventBus.publishedEvents().size());
-    ServiceDisconnectInitiated event = (ServiceDisconnectInitiated) eventBus.publishedEvents().get(1);
+    ServiceDisconnectInitiatedEvent event = (ServiceDisconnectInitiatedEvent) eventBus.publishedEvents().get(1);
     assertEquals(2, event.disconnectingEndpoints());
     assertEquals(
       "Starting to disconnect service with 2 underlying endpoints",
