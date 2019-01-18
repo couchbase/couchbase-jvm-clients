@@ -63,9 +63,10 @@ class AsyncCollection(name: String,
 //    Try.apply(mapper.writeValueAsBytes(content))
     content match {
         // My JsonType
-      case v: JsonType =>
-        val json = v.asJson
-          json.as[Array[Byte]].toTry
+        // TODO MVP probably remove my JsonType
+//      case v: JsonType =>
+//        val json = v.asJson
+//          json.as[Array[Byte]].toTry
 
         // circe's Json
       case v: Json =>
@@ -76,7 +77,7 @@ class AsyncCollection(name: String,
         Try(transform(v, BytesRenderer()).toBytes)
 
       case _ =>
-        // TODO get circe working
+        // TODO MVP support json string
 //        val circe = content.asJson
         val dbg = mapper.writeValueAsString(content)
         Try.apply(mapper.writeValueAsBytes(content))

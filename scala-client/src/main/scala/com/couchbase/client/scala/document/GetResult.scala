@@ -1,9 +1,12 @@
 package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.CouchbaseException
+import upickle.default.read
 
 import scala.concurrent.duration.Duration
 import scala.language.dynamics
+import scala.reflect.runtime.universe._
+import upickle.default._
 
 trait Convertable {
   def contentAs[T](path: PathElements): T
@@ -69,7 +72,6 @@ class GetResult(val id: String,
   def content(path: String): JsonType = ???
 
   def contentAsUjson = {
-    import upickle.default._
 
 //    ByteArrayParser.transform(_content, new BaseRenderer)
 //    transform(Readable.fromByteArray(_content), BytesRenderer())
@@ -77,6 +79,9 @@ class GetResult(val id: String,
   }
 
   def contentAs[T]: T = ???
+//  (implicit tt: TypeTag[T]): T = {
+//    read[ujson.Obj](_content)
+//  }
 
   def contentAs[T](path: String): T = ???
 

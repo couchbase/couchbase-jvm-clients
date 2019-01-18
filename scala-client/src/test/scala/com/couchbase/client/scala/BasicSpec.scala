@@ -32,7 +32,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 //    bucket.bucketManager().flush()
   }
 
-  "a basic insert and get of ujson" should "succeed" in {
+  "insert and get of ujson" should "succeed" in {
     val id = docId(0)
     val content = ujson.Obj("value" -> "INSERTED")
     assert(coll.insert(id, content).isSuccess)
@@ -53,7 +53,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
     assert (json.contains("graham"))
   }
 
-  "a basic insert and get using circe" should "succeed" in {
+  "insert and get using circe" should "succeed" in {
     val id = docId(0)
     case class User(name: String, age: Int)
     val user = User("graham" ,36)
@@ -74,7 +74,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 
 
 
-  "a basic insert and get of a case class" should "succeed" in {
+  "insert and get of a case class" should "succeed" in {
     val id = docId(0)
     case class User(name: String, age: Int)
     val user = User("graham" ,36)
@@ -82,7 +82,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 
     coll.get(id) match {
       case Success(result) =>
-        val json = result.contentAsUjson
+        val json = result.contentAs[ujson.Obj]
         assert(json("name").str == "graham")
         assert(json("age").num == 36)
       case Failure(err) => assert(false)
@@ -90,7 +90,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
   }
 
 
-  "a basic blocking remove" should "succeed" in {
+  "blocking remove" should "succeed" in {
     val id = docId(0)
 //    val doc = JsonObject.create.put("value", "INSERTED")
 //    val content = io.circe.JsonObject.fromMap(Map("value" -> "INSERTED"))
@@ -112,7 +112,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 //    assert(coll.get(id).isEmpty)
   }
 
-//  "a basic blocking insert and get" should "succeed" in {
+//  "blocking insert and get" should "succeed" in {
 //    val id = docId(0)
 //    val doc = JsonObject.create().put("value", "INSERTED")
 //    val newDoc = coll.insert(id, doc)
