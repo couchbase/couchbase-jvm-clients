@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
@@ -63,12 +64,26 @@ public class Bucket {
   }
 
   public ViewResult viewQuery(final String designDoc, final String viewName) {
-    return block(asyncBucket.viewQuery(designDoc, viewName).thenApply(avr -> new ViewResult()));
+    return block(asyncBucket.viewQuery(designDoc, viewName)
+      .thenApply(avr -> new ViewResult()));
   }
 
   public ViewResult viewQuery(final String designDoc, final String viewName,
                               final ViewOptions options) {
-    return block(asyncBucket.viewQuery(designDoc, viewName, options).thenApply(avr -> new ViewResult()));
+    return block(asyncBucket.viewQuery(designDoc, viewName, options)
+      .thenApply(avr -> new ViewResult()));
+
+  }
+
+  public ViewResult spatialViewQuery(final String designDoc, final String viewName) {
+    return block(asyncBucket.spatialViewQuery(designDoc, viewName)
+      .thenApply(avr -> new ViewResult()));
+  }
+
+  public ViewResult spatialViewQuery(final String designDoc, final String viewName,
+                                     final SpatialViewOptions options) {
+    return block(asyncBucket.spatialViewQuery(designDoc, viewName, options)
+      .thenApply(avr -> new ViewResult()));
 
   }
 

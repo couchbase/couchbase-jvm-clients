@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.core.util.Validators;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.AsyncViewResult;
+import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 
 import java.time.Duration;
@@ -73,6 +74,19 @@ public class AsyncBucket {
     Validators.notNullOrEmpty(designDoc, "Design Doc");
     Validators.notNullOrEmpty(viewName, "View Name");
     notNull(options, "ViewOptions");
+
+    return null;
+  }
+
+  public CompletableFuture<AsyncViewResult> spatialViewQuery(final String designDoc, final String viewName) {
+    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncViewResult> spatialViewQuery(final String designDoc, final String viewName,
+                                                      final SpatialViewOptions options) {
+    Validators.notNullOrEmpty(designDoc, "DesignDoc");
+    Validators.notNullOrEmpty(viewName, "ViewName");
+    notNull(options, "SpatialViewOptions");
 
     return null;
   }

@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.util.Validators;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ReactiveViewResult;
+import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
@@ -67,6 +68,19 @@ public class ReactiveBucket {
     notNullOrEmpty(designDoc, "Design Doc");
     notNullOrEmpty(viewName, "View Name");
     notNull(options, "ViewOptions");
+
+    return null;
+  }
+
+  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName) {
+    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName,
+                                            final SpatialViewOptions options) {
+    notNullOrEmpty(designDoc, "Design Doc");
+    notNullOrEmpty(viewName, "View Name");
+    notNull(options, "SpatialViewOptions");
 
     return null;
   }

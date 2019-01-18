@@ -51,7 +51,7 @@ public class Samples {
 
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
-      content.insert(0, true);
+      content.add(true);
       MutationResult result = collection.mutateIn("id", mutationSpec().replace("users", content));
     }
   }
