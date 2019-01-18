@@ -22,6 +22,7 @@ import java.util.Objects
 import com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.annotation.tailrec
+import scala.util.{Failure, Success, Try}
 
 sealed trait JsonType
 
@@ -226,6 +227,8 @@ object JsonObject {
 }
 
 
+case class CouldNotEncodeToJsonType(in: Any) extends RuntimeException
+
 // Choosing vector as we'll mostly be adding to the end of it
 case class JsonArray(val values: Vector[JsonType]) extends JsonType {
   def add(item: String): JsonArray = copy(values :+ JsonString(item))
@@ -252,8 +255,28 @@ object JsonArray {
     mapper.readValue(json, classOf[JsonArray])
   }
 
+  def toJsonType(in: Any): Try[JsonType] = {
+    in match {
+      case x: String => Success(JsonString(x))
+      case x: Int => Success(JsonNumber(x))
+      case x: Long => Success(JsonNumber(x))
+      case x: Double => Success(JsonNumber(x))
+      case x: Boolean => Success(JsonBoolean(x))
+        // TODO MVP Seq
+//      case x: Seq[_] =>
+//        val arr: Try[Seq[JsonType]] = x.map(toJsonType(_))
+//          arr.map(v => JsonArray(v)))
+      case _ => Failure(CouldNotEncodeToJsonType(in))
+    }
+  }
+
   // TODO checkItems
-  def from(items: Any*) = new JsonArray(items.toVector)
+  def from(items: Any*): Try[JsonArray] = {
+    // TODO MVP
+    ???
+//    val arr = items.map(toJsonType(_))
+//    new JsonArray(.toVector
+  }
   // TODO more advanced from that converts into JsonObjects etc
 
   private val EMPTY = JsonArray.create

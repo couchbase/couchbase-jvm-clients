@@ -42,8 +42,8 @@ case class GetSelecter(private val result: Convertable, path: PathElements) exte
 }
 
 class GetResult(val id: String,
-                val cas: Long,
                 private val _content: Array[Byte],
+                val cas: Long,
                 val expiry: Option[Duration]) extends Dynamic with Convertable {
 
   def contentAsObject: JsonObject = contentAs[JsonObject]
@@ -56,9 +56,25 @@ class GetResult(val id: String,
 
   def content: JsonType = ???
 
+  def contentAsBytes: Array[Byte] = _content
+
+  def contentAsStr: String = {
+    import upickle.default._
+
+    read[String](_content)
+  }
+
   def content(idx: Int): JsonType = ???
 
   def content(path: String): JsonType = ???
+
+  def contentAsUjson = {
+    import upickle.default._
+
+//    ByteArrayParser.transform(_content, new BaseRenderer)
+//    transform(Readable.fromByteArray(_content), BytesRenderer())
+    read[ujson.Obj](_content)
+  }
 
   def contentAs[T]: T = ???
 
@@ -66,8 +82,9 @@ class GetResult(val id: String,
 
   def contentAs[T](path: String, decoder: Array[Byte] => T): T = ???
 
-  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
-  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
+  // TODO MVP decide: nope, far too easy to get this wrong, and drops you into GetSelector.  Must do .dyn or something first.
+//  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
+//  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 
   override def exists(path: PathElements): Boolean = ???
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.core.error;
 
-package com.couchbase.client.scala.api
+/**
+ * Raised when provided content could not be successfully encoded.
+ *
+ * @author Graham Pople
+ * @since 2.0
+ */
+public class EncodingFailed extends CouchbaseException {
 
-import scala.concurrent.duration.FiniteDuration
+    public EncodingFailed() {
+        super();
+    }
 
-@Deprecated
-case class GetOptions(timeout: FiniteDuration = null) {
-  def timeout(timeout: FiniteDuration) = {
-    copy(timeout = timeout)
-  }
-}
+    public EncodingFailed(String message) {
+        super(message);
+    }
 
-@Deprecated
-object GetOptions {
-  def apply() = new GetOptions()
+    public EncodingFailed(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public EncodingFailed(Throwable cause) {
+        super(cause);
+    }
 }

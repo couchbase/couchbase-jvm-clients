@@ -22,29 +22,49 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.io.NetworkAddress
 import com.couchbase.client.scala.api.QueryOptions
-import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
+import com.couchbase.client.scala.env.ClusterEnvironment
+//import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
+import java.util.concurrent.Executors
 
-// TODO (michael: made the compiler happy, but obviously this needs fixing ;-))
-class Cluster(env: CouchbaseEnvironment, node: String) {
-  private val coreEnv = CoreEnvironment.create("ADMIN-TODO", "PASSWORD-TODO")
-  private val networkSet = new util.HashSet[NetworkAddress]()
-  networkSet.add(NetworkAddress.create(node))
-  val core = Core.create(coreEnv)
+import com.couchbase.client.scala.util.AsyncUtils
 
-  def openBucket(name: String) = new Bucket(this, name)
+import scala.concurrent.ExecutionContext
+import scala.util.Try
 
-  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
-    null
+class Cluster(env: => ClusterEnvironment)
+             (implicit ec: ExecutionContext) {
+
+  private val asyncCluster = new AsyncCluster(env)
+  // TODO MVP? reactive cluster
+//  private val coreEnv = CoreEnvironment.create("ADMIN-TODO", "PASSWORD-TODO")
+//  private val networkSet = new util.HashSet[NetworkAddress]()
+//  networkSet.add(NetworkAddress.create(node))
+
+//  val core = Core.create(coreEnv)
+
+  def bucket(name: String) = {
+    AsyncUtils.block(asyncCluster.bucket(name))
+      .map(new Bucket(_))
   }
 
-  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
-    null
-  }
+  // TODO MVP
+//  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
+//    null
+//  }
+//
+//  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
+//    null
+//  }
 
 }
 
+/// TODO     db.entries.select(_.car, _.id, _.velocity).where(_.car eqs carId).fetch()
+
 object Cluster {
-  def connect(node: String, username: String, password: String) = {
-    new Cluster(CouchbaseEnvironment.default(), node)
+  private val threadPool = Executors.newFixedThreadPool(10) // TODO 10?
+  private implicit val ec = ExecutionContext.fromExecutor(threadPool)
+
+  def connect(connectionString: String, username: String, password: String) = {
+    Try(new Cluster(ClusterEnvironment.create(connectionString, username, password)))
   }
 }

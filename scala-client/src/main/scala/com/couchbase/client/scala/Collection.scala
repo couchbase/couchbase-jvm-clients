@@ -20,20 +20,35 @@ import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.document._
-import com.couchbase.client.scala.query.N1qlQueryResult
+//import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+import scala.util.control.NonFatal
+import scala.reflect.runtime.universe._
 
-class Collection(val name: String,
-                 val scope: Scope) {
+class Collection(val async: AsyncCollection,
+                 bucketName: String)
+                (implicit ec: ExecutionContext) {
   private val config: CouchbaseEnvironment = null // scope.cluster.env
-  private val asyncColl = new AsyncCollection(this)
-  private val reactiveColl = new ReactiveCollection(this)
-  private val safetyTimeout = 60.minutes
+//  private val asyncCollection = new AsyncCollection(this)
+//  private val reactiveColl = new ReactiveCollection(this)
+  // TODO binary collection
+  // TODO MVP reactive collection
+  private val SafetyTimeout = 1.second
 //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
+
+  def block[T](in: Future[T], timeout: FiniteDuration): Try[T] = {
+    try {
+      Try(Await.result(in, timeout + SafetyTimeout))
+    }
+    catch {
+      case NonFatal(err) => Failure(err)
+    }
+  }
 
   def insert[T](id: String,
                 content: T,
@@ -43,15 +58,17 @@ class Collection(val name: String,
   persistTo: PersistTo.Value = PersistTo.None,
   durability: Durability.Value = Durability.None
                // TODO durability
-            )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.insert(id, content, timeout, expiration), safetyTimeout)
+            )
+//               (implicit tag: TypeTag[T])
+  : Try[MutationResult] = {
+    block(async.insert(id, content, timeout, expiration), timeout)
   }
 
 //  def insert[T](id: String,
 //             content: T,
 //             options: InsertOptions,
-//            )(implicit ec: ExecutionContext): MutationResult = {
-//    Await.result(asyncColl.insert(id, content, options), safetyTimeout)
+//            ): Try[MutationResult] = {
+//    block(asyncCollection.insert(id, content, options), timeout)
 //  }
 
   def replace[T](id: String,
@@ -63,16 +80,16 @@ class Collection(val name: String,
                  persistTo: PersistTo.Value = PersistTo.None,
                  durability: Durability.Value = Durability.None
                  // TODO durability
-                )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.replace(id, content, cas, timeout, expiration), safetyTimeout)
+                ): Try[MutationResult] = {
+    block(async.replace(id, content, cas, timeout, expiration), timeout)
   }
 
 //  def replace[T](id: String,
 //              content: T,
 //              cas: Long,
 //              options: ReplaceOptions,
-//            )(implicit ec: ExecutionContext): MutationResult = {
-//    Await.result(asyncColl.replace(id, content, cas, options), safetyTimeout)
+//            ): Try[MutationResult] = {
+//    block(asyncCollection.replace(id, content, cas, options), timeout)
 //  }
 
   def upsert[T](id: String,
@@ -83,13 +100,13 @@ class Collection(val name: String,
                 persistTo: PersistTo.Value = PersistTo.None,
                 durability: Durability.Value = Durability.None
                  // TODO durability
-                )(implicit ec: ExecutionContext): MutationResult = ???
+                ): Try[MutationResult] = ???
 
 //  def upsert[T](id: String,
 //                 content: T,
 //                 cas: Long,
 //                 options: UpsertOptions,
-//                )(implicit ec: ExecutionContext): MutationResult = ???
+//                ): Try[MutationResult] = ???
 
   def remove(id: String,
              cas: Long,
@@ -98,21 +115,21 @@ class Collection(val name: String,
              persistTo: PersistTo.Value = PersistTo.None,
              durability: Durability.Value = Durability.None
              // TODO durability
-            )(implicit ec: ExecutionContext): MutationResult = {
-    Await.result(asyncColl.remove(id, cas, timeout), safetyTimeout)
+            ): Try[MutationResult] = {
+    block(async.remove(id, cas, timeout), timeout)
   }
 
 //  def remove(id: String,
 //             cas: Long,
 //             options: RemoveOptions
-//            )(implicit ec: ExecutionContext): MutationResult = {
-//    Await.result(asyncColl.remove(id, cas, options), safetyTimeout)
+//            ): Try[MutationResult] = {
+//    block(asyncCollection.remove(id, cas, options), timeout)
 //  }
 
 //  def mutateIn(id: String,
 //               spec: MutateInSpec,
 //               options: MutateInOptions)
-//              (implicit ec: ExecutionContext): MutationResult = ???
+//              : Try[MutationResult] = ???
 
   def mutateIn(id: String,
                spec: MutateInSpec,
@@ -121,53 +138,52 @@ class Collection(val name: String,
                replicateTo: ReplicateTo.Value = ReplicateTo.None,
                persistTo: PersistTo.Value = PersistTo.None,
                durability: Durability.Value = Durability.None
-              )(implicit ec: ExecutionContext): MutationResult = ???
+              ): Try[MutationResult] = ???
 
 
   def get(id: String,
           operations: GetSpec = GetSpec().getDoc,
           timeout: FiniteDuration = kvTimeout,
           withExpiry: Boolean = false)
-         (implicit ec: ExecutionContext): Option[GetResult] = {
-    Await.result(asyncColl.get(id, timeout), safetyTimeout)
+         : Try[GetResult] = {
+    block(async.get(id, timeout), timeout)
   }
 
 //  def get(id: String,
 //          operations: GetSpec = GetSpec().getFullDocument,
 //          options: GetOptions)
-//         (implicit ec: ExecutionContext): Option[GetResult] = {
-//    Await.result(asyncColl.get(id, options), safetyTimeout)
+//         : Option[GetResult] = {
+//    block(asyncCollection.get(id, options), timeout)
 //  }
 
 //  def readOrError(id: String,
 //                  timeout: FiniteDuration = kvTimeout)
-//                 (implicit ec: ExecutionContext): GetResult = {
-//    Await.result(asyncColl.getOrError(id, timeout), safetyTimeout)
+//                 : GetResult = {
+//    block(asyncCollection.getOrError(id, timeout), timeout)
 //  }
 //
 //  def readOrError(id: String,
 //                  options: GetOptions)
-//                 (implicit ec: ExecutionContext): GetResult = {
-//    Await.result(asyncColl.getOrError(id, options), safetyTimeout)
+//                 : GetResult = {
+//    block(asyncCollection.getOrError(id, options), timeout)
 //  }
 
 //  def readAndLock(id: String,
 //                  lockFor: FiniteDuration,
 //                  timeout: FiniteDuration = kvTimeout)
-//                 (implicit ec: ExecutionContext): Option[GetResult] = {
-//    Await.result(asyncColl.getAndLock(id, lockFor, timeout), safetyTimeout)
+//                 : Option[GetResult] = {
+//    block(asyncCollection.getAndLock(id, lockFor, timeout), timeout)
 //  }
 //
 //  def readAndLock(id: String,
 //                  lockFor: FiniteDuration,
 //                  options: GetAndLockOptions)
-//                 (implicit ec: ExecutionContext): Option[GetResult] = {
-//    Await.result(asyncColl.getAndLock(id, lockFor, options), safetyTimeout)
+//                 : Option[GetResult] = {
+//    block(asyncCollection.getAndLock(id, lockFor, options), timeout)
 //  }
 
-  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = ???
+//  def query(statement: String, query: QueryOptions = QueryOptions()): Try[N1qlQueryResult] = ???
 
 
-  def async(): AsyncCollection = asyncColl
-  def reactive(): ReactiveCollection = reactiveColl
+//    def reactive(): ReactiveCollection = reactiveColl
 }

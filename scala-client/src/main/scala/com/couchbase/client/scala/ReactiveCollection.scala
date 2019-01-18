@@ -24,59 +24,59 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
 
 // During prototyping, leaving reactive collection support very skimpy.  It's just the same as Collection but returning Mono
-class ReactiveCollection(val coll: Collection) {
-  private val async = coll.async()
-  private val kvTimeout = coll.kvTimeout
-
-  def insertContent(id: String,
-                    content: JsonObject,
-                    timeout: FiniteDuration = kvTimeout,
-                    expiration: FiniteDuration = 0.seconds,
-                    replicateTo: ReplicateTo.Value = ReplicateTo.None,
-                    persistTo: PersistTo.Value = PersistTo.None
-            )(implicit ec: ExecutionContext): Mono[MutationResult] = {
-    Mono.fromFuture(async.insert(id, content, timeout, expiration, replicateTo, persistTo))
-  }
-
-  def remove(id: String,
-             cas: Long,
-             options: RemoveOptions = RemoveOptions()): Mono[MutationResult] = ???
-
-  def get(id: String,
-          timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-    Mono.fromFuture(async.get(id, timeout))
-  }
-
-  def get(id: String,
-          options: GetOptions)
-         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-    Mono.fromFuture(async.get(id, options))
-  }
-
-  def getOrError(id: String,
-                 timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Mono[GetResult] = {
-    Mono.fromFuture(async.getOrError(id, timeout))
-  }
-
-  def getOrError(id: String,
-                 options: GetOptions)
-                (implicit ec: ExecutionContext): Mono[GetResult] = {
-    Mono.fromFuture(async.getOrError(id, options))
-  }
-
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-    Mono.fromFuture(async.getAndLock(id, lockFor, timeout))
-  }
-
-  def getAndLock(id: String,
-                 lockFor: FiniteDuration,
-                 options: GetAndLockOptions)
-                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-    Mono.fromFuture(async.getAndLock(id, lockFor, options))
-  }
-}
+//class ReactiveCollection(val coll: Collection) {
+//  private val async = coll.async()
+//  private val kvTimeout = coll.kvTimeout
+//
+//  def insertContent(id: String,
+//                    content: JsonObject,
+//                    timeout: FiniteDuration = kvTimeout,
+//                    expiration: FiniteDuration = 0.seconds,
+//                    replicateTo: ReplicateTo.Value = ReplicateTo.None,
+//                    persistTo: PersistTo.Value = PersistTo.None
+//            )(implicit ec: ExecutionContext): Mono[MutationResult] = {
+//    Mono.fromFuture(async.insert(id, content, timeout, expiration, replicateTo, persistTo))
+//  }
+//
+//  def remove(id: String,
+//             cas: Long,
+//             options: RemoveOptions = RemoveOptions()): Mono[MutationResult] = ???
+//
+//  def get(id: String,
+//          timeout: FiniteDuration = kvTimeout)
+//         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
+//    Mono.fromFuture(async.get(id, timeout))
+//  }
+//
+//  def get(id: String,
+//          options: GetOptions)
+//         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
+//    Mono.fromFuture(async.get(id, options))
+//  }
+//
+//  def getOrError(id: String,
+//                 timeout: FiniteDuration = kvTimeout)
+//                (implicit ec: ExecutionContext): Mono[GetResult] = {
+//    Mono.fromFuture(async.getOrError(id, timeout))
+//  }
+//
+//  def getOrError(id: String,
+//                 options: GetOptions)
+//                (implicit ec: ExecutionContext): Mono[GetResult] = {
+//    Mono.fromFuture(async.getOrError(id, options))
+//  }
+//
+//  def getAndLock(id: String,
+//                 lockFor: FiniteDuration,
+//                 timeout: FiniteDuration = kvTimeout)
+//                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
+//    Mono.fromFuture(async.getAndLock(id, lockFor, timeout))
+//  }
+//
+//  def getAndLock(id: String,
+//                 lockFor: FiniteDuration,
+//                 options: GetAndLockOptions)
+//                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
+//    Mono.fromFuture(async.getAndLock(id, lockFor, options))
+//  }
+//}

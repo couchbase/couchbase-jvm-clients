@@ -17,14 +17,25 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.scala.util.AsyncUtils
+
+import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 // For now, use SDK 2 Cluster & Bucket objects as our base layer for SDK 3 prototyping
-class Scope(val core: Core,
-             val cluster: Cluster,
-            val bucket: Bucket,
-            val name: String) {
-  def openCollection(name: String): Collection = {
-    new Collection(name, this)
+class Scope(val async: AsyncScope,
+            bucketName: String)
+           (implicit ec: ExecutionContext) {
+
+  def name = async.name
+
+  def collection(name: String): Try[Collection] = {
+    AsyncUtils.block(async.collection(name))
+      .map(asyncCollection => new Collection(asyncCollection, bucketName))
+  }
+
+  def defaultCollection() = {
+    collection(Defaults.DefaultCollection)
   }
 }
 

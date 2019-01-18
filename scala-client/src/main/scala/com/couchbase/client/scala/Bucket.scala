@@ -17,27 +17,28 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.api.QueryOptions
-import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
+//import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
+import com.couchbase.client.scala.util.AsyncUtils
 
-class Bucket(cluster: Cluster,
-             name: String) {
-  def openCollection(scopeName: String, collection: String) = {
-    val scope = new Scope(cluster.core, cluster, this, scopeName)
-    scope.openCollection(collection)
+import scala.concurrent.ExecutionContext
+
+class Bucket(val async: AsyncBucket)
+            (implicit ec: ExecutionContext) {
+  def collection(scopeName: String, collection: String) = {
+    scope(Defaults.DefaultScope).flatMap(_.collection(collection))
   }
 
   def defaultCollection() = {
-    val scope = openScope("default")
-    scope.openCollection("default")
+    scope(Defaults.DefaultScope).flatMap(_.defaultCollection())
   }
 
-  def openScope(name: String) = new Scope(cluster.core, cluster, this, name)
-
-  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
-    null
+  def scope(name: String) = {
+    AsyncUtils.block(async.scope(name))
+      .map(asyncScope => new Scope(asyncScope, async.name))
   }
 
-  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
-    null
-  }
+  // TODO
+//  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = ???
+//
+//  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = ???
 }

@@ -18,16 +18,23 @@ package com.couchbase.client.scala
 
 import java.time.Duration
 import java.util.Optional
+import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExistException}
+import com.couchbase.client.core.Core
+import com.couchbase.client.core.error.{CouchbaseException, DocumentDoesNotExistException, EncodingFailed}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
-import com.couchbase.client.core.util.Validators
+import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
+import io.circe._
+import io.circe.generic.auto._
+import io.circe.parser._
+import io.circe.syntax._
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{JsonObject, GetResult}
+import com.couchbase.client.scala.document.{GetResult, JsonObject, JsonType}
+import com.couchbase.client.scala.env.ClusterEnvironment
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import reactor.core.scala.publisher.Mono
@@ -36,18 +43,53 @@ import rx.RxReactiveStreams
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future, JavaConversions}
 import scala.concurrent.duration.{FiniteDuration, _}
+import scala.util.{Failure, Success, Try}
+import scala.reflect.runtime.universe._
+import ujson._
 
-
-
-class AsyncCollection(private val collection: Collection) {
-  private val core = collection.scope.core
+class AsyncCollection(name: String,
+                      collectionId: Long,
+                      bucketName: String,
+                      core: Core,
+                      environment: ClusterEnvironment)
+                     (implicit ec: ExecutionContext) {
   private val mapper = new ObjectMapper()
-  private var coreContext = null
-  private val kvTimeout = collection.kvTimeout
+  private val kvTimeout = javaDurationToScala(environment.kvTimeout())
+  private val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
 
-  private def encode[T](content: T): Array[Byte] = null
+  def encode[T](content: T)
+//                       (implicit tag: TypeTag[T])
+  : Try[Array[Byte]] = {
+//    Try.apply(mapper.writeValueAsBytes(content))
+    content match {
+        // My JsonType
+      case v: JsonType =>
+        val json = v.asJson
+          json.as[Array[Byte]].toTry
+
+        // circe's Json
+      case v: Json =>
+        v.as[Array[Byte]].toTry
+
+        // ujson's Json
+      case v: ujson.Value =>
+        Try(transform(v, BytesRenderer()).toBytes)
+
+      case _ =>
+        // TODO get circe working
+//        val circe = content.asJson
+        val dbg = mapper.writeValueAsString(content)
+        Try.apply(mapper.writeValueAsBytes(content))
+//          circe.as[Array[Byte]].toTry
+    }
+  }
+
   implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
+  }
+
+  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
+    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
   }
 
   def insert[T](id: String,
@@ -56,49 +98,58 @@ class AsyncCollection(private val collection: Collection) {
                 expiration: FiniteDuration = 0.seconds,
                 replicateTo: ReplicateTo.Value = ReplicateTo.None,
                 persistTo: PersistTo.Value = PersistTo.None
-            )(implicit ec: ExecutionContext): Future[MutationResult] = {
+               )
+//               (implicit tag: TypeTag[T])
+  : Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
 
     // TODO custom encoders
-    val encoded = encode(content)
-    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
-    // TODO flags
-    // TODO datatype
-    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
-    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val collection = null
-    val request = new InsertRequest(id, collection, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
-    core.send(request)
-    FutureConverters.toScala(request.response())
-      .map(v => {
-        // TODO
-        //        if (response.status().isSuccess) {
-        //          val out = JSON_OBJECT_TRANSCODER.newDocument(doc.id(), doc.expiry(), doc.content(), response.cas(), response.mutationToken())
-        //          out
-        //        }
-        //        // TODO move this to core
-        //        else response.status() match {
-        //          case ResponseStatus.TOO_BIG =>
-        //            throw addDetails(new RequestTooBigException, response)
-        //          case ResponseStatus.EXISTS =>
-        //            throw addDetails(new DocumentAlreadyExistsException, response)
-        //          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY =>
-        //            throw addDetails(new TemporaryFailureException, response)
-        //          case ResponseStatus.OUT_OF_MEMORY =>
-        //            throw addDetails(new CouchbaseOutOfMemoryException, response)
-        //          case _ =>
-        //            throw addDetails(new CouchbaseException(response.status.toString), response)
-        //        }
+    encode(content) match {
+      case Success(encoded) =>
+        // TODO flags
+        // TODO datatype
+        // TODO retry strategies
+        val retryStrategy = BestEffortRetryStrategy.INSTANCE
+        val request = new InsertRequest(id,
+          collectionIdEncoded, encoded, expiration.toSeconds, 0, timeout, core.context(), bucketName, retryStrategy)
+        core.send(request)
+        FutureConverters.toScala(request.response())
+          .map(response => {
+            // TODO MVP error handling
+            // TODO MVP MutationTokens
+            MutationResult(response.cas(), Option.empty)
 
-        MutationResult(0, None)
-      })
+            // TODO
+            //        if (response.status().isSuccess) {
+            //          val out = JSON_OBJECT_TRANSCODER.newDocument(doc.id(), doc.expiry(), doc.content(), response.cas(), response.mutationToken())
+            //          out
+            //        }
+            //        // TODO move this to core
+            //        else response.status() match {
+            //          case ResponseStatus.TOO_BIG =>
+            //            throw addDetails(new RequestTooBigException, response)
+            //          case ResponseStatus.EXISTS =>
+            //            throw addDetails(new DocumentAlreadyExistsException, response)
+            //          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY =>
+            //            throw addDetails(new TemporaryFailureException, response)
+            //          case ResponseStatus.OUT_OF_MEMORY =>
+            //            throw addDetails(new CouchbaseOutOfMemoryException, response)
+            //          case _ =>
+            //            throw addDetails(new CouchbaseException(response.status.toString), response)
+            //        }
+
+          })
+      case Failure(err) =>
+        Future.failed(new EncodingFailed(err))
+    }
   }
 
   def insert[T](id: String,
-             content: T,
-             options: InsertOptions
-            )(implicit ec: ExecutionContext): Future[MutationResult] = {
+                content: T,
+                options: InsertOptions
+               )
+               (implicit tag: TypeTag[T]): Future[MutationResult] = {
     Validators.notNull(options, "options")
     insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
@@ -110,34 +161,19 @@ class AsyncCollection(private val collection: Collection) {
                  expiration: FiniteDuration = 0.seconds,
                  replicateTo: ReplicateTo.Value = ReplicateTo.None,
                  persistTo: PersistTo.Value = PersistTo.None
-             )(implicit ec: ExecutionContext): Future[MutationResult] = {
+                ): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
     Validators.notNull(cas, "cas")
 
-    // TODO custom encoders
-    val encoded = encode(content)
-    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
-    // TODO flags
-    // TODO datatype
-    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
-    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val collection = null
-
-    val request = new ReplaceRequest(id, null, encoded, expiration.toSeconds, 0, timeout, cas, coreContext, bucketName, retryStrategy)
-    core.send(request)
-    FutureConverters.toScala(request.response())
-      .map(v => {
-        // TODO
-        MutationResult(0, None)
-      })
+    null
   }
 
   def replace[T](id: String,
-              content: T,
-              cas: Long,
-              options: ReplaceOptions
-             )(implicit ec: ExecutionContext): Future[MutationResult] = {
+                 content: T,
+                 cas: Long,
+                 options: ReplaceOptions
+                ): Future[MutationResult] = {
     replace(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
@@ -148,34 +184,19 @@ class AsyncCollection(private val collection: Collection) {
              expiration: FiniteDuration = 0.seconds,
              replicateTo: ReplicateTo.Value = ReplicateTo.None,
              persistTo: PersistTo.Value = PersistTo.None
-             )(implicit ec: ExecutionContext): Future[MutationResult] = {
+            ): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
     Validators.notNull(cas, "cas")
 
-    // TODO custom encoders
-    val encoded = encode(content)
-    // TODO is expiration in nanos? (mn: no, expiration is in seconds) ;-)
-    // TODO flags
-    // TODO datatype
-    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
-    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val collection = null
-
-    val request = new UpsertRequest(id, collection, encoded, expiration.toSeconds, 0, timeout, coreContext, bucketName, retryStrategy)
-    core.send(request)
-    FutureConverters.toScala(request.response())
-      .map(v => {
-        // TODO
-        MutationResult(0, None)
-      })
+    null
   }
 
   def upsert(id: String,
-              content: JsonObject,
-              cas: Long,
-              options: UpsertOptions
-             )(implicit ec: ExecutionContext): Future[MutationResult] = {
+             content: JsonObject,
+             cas: Long,
+             options: UpsertOptions
+            ): Future[MutationResult] = {
     upsert(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
 
@@ -185,141 +206,138 @@ class AsyncCollection(private val collection: Collection) {
              timeout: FiniteDuration = kvTimeout,
              replicateTo: ReplicateTo.Value = ReplicateTo.None,
              persistTo: PersistTo.Value = PersistTo.None
-            )(implicit ec: ExecutionContext): Future[MutationResult] = {
+            ): Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(cas, "cas")
 
-    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
-    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val collection = null
-
-    val request = new RemoveRequest(id, collection, cas, timeout, coreContext, bucketName, retryStrategy)
-    core.send(request)
-    FutureConverters.toScala(request.response())
-      .map(v => {
-        // TODO
-        //        if (response.status().isSuccess) {
-        //          val out = RemoveResult(response.cas(), Option(response.mutationToken()))
-        //          out
-        //        }
-        //        // TODO move this to core
-        //        else response.status() match {
-        //          case ResponseStatus.NOT_EXISTS =>
-        //            throw addDetails(new DocumentDoesNotExistException, response)
-        //          case ResponseStatus.EXISTS | ResponseStatus.LOCKED =>
-        //            throw addDetails(new CASMismatchException, response)
-        //          case ResponseStatus.TEMPORARY_FAILURE | ResponseStatus.SERVER_BUSY =>
-        //            throw addDetails(new TemporaryFailureException, response)
-        //          case ResponseStatus.OUT_OF_MEMORY =>
-        //            throw addDetails(new CouchbaseOutOfMemoryException, response)
-        //          case _ =>
-        //            throw addDetails(new CouchbaseException(response.status.toString), response)
-        //        }
-
-
-        MutationResult(0, None)
-      })
+    null
   }
 
   def remove(id: String,
              cas: Long,
              options: RemoveOptions
-            )(implicit ec: ExecutionContext): Future[MutationResult] = {
+            ): Future[MutationResult] = {
     remove(id, cas, options.timeout)
   }
 
   def lookupInAs[T](id: String,
                     operations: GetSpec,
                     timeout: FiniteDuration = kvTimeout)
-                   (implicit ec: ExecutionContext): Future[T] = {
+                   : Future[T] = {
     return null;
   }
 
   def get(id: String,
           timeout: FiniteDuration = kvTimeout)
-         (implicit ec: ExecutionContext): Future[Option[GetResult]] = {
+         : Future[GetResult] = {
 
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
 
-    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
-    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
-    val collection = null
+    // TODO support projections
+    // TODO support expiration
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE
 
-    val request = new GetRequest(id,collection, timeout, coreContext, bucketName, retryStrategy)
+    val request = new GetRequest(id, collectionIdEncoded, timeout, core.context(), bucketName, retryStrategy)
+
     core.send(request)
+
     FutureConverters.toScala(request.response())
-      .map(v => {
-        if (v.status() == ResponseStatus.NOT_FOUND) {
-          None
+      .map(response => {
+        if (response.status.success) {
+          new GetResult(id, response.content, response.cas, Option.empty)
         }
-        else if (v.status() != ResponseStatus.SUCCESS) {
-          // TODO
-          throw new CouchbaseException()
+        else if (response.status == ResponseStatus.NOT_FOUND) {
+          throw new DocumentDoesNotExistException()
         }
-        else {
-          // TODO
-//          val content = JsonObject.create()
-//          Some(new GetResult(id, v.cas(), v.content()))
-          null
+        else { // todo: implement me
+          throw new UnsupportedOperationException("fixme")
         }
+
       })
 
-//    val request = new GetRequest(id, Duration.ofNanos(timeout.toNanos), coreContext)
+//    // TODO retry strategies
+//    val request = new InsertRequest(id,
+//      collectionIdEncoded, encoded, expiration.toSeconds, 0, timeout, core.context(), bucketName, retryStrategy)
+//    core.send(request)
+
+//    val retryStrategy = BestEffortRetryStrategy.INSTANCE // todo fixme from env
+//    val bucketName = "BUCKETNAME" // todo fixme from constructor chain
+//    val collection = null
 //
-//    dispatch[GetRequest, GetResponse](request)
-//      .map(response => {
-//        if (response.status().success()) {
-//          val content = mapper.readValue(response.content(), classOf[JsonObject])
-////          val doc = JSON_OBJECT_TRANSCODER.decode(id, response.content(), response.cas(), 0, response.flags(), response.status())
-//          val doc = JsonDocument.create(id, content, response.cas())
-//          Option(doc)
+//    val request = new GetRequest(id, collection, timeout, coreContext, bucketName, retryStrategy)
+//    core.send(request)
+//    FutureConverters.toScala(request.response())
+//      .map(v => {
+//        if (v.status() == ResponseStatus.NOT_FOUND) {
+//          None
 //        }
-//        // TODO move this to core
-//        else response.status match {
-//          case ResponseStatus.NOT_FOUND =>
-//            Option.empty[JsonDocument]
-//          case _ =>
-//            throw addDetails(new CouchbaseException(response.status.toString), response)
+//        else if (v.status() != ResponseStatus.SUCCESS) {
+//          // TODO
+//          throw new CouchbaseException()
+//        }
+//        else {
+//          // TODO
+//          //          val content = JsonObject.create()
+//          //          Some(new GetResult(id, v.cas(), v.content()))
+//          null
 //        }
 //      })
+
+    //    val request = new GetRequest(id, Duration.ofNanos(timeout.toNanos), coreContext)
+    //
+    //    dispatch[GetRequest, GetResponse](request)
+    //      .map(response => {
+    //        if (response.status().success()) {
+    //          val content = mapper.readValue(response.content(), classOf[JsonObject])
+    ////          val doc = JSON_OBJECT_TRANSCODER.decode(id, response.content(), response.cas(), 0, response.flags(), response.status())
+    //          val doc = JsonDocument.create(id, content, response.cas())
+    //          Option(doc)
+    //        }
+    //        // TODO move this to core
+    //        else response.status match {
+    //          case ResponseStatus.NOT_FOUND =>
+    //            Option.empty[JsonDocument]
+    //          case _ =>
+    //            throw addDetails(new CouchbaseException(response.status.toString), response)
+    //        }
+    //      })
   }
 
   def get(id: String,
           options: GetOptions
-         )(implicit ec: ExecutionContext): Future[Option[GetResult]] = {
+         ): Future[GetResult] = {
     get(id, options.timeout)
   }
 
-  def getOrError(id: String,
-                 timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext): Future[GetResult] = {
-    get(id, timeout).map(doc => {
-      if (doc.isEmpty) throw new DocumentDoesNotExistException()
-      else doc.get
-    })
-  }
-
-  def getOrError(id: String,
-                 options: GetOptions)
-                (implicit ec: ExecutionContext): Future[GetResult] = {
-    getOrError(id, options.timeout)
-  }
+//  def getOrError(id: String,
+//                 timeout: FiniteDuration = kvTimeout)
+//                : Future[GetResult] = {
+//    get(id, timeout).map(doc => {
+//      if (doc.isEmpty) throw new DocumentDoesNotExistException()
+//      else doc.get
+//    })
+//  }
+//
+//  def getOrError(id: String,
+//                 options: GetOptions)
+//                : Future[GetResult] = {
+//    getOrError(id, options.timeout)
+//  }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  timeout: FiniteDuration = kvTimeout)
-                (implicit ec: ExecutionContext) = Future {
+                 = Future {
     Option.empty
   }
 
   def getAndLock(id: String,
                  lockFor: FiniteDuration,
                  options: GetAndLockOptions)
-                (implicit ec: ExecutionContext) = Future {
+                 = Future {
     Option.empty
   }
-
 
 
 }
