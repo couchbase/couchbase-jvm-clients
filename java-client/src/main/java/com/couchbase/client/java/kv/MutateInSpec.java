@@ -16,25 +16,21 @@
 
 package com.couchbase.client.java.kv;
 
-public class LookupSpec {
+public class MutateInSpec {
 
-  public static LookupSpec lookupSpec() {
-    return new LookupSpec();
+  public static MutateInSpec mutationSpec() {
+    return new MutateInSpec();
   }
 
-  private LookupSpec() {
+  private MutateInSpec() {
 
   }
 
-  public LookupSpec get(final String... path) {
+  public <T> MutateInSpec replace(final String path, final T fragment) {
     return this;
   }
 
-  public LookupSpec exists(final String... path) {
-    return this;
-  }
-
-  public LookupSpec count(final String... path) {
+  public <T> MutateInSpec insert(final String path, final T fragment) {
     return this;
   }
 

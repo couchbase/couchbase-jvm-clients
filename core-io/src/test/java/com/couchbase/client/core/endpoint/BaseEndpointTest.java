@@ -31,6 +31,7 @@ import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -393,7 +394,7 @@ class BaseEndpointTest {
 
     InstrumentedEndpoint(NetworkAddress hostname, int port, EventLoopGroup eventLoopGroup,
                          CoreContext coreContext, Supplier<Mono<Channel>> channelSupplier) {
-      super(hostname, port, eventLoopGroup, coreContext, CircuitBreakerConfig.disabled());
+      super(hostname, port, eventLoopGroup, coreContext, CircuitBreakerConfig.disabled(), ServiceType.KV);
       this.channelSupplier = channelSupplier;
     }
 

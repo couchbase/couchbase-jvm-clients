@@ -1,30 +1,17 @@
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
-import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.Projections;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Optional;
 
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
-import static com.couchbase.client.java.kv.GetSpec.getSpec;
-import static com.couchbase.client.java.kv.MutateSpec.mutationSpec;
+import static com.couchbase.client.java.kv.MutateInSpec.mutationSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 

@@ -17,12 +17,17 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.util.Validators;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.view.ReactiveViewResult;
+import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 
 public class ReactiveBucket {
@@ -51,6 +56,19 @@ public class ReactiveBucket {
 
   public Mono<ReactiveCollection> collection(final String name) {
     return scope(DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
+  }
+
+  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {
+    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName,
+                                            final ViewOptions options) {
+    notNullOrEmpty(designDoc, "Design Doc");
+    notNullOrEmpty(viewName, "View Name");
+    notNull(options, "ViewOptions");
+
+    return null;
   }
 
 }

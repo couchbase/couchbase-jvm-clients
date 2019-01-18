@@ -30,14 +30,15 @@ import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
+import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
-import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupResult;
-import com.couchbase.client.java.kv.LookupSpec;
-import com.couchbase.client.java.kv.MutateOptions;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutateSpec;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -257,11 +258,10 @@ public class AsyncCollection {
    * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockFor the duration the write lock should be automatically released after.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor) {
-    return getAndLock(id, lockFor, GetAndLockOptions.DEFAULT);
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id) {
+    return getAndLock(id, GetAndLockOptions.DEFAULT);
   }
 
   /**
@@ -271,14 +271,11 @@ public class AsyncCollection {
    * has not been found, an empty optional will be returned.</p>
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockFor the duration the write lock should be automatically released after.
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final Duration lockFor,
-                                                           final GetAndLockOptions options) {
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(lockFor, "LockTime");
     notNull(options, "GetAndLockOptions");
 
     Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
@@ -286,7 +283,7 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     GetAndLockRequest request = new GetAndLockRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy,
-      lockFor);
+      options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor());
     return GetAccessor.getAndLock(core, id, request);
   }
 
@@ -324,6 +321,18 @@ public class AsyncCollection {
     GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
       bucket, retryStrategy, expiration);
     return GetAccessor.getAndTouch(core, id, request);
+  }
+
+  public List<CompletableFuture<GetResult>> getFromReplica(final String id) {
+    return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
+  }
+
+  public List<CompletableFuture<GetResult>> getFromReplica(final String id,
+                                                           final GetFromReplicaOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "GetFromReplicaOptions");
+
+    return null;
   }
 
   /**
@@ -544,15 +553,15 @@ public class AsyncCollection {
     return null;
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupSpec spec) {
-    return lookupIn(id, spec, LookupOptions.DEFAULT);
+  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupInSpec spec) {
+    return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupSpec spec,
-                                                            final LookupOptions options) {
+  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupInSpec spec,
+                                                            final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "LookupSpec");
-    notNull(options, "LookupOptions");
+    notNull(spec, "LookupInSpec");
+    notNull(options, "LookupInOptions");
 
     return null;
   }
@@ -564,8 +573,8 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateSpec spec) {
-    return mutateIn(id, spec, MutateOptions.DEFAULT);
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateInSpec spec) {
+    return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
   /**
@@ -576,11 +585,11 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateSpec spec,
-                                                    final MutateOptions options) {
+  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateInSpec spec,
+                                                    final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "MutateSpec");
-    notNull(options, "MutateOptions");
+    notNull(spec, "MutateInSpec");
+    notNull(options, "MutateInOptions");
 
     throw new UnsupportedOperationException("Implement me -> subdoc mutateIn");
   }

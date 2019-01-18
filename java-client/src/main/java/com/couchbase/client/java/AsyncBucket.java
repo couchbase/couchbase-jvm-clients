@@ -19,11 +19,16 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
+import com.couchbase.client.core.util.Validators;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.view.AsyncViewResult;
+import com.couchbase.client.java.view.ViewOptions;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class AsyncBucket {
 
@@ -57,6 +62,19 @@ public class AsyncBucket {
 
   public CompletableFuture<AsyncCollection> collection(final String collection) {
     return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
+  }
+
+  public CompletableFuture<AsyncViewResult> viewQuery(final String designDoc, final String viewName) {
+    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncViewResult> viewQuery(final String designDoc, final String viewName,
+                                                      final ViewOptions options) {
+    Validators.notNullOrEmpty(designDoc, "Design Doc");
+    Validators.notNullOrEmpty(viewName, "View Name");
+    notNull(options, "ViewOptions");
+
+    return null;
   }
 
   ClusterEnvironment environment() {

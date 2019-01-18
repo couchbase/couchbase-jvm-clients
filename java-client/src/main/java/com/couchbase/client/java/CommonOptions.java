@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.retry.RetryStrategy;
+import io.opentracing.Span;
 
 import java.time.Duration;
 
@@ -36,6 +37,11 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
    * The custom retry strategy, if set.
    */
   private RetryStrategy retryStrategy;
+
+  /**
+   * The OpenTracing span to be used as a parent.
+   */
+  private Span parentSpan;
 
   @SuppressWarnings({ "unchecked" })
   protected SELF self() {
@@ -58,6 +64,15 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
 
   public RetryStrategy retryStrategy() {
     return retryStrategy;
+  }
+
+  public SELF parentSpan(final Span span) {
+    this.parentSpan = span;
+    return self();
+  }
+
+  public Span parentSpan() {
+    return parentSpan;
   }
 
 }

@@ -64,7 +64,7 @@ class PooledServiceTest {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
-    serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234);
+    serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234, ServiceType.KV);
   }
 
   @AfterEach

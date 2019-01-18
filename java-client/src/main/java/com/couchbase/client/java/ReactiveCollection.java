@@ -26,8 +26,7 @@ import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.AppendOptions;
-import com.couchbase.client.java.kv.IncrementOptions;
+import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -36,13 +35,12 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.LookupOptions;
+import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupResult;
-import com.couchbase.client.java.kv.LookupSpec;
-import com.couchbase.client.java.kv.MutateOptions;
-import com.couchbase.client.java.kv.MutateSpec;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.PrependOptions;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
@@ -51,6 +49,7 @@ import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -171,14 +170,12 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<GetResult> getAndLock(final String id, final Duration lockFor) {
-    return getAndLock(id, lockFor, GetAndLockOptions.DEFAULT);
+  public Mono<GetResult> getAndLock(final String id) {
+    return getAndLock(id, GetAndLockOptions.DEFAULT);
   }
 
-  public Mono<GetResult> getAndLock(final String id, final Duration lockFor,
-                                    final GetAndLockOptions options) {
+  public Mono<GetResult> getAndLock(final String id, final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(lockFor, "LockTime");
     notNull(options, "GetAndLockOptions");
 
     return null;
@@ -193,6 +190,17 @@ public class ReactiveCollection {
     notNullOrEmpty(id, "Id");
     notNull(expiration, "Expiration");
     notNull(options, "GetAndTouchOptions");
+
+    return null;
+  }
+
+  public Flux<GetResult> getFromReplica(final String id) {
+    return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
+  }
+
+  public Flux<GetResult> getFromReplica(final String id, final GetFromReplicaOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "GetFromReplicaOptions");
 
     return null;
   }
@@ -391,12 +399,12 @@ public class ReactiveCollection {
     return null;
   }
 
-  public Mono<LookupResult> lookupIn(final String id, final LookupSpec spec) {
-    return lookupIn(id, spec, LookupOptions.DEFAULT);
+  public Mono<LookupResult> lookupIn(final String id, final LookupInSpec spec) {
+    return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupResult> lookupIn(final String id, final LookupSpec spec,
-                                     final LookupOptions options) {
+  public Mono<LookupResult> lookupIn(final String id, final LookupInSpec spec,
+                                     final LookupInOptions options) {
 
     throw new UnsupportedOperationException("Implement me -> subdoc lookupIn");
   }
@@ -408,8 +416,8 @@ public class ReactiveCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutateIn(final String id, final MutateSpec spec) {
-    return mutateIn(id, spec, MutateOptions.DEFAULT);
+  public Mono<MutationResult> mutateIn(final String id, final MutateInSpec spec) {
+    return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
   /**
@@ -420,8 +428,8 @@ public class ReactiveCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutationResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutateIn(final String id, final MutateSpec spec,
-                                       final MutateOptions options) {
+  public Mono<MutationResult> mutateIn(final String id, final MutateInSpec spec,
+                                       final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateSpec");
     notNull(options, "MutateOptions");
