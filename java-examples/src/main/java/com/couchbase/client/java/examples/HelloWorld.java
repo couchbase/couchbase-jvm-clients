@@ -32,7 +32,7 @@ import java.util.Optional;
  */
 public class HelloWorld {
 
-  public static void main(String... args) {
+  public static void main(String... args) throws Exception {
 
     /*
      * Connect to the cluster with a hostname and credentials.

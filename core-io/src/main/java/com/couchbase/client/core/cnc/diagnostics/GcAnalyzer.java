@@ -16,15 +16,22 @@
 
 package com.couchbase.client.core.cnc.diagnostics;
 
-import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionDetectedEvent;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
+import reactor.core.publisher.Mono;
 
+import javax.management.ListenerNotFoundException;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.openmbean.CompositeData;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.time.Duration;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * The {@link GcAnalyzer} takes incoming {@link GarbageCollectionNotificationInfo} from the
@@ -35,39 +42,65 @@ import java.util.function.Function;
  *
  * @since 2.0.0
  */
-public class GcAnalyzer
-  implements Function<GarbageCollectionNotificationInfo, GarbageCollectionDetectedEvent> {
+public class GcAnalyzer implements Analyzer, NotificationListener {
 
-  /**
-   * Holds the GC type against which this analyzer works.
-   */
-  private final GcType gcType;
+  private final DiagnosticsMonitor monitor;
 
-  /**
-   * Creates a new GC analyzer for the types supported.
-   *
-   * @param beanName the bean name of the gc.
-   */
-  public GcAnalyzer(final String beanName) {
-    this.gcType = GcType.fromString(beanName);
-    if (this.gcType == GcType.UNKNOWN) {
-      throw new IllegalArgumentException("Unknown/Unsupported GC Type");
-    }
+  public GcAnalyzer(final DiagnosticsMonitor monitor) {
+    this.monitor = monitor;
   }
 
   @Override
-  public GarbageCollectionDetectedEvent apply(final GarbageCollectionNotificationInfo info) {
-    GcInfo gcInfo = info.getGcInfo();
-    return new GarbageCollectionDetectedEvent(
-      Event.Severity.DEBUG,
-      Event.Category.SYSTEM,
-      Duration.ofMillis(gcInfo.getDuration()),
-      info.getGcAction(),
-      info.getGcCause(),
-      gcType,
-      calculateUsage(gcInfo.getMemoryUsageBeforeGc()),
-      calculateUsage(gcInfo.getMemoryUsageAfterGc())
-    );
+  public Mono<Void> start() {
+    return Mono.defer(() -> {
+      for (GarbageCollectorMXBean bean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        if (bean instanceof NotificationEmitter) {
+          ((NotificationEmitter) bean).addNotificationListener(this, null, null);
+        }
+      }
+      return Mono.empty();
+    });
+  }
+
+  @Override
+  public Mono<Void> stop() {
+    return Mono.defer(() -> {
+      for (GarbageCollectorMXBean bean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        if (bean instanceof NotificationEmitter) {
+          try {
+            ((NotificationEmitter) bean).removeNotificationListener(this);
+          } catch (ListenerNotFoundException e) {
+            // ignored on purpose
+          }
+        }
+      }
+      return Mono.empty();
+    });
+  }
+
+  @Override
+  public void handleNotification(Notification notification, Object handback) {
+    if (notification.getType().equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
+      CompositeData cd = (CompositeData) notification.getUserData();
+      GarbageCollectionNotificationInfo info = GarbageCollectionNotificationInfo.from(cd);
+      GcInfo gcInfo = info.getGcInfo();
+      GcType gcType = GcType.fromString(info.getGcName());
+
+      if (gcType == GcType.UNKNOWN) {
+        // Ignore unknown GC types
+        return;
+      }
+
+      monitor.emit(new GarbageCollectionDetectedEvent(
+        monitor.severity(),
+        Duration.ofMillis(gcInfo.getDuration()),
+        info.getGcAction(),
+        info.getGcCause(),
+        gcType,
+        calculateUsage(gcType, gcInfo.getMemoryUsageBeforeGc()),
+        calculateUsage(gcType, gcInfo.getMemoryUsageAfterGc())
+      ));
+    }
   }
 
   /**
@@ -76,7 +109,7 @@ public class GcAnalyzer
    * @param pools the pools to calculate from.
    * @return a proper value based on the gc or 0 if it couldn't be figured out.
    */
-  private long calculateUsage(final Map<String, MemoryUsage> pools) {
+  private long calculateUsage(final GcType gcType, final Map<String, MemoryUsage> pools) {
     long usage = 0;
     try {
       switch (gcType) {

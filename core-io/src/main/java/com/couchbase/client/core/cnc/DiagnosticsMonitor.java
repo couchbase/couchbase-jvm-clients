@@ -16,24 +16,16 @@
 
 package com.couchbase.client.core.cnc;
 
+import com.couchbase.client.core.cnc.diagnostics.Analyzer;
 import com.couchbase.client.core.cnc.diagnostics.GcAnalyzer;
-import com.sun.management.GarbageCollectionNotificationInfo;
-import org.reactivestreams.Publisher;
+import com.couchbase.client.core.cnc.diagnostics.PauseAnalyzer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.management.ListenerNotFoundException;
-import javax.management.NotificationEmitter;
-import javax.management.NotificationListener;
-import javax.management.openmbean.CompositeData;
-import java.lang.management.GarbageCollectorMXBean;
-import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The {@link DiagnosticsMonitor} keeps a close eye on system resources and emits events
@@ -72,10 +64,9 @@ public class DiagnosticsMonitor {
    */
   private final EventBus eventBus;
 
-  /**
-   * All listeners this monitor opens - tracked for closing later.
-   */
-  private final List<NotificationListener> notificationListeners;
+  private final Thread diagnosticsThread;
+  private final AtomicBoolean diagnosticsRunning = new AtomicBoolean(true);
+  private final List<Analyzer> analyzers;
 
   /**
    * Internal method to create the new monitor from a builder config.
@@ -84,71 +75,63 @@ public class DiagnosticsMonitor {
    */
   private DiagnosticsMonitor(final Builder builder) {
     this.eventBus = builder.eventBus;
-    notificationListeners = Collections.synchronizedList(new ArrayList<>());
+    this.analyzers = Collections.synchronizedList(new ArrayList<>());
+
+    diagnosticsThread = new Thread(() -> {
+      try {
+        while(diagnosticsRunning.get()) {
+          Thread.sleep(1000);
+        }
+      } catch (InterruptedException e) {
+        // for now don't do anything
+      }
+    }, "cb-diagnostics");
   }
 
   /**
    * Starts this {@link DiagnosticsMonitor}.
    */
   public Mono<Void> start() {
-    return registerGcAnalyzer();
+    return Mono.defer(() -> {
+        diagnosticsThread.start();
+        return Mono.empty();
+      })
+      .then(Mono.defer(() -> {
+          GcAnalyzer analyzer = new GcAnalyzer(this);
+          analyzers.add(analyzer);
+          return analyzer.start();
+      }))
+      .then(Mono.defer(() -> {
+        PauseAnalyzer analyzer = new PauseAnalyzer(this);
+        analyzers.add(analyzer);
+        return analyzer.start();
+      }));
   }
 
   /**
    * Stops the {@link DiagnosticsMonitor}.
    */
   public Mono<Void> stop() {
-    return deregisterGcAnalyzer();
+    return Flux
+      .fromIterable(analyzers)
+      .flatMap(Analyzer::stop)
+      .last()
+      .flatMap(aVoid -> {
+        diagnosticsRunning.set(false);
+        return Mono.empty();
+      });
   }
 
-  /**
-   * Registers all GC analyzers through the MXBean.
-   *
-   * @return a mono that completes once done.
-   */
-  private Mono<Void> registerGcAnalyzer() {
-    return Flux
-      .fromIterable(ManagementFactory.getGarbageCollectorMXBeans())
-      .filter(bean -> bean instanceof NotificationEmitter)
-      .flatMap(bean -> {
-        GcAnalyzer gcAnalyzer = new GcAnalyzer(bean.getName());
-        NotificationListener listener = (notification, handback) -> {
-          final String type = notification.getType();
-          if (type.equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
-            CompositeData cd = (CompositeData) notification.getUserData();
-            Event event = gcAnalyzer.apply(GarbageCollectionNotificationInfo.from(cd));
-            if (event != null) {
-              eventBus.publish(event);
-            }
-          }
-        };
-        notificationListeners.add(listener);
-        ((NotificationEmitter) bean).addNotificationListener(listener, null, null);
-        return Mono.empty();
-      })
-      .then();
+  public void emit(Event event) {
+    eventBus.publish(event);
   }
 
-  /**
-   * Deregisters all gc analyzers that have been registered on startup.
-   *
-   * @return a mono that completes once done.
-   */
-  private Mono<Void> deregisterGcAnalyzer() {
-    return Flux
-      .fromIterable(ManagementFactory.getGarbageCollectorMXBeans())
-      .filter(bean -> bean instanceof NotificationEmitter)
-      .flatMap(bean -> {
-        for (NotificationListener listener : notificationListeners) {
-          try {
-            ((NotificationEmitter) bean).removeNotificationListener(listener);
-          } catch (ListenerNotFoundException ex) {
-            // ignored, since we iterate and just remove them best effort
-          }
-        }
-        return Mono.empty();
-      })
-      .then();
+  public Event.Severity severity() {
+    return Event.Severity.DEBUG;
+  }
+
+  public Context context() {
+    return null;
   }
 
   /**

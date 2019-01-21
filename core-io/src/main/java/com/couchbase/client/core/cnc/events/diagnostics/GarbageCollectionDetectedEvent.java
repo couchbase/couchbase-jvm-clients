@@ -29,10 +29,10 @@ public class GarbageCollectionDetectedEvent extends AbstractEvent  {
   private final long memoryBefore;
   private final long memoryAfter;
 
-  public GarbageCollectionDetectedEvent(Severity severity, Category category, Duration duration,
+  public GarbageCollectionDetectedEvent(Severity severity, Duration duration,
                                         String action, String cause, GcAnalyzer.GcType type,
                                         long memoryBefore, long memoryAfter) {
-    super(severity, category, duration, null);
+    super(severity, Category.SYSTEM, duration, null);
     this.action = action;
     this.cause = cause;
     this.type = type;
@@ -66,8 +66,8 @@ public class GarbageCollectionDetectedEvent extends AbstractEvent  {
       "action='" + action + '\'' +
       ", cause='" + cause + '\'' +
       ", type='" + type + '\'' +
-      ", memoryBefore=" + memoryBefore +
-      ", memoryAfter=" + memoryAfter +
+      ", memoryBefore(mb)=" + memoryBefore / 1000000 +
+      ", memoryAfter(mb)=" + memoryAfter / 1000000 +
       '}';
   }
 

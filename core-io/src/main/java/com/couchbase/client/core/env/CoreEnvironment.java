@@ -129,7 +129,7 @@ public class CoreEnvironment {
     // TODO: make configurable!
     eventBus.get().subscribe(LoggingEventConsumer.create());
     diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
-    diagnosticsMonitor.start();
+    diagnosticsMonitor.start().block();
   }
 
   public static CoreEnvironment create(final String username, final String password) {

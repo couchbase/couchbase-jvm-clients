@@ -11,7 +11,8 @@ import java.util.List;
 public class ManagerLocator implements Locator {
 
   @Override
-  public void dispatch(Request<? extends Response> request, List<Node> nodes, ClusterConfig config, CoreContext ctx) {
+  public void dispatch(final Request<? extends Response> request,
+                       final List<Node> nodes, final ClusterConfig config, final CoreContext ctx) {
     if (request instanceof TargetedRequest) {
       for (Node n : nodes) {
         if (n.address().equals(((TargetedRequest) request).target())) {

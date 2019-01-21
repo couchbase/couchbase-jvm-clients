@@ -36,6 +36,7 @@ dependencies {
   compile 'io.projectreactor.addons:reactor-extra:3.2.1.RELEASE'
   compile 'org.iq80.snappy:snappy:0.4'
   compile 'io.opentracing:opentracing-api:0.32.0-RC1'
+  compile 'org.latencyutils:LatencyUtils:2.0.3'
   compile 'org.slf4j:slf4j-api:1.7.25', optional
 
   testCompile 'io.projectreactor:reactor-test:3.2.4.RELEASE'

@@ -33,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 public enum Reactor {
   ;
 
-
   /**
    * Wraps a {@link Request} and returns it in a {@link Mono}.
    *
