@@ -17,8 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -45,7 +45,7 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, final boolean collections) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
     return MemcacheProtocol.request(
       alloc,
       MemcacheProtocol.Opcode.NOOP,

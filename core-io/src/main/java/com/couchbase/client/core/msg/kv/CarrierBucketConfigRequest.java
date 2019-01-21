@@ -2,6 +2,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -24,7 +25,7 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
     return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_CONFIG, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
   }

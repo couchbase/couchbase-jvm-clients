@@ -18,14 +18,13 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 
 import java.time.Duration;
 
@@ -37,7 +36,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
  *
  * @since 2.0.0
  */
-public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implements Compressible {
+public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
 
   private final byte[] content;
   private final long expiration;
@@ -54,12 +53,12 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque,
-                        final CompressionConfig config, final boolean collections) {
-    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     byte datatype = 0;
     ByteBuf content;
+    CompressionConfig config = ctx.compressionConfig();
     if (config != null && config.enabled() && this.content.length >= config.minSize()) {
       ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
       if (maybeCompressed != null) {
@@ -90,11 +89,6 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   public UpsertResponse decode(final ByteBuf response) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
     return new UpsertResponse(status);
-  }
-
-  @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
-    return encode(alloc, opaque, null, collections);
   }
 
 }

@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.kv.Compressible;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
@@ -79,15 +78,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private int opaque;
 
-  /**
-   * If compression is enabled and should be used.
-   */
-  private boolean compressionEnabled;
-
-  /**
-   * If collection usage is enabled.
-   */
-  private boolean collectionsEnabled;
+  private EncodeContext encodeContext;
 
   /**
    * Creates a new {@link KeyValueMessageHandler}.
@@ -122,8 +113,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     opaque = Utils.opaque(ctx.channel(), false);
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
-    collectionsEnabled = features != null && features.contains(ServerFeature.COLLECTIONS);
+    boolean compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
+    boolean collectionsEnabled = features != null && features.contains(ServerFeature.COLLECTIONS);
+    encodeContext = new EncodeContext(
+      compressionEnabled ? compressionConfig : null,
+      collectionsEnabled
+    );
 
     ctx.fireChannelActive();
   }
@@ -135,12 +130,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
       int nextOpaque = ++opaque;
       handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
-
-      if (compressionEnabled && request instanceof Compressible) {
-        ctx.write(((Compressible) request).encode(ctx.alloc(), nextOpaque, compressionConfig, collectionsEnabled));
-      } else {
-        ctx.write(request.encode(ctx.alloc(), nextOpaque, collectionsEnabled));
-      }
+      ctx.write(request.encode(ctx.alloc(), nextOpaque, encodeContext));
       writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));

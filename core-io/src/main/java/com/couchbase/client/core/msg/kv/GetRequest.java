@@ -17,8 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -39,7 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
 
 /**
- * Represents a KV Get operation.
+ * Represents a KV Get (full document) operation.
  *
  * @since 2.0.0
  */
@@ -51,13 +51,12 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
-    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();
-    return r;
-  }
+    return r;  }
 
   @Override
   public GetResponse decode(final ByteBuf response) {

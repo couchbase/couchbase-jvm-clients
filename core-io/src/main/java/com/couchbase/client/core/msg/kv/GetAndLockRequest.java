@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -46,8 +47,8 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
-    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf extras = alloc.buffer(4).writeInt((int) lockFor.getSeconds());
     ByteBuf r = MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
       partition(), opaque, noCas(), extras, key, noBody());

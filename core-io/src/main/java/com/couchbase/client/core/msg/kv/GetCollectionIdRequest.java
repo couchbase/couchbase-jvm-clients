@@ -1,6 +1,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -35,7 +36,7 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, final boolean collections) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
     ByteBuf key = Unpooled.copiedBuffer(scopeName + "." + collectionName, CharsetUtil.UTF_8);
     ByteBuf request = request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), key, noBody());

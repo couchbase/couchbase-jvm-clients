@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.io.netty.kv.EncodeContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -27,14 +28,12 @@ import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-
 /**
  * Uses the KV replace command to replace a document if it exists.
  *
  * @since 2.0.0
  */
-public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implements Compressible {
+public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
 
   private final byte[] content;
   private final long expiration;
@@ -53,12 +52,12 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque,
-                        final CompressionConfig config, final boolean collections) {
-    ByteBuf key = Unpooled.wrappedBuffer(collections ? keyWithCollection() : key());
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     byte datatype = 0;
     ByteBuf content;
+    CompressionConfig config = ctx.compressionConfig();
     if (config != null && config.enabled() && this.content.length >= config.minSize()) {
       ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
       if (maybeCompressed != null) {
@@ -82,18 +81,11 @@ public class ReplaceRequest extends BaseKeyValueRequest<UpsertResponse> implemen
     extras.release();
     content.release();
 
-    return r;
-  }
+    return r;  }
 
   @Override
-  public UpsertResponse decode(final ByteBuf response) {
+  public ReplaceResponse decode(final ByteBuf response) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new UpsertResponse(status);
+    return new ReplaceResponse(status);
   }
-
-  @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final boolean collections) {
-    return encode(alloc, opaque, null, collections);
-  }
-
 }
