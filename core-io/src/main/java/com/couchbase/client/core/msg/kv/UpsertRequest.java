@@ -28,6 +28,7 @@ import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
@@ -88,7 +89,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
   @Override
   public UpsertResponse decode(final ByteBuf response) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new UpsertResponse(status);
+    return new UpsertResponse(status, cas(response));
   }
 
 }

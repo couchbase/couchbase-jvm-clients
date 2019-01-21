@@ -47,6 +47,18 @@ public enum ResponseStatus {
    */
   NO_ACCESS,
   /**
+   * The server could temporarily not fulfill the requrst.
+   */
+  TEMPORARY_FAILURE,
+  /**
+   * The server is busy for some reason.
+   */
+  SERVER_BUSY,
+  /**
+   * The server is out of memory.
+   */
+  OUT_OF_MEMORY,
+  /**
    * The server indicated that the given message is not supported.
    */
   UNSUPPORTED;

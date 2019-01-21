@@ -33,8 +33,7 @@ public enum UpsertAccessor {
     return request
       .response()
       .thenApply(response -> {
-        // todo: implement me
-        return new MutationResult(0, Optional.empty());
+        return new MutationResult(response.cas(), Optional.empty());
       });
   }
 

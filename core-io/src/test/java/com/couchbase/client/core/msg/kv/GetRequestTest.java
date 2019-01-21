@@ -60,6 +60,7 @@ class GetRequestTest {
 
     assertEquals(ResponseStatus.SUCCESS, decoded.status());
     assertArrayEquals(expected, decoded.content());
+    assertEquals("2000000", Integer.toHexString(decoded.flags()));
   }
 
   @Test
@@ -74,6 +75,7 @@ class GetRequestTest {
 
     assertEquals(ResponseStatus.NOT_FOUND, decoded.status());
     assertNull(decoded.content());
+    assertEquals(0, decoded.flags());
   }
 
 }

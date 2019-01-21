@@ -204,14 +204,17 @@ public class AsyncCollection {
       : options.retryStrategy();
 
     if (options.projections() != null) {
+      if (options.projections().size() > 16) {
+        throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+          + "projected per request.");
+      }
+
       List<SubdocGetRequest.Command> commands = options
         .projections()
         .stream()
         .filter(s -> s != null && !s.isEmpty())
         .map(s -> new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, s, false))
         .collect(Collectors.toList());
-
-      // todo: if over 16 fields, degrade to fulldoc and do the projection in java
 
       return getProjection(id, options, timeout, retryStrategy, commands);
     } else {

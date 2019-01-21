@@ -37,6 +37,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
@@ -98,7 +99,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   @Override
   public SubdocGetResponse decode(final ByteBuf response) {
     // todo: fixme: error handling
-
     ByteBuf body = body(response).get();
     List<SubdocGetResponse.ResponseValue> values = new ArrayList<>(commands.size());
     for (Command command : commands) {

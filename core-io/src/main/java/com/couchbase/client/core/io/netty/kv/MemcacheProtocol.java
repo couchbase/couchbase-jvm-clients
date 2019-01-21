@@ -566,6 +566,18 @@ public enum MemcacheProtocol {
      */
     ACCESS_ERROR((short) 0x24),
     /**
+     * The server could temporarily not fulfill the requrst.
+     */
+    TEMPORARY_FAILURE((short) 0x86),
+    /**
+     * The server is busy for some reason.
+     */
+    SERVER_BUSY((short) 0x85),
+    /**
+     * The server is out of memory.
+     */
+    OUT_OF_MEMORY((short) 0x82),
+    /**
      * Not supported.
      */
     NOT_SUPPORTED((short) 0x83);
@@ -593,6 +605,12 @@ public enum MemcacheProtocol {
           return NOT_FOUND;
         case 0x24:
           return ACCESS_ERROR;
+        case 0x82:
+          return OUT_OF_MEMORY;
+        case 0x85:
+          return SERVER_BUSY;
+        case 0x86:
+          return TEMPORARY_FAILURE;
       }
       throw new UnsupportedOperationException("unsupported status " + value);
     }
