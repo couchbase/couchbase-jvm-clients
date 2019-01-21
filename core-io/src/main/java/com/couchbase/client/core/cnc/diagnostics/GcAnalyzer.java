@@ -79,7 +79,7 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
   }
 
   @Override
-  public void handleNotification(Notification notification, Object handback) {
+  public void handleNotification(final Notification notification, final Object ignored) {
     if (notification.getType().equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
       CompositeData cd = (CompositeData) notification.getUserData();
       GarbageCollectionNotificationInfo info = GarbageCollectionNotificationInfo.from(cd);
@@ -175,9 +175,13 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
      */
     STOP_THE_WORLD,
     /**
-     * The algorithm is concurrent and not stopping the world.
+     * The algorithm is mostly concurrent and only shortly stopping the world.
      */
-    CONCURRENT,
+    MOSTLY_CONCURRENT,
+    /**
+     * The algorithm is fully concurrent and not stopping the world.
+     */
+    FULLY_CONCURRENT,
     /**
      * We couldn't figure out the concurrency type, sorry.
      */
@@ -207,16 +211,12 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
     MARK_SWEEP_COMPACT("MarkSweepCompact", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
     /**
      * Young generation collection of the g1 collector.
-     *
-     * TODO: figure out the concurrency type.
      */
     G1_YOUNG("G1 Young Generation", GcGeneration.YOUNG, Concurrency.STOP_THE_WORLD),
     /**
      * Old generation collection of the g1 collector.
-     *
-     * TODO: figure out the concurrency type.
      */
-    G1_OLD("G1 Old Generation", GcGeneration.OLD, Concurrency.STOP_THE_WORLD),
+    G1_OLD("G1 Old Generation", GcGeneration.OLD, Concurrency.MOSTLY_CONCURRENT),
     /**
      * The ParNew collector.
      */
@@ -224,7 +224,7 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
     /**
      * The concurrent mark sweep collector.
      */
-    CONCURRENT_MARK_SWEEP("ConcurrentMarkSweep", GcGeneration.OLD, Concurrency.CONCURRENT),
+    CONCURRENT_MARK_SWEEP("ConcurrentMarkSweep", GcGeneration.OLD, Concurrency.MOSTLY_CONCURRENT),
     /**
      * We couldn't figure out the gc type, sorry!
      */

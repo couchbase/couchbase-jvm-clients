@@ -28,11 +28,13 @@ public class GarbageCollectionDetectedEvent extends AbstractEvent  {
   private final GcAnalyzer.GcType type;
   private final long memoryBefore;
   private final long memoryAfter;
+  private final Severity severity;
 
   public GarbageCollectionDetectedEvent(Severity severity, Duration duration,
                                         String action, String cause, GcAnalyzer.GcType type,
                                         long memoryBefore, long memoryAfter) {
     super(severity, Category.SYSTEM, duration, null);
+    this.severity = severity;
     this.action = action;
     this.cause = cause;
     this.type = type;
@@ -71,4 +73,29 @@ public class GarbageCollectionDetectedEvent extends AbstractEvent  {
       '}';
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    GarbageCollectionDetectedEvent that = (GarbageCollectionDetectedEvent) o;
+
+    if (memoryBefore != that.memoryBefore) return false;
+    if (memoryAfter != that.memoryAfter) return false;
+    if (action != null ? !action.equals(that.action) : that.action != null) return false;
+    if (cause != null ? !cause.equals(that.cause) : that.cause != null) return false;
+    if (type != that.type) return false;
+    return severity == that.severity;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = action != null ? action.hashCode() : 0;
+    result = 31 * result + (cause != null ? cause.hashCode() : 0);
+    result = 31 * result + (type != null ? type.hashCode() : 0);
+    result = 31 * result + (int) (memoryBefore ^ (memoryBefore >>> 32));
+    result = 31 * result + (int) (memoryAfter ^ (memoryAfter >>> 32));
+    result = 31 * result + (severity != null ? severity.hashCode() : 0);
+    return result;
+  }
 }

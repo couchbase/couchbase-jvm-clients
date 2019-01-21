@@ -115,11 +115,10 @@ public class DiagnosticsMonitor {
     return Flux
       .fromIterable(analyzers)
       .flatMap(Analyzer::stop)
-      .last()
-      .flatMap(aVoid -> {
+      .then(Mono.defer(() -> {
         diagnosticsRunning.set(false);
         return Mono.empty();
-      });
+      }));
   }
 
   public void emit(Event event) {
