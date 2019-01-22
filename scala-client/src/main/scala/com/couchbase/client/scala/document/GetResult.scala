@@ -1,12 +1,15 @@
 package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.CouchbaseException
-import upickle.default.read
+
+import scala.util.Try
+//import ujson.Obj
+//import upickle.default.read
 
 import scala.concurrent.duration.Duration
-import scala.language.dynamics
-import scala.reflect.runtime.universe._
-import upickle.default._
+//import scala.language.dynamics
+//import scala.reflect.runtime.universe._
+//import upickle.default._
 
 trait Convertable {
   def contentAs[T](path: PathElements): T
@@ -31,33 +34,28 @@ case class PathElements(paths: List[PathElement]) {
   }
 }
 
-// TODO much more implementation required
-case class GetSelecter(private val result: Convertable, path: PathElements) extends Dynamic {
-  def selectDynamic(name: String): GetSelecter = GetSelecter(result, path.add(PathObjectOrField(name)))
-  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(result, path.add(PathArray(name, index)))
 
-  def exists: Boolean = result.exists(path)
-  def getString: String = result.contentAs[String](path)
-  // TODO see what Jackson transcoding produces in terms of ints, longs, floats, doubles
-  def getInt: Int = result.contentAs[Int](path)
-  def getObject: JsonObject = result.contentAs[JsonObject](path)
-  def getAs[T]: T = result.contentAs[T](path)
-}
+
+
 
 class GetResult(val id: String,
                 private val _content: Array[Byte],
                 val cas: Long,
-                val expiry: Option[Duration]) extends Dynamic with Convertable {
+                val expiry: Option[Duration]) extends Convertable {
 
-  def contentAsObject: JsonObject = contentAs[JsonObject]
+
+
+
+
+  def contentAsObject: JsonObject = ???
 
   def contentAsObject(path: String): JsonObject = contentAs[JsonObject](path)
 
-  def contentAsArray: JsonArray = contentAs[JsonArray]
+  def contentAsArray: JsonArray = ???
 
   def contentAsArray(path: String): JsonArray = contentAs[JsonArray](path)
 
-  def content: JsonType = ???
+//  def content: JsonType = ???
 
   def contentAsBytes: Array[Byte] = _content
 
@@ -71,17 +69,22 @@ class GetResult(val id: String,
 
   def content(path: String): JsonType = ???
 
-  def contentAsUjson = {
-
-//    ByteArrayParser.transform(_content, new BaseRenderer)
-//    transform(Readable.fromByteArray(_content), BytesRenderer())
-    read[ujson.Obj](_content)
-  }
-
-  def contentAs[T]: T = ???
-//  (implicit tt: TypeTag[T]): T = {
+  // TODO MVP improve
+//  def contentAsUjson = {
+//
+////    ByteArrayParser.transform(_content, new BaseRenderer)
+////    transform(Readable.fromByteArray(_content), BytesRenderer())
 //    read[ujson.Obj](_content)
 //  }
+
+  def contentAs[T]
+  (implicit ev: Conversions.Convertable[T]): Try[T] = {
+//    (implicit tt: TypeTag[T]): T = {
+//    (implicit tt: TypeTag[T]): T = {
+
+//    read[ujson.Obj](_content)
+    ev.decode(_content)
+  }
 
   def contentAs[T](path: String): T = ???
 

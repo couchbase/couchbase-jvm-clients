@@ -4,14 +4,14 @@ import java.lang.reflect.{ParameterizedType, Type}
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import scala.reflect.runtime.universe._
 import upickle.default._
 import upickle.default.{ReadWriter => RW, macroRW}
 
 object DefaultDecoder {
-  private val mapper = new ObjectMapper()
-  mapper.registerModule(DefaultScalaModule)
+//  private val mapper = new ObjectMapper()
+//  mapper.registerModule(DefaultScalaModule)
 
 //  def decode[T](value: String)(implicit tag: TypeTag[T]): T = {
 //    read[T](value)

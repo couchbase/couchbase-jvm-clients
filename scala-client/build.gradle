@@ -1,6 +1,85 @@
-plugins {
-  id 'scala'
+buildscript {
+  repositories { jcenter() }
+
+  dependencies {
+    classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
+  }
 }
+
+
+apply plugin: 'scala'
+apply plugin: 'nebula.optional-base'
+apply plugin: 'maven-publish'
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      artifactId = 'my-library'
+      from components.java
+//      artifact sourcesJar
+//      artifact javadocJar
+      pom {
+        name = 'My Library'
+        description = 'A concise description of my library'
+        url = 'http://www.example.com/library'
+        licenses {
+          // TODO
+          license {
+            name = 'The Apache License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+        developers {
+          developer {
+            id = 'grahamp'
+            name = 'Graham Pople'
+            email = 'graham.pople@couchbase.com'
+          }
+        }
+//        scm {
+//          connection = 'scm:git:git://example.com/my-library.git'
+//          developerConnection = 'scm:git:ssh://example.com/my-library.git'
+//          url = 'http://example.com/my-library/'
+//        }
+      }
+    }
+  }
+  repositories {
+    maven {
+      // change URLs to point to your repos, e.g. http://my.org/repo
+//      def releasesRepoUrl = "$buildDir/repos/releases"
+//      def snapshotsRepoUrl = "$buildDir/repos/snapshots"
+//      url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+    }
+  }
+}
+
+//signing {
+//  sign publishing.publications.mavenJava
+//}
+
+
+javadoc {
+  if(JavaVersion.current().isJava9Compatible()) {
+    options.addBooleanOption('html5', true)
+  }
+}
+task sourcesJar(type: Jar, dependsOn: classes) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+  classifier = 'javadoc'
+  from javadoc.destinationDir
+}
+
+//artifacts {
+//  archives sourcesJar
+//  archives javadocJar
+//}
+
+
 
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.7'
@@ -13,15 +92,14 @@ dependencies {
 
   // TODO Can remove some of these when settled on a json lib
   // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
-  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
-  compile "org.scala-lang:scala-reflect:2.12.7"
-//  compile group: 'com.lihaoyi', name: 'ujson_2.12', version: '0.7.1'
-  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
+//  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
+//  provided "org.scala-lang:scala-reflect:2.12.7"
+  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1', optional
 
-  compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0'
-  compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0'
-  compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0'
-  compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1'
+  compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0', optional
+  compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0', optional
+  compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0', optional
+  compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1', optional
 
 
 //  integrationTestCompile project(':test-utils')

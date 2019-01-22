@@ -33,7 +33,7 @@ import io.circe.syntax._
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{GetResult, JsonObject, JsonType}
+import com.couchbase.client.scala.document.{Conversions, GetResult, JsonObject, JsonType}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
@@ -47,6 +47,10 @@ import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 import ujson._
 
+import scala.language.implicitConversions
+
+
+
 class AsyncCollection(name: String,
                       collectionId: Long,
                       bucketName: String,
@@ -57,32 +61,42 @@ class AsyncCollection(name: String,
   private val kvTimeout = javaDurationToScala(environment.kvTimeout())
   private val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
 
+  import annotation.implicitNotFound
+  @implicitNotFound("No member of type class NumberLike in scope for ${T}")
   def encode[T](content: T)
+               (implicit ev: Conversions.Convertable[T])
 //                       (implicit tag: TypeTag[T])
   : Try[Array[Byte]] = {
 //    Try.apply(mapper.writeValueAsBytes(content))
-    content match {
-        // My JsonType
-        // TODO MVP probably remove my JsonType
-//      case v: JsonType =>
-//        val json = v.asJson
-//          json.as[Array[Byte]].toTry
 
-        // circe's Json
-      case v: Json =>
-        v.as[Array[Byte]].toTry
+    ev.encode(content)
 
-        // ujson's Json
-      case v: ujson.Value =>
-        Try(transform(v, BytesRenderer()).toBytes)
-
-      case _ =>
-        // TODO MVP support json string
-//        val circe = content.asJson
-        val dbg = mapper.writeValueAsString(content)
-        Try.apply(mapper.writeValueAsBytes(content))
-//          circe.as[Array[Byte]].toTry
-    }
+//    content match {
+//        // My JsonType
+//        // TODO MVP probably remove my JsonType
+////      case v: JsonType =>
+////        val json = v.asJson
+////          json.as[Array[Byte]].toTry
+//
+//        // circe's Json
+//      case v: Json =>
+//        v.as[Array[Byte]].toTry
+//
+//        // ujson's Json
+//      case v: ujson.Value =>
+//        Try(transform(v, BytesRenderer()).toBytes)
+//
+//      case v: Array[Byte] =>
+//        // TODO check it's not MessagePack from upickle.default.writeBinary
+//        Try(v)
+//
+//      case _ =>
+//        // TODO MVP support json string
+////        val circe = content.asJson
+//        val dbg = mapper.writeValueAsString(content)
+//        Try.apply(mapper.writeValueAsBytes(content))
+////          circe.as[Array[Byte]].toTry
+//    }
   }
 
   implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
@@ -100,6 +114,7 @@ class AsyncCollection(name: String,
                 replicateTo: ReplicateTo.Value = ReplicateTo.None,
                 persistTo: PersistTo.Value = PersistTo.None
                )
+               (implicit ev: Conversions.Convertable[T])
 //               (implicit tag: TypeTag[T])
   : Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
@@ -150,7 +165,7 @@ class AsyncCollection(name: String,
                 content: T,
                 options: InsertOptions
                )
-               (implicit tag: TypeTag[T]): Future[MutationResult] = {
+               (implicit tag: TypeTag[T], ev: Conversions.Convertable[T]): Future[MutationResult] = {
     Validators.notNull(options, "options")
     insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
   }
@@ -245,6 +260,7 @@ class AsyncCollection(name: String,
 
     FutureConverters.toScala(request.response())
       .map(response => {
+        val decoded = response.content.map(_.toChar).mkString
         if (response.status.success) {
           new GetResult(id, response.content, response.cas, Option.empty)
         }

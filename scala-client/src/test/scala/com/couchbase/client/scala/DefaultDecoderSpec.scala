@@ -4,11 +4,11 @@ import java.lang.reflect.{ParameterizedType, Type}
 import java.nio.charset.Charset
 
 import com.couchbase.client.scala.document.DefaultDecoder
-import com.couchbase.client.scala.document.DefaultDecoder.mapper
+//import com.couchbase.client.scala.document.DefaultDecoder.mapper
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+//import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import org.scalatest.FunSuite
 import upickle.default._
 import upickle._
@@ -17,8 +17,8 @@ import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
 sealed trait Decode
 
 class DefaultDecoderSpec extends FunSuite {
-  private val mapper = new ObjectMapper() with ScalaObjectMapper
-  mapper.registerModule(DefaultScalaModule)
+//  private val mapper = new ObjectMapper() with ScalaObjectMapper
+//  mapper.registerModule(DefaultScalaModule)
 
 //  def decode[T](in: Array[Byte]): T = DefaultDecoder.decode[T](in)
 //  def decode[T](in: String): T = DefaultDecoder.decode[T](in)

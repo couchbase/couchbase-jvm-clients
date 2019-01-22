@@ -26,6 +26,7 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
+import GetResult._
 
 object Samples {
 
@@ -76,7 +77,8 @@ object Samples {
 //    getResult.users.getAs[List[User]]
 
     case class MyUsersEntity(users: List[User])
-    val users = getResult.contentAs[MyUsersEntity]
+    // TODO
+//    val users = getResult.contentAs[MyUsersEntity]
 
 //    getResult.some.field.getString
 
@@ -102,7 +104,8 @@ object Samples {
       println(result.contentAs[String]("field1"))
 //      println(result.field1.asInstanceOf[String])
       case class MyProjection(field1: String, field2: Int)
-      val proj = result.contentAs[MyProjection]
+      // TODO
+//      val proj = result.contentAs[MyProjection]
     })
 
 
@@ -114,11 +117,12 @@ object Samples {
 
 
     // Various ways of inserting
-    val inserted: Try[MutationResult] = coll.insert("id", JsonObject.create)
-    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, expiration = 10.days)
-    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds)
+    // TODO
+//    val inserted: Try[MutationResult] = coll.insert("id", JsonObject.create)
+//    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, expiration = 10.days)
+//    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds)
     case class User(name: String, age: Int)
-    coll.insert("john", User("John", 25), timeout = 5.seconds)
+//    coll.insert("john", User("John", 25), timeout = 5.seconds)
 
 
     // Various ways of replacing

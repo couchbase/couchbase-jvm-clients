@@ -59,6 +59,7 @@ class Collection(val async: AsyncCollection,
   durability: Durability.Value = Durability.None
                // TODO durability
             )
+               (implicit ev: Conversions.Convertable[T])
 //               (implicit tag: TypeTag[T])
   : Try[MutationResult] = {
     block(async.insert(id, content, timeout, expiration), timeout)
@@ -109,7 +110,7 @@ class Collection(val async: AsyncCollection,
 //                ): Try[MutationResult] = ???
 
   def remove(id: String,
-             cas: Long,
+             cas: Long = 0,
              timeout: FiniteDuration = kvTimeout,
              replicateTo: ReplicateTo.Value = ReplicateTo.None,
              persistTo: PersistTo.Value = PersistTo.None,

@@ -15,6 +15,7 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
 import scala.reflect.runtime.universe._
+import com.couchbase.client.scala.document.GetResult._
 
 class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
   val (cluster, bucket, scope, coll) = (for {
@@ -32,73 +33,73 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 //    bucket.bucketManager().flush()
   }
 
-  "insert and get of ujson" should "succeed" in {
-    val id = docId(0)
-    val content = ujson.Obj("value" -> "INSERTED")
-    assert(coll.insert(id, content).isSuccess)
-
-    coll.get(id) match {
-      case Success(result) =>
-        val json = result.contentAsUjson
-        assert(json("value").str == "INSERTED")
-      case Failure(err) => assert(false)
-    }
-  }
-
-  "circe encode of a case class" should "succeed" in {
-    case class User(name: String, age: Int)
-    val user = User("graham" ,36)
-
-    val json = user.asJson.toString()
-    assert (json.contains("graham"))
-  }
-
-  "insert and get using circe" should "succeed" in {
-    val id = docId(0)
-    case class User(name: String, age: Int)
-    val user = User("graham" ,36)
-    assert(coll.insert(id, user.asJson).isSuccess)
-
-    coll.get(id) match {
-      case Success(result) =>
-        val json = decode[User](result.contentAsStr).right.get
-        assert(json.name == "graham")
-        assert(json.age == 36)
-      case Failure(err) => assert(false)
-    }
-  }
-
-  // TODO check implicit custom decoders work for circe
-  // TODO check generic derivation works without macro paradise in app build
-
-
-
-
-  "insert and get of a case class" should "succeed" in {
-    val id = docId(0)
-    case class User(name: String, age: Int)
-    val user = User("graham" ,36)
-    assert(coll.insert(id, user).isSuccess)
-
-    coll.get(id) match {
-      case Success(result) =>
-        val json = result.contentAs[ujson.Obj]
-        assert(json("name").str == "graham")
-        assert(json("age").num == 36)
-      case Failure(err) => assert(false)
-    }
-  }
-
-
-  "blocking remove" should "succeed" in {
-    val id = docId(0)
-//    val doc = JsonObject.create.put("value", "INSERTED")
-//    val content = io.circe.JsonObject.fromMap(Map("value" -> "INSERTED"))
-    val content = ujson.Obj("value" -> "INSERTED")
-    coll.insert(id, content) match {
-      case Failure(err) => assert(false)
-      case _ =>
-    }
+//  "insert and get of ujson" should "succeed" in {
+//    val id = docId(0)
+//    val content = ujson.Obj("value" -> "INSERTED")
+//    assert(coll.insert(id, content).isSuccess)
+//
+//    coll.get(id) match {
+//      case Success(result) =>
+//        val json = result.contentAsUjson
+//        assert(json("value").str == "INSERTED")
+//      case Failure(err) => assert(false)
+//    }
+//  }
+//
+//  "circe encode of a case class" should "succeed" in {
+//    case class User(name: String, age: Int)
+//    val user = User("graham" ,36)
+//
+//    val json = user.asJson.toString()
+//    assert (json.contains("graham"))
+//  }
+//
+//  "insert and get using circe" should "succeed" in {
+//    val id = docId(0)
+//    case class User(name: String, age: Int)
+//    val user = User("graham" ,36)
+//    assert(coll.insert(id, user.asJson).isSuccess)
+//
+//    coll.get(id) match {
+//      case Success(result) =>
+//        val json = decode[User](result.contentAsStr).right.get
+//        assert(json.name == "graham")
+//        assert(json.age == 36)
+//      case Failure(err) => assert(false)
+//    }
+//  }
+//
+//  // TODO check implicit custom decoders work for circe
+//  // TODO check generic derivation works without macro paradise in app build
+//
+//
+//
+//
+//  "insert and get of a case class" should "succeed" in {
+//    val id = docId(0)
+//    case class User(name: String, age: Int)
+//    val user = User("graham" ,36)
+//    assert(coll.insert(id, user).isSuccess)
+//
+//    coll.get(id) match {
+//      case Success(result) =>
+//        val json = result.contentAs[ujson.Obj]
+//        assert(json("name").str == "graham")
+//        assert(json("age").num == 36)
+//      case Failure(err) => assert(false)
+//    }
+//  }
+//
+//
+//  "blocking remove" should "succeed" in {
+//    val id = docId(0)
+////    val doc = JsonObject.create.put("value", "INSERTED")
+////    val content = io.circe.JsonObject.fromMap(Map("value" -> "INSERTED"))
+//    val content = ujson.Obj("value" -> "INSERTED")
+//    coll.insert(id, content) match {
+//      case Failure(err) => assert(false)
+//      case _ =>
+//    }
 
 
 
@@ -110,7 +111,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
 //    assert(result.cas != 0)
 //    assert(result.mutationToken.isEmpty)
 //    assert(coll.get(id).isEmpty)
-  }
+//  }
 
 //  "blocking insert and get" should "succeed" in {
 //    val id = docId(0)

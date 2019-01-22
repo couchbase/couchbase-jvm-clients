@@ -64,6 +64,8 @@ object Cluster {
   private val threadPool = Executors.newFixedThreadPool(10) // TODO 10?
   private implicit val ec = ExecutionContext.fromExecutor(threadPool)
 
+  // TODO MVP decision may be made to defer errors until the operation level, e.g. opening resources would always
+  // succeed
   def connect(connectionString: String, username: String, password: String) = {
     Try(new Cluster(ClusterEnvironment.create(connectionString, username, password)))
   }
