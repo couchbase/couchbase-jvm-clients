@@ -19,10 +19,13 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.msg.kv.GetAndLockRequest;
+import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -54,6 +57,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -147,51 +151,82 @@ public class ReactiveCollection {
    * @return a {@link Mono} indicating once loaded or failed.
    */
   public Mono<GetResult> get(final String id, final GetOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "GetOptions");
-
-    if (options.projections() != null) {
-      throw new UnsupportedOperationException("TODO: implement subdoc get!");
-    }
-
-    if (options.withExpiration()) {
-      throw new UnsupportedOperationException("TODO: do a get spec with fetch and convert.");
-    }
-
     return Mono.defer(() -> {
-      Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-      RetryStrategy retryStrategy = options.retryStrategy() == null
-        ? environment.retryStrategy()
-        : options.retryStrategy();
-      GetRequest request = new GetRequest(id, encodedId, timeout, coreContext, bucketName, retryStrategy);
-      return Reactor
-        .wrap(request, GetAccessor.get(core, id, request), true)
-        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+      if (options.projections() == null && !options.withExpiration()) {
+        GetRequest request = asyncCollection.fullGetRequest(id, options);
+        return Reactor
+          .wrap(request, GetAccessor.get(core, id, request), true)
+          .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+      } else {
+        SubdocGetRequest request = asyncCollection.subdocGetRequest(id, options);
+        return Reactor
+          .wrap(request, GetAccessor.subdocGet(core, id, request), true)
+          .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+      }
     });
   }
 
+  /**
+   * Fetches a full document and write-locks it for the given duration with default options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
   public Mono<GetResult> getAndLock(final String id) {
     return getAndLock(id, GetAndLockOptions.DEFAULT);
   }
 
+  /**
+   * Fetches a full document and write-locks it for the given duration with custom options.
+   *
+   * <p>The {@link Optional} indicates if the document has been found or not. If the document
+   * has not been found, an empty optional will be returned.</p>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
   public Mono<GetResult> getAndLock(final String id, final GetAndLockOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "GetAndLockOptions");
-
-    return null;
+    return Mono.defer(() -> {
+      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, options);
+      return Reactor
+        .wrap(request, GetAccessor.getAndLock(core, id, request), true)
+        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+    });
   }
 
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with default
+   * options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiration the new expiration time for the document.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
   public Mono<GetResult> getAndTouch(final String id, final Duration expiration) {
     return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
   }
 
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with custom
+   * options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiration the new expiration time for the document.
+   * @param options custom options to change the default behavior.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
   public Mono<GetResult> getAndTouch(final String id, final Duration expiration,
                                      final GetAndTouchOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(expiration, "Expiration");
-    notNull(options, "GetAndTouchOptions");
-
-    return null;
+    return Mono.defer(() -> {
+      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
+      return Reactor
+        .wrap(request, GetAccessor.getAndTouch(core, id, request), true)
+        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+    });
   }
 
   public Flux<GetResult> getFromReplica(final String id) {

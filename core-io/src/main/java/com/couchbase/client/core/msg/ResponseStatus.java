@@ -59,6 +59,10 @@ public enum ResponseStatus {
    */
   OUT_OF_MEMORY,
   /**
+   * The requested resource is locked.
+   */
+  LOCKED,
+  /**
    * The server indicated that the given message is not supported.
    */
   UNSUPPORTED;

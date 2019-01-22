@@ -28,17 +28,17 @@ public class GetAndLockResponse extends BaseResponse {
 
   private final byte[] content;
   private final long cas;
+  private final int flags;
 
-  GetAndLockResponse(final ResponseStatus status, final byte[] content, final long cas) {
+  GetAndLockResponse(final ResponseStatus status, final byte[] content, final long cas, final int flags) {
     super(status);
     this.content = content;
     this.cas = cas;
+    this.flags = flags;
   }
 
   /**
    * Returns the content, but might be empty or null.
-   *
-   * @return the content, if successful and found. Check the result!
    */
   public byte[] content() {
     return content;
@@ -46,11 +46,15 @@ public class GetAndLockResponse extends BaseResponse {
 
   /**
    * Returns the CAS value of the document at the time of the fetch.
-   *
-   * @return the cas value.
    */
   public long cas() {
     return cas;
   }
 
+  /**
+   * Returns the flag for this document if success.
+   */
+  public int flags() {
+    return flags;
+  }
 }

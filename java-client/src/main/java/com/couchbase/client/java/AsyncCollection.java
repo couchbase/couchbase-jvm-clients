@@ -195,6 +195,41 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
+    if (options.projections() == null && !options.withExpiration()) {
+      return GetAccessor.get(core, id, fullGetRequest(id, options));
+    } else {
+      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options));
+    }
+  }
+
+  /**
+   * Helper method to create a get request for a full doc fetch.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return the get request.
+   */
+  @Stability.Internal
+  GetRequest fullGetRequest(final String id, final GetOptions options) {
+    notNullOrEmpty(id, "Id");
+    notNull(options, "GetOptions");
+
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
+  }
+
+  /**
+   * Helper method to create a get request for a subdoc fetch.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return the subdoc get request.
+   */
+  @Stability.Internal
+  SubdocGetRequest subdocGetRequest(final String id, final GetOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
 
@@ -203,55 +238,40 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
 
-    if (options.projections() != null) {
+    List<SubdocGetRequest.Command> commands = new ArrayList<>();
+
+    if (options.withExpiration()) {
+      commands.add(new SubdocGetRequest.Command(
+        SubdocGetRequest.CommandType.GET,
+        "$document.exptime",
+        true
+      ));
+    }
+
+    if (options.projections() != null && !options.projections().isEmpty()) {
       if (options.projections().size() > 16) {
         throw new IllegalArgumentException("Only a maximum of 16 fields can be "
           + "projected per request.");
       }
 
-      List<SubdocGetRequest.Command> commands = options
+      commands.addAll(options
         .projections()
         .stream()
         .filter(s -> s != null && !s.isEmpty())
         .map(s -> new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, s, false))
-        .collect(Collectors.toList());
-
-      return getProjection(id, options, timeout, retryStrategy, commands);
-    } else {
-      return getFullDoc(id, options, timeout, retryStrategy);
-    }
-  }
-
-  private CompletableFuture<Optional<GetResult>> getFullDoc(final String id,
-                                                            final GetOptions options,
-                                                            final Duration timeout,
-                                                            final RetryStrategy retryStrategy) {
-    if (options.withExpiration()) {
-      List<SubdocGetRequest.Command> command = new ArrayList<>();
-      command.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false));
-      return getProjection(id, options, timeout, retryStrategy, command);
-    }
-
-    GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
-    return GetAccessor.get(core, id, request);
-  }
-
-  private CompletableFuture<Optional<GetResult>> getProjection(final String id,
-                                                               final GetOptions options,
-                                                               final Duration timeout,
-                                                               final RetryStrategy retryStrategy,
-                                                               final List<SubdocGetRequest.Command> commands) {
-    if (options.withExpiration()) {
-      commands.add(0, new SubdocGetRequest.Command(
-        SubdocGetRequest.CommandType.GET,
-        "$document.exptime",
-        true)
+        .collect(Collectors.toList())
       );
+    } else {
+      commands.add(new SubdocGetRequest.Command(
+        SubdocGetRequest.CommandType.GET_DOC,
+        "",
+        false
+      ));
     }
 
-    SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy,
-      id, collectionId, (byte) 0, commands);
-    return GetAccessor.subdocGet(core, id, request);
+    return new SubdocGetRequest(
+      timeout, coreContext, bucket, retryStrategy, id, collectionId, (byte) 0, commands
+    );
   }
 
   /**
@@ -277,7 +297,20 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id, final GetAndLockOptions options) {
+  public CompletableFuture<Optional<GetResult>> getAndLock(final String id,
+                                                           final GetAndLockOptions options) {
+    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, options));
+  }
+
+  /**
+   * Helper method to create the get and lock request.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return the get and lock request.
+   */
+  @Stability.Internal
+  GetAndLockRequest getAndLockRequest(final String id, final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetAndLockOptions");
 
@@ -285,13 +318,16 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    GetAndLockRequest request = new GetAndLockRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy,
-      options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor());
-    return GetAccessor.getAndLock(core, id, request);
+
+    Duration lockFor = options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor();
+    return new GetAndLockRequest(
+      id, collectionId, timeout, coreContext, bucket, retryStrategy, lockFor
+    );
   }
 
   /**
-   * Fetches a full document and resets its expiration time to the value provided with default options.
+   * Fetches a full document and resets its expiration time to the value provided with default
+   * options.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param expiration the new expiration time for the document.
@@ -303,7 +339,8 @@ public class AsyncCollection {
   }
 
   /**
-   * Fetches a full document and resets its expiration time to the value provided with default options.
+   * Fetches a full document and resets its expiration time to the value provided with custom
+   * options.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param expiration the new expiration time for the document.
@@ -313,6 +350,20 @@ public class AsyncCollection {
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
+    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options));
+  }
+
+  /**
+   * Helper method for get and touch requests.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiration the new expiration time for the document.
+   * @param options custom options to change the default behavior.
+   * @return the get and touch request.
+   */
+  @Stability.Internal
+  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiration,
+                                        final GetAndTouchOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(expiration, "Expiration");
     notNull(options, "GetAndTouchOptions");
@@ -321,9 +372,8 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
+    return new GetAndTouchRequest(id, collectionId, timeout, coreContext,
       bucket, retryStrategy, expiration);
-    return GetAccessor.getAndTouch(core, id, request);
   }
 
   public List<CompletableFuture<GetResult>> getFromReplica(final String id) {

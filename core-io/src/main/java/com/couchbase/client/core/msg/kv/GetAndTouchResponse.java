@@ -28,17 +28,18 @@ public class GetAndTouchResponse extends BaseResponse {
 
   private final byte[] content;
   private final long cas;
+  private final int flags;
 
-  GetAndTouchResponse(final ResponseStatus status, final byte[] content, final long cas) {
+  GetAndTouchResponse(final ResponseStatus status, final byte[] content, final long cas,
+                      final int flags) {
     super(status);
     this.content = content;
     this.cas = cas;
+    this.flags = flags;
   }
 
   /**
    * Returns the content, but might be empty or null.
-   *
-   * @return the content, if successful and found. Check the result!
    */
   public byte[] content() {
     return content;
@@ -46,11 +47,12 @@ public class GetAndTouchResponse extends BaseResponse {
 
   /**
    * Returns the CAS value of the document at the time of the fetch.
-   *
-   * @return the cas value.
    */
   public long cas() {
     return cas;
   }
 
+  public int flags() {
+    return flags;
+  }
 }

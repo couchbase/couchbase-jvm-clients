@@ -37,7 +37,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 

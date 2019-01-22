@@ -67,9 +67,10 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
         .map(ByteBufUtil::getBytes)
         .map(bytes -> tryDecompression(bytes, datatype(response)))
         .orElse(new byte[] {});
-      return new GetAndLockResponse(status, content, cas);
+      int flags = extras(response).map(x -> x.getInt(0)).orElse(0);
+      return new GetAndLockResponse(status, content, cas, flags);
     } else {
-      return new GetAndLockResponse(status, null, cas);
+      return new GetAndLockResponse(status, null, cas, 0);
     }
   }
 

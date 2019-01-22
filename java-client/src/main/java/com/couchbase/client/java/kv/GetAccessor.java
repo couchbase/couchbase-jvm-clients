@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
@@ -80,18 +81,25 @@ public enum GetAccessor {
     return request
       .response()
       .thenApply(getResponse -> {
-        if (getResponse.status().success()) {
-          return Optional.of(GetResult.create(
-            id,
-            new EncodedDocument(0, getResponse.content()),
-            getResponse.cas(),
-            Optional.empty()
-          ));
-        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
-          return Optional.empty();
-        } else {
-          // todo: implement me
-          throw new UnsupportedOperationException("fixme");
+        switch (getResponse.status()) {
+          case SUCCESS:
+            return Optional.of(GetResult.create(
+              id,
+              new EncodedDocument(getResponse.flags(), getResponse.content()),
+              getResponse.cas(),
+              Optional.empty()
+            ));
+          case NOT_FOUND:
+            return Optional.empty();
+          case TEMPORARY_FAILURE:
+          case LOCKED:
+            throw new TemporaryLockFailureException();
+          case SERVER_BUSY:
+            throw new TemporaryFailureException();
+          case OUT_OF_MEMORY:
+            throw new CouchbaseOutOfMemoryException();
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
       });
   }
@@ -102,18 +110,24 @@ public enum GetAccessor {
     return request
       .response()
       .thenApply(getResponse -> {
-        if (getResponse.status().success()) {
-          return Optional.of(GetResult.create(
-            id,
-            new EncodedDocument(0, getResponse.content()),
-            getResponse.cas(),
-            Optional.empty()
-          ));
-        } else if (getResponse.status() == ResponseStatus.NOT_FOUND) {
-          return Optional.empty();
-        } else {
-          // todo: implement me
-          throw new UnsupportedOperationException("fixme");
+        switch (getResponse.status()) {
+          case SUCCESS:
+            return Optional.of(GetResult.create(
+              id,
+              new EncodedDocument(getResponse.flags(), getResponse.content()),
+              getResponse.cas(),
+              Optional.empty()
+            ));
+          case NOT_FOUND:
+            return Optional.empty();
+          case TEMPORARY_FAILURE:
+          case LOCKED:
+          case SERVER_BUSY:
+            throw new TemporaryFailureException();
+          case OUT_OF_MEMORY:
+            throw new CouchbaseOutOfMemoryException();
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
       });
   }

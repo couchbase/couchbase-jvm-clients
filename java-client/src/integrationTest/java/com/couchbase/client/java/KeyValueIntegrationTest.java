@@ -19,10 +19,8 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ExistsResult;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -214,6 +212,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
         "10", "11", "12", "13", "14", "15", "16", "17"
       ))
     );
+  }
+
+  @Test
+  void getAndLock() {
+
   }
 
 }

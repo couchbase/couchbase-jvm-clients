@@ -67,9 +67,10 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
         .map(ByteBufUtil::getBytes)
         .map(bytes -> tryDecompression(bytes, datatype(response)))
         .orElse(new byte[] {});
-      return new GetAndTouchResponse(status, content, cas);
+      int flags = extras(response).map(x -> x.getInt(0)).orElse(0);
+      return new GetAndTouchResponse(status, content, cas, flags);
     } else {
-      return new GetAndTouchResponse(status, null, cas);
+      return new GetAndTouchResponse(status, null, cas, 0);
     }
   }
 
