@@ -24,8 +24,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -78,18 +80,26 @@ public class MockTestCluster extends TestCluster {
       }
     }
 
-    Map<Services, Integer> ports = new HashMap<>();
-    ports.put(Services.KV, mock.getCarrierPort(bucketConfig.name));
-    ports.put(Services.MANAGER, mock.getHttpPort());
+    List<TestNodeConfig> nodeConfigs = new ArrayList<>();
+    for (Bucket bucket : mock.getBuckets().values()) {
+      for (MemcachedServer server : bucket.getServers()) {
+        Map<Services, Integer> ports = new HashMap<>();
+        ports.put(Services.KV, server.getPort());
+        ports.put(Services.MANAGER, mock.getHttpPort());
+
+        nodeConfigs.add(new TestNodeConfig(
+          server.getHostname(),
+          ports
+        ));
+      }
+    }
 
     return new TestClusterConfig(
       bucketConfig.name,
       bucketConfig.name,
       bucketConfig.password,
-      Collections.singletonList(new TestNodeConfig(
-        bucketConfig.hostname,
-        ports
-      ))
+      nodeConfigs,
+      bucketConfig.numReplicas
     );
   }
 

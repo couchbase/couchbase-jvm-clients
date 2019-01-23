@@ -82,25 +82,36 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
   public void handleNotification(final Notification notification, final Object ignored) {
     if (notification.getType().equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
       CompositeData cd = (CompositeData) notification.getUserData();
-      GarbageCollectionNotificationInfo info = GarbageCollectionNotificationInfo.from(cd);
-      GcInfo gcInfo = info.getGcInfo();
-      GcType gcType = GcType.fromString(info.getGcName());
-
-      if (gcType == GcType.UNKNOWN) {
-        // Ignore unknown GC types
-        return;
-      }
-
-      monitor.emit(new GarbageCollectionDetectedEvent(
-        monitor.severity(),
-        Duration.ofMillis(gcInfo.getDuration()),
-        info.getGcAction(),
-        info.getGcCause(),
-        gcType,
-        calculateUsage(gcType, gcInfo.getMemoryUsageBeforeGc()),
-        calculateUsage(gcType, gcInfo.getMemoryUsageAfterGc())
-      ));
+      handleNotification(GarbageCollectionNotificationInfo.from(cd));
     }
+  }
+
+  /**
+   * Helper method to handle the notification which has been already unpacked.
+   *
+   * <p>This method is needed in testing since it is nearly impossible to mock out the structures
+   * provided by the JVM since they are under the sun namespace.</p>
+   *
+   * @param info the gc info.
+   */
+  void handleNotification(final GarbageCollectionNotificationInfo info) {
+    GcInfo gcInfo = info.getGcInfo();
+    GcType gcType = GcType.fromString(info.getGcName());
+
+    if (gcType == GcType.UNKNOWN) {
+      // Ignore unknown GC types
+      return;
+    }
+
+    monitor.emit(new GarbageCollectionDetectedEvent(
+      monitor.severity(),
+      Duration.ofMillis(gcInfo.getDuration()),
+      info.getGcAction(),
+      info.getGcCause(),
+      gcType,
+      calculateUsage(gcType, gcInfo.getMemoryUsageBeforeGc()),
+      calculateUsage(gcType, gcInfo.getMemoryUsageAfterGc())
+    ));
   }
 
   /**

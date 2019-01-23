@@ -20,8 +20,10 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -176,6 +178,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public RetryStrategy retryStrategy() {
     return retryStrategy;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    return null;
   }
 
   /**

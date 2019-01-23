@@ -31,12 +31,15 @@ public class TestClusterConfig {
   private final String adminUsername;
   private final String adminPassword;
   private final List<TestNodeConfig> nodes;
+  private final int numReplicas;
 
-  public TestClusterConfig(String bucketname, String adminUsername, String adminPassword, List<TestNodeConfig> nodes) {
+  public TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
+                           List<TestNodeConfig> nodes, int numReplicas) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
     this.nodes = nodes;
+    this.numReplicas = numReplicas;
   }
 
   public String bucketname() {
@@ -53,6 +56,10 @@ public class TestClusterConfig {
 
   public List<TestNodeConfig> nodes() {
     return nodes;
+  }
+
+  public int numReplicas() {
+    return numReplicas;
   }
 
   /**

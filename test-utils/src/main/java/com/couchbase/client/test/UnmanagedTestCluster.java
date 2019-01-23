@@ -16,12 +16,16 @@
 
 package com.couchbase.client.test;
 
+import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -33,12 +37,14 @@ public class UnmanagedTestCluster extends TestCluster {
   private final String adminUsername;
   private final String adminPassword;
   private volatile String bucketname;
+  private final int numReplicas;
 
   UnmanagedTestCluster(final Properties properties) {
     seedHost = properties.getProperty("cluster.unmanaged.seed").split(":")[0];
     seedPort = Integer.parseInt(properties.getProperty("cluster.unmanaged.seed").split(":")[1]);
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
+    numReplicas = Integer.parseInt(properties.getProperty("cluster.unmanaged.numReplicas"));
   }
 
   @Override
@@ -55,13 +61,17 @@ public class UnmanagedTestCluster extends TestCluster {
       .url("http://" + seedHost + ":" + seedPort + "/pools/default/buckets")
       .post(new FormBody.Builder()
         .add("name", bucketname)
+        .add("bucketType", "membase")
         .add("ramQuotaMB", "100")
+        .add("replicaNumber", Integer.toString(numReplicas))
         .build())
       .build())
       .execute();
 
     if (postResponse.code() != 202) {
-      throw new Exception("Could not create bucket: " + postResponse);
+      throw new Exception("Could not create bucket: "
+        + postResponse + ", Reason: "
+        + postResponse.body().string());
     }
 
     Response getResponse = httpClient.newCall(new Request.Builder()
@@ -70,12 +80,50 @@ public class UnmanagedTestCluster extends TestCluster {
       .build())
     .execute();
 
+    String raw = getResponse.body().string();
+
+    waitUntilAllNodesHealthy();
+
     return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
-      nodesFromRaw(seedHost, getResponse.body().string())
+      nodesFromRaw(seedHost, raw),
+      replicasFromRaw(raw)
     );
+  }
+
+  private void waitUntilAllNodesHealthy() throws Exception {
+    while(true) {
+      Response getResponse = httpClient.newCall(new Request.Builder()
+        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+        .url("http://" + seedHost + ":" + seedPort + "/pools/default/")
+        .build())
+        .execute();
+
+      String raw = getResponse.body().string();
+
+      Map<String, Object> decoded;
+      try {
+        decoded = (Map<String, Object>)
+          MAPPER.readValue(raw, Map.class);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      List<Map<String, Object>> nodes = (List<Map<String, Object>>) decoded.get("nodes");
+      int healthy = 0;
+      for (Map<String, Object> node : nodes) {
+        String status = (String) node.get("status");
+        if (status.equals("healthy")) {
+          healthy++;
+        }
+      }
+      if (healthy == nodes.size()) {
+        break;
+      }
+      Thread.sleep(100);
+    }
   }
 
   @Override

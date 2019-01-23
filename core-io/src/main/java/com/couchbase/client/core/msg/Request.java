@@ -20,6 +20,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -118,6 +119,13 @@ public interface Request<R extends Response> {
    * @return the service type for this request.
    */
   ServiceType serviceType();
+
+  /**
+   * Returns contextual information for each individual service.
+   *
+   * @return the service context.
+   */
+  Map<String, Object> serviceContext();
 
   /**
    * The retry strategy for this particular request.

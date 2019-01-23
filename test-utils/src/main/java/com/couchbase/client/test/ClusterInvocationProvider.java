@@ -86,9 +86,19 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
       IgnoreWhen found = annotation.get();
       for (ClusterType type : found.clusterTypes()) {
         if (testCluster.type().equals(type)) {
-          return ConditionEvaluationResult.disabled("Test disabled on this ClusterType (" + type
-            + ") based on @IgnoreWhen");
+          return ConditionEvaluationResult.disabled("Test disabled on this ClusterType ("
+            + type + ") based on @IgnoreWhen");
         }
+      }
+      int numNodes = testCluster.config().nodes().size();
+      if (numNodes > found.nodesGreaterThan() || numNodes < found.nodesLessThan()) {
+        return ConditionEvaluationResult.disabled("Test disabled on the number of nodes ("
+          + numNodes + ") based on @IgnoreWhen");
+      }
+      int numReplicas = testCluster.config().numReplicas();
+      if (numReplicas > found.replicasGreaterThan() || numReplicas < found.replicasLessThan()) {
+        return ConditionEvaluationResult.disabled("Test disabled on the number of replicas ("
+          + numReplicas + ") based on @IgnoreWhen");
       }
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");

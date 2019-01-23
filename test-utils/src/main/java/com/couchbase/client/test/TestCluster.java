@@ -29,7 +29,7 @@ import java.util.Properties;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  protected static final ObjectMapper MAPPER = new ObjectMapper();
 
   /**
    * The topology spec defined by the child implementations.
@@ -84,7 +84,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   @SuppressWarnings({"unchecked"})
   protected List<TestNodeConfig> nodesFromRaw(final String inputHost, final String config) {
     List<TestNodeConfig> result = new ArrayList<>();
-    Map<String, Object> decoded = null;
+    Map<String, Object> decoded;
     try {
       decoded = (Map<String, Object>)
         MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
@@ -104,6 +104,18 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
+  }
+
+  protected int replicasFromRaw(final String config) {
+    Map<String, Object> decoded;
+    try {
+      decoded = (Map<String, Object>)
+        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    Map<String, Object> serverMap = (Map<String, Object>) decoded.get("vBucketServerMap");
+    return (int) serverMap.get("numReplicas");
   }
 
   /**

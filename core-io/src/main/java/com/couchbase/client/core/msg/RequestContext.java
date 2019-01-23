@@ -126,6 +126,10 @@ public class RequestContext extends CoreContext {
     if (payload != null) {
       input.put("payload", payload);
     }
+    Map<String, Object> serviceContext = request.serviceContext();
+    if (serviceContext != null) {
+      input.put("service", serviceContext);
+    }
     if (dispatchLatency != 0) {
       input.put("timings", new HashMap<>().put("dispatch", dispatchLatency));
     }

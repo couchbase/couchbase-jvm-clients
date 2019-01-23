@@ -144,6 +144,16 @@ public class Core {
   }
 
   /**
+   * This API provides access to the current config that is published throughout the core.
+   *
+   * <p>Note that this is internal API and might change at any time.</p>
+   */
+  @Stability.Internal
+  public ClusterConfig clusterConfig() {
+    return configurationProvider.config();
+  }
+
+  /**
    * Attempts to close a bucket and fails the {@link Mono} if there is a persistent error
    * as the reason.
    */

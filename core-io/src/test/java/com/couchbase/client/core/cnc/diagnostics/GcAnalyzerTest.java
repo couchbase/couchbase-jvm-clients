@@ -22,9 +22,8 @@ import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionDetecte
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
 import org.junit.jupiter.api.Test;
-import sun.management.GarbageCollectionNotifInfoCompositeData;
 
-import javax.management.Notification;
+
 import java.lang.management.MemoryUsage;
 import java.time.Duration;
 import java.util.HashMap;
@@ -60,7 +59,7 @@ class GcAnalyzerTest {
       .poolAfter("PS Eden Space", 1)
       .poolBefore("PS Survivor Space", 1)
       .poolAfter("PS Survivor Space", 2704608)
-      .build("PS Scavenge"), null);
+      .build("PS Scavenge"));
 
     verify(monitor, times(1)).emit(new GarbageCollectionDetectedEvent(
       Event.Severity.DEBUG,
@@ -85,7 +84,7 @@ class GcAnalyzerTest {
       .duration(200)
       .poolBefore("PS Old Gen", 16384)
       .poolAfter("PS Old Gen", 2446680)
-      .build("PS MarkSweep"), null);
+      .build("PS MarkSweep"));
 
     verify(monitor, times(1)).emit(new GarbageCollectionDetectedEvent(
       Event.Severity.DEBUG,
@@ -112,7 +111,7 @@ class GcAnalyzerTest {
       .poolAfter("Eden Space", 1)
       .poolBefore("Survivor Space", 1)
       .poolAfter("Survivor Space", 2704608)
-      .build("Copy"), null);
+      .build("Copy"));
 
     verify(monitor, times(1)).emit(new GarbageCollectionDetectedEvent(
       Event.Severity.DEBUG,
@@ -137,7 +136,7 @@ class GcAnalyzerTest {
       .duration(200)
       .poolBefore("Tenured Gen", 16384)
       .poolAfter("Tenured Gen", 2446680)
-      .build("MarkSweepCompact"), null);
+      .build("MarkSweepCompact"));
 
     verify(monitor, times(1)).emit(new GarbageCollectionDetectedEvent(
       Event.Severity.DEBUG,
@@ -191,7 +190,7 @@ class GcAnalyzerTest {
       return this;
     }
 
-    Notification build(String name) {
+    GarbageCollectionNotificationInfo build(String name) {
       GarbageCollectionNotificationInfo fullInfo = mock(GarbageCollectionNotificationInfo.class);
       when(fullInfo.getGcAction()).thenReturn(action);
       when(fullInfo.getGcCause()).thenReturn(cause);
@@ -203,14 +202,8 @@ class GcAnalyzerTest {
       when(gcInfo.getMemoryUsageBeforeGc()).thenReturn(poolBefore);
       when(gcInfo.getMemoryUsageAfterGc()).thenReturn(poolAfter);
 
-      Notification notification = new Notification(
-        GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION,
-        "source",
-        0
-      );
-
-      notification.setUserData(new GarbageCollectionNotifInfoCompositeData(fullInfo));
-      return notification;
+      return fullInfo;
     }
   }
+
 }

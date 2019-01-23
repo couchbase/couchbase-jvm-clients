@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -48,16 +49,19 @@ import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ReplicaMode;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -234,10 +238,25 @@ public class ReactiveCollection {
   }
 
   public Flux<GetResult> getFromReplica(final String id, final GetFromReplicaOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "GetFromReplicaOptions");
+    return Flux
+      .fromStream(asyncCollection.getFromReplicaRequests(id, options))
+      .flatMap(request -> {
 
-    return null;
+        Mono<GetResult> result = Reactor
+          .wrap(request, GetAccessor.get(core, id, request), true)
+          .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+
+        if (options.replicaMode() == ReplicaMode.ALL) {
+          result = result.onErrorResume(t -> {
+            coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(
+              request.context()
+            ));
+            return Mono.empty();
+          });
+        }
+
+        return result;
+      });
   }
 
   /**

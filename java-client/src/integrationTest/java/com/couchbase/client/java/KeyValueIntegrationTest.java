@@ -219,4 +219,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   }
 
+  @Test
+  void getAndTouch() {
+
+  }
+
 }

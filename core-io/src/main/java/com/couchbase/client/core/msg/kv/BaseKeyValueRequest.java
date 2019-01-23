@@ -24,9 +24,12 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The {@link BaseKeyValueRequest} should be subclassed by all KeyValue requests since it
@@ -86,6 +89,22 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public ServiceType serviceType() {
     return ServiceType.KV;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx = new HashMap<>();
+    ctx.put("type", serviceType().ident());
+    if (bucket != null) {
+      ctx.put("bucket", bucket);
+    }
+    if (key != null) {
+      ctx.put("key", new String(key, CharsetUtil.UTF_8));
+    }
+    if (collection != null) {
+      ctx.put("cid", UnsignedLEB128.decode(collection));
+    }
+    return ctx;
   }
 
   @Override

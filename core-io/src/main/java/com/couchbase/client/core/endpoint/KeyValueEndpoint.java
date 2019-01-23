@@ -29,6 +29,8 @@ import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -68,6 +70,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
     @Override
     public void init(ChannelPipeline pipeline) {
+      //pipeline.addLast(new LoggingHandler(LogLevel.WARN));
       pipeline.addLast(new MemcacheProtocolDecodeHandler());
       pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
 

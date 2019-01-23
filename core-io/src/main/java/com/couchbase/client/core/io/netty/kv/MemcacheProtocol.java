@@ -343,6 +343,16 @@ public enum MemcacheProtocol {
       return ResponseStatus.NOT_FOUND;
     } else if (status == Status.NOT_SUPPORTED.status) {
       return ResponseStatus.UNSUPPORTED;
+    } else if (status == Status.ACCESS_ERROR.status) {
+      return ResponseStatus.NO_ACCESS;
+    } else if (status == Status.OUT_OF_MEMORY.status) {
+      return ResponseStatus.OUT_OF_MEMORY;
+    } else if (status == Status.SERVER_BUSY.status) {
+      return ResponseStatus.SERVER_BUSY;
+    } else if (status == Status.TEMPORARY_FAILURE.status) {
+      return ResponseStatus.TEMPORARY_FAILURE;
+    } else if (status == Status.NOT_MY_VBUCKET.status) {
+      return ResponseStatus.NOT_MY_VBUCKET;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -534,7 +544,11 @@ public enum MemcacheProtocol {
     /**
      * Performs an observe call with the CAS option.
      */
-    OBSERVE_CAS((byte) 0x92);
+    OBSERVE_CAS((byte) 0x92),
+    /**
+     * A replica get operation.
+     */
+    GET_REPLICA((byte) 0x83);
 
     private final byte opcode;
 
@@ -561,6 +575,10 @@ public enum MemcacheProtocol {
      * Entity not found.
      */
     NOT_FOUND((short) 0x01),
+    /**
+     * Not my vbucket.
+     */
+    NOT_MY_VBUCKET((short) 0x07),
     /**
      * Access problem.
      */
@@ -597,23 +615,6 @@ public enum MemcacheProtocol {
       return status;
     }
 
-    public static Status fromShort(short value) {
-      switch (value) {
-        case 0x00:
-          return SUCCESS;
-        case 0x01:
-          return NOT_FOUND;
-        case 0x24:
-          return ACCESS_ERROR;
-        case 0x82:
-          return OUT_OF_MEMORY;
-        case 0x85:
-          return SERVER_BUSY;
-        case 0x86:
-          return TEMPORARY_FAILURE;
-      }
-      throw new UnsupportedOperationException("unsupported status " + value);
-    }
   }
 
   public enum Datatype {

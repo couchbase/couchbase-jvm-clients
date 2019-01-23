@@ -42,3 +42,11 @@ $ ./gradlew build
 ```
 
 (You can always go into one of the sub-directories like `core-io` to only build or test an individual project.)
+
+### Testing Infos
+
+To cover all tests, the suite needs to be run against the following topologies:
+
+ - 1 node, no replica
+ - 2 nodes, 1 replica
+ - 2 nodes, 2 replicas

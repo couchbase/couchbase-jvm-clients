@@ -65,7 +65,11 @@ public enum ResponseStatus {
   /**
    * The server indicated that the given message is not supported.
    */
-  UNSUPPORTED;
+  UNSUPPORTED,
+  /**
+   * In a kv request, signaling that the vbucket is on a different node.
+   */
+  NOT_MY_VBUCKET;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

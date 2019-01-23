@@ -28,6 +28,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 
 import java.util.List;
@@ -85,8 +86,7 @@ public class KeyValueLocator implements Locator {
     int partitionId = partitionForKey(request.key(), config.numberOfPartitions());
     request.partition((short) partitionId);
 
-    boolean useFastForward = request.context().retryAttempts() > 0 && config.hasFastForwardMap();
-    int nodeId = config.nodeIndexForMaster(partitionId, useFastForward);
+    int nodeId = calculateNodeId(partitionId, request, config);
     if (nodeId < 0) {
       // TODO errorObservables(nodeId, request, config.name(), env, responseBuffer);
       return;
@@ -107,6 +107,28 @@ public class KeyValueLocator implements Locator {
 
     throw new IllegalStateException("Node not found for request" + request);
   }
+  /**
+   * Helper method to calculate the node if for the given partition and request type.
+   *
+   * @param partitionId the partition id.
+   * @param request the request used.
+   * @param config the current bucket configuration.
+   * @return the calculated node id.
+   */
+  private static int calculateNodeId(int partitionId, final KeyValueRequest<?> request,
+                                     final CouchbaseBucketConfig config) {
+    boolean useFastForward = request.context().retryAttempts() > 0 && config.hasFastForwardMap();
+    if (request instanceof ReplicaGetRequest) {
+      return config.nodeIndexForReplica(
+        partitionId,
+        ((ReplicaGetRequest) request).replica() - 1,
+        useFastForward
+      );
+    } else {
+      return config.nodeIndexForMaster(partitionId, useFastForward);
+    }
+  }
+
 
   /**
    * Locates the proper {@link Node}s for a Memcache bucket.

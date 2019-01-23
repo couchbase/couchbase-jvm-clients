@@ -19,6 +19,9 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
@@ -45,6 +48,7 @@ import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ReplicaMode;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
@@ -56,6 +60,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -376,16 +381,61 @@ public class AsyncCollection {
       bucket, retryStrategy, expiration);
   }
 
-  public List<CompletableFuture<GetResult>> getFromReplica(final String id) {
+  public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id) {
     return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
   }
 
-  public List<CompletableFuture<GetResult>> getFromReplica(final String id,
-                                                           final GetFromReplicaOptions options) {
+  public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id,
+                                                                     final GetFromReplicaOptions options) {
+    return getFromReplicaRequests(id, options)
+      .map(request -> GetAccessor.get(core, id, request))
+      .collect(Collectors.toList());
+  }
+
+  /**
+   * Helper method to assemble a stream of requests either to the active or to the replica.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a stream of requests.
+   */
+  Stream<GetRequest> getFromReplicaRequests(final String id,
+                                            final GetFromReplicaOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetFromReplicaOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+
+    BucketConfig config = core.clusterConfig().bucketConfig(bucket);
+    if (config == null) {
+      throw new CouchbaseException("No bucket config found, " +
+        "this is a bug and not supposed to happen. Please report!");
+    }
+
+    if (config instanceof CouchbaseBucketConfig) {
+      if (options.replicaMode() == ReplicaMode.ALL) {
+        int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
+        List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
+        requests.add(new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy));
+        for (int i = 0; i < numReplicas; i++) {
+          requests.add(new ReplicaGetRequest(
+            id, collectionId, timeout, coreContext, bucket, retryStrategy, (short) (i + 1)
+          ));
+        }
+        return requests.stream();
+      } else {
+        return Stream.of(new ReplicaGetRequest(
+          id, collectionId, timeout, coreContext, bucket, retryStrategy,
+          (short) options.replicaMode().ordinal()
+        ));
+      }
+    } else {
+      throw new UnsupportedOperationException("Only couchbase buckets are supported "
+        + "for replica get requests!");
+    }
   }
 
   /**
