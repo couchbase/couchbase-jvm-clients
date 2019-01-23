@@ -91,7 +91,7 @@ public enum ServerFeature {
    *
    * @since Couchbase Server Spock (5.0)
    */
-  COLLECTIONS((short) 0x09),
+  COLLECTIONS((short) 0x12),
 
   /**
    * Enable snappy-based compression support.
