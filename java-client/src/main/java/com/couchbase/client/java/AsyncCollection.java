@@ -381,10 +381,24 @@ public class AsyncCollection {
       bucket, retryStrategy, expiration);
   }
 
+  /**
+   * Reads from all available replicas and the active node and returns the results as a list
+   * of futures that might complete or fail.
+   *
+   * @param id the document id.
+   * @return a list of results from the active and the replica.
+   */
   public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id) {
     return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
   }
 
+  /**
+   * Reads from replicas or the active node based on the options and returns the results as a list
+   * of futures that might complete or fail.
+   *
+   * @param id the document id.
+   * @return a list of results from the active and the replica.
+   */
   public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id,
                                                                      final GetFromReplicaOptions options) {
     return getFromReplicaRequests(id, options)

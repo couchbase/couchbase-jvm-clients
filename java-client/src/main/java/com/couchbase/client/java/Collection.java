@@ -181,10 +181,29 @@ public class Collection {
     return block(async().getAndTouch(id, expiration, options));
   }
 
+  /**
+   * Reads from all available replicas and the active node and returns the results as a stream.
+   *
+   * <p>Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.</p>
+   *
+   * @param id the document id.
+   * @return a stream of results from the active and the replica.
+   */
   public Stream<GetResult> getFromReplica(final String id) {
     return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
   }
 
+  /**
+   * Reads all available or one replica and returns the results as a stream.
+   *
+   * <p>By default all available replicas and the active node will be asked and returned as
+   * an async stream. If configured differently in the options</p>
+   *
+   * @param id the document id.
+   * @param options the custom options.
+   * @return a stream of results from the active and the replica depending on the options.
+   */
   public Stream<GetResult> getFromReplica(final String id, final GetFromReplicaOptions options) {
     return reactiveCollection.getFromReplica(id, options).toStream();
   }
