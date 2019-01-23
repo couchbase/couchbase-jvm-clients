@@ -140,6 +140,10 @@ public interface Event {
      * Represents an event from the config subsystem.
      */
     CONFIG,
+    /**
+     * Represents an event from the upper level core subsystem.
+     */
+    CORE
   }
 
 }

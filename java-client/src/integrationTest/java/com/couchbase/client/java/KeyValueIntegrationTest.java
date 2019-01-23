@@ -24,6 +24,7 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -215,13 +216,15 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @Ignore
   void getAndLock() {
-
+    // todo: implement me
   }
 
   @Test
+  @Ignore
   void getAndTouch() {
-
+    // todo: implement me
   }
 
 }

@@ -17,6 +17,9 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
+import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
+import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
@@ -30,11 +33,10 @@ import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.service.ServiceType;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -86,6 +88,8 @@ public class Core {
 
   private final AtomicBoolean reconfigureInProgress = new AtomicBoolean(false);
 
+  private final AtomicBoolean shutdown = new AtomicBoolean(false);
+
   public static Core create(final CoreEnvironment environment) {
     return new Core(environment);
   }
@@ -121,7 +125,6 @@ public class Core {
     if (registerForTimeout) {
       context().environment().timer().register((Request<Response>) request);
     }
-
     locator(request.serviceType()).dispatch(request, nodes, currentConfig, context());
   }
 
@@ -175,7 +178,7 @@ public class Core {
    */
   @Stability.Internal
   public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType,
-                                    int port, Optional<String> bucket) {
+                                    final int port, final Optional<String> bucket) {
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.address().equals(target))
@@ -193,8 +196,12 @@ public class Core {
    */
   @Stability.Internal
   public Mono<Void> shutdown() {
-    // tODO: implement me
-    return Mono.empty();
+    return Mono.defer(() -> {
+      if (shutdown.compareAndSet(false, true)) {
+        // tODO: implement me
+      }
+      return Mono.empty();
+    });
   }
 
   /**
@@ -208,38 +215,47 @@ public class Core {
    * it works very similar.</p>
    */
   private void reconfigure() {
-    if (reconfigureInProgress.compareAndSet(false, true)) {
-      // TODO: proper error handling/logging!!
+    if (reconfigureInProgress.compareAndSet(false, true) && !shutdown.get()) {
+      long start = System.nanoTime();
+
+      // TODO: in the stream, also REMOVE stuff that is not needed anymore
+
       Flux
         .just(currentConfig)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()))
         .flatMap(bc -> Flux.fromIterable(bc.nodes())
           .flatMap(ni -> Flux
             .fromIterable(ni.services().entrySet())
-            .flatMap(s -> ensureServiceAt(ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())))))
-        .subscribe(new Subscriber<Void>() {
-          @Override
-          public void onSubscribe(Subscription s) {
-            System.err.println("s");
+            .flatMap(s -> ensureServiceAt(
+              ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())
+            ))
+          )
+        )
+        .subscribe(
+          v -> {},
+          e -> {
+            reconfigureInProgress.set(false);
+            coreContext
+              .environment()
+              .eventBus()
+              .publish(new ReconfigurationErrorDetectedEvent(context(), e));
+          },
+          () -> {
+            reconfigureInProgress.set(false);
+            coreContext
+              .environment()
+              .eventBus()
+              .publish(new ReconfigurationCompletedEvent(
+                Duration.ofNanos(System.nanoTime() - start),
+                coreContext
+              ));
           }
-
-          @Override
-          public void onNext(Void aVoid) {
-            System.err.println("n");
-          }
-
-          @Override
-          public void onError(Throwable t) {
-            System.err.println("e: " + t);
-          }
-
-          @Override
-          public void onComplete() {
-            System.err.println("oc");
-          }
-        });
+        );
     } else {
-      // todo: trace log that reconfigure attempt ignored since one is already in progress
+      coreContext
+        .environment()
+        .eventBus()
+        .publish(new ReconfigurationIgnoredEvent(coreContext));
     }
   }
 
