@@ -18,6 +18,11 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
+import com.couchbase.client.core.error.DocumentDoesNotExistException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 
 import java.util.Optional;
@@ -31,9 +36,23 @@ public enum RemoveAccessor {
   public static CompletableFuture<MutationResult> remove(final Core core,
                                                          final RemoveRequest request) {
     core.send(request);
-    return request.response().thenApply(r -> {
-      // TODO: add cas and mutation token
-      return new MutationResult(0, Optional.empty());
+    return request.response().thenApply(response -> {
+      switch (response.status()) {
+        case SUCCESS:
+          return new MutationResult(response.cas(), response.mutationToken());
+        case NOT_FOUND:
+          throw new DocumentDoesNotExistException();
+        case EXISTS:
+        case LOCKED:
+          throw new CASMismatchException();
+        case TEMPORARY_FAILURE:
+        case SERVER_BUSY:
+          throw new TemporaryFailureException();
+        case OUT_OF_MEMORY:
+          throw new CouchbaseOutOfMemoryException();
+        default:
+          throw new CouchbaseException("Unexpected Status Code " + response.status());
+      }
     });
   }
 }

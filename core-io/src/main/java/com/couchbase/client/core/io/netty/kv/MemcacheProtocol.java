@@ -353,6 +353,10 @@ public enum MemcacheProtocol {
       return ResponseStatus.TEMPORARY_FAILURE;
     } else if (status == Status.NOT_MY_VBUCKET.status) {
       return ResponseStatus.NOT_MY_VBUCKET;
+    } else if (status == Status.LOCKED.status) {
+      return ResponseStatus.LOCKED;
+    } else if (status == Status.EXISTS.status) {
+      return ResponseStatus.EXISTS;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -576,9 +580,17 @@ public enum MemcacheProtocol {
      */
     NOT_FOUND((short) 0x01),
     /**
+     * The key exists in the cluster (with another CAS value).
+     */
+    EXISTS((short) 0x02),
+    /**
      * Not my vbucket.
      */
     NOT_MY_VBUCKET((short) 0x07),
+    /**
+     * Resource is locked.
+     */
+    LOCKED((short) 0x09),
     /**
      * Access problem.
      */

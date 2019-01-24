@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.java.MutationToken;
+import com.couchbase.client.core.msg.kv.MutationToken;
 
 import java.util.Optional;
 

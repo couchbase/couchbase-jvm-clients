@@ -26,7 +26,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
+import java.util.Optional;
 
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -60,7 +62,11 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
   @Override
   public RemoveResponse decode(final ByteBuf response) {
     ResponseStatus status = decodeStatus(response);
-    return new RemoveResponse(status);
+    if (status.success()) {
+      return new RemoveResponse(status, cas(response), Optional.empty());
+    } else {
+      return new RemoveResponse(status, 0, Optional.empty());
+    }
   }
 
 }

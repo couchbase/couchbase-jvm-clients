@@ -37,6 +37,10 @@ public enum ResponseStatus {
    */
   NOT_FOUND,
   /**
+   * The document exists (but maybe with another cas, depending on the op).
+   */
+  EXISTS,
+  /**
    * Indicates an unknown status returned from the server, please check the
    * events/logs for further information.
    */

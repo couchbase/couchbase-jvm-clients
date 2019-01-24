@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CouchbaseException;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -33,9 +35,14 @@ public enum AsyncUtils {
   public static <T> T block(final CompletableFuture<T> input) {
     try {
       return input.get();
-    } catch (InterruptedException | ExecutionException e) {
-      // todo: figure out if this is the right strategy
+    } catch (InterruptedException e) {
       throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() != null && e.getCause() instanceof CouchbaseException) {
+        throw (CouchbaseException) e.getCause();
+      } else {
+        throw new RuntimeException(e);
+      }
     }
   }
 

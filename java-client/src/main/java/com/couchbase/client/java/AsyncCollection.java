@@ -466,10 +466,22 @@ public class AsyncCollection {
    * Checks if the given document ID exists on the active partition with custom options.
    *
    * @param id the document ID
+   * @param options to modify the default behavior
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<ExistsResult>> exists(final String id,
                                                           final ExistsOptions options) {
+    return ExistsAccessor.exists(core, id, existsRequest(id, options));
+  }
+
+  /**
+   * Helper method to create the exists request from its options.
+   *
+   * @param id the document ID
+   * @param options custom options to change the default behavior
+   * @return the observe request used for exists.
+   */
+  ObserveViaCasRequest existsRequest(final String id, final ExistsOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "ExistsOptions");
 
@@ -477,9 +489,8 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, bucket,
+    return new ObserveViaCasRequest(timeout, coreContext, bucket,
       retryStrategy, id, collectionId);
-    return ExistsAccessor.exists(core, id, request);
   }
 
 
@@ -501,6 +512,17 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
+    return RemoveAccessor.remove(core, removeRequest(id, options));
+  }
+
+  /**
+   * Helper method to create the remove request.
+   *
+   * @param id the id of the document to remove.
+   * @param options custom options to change the default behavior.
+   * @return the remove request.
+   */
+  RemoveRequest removeRequest(final String id, final RemoveOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "RemoveOptions");
 
@@ -508,9 +530,8 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    RemoveRequest request = new RemoveRequest(id, collectionId, options.cas(), timeout,
+    return new RemoveRequest(id, collectionId, options.cas(), timeout,
       coreContext, bucket, retryStrategy);
-    return RemoveAccessor.remove(core, request);
   }
 
   /**

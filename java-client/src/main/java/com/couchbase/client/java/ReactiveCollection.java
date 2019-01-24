@@ -24,12 +24,16 @@ import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.ExistsAccessor;
+import com.couchbase.client.java.kv.ExistsOptions;
+import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
@@ -279,6 +283,32 @@ public class ReactiveCollection {
   }
 
   /**
+   * Checks if the given document ID exists on the active partition with default options.
+   *
+   * @param id the document ID
+   * @return a {@link Mono} completing once loaded or failed.
+   */
+  public Mono<ExistsResult> exists(final String id) {
+    return exists(id, ExistsOptions.DEFAULT);
+  }
+
+  /**
+   * Checks if the given document ID exists on the active partition with custom options.
+   *
+   * @param id the document ID
+   * @param options to modify the default behavior
+   * @return a {@link Mono} completing once loaded or failed.
+   */
+  public Mono<ExistsResult> exists(final String id, final ExistsOptions options) {
+    return Mono.defer(() -> {
+      ObserveViaCasRequest request = asyncCollection.existsRequest(id, options);
+      return Reactor
+        .wrap(request, ExistsAccessor.exists(core, id, request), true)
+        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+    });
+  }
+
+  /**
    * Removes a Document from a collection with default options.
    *
    * @param id the id of the document to remove.
@@ -296,20 +326,11 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once removed or failed.
    */
   public Mono<MutationResult> remove(final String id, final RemoveOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "RemoveOptions");
-
     return Mono.defer(() -> {
-      Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-      RetryStrategy retryStrategy = options.retryStrategy() == null
-        ? environment.retryStrategy()
-        : options.retryStrategy();
-      RemoveRequest request = new RemoveRequest(id, encodedId, options.cas(), timeout, coreContext,
-        bucketName, retryStrategy);
+      RemoveRequest request = asyncCollection.removeRequest(id, options);
       return Reactor.wrap(request, RemoveAccessor.remove(core, request), true);
     });
   }
-
 
   /**
    * Inserts a full document which does not exist yet with default options.

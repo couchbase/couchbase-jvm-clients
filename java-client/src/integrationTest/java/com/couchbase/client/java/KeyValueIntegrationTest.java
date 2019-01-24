@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.DocumentDoesNotExistException;
+import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ExistsResult;
@@ -24,7 +27,6 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,9 +35,13 @@ import java.time.Duration;
 import java.util.*;
 
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
+import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
+import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -75,11 +81,14 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(insertResult.cas() != 0);
     assertFalse(insertResult.mutationToken().isPresent());
 
-    GetResult getResult = collection.get(id).get();
-    assertEquals(id, getResult.id());
-    assertEquals("Hello, World", getResult.contentAs(String.class));
-    assertTrue(getResult.cas() != 0);
-    assertFalse(getResult.expiration().isPresent());
+    Optional<GetResult> getResult = collection.get(id);
+    assertTrue(getResult.isPresent());
+    getResult.ifPresent(r -> {
+      assertEquals(id, r.id());
+      assertEquals("Hello, World", r.contentAs(String.class));
+      assertTrue(r.cas() != 0);
+      assertFalse(r.expiration().isPresent());
+    });
   }
 
   @Test
@@ -97,6 +106,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertEquals(id, existsResult.get().id());
     assertEquals(insertResult.cas(), existsResult.get().cas());
+
+    assertFalse(collection.exists("some_id").isPresent());
   }
 
   @Test
@@ -216,15 +227,83 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @Ignore
   void getAndLock() {
-    // todo: implement me
+    String id = UUID.randomUUID().toString();
+
+    JsonObject expected = JsonObject.create().put("foo", true);
+    MutationResult insert = collection.insert(id, expected);
+
+    assertTrue(insert.cas() != 0);
+
+    Optional<GetResult> getAndLock = collection.getAndLock(id);
+
+    assertTrue(getAndLock.isPresent());
+    assertTrue(getAndLock.get().cas() != 0);
+    assertNotEquals(insert.cas(), getAndLock.get().cas());
+    assertEquals(expected, getAndLock.get().contentAsObject());
+
+    assertThrows(TemporaryLockFailureException.class, () -> collection.getAndLock(id));
+    assertFalse(collection.getAndLock("some_doc").isPresent());
+  }
+
+  /**
+   * This test is ignored against the mock because right now it does not bump the CAS like
+   * the server does when getAndTouch is called.
+   *
+   * <p>Remove the ignore as soon as https://github.com/couchbase/CouchbaseMock/issues/49 is
+   * fixed.</p>
+   */
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  void getAndTouch() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject expected = JsonObject.create().put("foo", true);
+    MutationResult insert = collection.insert(
+      id,
+      expected,
+      insertOptions().expiry(Duration.ofSeconds(2))
+    );
+    assertTrue(insert.cas() != 0);
+
+    Optional<GetResult> getAndTouch = collection.getAndTouch(id, Duration.ofSeconds(1));
+
+    assertTrue(getAndTouch.isPresent());
+    assertTrue(getAndTouch.get().cas() != 0);
+    assertNotEquals(insert.cas(), getAndTouch.get().cas());
+    assertEquals(expected, getAndTouch.get().contentAsObject());
+
+    waitUntilCondition(() -> {
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        // ignored.
+      }
+      return !collection.get(id).isPresent();
+    });
   }
 
   @Test
-  @Ignore
-  void getAndTouch() {
-    // todo: implement me
+  void remove() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject expected = JsonObject.create().put("foo", true);
+    MutationResult insert = collection.insert(
+      id,
+      expected,
+      insertOptions().expiry(Duration.ofSeconds(2))
+    );
+    assertTrue(insert.cas() != 0);
+
+    assertThrows(
+      CASMismatchException.class,
+      () -> collection.remove(id, removeOptions().cas(insert.cas() + 100))
+    );
+
+    MutationResult result = collection.remove(id);
+    assertTrue(result.cas() != insert.cas());
+
+    assertThrows(DocumentDoesNotExistException.class, () -> collection.remove(id));
   }
 
 }
