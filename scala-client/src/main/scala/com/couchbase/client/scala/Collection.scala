@@ -59,7 +59,7 @@ class Collection(val async: AsyncCollection,
   durability: Durability.Value = Durability.None
                // TODO durability
             )
-               (implicit ev: Conversions.Convertable[T])
+               (implicit ev: Conversions.Encodable[T], up: upickle.default.ReadWriter[T] = null)
 //               (implicit tag: TypeTag[T])
   : Try[MutationResult] = {
     block(async.insert(id, content, timeout, expiration), timeout)

@@ -78,12 +78,12 @@ class GetResult(val id: String,
 //  }
 
   def contentAs[T]
-  (implicit ev: Conversions.Convertable[T]): Try[T] = {
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
 //    (implicit tt: TypeTag[T]): T = {
 //    (implicit tt: TypeTag[T]): T = {
 
 //    read[ujson.Obj](_content)
-    ev.decode(_content)
+    ev.decode(_content, Conversions.JsonDecodeParams)
   }
 
   def contentAs[T](path: String): T = ???

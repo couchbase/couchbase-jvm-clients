@@ -64,12 +64,12 @@ class AsyncCollection(name: String,
   import annotation.implicitNotFound
   @implicitNotFound("No member of type class NumberLike in scope for ${T}")
   def encode[T](content: T)
-               (implicit ev: Conversions.Convertable[T])
+               (implicit ev: Conversions.Encodable[T])
 //                       (implicit tag: TypeTag[T])
   : Try[Array[Byte]] = {
 //    Try.apply(mapper.writeValueAsBytes(content))
 
-    ev.encode(content)
+    ev.encode(content).map(_._1)
 
 //    content match {
 //        // My JsonType
@@ -114,7 +114,7 @@ class AsyncCollection(name: String,
                 replicateTo: ReplicateTo.Value = ReplicateTo.None,
                 persistTo: PersistTo.Value = PersistTo.None
                )
-               (implicit ev: Conversions.Convertable[T])
+               (implicit ev: Conversions.Encodable[T])
 //               (implicit tag: TypeTag[T])
   : Future[MutationResult] = {
     Validators.notNullOrEmpty(id, "id")
@@ -161,14 +161,14 @@ class AsyncCollection(name: String,
     }
   }
 
-  def insert[T](id: String,
-                content: T,
-                options: InsertOptions
-               )
-               (implicit tag: TypeTag[T], ev: Conversions.Convertable[T]): Future[MutationResult] = {
-    Validators.notNull(options, "options")
-    insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
-  }
+//  def insert[T](id: String,
+//                content: T,
+//                options: InsertOptions
+//               )
+//               (implicit tag: TypeTag[T], ev: Conversions.Convertable[T], up: upickle.default.ReadWriter[T] = null): Future[MutationResult] = {
+//    Validators.notNull(options, "options")
+//    insert(id, content, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+//  }
 
   def replace[T](id: String,
                  content: T,
@@ -208,13 +208,13 @@ class AsyncCollection(name: String,
     null
   }
 
-  def upsert(id: String,
-             content: JsonObject,
-             cas: Long,
-             options: UpsertOptions
-            ): Future[MutationResult] = {
-    upsert(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
-  }
+//  def upsert(id: String,
+//             content: JsonObject,
+//             cas: Long,
+//             options: UpsertOptions
+//            ): Future[MutationResult] = {
+//    upsert(id, content, cas, options.timeout, options.expiration, options.replicateTo, options.persistTo)
+//  }
 
 
   def remove(id: String,
@@ -226,15 +226,25 @@ class AsyncCollection(name: String,
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(cas, "cas")
 
-    null
+    // TODO retry strategies
+    val retryStrategy = BestEffortRetryStrategy.INSTANCE
+    val request = new RemoveRequest(id,
+      collectionIdEncoded, cas,timeout, core.context(), bucketName, retryStrategy)
+    core.send(request)
+    FutureConverters.toScala(request.response())
+      .map(response => {
+        // TODO MVP error handling
+        // TODO MVP MutationTokens
+        MutationResult(0, Option.empty)
+      })
   }
 
-  def remove(id: String,
-             cas: Long,
-             options: RemoveOptions
-            ): Future[MutationResult] = {
-    remove(id, cas, options.timeout)
-  }
+//  def remove(id: String,
+//             cas: Long,
+//             options: RemoveOptions
+//            ): Future[MutationResult] = {
+//    remove(id, cas, options.timeout)
+//  }
 
   def lookupInAs[T](id: String,
                     operations: GetSpec,

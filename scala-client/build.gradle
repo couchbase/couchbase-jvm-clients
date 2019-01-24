@@ -6,6 +6,7 @@ buildscript {
   }
 }
 
+version = '1.0.1-SNAPSHOT'
 
 apply plugin: 'scala'
 apply plugin: 'nebula.optional-base'
@@ -14,12 +15,14 @@ apply plugin: 'maven-publish'
 publishing {
   publications {
     mavenJava(MavenPublication) {
-      artifactId = 'my-library'
+      artifactId = 'scala-client'
       from components.java
-//      artifact sourcesJar
+//      artifact sourcesLearn Git and GitHub without any code!
+
 //      artifact javadocJar
       pom {
-        name = 'My Library'
+        name = 'scala-client'
+        // TODO
         description = 'A concise description of my library'
         url = 'http://www.example.com/library'
         licenses {
@@ -80,6 +83,8 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 //}
 
 
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
 
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.7'
@@ -92,7 +97,7 @@ dependencies {
 
   // TODO Can remove some of these when settled on a json lib
   // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
-//  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
+  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
 //  provided "org.scala-lang:scala-reflect:2.12.7"
   compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1', optional
 
