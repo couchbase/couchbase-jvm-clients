@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.DocumentAlreadyExistsException;
 import com.couchbase.client.core.error.DocumentDoesNotExistException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -24,6 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -304,6 +306,64 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(result.cas() != insert.cas());
 
     assertThrows(DocumentDoesNotExistException.class, () -> collection.remove(id));
+  }
+
+  @Test
+  void insert() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject expected = JsonObject.create().put("foo", true);
+    MutationResult insert = collection.insert(id, expected);
+    assertTrue(insert.cas() != 0);
+
+    assertThrows(DocumentAlreadyExistsException.class, () -> collection.insert(id, expected));
+  }
+
+  @Test
+  void upsert() {
+    String id = UUID.randomUUID().toString();
+
+    MutationResult upsert = collection.upsert(
+      id,
+      JsonObject.create().put("foo", true)
+    );
+    assertTrue(upsert.cas() != 0);
+
+    JsonObject expected = JsonObject.create().put("foo", false);
+    MutationResult upsertOverride = collection.upsert(id, expected);
+    assertTrue(upsertOverride.cas() != 0);
+    assertTrue(upsert.cas() != upsertOverride.cas());
+
+    assertEquals(expected, collection.get(id).get().contentAsObject());
+  }
+
+  @Test
+  void replace() {
+    String id = UUID.randomUUID().toString();
+
+    MutationResult upsert = collection.upsert(
+      id,
+      JsonObject.create().put("foo", true)
+    );
+    assertTrue(upsert.cas() != 0);
+
+    assertThrows(CASMismatchException.class, () -> collection.replace(
+      id,
+      JsonObject.empty(),
+      ReplaceOptions.replaceOptions().cas(upsert.cas() + 1))
+    );
+
+    JsonObject expected = JsonObject.create().put("foo", false);
+    MutationResult replaced = collection.replace(id, expected);
+    assertTrue(replaced.cas() != 0);
+    assertTrue(upsert.cas() != replaced.cas());
+
+    assertEquals(expected, collection.get(id).get().contentAsObject());
+
+    assertThrows(
+      DocumentDoesNotExistException.class,
+      () -> collection.replace("some_doc", JsonObject.empty())
+    );
   }
 
 }

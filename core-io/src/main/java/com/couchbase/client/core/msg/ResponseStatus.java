@@ -73,7 +73,11 @@ public enum ResponseStatus {
   /**
    * In a kv request, signaling that the vbucket is on a different node.
    */
-  NOT_MY_VBUCKET;
+  NOT_MY_VBUCKET,
+  /**
+   * The written resource is too big.
+   */
+  TOO_BIG;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

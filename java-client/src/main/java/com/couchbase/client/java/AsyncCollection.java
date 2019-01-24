@@ -555,6 +555,18 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content,
                                                   final InsertOptions options) {
+    return InsertAccessor.insert(core, insertRequest(id, content, options));
+  }
+
+  /**
+   * Helper method to generate the insert request.
+   *
+   * @param id the document id to insert.
+   * @param content the document content to insert.
+   * @param options custom options to customize the insert behavior.
+   * @return the insert request.
+   */
+  InsertRequest insertRequest(final String id, final Object content, final InsertOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "InsertOptions");
@@ -564,19 +576,9 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
 
-    InsertRequest request = new InsertRequest(
-      id,
-            collectionId,
-      encoded.content(),
-      options.expiry().getSeconds(),
-      encoded.flags(),
-      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      coreContext,
-      bucket,
-      retryStrategy
-    );
-
-    return InsertAccessor.insert(core, request);
+    return new InsertRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
+      encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
+      coreContext, bucket, retryStrategy);
   }
 
   /**
@@ -600,6 +602,18 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content,
                                                   final UpsertOptions options) {
+    return UpsertAccessor.upsert(core, upsertRequest(id, content, options));
+  }
+
+  /**
+   * Helper method to generate the upsert request.
+   *
+   * @param id the document id to upsert.
+   * @param content the document content to upsert.
+   * @param options custom options to customize the upsert behavior.
+   * @return the upsert request.
+   */
+  UpsertRequest upsertRequest(final String id, final Object content, final UpsertOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "UpsertOptions");
@@ -609,19 +623,9 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
 
-    UpsertRequest request = new UpsertRequest(
-      id,
-            collectionId,
-      encoded.content(),
-      options.expiry().getSeconds(),
-      encoded.flags(),
-      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      coreContext,
-      bucket,
-      retryStrategy
-    );
-
-    return UpsertAccessor.upsert(core, request);
+    return new UpsertRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
+      encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
+      coreContext, bucket, retryStrategy);
   }
 
   /**
@@ -645,6 +649,18 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content,
                                                    final ReplaceOptions options) {
+    return ReplaceAccessor.replace(core, replaceRequest(id, content, options));
+  }
+
+  /**
+   * Helper method to generate the replace request.
+   *
+   * @param id the document id to replace.
+   * @param content the document content to replace.
+   * @param options custom options to customize the replace behavior.
+   * @return the replace request.
+   */
+  ReplaceRequest replaceRequest(final String id, final Object content, final ReplaceOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "ReplaceOptions");
@@ -654,19 +670,9 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
 
-    ReplaceRequest request = new ReplaceRequest(
-      id,
-            collectionId,
-      encoded.content(),
-      options.expiry().getSeconds(),
-      encoded.flags(),
-      Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      options.cas(),
-      coreContext,
-      bucket,
-      retryStrategy
-    );
-    return ReplaceAccessor.replace(core, request);
+    return new ReplaceRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
+      encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
+      options.cas(), coreContext, bucket, retryStrategy);
   }
 
   public CompletableFuture<Void> touch(final String id) {

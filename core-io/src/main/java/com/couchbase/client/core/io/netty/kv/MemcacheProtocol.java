@@ -357,6 +357,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.LOCKED;
     } else if (status == Status.EXISTS.status) {
       return ResponseStatus.EXISTS;
+    } else if (status == Status.TOO_BIG.status) {
+      return ResponseStatus.TOO_BIG;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -583,6 +585,10 @@ public enum MemcacheProtocol {
      * The key exists in the cluster (with another CAS value).
      */
     EXISTS((short) 0x02),
+    /**
+     * Resource too big.
+     */
+    TOO_BIG((short) 0x03),
     /**
      * Not my vbucket.
      */

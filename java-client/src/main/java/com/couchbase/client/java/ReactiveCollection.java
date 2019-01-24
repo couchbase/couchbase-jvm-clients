@@ -351,29 +351,9 @@ public class ReactiveCollection {
    * @param options custom options to customize the insert behavior.
    * @return a {@link Mono} completing once inserted or failed.
    */
-  public Mono<MutationResult> insert(final String id, Object content,
-                                     final InsertOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "InsertOptions");
-
+  public Mono<MutationResult> insert(final String id, Object content, final InsertOptions options) {
     return Mono.defer(() -> {
-      EncodedDocument encoded = options.encoder().encode(content);
-      RetryStrategy retryStrategy = options.retryStrategy() == null
-        ? environment.retryStrategy()
-        : options.retryStrategy();
-
-      InsertRequest request = new InsertRequest(
-        id,
-        encodedId,
-        encoded.content(),
-        options.expiry().getSeconds(),
-        encoded.flags(),
-        Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-        coreContext,
-        bucketName,
-        retryStrategy
-      );
+      InsertRequest request = asyncCollection.insertRequest(id, content, options);
       return Reactor.wrap(request, InsertAccessor.insert(core, request), true);
     });
   }
@@ -397,29 +377,9 @@ public class ReactiveCollection {
    * @param options custom options to customize the upsert behavior.
    * @return a {@link Mono} completing once upserted or failed.
    */
-  public Mono<MutationResult> upsert(final String id, Object content,
-                                                  final UpsertOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "UpsertOptions");
-
+  public Mono<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
     return Mono.defer(() -> {
-      EncodedDocument encoded = options.encoder().encode(content);
-      RetryStrategy retryStrategy = options.retryStrategy() == null
-        ? environment.retryStrategy()
-        : options.retryStrategy();
-
-      UpsertRequest request = new UpsertRequest(
-        id,
-        encodedId,
-        encoded.content(),
-        options.expiry().getSeconds(),
-        encoded.flags(),
-        Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-        coreContext,
-        bucketName,
-        retryStrategy
-      );
+      UpsertRequest request = asyncCollection.upsertRequest(id, content, options);
       return Reactor.wrap(request, UpsertAccessor.upsert(core, request), true);
     });
   }
@@ -443,30 +403,9 @@ public class ReactiveCollection {
    * @param options custom options to customize the replace behavior.
    * @return a {@link Mono} completing once replaced or failed.
    */
-  public Mono<MutationResult> replace(final String id, Object content,
-                                                   final ReplaceOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "ReplaceOptions");
-
+  public Mono<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
     return Mono.defer(() -> {
-      EncodedDocument encoded = options.encoder().encode(content);
-      RetryStrategy retryStrategy = options.retryStrategy() == null
-        ? environment.retryStrategy()
-        : options.retryStrategy();
-
-      ReplaceRequest request = new ReplaceRequest(
-        id,
-        encodedId,
-        encoded.content(),
-        options.expiry().getSeconds(),
-        encoded.flags(),
-        Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-        options.cas(),
-        coreContext,
-        bucketName,
-        retryStrategy
-      );
+      ReplaceRequest request = asyncCollection.replaceRequest(id, content, options);
       return Reactor.wrap(request, ReplaceAccessor.replace(core, request), true);
     });
   }

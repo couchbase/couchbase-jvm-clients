@@ -27,6 +27,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
+import java.util.Optional;
+
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 
 /**
  * Uses the KV replace command to replace a document if it exists.
@@ -86,6 +89,6 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
   @Override
   public ReplaceResponse decode(final ByteBuf response) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new ReplaceResponse(status);
+    return new ReplaceResponse(status, cas(response), Optional.empty());
   }
 }

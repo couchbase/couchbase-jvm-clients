@@ -18,6 +18,12 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
+import com.couchbase.client.core.error.DocumentAlreadyExistsException;
+import com.couchbase.client.core.error.RequestTooBigException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 
@@ -33,7 +39,22 @@ public enum UpsertAccessor {
     return request
       .response()
       .thenApply(response -> {
-        return new MutationResult(response.cas(), Optional.empty());
+        switch (response.status()) {
+          case SUCCESS:
+            return new MutationResult(response.cas(), response.mutationToken());
+          case TOO_BIG:
+            throw new RequestTooBigException();
+          case EXISTS:
+          case LOCKED:
+            throw new CASMismatchException();
+          case TEMPORARY_FAILURE:
+          case SERVER_BUSY:
+            throw new TemporaryFailureException();
+          case OUT_OF_MEMORY:
+            throw new CouchbaseOutOfMemoryException();
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + response.status());
+        }
       });
   }
 
