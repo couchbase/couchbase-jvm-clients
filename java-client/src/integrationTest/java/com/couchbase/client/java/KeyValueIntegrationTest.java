@@ -20,15 +20,18 @@ import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.DocumentAlreadyExistsException;
 import com.couchbase.client.core.error.DocumentDoesNotExistException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
+import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +44,7 @@ import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -427,6 +431,66 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(replaced.cas() != 0);
 
     assertEquals(expected, collection.get(id).get().contentAsObject());
+  }
+
+  @Test
+  void append() {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
+    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+
+    assertThrows(
+      DocumentDoesNotExistException.class,
+      () -> collection.binary().append(id, helloBytes)
+    );
+
+    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+      helloBytes,
+      collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+
+    MutationResult append = collection.binary().append(id, worldBytes);
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+      helloWorldBytes,
+      collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+  }
+
+  @Test
+  void prepend() {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
+    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
+    byte[] worldHelloBytes = "World!Hello, ".getBytes(CharsetUtil.UTF_8);
+
+    assertThrows(
+      DocumentDoesNotExistException.class,
+      () -> collection.binary().prepend(id, helloBytes)
+    );
+
+    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+      helloBytes,
+      collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+
+    MutationResult append = collection.binary().prepend(id, worldBytes);
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+      worldHelloBytes,
+      collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
   }
 
 }

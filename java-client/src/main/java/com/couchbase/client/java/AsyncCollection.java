@@ -136,7 +136,7 @@ public class AsyncCollection {
     this.environment = environment;
     this.bucket = bucket;
     this.collectionId = UnsignedLEB128.encode(id);
-    this.asyncBinaryCollection = new AsyncBinaryCollection();
+    this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, bucket, collectionId);
   }
 
   /**

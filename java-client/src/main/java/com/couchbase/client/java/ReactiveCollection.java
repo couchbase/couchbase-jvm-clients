@@ -116,7 +116,7 @@ public class ReactiveCollection {
     this.core = asyncCollection.core();
     this.bucketName = bucketName;
     this.encodedId = asyncCollection.collectionId();
-    this.reactiveBinaryCollection = new ReactiveBinaryCollection(asyncCollection.binary());
+    this.reactiveBinaryCollection = new ReactiveBinaryCollection(core, asyncCollection.binary());
   }
 
   /**

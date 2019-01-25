@@ -51,6 +51,10 @@ public enum ResponseStatus {
    */
   NO_ACCESS,
   /**
+   * The resource was not stored for some reason.
+   */
+  NOT_STORED,
+  /**
    * The server could temporarily not fulfill the requrst.
    */
   TEMPORARY_FAILURE,

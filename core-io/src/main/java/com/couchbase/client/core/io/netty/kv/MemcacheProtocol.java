@@ -359,6 +359,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.EXISTS;
     } else if (status == Status.TOO_BIG.status) {
       return ResponseStatus.TOO_BIG;
+    } else if (status == Status.NOT_STORED.status) {
+      return ResponseStatus.NOT_STORED;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -500,9 +502,25 @@ public enum MemcacheProtocol {
      */
     DELETE((byte) 0x04),
     /**
+     * Increment binary counter.
+     */
+    INCREMENT((byte) 0x05),
+    /**
+     * Decrement binary counter.
+     */
+    DECREMENT((byte) 0x06),
+    /**
      * The noop command.
      */
     NOOP((byte) 0x0a),
+    /**
+     * Binary append.
+     */
+    APPEND((byte) 0x0e),
+    /**
+     * Binary prepend.
+     */
+    PREPEND((byte) 0x0f),
     /**
      * The hello command used during bootstrap to negoatiate the features.
      */
@@ -597,6 +615,10 @@ public enum MemcacheProtocol {
      * Resource too big.
      */
     TOO_BIG((short) 0x03),
+    /**
+     * Not stored for some reason.
+     */
+    NOT_STORED((short) 0x05),
     /**
      * Not my vbucket.
      */

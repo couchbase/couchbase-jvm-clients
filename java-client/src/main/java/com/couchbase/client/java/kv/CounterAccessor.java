@@ -16,5 +16,21 @@
 
 package com.couchbase.client.java.kv;
 
-public class MutateInResult {
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.msg.kv.AppendRequest;
+import com.couchbase.client.core.msg.kv.DecrementRequest;
+import com.couchbase.client.core.msg.kv.IncrementRequest;
+
+import java.util.concurrent.CompletableFuture;
+
+public class CounterAccessor {
+
+  public static CompletableFuture<MutationResult> increment(Core core, String id, IncrementRequest request) {
+    return null;
+  }
+
+  public static CompletableFuture<MutationResult> decrement(Core core, String id, DecrementRequest request) {
+    return null;
+  }
+
 }

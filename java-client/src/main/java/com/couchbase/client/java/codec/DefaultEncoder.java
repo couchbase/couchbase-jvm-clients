@@ -13,7 +13,12 @@ public class DefaultEncoder implements Encoder {
   public EncodedDocument encode(final Object input) {
     try {
       int flags = 0; // TODO: FIXME
-      byte[] encoded = JacksonTransformers.MAPPER.writeValueAsBytes(input); // FIXME
+      byte[] encoded;
+      if (input instanceof BinaryContent) {
+        encoded = ((BinaryContent) input).content();
+      } else {
+        encoded = JacksonTransformers.MAPPER.writeValueAsBytes(input); // FIXME
+      }
       return new EncodedDocument(flags, encoded);
     } catch (Exception ex) {
       // TODO: better hierachy

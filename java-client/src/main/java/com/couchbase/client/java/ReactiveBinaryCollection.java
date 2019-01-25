@@ -16,10 +16,16 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.msg.kv.AppendRequest;
+import com.couchbase.client.core.msg.kv.PrependRequest;
+import com.couchbase.client.java.kv.AppendAccessor;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.DecrementOptions;
 import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.PrependAccessor;
 import com.couchbase.client.java.kv.PrependOptions;
 import reactor.core.publisher.Mono;
 
@@ -28,27 +34,35 @@ import static com.couchbase.client.java.AsyncUtils.block;
 public class ReactiveBinaryCollection {
 
   private final AsyncBinaryCollection async;
+  private final Core core;
 
-  ReactiveBinaryCollection(final AsyncBinaryCollection async) {
+  ReactiveBinaryCollection(final Core core, final AsyncBinaryCollection async) {
+    this.core = core;
     this.async = async;
   }
 
   public Mono<MutationResult> append(final String id, final byte[] content) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+    return append(id, content, AppendOptions.DEFAULT);
   }
 
   public Mono<MutationResult> append(final String id, final byte[] content,
-                               final AppendOptions options) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+                                     final AppendOptions options) {
+    return Mono.defer(() -> {
+      AppendRequest request = async.appendRequest(id, content, options);
+      return Reactor.wrap(request, AppendAccessor.append(core, request), true);
+    });
   }
 
   public Mono<MutationResult> prepend(final String id, final byte[] content) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+    return prepend(id, content, PrependOptions.DEFAULT);
   }
 
   public Mono<MutationResult> prepend(final String id, final byte[] content,
-                                final PrependOptions options) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+                                      final PrependOptions options) {
+    return Mono.defer(() -> {
+      PrependRequest request = async.prependRequest(id, content, options);
+      return Reactor.wrap(request, PrependAccessor.prepend(core, request), true);
+    });
   }
 
   public Mono<MutationResult> increment(final String id) {

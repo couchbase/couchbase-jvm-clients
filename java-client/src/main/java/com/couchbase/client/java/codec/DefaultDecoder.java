@@ -29,7 +29,11 @@ public class DefaultDecoder implements Decoder<Object> {
   @Override
   public Object decode(Class<Object> target, EncodedDocument encoded) {
     try {
-      return JacksonTransformers.MAPPER.readValue(encoded.content(), target);
+      if (target.isAssignableFrom(BinaryContent.class)) {
+        return BinaryContent.wrap(encoded.content());
+      } else {
+        return JacksonTransformers.MAPPER.readValue(encoded.content(), target);
+      }
     } catch (IOException e) {
       // TODO
       throw new CouchbaseException(e);
