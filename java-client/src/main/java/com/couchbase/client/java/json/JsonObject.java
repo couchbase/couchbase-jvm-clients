@@ -169,6 +169,14 @@ public class JsonObject extends JsonValue implements Serializable {
         }
     }
 
+    public static JsonObject fromJson(byte[] s) {
+        try {
+            return JacksonTransformers.bytesToJsonObject(s);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Cannot convert byte array to JsonObject", e);
+        }
+    }
+
     /**
      * Stores a {@link Object} value identified by the field name.
      *

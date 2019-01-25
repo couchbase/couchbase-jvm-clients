@@ -21,27 +21,26 @@ import com.couchbase.client.java.codec.DefaultDecoder;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * Experimental prototype for a different result type on fetch.
  */
-public class LookupResult {
+public class LookupInResult {
 
   private final String id;
   private final List<EncodedFragment> encoded;
   private final long cas;
   private final Optional<Duration> expiration;
 
-  static LookupResult create(final String id, final List<EncodedFragment> encoded,
-                             final long cas, final Optional<Duration> expiration)
+  static LookupInResult create(final String id, final List<EncodedFragment> encoded,
+                               final long cas, final Optional<Duration> expiration)
   {
-    return new LookupResult(id, encoded, cas, expiration);
+    return new LookupInResult(id, encoded, cas, expiration);
   }
 
-  private LookupResult(final String id, final List<EncodedFragment> encoded, final long cas,
-                       final Optional<Duration> expiration) {
+  private LookupInResult(final String id, final List<EncodedFragment> encoded, final long cas,
+                         final Optional<Duration> expiration) {
     this.id = id;
     this.cas = cas;
     this.encoded = encoded;

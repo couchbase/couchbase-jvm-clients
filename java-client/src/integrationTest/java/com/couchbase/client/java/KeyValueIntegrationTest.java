@@ -264,7 +264,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult insert = collection.insert(
       id,
       expected,
-      insertOptions().expiry(Duration.ofSeconds(2))
+      insertOptions().expiry(Duration.ofSeconds(10))
     );
     assertTrue(insert.cas() != 0);
 
@@ -364,6 +364,69 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       DocumentDoesNotExistException.class,
       () -> collection.replace("some_doc", JsonObject.empty())
     );
+  }
+
+  /**
+   * Right now the mock does not change the cas on touch, so we need to ignore the test
+   * until https://github.com/couchbase/CouchbaseMock/issues/50 is resolved.
+   */
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  void touch() throws Exception {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject expected = JsonObject.create().put("foo", true);
+    MutationResult upsert = collection.upsert(
+      id,
+      expected,
+      upsertOptions().expiry(Duration.ofSeconds(10))
+    );
+    assertTrue(upsert.cas() != 0);
+
+    MutationResult touched = collection.touch(id, Duration.ofSeconds(1));
+    assertNotEquals(touched.cas(), upsert.cas());
+
+    Thread.sleep(300);
+
+    Optional<GetResult> get = collection.get(id);
+    assertTrue(get.isPresent());
+    get.ifPresent(r -> {
+      assertEquals(expected, r.contentAsObject());
+      assertEquals(r.cas(), touched.cas());
+    });
+
+    waitUntilCondition(() -> {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        // ignored.
+      }
+      return !collection.get(id).isPresent();
+    });
+  }
+
+  @Test
+  void unlock() {
+    String id = UUID.randomUUID().toString();
+
+    MutationResult upsert = collection.upsert(id, JsonObject.create().put("foo", true));
+    assertTrue(upsert.cas() != 0);
+
+    Optional<GetResult> locked = collection.getAndLock(id);
+    assertTrue(locked.isPresent());
+
+    System.err.println(locked.get().cas());
+
+    assertThrows(TemporaryLockFailureException.class, () -> collection.upsert(id, JsonObject.empty()));
+    assertThrows(TemporaryLockFailureException.class, () -> collection.unlock(id, locked.get().cas() + 1));
+
+    collection.unlock(id, locked.get().cas());
+
+    JsonObject expected = JsonObject.create().put("foo", false);
+    MutationResult replaced = collection.replace(id, expected);
+    assertTrue(replaced.cas() != 0);
+
+    assertEquals(expected, collection.get(id).get().contentAsObject());
   }
 
 }

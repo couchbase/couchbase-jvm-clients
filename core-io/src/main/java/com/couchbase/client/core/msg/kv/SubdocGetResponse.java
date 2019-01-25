@@ -2,7 +2,9 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
+import io.netty.util.CharsetUtil;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class SubdocGetResponse extends BaseResponse {
@@ -46,5 +48,22 @@ public class SubdocGetResponse extends BaseResponse {
     public String path() {
       return path;
     }
+
+    @Override
+    public String toString() {
+      return "ResponseValue{" +
+        "status=" + status +
+        ", value=" + new String(value, CharsetUtil.UTF_8) +
+        ", path='" + path + '\'' +
+        '}';
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "SubdocGetResponse{" +
+      "values=" + values +
+      ", cas=" + cas +
+      '}';
   }
 }

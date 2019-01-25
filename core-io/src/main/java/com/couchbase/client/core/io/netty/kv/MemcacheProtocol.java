@@ -554,7 +554,15 @@ public enum MemcacheProtocol {
     /**
      * A replica get operation.
      */
-    GET_REPLICA((byte) 0x83);
+    GET_REPLICA((byte) 0x83),
+    /**
+     * Touch command sets a new expiration.
+     */
+    TOUCH((byte) 0x1c),
+    /**
+     * Unlocks a write locked document.
+     */
+    UNLOCK((byte) 0x95);
 
     private final byte opcode;
 

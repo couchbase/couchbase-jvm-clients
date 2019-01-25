@@ -179,7 +179,15 @@ public class JacksonTransformers {
     }
 
     public static JsonArray stringToJsonArray(String input) throws Exception {
-        return JacksonTransformers.MAPPER.readValue(input, JsonArray.class);
+        return MAPPER.readValue(input, JsonArray.class);
+    }
+
+    public static JsonArray bytesToJsonArray(byte[] input) throws Exception {
+        return MAPPER.readValue(input, JsonArray.class);
+    }
+
+    public static JsonObject bytesToJsonObject(byte[] input) throws Exception {
+        return MAPPER.readValue(input, JsonObject.class);
     }
 
 

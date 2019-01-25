@@ -182,6 +182,14 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
     }
   }
 
+  public static JsonArray fromJson(byte[] s) {
+    try {
+      return JacksonTransformers.bytesToJsonArray(s);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Cannot convert byte array to JsonArray", e);
+    }
+  }
+
   /**
    * Retrieves the value by the position in the {@link JsonArray} and does not cast it.
    *

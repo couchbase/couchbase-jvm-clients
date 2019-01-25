@@ -28,14 +28,14 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.TouchRequest;
+import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetFromReplicaOptions;
-import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
@@ -44,9 +44,10 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
-import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.RemoveAccessor;
@@ -54,18 +55,17 @@ import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicaMode;
+import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -410,34 +410,34 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<Void> touch(final String id) {
-    return touch(id, TouchOptions.DEFAULT);
+  public Mono<MutationResult> touch(final String id, final Duration expiry) {
+    return touch(id, expiry, TouchOptions.DEFAULT);
   }
 
-  public Mono<Void> touch(final String id, final TouchOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "TouchOptions");
-
-    return null;
+  public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
+    return Mono.defer(() -> {
+      TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
+      return Reactor.wrap(request, TouchAccessor.touch(core, request), true);
+    });
   }
 
-  public Mono<MutationResult> unlock(final String id) {
-    return unlock(id, UnlockOptions.DEFAULT);
+  public Mono<Void> unlock(final String id, final long cas) {
+    return unlock(id, cas, UnlockOptions.DEFAULT);
   }
 
-  public Mono<MutationResult> unlock(final String id, final UnlockOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "UnlockOptions");
-
-    return null;
+  public Mono<Void> unlock(final String id, final long cas, final UnlockOptions options) {
+    return Mono.defer(() -> {
+      UnlockRequest request = asyncCollection.unlockRequest(id, cas, options);
+      return Reactor.wrap(request, UnlockAccessor.unlock(core, request), true);
+    });
   }
 
-  public Mono<LookupResult> lookupIn(final String id, final LookupInSpec spec) {
+  public Mono<LookupInResult> lookupIn(final String id, final LookupInSpec spec) {
     return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupResult> lookupIn(final String id, final LookupInSpec spec,
-                                     final LookupInOptions options) {
+  public Mono<LookupInResult> lookupIn(final String id, final LookupInSpec spec,
+                                       final LookupInOptions options) {
 
     throw new UnsupportedOperationException("Implement me -> subdoc lookupIn");
   }
@@ -447,9 +447,9 @@ public class ReactiveCollection {
    *
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutateIn(final String id, final MutateInSpec spec) {
+  public Mono<MutateInResult> mutateIn(final String id, final MutateInSpec spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -459,9 +459,9 @@ public class ReactiveCollection {
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutationResult> mutateIn(final String id, final MutateInSpec spec,
+  public Mono<MutateInResult> mutateIn(final String id, final MutateInSpec spec,
                                        final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateSpec");

@@ -37,9 +37,10 @@ import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
-import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.RemoveAccessor;
@@ -49,7 +50,9 @@ import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicaMode;
+import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -64,6 +67,7 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.kv.GetAccessor.EXPIRATION_MACRO;
 
 /**
  * The {@link AsyncCollection} provides basic asynchronous access to all collection APIs.
@@ -248,7 +252,7 @@ public class AsyncCollection {
     if (options.withExpiration()) {
       commands.add(new SubdocGetRequest.Command(
         SubdocGetRequest.CommandType.GET,
-        "$document.exptime",
+        EXPIRATION_MACRO,
         true
       ));
     }
@@ -675,34 +679,51 @@ public class AsyncCollection {
       options.cas(), coreContext, bucket, retryStrategy);
   }
 
-  public CompletableFuture<Void> touch(final String id) {
-    return touch(id, TouchOptions.DEFAULT);
+  public CompletableFuture<MutationResult> touch(final String id, final Duration expiry) {
+    return touch(id, expiry, TouchOptions.DEFAULT);
   }
 
-  public CompletableFuture<Void> touch(final String id, final TouchOptions options) {
+  public CompletableFuture<MutationResult> touch(final String id, final Duration expiry,
+                                                 final TouchOptions options) {
+    return TouchAccessor.touch(core, touchRequest(id, expiry, options));
+  }
+
+  TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "TouchOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new TouchRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, expiry.getSeconds());
   }
 
-  public CompletableFuture<MutationResult> unlock(final String id) {
-    return unlock(id, UnlockOptions.DEFAULT);
+  public CompletableFuture<Void> unlock(final String id, final long cas) {
+    return unlock(id, cas, UnlockOptions.DEFAULT);
   }
 
-  public CompletableFuture<MutationResult> unlock(final String id, final UnlockOptions options) {
+  public CompletableFuture<Void> unlock(final String id, final long cas, final UnlockOptions options) {
+    return UnlockAccessor.unlock(core, unlockRequest(id, cas, options));
+  }
+
+  UnlockRequest unlockRequest(final String id, final long cas, final UnlockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "UnlockOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupInSpec spec) {
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInSpec spec) {
     return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupResult>> lookupIn(final String id, final LookupInSpec spec,
-                                                            final LookupInOptions options) {
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInSpec spec,
+                                                              final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "LookupInSpec");
     notNull(options, "LookupInOptions");
@@ -715,9 +736,9 @@ public class AsyncCollection {
    *
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateInSpec spec) {
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInSpec spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -727,9 +748,9 @@ public class AsyncCollection {
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutationResult> mutateIn(final String id, final MutateInSpec spec,
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInSpec spec,
                                                     final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateInSpec");

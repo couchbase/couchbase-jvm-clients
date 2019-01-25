@@ -23,9 +23,10 @@ import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInOptions;
-import com.couchbase.client.java.kv.LookupResult;
+import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -38,7 +39,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -318,28 +318,28 @@ public class Collection {
     return block(async().replace(id, content, options));
   }
 
-  public void touch(final String id) {
-    block(async().touch(id));
+  public MutationResult touch(final String id, Duration expiry) {
+    return block(async().touch(id, expiry));
   }
 
-  public void touch(final String id, final TouchOptions options) {
-    block(async().touch(id, options));
+  public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
+    return block(async().touch(id, expiry, options));
   }
 
-  public MutationResult unlock(final String id) {
-    return block(async().unlock(id));
+  public void unlock(final String id, long cas) {
+    block(async().unlock(id, cas));
   }
 
-  public MutationResult unlock(final String id, final UnlockOptions options) {
-    return block(async().unlock(id, options));
+  public void unlock(final String id, long cas, final UnlockOptions options) {
+    block(async().unlock(id, cas, options));
   }
 
-  public Optional<LookupResult> lookupIn(final String id, final LookupInSpec spec) {
+  public Optional<LookupInResult> lookupIn(final String id, final LookupInSpec spec) {
     return block(async().lookupIn(id, spec));
   }
 
-  public Optional<LookupResult> lookupIn(final String id, final LookupInSpec spec,
-                                         final LookupInOptions options) {
+  public Optional<LookupInResult> lookupIn(final String id, final LookupInSpec spec,
+                                           final LookupInOptions options) {
     return block(async().lookupIn(id, spec, options));
   }
 
@@ -348,9 +348,9 @@ public class Collection {
    *
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutateInSpec spec) {
+  public MutateInResult mutateIn(final String id, final MutateInSpec spec) {
     return block(async().mutateIn(id, spec));
   }
 
@@ -360,9 +360,9 @@ public class Collection {
    * @param id the outer document ID.
    * @param spec the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
-   * @return the {@link MutationResult} once the mutation has been performed or failed.
+   * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutationResult mutateIn(final String id, final MutateInSpec spec,
+  public MutateInResult mutateIn(final String id, final MutateInSpec spec,
                                  final MutateInOptions options) {
     return block(async().mutateIn(id, spec, options));
   }

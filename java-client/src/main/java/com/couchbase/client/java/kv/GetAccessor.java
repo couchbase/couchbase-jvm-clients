@@ -26,19 +26,27 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
 public enum GetAccessor {
   ;
+
+  /**
+   * Constant for the subdocument expiration macro.
+   */
+  public static final String EXPIRATION_MACRO = "$document.exptime";
 
   /**
    * Takes a {@link GetRequest} and dispatches, converts and returns the result.
@@ -137,60 +145,87 @@ public enum GetAccessor {
     core.send(request);
     return request
       .response()
-      .thenApply(subdocResponse -> {
-        if (subdocResponse.status().success()) {
-          long cas = subdocResponse.cas();
-
-          try {
-            List<SubdocGetResponse.ResponseValue> values = subdocResponse.values();
-            byte[] exptime = null;
-            byte[] content = null;
-            for (SubdocGetResponse.ResponseValue value : values) {
-              if (value.path().equals("$document.exptime")) {
-                exptime = value.value();
-
-              } else if (value.path().isEmpty()) {
-                content = value.value();
-              }
-            }
-
-            if (content == null) {
-              // TODO: this is not very efficient and a hack - fix me
-
-              ObjectNode node = Mapper.mapper().createObjectNode();
-              for (SubdocGetResponse.ResponseValue value : values) {
-                if (value.path().isEmpty() || value.path().equals("$document.exptime")) {
-                  continue;
-                }
-
-                if (value.path().contains(".")) {
-                  throw new UnsupportedOperationException("nested paths are not working mapped yet");
-                }
-                node.set(value.path(), Mapper.mapper().readTree(value.value()));
-              }
-              content = Mapper.mapper().writeValueAsBytes(node);
-            }
-
-            return Optional.of(GetResult.create(
-              id,
-              new EncodedDocument(0, content),
-              cas,
-              exptime == null
-                ? Optional.empty()
-                : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, CharsetUtil.UTF_8)))))
-            );
-          } catch (IOException e) {
-            // TODO: fixme
-            throw new RuntimeException(e);
-          }
-        } else if (subdocResponse.status() == ResponseStatus.NOT_FOUND) {
+      .thenApply(response -> {
+        switch (response.status()) {
+          case SUCCESS:
+            return Optional.of(parseSubdocGet(id, response));
+          case NOT_FOUND:
             return Optional.empty();
-        } else {
-          // todo: implement me
-          throw new UnsupportedOperationException("fixme");
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
       });
   }
 
+  private static GetResult parseSubdocGet(final String id, final SubdocGetResponse response) {
+    long cas = response.cas();
+
+    byte[] exptime = null;
+    byte[] content = null;
+
+    for (SubdocGetResponse.ResponseValue value : response.values()) {
+      if (EXPIRATION_MACRO.equals(value.path())) {
+        exptime = value.value();
+      } else if (value.path().isEmpty()) {
+        content = value.value();
+      }
+    }
+
+    if (content == null) {
+      try {
+        content = projectRecursive(response);
+      } catch (IOException e) {
+        throw new CouchbaseException("Unexpected Exception while decoding Sub-Document get", e);
+      }
+    }
+
+    Optional<Duration> expiration = exptime == null
+      ? Optional.empty()
+      : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, CharsetUtil.UTF_8))));
+
+    // TODO: optimize the subdoc holder
+    return GetResult.create(id, new EncodedDocument(0, content), cas, expiration);
+  }
+
+  /**
+   * Helper method to recursively project subdocument fields into a json object structure.
+   *
+   * @param response the raw response from the server.
+   * @return the document, encoded as a byte array.
+   * @throws IOException if jackson gets a heart attack while parsing.
+   */
+  static byte[] projectRecursive(final SubdocGetResponse response) throws IOException {
+    ObjectNode root = Mapper.mapper().createObjectNode();
+
+    for (SubdocGetResponse.ResponseValue value : response.values()) {
+      if (value.status() != 0 || value.path().isEmpty() || EXPIRATION_MACRO.equals(value.path())) {
+        continue;
+      }
+
+      String path = value.path();
+      if (!path.contains(".")) {
+        root.set(path, Mapper.mapper().readTree(value.value()));
+        continue;
+      }
+
+      String[] pathComponents = path.split("\\.");
+      ObjectNode parent = root;
+      for (int i = 0; i < pathComponents.length - 1; i++) {
+        String component = pathComponents[i];
+        ObjectNode maybe = (ObjectNode) parent.get(component);
+        if (maybe == null) {
+          maybe = Mapper.mapper().createObjectNode();
+          parent.set(component, maybe);
+        }
+        parent = maybe;
+      }
+      parent.set(
+        pathComponents[pathComponents.length-1],
+        Mapper.mapper().readTree(value.value())
+      );
+    }
+
+    return Mapper.mapper().writeValueAsBytes(root);
+  }
 
 }
