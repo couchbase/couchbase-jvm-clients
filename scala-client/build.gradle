@@ -1,3 +1,4 @@
+
 buildscript {
   repositories { jcenter() }
 
@@ -6,11 +7,88 @@ buildscript {
   }
 }
 
+/*
+  The scala and idea plugins appear to be incompatible.  With a minimal build.gradle just pulling
+  in those two plugins, get error
+  > Failed to apply plugin [id 'org.gradle.idea']
+   > Task with name 'ideaProject' not found in root project 'couchbase-jvm-clients'.
+   with Gradle 4.10 and 5.1.
+ */
+//plugins {
+//  id 'scala'
+//  id 'java-library'
+//  id 'maven-publish'
+////  id 'idea'
+////  id 'nebula.optional-base'
+////  id 'nebula.provided-base'
+//}
+
+//plugins {
+//  id 'idea'
+//}
+
 version = '1.0.1-SNAPSHOT'
 
+apply plugin: 'java'
 apply plugin: 'scala'
 apply plugin: 'nebula.optional-base'
 apply plugin: 'maven-publish'
+////
+////
+//
+sourceSets {
+  integrationTest {
+//          {
+    scala {
+      compileClasspath += main.output + test.output
+      runtimeClasspath += main.output + test.output
+      srcDir file('src/integrationTest/scala')
+//    }
+//      resources.srcDir file('src/integrationTest/resources')
+//  }
+    }
+  }
+    
+  test {
+    scala {
+      srcDirs = ['src/test/scala', 'src/integrationTest/scala']
+    }
+  }
+}
+
+//idea {
+//  module {
+////    testSourceDirs += sourceSets.integrationTest.scala.srcDirs
+//    testSourceDirs += sourceSets.integrationTest
+////    testResourceDirs += sourceSets.integrationTest.resources.srcDirs
+////    scopes.TEST.plus += [ configurations.integrationTestCompile ]
+//  }
+//}
+
+configurations {
+  integrationTestCompile.extendsFrom testCompile
+  integrationTestRuntime.extendsFrom testRuntime
+}
+
+task integrationTest(type: Test) {
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  outputs.upToDateWhen { false }
+}
+
+check.dependsOn integrationTest
+integrationTest.mustRunAfter test
+
+
+
+//task integrationTest(type: Test) {
+//  description = 'Runs the integration tests.'
+//  group = 'verification'
+//  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+//  classpath = sourceSets.integrationTest.runtimeClasspath
+//  outputs.upToDateWhen { false }
+//  mustRunAfter test
+//}
 
 publishing {
   publications {
@@ -107,5 +185,7 @@ dependencies {
   compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1', optional
 
 
+  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-core_2.12", version: "0.39.0", optional
+  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-macros_2.12", version: "0.39.0", optional // TODO get provided working
 //  integrationTestCompile project(':test-utils')
 }

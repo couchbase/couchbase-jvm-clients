@@ -14,25 +14,22 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala.api
+package com.couchbase.client.scala.durability
 
-import scala.concurrent.duration.FiniteDuration
-
-case class GetAndLockOptions(timeout: FiniteDuration = null) {
-  def timeout(timeout: FiniteDuration) = copy(timeout = timeout)
+object ReplicateTo extends Enumeration {
+  val None, One, Two, Three = Value
 }
 
-//case class GetAndLockOptions() {
-//  private var timeout: FiniteDuration = null
-//
-//  def timeout(timeout: FiniteDuration): GetAndLockOptions = {
-//    this.timeout = timeout
-//    this
-//  }
-//
-//  def build(): GetAndLockOptionsBuilt = GetAndLockOptionsBuilt(timeout)
-//}
-
-object GetAndLockOptions {
-  def apply() = new GetAndLockOptions()
+object PersistTo extends Enumeration {
+  val None, One, Two, Three = Value
 }
+
+object DurabilityLevel extends Enumeration {
+  val None, Majority, MajorityAndPersistActive, PersistToMajority = Value
+}
+
+sealed trait Durability
+case object Disabled extends Durability
+case class ObserveBased(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value) extends Durability
+case object ReplicateToMajority extends Durability
+case object PersistToMajority extends Durability

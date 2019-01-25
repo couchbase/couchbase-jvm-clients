@@ -18,6 +18,8 @@ package com.couchbase.client.scala.api
 
 import java.util.Objects
 
+import com.couchbase.client.core.msg.kv.MutationToken
+
 import scala.concurrent.duration.Duration
 
 case class Credential(login: String, password: String)

@@ -130,9 +130,10 @@ object Samples {
       // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
       // val toReplace = fetched1.get.copy(content = JsonObject.empty())
       val toReplace = fetched1.get
-      val replaced: Try[MutationResult] = coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
-      coll.replace(toReplace.id, JsonObject.create, toReplace.cas, timeout = 1000.milliseconds)
-      coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)
+      // TODO
+//      val replaced: Try[MutationResult] = coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
+//      coll.replace(toReplace.id, JsonObject.create, toReplace.cas, timeout = 1000.milliseconds)
+//      coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)
     }
 
 

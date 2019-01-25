@@ -18,8 +18,11 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.document._
+import com.couchbase.client.scala.durability.{Disabled, Durability}
+import io.opentracing.Span
 //import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -33,15 +36,15 @@ class Collection(val async: AsyncCollection,
                  bucketName: String)
                 (implicit ec: ExecutionContext) {
   private val config: CouchbaseEnvironment = null // scope.cluster.env
-//  private val asyncCollection = new AsyncCollection(this)
-//  private val reactiveColl = new ReactiveCollection(this)
+  //  private val asyncCollection = new AsyncCollection(this)
+  //  private val reactiveColl = new ReactiveCollection(this)
   // TODO binary collection
   // TODO MVP reactive collection
   private val SafetyTimeout = 1.second
-//  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
-  val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
+  //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
+  private val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
-  def block[T](in: Future[T], timeout: FiniteDuration): Try[T] = {
+  private def block[T](in: Future[T], timeout: FiniteDuration): Try[T] = {
     try {
       Try(Await.result(in, timeout + SafetyTimeout))
     }
@@ -50,141 +53,98 @@ class Collection(val async: AsyncCollection,
     }
   }
 
-  def insert[T](id: String,
-                content: T,
+  def exists[T](id: String,
+                parentSpan: Option[Span] = None,
                 timeout: FiniteDuration = kvTimeout,
-                expiration: FiniteDuration = 0.seconds,
-                  replicateTo: ReplicateTo.Value = ReplicateTo.None,
-  persistTo: PersistTo.Value = PersistTo.None,
-  durability: Durability.Value = Durability.None
-               // TODO durability
-            )
-               (implicit ev: Conversions.Encodable[T], up: upickle.default.ReadWriter[T] = null)
-//               (implicit tag: TypeTag[T])
-  : Try[MutationResult] = {
-    block(async.insert(id, content, timeout, expiration), timeout)
+                retryStrategy: RetryStrategy = async.environment.retryStrategy()
+               )
+  : Try[ExistsResult] = {
+    block(async.exists(id, parentSpan, timeout, retryStrategy), timeout)
   }
 
-//  def insert[T](id: String,
-//             content: T,
-//             options: InsertOptions,
-//            ): Try[MutationResult] = {
-//    block(asyncCollection.insert(id, content, options), timeout)
-//  }
+  def insert[T](id: String,
+                content: T,
+                durability: Durability = Disabled,
+                expiration: FiniteDuration = 0.seconds,
+                parentSpan: Option[Span] = None,
+                timeout: FiniteDuration = kvTimeout,
+                retryStrategy: RetryStrategy = async.environment.retryStrategy(),
+               )
+               (implicit ev: Conversions.Encodable[T])
+  //               (implicit tag: TypeTag[T])
+  : Try[MutationResult] = {
+    block(async.insert(id, content, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
+  }
 
   def replace[T](id: String,
                  content: T,
-                 cas: Long,
-                 timeout: FiniteDuration = kvTimeout,
+                 cas: Long = 0,
+                 durability: Durability = Disabled,
                  expiration: FiniteDuration = 0.seconds,
-                 replicateTo: ReplicateTo.Value = ReplicateTo.None,
-                 persistTo: PersistTo.Value = PersistTo.None,
-                 durability: Durability.Value = Durability.None
-                 // TODO durability
-                ): Try[MutationResult] = {
-    block(async.replace(id, content, cas, timeout, expiration), timeout)
+                 parentSpan: Option[Span] = None,
+                 timeout: FiniteDuration = kvTimeout,
+                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                )
+                (implicit ev: Conversions.Encodable[T]): Try[MutationResult] = {
+    block(async.replace(id, content, cas, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
   }
 
-//  def replace[T](id: String,
-//              content: T,
-//              cas: Long,
-//              options: ReplaceOptions,
-//            ): Try[MutationResult] = {
-//    block(asyncCollection.replace(id, content, cas, options), timeout)
-//  }
-
   def upsert[T](id: String,
-                 content: T,
-                 timeout: FiniteDuration = kvTimeout,
-                 expiration: FiniteDuration = 0.seconds,
-                replicateTo: ReplicateTo.Value = ReplicateTo.None,
-                persistTo: PersistTo.Value = PersistTo.None,
-                durability: Durability.Value = Durability.None
-                 // TODO durability
-                ): Try[MutationResult] = ???
-
-//  def upsert[T](id: String,
-//                 content: T,
-//                 cas: Long,
-//                 options: UpsertOptions,
-//                ): Try[MutationResult] = ???
+                content: T,
+                durability: Durability = Disabled,
+                expiration: FiniteDuration = 0.seconds,
+                parentSpan: Option[Span] = None,
+                timeout: FiniteDuration = kvTimeout,
+                retryStrategy: RetryStrategy = async.environment.retryStrategy()
+               )
+               (implicit ev: Conversions.Encodable[T]): Try[MutationResult] = {
+    block(async.upsert(id, content, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
+  }
 
   def remove(id: String,
              cas: Long = 0,
+             durability: Durability = Disabled,
+             parentSpan: Option[Span] = None,
              timeout: FiniteDuration = kvTimeout,
-             replicateTo: ReplicateTo.Value = ReplicateTo.None,
-             persistTo: PersistTo.Value = PersistTo.None,
-             durability: Durability.Value = Durability.None
-             // TODO durability
+             retryStrategy: RetryStrategy = async.environment.retryStrategy()
             ): Try[MutationResult] = {
-    block(async.remove(id, cas, timeout), timeout)
+    block(async.remove(id, cas, durability, parentSpan, timeout, retryStrategy), timeout)
   }
-
-//  def remove(id: String,
-//             cas: Long,
-//             options: RemoveOptions
-//            ): Try[MutationResult] = {
-//    block(asyncCollection.remove(id, cas, options), timeout)
-//  }
-
-//  def mutateIn(id: String,
-//               spec: MutateInSpec,
-//               options: MutateInOptions)
-//              : Try[MutationResult] = ???
 
   def mutateIn(id: String,
                spec: MutateInSpec,
                cas: Long = 0,
+               durability: Durability = Disabled,
                timeout: FiniteDuration = kvTimeout,
-               replicateTo: ReplicateTo.Value = ReplicateTo.None,
-               persistTo: PersistTo.Value = PersistTo.None,
-               durability: Durability.Value = Durability.None
               ): Try[MutationResult] = ???
 
 
-  def get(id: String,
-          operations: GetSpec = GetSpec().getDoc,
+  def getAndLock(id: String,
+          lockFor: FiniteDuration = 30.seconds,
+          parentSpan: Option[Span] = None,
           timeout: FiniteDuration = kvTimeout,
-          withExpiry: Boolean = false)
-         : Try[GetResult] = {
-    block(async.get(id, timeout), timeout)
+          retryStrategy: RetryStrategy = async.environment.retryStrategy()
+         ): Try[GetResult] = {
+    block(async.getAndLock(id, lockFor, parentSpan, timeout, retryStrategy), timeout)
   }
 
-//  def get(id: String,
-//          operations: GetSpec = GetSpec().getFullDocument,
-//          options: GetOptions)
-//         : Option[GetResult] = {
-//    block(asyncCollection.get(id, options), timeout)
-//  }
+  def getAndTouch(id: String,
+                  expiration: FiniteDuration,
+                 parentSpan: Option[Span] = None,
+                 timeout: FiniteDuration = kvTimeout,
+                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                ): Try[GetResult] = {
+    block(async.getAndTouch(id, expiration, parentSpan, timeout, retryStrategy), timeout)
+  }
 
-//  def readOrError(id: String,
-//                  timeout: FiniteDuration = kvTimeout)
-//                 : GetResult = {
-//    block(asyncCollection.getOrError(id, timeout), timeout)
-//  }
-//
-//  def readOrError(id: String,
-//                  options: GetOptions)
-//                 : GetResult = {
-//    block(asyncCollection.getOrError(id, options), timeout)
-//  }
+  def get(id: String,
+          operations: GetSpec = GetSpec().getDoc,
+          withExpiration: Boolean = false,
+          parentSpan: Option[Span] = None,
+          timeout: FiniteDuration = kvTimeout,
+          retryStrategy: RetryStrategy = async.environment.retryStrategy()
+         ): Try[GetResult] = {
+    block(async.get(id, withExpiration, parentSpan, timeout, retryStrategy), timeout)
+  }
 
-//  def readAndLock(id: String,
-//                  lockFor: FiniteDuration,
-//                  timeout: FiniteDuration = kvTimeout)
-//                 : Option[GetResult] = {
-//    block(asyncCollection.getAndLock(id, lockFor, timeout), timeout)
-//  }
-//
-//  def readAndLock(id: String,
-//                  lockFor: FiniteDuration,
-//                  options: GetAndLockOptions)
-//                 : Option[GetResult] = {
-//    block(asyncCollection.getAndLock(id, lockFor, options), timeout)
-//  }
-
-//  def query(statement: String, query: QueryOptions = QueryOptions()): Try[N1qlQueryResult] = ???
-
-
-//    def reactive(): ReactiveCollection = reactiveColl
 }

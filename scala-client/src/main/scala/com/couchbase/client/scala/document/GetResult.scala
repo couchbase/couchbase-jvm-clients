@@ -41,7 +41,7 @@ case class PathElements(paths: List[PathElement]) {
 class GetResult(val id: String,
                 private val _content: Array[Byte],
                 val cas: Long,
-                val expiry: Option[Duration]) extends Convertable {
+                val expiration: Option[Duration]) extends Convertable {
 
 
 
@@ -101,7 +101,7 @@ class GetResult(val id: String,
 
 object GetResult {
   def unapply[T](document: GetResult): Option[(String, JsonObject, Long, Option[Duration])] = {
-    Some(document.id, document.contentAsObject, document.cas, document.expiry)
+    Some(document.id, document.contentAsObject, document.cas, document.expiration)
   }
 
   // TODO can get this working along with unapply
