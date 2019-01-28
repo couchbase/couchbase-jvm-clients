@@ -29,6 +29,7 @@ import io.netty.util.CharsetUtil;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
@@ -97,15 +98,20 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   @Override
   public SubdocGetResponse decode(final ByteBuf response) {
-    // todo: fixme: error handling
-    ByteBuf body = body(response).get();
-    List<SubdocGetResponse.ResponseValue> values = new ArrayList<>(commands.size());
-    for (Command command : commands) {
-      short status = body.readShort();
-      int valueLength = body.readInt();
-      byte[] value = new byte[valueLength];
-      body.readBytes(value, 0, valueLength);
-      values.add(new SubdocGetResponse.ResponseValue(status, value, command.path));
+    Optional<ByteBuf> maybeBody = body(response);
+    List<SubdocGetResponse.ResponseValue> values;
+    if (maybeBody.isPresent()) {
+      ByteBuf body = maybeBody.get();
+      values = new ArrayList<>(commands.size());
+      for (Command command : commands) {
+        short status = body.readShort();
+        int valueLength = body.readInt();
+        byte[] value = new byte[valueLength];
+        body.readBytes(value, 0, valueLength);
+        values.add(new SubdocGetResponse.ResponseValue(status, value, command.path));
+      }
+    } else {
+      values = new ArrayList<>();
     }
     return new SubdocGetResponse(decodeStatus(response), values, cas(response));
   }

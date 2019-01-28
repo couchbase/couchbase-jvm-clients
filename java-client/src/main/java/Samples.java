@@ -5,6 +5,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
@@ -12,7 +13,6 @@ import com.couchbase.client.java.kv.PersistTo;
 import java.util.Optional;
 
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
-import static com.couchbase.client.java.kv.MutateInSpec.mutationSpec;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 
@@ -53,7 +53,7 @@ public class Samples {
     if (document.isPresent()) {
       JsonArray content = document.get().contentAsArray();
       content.add(true);
-      MutateInResult result = collection.mutateIn("id", mutationSpec().replace("users", content));
+      MutateInResult result = collection.mutateIn("id", MutateInOps.mutateInOps().replace("users", content));
     }
   }
 

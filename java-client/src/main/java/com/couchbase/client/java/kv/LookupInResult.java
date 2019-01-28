@@ -16,8 +16,11 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.codec.DefaultDecoder;
+import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
 import java.util.List;
@@ -29,22 +32,19 @@ import java.util.Optional;
 public class LookupInResult {
 
   private final String id;
-  private final List<EncodedFragment> encoded;
+  private final List<SubdocGetResponse.ResponseValue> encoded;
   private final long cas;
-  private final Optional<Duration> expiration;
 
-  static LookupInResult create(final String id, final List<EncodedFragment> encoded,
-                               final long cas, final Optional<Duration> expiration)
-  {
-    return new LookupInResult(id, encoded, cas, expiration);
+  static LookupInResult create(final String id, final List<SubdocGetResponse.ResponseValue> encoded,
+                               final long cas) {
+    return new LookupInResult(id, encoded, cas);
   }
 
-  private LookupInResult(final String id, final List<EncodedFragment> encoded, final long cas,
-                         final Optional<Duration> expiration) {
+  private LookupInResult(final String id, final List<SubdocGetResponse.ResponseValue> encoded,
+                         final long cas) {
     this.id = id;
     this.cas = cas;
     this.encoded = encoded;
-    this.expiration = expiration;
   }
 
   public String id() {
@@ -55,9 +55,6 @@ public class LookupInResult {
     return cas;
   }
 
-  public Optional<Duration> expiration() {
-    return expiration;
-  }
 
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
@@ -65,11 +62,20 @@ public class LookupInResult {
   }
 
   public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
-    return null;
+    return decoder.decode(target, new EncodedDocument(0, encoded.get(index).value()));
   }
 
+  public JsonObject contentAsObject(int index) {
+    return contentAs(index, JsonObject.class);
+  }
+
+  public JsonArray contentAsArray(int index) {
+    return contentAs(index, JsonArray.class);
+  }
+
+
   public boolean exists(int index) {
-    return false;
+    return index < encoded.size();
   }
 
   @Override
@@ -78,7 +84,6 @@ public class LookupInResult {
       "id='" + id + '\'' +
       ", encoded=" + encoded +
       ", cas=" + cas +
-      ", expiration=" + expiration +
       '}';
   }
 

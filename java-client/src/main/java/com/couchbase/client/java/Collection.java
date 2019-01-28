@@ -24,13 +24,13 @@ import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.LookupInOps;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -334,11 +334,11 @@ public class Collection {
     block(async().unlock(id, cas, options));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, final LookupInSpec spec) {
+  public Optional<LookupInResult> lookupIn(final String id, final LookupInOps spec) {
     return block(async().lookupIn(id, spec));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, final LookupInSpec spec,
+  public Optional<LookupInResult> lookupIn(final String id, final LookupInOps spec,
                                            final LookupInOptions options) {
     return block(async().lookupIn(id, spec, options));
   }
@@ -350,7 +350,7 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final MutateInSpec spec) {
+  public MutateInResult mutateIn(final String id, final MutateInOps spec) {
     return block(async().mutateIn(id, spec));
   }
 
@@ -362,7 +362,7 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final MutateInSpec spec,
+  public MutateInResult mutateIn(final String id, final MutateInOps spec,
                                  final MutateInOptions options) {
     return block(async().mutateIn(id, spec, options));
   }

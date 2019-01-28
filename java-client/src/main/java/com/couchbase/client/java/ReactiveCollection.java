@@ -45,10 +45,10 @@ import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.LookupInOps;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
-import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
@@ -432,11 +432,11 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, final LookupInSpec spec) {
+  public Mono<LookupInResult> lookupIn(final String id, final LookupInOps spec) {
     return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, final LookupInSpec spec,
+  public Mono<LookupInResult> lookupIn(final String id, final LookupInOps spec,
                                        final LookupInOptions options) {
 
     throw new UnsupportedOperationException("Implement me -> subdoc lookupIn");
@@ -449,7 +449,7 @@ public class ReactiveCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final MutateInSpec spec) {
+  public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -461,7 +461,7 @@ public class ReactiveCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final MutateInSpec spec,
+  public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                        final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateSpec");

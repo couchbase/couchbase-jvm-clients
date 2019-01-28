@@ -36,13 +36,14 @@ import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
+import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.LookupInOps;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -718,17 +719,27 @@ public class AsyncCollection {
     return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInSpec spec) {
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInOps spec) {
     return lookupIn(id, spec, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInSpec spec,
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInOps spec,
                                                               final LookupInOptions options) {
+    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, spec, options));
+  }
+
+  SubdocGetRequest lookupInRequest(final String id, final LookupInOps spec,
+                                    final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "LookupInSpec");
+    notNull(spec, "LookupInOps");
     notNull(options, "LookupInOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      (byte) 0, spec.commands());
   }
 
   /**
@@ -738,7 +749,7 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInSpec spec) {
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -750,7 +761,7 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInSpec spec,
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                                     final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateInSpec");
