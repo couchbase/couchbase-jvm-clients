@@ -23,14 +23,18 @@ import com.couchbase.client.core.env.CompressionConfig;
  *
  * @since 2.0.0
  */
-public class EncodeContext {
+public class ChannelContext {
 
+  private final String bucket;
   private final CompressionConfig compression;
   private final boolean collections;
+  private final boolean mutationTokensEnabled;
 
-  public EncodeContext(CompressionConfig compression, boolean collections) {
+  public ChannelContext(CompressionConfig compression, boolean collections, boolean mutationTokens, String bucket) {
     this.compression = compression;
     this.collections = collections;
+    this.mutationTokensEnabled = mutationTokens;
+    this.bucket = bucket;
   }
 
   public boolean collectionsEnabled() {
@@ -41,8 +45,16 @@ public class EncodeContext {
     return compression != null;
   }
 
+  public boolean mutationTokensEnabled() {
+    return mutationTokensEnabled;
+  }
+
   public CompressionConfig compressionConfig() {
     return compression;
+  }
+
+  public String bucket() {
+    return bucket;
   }
 
 }

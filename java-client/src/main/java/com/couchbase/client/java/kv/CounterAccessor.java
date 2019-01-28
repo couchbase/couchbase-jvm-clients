@@ -39,7 +39,7 @@ public class CounterAccessor {
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return new CounterResult(response.cas(), response.value(), Optional.empty());
+            return new CounterResult(response.cas(), response.value(), response.mutationToken());
           case NOT_FOUND:
             throw new DocumentDoesNotExistException();
           case TEMPORARY_FAILURE:
@@ -63,7 +63,7 @@ public class CounterAccessor {
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return new CounterResult(response.cas(), response.value(), Optional.empty());
+            return new CounterResult(response.cas(), response.value(), response.mutationToken());
           case NOT_FOUND:
             throw new DocumentDoesNotExistException();
           case TEMPORARY_FAILURE:

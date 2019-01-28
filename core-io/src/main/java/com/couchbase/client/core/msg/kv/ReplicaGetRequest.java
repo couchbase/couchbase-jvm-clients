@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -47,7 +47,7 @@ public class ReplicaGetRequest extends GetRequest {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_REPLICA, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());

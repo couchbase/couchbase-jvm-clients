@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -44,7 +44,7 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
@@ -53,7 +53,7 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
   }
 
   @Override
-  public UnlockResponse decode(ByteBuf response) {
+  public UnlockResponse decode(ByteBuf response, ChannelContext ctx) {
     return new UnlockResponse(decodeStatus(response), cas(response), Optional.empty());
   }
 }

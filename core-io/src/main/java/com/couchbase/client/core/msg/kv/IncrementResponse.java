@@ -19,15 +19,19 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import java.util.Optional;
+
 public class IncrementResponse extends BaseResponse {
 
   private final long cas;
   private final long value;
+  private final Optional<MutationToken> mutationToken;
 
-  public IncrementResponse(ResponseStatus status, long value, long cas) {
+  public IncrementResponse(ResponseStatus status, long value, long cas, Optional<MutationToken> mutationToken) {
     super(status);
     this.value = value;
     this.cas = cas;
+    this.mutationToken = mutationToken;
   }
 
   public long value() {
@@ -36,5 +40,9 @@ public class IncrementResponse extends BaseResponse {
 
   public long cas() {
     return cas;
+  }
+
+  public Optional<MutationToken> mutationToken() {
+    return mutationToken;
   }
 }

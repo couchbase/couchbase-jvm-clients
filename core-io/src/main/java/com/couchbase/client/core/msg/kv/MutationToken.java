@@ -23,12 +23,12 @@ package com.couchbase.client.core.msg.kv;
  */
 public class MutationToken {
 
-    private final long vbucketID;
+    private final short vbucketID;
     private final long vbucketUUID;
     private final long sequenceNumber;
     private final String bucket;
 
-    public MutationToken(long vbucketID, long vbucketUUID, long sequenceNumber, String bucket) {
+    public MutationToken(short vbucketID, long vbucketUUID, long sequenceNumber, String bucket) {
         this.vbucketID = vbucketID;
         this.vbucketUUID = vbucketUUID;
         this.sequenceNumber = sequenceNumber;
@@ -43,7 +43,7 @@ public class MutationToken {
         return sequenceNumber;
     }
 
-    public long vbucketID() {
+    public short vbucketID() {
         return vbucketID;
     }
 

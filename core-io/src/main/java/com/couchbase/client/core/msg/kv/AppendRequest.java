@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -28,9 +28,7 @@ import io.netty.buffer.Unpooled;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
 
@@ -46,7 +44,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     byte datatype = 0;
@@ -73,7 +71,11 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
   }
 
   @Override
-  public AppendResponse decode(ByteBuf response) {
-    return new AppendResponse(decodeStatus(response), cas(response), Optional.empty());
+  public AppendResponse decode(final ByteBuf response, final ChannelContext ctx) {
+    return new AppendResponse(
+      decodeStatus(response),
+      cas(response),
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+    );
   }
 }

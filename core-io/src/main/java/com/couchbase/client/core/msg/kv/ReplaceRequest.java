@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
 
 /**
  * Uses the KV replace command to replace a document if it exists.
@@ -55,7 +56,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     byte datatype = 0;
@@ -87,8 +88,12 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
     return r;  }
 
   @Override
-  public ReplaceResponse decode(final ByteBuf response) {
+  public ReplaceResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new ReplaceResponse(status, cas(response), Optional.empty());
+    return new ReplaceResponse(
+      status,
+      cas(response),
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+    );
   }
 }

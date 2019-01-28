@@ -86,7 +86,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       }
 
       pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));
-      pipeline.addLast(new KeyValueMessageHandler(coreContext));
+      pipeline.addLast(new KeyValueMessageHandler(coreContext, bucketname));
     }
 
     /**
@@ -101,6 +101,10 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.XERROR
         // ServerFeature.COLLECTIONS
       ));
+
+      if (coreContext.environment().mutationTokensEnabled()) {
+        features.add(ServerFeature.MUTATION_SEQNO);
+      }
 
       if (coreContext.environment().ioEnvironment().compressionConfig().enabled()) {
         features.add(ServerFeature.SNAPPY);

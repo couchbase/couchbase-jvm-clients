@@ -68,6 +68,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private final EventBus eventBus;
 
+  private final String bucketName;
+
   /**
    * Stores the current IO context.
    */
@@ -78,19 +80,20 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private int opaque;
 
-  private EncodeContext encodeContext;
+  private ChannelContext channelContext;
 
   /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
    * @param coreContext the parent core context.
    */
-  public KeyValueMessageHandler(final CoreContext coreContext) {
+  public KeyValueMessageHandler(final CoreContext coreContext, final String bucketName) {
     this.coreContext = coreContext;
     this.writtenRequests = new IntObjectHashMap<>();
     this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
     this.compressionConfig = coreContext.environment().ioEnvironment().compressionConfig();
     this.eventBus = coreContext.environment().eventBus();
+    this.bucketName = bucketName;
   }
 
   /**
@@ -115,9 +118,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     boolean compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
     boolean collectionsEnabled = features != null && features.contains(ServerFeature.COLLECTIONS);
-    encodeContext = new EncodeContext(
+    boolean mutationTokensEnabled = features != null && features.contains(ServerFeature.MUTATION_SEQNO);
+    channelContext = new ChannelContext(
       compressionEnabled ? compressionConfig : null,
-      collectionsEnabled
+      collectionsEnabled,
+      mutationTokensEnabled,
+      bucketName
     );
 
     ctx.fireChannelActive();
@@ -130,7 +136,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
       int nextOpaque = ++opaque;
       handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
-      ctx.write(request.encode(ctx.alloc(), nextOpaque, encodeContext));
+      ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext));
       writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));
@@ -178,7 +184,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     long start = writtenRequestDispatchTimings.remove(opaque);
     request.context().dispatchLatency(System.nanoTime() - start);
 
-    Response decoded = request.decode(response);
+    Response decoded = request.decode(response, channelContext);
     request.succeed(decoded);
 
     ReferenceCountUtil.release(response);

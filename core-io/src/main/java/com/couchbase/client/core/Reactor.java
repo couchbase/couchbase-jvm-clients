@@ -18,11 +18,9 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.msg.Response;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 /**

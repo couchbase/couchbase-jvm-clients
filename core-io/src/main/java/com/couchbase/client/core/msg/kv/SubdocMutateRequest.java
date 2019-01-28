@@ -17,8 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -52,7 +51,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     ByteBuf extras = alloc.buffer();
@@ -86,7 +85,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   @Override
-  public SubdocMutateResponse decode(final ByteBuf response) {
+  public SubdocMutateResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     List<SubdocMutateResponse.ResponseValue> values;
     if (maybeBody.isPresent()) {
@@ -102,7 +101,12 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     } else {
       values = new ArrayList<>();
     }
-    return new SubdocMutateResponse(decodeStatus(response), values, cas(response), Optional.empty());
+    return new SubdocMutateResponse(
+      decodeStatus(response),
+      values,
+      cas(response),
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+    );
   }
 
   public static class Command {

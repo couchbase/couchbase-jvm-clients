@@ -69,6 +69,7 @@ public class CoreEnvironment {
   private final ViewServiceConfig viewServiceConfig;
   private final SearchServiceConfig searchServiceConfig;
   private final AnalyticsServiceConfig analyticsServiceConfig;
+  private final boolean mutationTokensEnabled;
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
@@ -119,6 +120,7 @@ public class CoreEnvironment {
     this.analyticsServiceConfig = builder.analyticsServiceConfig == null
       ? AnalyticsServiceConfig.create()
       : builder.analyticsServiceConfig;
+    this.mutationTokensEnabled = builder.mutationTokensEnabled;
 
     this.credentials = builder.credentials;
 
@@ -260,6 +262,10 @@ public class CoreEnvironment {
     return searchServiceConfig;
   }
 
+  public boolean mutationTokensEnabled() {
+    return mutationTokensEnabled;
+  }
+
   public void shutdown(final Duration timeout) {
     shutdownAsync(timeout).block();
   }
@@ -283,6 +289,7 @@ public class CoreEnvironment {
     private Duration managerTimeout = null;
     private Duration queryTimeout = null;
     private Duration configPollInterval = null;
+    private boolean mutationTokensEnabled = false;
 
     private MemcachedHashingStrategy memcachedHashingStrategy;
     private RetryStrategy retryStrategy;
@@ -408,6 +415,11 @@ public class CoreEnvironment {
 
     public SELF viewServiceConfig(final ViewServiceConfig config) {
       this.viewServiceConfig = config;
+      return self();
+    }
+
+    public SELF mutationTokensEnabled(final boolean mutationTokensEnabled) {
+      this.mutationTokensEnabled = mutationTokensEnabled;
       return self();
     }
 

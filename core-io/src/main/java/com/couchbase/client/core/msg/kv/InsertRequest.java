@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -29,8 +29,7 @@ import io.netty.buffer.Unpooled;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 /**
  * Uses the KV "add" command to  insert documents if they do not already exist.
@@ -54,7 +53,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     byte datatype = 0;
@@ -87,9 +86,13 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
   }
 
   @Override
-  public InsertResponse decode(final ByteBuf response) {
+  public InsertResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    return new InsertResponse(status, cas(response), Optional.empty());
+    return new InsertResponse(
+      status,
+      cas(response),
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+    );
   }
 
 }

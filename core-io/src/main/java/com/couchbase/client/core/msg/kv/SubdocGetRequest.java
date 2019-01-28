@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -55,7 +55,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     ByteBuf extras = flags != 0
@@ -97,7 +97,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   @Override
-  public SubdocGetResponse decode(final ByteBuf response) {
+  public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     List<SubdocGetResponse.ResponseValue> values;
     if (maybeBody.isPresent()) {

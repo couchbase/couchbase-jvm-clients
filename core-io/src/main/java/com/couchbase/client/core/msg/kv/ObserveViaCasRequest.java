@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -43,7 +43,7 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     byte[] key = ctx.collectionsEnabled() ? keyWithCollection() : key();
     int keyLength = key.length;
     ByteBuf content = alloc.buffer(keyLength + 4);
@@ -58,7 +58,7 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
   }
 
   @Override
-  public ObserveViaCasResponse decode(final ByteBuf response) {
+  public ObserveViaCasResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     byte observed = ObserveViaCasResponse.ObserveStatus.UNKNOWN.value();
     long observedCas = 0;

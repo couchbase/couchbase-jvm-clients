@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -47,7 +47,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
@@ -58,7 +58,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   }
 
   @Override
-  public GetAndTouchResponse decode(final ByteBuf response) {
+  public GetAndTouchResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     long cas = cas(response);
 

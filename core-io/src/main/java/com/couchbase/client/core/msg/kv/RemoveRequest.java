@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.EncodeContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -28,11 +28,7 @@ import io.netty.buffer.Unpooled;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 /**
  * Represents a KV delete operation.
@@ -51,7 +47,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, EncodeContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
@@ -60,13 +56,15 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
   }
 
   @Override
-  public RemoveResponse decode(final ByteBuf response) {
+  public RemoveResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
-    if (status.success()) {
-      return new RemoveResponse(status, cas(response), Optional.empty());
-    } else {
-      return new RemoveResponse(status, 0, Optional.empty());
-    }
+    Optional<MutationToken> mutationToken = extractToken(
+      ctx.mutationTokensEnabled(),
+      partition(),
+      response,
+      ctx.bucket()
+    );
+    return new RemoveResponse(status, cas(response), mutationToken);
   }
 
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.MutationToken;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -430,6 +431,28 @@ public enum MemcacheProtocol {
     sb.append(String.format("CAS: 0x%x\n", cas(message)));
 
     return sb.toString();
+  }
+
+  /**
+   * Tries to extract the mutation token if the surround msg and environment allows for it.
+   *
+   * @param enabled if enabled
+   * @param partition the partition id
+   * @param msg the msg to check
+   * @param bucket the bucket for this msg
+   * @return an optional with content if successful, false otherwise.
+   */
+  public static Optional<MutationToken> extractToken(final boolean enabled, final short partition, final ByteBuf msg,
+                                                     final String bucket) {
+    if (!enabled || (decodeStatus(msg) != ResponseStatus.SUCCESS)) {
+      return Optional.empty();
+    }
+    return extras(msg).map(e -> new MutationToken(
+      partition,
+      e.readLong(),
+      e.readLong(),
+      bucket
+    ));
   }
 
   public enum Magic {
