@@ -16,22 +16,81 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.java.codec.DefaultEncoder;
+import com.couchbase.client.java.codec.Encoder;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class MutateInOps {
+
+  private final List<SubdocMutateRequest.Command> commands;
+
+  private static final Encoder ENCODER = new DefaultEncoder();
 
   public static MutateInOps mutateInOps() {
     return new MutateInOps();
   }
 
   private MutateInOps() {
+    commands = new ArrayList<>();
+  }
 
+  public <T> MutateInOps replace(final boolean xattr, final String path, final T fragment) {
+    return replace(xattr, path, fragment, false);
+  }
+
+  public <T> MutateInOps replace(final String path, final T fragment, final boolean createParent) {
+    return replace(false, path, fragment, createParent);
   }
 
   public <T> MutateInOps replace(final String path, final T fragment) {
+    return replace(false, path, fragment, false);
+  }
+
+  public <T> MutateInOps replace(final boolean xattr, final String path, final T fragment,
+                                 final boolean createParent) {
+    commands.add(new SubdocMutateRequest.Command(
+      SubdocMutateRequest.CommandType.REPLACE,
+      path,
+      ENCODER.encode(fragment).content(),
+      createParent,
+      xattr
+    ));
     return this;
   }
 
+  public <T> MutateInOps insert(final boolean xattr, final String path, final T fragment) {
+    return insert(xattr, path, fragment, false);
+  }
+
+  public <T> MutateInOps insert(final String path, final T fragment, final boolean createParent) {
+    return insert(false, path, fragment, createParent);
+  }
+
+
   public <T> MutateInOps insert(final String path, final T fragment) {
+    return insert(false, path, fragment, false);
+  }
+
+  public <T> MutateInOps insert(final boolean xattr, final String path, final T fragment,
+                                 final boolean createParent) {
+    commands.add(new SubdocMutateRequest.Command(
+      SubdocMutateRequest.CommandType.DICT_ADD,
+      path,
+      ENCODER.encode(fragment).content(),
+      createParent,
+      xattr
+    ));
     return this;
+  }
+
+
+  @Stability.Internal
+  public List<SubdocMutateRequest.Command> commands() {
+    return commands;
   }
 
 }

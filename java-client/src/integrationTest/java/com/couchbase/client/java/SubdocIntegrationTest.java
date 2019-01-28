@@ -21,6 +21,8 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.LookupInResult;
+import com.couchbase.client.java.kv.MutateInOps;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.LookupInOps.lookupInOps;
+import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -98,6 +101,21 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       assertTrue(r.exists(1));
       assertTrue(r.cas() != 0);
     });
+  }
+
+  @Test
+  void insertPrimitive() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.empty());
+
+    MutateInResult result = collection.mutateIn(id, mutateInOps().insert("foo", "bar"));
+    assertTrue(result.cas() != 0);
+
+    assertEquals(
+      JsonObject.create().put("foo", "bar"),
+      collection.get(id).get().contentAsObject()
+    );
   }
 
 }

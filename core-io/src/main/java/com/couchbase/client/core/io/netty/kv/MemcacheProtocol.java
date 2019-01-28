@@ -558,6 +558,10 @@ public enum MemcacheProtocol {
      */
     SUBDOC_MULTI_LOOKUP((byte) 0xd0),
     /**
+     * Subdocument multi mutation.
+     */
+    SUBDOC_MULTI_MUTATE((byte) 0xd1),
+    /**
      * Allows to get a document and reset its expiry at the same time.
      */
     GET_AND_TOUCH((byte) 0x1d),

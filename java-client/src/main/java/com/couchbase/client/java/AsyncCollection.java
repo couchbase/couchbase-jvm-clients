@@ -26,37 +26,7 @@ import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.EncodedDocument;
-import com.couchbase.client.java.kv.ExistsAccessor;
-import com.couchbase.client.java.kv.ExistsOptions;
-import com.couchbase.client.java.kv.ExistsResult;
-import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.kv.GetAndLockOptions;
-import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetFromReplicaOptions;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.InsertAccessor;
-import com.couchbase.client.java.kv.LookupInAccessor;
-import com.couchbase.client.java.kv.LookupInOptions;
-import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInOps;
-import com.couchbase.client.java.kv.MutateInOptions;
-import com.couchbase.client.java.kv.MutateInResult;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutateInOps;
-import com.couchbase.client.java.kv.RemoveAccessor;
-import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.ReplaceAccessor;
-import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.ReplicaMode;
-import com.couchbase.client.java.kv.TouchAccessor;
-import com.couchbase.client.java.kv.TouchOptions;
-import com.couchbase.client.java.kv.UnlockAccessor;
-import com.couchbase.client.java.kv.UnlockOptions;
-import com.couchbase.client.java.kv.UpsertAccessor;
-import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.kv.*;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -763,11 +733,21 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                                     final MutateInOptions options) {
+    return MutateInAccessor.mutateIn(core, mutateInRequest(id, spec, options));
+  }
+
+  SubdocMutateRequest mutateInRequest(final String id, final MutateInOps spec,
+                                      final MutateInOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(spec, "MutateInSpec");
     notNull(options, "MutateInOptions");
 
-    throw new UnsupportedOperationException("Implement me -> subdoc mutateIn");
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      (byte) 0, spec.commands(), options.expiry().getSeconds());
   }
 
 }

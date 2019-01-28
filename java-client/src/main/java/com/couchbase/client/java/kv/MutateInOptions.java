@@ -18,8 +18,38 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.CommonOptions;
 
+import java.time.Duration;
+
 public class MutateInOptions extends CommonOptions<MutateInOptions> {
 
   public static MutateInOptions DEFAULT = new MutateInOptions();
 
+  private Duration expiry = Duration.ZERO;
+  private long cas = 0;
+
+  public static MutateInOptions mutateInOptions() {
+    return new MutateInOptions();
+  }
+
+  private MutateInOptions() {
+
+  }
+
+  public Duration expiry() {
+    return expiry;
+  }
+
+  public MutateInOptions expiry(final Duration expiry) {
+    this.expiry = expiry;
+    return this;
+  }
+
+  public long cas() {
+    return cas;
+  }
+
+  public MutateInOptions cas(long cas) {
+    this.cas = cas;
+    return this;
+  }
 }
