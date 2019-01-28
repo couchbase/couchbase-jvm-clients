@@ -30,11 +30,6 @@ import static com.couchbase.client.java.AsyncUtils.block;
 public class Scope {
 
   /**
-   * The name of the bucket at which this scope belongs.
-   */
-  private final String bucketName;
-
-  /**
    * The underlying async scope which actually performs the actions.
    */
   private final AsyncScope asyncScope;
@@ -43,11 +38,9 @@ public class Scope {
    * Creates a new {@link Scope}.
    *
    * @param asyncScope the underlying async scope.
-   * @param bucketName the name of the bucket this scope belongs to.
    */
-  Scope(final AsyncScope asyncScope, final String bucketName) {
+  Scope(final AsyncScope asyncScope) {
     this.asyncScope = asyncScope;
-    this.bucketName = bucketName;
   }
 
   /**
@@ -75,7 +68,7 @@ public class Scope {
    * @return the requested collection if successful.
    */
   public Collection collection(final String name) {
-    return new Collection(block(asyncScope.collection(name)), bucketName);
+    return new Collection(block(asyncScope.collection(name)));
   }
 
 }

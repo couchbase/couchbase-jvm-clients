@@ -16,13 +16,9 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
-
-import java.util.function.Function;
 
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -31,14 +27,10 @@ public class Bucket {
 
   private final AsyncBucket asyncBucket;
   private final ReactiveBucket reactiveBucket;
-  private final Core core;
-  private final ClusterEnvironment environment;
 
   Bucket(AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
     this.reactiveBucket = new ReactiveBucket(asyncBucket);
-    this.core = asyncBucket.core();
-    this.environment = asyncBucket.environment();
   }
 
   public AsyncBucket async() {
@@ -51,7 +43,7 @@ public class Bucket {
 
   public Scope scope(final String name) {
     return block(asyncBucket.scope(name)
-      .thenApply(asyncScope -> new Scope(asyncScope, asyncBucket.name()))
+      .thenApply(Scope::new)
     );
   }
 

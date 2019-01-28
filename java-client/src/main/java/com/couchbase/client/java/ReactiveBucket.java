@@ -16,16 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.util.Validators;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
-
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -34,13 +28,9 @@ import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 public class ReactiveBucket {
 
   private final AsyncBucket asyncBucket;
-  private final Core core;
-  private final ClusterEnvironment environment;
 
   ReactiveBucket(AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
-    this.core = asyncBucket.core();
-    this.environment = asyncBucket.environment();
   }
 
   public AsyncBucket async() {

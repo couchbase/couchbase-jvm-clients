@@ -56,28 +56,16 @@ public class ReactiveCollection {
   private final CoreContext coreContext;
 
   /**
-   * Holds the environment for this collection.
-   */
-  private final ClusterEnvironment environment;
-
-  /**
    * Holds a direct reference to the core.
    */
   private final Core core;
 
-  private final String bucketName;
-
-  private final byte[] encodedId;
-
   private final ReactiveBinaryCollection reactiveBinaryCollection;
 
-  ReactiveCollection(final AsyncCollection asyncCollection, final String bucketName) {
+  ReactiveCollection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
-    this.environment = asyncCollection.environment();
     this.core = asyncCollection.core();
-    this.bucketName = bucketName;
-    this.encodedId = asyncCollection.collectionId();
     this.reactiveBinaryCollection = new ReactiveBinaryCollection(core, asyncCollection.binary());
   }
 

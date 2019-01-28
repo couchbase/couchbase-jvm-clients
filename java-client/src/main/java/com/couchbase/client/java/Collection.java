@@ -67,9 +67,9 @@ public class Collection {
 
   private final BinaryCollection binaryCollection;
 
-  public Collection(final AsyncCollection asyncCollection, String bucketName) {
+  public Collection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
-    reactiveCollection = new ReactiveCollection(asyncCollection, bucketName);
+    reactiveCollection = new ReactiveCollection(asyncCollection);
     this.binaryCollection = new BinaryCollection(asyncCollection.binary());
   }
 

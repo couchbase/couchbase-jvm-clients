@@ -78,7 +78,7 @@ public class ReactiveScope {
   public Mono<ReactiveCollection> collection(final String name) {
     return Mono
       .fromFuture(asyncScope.collection(name))
-      .map(asyncCollection -> new ReactiveCollection(asyncCollection, bucketName));
+      .map(ReactiveCollection::new);
   }
 
 }
