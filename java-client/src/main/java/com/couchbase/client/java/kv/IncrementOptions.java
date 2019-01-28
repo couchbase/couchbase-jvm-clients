@@ -18,7 +18,53 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.CommonOptions;
 
+import java.util.Optional;
+
 public class IncrementOptions extends CommonOptions<IncrementOptions> {
   public static IncrementOptions DEFAULT = new IncrementOptions();
+
+  private long delta;
+  private Optional<Long> initial;
+  private int expiry;
+
+  public static IncrementOptions incrementOptions() {
+    return new IncrementOptions();
+  }
+
+  private IncrementOptions() {
+    delta = 1;
+    initial = Optional.empty();
+    expiry = 0;
+  }
+
+  public long delta() {
+    return delta;
+  }
+
+  public IncrementOptions delta(long delta) {
+    if (delta < 0) {
+      throw new IllegalArgumentException("The delta cannot be less than 0");
+    }
+    this.delta = delta;
+    return this;
+  }
+
+  public Optional<Long> initial() {
+    return initial;
+  }
+
+  public IncrementOptions initial(Optional<Long> initial) {
+    this.initial = initial;
+    return this;
+  }
+
+  public int expiry() {
+    return expiry;
+  }
+
+  public IncrementOptions expiry(int expiry) {
+    this.expiry = expiry;
+    return this;
+  }
 
 }

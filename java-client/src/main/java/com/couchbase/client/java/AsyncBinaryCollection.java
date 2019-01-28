@@ -27,6 +27,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.kv.AppendAccessor;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterAccessor;
+import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
 import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
@@ -102,33 +103,43 @@ public class AsyncBinaryCollection {
     );
   }
 
-  public CompletableFuture<MutationResult> increment(final String id) {
+  public CompletableFuture<CounterResult> increment(final String id) {
     return increment(id, IncrementOptions.DEFAULT);
   }
 
-  public CompletableFuture<MutationResult> increment(final String id, final IncrementOptions options) {
-    return CounterAccessor.increment(core, id, incrementRequest(id, options));
+  public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
+    return CounterAccessor.increment(core, incrementRequest(id, options));
   }
 
   IncrementRequest incrementRequest(final String id, final IncrementOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "IncrementOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      options.delta(), options.initial(), options.expiry());
   }
 
-  public CompletableFuture<MutationResult> decrement(final String id) {
+  public CompletableFuture<CounterResult> decrement(final String id) {
     return decrement(id, DecrementOptions.DEFAULT);
   }
 
-  public CompletableFuture<MutationResult> decrement(final String id, final DecrementOptions options) {
-    return CounterAccessor.decrement(core, id, decrementRequest(id, options));
+  public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
+    return CounterAccessor.decrement(core, decrementRequest(id, options));
   }
 
   DecrementRequest decrementRequest(final String id, final DecrementOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "DecrementOptions");
 
-    return null;
+    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy() == null
+      ? environment.retryStrategy()
+      : options.retryStrategy();
+    return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      options.delta(), options.initial(), options.expiry());
   }
 }

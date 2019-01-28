@@ -19,9 +19,13 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.kv.AppendRequest;
+import com.couchbase.client.core.msg.kv.DecrementRequest;
+import com.couchbase.client.core.msg.kv.IncrementRequest;
 import com.couchbase.client.core.msg.kv.PrependRequest;
 import com.couchbase.client.java.kv.AppendAccessor;
 import com.couchbase.client.java.kv.AppendOptions;
+import com.couchbase.client.java.kv.CounterAccessor;
+import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
 import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
@@ -65,20 +69,26 @@ public class ReactiveBinaryCollection {
     });
   }
 
-  public Mono<MutationResult> increment(final String id) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+  public Mono<CounterResult> increment(final String id) {
+    return increment(id, IncrementOptions.DEFAULT);
   }
 
-  public Mono<MutationResult> increment(final String id, final IncrementOptions options) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+  public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
+    return Mono.defer(() -> {
+      IncrementRequest request = async.incrementRequest(id, options);
+      return Reactor.wrap(request, CounterAccessor.increment(core, request), true);
+    });
   }
 
-  public Mono<MutationResult> decrement(final String id) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+  public Mono<CounterResult> decrement(final String id) {
+    return decrement(id, DecrementOptions.DEFAULT);
   }
 
-  public Mono<MutationResult> decrement(final String id, final DecrementOptions options) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+  public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
+    return Mono.defer(() -> {
+      DecrementRequest request = async.decrementRequest(id, options);
+      return Reactor.wrap(request, CounterAccessor.decrement(core, request), true);
+    });
   }
 
 }

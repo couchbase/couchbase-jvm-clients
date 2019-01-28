@@ -23,9 +23,9 @@ import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -39,7 +39,9 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.*;
 
+import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
+import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
@@ -491,6 +493,68 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       worldHelloBytes,
       collection.get(id).get().contentAs(BinaryContent.class).content()
     );
+  }
+
+  @Test
+  void increment() {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentDoesNotExistException.class, () -> collection.binary().increment(id));
+
+    CounterResult result = collection.binary().increment(
+      id,
+      incrementOptions().initial(Optional.of(5L))
+    );
+
+    assertTrue(result.cas() != 0);
+    assertEquals(5L, result.content());
+
+    result = collection.binary().increment(id, incrementOptions().delta(2));
+
+    assertTrue(result.cas() != 0);
+    assertEquals(7L, result.content());
+
+    result = collection.binary().increment(id, incrementOptions());
+
+    assertTrue(result.cas() != 0);
+    assertEquals(8L, result.content());
+  }
+
+
+  /**
+   * Right now the mock allows the value to be decremented below zero, which is against the server
+   * spec/protocol. Once https://github.com/couchbase/CouchbaseMock/issues/51 is fixed, this
+   * ignore annotation can be removed.
+   */
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  void decrement() {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentDoesNotExistException.class, () -> collection.binary().decrement(id));
+
+    CounterResult result = collection.binary().decrement(
+      id,
+      decrementOptions().initial(Optional.of(2L))
+    );
+
+    assertTrue(result.cas() != 0);
+    assertEquals(2L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(1L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
   }
 
 }

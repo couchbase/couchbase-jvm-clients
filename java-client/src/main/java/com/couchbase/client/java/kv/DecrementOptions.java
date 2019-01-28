@@ -18,7 +18,53 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.CommonOptions;
 
+import java.util.Optional;
+
 public class DecrementOptions extends CommonOptions<DecrementOptions> {
   public static DecrementOptions DEFAULT = new DecrementOptions();
+
+  private long delta;
+  private Optional<Long> initial;
+  private int expiry;
+
+  public static DecrementOptions decrementOptions() {
+    return new DecrementOptions();
+  }
+
+  private DecrementOptions() {
+    delta = 1;
+    initial = Optional.empty();
+    expiry = 0;
+  }
+
+  public long delta() {
+    return delta;
+  }
+
+  public DecrementOptions delta(long delta) {
+    if (delta < 0) {
+      throw new IllegalArgumentException("The delta cannot be less than 0");
+    }
+    this.delta = delta;
+    return this;
+  }
+
+  public Optional<Long> initial() {
+    return initial;
+  }
+
+  public DecrementOptions initial(Optional<Long> initial) {
+    this.initial = initial;
+    return this;
+  }
+
+  public int expiry() {
+    return expiry;
+  }
+
+  public DecrementOptions expiry(int expiry) {
+    this.expiry = expiry;
+    return this;
+  }
 
 }

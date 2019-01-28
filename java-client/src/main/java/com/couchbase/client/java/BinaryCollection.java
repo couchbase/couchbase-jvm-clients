@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.kv.AppendOptions;
+import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
 import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
@@ -50,19 +51,19 @@ public class BinaryCollection {
     return block(async.prepend(id, content, options));
   }
 
-  public MutationResult increment(final String id) {
+  public CounterResult increment(final String id) {
     return block(async.increment(id));
   }
 
-  public MutationResult increment(final String id, final IncrementOptions options) {
+  public CounterResult increment(final String id, final IncrementOptions options) {
     return block(async.increment(id, options));
   }
 
-  public MutationResult decrement(final String id) {
+  public CounterResult decrement(final String id) {
     return block(async.decrement(id));
   }
 
-  public MutationResult decrement(final String id, final DecrementOptions options) {
+  public CounterResult decrement(final String id, final DecrementOptions options) {
     return block(async.decrement(id, options));
   }
 

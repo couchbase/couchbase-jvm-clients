@@ -17,20 +17,66 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
+import com.couchbase.client.core.error.DocumentDoesNotExistException;
+import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class CounterAccessor {
 
-  public static CompletableFuture<MutationResult> increment(Core core, String id, IncrementRequest request) {
-    return null;
+  public static CompletableFuture<CounterResult> increment(final Core core,
+                                                            final IncrementRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(response -> {
+        switch (response.status()) {
+          case SUCCESS:
+            return new CounterResult(response.cas(), response.value(), Optional.empty());
+          case NOT_FOUND:
+            throw new DocumentDoesNotExistException();
+          case TEMPORARY_FAILURE:
+          case SERVER_BUSY:
+            throw new TemporaryFailureException();
+          case LOCKED:
+            throw new TemporaryLockFailureException();
+          case OUT_OF_MEMORY:
+            throw new CouchbaseOutOfMemoryException();
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + response.status());
+        }
+      });
   }
 
-  public static CompletableFuture<MutationResult> decrement(Core core, String id, DecrementRequest request) {
-    return null;
+  public static CompletableFuture<CounterResult> decrement(final Core core,
+                                                           final DecrementRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(response -> {
+        switch (response.status()) {
+          case SUCCESS:
+            return new CounterResult(response.cas(), response.value(), Optional.empty());
+          case NOT_FOUND:
+            throw new DocumentDoesNotExistException();
+          case TEMPORARY_FAILURE:
+          case SERVER_BUSY:
+            throw new TemporaryFailureException();
+          case LOCKED:
+            throw new TemporaryLockFailureException();
+          case OUT_OF_MEMORY:
+            throw new CouchbaseOutOfMemoryException();
+          default:
+            throw new CouchbaseException("Unexpected Status Code " + response.status());
+        }
+      });
   }
 
 }
