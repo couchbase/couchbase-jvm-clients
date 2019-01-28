@@ -20,47 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
-import com.couchbase.client.core.msg.kv.GetAndLockRequest;
-import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
-import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.InsertRequest;
-import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
-import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.core.msg.kv.ReplaceRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.TouchRequest;
-import com.couchbase.client.core.msg.kv.UnlockRequest;
-import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.ExistsAccessor;
-import com.couchbase.client.java.kv.ExistsOptions;
-import com.couchbase.client.java.kv.ExistsResult;
-import com.couchbase.client.java.kv.GetFromReplicaOptions;
-import com.couchbase.client.java.kv.GetAccessor;
-import com.couchbase.client.java.kv.GetAndLockOptions;
-import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.client.java.kv.InsertAccessor;
-import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.LookupInOptions;
-import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInOps;
-import com.couchbase.client.java.kv.MutateInOptions;
-import com.couchbase.client.java.kv.MutateInResult;
-import com.couchbase.client.java.kv.MutateInOps;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.RemoveAccessor;
-import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.ReplaceAccessor;
-import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.ReplicaMode;
-import com.couchbase.client.java.kv.TouchAccessor;
-import com.couchbase.client.java.kv.TouchOptions;
-import com.couchbase.client.java.kv.UnlockAccessor;
-import com.couchbase.client.java.kv.UnlockOptions;
-import com.couchbase.client.java.kv.UpsertAccessor;
-import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.kv.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -438,8 +400,12 @@ public class ReactiveCollection {
 
   public Mono<LookupInResult> lookupIn(final String id, final LookupInOps spec,
                                        final LookupInOptions options) {
-
-    throw new UnsupportedOperationException("Implement me -> subdoc lookupIn");
+    return Mono.defer(() -> {
+      SubdocGetRequest request = asyncCollection.lookupInRequest(id, spec, options);
+      return Reactor
+        .wrap(request, LookupInAccessor.lookupInAccessor(core, id, request), true)
+        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+    });
   }
 
   /**
@@ -463,11 +429,10 @@ public class ReactiveCollection {
    */
   public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                        final MutateInOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(spec, "MutateSpec");
-    notNull(options, "MutateOptions");
-
-    throw new UnsupportedOperationException("Implement me -> subdoc mutateIn");
+    return Mono.defer(() -> {
+      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, spec, options);
+      return Reactor.wrap(request, MutateInAccessor.mutateIn(core, request), true);
+    });
   }
 
 
