@@ -1,6 +1,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
+import com.couchbase.client.scala.api.LookupInOps
 import org.scalatest.{FunSpec, FunSuite}
 
 import scala.concurrent.duration._
@@ -51,8 +52,6 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  // TODO getWithProjection
-
   private def cleanupDoc(docIdx: Int = 0): String = {
     val docId = TestUtils.docId(docIdx)
     coll.remove(docId)
@@ -70,13 +69,25 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-    test("insert with expiry") {
+  test("insert without expiry") {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content, expiration = 5.seconds).isSuccess)
 
     coll.get(docId) match {
+      case Success(result) => assert(result.expiration.isEmpty)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("insert with expiry") {
+    val docId = cleanupDoc()
+
+    val content = ujson.Obj("hello" -> "world")
+    assert(coll.insert(docId, content, expiration = 5.seconds).isSuccess)
+
+    coll.get(docId, withExpiration = true) match {
       case Success(result) => assert(result.expiration.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -253,4 +264,23 @@ class KeyValueSpec extends FunSuite {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
+
+  test("lookupIn") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> "world",
+      "foo" -> "bar",
+      "age" -> 22)
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId, LookupInOps.get("foo").get("age")) match {
+      case Success(result) =>
+        assert(result.cas != 0)
+        assert(result.cas == insertResult.cas)
+        assert(result.fieldAs[String]("foo").get == "bar")
+        assert(result.bodyAsBytes.isEmpty)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
 }

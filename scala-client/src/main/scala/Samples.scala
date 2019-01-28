@@ -60,13 +60,14 @@ object Samples {
       case Failure(err) =>
     }
 
-    val fetched2 = coll.get("id", GetSpec().getDoc)
+    // TODO
+//    val fetched2 = coll.get("id", LookupInOps().getDoc)
     val fetched3 = coll.get("id", timeout = 1000.milliseconds)
 
 
     // ReadResult contains the raw bytes, plus metadata.  Defers conversion to the last moment.
     val getResult: GetResult = fetched1.get
-    val content: JsonObject = getResult.contentAsObject
+//    val content: JsonObject = getResult.contentAsObject
 
 
 
@@ -93,27 +94,27 @@ object Samples {
 
 
     // Simple subdoc lookup
-    val resultOpt: Try[GetResult] = coll.get("id", GetSpec().getMany("field1", "field2"))
-    coll.get("id", GetSpec().getMany("field1", "field2"), timeout = 10.seconds)
+//    val resultOpt: Try[GetResult] = coll.get("id", LookupInOps().getMany("field1", "field2"))
+//    coll.get("id", LookupInOps().getMany("field1", "field2"), timeout = 10.seconds)
 
 
     // Parsing subdoc results.  LookupInResult is similar to a Document.
-    resultOpt.foreach(result => {
-      println(result.content(0).asInstanceOf[String])
-      println(result.contentAsObject("field1").asInstanceOf[String])
-      println(result.contentAs[String]("field1"))
-//      println(result.field1.asInstanceOf[String])
-      case class MyProjection(field1: String, field2: Int)
-      // TODO
-//      val proj = result.contentAs[MyProjection]
-    })
+//    resultOpt.foreach(result => {
+//      println(result.content(0).asInstanceOf[String])
+//      println(result.contentAsObject("field1").asInstanceOf[String])
+//      println(result.contentAs[String]("field1"))
+////      println(result.field1.asInstanceOf[String])
+//      case class MyProjection(field1: String, field2: Int)
+//      // TODO
+////      val proj = result.contentAs[MyProjection]
+//    })
 
 
     // JsonObject works pretty much as in SDK2, though it's now immutable (may change)
-    val age: Option[Any] = fetched1.get.contentAsObject.get("age")
-    val age2: Option[Int] = fetched1.get.contentAsObject.getInt("age")
-    // And Scala's Dynamic feature lets us do some cool stuff:
-    val age3: Int = fetched1.get.contentAsObject.age.getInt
+//    val age: Option[Any] = fetched1.get.contentAsObject.get("age")
+//    val age2: Option[Int] = fetched1.get.contentAsObject.getInt("age")
+//    // And Scala's Dynamic feature lets us do some cool stuff:
+//    val age3: Int = fetched1.get.contentAsObject.age.getInt
 
 
     // Various ways of inserting

@@ -138,13 +138,22 @@ class Collection(val async: AsyncCollection,
   }
 
   def get(id: String,
-          operations: GetSpec = GetSpec().getDoc,
           withExpiration: Boolean = false,
           parentSpan: Option[Span] = None,
           timeout: FiniteDuration = kvTimeout,
           retryStrategy: RetryStrategy = async.environment.retryStrategy()
          ): Try[GetResult] = {
     block(async.get(id, withExpiration, parentSpan, timeout, retryStrategy), timeout)
+  }
+
+
+  def lookupIn(id: String,
+               spec: LookupInOps,
+          parentSpan: Option[Span] = None,
+          timeout: FiniteDuration = kvTimeout,
+          retryStrategy: RetryStrategy = async.environment.retryStrategy()
+         ): Try[LookupInResult] = {
+    block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }
 
 }

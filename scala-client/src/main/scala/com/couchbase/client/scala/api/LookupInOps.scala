@@ -23,43 +23,71 @@ import scala.language.dynamics
 sealed trait LookupOperation
 case class GetOperation(path: String, xattr: Boolean) extends LookupOperation
 case class GetFullDocumentOperation() extends LookupOperation
-case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperation
-case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
+//case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperation
+//case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
 case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
-case class WithExpiryOperation() extends LookupOperation
+case class CountOperation(path: String, xattr: Boolean) extends LookupOperation
+//case class WithExpiryOperation() extends LookupOperation
 
-case class GetSpec(operations: List[LookupOperation]) {
-  def getDoc: GetSpec = {
+case class LookupInOps(val operations: List[LookupOperation]) {
+  def getDoc: LookupInOps = {
     copy(operations = operations :+ GetFullDocumentOperation())
   }
 
-  def getMany(path: String*): GetSpec = {
+  def getMulti(path: String*): LookupInOps = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
 
-  def get(path: String, xattr: Boolean = false): GetSpec = {
+  def get(path: String, xattr: Boolean = false): LookupInOps = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
-  def getString(path: String, xattr: Boolean = false): GetSpec = {
-    copy(operations = operations :+ GetStringOperation(path, xattr))
+//  def getString(path: String, xattr: Boolean = false): LookupInOps = {
+//    copy(operations = operations :+ GetStringOperation(path, xattr))
+//  }
+//
+//  def getInt(path: String, xattr: Boolean = false): LookupInOps = {
+//    copy(operations = operations :+ GetIntOperation(path, xattr))
+//  }
+
+  def count(path: String, xattr: Boolean = false): LookupInOps = {
+    copy(operations = operations :+ CountOperation(path, xattr))
   }
 
-  def getInt(path: String, xattr: Boolean = false): GetSpec = {
-    copy(operations = operations :+ GetIntOperation(path, xattr))
-  }
-
-  def exists(path: String, xattr: Boolean = false): GetSpec = {
+  def exists(path: String, xattr: Boolean = false): LookupInOps = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
   }
 
-  def withExpiry: GetSpec = {
-    copy(operations = operations :+ WithExpiryOperation())
-  }
+
+//  def withExpiry: LookupInOps = {
+//    copy(operations = operations :+ WithExpiryOperation())
+//  }
 }
 
-object GetSpec {
-  def apply() = new GetSpec(List.empty[LookupOperation])
+object LookupInOps {
+  def apply() = new LookupInOps(List.empty[LookupOperation])
+
+  def empty = LookupInOps(List())
+
+  def getDoc: LookupInOps = {
+    empty.getDoc
+  }
+
+  def getMulti(path: String*): LookupInOps = {
+    empty.getMulti(path: _*)
+  }
+
+  def get(path: String, xattr: Boolean = false): LookupInOps = {
+    empty.get(path, xattr)
+  }
+
+  def count(path: String, xattr: Boolean = false): LookupInOps = {
+    empty.count(path, xattr)
+  }
+
+  def exists(path: String, xattr: Boolean = false): LookupInOps = {
+    empty.exists(path, xattr)
+  }
 }
 
 //class SubDocument extends Dynamic {

@@ -35,7 +35,7 @@ import io.circe.syntax._
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{Conversions, GetResult, JsonObject, JsonType}
+import com.couchbase.client.scala.document.{LookupInResult, _}
 import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -277,7 +277,7 @@ class AsyncCollection(name: String,
   }
 
   def lookupInAs[T](id: String,
-                    operations: GetSpec,
+                    operations: LookupInOps,
                     timeout: FiniteDuration = kvTimeout)
   : Future[T] = {
     return null;
@@ -292,9 +292,9 @@ class AsyncCollection(name: String,
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(timeout, "timeout")
 
-
     if (withExpiration) {
-      getSubDoc(id, withExpiration, parentSpan, timeout, retryStrategy)
+      getSubDoc(id, LookupInOps.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
+      GetResult(id, lookupInResult.bodyAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -320,20 +320,30 @@ class AsyncCollection(name: String,
       })
   }
 
+  private val ExpTime = "$document.exptime"
+
   private def getSubDoc(id: String,
+                        spec: LookupInOps,
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
                         timeout: FiniteDuration = kvTimeout,
-                        retryStrategy: RetryStrategy = environment.retryStrategy()): Future[GetResult] = {
+                        retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
     // TODO support projections
     // TODO support expiration
 
     val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
     if (withExpiration) {
-      commands.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "$document.exptime", true))
+      commands.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, ExpTime, true))
     }
-    commands.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false))
+
+    spec.operations.map {
+      case x: GetOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, x.path,   x.xattr)
+      case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false)
+      case x: ExistsOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, x.path, x.xattr)
+      case x: CountOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.COUNT, x.path, x.xattr)
+    }.foreach(commands.add)
+
 
     // TODO flags?
     val request = new SubdocGetRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands)
@@ -343,20 +353,33 @@ class AsyncCollection(name: String,
     FutureConverters.toScala(request.response())
       .map(response => {
         response.status() match {
-          //          case ResponseStatus.SUCCESS =>
-          //            import collection.JavaConverters._
-          //
-          //            val values = response.values().asScala
-          //
-          //            // TODO expiry time
-          ////            val exptime = values.find(_.path()  == "$document.exptime")
-          ////              .map(exptime => {
-          ////                val str = new java.lang.String(exptime, CharsetUtil.UTF_8)
-          ////                FiniteDuration(str.toLong, TimeUnit.SECONDS)
-          ////              })
-          //
-          //            // TODO
-          //            GetResult(id, null, response.cas(), None)
+
+
+                    case ResponseStatus.SUCCESS =>
+                      import collection.JavaConverters._
+
+                      val values = response.values().asScala
+
+                      var exptime: Option[FiniteDuration] = None
+                      var fulldoc: Option[Array[Byte]] = None
+                      val fields = collection.mutable.Map.empty[String, SubdocGetResponse.ResponseValue]
+
+                      values.foreach(value => {
+                        // TODO check status
+
+                        if (value.path() == ExpTime) {
+                          val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
+                          exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
+                        }
+                        else if (value.path == "") {
+                          fulldoc = Some(value.value())
+                        }
+                        else {
+                          fields += value.path() -> value
+                        }
+                      })
+
+                      LookupInResult(id, fulldoc, fields, response.cas(), exptime)
 
           case _ => throw throwOnBadResult(response.status())
         }
@@ -407,6 +430,16 @@ class AsyncCollection(name: String,
           case _ => throw throwOnBadResult(response.status())
         }
       })
+  }
+
+
+  def lookupIn(id: String,
+               spec: LookupInOps,
+               parentSpan: Option[Span] = None,
+               timeout: FiniteDuration = kvTimeout,
+               retryStrategy: RetryStrategy = environment.retryStrategy()
+              ): Future[LookupInResult] = {
+    getSubDoc(id, spec, true, parentSpan, timeout, retryStrategy)
   }
 
 }

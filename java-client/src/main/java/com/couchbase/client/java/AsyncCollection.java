@@ -230,7 +230,7 @@ public class AsyncCollection {
 
     if (options.projections() != null && !options.projections().isEmpty()) {
       if (options.projections().size() > 16) {
-        throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+        throw new UnsupportedOperationException("Only a maximum of 16 fields can be "
           + "projected per request.");
       }
 

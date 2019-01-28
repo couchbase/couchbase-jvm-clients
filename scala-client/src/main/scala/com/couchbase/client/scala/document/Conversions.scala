@@ -61,11 +61,11 @@ object Conversions {
       override def decode(bytes: Array[Byte], params: DecodeParams): Try[Array[Byte]] = Try(bytes)
     }
 
-    //    implicit object StringConvert extends Convertable[String] {
-    //      override def encode(content: String) = Try((content, JsonEncodeParams))
-    //
-    //      override def decode(bytes: Array[Byte], params: DecodeParams): Try[String] = Try((bytes, JsonDecodeParams))
-    //    }
+//        implicit object StringConvert extends Convertable[String] {
+//          override def encode(content: String) = Try((content, JsonEncodeParams))
+//
+//          override def decode(bytes: Array[Byte], params: DecodeParams): Try[String] = Try((bytes, JsonDecodeParams))
+//        }
 
     implicit object UjsonValueConvert extends Decodable[ujson.Value] {
       override def decode(bytes: Array[Byte], params: DecodeParams) = {
@@ -84,6 +84,51 @@ object Conversions {
         Try(upickle.default.read[ujson.Arr](bytes))
       }
     }
+
+  }
+
+
+  trait DecodableField[T] {
+    def decode(bytes: Array[Byte], params: DecodeParams): Try[T]
+  }
+
+
+
+  object DecodableField {
+
+//    implicit object RawConvert extends Decodable[Array[Byte]] {
+//      override def decode(bytes: Array[Byte], params: DecodeParams): Try[Array[Byte]] = Try(bytes)
+//    }
+//
+//    //        implicit object StringConvert extends Convertable[String] {
+//    //          override def encode(content: String) = Try((content, JsonEncodeParams))
+//    //
+//    //          override def decode(bytes: Array[Byte], params: DecodeParams): Try[String] = Try((bytes, JsonDecodeParams))
+//    //        }
+//
+//    implicit object UjsonValueConvert extends Decodable[ujson.Value] {
+//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+//        Try(upickle.default.read[ujson.Value](bytes))
+//      }
+//    }
+//
+//    implicit object UjsonObjConvert extends Decodable[ujson.Obj] {
+//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+//        Try(upickle.default.read[ujson.Obj](bytes))
+//      }
+//    }
+//
+//    implicit object UjsonArrConvert extends Decodable[ujson.Arr] {
+//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+//        Try(upickle.default.read[ujson.Arr](bytes))
+//      }
+//    }
+
+        implicit object StringConvert extends DecodableField[String] {
+          override def decode(bytes: Array[Byte], params: DecodeParams): Try[String] = {
+            Try(upickle.default.read[String](bytes))
+          }
+        }
 
   }
 }
