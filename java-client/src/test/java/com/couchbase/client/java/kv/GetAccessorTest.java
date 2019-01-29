@@ -17,7 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.SubDocumentResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocOperationResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
 import io.netty.util.CharsetUtil;
@@ -78,8 +78,8 @@ class GetAccessorTest {
   @Test
   void ignoresNonSuccessField() throws Exception {
     List<SubdocGetResponse.ResponseValue> values = Arrays.asList(
-      new SubdocGetResponse.ResponseValue(SubDocumentResponseStatus.SUCCESS, "42".getBytes(CharsetUtil.UTF_8), "a"),
-      new SubdocGetResponse.ResponseValue(SubDocumentResponseStatus.PATH_NOT_FOUND, "99".getBytes(CharsetUtil.UTF_8), "b")
+      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.SUCCESS, "42".getBytes(CharsetUtil.UTF_8), "a"),
+      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.PATH_NOT_FOUND, "99".getBytes(CharsetUtil.UTF_8), "b")
     );
 
     SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
@@ -124,7 +124,7 @@ class GetAccessorTest {
       .stream()
       .map(e ->
         new SubdocGetResponse.ResponseValue(
-          SubDocumentResponseStatus.SUCCESS,
+          SubdocOperationResponseStatus.SUCCESS,
           e.getValue().getBytes(CharsetUtil.UTF_8),
           e.getKey()
         )

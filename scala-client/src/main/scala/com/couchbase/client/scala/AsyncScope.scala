@@ -33,6 +33,7 @@ class AsyncScope(val scopeName: String,
           if (res.status().success()) {
             new AsyncCollection(name, res.collectionId().get(), bucketName, core, environment)
           } else {
+            // TODO fix
             throw new IllegalStateException("Do not raise me.. propagate into collection.. " + "collection error")
           }
         })

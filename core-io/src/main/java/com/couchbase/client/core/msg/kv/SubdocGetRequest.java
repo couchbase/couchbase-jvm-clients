@@ -19,10 +19,10 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -107,47 +107,52 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       values = new ArrayList<>(commands.size());
       for (Command command : commands) {
         short statusRaw = body.readShort();
-        SubDocumentResponseStatus status = decodeSubDocumentStatus(statusRaw);
-        if (status != SubDocumentResponseStatus.SUCCESS) {
+        SubdocOperationResponseStatus status = decodeSubDocumentStatus(statusRaw);
+        Optional<SubDocumentException> error = Optional.empty();
+        if (status != SubdocOperationResponseStatus.SUCCESS) {
           if (errors == null) errors = new ArrayList<>();
-          SubDocumentException error = mapSubDocumentError(status, command.path, origKey);
-          errors.add(error);
+          SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
+          errors.add(err);
+          error = Optional.of(err);
         }
         int valueLength = body.readInt();
         byte[] value = new byte[valueLength];
         body.readBytes(value, 0, valueLength);
-        values.add(new SubdocGetResponse.ResponseValue(status, value, command.path));
+        SubdocGetResponse.ResponseValue op = new SubdocGetResponse.ResponseValue(status, error, value, command.path, command.type);
+        values.add(op);
       }
     } else {
       values = new ArrayList<>();
     }
 
     short rawStatus = status(response);
-    Optional<SubDocumentException> error = getSubDocumentException(errors, rawStatus);
+    ResponseStatus status = decodeStatus(response);
 
-    return new SubdocGetResponse(decodeStatus(response), error, values, cas(response));
-  }
-
-  private Optional<SubDocumentException> getSubDocumentException(List<SubDocumentException> errors,
-                                                                 short rawStatus) {
     Optional<SubDocumentException> error = Optional.empty();
 
+    // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
-      if (errors != null && !errors.isEmpty()) {
-        error = Optional.of(new MultiMutationException(errors));
-      } else {
-        error = Optional.of(new MultiMutationException(new ArrayList<>()));
+      // If a single subdoc op was tried and failed, return that directly
+      if (commands.size() == 1 && errors != null && errors.size() == 1) {
+        error = Optional.of(errors.get(0));
       }
-    }
-    else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
+      else {
+        // Otherwise return success, as some of the operations have succeeded
+        status = ResponseStatus.SUCCESS;
+      }
+    } else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
       error = Optional.of(new DocumentNotJsonException(origKey));
-    }
-    else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
+    } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
       error = Optional.of(new DocumentTooDeepException(origKey));
+    }
+    // If a single subdoc op was tried and failed, return that directly
+    else if (commands.size() == 1 && errors != null && errors.size() == 1) {
+      error = Optional.of(errors.get(0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 
-    return error;
+
+    return new SubdocGetResponse(status, error, values, cas(response));
   }
 
   public static class Command {

@@ -35,18 +35,26 @@ public class SubdocGetResponse extends BaseResponse {
   public Optional<SubDocumentException> error() { return error; }
 
   public static class ResponseValue {
-    private final SubDocumentResponseStatus status;
+    private final SubdocOperationResponseStatus status;
+    private final Optional<SubDocumentException> error;
     private final byte[] value;
     private final String path;
+    private final SubdocGetRequest.CommandType type;
 
-    public ResponseValue(SubDocumentResponseStatus status, byte[] value, String path) {
+    public ResponseValue(SubdocOperationResponseStatus status, Optional<SubDocumentException> error, byte[] value, String path, SubdocGetRequest.CommandType type) {
       this.status = status;
+      this.error = error;
       this.value = value;
       this.path = path;
+      this.type = type;
     }
 
-    public SubDocumentResponseStatus status() {
+    public SubdocOperationResponseStatus status() {
       return status;
+    }
+
+    public Optional<SubDocumentException> error() {
+      return error;
     }
 
     public byte[] value() {
@@ -55,6 +63,10 @@ public class SubdocGetResponse extends BaseResponse {
 
     public String path() {
       return path;
+    }
+
+    public SubdocGetRequest.CommandType type() {
+      return type;
     }
 
     @Override

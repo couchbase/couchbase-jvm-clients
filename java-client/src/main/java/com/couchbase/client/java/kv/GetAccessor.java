@@ -23,19 +23,12 @@ import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -202,7 +195,7 @@ public enum GetAccessor {
     ObjectNode root = Mapper.mapper().createObjectNode();
 
     for (SubdocGetResponse.ResponseValue value : response.values()) {
-      if (value.status() != SubDocumentResponseStatus.SUCCESS
+      if (value.status() != SubdocOperationResponseStatus.SUCCESS
               || value.path().isEmpty()
               || EXPIRATION_MACRO.equals(value.path())) {
         continue;

@@ -295,7 +295,7 @@ class AsyncCollection(name: String,
 
     if (withExpiration) {
       getSubDoc(id, LookupInOps.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-      GetResult(id, lookupInResult.bodyAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
+        GetResult(id, lookupInResult.bodyAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -339,7 +339,7 @@ class AsyncCollection(name: String,
     }
 
     spec.operations.map {
-      case x: GetOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, x.path,   x.xattr)
+      case x: GetOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, x.path, x.xattr)
       case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false)
       case x: ExistsOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, x.path, x.xattr)
       case x: CountOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.COUNT, x.path, x.xattr)
@@ -357,37 +357,36 @@ class AsyncCollection(name: String,
 
         response.status() match {
 
+          case ResponseStatus.SUCCESS =>
+            val values = response.values().asScala
 
-                    case ResponseStatus.SUCCESS =>
-                      val values = response.values().asScala
+            var exptime: Option[FiniteDuration] = None
+            var fulldoc: Option[Array[Byte]] = None
+            val fields = collection.mutable.Map.empty[String, SubdocGetResponse.ResponseValue]
 
-                      var exptime: Option[FiniteDuration] = None
-                      var fulldoc: Option[Array[Byte]] = None
-                      val fields = collection.mutable.Map.empty[String, SubdocGetResponse.ResponseValue]
+            values.foreach(value => {
+              if (value.path() == ExpTime) {
+                val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
+                exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
+              }
+              else if (value.path == "") {
+                fulldoc = Some(value.value())
+              }
+              else {
+                fields += value.path() -> value
+              }
+            })
 
-                      values.foreach(value => {
-                        if (value.path() == ExpTime) {
-                          val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-                          exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
-                        }
-                        else if (value.path == "") {
-                          fulldoc = Some(value.value())
-                        }
-                        else {
-                          fields += value.path() -> value
-                        }
-                      })
+            LookupInResult(id, fulldoc, fields, response.cas(), exptime)
 
-                      LookupInResult(id, fulldoc, fields, response.cas(), exptime)
+          case ResponseStatus.SUBDOC_FAILURE =>
 
-                    case ResponseStatus.SUBDOC_FAILURE =>
+            response.error().asScala match {
+              case Some(err) => throw err
+              case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+            }
 
-                      response.error().asScala match {
-                        case Some(err) => throw err
-                        case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
-                      }
-
-                    case _ => throw throwOnBadResult(response.status())
+          case _ => throw throwOnBadResult(response.status())
         }
       })
 
@@ -445,7 +444,9 @@ class AsyncCollection(name: String,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()
               ): Future[LookupInResult] = {
-    getSubDoc(id, spec, true, parentSpan, timeout, retryStrategy)
+    // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app
+    // may expect error to be raised and it won't
+    getSubDoc(id, spec, false, parentSpan, timeout, retryStrategy)
   }
 
 }

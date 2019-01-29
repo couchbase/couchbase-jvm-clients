@@ -16,11 +16,10 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.core.msg.kv.SubDocumentResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocOperationResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -381,45 +380,45 @@ public enum MemcacheProtocol {
    * @param status the protocol status.
    * @return the response status.
    */
-  public static SubDocumentResponseStatus decodeSubDocumentStatus(short status) {
+  public static SubdocOperationResponseStatus decodeSubDocumentStatus(short status) {
     if (status == Status.SUCCESS.status) {
-      return SubDocumentResponseStatus.SUCCESS;
+      return SubdocOperationResponseStatus.SUCCESS;
     } else if (status == Status.SUBDOC_PATH_NOT_FOUND.status) {
-      return SubDocumentResponseStatus.PATH_NOT_FOUND;
+      return SubdocOperationResponseStatus.PATH_NOT_FOUND;
     } else if (status == Status.SUBDOC_PATH_MISMATCH.status) {
-      return SubDocumentResponseStatus.PATH_MISMATCH;
+      return SubdocOperationResponseStatus.PATH_MISMATCH;
     } else if (status == Status.SUBDOC_PATH_INVALID.status) {
-      return SubDocumentResponseStatus.PATH_INVALID;
+      return SubdocOperationResponseStatus.PATH_INVALID;
     } else if (status == Status.SUBDOC_PATH_TOO_BIG.status) {
-      return SubDocumentResponseStatus.PATH_TOO_BIG;
+      return SubdocOperationResponseStatus.PATH_TOO_BIG;
     } else if (status == Status.SUBDOC_DOC_TOO_DEEP.status) {
-      return SubDocumentResponseStatus.DOC_TOO_DEEP;
+      return SubdocOperationResponseStatus.DOC_TOO_DEEP;
     } else if (status == Status.SUBDOC_VALUE_CANTINSERT.status) {
-      return SubDocumentResponseStatus.VALUE_CANTINSERT;
+      return SubdocOperationResponseStatus.VALUE_CANTINSERT;
     } else if (status == Status.SUBDOC_DOC_NOT_JSON.status) {
-      return SubDocumentResponseStatus.DOC_NOT_JSON;
+      return SubdocOperationResponseStatus.DOC_NOT_JSON;
     } else if (status == Status.SUBDOC_NUM_RANGE.status) {
-      return SubDocumentResponseStatus.NUM_RANGE;
+      return SubdocOperationResponseStatus.NUM_RANGE;
     } else if (status == Status.SUBDOC_DELTA_RANGE.status) {
-      return SubDocumentResponseStatus.DELTA_RANGE;
+      return SubdocOperationResponseStatus.DELTA_RANGE;
     } else if (status == Status.SUBDOC_PATH_EXISTS.status) {
-      return SubDocumentResponseStatus.PATH_EXISTS;
+      return SubdocOperationResponseStatus.PATH_EXISTS;
     } else if (status == Status.SUBDOC_VALUE_TOO_DEEP.status) {
-      return SubDocumentResponseStatus.VALUE_TOO_DEEP;
+      return SubdocOperationResponseStatus.VALUE_TOO_DEEP;
     } else if (status == Status.SUBDOC_INVALID_COMBO.status) {
-      return SubDocumentResponseStatus.INVALID_COMBO;
+      return SubdocOperationResponseStatus.INVALID_COMBO;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status) {
-      return SubDocumentResponseStatus.MULTI_PATH_FAILURE;
+      return SubdocOperationResponseStatus.MULTI_PATH_FAILURE;
     } else if (status == Status.SUBDOC_XATTR_INVALID_FLAG_COMBO.status) {
-      return SubDocumentResponseStatus.XATTR_INVALID_FLAG_COMBO;
+      return SubdocOperationResponseStatus.XATTR_INVALID_FLAG_COMBO;
     } else if (status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status) {
-      return SubDocumentResponseStatus.XATTR_INVALID_KEY_COMBO;
+      return SubdocOperationResponseStatus.XATTR_INVALID_KEY_COMBO;
     } else if (status == Status.SUBDOC_XATTR_UNKNOWN_MACRO.status) {
-      return SubDocumentResponseStatus.XATTR_UNKNOWN_MACRO;
+      return SubdocOperationResponseStatus.XATTR_UNKNOWN_MACRO;
     } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
-      return SubDocumentResponseStatus.SUCCESS_DELETED_DOCUMENT;
+      return SubdocOperationResponseStatus.SUCCESS_DELETED_DOCUMENT;
     } else {
-      return SubDocumentResponseStatus.UNKNOWN;
+      return SubdocOperationResponseStatus.UNKNOWN;
     }
   }
 
@@ -431,7 +430,7 @@ public enum MemcacheProtocol {
    * @param path the path of the SubDocument command
    * @param id the id of the document
    */
-  public static SubDocumentException mapSubDocumentError(SubDocumentResponseStatus status, String path, String id) {
+  public static SubDocumentException mapSubDocumentError(SubdocOperationResponseStatus status, String path, String id) {
     switch(status) {
       case PATH_NOT_FOUND:
         return new PathNotFoundException(path);

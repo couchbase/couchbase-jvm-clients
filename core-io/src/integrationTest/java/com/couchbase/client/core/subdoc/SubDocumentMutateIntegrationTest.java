@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core;
+package com.couchbase.client.core.subdoc;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +38,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.*;
 
-class SubDocumentIntegrationTest extends CoreIntegrationTest {
+class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
 
   private Core core;
   private CoreEnvironment env;
@@ -99,30 +102,6 @@ class SubDocumentIntegrationTest extends CoreIntegrationTest {
     assertTrue(response.cas() != 0);
   }
 
-  /**
-   * Perform subdoc operations and assert the result is the expected exception
-   */
-  private void testFailure(String input, List<SubdocGetRequest.Command> commands, Class<?> expected) {
-    String id = UUID.randomUUID().toString();
-    byte[] content = insertContent(id, input);
-
-    SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-            config().bucketname(), env.retryStrategy(), id, null, (byte) 0, commands);
-    core.send(request);
-
-    SubdocGetResponse response = null;
-    try {
-      response = request.response().get();
-    } catch (InterruptedException | ExecutionException e) {
-      fail("Failed with " + e);
-    }
-    assertFalse(response.status().success());
-    assertEquals(ResponseStatus.SUBDOC_FAILURE, response.status());
-    assertTrue(response.error().isPresent());
-    SubDocumentException err = response.error().get();
-    assertTrue(expected.isInstance(err));
-    assertTrue(response.cas() != 0);
-  }
 
   /**
    * Perform a single get subdoc operation and assert the result is a MultiMutationException containing a single
@@ -135,15 +114,6 @@ class SubDocumentIntegrationTest extends CoreIntegrationTest {
     testChildFailure(input, commands, expected);
    }
 
-  /**
-   * Perform a single get subdoc operation and assert the result is the expected exception
-   */
-  private void testSingleGetFailure(String input, String path, Class<?> expected) {
-    List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, path,  false));
-
-    testFailure(input, commands, expected);
-  }
 
   // TODO add macro expansion support
 //  @Ignore("requires macro expansion support")
@@ -151,20 +121,5 @@ class SubDocumentIntegrationTest extends CoreIntegrationTest {
 //  void xattrUnknownMacroError() throws Exception {
 //    testSingleGetChildFailure("hello, world", "$no_exist", XattrUnknownMacroException.class);
 //  }
-
-  @Test
-  void pathNotFound() throws Exception {
-    testSingleGetChildFailure("{\"foo\":\"bar\"}", "no_exist", PathNotFoundException.class);
-  }
-
-  @Test
-  void pathMismatch() throws Exception {
-    testSingleGetChildFailure("{\"foo\":\"bar\"}", "foo.bar[0].baz", PathMismatchException.class);
-  }
-
-  @Test
-  void notJson() throws Exception {
-    testSingleGetFailure("{\"foo\":\"bar\"}", "no_exist", DocumentNotJsonException.class);
-  }
 
 }
