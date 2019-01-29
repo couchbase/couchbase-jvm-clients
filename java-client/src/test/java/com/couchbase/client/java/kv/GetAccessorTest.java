@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocOperationResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GetAccessorTest {
@@ -78,8 +80,11 @@ class GetAccessorTest {
   @Test
   void ignoresNonSuccessField() throws Exception {
     List<SubdocGetResponse.ResponseValue> values = Arrays.asList(
-      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.SUCCESS, "42".getBytes(CharsetUtil.UTF_8), "a"),
-      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.PATH_NOT_FOUND, "99".getBytes(CharsetUtil.UTF_8), "b")
+      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.SUCCESS, Optional.empty(),
+              "42".getBytes(CharsetUtil.UTF_8), "a", SubdocGetRequest.CommandType.GET),
+      new SubdocGetResponse.ResponseValue(SubdocOperationResponseStatus.PATH_NOT_FOUND,
+              Optional.of(mapSubDocumentError(SubdocOperationResponseStatus.PATH_NOT_FOUND, "", "")),
+              "99".getBytes(CharsetUtil.UTF_8), "b" ,SubdocGetRequest.CommandType.GET)
     );
 
     SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
@@ -121,14 +126,16 @@ class GetAccessorTest {
   private SubdocGetResponse response(final Map<String, String> paths) {
     List<SubdocGetResponse.ResponseValue> values = paths
       .entrySet()
-      .stream()
-      .map(e ->
-        new SubdocGetResponse.ResponseValue(
-          SubdocOperationResponseStatus.SUCCESS,
-          e.getValue().getBytes(CharsetUtil.UTF_8),
-          e.getKey()
-        )
-      )
+            .stream()
+            .map(e ->
+                    new SubdocGetResponse.ResponseValue(
+                            SubdocOperationResponseStatus.SUCCESS,
+                            Optional.empty(),
+                            e.getValue().getBytes(CharsetUtil.UTF_8),
+                            e.getKey(),
+                            SubdocGetRequest.CommandType.GET
+                    )
+            )
       .collect(Collectors.toList());
     return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
   }

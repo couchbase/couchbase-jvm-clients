@@ -16,10 +16,12 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.LookupInOps;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.MutateInResult;
@@ -34,9 +36,7 @@ import java.util.UUID;
 
 import static com.couchbase.client.java.kv.LookupInOps.lookupInOps;
 import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
 
@@ -118,4 +118,75 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     );
   }
 
+  @Test
+  void pathDoesNotExistSingle() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.empty());
+
+    assertThrows(PathNotFoundException.class, () ->
+            collection.lookupIn(id, lookupInOps().get("not_exist"))
+    );
+  }
+
+  @Test
+  void pathDoesNotExistMulti() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", "bar"));
+
+    LookupInResult result = collection.lookupIn(id, lookupInOps().get("not_exist").get("foo")).get();
+
+    assertFalse(result.exists(0));
+    assertTrue(result.exists(1));
+    assertThrows(PathNotFoundException.class, () ->
+      assertTrue(result.contentAs(0, Boolean.class))
+    );
+    assertEquals("bar", result.contentAs(1, String.class));
+  }
+
+
+  // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder
+//  @Test
+//  void existsSingle() {
+//    String id = UUID.randomUUID().toString();
+//
+//    collection.upsert(id, JsonObject.create().put("foo", "bar"));
+//
+//    LookupInResult result = collection.lookupIn(id, lookupInOps().exists("not_exist")).get();
+//
+//    assertFalse(result.exists(0));
+//    assertThrows(PathNotFoundException.class, () ->
+//            assertTrue(result.contentAs(0, Boolean.class))
+//    );
+//  }
+
+  @Test
+  void existsMulti() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", "bar"));
+
+    LookupInResult result = collection.lookupIn(id, lookupInOps().exists("not_exist").get("foo")).get();
+
+    assertFalse(result.exists(0));
+    assertThrows(PathNotFoundException.class, () ->
+            assertTrue(result.contentAs(0, Boolean.class))
+    );
+
+    assertTrue(result.exists(1));
+    assertEquals("bar", result.contentAs(1, String.class));
+  }
+
+  @Test
+  void count() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", JsonArray.from("hello", "world")));
+
+    LookupInResult result = collection.lookupIn(id, lookupInOps().count("foo")).get();
+
+    assertTrue(result.exists(0));
+    assertEquals(2, (int) result.contentAs(0, Integer.class));
+  }
 }

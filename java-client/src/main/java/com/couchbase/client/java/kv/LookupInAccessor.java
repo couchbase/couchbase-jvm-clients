@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 import java.util.Optional;
@@ -34,6 +35,8 @@ public class LookupInAccessor {
         switch (response.status()) {
           case SUCCESS:
             return Optional.of(LookupInResult.create(id, response.values(), response.cas()));
+          case SUBDOC_FAILURE:
+            throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});
           case NOT_FOUND:
             return Optional.empty();
           default:

@@ -62,7 +62,16 @@ public class LookupInResult {
   }
 
   public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
-    return decoder.decode(target, new EncodedDocument(0, encoded.get(index).value()));
+    if (index >= 0 && index < encoded.size()) {
+      SubdocGetResponse.ResponseValue value = encoded.get(index);
+      value.error().map(err -> {
+        throw err;
+      });
+      return decoder.decode(target, new EncodedDocument(0, value.value()));
+    }
+    else {
+      throw new IllegalArgumentException("Index " + index + " is invalid");
+    }
   }
 
   public JsonObject contentAsObject(int index) {
@@ -75,7 +84,13 @@ public class LookupInResult {
 
 
   public boolean exists(int index) {
-    return index < encoded.size();
+    if (index >= 0 && index < encoded.size()) {
+      SubdocGetResponse.ResponseValue value = encoded.get(index);
+      return value.status().success();
+    }
+    else {
+      return false;
+    }
   }
 
   @Override
