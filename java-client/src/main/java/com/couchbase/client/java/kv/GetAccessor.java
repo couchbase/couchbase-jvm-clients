@@ -158,6 +158,10 @@ public enum GetAccessor {
   }
 
   private static GetResult parseSubdocGet(final String id, final SubdocGetResponse response) {
+    if (response.error().isPresent()) {
+      throw response.error().get();
+    }
+
     long cas = response.cas();
 
     byte[] exptime = null;
@@ -198,7 +202,9 @@ public enum GetAccessor {
     ObjectNode root = Mapper.mapper().createObjectNode();
 
     for (SubdocGetResponse.ResponseValue value : response.values()) {
-      if (value.status() != 0 || value.path().isEmpty() || EXPIRATION_MACRO.equals(value.path())) {
+      if (value.status() != SubDocumentResponseStatus.SUCCESS
+              || value.path().isEmpty()
+              || EXPIRATION_MACRO.equals(value.path())) {
         continue;
       }
 

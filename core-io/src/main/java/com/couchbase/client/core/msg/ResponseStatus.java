@@ -81,7 +81,11 @@ public enum ResponseStatus {
   /**
    * The written resource is too big.
    */
-  TOO_BIG;
+  TOO_BIG,
+  /**
+   * One or more attempted subdoc operations failed.
+   */
+  SUBDOC_FAILURE;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

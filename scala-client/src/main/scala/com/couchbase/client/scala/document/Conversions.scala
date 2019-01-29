@@ -125,10 +125,46 @@ object Conversions {
 //    }
 
         implicit object StringConvert extends DecodableField[String] {
-          override def decode(bytes: Array[Byte], params: DecodeParams): Try[String] = {
+          override def decode(bytes: Array[Byte], params: DecodeParams) = {
+            // Note this means we actually depend on ujson
             Try(upickle.default.read[String](bytes))
           }
         }
+
+    implicit object BooleanConvert extends DecodableField[Boolean] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        Try(upickle.default.read[Boolean](bytes))
+      }
+    }
+
+
+    implicit object IntConvert extends DecodableField[Int] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        Try(upickle.default.read[Int](bytes))
+      }
+    }
+
+
+    implicit object DoubleConvert extends DecodableField[Double] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        Try(upickle.default.read[Double](bytes))
+      }
+    }
+
+    implicit object UsjonValueConvert extends DecodableField[ujson.Value] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        Try(upickle.default.read[ujson.Value](bytes))
+      }
+    }
+
+
+    implicit object UsjonObjConvert extends DecodableField[ujson.Obj] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        Try(upickle.default.read[ujson.Obj](bytes))
+      }
+    }
+
+
 
   }
 }

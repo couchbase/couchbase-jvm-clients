@@ -283,4 +283,65 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
+  test("lookupIn with doc") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> "world",
+      "foo" -> "bar",
+      "age" -> 22)
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId, LookupInOps.get("foo").get("age").getDoc) match {
+      case Success(result) =>
+        assert(result.fieldAs[String]("foo").get == "bar")
+        assert(result.bodyAsBytes.isDefined)
+        result.bodyAs[ujson.Obj] match {
+          case Success(body) =>
+            assert(body("hello").str == "world")
+            assert(body("age").num == 22)
+          case Failure(err) => assert(false, s"unexpected error $err")
+        }
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  // TODO lookup exists
+  // TODO lookup count
+  // TODO lookup single vs multi
+
+  test("lookupIn singlepath failure") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> ujson.Arr("world"),
+      "foo" -> "bar",
+      "age" -> 22)
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId, LookupInOps.get("does_not_exist")) match {
+      case Success(result) =>
+        assert(!result.fieldAs[Boolean]("does_not_exist").get)
+        case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("lookupIn exists and count") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> ujson.Arr("world"),
+      "foo" -> "bar",
+      "age" -> 22)
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId,
+      LookupInOps.count("hello")
+      .exists("age")
+    .exists("does_not_exist")) match {
+      case Success(result) =>
+        assert(result.fieldAs[Boolean]("age").get)
+        assert(!result.fieldAs[Boolean]("does_not_exist").get)
+        assert(result.fieldAs[Int]("hello").get == 1)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
 }

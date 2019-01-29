@@ -17,6 +17,10 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
+import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
+import com.couchbase.client.core.error.subdoc.MultiMutationException;
+import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -31,13 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
@@ -45,6 +43,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   private final byte flags;
   private final List<Command> commands;
+  private final String origKey;
 
   public SubdocGetRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                           final RetryStrategy retryStrategy, final String key,
@@ -52,6 +51,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.flags = flags;
     this.commands = commands;
+    this.origKey = key;
   }
 
   @Override
@@ -65,6 +65,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     ByteBuf body;
     if (commands.size() == 1) {
       // todo: Optimize into single get request only?
+      // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
+      // add the others if do the single lookup optimisation.
       body = commands.get(0).encode(alloc);
     } else {
       body = alloc.compositeBuffer(commands.size());
@@ -100,11 +102,18 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     List<SubdocGetResponse.ResponseValue> values;
+    List<SubDocumentException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
       values = new ArrayList<>(commands.size());
       for (Command command : commands) {
-        short status = body.readShort();
+        short statusRaw = body.readShort();
+        SubDocumentResponseStatus status = decodeSubDocumentStatus(statusRaw);
+        if (status != SubDocumentResponseStatus.SUCCESS) {
+          if (errors == null) errors = new ArrayList<>();
+          SubDocumentException error = mapSubDocumentError(status, command.path, origKey);
+          errors.add(error);
+        }
         int valueLength = body.readInt();
         byte[] value = new byte[valueLength];
         body.readBytes(value, 0, valueLength);
@@ -113,7 +122,32 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     } else {
       values = new ArrayList<>();
     }
-    return new SubdocGetResponse(decodeStatus(response), values, cas(response));
+
+    short rawStatus = status(response);
+    Optional<SubDocumentException> error = getSubDocumentException(errors, rawStatus);
+
+    return new SubdocGetResponse(decodeStatus(response), error, values, cas(response));
+  }
+
+  private Optional<SubDocumentException> getSubDocumentException(List<SubDocumentException> errors, short rawStatus) {
+    Optional<SubDocumentException> error = Optional.empty();
+
+    if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
+      if (errors != null && !errors.isEmpty()) {
+        error = Optional.of(new MultiMutationException(errors));
+      } else {
+        error = Optional.of(new MultiMutationException(new ArrayList<>()));
+      }
+    }
+    else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
+      error = Optional.of(new DocumentNotJsonException(origKey));
+    }
+    else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
+      error = Optional.of(new DocumentTooDeepException(origKey));
+    }
+    // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
+
+    return error;
   }
 
   public static class Command {

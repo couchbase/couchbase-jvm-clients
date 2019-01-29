@@ -177,7 +177,9 @@ dependencies {
   // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
   compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
 //  provided "org.scala-lang:scala-reflect:2.12.7"
-  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1', optional
+
+  // TODO check this is not a transitive dep
+  implementation group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
 
   compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0', optional

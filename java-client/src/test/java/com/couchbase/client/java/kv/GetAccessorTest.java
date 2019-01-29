@@ -17,15 +17,13 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.SubDocumentResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,11 +78,11 @@ class GetAccessorTest {
   @Test
   void ignoresNonSuccessField() throws Exception {
     List<SubdocGetResponse.ResponseValue> values = Arrays.asList(
-      new SubdocGetResponse.ResponseValue((short) 0, "42".getBytes(CharsetUtil.UTF_8), "a"),
-      new SubdocGetResponse.ResponseValue((short) 1, "99".getBytes(CharsetUtil.UTF_8), "b")
+      new SubdocGetResponse.ResponseValue(SubDocumentResponseStatus.SUCCESS, "42".getBytes(CharsetUtil.UTF_8), "a"),
+      new SubdocGetResponse.ResponseValue(SubDocumentResponseStatus.PATH_NOT_FOUND, "99".getBytes(CharsetUtil.UTF_8), "b")
     );
 
-    SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, values, 0);
+    SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
     byte[] result = GetAccessor.projectRecursive(response);
 
     JsonObject expected = JsonObject.create()
@@ -126,12 +124,12 @@ class GetAccessorTest {
       .stream()
       .map(e ->
         new SubdocGetResponse.ResponseValue(
-          (short) 0,
+          SubDocumentResponseStatus.SUCCESS,
           e.getValue().getBytes(CharsetUtil.UTF_8),
           e.getKey()
         )
       )
       .collect(Collectors.toList());
-    return new SubdocGetResponse(ResponseStatus.SUCCESS, values, 0);
+    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
   }
 }

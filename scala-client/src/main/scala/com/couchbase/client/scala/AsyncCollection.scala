@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
+import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
@@ -352,12 +353,12 @@ class AsyncCollection(name: String,
 
     FutureConverters.toScala(request.response())
       .map(response => {
+        import collection.JavaConverters._
+
         response.status() match {
 
 
                     case ResponseStatus.SUCCESS =>
-                      import collection.JavaConverters._
-
                       val values = response.values().asScala
 
                       var exptime: Option[FiniteDuration] = None
@@ -365,8 +366,6 @@ class AsyncCollection(name: String,
                       val fields = collection.mutable.Map.empty[String, SubdocGetResponse.ResponseValue]
 
                       values.foreach(value => {
-                        // TODO check status
-
                         if (value.path() == ExpTime) {
                           val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
                           exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
@@ -381,7 +380,14 @@ class AsyncCollection(name: String,
 
                       LookupInResult(id, fulldoc, fields, response.cas(), exptime)
 
-          case _ => throw throwOnBadResult(response.status())
+                    case ResponseStatus.SUBDOC_FAILURE =>
+
+                      response.error().asScala match {
+                        case Some(err) => throw err
+                        case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+                      }
+
+                    case _ => throw throwOnBadResult(response.status())
         }
       })
 

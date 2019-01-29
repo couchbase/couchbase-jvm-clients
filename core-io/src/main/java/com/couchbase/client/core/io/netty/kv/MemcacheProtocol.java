@@ -16,11 +16,13 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.kv.SubDocumentResponseStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import org.iq80.snappy.Snappy;
 
@@ -362,8 +364,101 @@ public enum MemcacheProtocol {
       return ResponseStatus.TOO_BIG;
     } else if (status == Status.NOT_STORED.status) {
       return ResponseStatus.NOT_STORED;
+    } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
+            || status == Status.SUBDOC_DOC_NOT_JSON.status
+            || status == Status.SUBDOC_DOC_TOO_DEEP.status
+            || status == Status.SUBDOC_INVALID_COMBO.status) {
+      return ResponseStatus.SUBDOC_FAILURE;
     } else {
       return ResponseStatus.UNKNOWN;
+    }
+  }
+  
+  /**
+   * Converts a KeyValue protocol status into its generic format.  It must be a status that can be returned from a
+   * sub-document operation.
+   *
+   * @param status the protocol status.
+   * @return the response status.
+   */
+  public static SubDocumentResponseStatus decodeSubDocumentStatus(short status) {
+    if (status == Status.SUCCESS.status) {
+      return SubDocumentResponseStatus.SUCCESS;
+    } else if (status == Status.SUBDOC_PATH_NOT_FOUND.status) {
+      return SubDocumentResponseStatus.PATH_NOT_FOUND;
+    } else if (status == Status.SUBDOC_PATH_MISMATCH.status) {
+      return SubDocumentResponseStatus.PATH_MISMATCH;
+    } else if (status == Status.SUBDOC_PATH_INVALID.status) {
+      return SubDocumentResponseStatus.PATH_INVALID;
+    } else if (status == Status.SUBDOC_PATH_TOO_BIG.status) {
+      return SubDocumentResponseStatus.PATH_TOO_BIG;
+    } else if (status == Status.SUBDOC_DOC_TOO_DEEP.status) {
+      return SubDocumentResponseStatus.DOC_TOO_DEEP;
+    } else if (status == Status.SUBDOC_VALUE_CANTINSERT.status) {
+      return SubDocumentResponseStatus.VALUE_CANTINSERT;
+    } else if (status == Status.SUBDOC_DOC_NOT_JSON.status) {
+      return SubDocumentResponseStatus.DOC_NOT_JSON;
+    } else if (status == Status.SUBDOC_NUM_RANGE.status) {
+      return SubDocumentResponseStatus.NUM_RANGE;
+    } else if (status == Status.SUBDOC_DELTA_RANGE.status) {
+      return SubDocumentResponseStatus.DELTA_RANGE;
+    } else if (status == Status.SUBDOC_PATH_EXISTS.status) {
+      return SubDocumentResponseStatus.PATH_EXISTS;
+    } else if (status == Status.SUBDOC_VALUE_TOO_DEEP.status) {
+      return SubDocumentResponseStatus.VALUE_TOO_DEEP;
+    } else if (status == Status.SUBDOC_INVALID_COMBO.status) {
+      return SubDocumentResponseStatus.INVALID_COMBO;
+    } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status) {
+      return SubDocumentResponseStatus.MULTI_PATH_FAILURE;
+    } else if (status == Status.SUBDOC_XATTR_INVALID_FLAG_COMBO.status) {
+      return SubDocumentResponseStatus.XATTR_INVALID_FLAG_COMBO;
+    } else if (status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status) {
+      return SubDocumentResponseStatus.XATTR_INVALID_KEY_COMBO;
+    } else if (status == Status.SUBDOC_XATTR_UNKNOWN_MACRO.status) {
+      return SubDocumentResponseStatus.XATTR_UNKNOWN_MACRO;
+    } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
+      return SubDocumentResponseStatus.SUCCESS_DELETED_DOCUMENT;
+    } else {
+      return SubDocumentResponseStatus.UNKNOWN;
+    }
+  }
+
+  /**
+   * For any response that can be returned by a SubDocument command - path, document, or execution-based - map it to
+   * an appropriate SubDocumentException.
+   *
+   * @param status the SubDocument status code
+   * @param path the path of the SubDocument command
+   * @param id the id of the document
+   */
+  public static SubDocumentException mapSubDocumentError(SubDocumentResponseStatus status, String path, String id) {
+    switch(status) {
+      case PATH_NOT_FOUND:
+        return new PathNotFoundException(path);
+      case PATH_MISMATCH:
+        return new PathMismatchException(path);
+      case PATH_TOO_BIG:
+        return new PathTooDeepException(path);
+      case DOC_TOO_DEEP:
+        return new DocumentTooDeepException(id);
+      case VALUE_CANTINSERT:
+        return new CannotInsertValueException("Cannot insert on path" + path);
+      case DOC_NOT_JSON:
+        return new DocumentNotJsonException(id);
+      case NUM_RANGE:
+        return new NumberTooBigException();
+      case DELTA_RANGE:
+        return new BadDeltaException();
+      case PATH_EXISTS:
+        return new PathExistsException(id, path);
+      case VALUE_TOO_DEEP:
+        return new ValueTooDeepException(id, path);
+      case XATTR_INVALID_FLAG_COMBO:
+        return new XattrInvalidFlagComboException(path);
+      case XATTR_UNKNOWN_MACRO:
+        return new XattrUnknownMacroException(path);
+      default:
+        return new SubDocumentException("SubDocument operation failed with status " + status.toString()) {};
     }
   }
 
@@ -673,7 +768,76 @@ public enum MemcacheProtocol {
     /**
      * Not supported.
      */
-    NOT_SUPPORTED((short) 0x83);
+    NOT_SUPPORTED((short) 0x83),
+    /**
+     * The provided path does not exist in the document
+     */
+    SUBDOC_PATH_NOT_FOUND((short) 0xc0),
+    /**
+     * One of path components treats a non-dictionary as a dictionary, or a non-array as an array, or value the path points to is not a number
+     */
+    SUBDOC_PATH_MISMATCH((short) 0xc1),
+    /**
+     * The path's syntax was incorrect
+     */
+    SUBDOC_PATH_INVALID((short) 0xc2),
+    /**
+     * The path provided is too large: either the string is too long, or it contains too many components
+     */
+    SUBDOC_PATH_TOO_BIG((short) 0xc3),
+    /**
+     * The document has too many levels to parse
+     */
+    SUBDOC_DOC_TOO_DEEP((short) 0xc4),
+    /**
+     * The value provided will invalidate the JSON if inserted
+     */
+    SUBDOC_VALUE_CANTINSERT((short) 0xc5),
+    /**
+     * The existing document is not valid JSON
+     */
+    SUBDOC_DOC_NOT_JSON((short) 0xc6),
+    /**
+     * The existing number is out of the valid range for arithmetic operations
+     */
+    SUBDOC_NUM_RANGE((short) 0xc7),
+    /**
+     * The operation would result in a number outside the valid range
+     */
+    SUBDOC_DELTA_RANGE((short) 0xc8),
+    /**
+     * The requested operation requires the path to not already exist, but it exists
+     */
+    SUBDOC_PATH_EXISTS((short) 0xc9),
+    /**
+     * Inserting the value would cause the document to be too deep
+     */
+    SUBDOC_VALUE_TOO_DEEP((short) 0xca),
+    /**
+     * An invalid combination of commands was specified
+     */
+    SUBDOC_INVALID_COMBO((short) 0xcb),
+    /**
+     * Specified key was successfully found, but one or more path operations failed
+     */
+    SUBDOC_MULTI_PATH_FAILURE((short) 0xcc),
+    /**
+     * An invalid combination of operationSpecified key was successfully found, but one or more path operations faileds, using macros when not using extended attributes
+     */
+    SUBDOC_XATTR_INVALID_FLAG_COMBO((short)  0xce),
+    /**
+     * Only single xattr key may be accessed at the same time
+     */
+    SUBDOC_XATTR_INVALID_KEY_COMBO((short) 0xcf),
+    /**
+     * The server has no knowledge of the requested macro
+     */
+    SUBDOC_XATTR_UNKNOWN_MACRO((short) 0xd0),
+    /**
+     * The subdoc operation completed successfully on the deleted document
+     */
+    SUBDOC_SUCCESS_DELETED_DOCUMENT((short)0xcd);
+
 
     private final short status;
 
