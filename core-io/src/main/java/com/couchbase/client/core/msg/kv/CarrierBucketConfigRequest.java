@@ -32,7 +32,10 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
 
   @Override
   public CarrierBucketConfigResponse decode(final ByteBuf response, ChannelContext ctx) {
-    byte[] content = body(response).map(ByteBufUtil::getBytes).orElse(new byte[] {});
+    byte[] content = body(response)
+      .map(ByteBufUtil::getBytes)
+      .map(bytes -> tryDecompression(bytes, datatype(response)))
+      .orElse(new byte[] {});
     return new CarrierBucketConfigResponse(decodeStatus(response), content);
   }
 

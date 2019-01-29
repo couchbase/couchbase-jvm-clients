@@ -77,7 +77,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       }
     }
 
-
     ByteBuf request = request(
       alloc,
       MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP,
@@ -129,7 +128,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     return new SubdocGetResponse(decodeStatus(response), error, values, cas(response));
   }
 
-  private Optional<SubDocumentException> getSubDocumentException(List<SubDocumentException> errors, short rawStatus) {
+  private Optional<SubDocumentException> getSubDocumentException(List<SubDocumentException> errors,
+                                                                 short rawStatus) {
     Optional<SubDocumentException> error = Optional.empty();
 
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
