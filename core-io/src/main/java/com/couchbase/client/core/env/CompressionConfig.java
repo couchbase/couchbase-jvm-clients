@@ -23,6 +23,10 @@ package com.couchbase.client.core.env;
  */
 public class CompressionConfig {
 
+  public static final boolean DEFAULT_ENABLED = true;
+  public static final int DEFAULT_MIN_SIZE = 32;
+  public static final double DEFAULT_MIN_RATIO = 0.83;
+
   /**
    * If compression is enabled or not.
    */
@@ -108,9 +112,9 @@ public class CompressionConfig {
    */
   public static class Builder {
 
-    private boolean enabled = true;
-    private int minSize = 32;
-    private double minRatio = 0.83;
+    private boolean enabled = DEFAULT_ENABLED;
+    private int minSize = DEFAULT_MIN_SIZE;
+    private double minRatio = DEFAULT_MIN_RATIO;
 
     public CompressionConfig build() {
       return new CompressionConfig(this);
