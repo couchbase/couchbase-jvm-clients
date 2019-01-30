@@ -433,15 +433,15 @@ public enum MemcacheProtocol {
   public static SubDocumentException mapSubDocumentError(SubDocumentOpResponseStatus status, String path, String id) {
     switch(status) {
       case PATH_NOT_FOUND:
-        return new PathNotFoundException(path);
+        return new PathNotFoundException(id, path);
       case PATH_MISMATCH:
-        return new PathMismatchException(path);
+        return new PathMismatchException(id, path);
       case PATH_TOO_BIG:
         return new PathTooDeepException(path);
       case DOC_TOO_DEEP:
         return new DocumentTooDeepException(id);
       case VALUE_CANTINSERT:
-        return new CannotInsertValueException("Cannot insert on path" + path);
+        return new CannotInsertValueException("Cannot insert on path " + path);
       case DOC_NOT_JSON:
         return new DocumentNotJsonException(id);
       case NUM_RANGE:

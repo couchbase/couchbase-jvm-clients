@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+
 import java.util.List;
 
 /**
@@ -25,21 +28,31 @@ import java.util.List;
  * None of the mutations were applied.
  *
  * @author Simon Baslé
- * @since 2.2
+ * @since 2.0
  */
 public class MultiMutationException extends SubDocumentException {
 
-    private final List<SubDocumentException> childExceptions;
+    private final int index;
+    private final SubDocumentOpResponseStatus status;
 
-    public MultiMutationException(List<SubDocumentException> childExceptions) {
-        super("Multiple mutation could not be applied.");
-        this.childExceptions = childExceptions;
+    public MultiMutationException(int index, SubDocumentOpResponseStatus errorStatus, CouchbaseException errorException) {
+        super("Multiple mutation could not be applied. First problematic failure at " + index
+                + " with status " + errorStatus, errorException);
+        this.index = index;
+        this.status = errorStatus;
     }
 
     /**
-     * @return the list of {@link SubDocumentException} individual errors .
+     * @return the zero-based index of the first mutation spec that caused the multi mutation to fail.
      */
-    public List<SubDocumentException> childExceptions() {
-        return childExceptions;
+    public int firstFailureIndex() {
+        return index;
+    }
+
+    /**
+     * @return the error status for the first mutation spec that caused the multi mutation to fail.
+     */
+    public SubDocumentOpResponseStatus firstFailureStatus() {
+        return status;
     }
 }

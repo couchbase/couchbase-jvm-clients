@@ -401,7 +401,6 @@ class AsyncCollection(name: String,
     // TODO support projections
     // TODO support expiration (probs works, check unit tested)
 
-    val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
 
     spec.operations.find(_.fragment.isFailure) match {
       case Some(failed) =>
@@ -409,7 +408,10 @@ class AsyncCollection(name: String,
         Future.failed(failed.fragment.failed.get)
       case _ =>
 
-        val mapped: Seq[SubdocMutateRequest.Command] = spec.operations.map(_.convert)
+        val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
+        spec.operations.map(_.convert).foreach(commands.add)
+
+        // TODO check for no commands
 
         // TODO flags?
         // TODO expiration

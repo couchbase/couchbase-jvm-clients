@@ -101,10 +101,15 @@ object Conversions {
   object EncodableField {
     implicit object StringConvert extends EncodableField[String] {
       override def encode(content: String) = {
-        Try((content.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
       }
     }
 
+//    implicit object BoolConvert extends EncodableField[Boolean] {
+//      override def encode(content: Boolean) = {
+//        Try((content..getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+//      }
+//    }
   }
 
   trait DecodableField[T] {

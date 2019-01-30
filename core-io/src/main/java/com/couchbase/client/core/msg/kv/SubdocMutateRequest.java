@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
+import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -93,60 +94,62 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   @Override
   public SubdocMutateResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
+    short rawOverallStatus = status(response);
+    ResponseStatus overallStatus = decodeStatus(response);
+    Optional<SubDocumentException> error = Optional.empty();
+
     List<SubdocField> values;
-    List<SubDocumentException> errors = null;
+
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
-      values = new ArrayList<>(commands.size());
-      for (Command command : commands) {
-        short statusRaw = body.readShort();
-        SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
-        Optional<SubDocumentException> error = Optional.empty();
-        if (status != SubDocumentOpResponseStatus.SUCCESS) {
-          if (errors == null) errors = new ArrayList<>();
-          SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
-          errors.add(err);
-          error = Optional.of(err);
+
+      // If there's a multi-mutation failure we only get the first failure back
+      if (rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
+        byte index = body.readByte();
+        short opStatusRaw = body.readShort();
+        SubDocumentOpResponseStatus opStatus = decodeSubDocumentStatus(opStatusRaw);
+        SubDocumentException err = mapSubDocumentError(opStatus, commands.get(index).path, origKey);
+        error = Optional.of(new MultiMutationException(index, opStatus, err));
+        values = new ArrayList<>();
+      }
+      else {
+        values = new ArrayList<>(commands.size());
+        for (Command command : commands) {
+          short statusRaw = body.readShort();
+          SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
+
+          // The status here should always be SUCCESS
+          if (status != SubDocumentOpResponseStatus.SUCCESS) {
+            SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
+
+            SubdocField op = new SubdocField(status, Optional.of(err), new byte[] {}, command.path, command.type);
+            values.add(op);
+          }
+          else {
+            int valueLength = body.readInt();
+            byte[] value = new byte[valueLength];
+            body.readBytes(value, 0, valueLength);
+            SubdocField op = new SubdocField(status, Optional.empty(), value, command.path, command.type);
+            values.add(op);
+          }
         }
-        int valueLength = body.readInt();
-        byte[] value = new byte[valueLength];
-        body.readBytes(value, 0, valueLength);
-        SubdocField op = new SubdocField(status, error, value, command.path, command.type);
-        values.add(op);
       }
     } else {
       values = new ArrayList<>();
     }
 
-    short rawStatus = status(response);
-    ResponseStatus status = decodeStatus(response);
-
-    Optional<SubDocumentException> error = Optional.empty();
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
-    if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
-      // If a single subdoc op was tried and failed, return that directly
-      if (commands.size() == 1 && errors != null && errors.size() == 1) {
-        error = Optional.of(errors.get(0));
-      }
-      else {
-        // Otherwise return success, as some of the operations have succeeded
-        status = ResponseStatus.SUCCESS;
-      }
-    } else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
+    if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
       error = Optional.of(new DocumentNotJsonException(origKey));
-    } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
+    } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
       error = Optional.of(new DocumentTooDeepException(origKey));
-    }
-    // If a single subdoc op was tried and failed, return that directly
-    else if (commands.size() == 1 && errors != null && errors.size() == 1) {
-      error = Optional.of(errors.get(0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 
 
     return new SubdocMutateResponse(
-      status,
+      overallStatus,
       error,
       values,
       cas(response),

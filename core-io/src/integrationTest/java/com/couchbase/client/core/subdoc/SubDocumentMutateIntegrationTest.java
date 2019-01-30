@@ -94,8 +94,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     assertTrue(response.error().isPresent());
     assertTrue(response.error().get() instanceof MultiMutationException);
     MultiMutationException err = (MultiMutationException) response.error().get();
-    assertEquals(1, (err.childExceptions().size()));
-    assertTrue(expected.isInstance(err.childExceptions().get(0)));
+    assertTrue(expected.isInstance(err.getCause()));
     assertTrue(response.cas() != 0);
   }
 
