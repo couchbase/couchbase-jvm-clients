@@ -56,6 +56,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   private static final int DEFAULT_MANAGER_PORT = 8091;
 
+  private static final int DEFAULT_KV_TLS_PORT = 11207;
+
+  private static final int DEFAULT_MANAGER_TLS_PORT = 18091;
+
   /**
    * The number of loaders which will (at maximum) try to load a config
    * in parallel.
@@ -103,13 +107,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public Mono<Void> openBucket(final String name) {
     return Mono.defer(() -> {
       if (!shutdown.get()) {
+
+        boolean tls = core.context().environment().ioEnvironment().securityConfig().tlsEnabled();
+        int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
+        int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
+
         return Flux
           .fromIterable(core.context().environment().seedNodes())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> keyValueLoader
-            .load(seed.getAddress(), seed.kvPort().orElse(DEFAULT_KV_PORT), name)
+            .load(seed.getAddress(), seed.kvPort().orElse(kvPort), name)
             .onErrorResume(t -> clusterManagerLoader.load(
-              seed.getAddress(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT), name
+              seed.getAddress(), seed.httpPort().orElse(managerPort), name
             ))
           )
           .take(1)

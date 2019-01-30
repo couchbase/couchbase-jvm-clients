@@ -24,6 +24,8 @@ import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.PartitionSelectionStrategy;
 
+import java.util.Optional;
+
 /**
  *
  */
@@ -31,7 +33,6 @@ public class KeyValueService extends PooledService {
 
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
 
-  private final CoreContext coreContext;
   private final NetworkAddress hostname;
   private final int port;
   private final String bucketname;
@@ -40,8 +41,7 @@ public class KeyValueService extends PooledService {
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
                          final NetworkAddress hostname, final int port, final String bucketname,
                          final Credentials credentials) {
-    super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV));
-    this.coreContext = coreContext;
+    super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV, Optional.of(bucketname)));
     this.hostname = hostname;
     this.port = port;
     this.bucketname = bucketname;
@@ -50,7 +50,7 @@ public class KeyValueService extends PooledService {
 
   @Override
   protected Endpoint createEndpoint() {
-    return new KeyValueEndpoint(coreContext, hostname, port, bucketname, credentials);
+    return new KeyValueEndpoint(serviceContext(), hostname, port, bucketname, credentials);
   }
 
   @Override

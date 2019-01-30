@@ -24,11 +24,15 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEv
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.PipelineErrorHandler;
+import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -45,9 +49,11 @@ import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslHandler;
 import reactor.core.publisher.Mono;
 import reactor.retry.Retry;
 
+import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
@@ -116,18 +122,19 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param hostname the remote hostname.
    * @param port the remote port.
    * @param eventLoopGroup the netty event loop group to use.
-   * @param coreContext the core context.
+   * @param serviceContext the core context.
    * @param circuitBreakerConfig the circuit breaker config used.
    */
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
-               final CoreContext coreContext, final CircuitBreakerConfig circuitBreakerConfig,
+               final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
                final ServiceType serviceType) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
     this.circuitBreaker = circuitBreakerConfig.enabled()
       ? new LazyCircuitBreaker(circuitBreakerConfig)
       : NoopCircuitBreaker.INSTANCE;
-    this.endpointContext = new EndpointContext(coreContext, hostname, port, circuitBreaker, serviceType);
+    this.endpointContext = new EndpointContext(serviceContext, hostname, port, circuitBreaker,
+      serviceType, serviceContext.bucket());
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
     this.eventLoopGroup = eventLoopGroup;
@@ -200,7 +207,17 @@ public abstract class BaseEndpoint implements Endpoint {
             @Override
             protected void initChannel(SocketChannel ch) {
               ChannelPipeline pipeline = ch.pipeline();
+
+              SecurityConfig config = endpointContext.environment().ioEnvironment().securityConfig();
+              if (config.tlsEnabled()) {
+                try {
+                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config));
+                } catch (Exception e) {
+                  throw new SecurityException("Could not instantiate SSL Handler", e);
+                }
+              }
               pipelineInitializer().init(pipeline);
+              pipeline.addLast(new PipelineErrorHandler(endpointContext));
             }
           });
 
@@ -372,4 +389,7 @@ public abstract class BaseEndpoint implements Endpoint {
     return Mono.fromFuture(completableFuture);
   }
 
+  public EndpointContext endpointContext() {
+    return endpointContext;
+  }
 }

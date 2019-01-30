@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
@@ -27,10 +26,9 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -38,32 +36,30 @@ import java.util.Set;
 
 public class KeyValueEndpoint extends BaseEndpoint {
 
-  private final CoreContext coreContext;
   private final String bucketname;
   private final Credentials credentials;
 
-  public KeyValueEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
+  public KeyValueEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                           final int port, final String bucketname, final Credentials credentials) {
-    super(hostname, port, coreContext.environment().ioEnvironment().kvEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().kvCircuitBreakerConfig(), ServiceType.KV);
-    this.coreContext = coreContext;
+    super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
+      ctx, ctx.environment().ioEnvironment().kvCircuitBreakerConfig(), ServiceType.KV);
     this.credentials = credentials;
     this.bucketname = bucketname;
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new KeyValuePipelineInitializer(coreContext, bucketname, credentials);
+    return new KeyValuePipelineInitializer(endpointContext(), bucketname, credentials);
   }
 
   public static class KeyValuePipelineInitializer implements PipelineInitializer {
 
-    private final CoreContext coreContext;
+    private final EndpointContext ctx;
     private final String bucketname;
     private final Credentials credentials;
 
-    public KeyValuePipelineInitializer(CoreContext coreContext, String bucketname, Credentials credentials) {
-      this.coreContext = coreContext;
+    public KeyValuePipelineInitializer(EndpointContext ctx, String bucketname, Credentials credentials) {
+      this.ctx = ctx;
       this.credentials = credentials;
       this.bucketname = bucketname;
     }
@@ -71,21 +67,21 @@ public class KeyValueEndpoint extends BaseEndpoint {
     @Override
     public void init(ChannelPipeline pipeline) {
       pipeline.addLast(new MemcacheProtocolDecodeHandler());
-      pipeline.addLast(new MemcacheProtocolVerificationHandler(coreContext));
+      pipeline.addLast(new MemcacheProtocolVerificationHandler(ctx));
 
-      pipeline.addLast(new FeatureNegotiatingHandler(coreContext, serverFeatures()));
-      pipeline.addLast(new ErrorMapLoadingHandler(coreContext));
+      pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
+      pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
-      if (!coreContext.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
+      if (!ctx.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
         pipeline.addLast(new SaslAuthenticationHandler(
-          coreContext,
+          ctx,
           credentials.usernameForBucket(bucketname),
           credentials.passwordForBucket(bucketname)
         ));
       }
 
-      pipeline.addLast(new SelectBucketHandler(coreContext, bucketname));
-      pipeline.addLast(new KeyValueMessageHandler(coreContext, bucketname));
+      pipeline.addLast(new SelectBucketHandler(ctx, bucketname));
+      pipeline.addLast(new KeyValueMessageHandler(ctx, bucketname));
     }
 
     /**
@@ -101,11 +97,11 @@ public class KeyValueEndpoint extends BaseEndpoint {
         // ServerFeature.COLLECTIONS
       ));
 
-      if (coreContext.environment().mutationTokensEnabled()) {
+      if (ctx.environment().mutationTokensEnabled()) {
         features.add(ServerFeature.MUTATION_SEQNO);
       }
 
-      if (coreContext.environment().ioEnvironment().compressionConfig().enabled()) {
+      if (ctx.environment().ioEnvironment().compressionConfig().enabled()) {
         features.add(ServerFeature.SNAPPY);
       }
 

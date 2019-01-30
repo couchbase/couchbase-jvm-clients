@@ -224,12 +224,14 @@ public class Core {
         .just(currentConfig)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()))
         .flatMap(bc -> Flux.fromIterable(bc.nodes())
-          .flatMap(ni -> Flux
-            .fromIterable(ni.services().entrySet())
-            .flatMap(s -> ensureServiceAt(
-              ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())
-            ))
-          )
+          .flatMap(ni -> {
+            boolean tls = coreContext.environment().ioEnvironment().securityConfig().tlsEnabled();
+            return Flux
+              .fromIterable(tls ? ni.sslServices().entrySet() : ni.services().entrySet())
+              .flatMap(s -> ensureServiceAt(
+                ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())
+              ));
+          })
         )
         .subscribe(
           v -> {},

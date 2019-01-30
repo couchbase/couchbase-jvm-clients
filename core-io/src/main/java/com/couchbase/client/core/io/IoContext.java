@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 
 import java.net.SocketAddress;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The {@link IoContext} is used to extend the core context with IO related metadata
@@ -33,18 +34,22 @@ public class IoContext extends CoreContext {
 
   private final SocketAddress remoteSocket;
 
+  private final Optional<String> bucket;
+
   /**
    * Creates a new IO Context.
    *
    * @param ctx the core context as a parent.
    * @param localSocket the local io socket.
    * @param remoteSocket the remote io socket.
+   * @param bucket the bucket name, if it makes sense.
    */
   public IoContext(final CoreContext ctx, final SocketAddress localSocket,
-                   final SocketAddress remoteSocket) {
+                   final SocketAddress remoteSocket, final Optional<String> bucket) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.localSocket = localSocket;
     this.remoteSocket = remoteSocket;
+    this.bucket = bucket;
   }
 
   @Override
@@ -52,12 +57,11 @@ public class IoContext extends CoreContext {
     super.injectExportableParams(input);
     input.put("local", localSocket());
     input.put("remote", remoteSocket());
+    bucket.ifPresent(s -> input.put("bucket", s));
   }
 
   /**
    * Returns the local socket.
-   *
-   * @return the local socket address.
    */
   public SocketAddress localSocket() {
     return localSocket;
@@ -65,10 +69,15 @@ public class IoContext extends CoreContext {
 
   /**
    * Returns the remote socket.
-   *
-   * @return the remote socket address.
    */
   public SocketAddress remoteSocket() {
     return remoteSocket;
+  }
+
+  /**
+   * Returns the bucket name if present.
+   */
+  public Optional<String> bucket() {
+    return bucket;
   }
 }

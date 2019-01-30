@@ -2,5 +2,7 @@ package com.couchbase.client.test;
 
 public enum Services {
   KV,
-  MANAGER
+  KV_TLS,
+  MANAGER,
+  MANAGER_TLS
 }

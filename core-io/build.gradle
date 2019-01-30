@@ -30,6 +30,7 @@ idea {
 
 dependencies {
   compile 'io.netty:netty-all:4.1.32.Final'
+  compile 'io.netty:netty-tcnative-boringssl-static:2.0.20.Final'
   compile 'org.jctools:jctools-core:2.1.2'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
   compile 'io.projectreactor:reactor-core:3.2.4.RELEASE'

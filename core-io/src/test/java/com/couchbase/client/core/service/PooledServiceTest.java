@@ -37,6 +37,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -64,7 +65,8 @@ class PooledServiceTest {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
-    serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234, ServiceType.KV);
+    serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+      ServiceType.KV, Optional.empty());
   }
 
   @AfterEach

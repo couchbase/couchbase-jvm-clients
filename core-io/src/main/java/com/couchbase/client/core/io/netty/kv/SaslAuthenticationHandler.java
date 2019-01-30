@@ -16,10 +16,10 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.io.IoContext;
@@ -95,7 +95,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private final String username;
   private final String password;
   private final Set<SaslMechanism> allowedMechanisms;
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Once connected, holds the io context for more debug information.
@@ -114,13 +114,13 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    */
   private ChannelPromise interceptedConnectPromise;
 
-  public SaslAuthenticationHandler(final CoreContext coreContext, final String username,
+  public SaslAuthenticationHandler(final EndpointContext endpointContext, final String username,
                                    final String password) {
-    this.coreContext = coreContext;
+    this.endpointContext = endpointContext;
     this.username = username;
     this.password = password;
-    this.allowedMechanisms = coreContext.environment().ioEnvironment().allowedSaslMechanisms();
-    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
+    this.allowedMechanisms = endpointContext.environment().ioEnvironment().allowedSaslMechanisms();
+    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
   }
 
   /**
@@ -149,9 +149,10 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     ctx.executor().schedule(() -> {
@@ -249,7 +250,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     try {
       saslClient = createSaslClient(usedMechs);
 
-      coreContext.environment().eventBus().publish(new SaslMechanismsSelectedEvent(
+      endpointContext.environment().eventBus().publish(new SaslMechanismsSelectedEvent(
         ioContext,
         Stream.of(serverMechanisms).map(SaslMechanism::from).collect(Collectors.toSet()),
         allowedMechanisms,
@@ -385,7 +386,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    */
   private void completeAuth(final ChannelHandlerContext ctx) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
-    coreContext.environment().eventBus().publish(
+    endpointContext.environment().eventBus().publish(
       new SaslAuthenticationCompletedEvent(latency.orElse(Duration.ZERO), ioContext)
     );
     interceptedConnectPromise.trySuccess();
@@ -416,7 +417,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       lastPacket.readerIndex(ridx);
     }
 
-    coreContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
+    endpointContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
       latency.orElse(Duration.ZERO),
       ioContext,
       message,

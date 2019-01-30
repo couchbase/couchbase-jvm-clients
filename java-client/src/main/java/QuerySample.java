@@ -4,10 +4,13 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class QuerySample {
@@ -15,7 +18,9 @@ public class QuerySample {
   public static void main(String... args) throws Exception {
     CoreEnvironment environment = CoreEnvironment.create("Administrator", "password");
     Core core = Core.create(environment);
-    QueryEndpoint endpoint = new QueryEndpoint(core.context(), NetworkAddress.localhost(), 8093);
+    QueryEndpoint endpoint = new QueryEndpoint(new ServiceContext(core.context(),
+      NetworkAddress.localhost(), 1234, ServiceType.QUERY, Optional.empty()),
+      NetworkAddress.localhost(), 8093);
 
     endpoint.connect();
 

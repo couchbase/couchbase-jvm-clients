@@ -33,8 +33,11 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -58,6 +61,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -74,7 +78,7 @@ class FeatureNegotiatingHandlerTest {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
   }
 
-  private CoreContext coreContext;
+  private EndpointContext endpointContext;
   private EmbeddedChannel channel;
   private SimpleEventBus simpleEventBus;
   private IoEnvironment ioEnv;
@@ -88,7 +92,9 @@ class FeatureNegotiatingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+      null, ServiceType.KV, Optional.empty());
   }
 
   @AfterEach
@@ -112,7 +118,7 @@ class FeatureNegotiatingHandlerTest {
     };
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       Collections.singleton(ServerFeature.TRACING)
     );
     channel.pipeline().addLast(failingHandler).addLast(handler);
@@ -131,7 +137,7 @@ class FeatureNegotiatingHandlerTest {
     when(ioEnv.connectTimeout()).thenReturn(timeout);
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       Collections.singleton(ServerFeature.TRACING)
     );
     channel.pipeline().addLast(handler);
@@ -156,7 +162,7 @@ class FeatureNegotiatingHandlerTest {
   @Test
   void connectInstantlyIfNoFeaturesNeeded() {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       Collections.emptySet()
     );
     channel.pipeline().addLast(handler);
@@ -178,7 +184,7 @@ class FeatureNegotiatingHandlerTest {
   @MethodSource("featureProvider")
   void encodeAndSendHelloRequest(Set<ServerFeature> enabledFeatures) {
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       enabledFeatures
     );
     channel.pipeline().addLast(handler);
@@ -230,7 +236,7 @@ class FeatureNegotiatingHandlerTest {
       ServerFeature.XATTR, ServerFeature.XERROR, ServerFeature.SELECT_BUCKET,
       ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       toNegotiate
     );
     channel.pipeline().addLast(handler);
@@ -277,7 +283,7 @@ class FeatureNegotiatingHandlerTest {
       ServerFeature.XATTR, ServerFeature.XERROR, ServerFeature.SELECT_BUCKET,
       ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       toNegotiate
     );
     channel.pipeline().addLast(handler);
@@ -327,7 +333,7 @@ class FeatureNegotiatingHandlerTest {
   void decodeAndIgnoreNonAskedForFeaturesInResponse() {
     Set<ServerFeature> toNegotiate = EnumSet.of(ServerFeature.SNAPPY, ServerFeature.TRACING);
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
-      coreContext,
+      endpointContext,
       toNegotiate
     );
     channel.pipeline().addLast(handler);

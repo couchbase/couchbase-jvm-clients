@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
@@ -65,7 +66,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
   /**
    * Holds the core context as reference to event bus and more.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Holds the timeout for the full select bucket loading phase.
@@ -92,12 +93,12 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
   /**
    * Creates a new {@link SelectBucketHandler}.
    *
-   * @param coreContext the core context used to refer to values like the core id.
+   * @param endpointContext the core context used to refer to values like the core id.
    * @param bucketName  the bucket name to select.
    */
-  public SelectBucketHandler(final CoreContext coreContext, final String bucketName) {
-    this.coreContext = coreContext;
-    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
+  public SelectBucketHandler(final EndpointContext endpointContext, final String bucketName) {
+    this.endpointContext = endpointContext;
+    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
     this.bucketName = bucketName;
   }
 
@@ -118,9 +119,10 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     if (selectBucketEnabled(ctx)) {
@@ -136,7 +138,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
       ConnectTimings.start(ctx.channel(), this.getClass());
       ctx.writeAndFlush(buildSelectBucketRequest(ctx));
     } else {
-      coreContext.environment().eventBus().publish(new SelectBucketDisabledEvent(ioContext, bucketName));
+      endpointContext.environment().eventBus().publish(new SelectBucketDisabledEvent(ioContext, bucketName));
       ConnectTimings.record(ctx.channel(), this.getClass());
       interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
@@ -151,7 +153,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
     if (msg instanceof ByteBuf) {
       short status = status((ByteBuf) msg);
       if (status == MemcacheProtocol.Status.SUCCESS.status()) {
-        coreContext.environment().eventBus().publish(new SelectBucketCompletedEvent(
+        endpointContext.environment().eventBus().publish(new SelectBucketCompletedEvent(
           latency.orElse(Duration.ZERO),
           ioContext,
           bucketName)
@@ -160,14 +162,14 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
         ctx.pipeline().remove(this);
         ctx.fireChannelActive();
       } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
-        coreContext.environment().eventBus().publish(
+        endpointContext.environment().eventBus().publish(
           new SelectBucketFailedEvent(ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
           new AuthenticationException("No Access to bucket " + bucketName)
         );
       } else {
-        coreContext.environment().eventBus().publish(
+        endpointContext.environment().eventBus().publish(
           new SelectBucketFailedEvent(ioContext, status)
         );
         interceptedConnectPromise.tryFailure(

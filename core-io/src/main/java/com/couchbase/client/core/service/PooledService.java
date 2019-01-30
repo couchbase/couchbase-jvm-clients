@@ -94,6 +94,10 @@ abstract class PooledService implements Service {
     scheduleCleanIdleConnections();
   }
 
+  public ServiceContext serviceContext() {
+    return serviceContext;
+  }
+
   /**
    * Helper method to schedule cleaning up idle connections per interval.
    */

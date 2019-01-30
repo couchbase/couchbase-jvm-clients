@@ -21,6 +21,7 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class EndpointContext extends CoreContext {
 
@@ -44,6 +45,8 @@ public class EndpointContext extends CoreContext {
    */
   private final ServiceType serviceType;
 
+  private final Optional<String> bucket;
+
   /**
    * Creates a new {@link EndpointContext}.
    *
@@ -52,12 +55,13 @@ public class EndpointContext extends CoreContext {
    * @param remotePort the remote port.
    */
   public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
-                         CircuitBreaker circuitBreaker, ServiceType serviceType) {
+                         CircuitBreaker circuitBreaker, ServiceType serviceType, Optional<String> bucket) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
     this.circuitBreaker = circuitBreaker;
     this.serviceType = serviceType;
+    this.bucket = bucket;
   }
 
   @Override
@@ -66,6 +70,7 @@ public class EndpointContext extends CoreContext {
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
+    bucket.ifPresent(b -> input.put("bucket", b));
   }
 
   public NetworkAddress remoteHostname() {
@@ -82,5 +87,9 @@ public class EndpointContext extends CoreContext {
 
   public ServiceType serviceType() {
     return serviceType;
+  }
+
+  public Optional<String> bucket() {
+    return bucket;
   }
 }

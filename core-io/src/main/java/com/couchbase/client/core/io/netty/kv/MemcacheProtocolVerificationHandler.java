@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -41,15 +42,15 @@ public class MemcacheProtocolVerificationHandler extends ChannelDuplexHandler {
   /**
    * Holds the core context as reference to event bus and more.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Creates a new {@link MemcacheProtocolVerificationHandler}.
    *
-   * @param coreContext the core context used to refer to values like the core id.
+   * @param endpointContext the core context used to refer to values like the core id.
    */
-  public MemcacheProtocolVerificationHandler(final CoreContext coreContext) {
-    this.coreContext = coreContext;
+  public MemcacheProtocolVerificationHandler(final EndpointContext endpointContext) {
+    this.endpointContext = endpointContext;
   }
 
   /**
@@ -93,16 +94,17 @@ public class MemcacheProtocolVerificationHandler extends ChannelDuplexHandler {
    */
   private void handleEventAndCloseChannel(final ChannelHandlerContext ctx, final ByteBuf msg) {
     final IoContext ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     byte[] packet = new byte[msg.readableBytes()];
     msg.readBytes(packet);
     ReferenceCountUtil.release(msg);
 
-    coreContext.environment().eventBus().publish(new InvalidPacketDetectedEvent(
+    endpointContext.environment().eventBus().publish(new InvalidPacketDetectedEvent(
       ioContext,
       packet
     ));

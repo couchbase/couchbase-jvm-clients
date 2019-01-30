@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -26,27 +26,18 @@ import io.netty.handler.logging.LoggingHandler;
 
 public class AnalyticsEndpoint extends BaseEndpoint {
 
-  private final CoreContext coreContext;
-
-  public AnalyticsEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
+  public AnalyticsEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                            final int port) {
-    super(hostname, port, coreContext.environment().ioEnvironment().analyticsEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().analyticsCircuitBreakerConfig(), ServiceType.ANALYTICS);
-    this.coreContext = coreContext;
+    super(hostname, port, ctx.environment().ioEnvironment().analyticsEventLoopGroup().get(),
+      ctx, ctx.environment().ioEnvironment().analyticsCircuitBreakerConfig(), ServiceType.ANALYTICS);
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new AnalyticsPipelineInitializer(coreContext);
+    return new AnalyticsPipelineInitializer();
   }
 
   public static class AnalyticsPipelineInitializer implements PipelineInitializer {
-
-    private final CoreContext coreContext;
-
-    public AnalyticsPipelineInitializer(CoreContext coreContext) {
-      this.coreContext = coreContext;
-    }
 
     @Override
     public void init(ChannelPipeline pipeline) {

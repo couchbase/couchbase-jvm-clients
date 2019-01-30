@@ -31,6 +31,7 @@ import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.Channel;
@@ -48,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -77,7 +79,7 @@ class BaseEndpointTest {
   private EventLoopGroup eventLoopGroup;
   private SimpleEventBus eventBus;
   private CoreEnvironment environment;
-  private CoreContext ctx;
+  private ServiceContext ctx;
   private Credentials credentials = mock(Credentials.class);
 
   @BeforeEach
@@ -85,7 +87,9 @@ class BaseEndpointTest {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
-    ctx = new CoreContext(mock(Core.class), 1, environment);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
+    ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+      ServiceType.KV, Optional.empty());
   }
 
   @AfterEach
@@ -126,7 +130,10 @@ class BaseEndpointTest {
         .connectTimeout(Duration.ofMillis(10))
         .build())
       .build();
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, env);
+
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+      ServiceType.KV, Optional.empty());
 
     try {
       final CompletableFuture<Channel> cf = new CompletableFuture<>();
@@ -247,7 +254,9 @@ class BaseEndpointTest {
         .connectTimeout(Duration.ofMillis(10))
         .build())
       .build();
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+      ServiceType.KV, Optional.empty());
 
     try {
       final CompletableFuture<Channel> cf = new CompletableFuture<>();
@@ -387,14 +396,14 @@ class BaseEndpointTest {
 
     private Supplier<Mono<Channel>> channelSupplier;
 
-    static InstrumentedEndpoint create(EventLoopGroup eventLoopGroup, CoreContext ctx,
+    static InstrumentedEndpoint create(EventLoopGroup eventLoopGroup, ServiceContext ctx,
                                        Supplier<Mono<Channel>> channelSupplier) {
       return new InstrumentedEndpoint(LOCALHOST, PORT, eventLoopGroup, ctx, channelSupplier);
     }
 
     InstrumentedEndpoint(NetworkAddress hostname, int port, EventLoopGroup eventLoopGroup,
-                         CoreContext coreContext, Supplier<Mono<Channel>> channelSupplier) {
-      super(hostname, port, eventLoopGroup, coreContext, CircuitBreakerConfig.disabled(), ServiceType.KV);
+                         ServiceContext ctx, Supplier<Mono<Channel>> channelSupplier) {
+      super(hostname, port, eventLoopGroup, ctx, CircuitBreakerConfig.disabled(), ServiceType.KV);
       this.channelSupplier = channelSupplier;
     }
 

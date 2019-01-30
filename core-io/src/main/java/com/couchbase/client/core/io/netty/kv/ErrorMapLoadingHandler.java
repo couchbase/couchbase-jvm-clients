@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.json.MapperException;
@@ -70,7 +71,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   /**
    * Holds the core context as reference to event bus and more.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Holds the timeout for the full error map loading phase.
@@ -92,11 +93,11 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   /**
    * Creates a new {@link ErrorMapLoadingHandler}.
    *
-   * @param coreContext the core context used to refer to values like the core id.
+   * @param endpointContext the core context used to refer to values like the core id.
    */
-  public ErrorMapLoadingHandler(final CoreContext coreContext) {
-    this.coreContext = coreContext;
-    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
+  public ErrorMapLoadingHandler(final EndpointContext endpointContext) {
+    this.endpointContext = endpointContext;
+    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
   }
 
   /**
@@ -125,9 +126,10 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     ctx.executor().schedule(() -> {
@@ -151,11 +153,11 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       if (successful((ByteBuf) msg)) {
         Optional<ErrorMap> loadedMap = extractErrorMap((ByteBuf) msg);
         loadedMap.ifPresent(errorMap -> ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).set(errorMap));
-        coreContext.environment().eventBus().publish(
+        endpointContext.environment().eventBus().publish(
           new ErrorMapLoadedEvent(ioContext, latency.orElse(Duration.ZERO), loadedMap)
         );
       } else {
-        coreContext.environment().eventBus().publish(
+        endpointContext.environment().eventBus().publish(
           new ErrorMapLoadingFailedEvent(
             ioContext,
             latency.orElse(Duration.ZERO),
@@ -187,13 +189,13 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       try {
         return Optional.of(decodeInto(input, ErrorMap.class));
       } catch (MapperException e) {
-        coreContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
+        endpointContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
           ioContext, e.getMessage(), new String(input, CharsetUtil.UTF_8)
         ));
         return Optional.empty();
       }
     } else {
-      coreContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
+      endpointContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
         ioContext, "No content in response", ""
       ));
       return Optional.empty();

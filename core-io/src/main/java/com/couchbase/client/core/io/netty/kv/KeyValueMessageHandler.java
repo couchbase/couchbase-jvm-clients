@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
@@ -46,7 +47,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * Stores the {@link CoreContext} for use.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Holds all outstanding requests based on their opaque.
@@ -85,14 +86,14 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
-   * @param coreContext the parent core context.
+   * @param endpointContext the parent core context.
    */
-  public KeyValueMessageHandler(final CoreContext coreContext, final String bucketName) {
-    this.coreContext = coreContext;
+  public KeyValueMessageHandler(final EndpointContext endpointContext, final String bucketName) {
+    this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
     this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
-    this.compressionConfig = coreContext.environment().ioEnvironment().compressionConfig();
-    this.eventBus = coreContext.environment().eventBus();
+    this.compressionConfig = endpointContext.environment().ioEnvironment().compressionConfig();
+    this.eventBus = endpointContext.environment().eventBus();
     this.bucketName = bucketName;
   }
 
@@ -108,9 +109,10 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     opaque = Utils.opaque(ctx.channel(), false);

@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -26,27 +26,18 @@ import io.netty.handler.logging.LoggingHandler;
 
 public class SearchEndpoint extends BaseEndpoint {
 
-  private final CoreContext coreContext;
-
-  public SearchEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
+  public SearchEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                         final int port) {
-    super(hostname, port, coreContext.environment().ioEnvironment().searchEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().searchCircuitBreakerConfig(), ServiceType.SEARCH);
-    this.coreContext = coreContext;
+    super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroup().get(),
+      ctx, ctx.environment().ioEnvironment().searchCircuitBreakerConfig(), ServiceType.SEARCH);
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new SearchPipelineInitializer(coreContext);
+    return new SearchPipelineInitializer();
   }
 
   public static class SearchPipelineInitializer implements PipelineInitializer {
-
-    private final CoreContext coreContext;
-
-    public SearchPipelineInitializer(CoreContext coreContext) {
-      this.coreContext = coreContext;
-    }
 
     @Override
     public void init(ChannelPipeline pipeline) {

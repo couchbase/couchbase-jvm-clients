@@ -101,6 +101,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       Map<Services, Integer> ports = new HashMap<>();
       ports.put(Services.KV, services.get("kv"));
       ports.put(Services.MANAGER, services.get("mgmt"));
+      ports.put(Services.KV_TLS, services.get("kvSSL"));
+      ports.put(Services.MANAGER_TLS, services.get("mgmtSSL"));
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;

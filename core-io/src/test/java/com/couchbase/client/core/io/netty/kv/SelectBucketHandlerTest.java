@@ -20,8 +20,11 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -37,6 +40,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,7 +62,7 @@ class SelectBucketHandlerTest {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
   }
 
-  private CoreContext coreContext;
+  private EndpointContext endpointContext;
   private EmbeddedChannel channel;
   private SimpleEventBus simpleEventBus;
 
@@ -71,7 +75,9 @@ class SelectBucketHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(10));
-    coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+      null, ServiceType.KV, Optional.empty());
   }
 
   @AfterEach
@@ -94,7 +100,7 @@ class SelectBucketHandlerTest {
       }
     };
 
-    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
+    SelectBucketHandler handler = new SelectBucketHandler(endpointContext, "bucket");
     channel.pipeline().addLast(failingHandler).addLast(handler);
 
     ChannelFuture connect = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
@@ -109,7 +115,7 @@ class SelectBucketHandlerTest {
   void failConnectIfPromiseTimesOut() throws Exception {
     final Duration timeout = Duration.ofMillis(10);
 
-    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
+    SelectBucketHandler handler = new SelectBucketHandler(endpointContext, "bucket");
     channel.pipeline().addLast(handler);
 
     final ChannelFuture connect = channel.connect(
@@ -136,7 +142,7 @@ class SelectBucketHandlerTest {
    */
   @Test
   void completeImmediatelyIfNotNegotiated() {
-    SelectBucketHandler handler = new SelectBucketHandler(coreContext, "bucket");
+    SelectBucketHandler handler = new SelectBucketHandler(endpointContext, "bucket");
     channel.pipeline().addLast(handler);
 
     final ChannelFuture connect = channel.connect(

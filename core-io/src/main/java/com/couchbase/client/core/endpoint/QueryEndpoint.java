@@ -16,51 +16,29 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
-import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
-import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
-import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
-import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
 public class QueryEndpoint extends BaseEndpoint {
 
-  private final CoreContext coreContext;
-
-  public QueryEndpoint(final CoreContext coreContext, final NetworkAddress hostname,
+  public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                        final int port) {
-    super(hostname, port, coreContext.environment().ioEnvironment().queryEventLoopGroup().get(),
-      coreContext, coreContext.environment().ioEnvironment().queryCircuitBreakerConfig(), ServiceType.QUERY);
-    this.coreContext = coreContext;
+    super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
+      ctx, ctx.environment().ioEnvironment().queryCircuitBreakerConfig(), ServiceType.QUERY);
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new QueryPipelineInitializer(coreContext);
+    return new QueryPipelineInitializer();
   }
 
   public static class QueryPipelineInitializer implements PipelineInitializer {
-
-    private final CoreContext coreContext;
-
-    public QueryPipelineInitializer(CoreContext coreContext) {
-      this.coreContext = coreContext;
-    }
 
     @Override
     public void init(ChannelPipeline pipeline) {

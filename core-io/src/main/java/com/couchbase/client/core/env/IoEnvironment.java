@@ -312,6 +312,11 @@ public class IoEnvironment {
       return this;
     }
 
+    public Builder securityConfig(SecurityConfig securityConfig) {
+      this.securityConfig = securityConfig;
+      return this;
+    }
+
     public IoEnvironment build() {
       return new IoEnvironment(this);
     }

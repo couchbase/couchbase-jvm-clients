@@ -16,11 +16,11 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.json.Mapper;
@@ -75,7 +75,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   /**
    * Holds the core context as reference to event bus and more.
    */
-  private final CoreContext coreContext;
+  private final EndpointContext endpointContext;
 
   /**
    * Once connected, holds the io context for more debug information.
@@ -92,13 +92,13 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   /**
    * Creates a new {@link FeatureNegotiatingHandler}.
    *
-   * @param coreContext the core context used to refer to values like the core id.
+   * @param endpointContext the core context used to refer to values like the core id.
    * @param features    the list of features that should be negotiated from the client side.
    */
-  public FeatureNegotiatingHandler(final CoreContext coreContext,
+  public FeatureNegotiatingHandler(final EndpointContext endpointContext,
                             final Set<ServerFeature> features) {
-    this.coreContext = coreContext;
-    this.timeout = coreContext.environment().ioEnvironment().connectTimeout();
+    this.endpointContext = endpointContext;
+    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
     this.features = features;
   }
 
@@ -142,9 +142,10 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
-      coreContext,
+      endpointContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
     );
 
     ctx.executor().schedule(() -> {
@@ -176,13 +177,13 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
       if (!successful((ByteBuf) msg)) {
-        coreContext.environment().eventBus().publish(
+        endpointContext.environment().eventBus().publish(
           new FeaturesNegotiationFailedEvent(ioContext, status((ByteBuf) msg))
         );
       }
       List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
       ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).set(negotiated);
-      coreContext.environment().eventBus().publish(
+      endpointContext.environment().eventBus().publish(
         new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
       );
       interceptedConnectPromise.trySuccess();
@@ -229,7 +230,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     }
 
     if (!unsolicited.isEmpty()) {
-      coreContext.environment().eventBus().publish(
+      endpointContext.environment().eventBus().publish(
         new UnsolicitedFeaturesReturnedEvent(ioContext, unsolicited)
       );
     }
@@ -279,7 +280,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   private ByteBuf buildHelloKey(final ChannelHandlerContext ctx) {
     TreeMap<String, String> result = new TreeMap<>();
 
-    String agent = coreContext.environment().userAgent();
+    String agent = endpointContext.environment().userAgent();
     if (agent == null || agent.isEmpty()) {
       agent = "java-core-io/unknown";
     } else if (agent.length() > 200) {
@@ -297,7 +298,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       convertedChannelId = new Random().nextInt();
     }
     String paddedChannelId = paddedHex(convertedChannelId);
-    result.put("i", paddedHex(coreContext.id()) + "/" + paddedChannelId);
+    result.put("i", paddedHex(endpointContext.id()) + "/" + paddedChannelId);
 
     return ctx.alloc().buffer().writeBytes(Mapper.encodeAsBytes(result));
   }

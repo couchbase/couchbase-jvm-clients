@@ -22,8 +22,11 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -63,7 +66,7 @@ class ErrorMapLoadingHandlerTest {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
   }
 
-  private CoreContext coreContext;
+  private EndpointContext endpointContext;
   private EmbeddedChannel channel;
   private SimpleEventBus simpleEventBus;
 
@@ -76,7 +79,9 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+      null, ServiceType.KV, Optional.empty());
   }
 
   @AfterEach
@@ -99,7 +104,7 @@ class ErrorMapLoadingHandlerTest {
       }
     };
 
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
     channel.pipeline().addLast(failingHandler).addLast(handler);
 
     ChannelFuture connect = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
@@ -119,9 +124,12 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(100));
-    coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    EndpointContext endpointContext = endpointContext = new EndpointContext(coreContext,
+      NetworkAddress.localhost(), 1234, null, ServiceType.KV,
+      Optional.empty());
 
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
 
     channel.pipeline().addLast(handler);
 
@@ -144,7 +152,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void encodeAndSendErrorMapRequest() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -169,7 +177,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeSuccessfulErrorMap() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -211,7 +219,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeUnsuccessfulResponse() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
@@ -249,7 +257,7 @@ class ErrorMapLoadingHandlerTest {
    */
   @Test
   void decodeSuccessfulResponseWithEmptyMap() {
-    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(coreContext);
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
     channel.pipeline().addLast(handler);
 
     assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));

@@ -22,23 +22,23 @@ import com.couchbase.client.core.endpoint.SearchEndpoint;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.RoundRobinSelectionStrategy;
 
+import java.util.Optional;
+
 public class SearchService extends PooledService {
 
-  private final CoreContext context;
   private final NetworkAddress hostname;
   private final int port;
 
   public SearchService(final SearchServiceConfig config, final CoreContext context,
                        final NetworkAddress hostname, final int port) {
-    super(config, new ServiceContext(context, hostname, port, ServiceType.SEARCH));
-    this.context = context;
+    super(config, new ServiceContext(context, hostname, port, ServiceType.SEARCH, Optional.empty()));
     this.hostname = hostname;
     this.port = port;
   }
 
   @Override
   protected Endpoint createEndpoint() {
-    return new SearchEndpoint(context, hostname, port);
+    return new SearchEndpoint(serviceContext(), hostname, port);
   }
 
   @Override

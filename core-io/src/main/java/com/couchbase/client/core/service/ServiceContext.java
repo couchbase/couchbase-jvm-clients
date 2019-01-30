@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class ServiceContext extends CoreContext {
 
@@ -38,11 +39,14 @@ public class ServiceContext extends CoreContext {
    */
   private final ServiceType serviceType;
 
+  private final Optional<String> bucket;
+
   public ServiceContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
-                        ServiceType serviceType) {
+                        ServiceType serviceType, Optional<String> bucket) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
+    this.bucket = bucket;
     this.serviceType = serviceType;
   }
 
@@ -59,6 +63,14 @@ public class ServiceContext extends CoreContext {
     super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
     input.put("type", serviceType);
+    bucket.ifPresent(b -> input.put("bucket", b));
   }
 
+  public ServiceType serviceType() {
+    return serviceType;
+  }
+
+  public Optional<String> bucket() {
+    return bucket;
+  }
 }

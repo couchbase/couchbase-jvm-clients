@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.util.SimpleEventBus;
 import io.netty.buffer.ByteBuf;
@@ -56,7 +57,7 @@ class MemcacheProtocolVerificationHandlerTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource
   void shouldVerifyCorrectResponses(final InputHolder inputHolder) {
-    CoreContext ctx = mock(CoreContext.class);
+    EndpointContext ctx = mock(EndpointContext.class);
     final EmbeddedChannel channel = new EmbeddedChannel(
       new MemcacheProtocolVerificationHandler(ctx)
     );
@@ -88,7 +89,7 @@ class MemcacheProtocolVerificationHandlerTest {
   void shouldCloseOnInvalidResponses(final InputHolder inputHolder) {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
-    CoreContext ctx = mock(CoreContext.class);
+    EndpointContext ctx = mock(EndpointContext.class);
     when(ctx.environment()).thenReturn(env);
     when(env.eventBus()).thenReturn(eventBus);
 
@@ -125,7 +126,7 @@ class MemcacheProtocolVerificationHandlerTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource
   void shouldVerifyCorrectRequests(final InputHolder inputHolder) {
-    CoreContext ctx = mock(CoreContext.class);
+    EndpointContext ctx = mock(EndpointContext.class);
     final EmbeddedChannel channel = new EmbeddedChannel(
       new MemcacheProtocolVerificationHandler(ctx)
     );

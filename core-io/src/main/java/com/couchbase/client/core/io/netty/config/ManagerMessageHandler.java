@@ -39,6 +39,8 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
+import java.util.Optional;
+
 /**
  * This handler dispatches requests and responses against the cluster manager service.
  *
@@ -67,7 +69,8 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     ioContext = new IoContext(
       coreContext,
       ctx.channel().localAddress(),
-      ctx.channel().remoteAddress()
+      ctx.channel().remoteAddress(),
+      Optional.empty()
     );
 
     currentContent = ctx.alloc().buffer();

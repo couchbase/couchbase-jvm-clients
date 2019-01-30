@@ -18,8 +18,11 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterAll;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -34,13 +38,15 @@ import static org.mockito.Mockito.mock;
 class KeyValueMessageHandlerTest {
 
   private static CoreEnvironment ENV;
-  private static CoreContext CTX;
+  private static EndpointContext CTX;
   private static String BUCKET = "bucket";
 
   @BeforeAll
   private static void setup() {
     ENV = CoreEnvironment.create("foo", "bar");
-    CTX = new CoreContext(mock(Core.class), 1, ENV);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, ENV);
+    CTX = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+      null, ServiceType.KV, Optional.empty());
   }
 
   @AfterAll

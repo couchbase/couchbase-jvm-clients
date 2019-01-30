@@ -16,19 +16,87 @@
 
 package com.couchbase.client.core.env;
 
+import javax.net.ssl.TrustManagerFactory;
+import java.security.cert.X509Certificate;
+
 public class SecurityConfig {
 
-  private boolean certAuthEnabled;
+  private final boolean tlsEnabled;
+  private final boolean certAuthEnabled;
+  private final X509Certificate[] trustCertificates;
+  private final TrustManagerFactory trustManagerFactory;
 
-  public static SecurityConfig create() {
-    return new SecurityConfig(false);
+  public static Builder builder() {
+    return new Builder();
   }
 
-  private SecurityConfig(boolean certAuthEnabled) {
-    this.certAuthEnabled = certAuthEnabled;
+  public static SecurityConfig create() {
+    return new SecurityConfig(builder());
+  }
+
+  private SecurityConfig(final Builder builder) {
+    tlsEnabled = builder.tlsEnabled;
+    certAuthEnabled = builder.certAuthEnabled;
+    trustCertificates = builder.trustCertificates;
+    trustManagerFactory = builder.trustManagerFactory;
+
+    if (tlsEnabled) {
+      if (trustCertificates != null && trustManagerFactory != null) {
+        throw new IllegalArgumentException("Either trust certificates or a trust manager factory" +
+          "can be provided, but not both!");
+      }
+      if ((trustCertificates == null || trustCertificates.length == 0) && trustManagerFactory == null) {
+        throw new IllegalArgumentException("Either a trust certificate or a trust manager factory" +
+          "must be provided when TLS is enabled!");
+      }
+    }
   }
 
   public boolean certAuthEnabled() {
     return certAuthEnabled;
+  }
+
+  public boolean tlsEnabled() {
+    return tlsEnabled;
+  }
+
+  public X509Certificate[] trustCertificates() {
+    return trustCertificates;
+  }
+
+  public TrustManagerFactory trustManagerFactory() {
+    return trustManagerFactory;
+  }
+
+  public static class Builder {
+
+    private boolean tlsEnabled = false;
+    private boolean certAuthEnabled = false;
+    private X509Certificate[] trustCertificates = null;
+    private TrustManagerFactory trustManagerFactory = null;
+
+    public SecurityConfig build() {
+      return new SecurityConfig(this);
+    }
+
+    public Builder tlsEnabled(boolean tlsEnabled) {
+      this.tlsEnabled = tlsEnabled;
+      return this;
+    }
+
+    public Builder certAuthEnabled(boolean certAuthEnabled) {
+      this.certAuthEnabled = certAuthEnabled;
+      return this;
+    }
+
+    public Builder trustCertificates(final X509Certificate... certificates) {
+      this.trustCertificates = certificates;
+      return this;
+    }
+
+    public Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
+      this.trustManagerFactory = trustManagerFactory;
+      return this;
+    }
   }
 }
