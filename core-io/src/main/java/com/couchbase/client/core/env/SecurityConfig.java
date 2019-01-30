@@ -84,10 +84,11 @@ public class SecurityConfig {
       return this;
     }
 
+    /*
     public Builder certAuthEnabled(boolean certAuthEnabled) {
       this.certAuthEnabled = certAuthEnabled;
       return this;
-    }
+    }*/
 
     public Builder trustCertificates(final X509Certificate... certificates) {
       this.trustCertificates = certificates;
