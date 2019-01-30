@@ -112,7 +112,6 @@ public class UnmanagedTestCluster extends TestCluster {
 
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
-    System.err.println(cert);
     return Optional.of((X509Certificate) cert);
   }
 

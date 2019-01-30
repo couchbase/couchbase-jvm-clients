@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +30,8 @@ public class EndpointContext extends CoreContext {
    * The hostname of this endpoint.
    */
   private final NetworkAddress remoteHostname;
+
+  private final Optional<SocketAddress> localSocket;
 
   /**
    * The port of this endpoint.
@@ -55,19 +58,22 @@ public class EndpointContext extends CoreContext {
    * @param remotePort the remote port.
    */
   public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
-                         CircuitBreaker circuitBreaker, ServiceType serviceType, Optional<String> bucket) {
+                         CircuitBreaker circuitBreaker, ServiceType serviceType,
+                         Optional<SocketAddress> localSocket, Optional<String> bucket) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
     this.circuitBreaker = circuitBreaker;
     this.serviceType = serviceType;
     this.bucket = bucket;
+    this.localSocket = localSocket;
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
+    localSocket.ifPresent(s -> input.put("local", s));
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
     bucket.ifPresent(b -> input.put("bucket", b));
@@ -83,6 +89,10 @@ public class EndpointContext extends CoreContext {
 
   public CircuitBreaker circuitBreaker() {
     return circuitBreaker;
+  }
+
+  public Optional<SocketAddress> localSocket() {
+    return localSocket;
   }
 
   public ServiceType serviceType() {

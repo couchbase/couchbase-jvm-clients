@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
@@ -49,12 +48,11 @@ import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.ssl.SslHandler;
 import reactor.core.publisher.Mono;
 import reactor.retry.Retry;
 
-import javax.net.ssl.SSLException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,7 +81,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * The related context to use.
    */
-  private final EndpointContext endpointContext;
+  private final AtomicReference<EndpointContext> endpointContext;
 
   /**
    * If instructed to disconnect, disrupts any connecting attempts
@@ -133,8 +131,10 @@ public abstract class BaseEndpoint implements Endpoint {
     this.circuitBreaker = circuitBreakerConfig.enabled()
       ? new LazyCircuitBreaker(circuitBreakerConfig)
       : NoopCircuitBreaker.INSTANCE;
-    this.endpointContext = new EndpointContext(serviceContext, hostname, port, circuitBreaker,
-      serviceType, serviceContext.bucket());
+    this.endpointContext = new AtomicReference<>(
+      new EndpointContext(serviceContext, hostname, port, circuitBreaker, serviceType,
+        Optional.empty(), serviceContext.bucket())
+    );
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
     this.eventLoopGroup = eventLoopGroup;
@@ -187,6 +187,8 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   private void reconnect() {
     state.set(EndpointState.CONNECTING);
+
+    final EndpointContext endpointContext = this.endpointContext.get();
 
     final AtomicLong attemptStart = new AtomicLong();
     Mono
@@ -265,11 +267,21 @@ public abstract class BaseEndpoint implements Endpoint {
             closeChannel(channel);
           } else {
             this.channel = channel;
-            endpointContext.environment().eventBus().publish(new EndpointConnectedEvent(
-              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+            EndpointContext newContext = new EndpointContext(
               endpointContext,
+              endpointContext.remoteHostname(),
+              endpointContext.remotePort(),
+              endpointContext.circuitBreaker(),
+              endpointContext.serviceType(),
+              Optional.of(channel.localAddress()),
+              endpointContext.bucket()
+            );
+            this.endpointContext.get().environment().eventBus().publish(new EndpointConnectedEvent(
+              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              newContext,
               ConnectTimings.toMap(channel)
             ));
+            this.endpointContext.set(newContext);
             this.circuitBreaker.reset();
             state.set(EndpointState.CONNECTED);
           }
@@ -302,6 +314,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   private void closeChannel(final Channel channel) {
     if (channel != null) {
+      final EndpointContext endpointContext = this.endpointContext.get();
       final long start = System.nanoTime();
       channel.disconnect().addListener(future -> {
         Duration latency = Duration.ofNanos(System.nanoTime() - start);
@@ -337,7 +350,7 @@ public abstract class BaseEndpoint implements Endpoint {
         });
         channel.writeAndFlush(request);
     } else {
-      RetryOrchestrator.maybeRetry(endpointContext, request);
+      RetryOrchestrator.maybeRetry(endpointContext.get(), request);
     }
   }
 
@@ -390,6 +403,6 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   public EndpointContext endpointContext() {
-    return endpointContext;
+    return endpointContext.get();
   }
 }

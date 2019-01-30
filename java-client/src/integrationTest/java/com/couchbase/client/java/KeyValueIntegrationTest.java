@@ -421,8 +421,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     Optional<GetResult> locked = collection.getAndLock(id);
     assertTrue(locked.isPresent());
 
-    System.err.println(locked.get().cas());
-
     assertThrows(TemporaryLockFailureException.class, () -> collection.upsert(id, JsonObject.empty()));
     assertThrows(TemporaryLockFailureException.class, () -> collection.unlock(id, locked.get().cas() + 1));
 

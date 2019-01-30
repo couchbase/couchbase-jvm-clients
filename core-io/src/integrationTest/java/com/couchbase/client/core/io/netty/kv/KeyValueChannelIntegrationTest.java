@@ -72,6 +72,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
       node.ports().get(Services.KV),
       null,
       ServiceType.KV,
+      Optional.empty(),
       Optional.of(config().bucketname())
     );
     eventLoopGroup = new NioEventLoopGroup(1);
