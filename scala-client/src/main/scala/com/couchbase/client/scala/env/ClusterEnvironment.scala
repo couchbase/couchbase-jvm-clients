@@ -1,6 +1,5 @@
 package com.couchbase.client.scala.env
 
-import com.couchbase.client.core.env.CoreEnvironment.Builder
 import com.couchbase.client.core.env.{CoreEnvironment, Credentials}
 
 

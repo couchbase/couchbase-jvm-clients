@@ -18,7 +18,6 @@ package com.couchbase.client.scala
 
 import java.nio.charset.Charset
 import java.time.Duration
-import java.util
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 

@@ -16,14 +16,7 @@
 
 package com.couchbase.client.scala
 
-import java.util
-
-import com.couchbase.client.core.Core
-import com.couchbase.client.core.env.CoreEnvironment
-import com.couchbase.client.core.io.NetworkAddress
-import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
-//import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 import java.util.concurrent.Executors
 
 import com.couchbase.client.scala.util.AsyncUtils
