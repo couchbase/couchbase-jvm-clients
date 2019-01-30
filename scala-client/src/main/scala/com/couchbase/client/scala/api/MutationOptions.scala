@@ -12,8 +12,29 @@ sealed trait MutateOperation {
   def convert: SubdocMutateRequest.Command
 }
 
-case class InsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)], xattrs: Boolean = false, createParent: Boolean = false, expandMacros: Boolean = false) extends MutateOperation {
-  def convert = new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, path, value, createParent, xattrs)
+trait MutateOperationSimple extends MutateOperation {
+  val typ: SubdocCommandType
+  val path: String
+  val fragment: Try[(Array[Byte], EncodeParams)]
+  val xattrs: Boolean
+  val createParent: Boolean
+  val expandMacros: Boolean
+  def convert = new SubdocMutateRequest.Command(typ, path, value, createParent, xattrs)
+}
+
+case class InsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                           xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.DICT_ADD
+}
+
+case class ReplaceOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                           xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.REPLACE
+}
+
+case class UpsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                            xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
 }
 //case class ReplaceOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
 //case class UpsertOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
@@ -32,7 +53,17 @@ case class MutateInOps(operations: List[MutateOperation]) {
     copy(operations = operations :+ InsertOperation(path, encoded, xattrs, createPath, expandMacros))
   }
 
-//  def replace(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
+  def replace[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+               (implicit ev: EncodableField[T]): MutateInOps = {
+    copy(operations = operations :+ ReplaceOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+  def upsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                (implicit ev: EncodableField[T]): MutateInOps = {
+    copy(operations = operations :+ UpsertOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+  //  def replace(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
 //    copy(operations = operations :+ ReplaceOperation(path, value, xattrs, createPath, expandMacros))
 //  }
 //
@@ -71,5 +102,15 @@ object MutateInOps {
   def insert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
                (implicit ev: EncodableField[T]): MutateInOps = {
     empty.insert(path, value, xattrs, createPath, expandMacros)
+  }
+
+  def replace[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+               (implicit ev: EncodableField[T]): MutateInOps = {
+    empty.replace(path, value, xattrs, createPath, expandMacros)
+  }
+
+  def upsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                (implicit ev: EncodableField[T]): MutateInOps = {
+    empty.upsert(path, value, xattrs, createPath, expandMacros)
   }
 }
