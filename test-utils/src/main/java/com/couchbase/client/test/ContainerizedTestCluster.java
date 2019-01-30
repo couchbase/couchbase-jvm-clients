@@ -28,7 +28,11 @@ import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -118,9 +122,24 @@ public class ContainerizedTestCluster extends TestCluster {
       adminPassword,
       nodesFromRaw(seedHost, getResponse.body().string()),
       0, // TODO: Implement me,
-      Optional.empty() // todo: implement me
+      loadClusterCertificate(seedHost, seedPort)
     );
   }
+
+  private Optional<X509Certificate> loadClusterCertificate(String seedHost, int seedPort) throws Exception {
+    Response getResponse = httpClient.newCall(new Request.Builder()
+      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+      .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
+      .build())
+      .execute();
+
+    String raw = getResponse.body().string();
+
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
+    return Optional.of((X509Certificate) cert);
+  }
+
 
   private void initFirstNode(CouchbaseContainer container, String seedHost, int seedPort) throws Exception {
     httpClient.newCall(new Request.Builder()

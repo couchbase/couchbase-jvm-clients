@@ -46,7 +46,6 @@ import java.util.function.Supplier;
  */
 public class CoreEnvironment {
 
-  private static final Supplier<String> DEFAULT_USER_AGENT = () -> "foobar";
   private static final Supplier<Set<SeedNode>> DEFAULT_SEED_NODES = () ->
     new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
@@ -73,7 +72,7 @@ public class CoreEnvironment {
 
   protected CoreEnvironment(final Builder builder) {
     this.userAgent = builder.userAgent == null
-      ? DEFAULT_USER_AGENT
+      ? this::defaultUserAgent
       : builder.userAgent;
     this.eventBus = builder.eventBus == null
       ? new OwnedSupplier<>(DefaultEventBus.create())
@@ -132,6 +131,38 @@ public class CoreEnvironment {
     eventBus.get().subscribe(LoggingEventConsumer.create());
     diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
     diagnosticsMonitor.start().block();
+  }
+
+  /**
+   * Helper method which grabs the title and version for the user agent from the manifest.
+   *
+   * @return the user agent string, in a best effort manner.
+   */
+  private String defaultUserAgent() {
+    try {
+      final Package p = agentPackage();
+      String t = p.getImplementationTitle() == null ? defaultAgentTitle() : p.getImplementationTitle();
+      String v = p.getImplementationVersion() == null ? "0.0.0" : p.getImplementationVersion();
+      return t + "/" + v;
+    } catch (Throwable t) {
+      return "core-io/0.0.0";
+    }
+  }
+
+  /**
+   * Make sure to override this in client implementations so it picks up the right manifest.
+   *
+   * <p>This method should be overridden by client implementations to make sure their version
+   * is included instead.</p>
+   *
+   * @return the package of the target application to extract properties.
+   */
+  protected Package agentPackage() {
+    return CoreEnvironment.class.getPackage();
+  }
+
+  protected String defaultAgentTitle() {
+    return "core-io";
   }
 
   public static CoreEnvironment create(final String username, final String password) {

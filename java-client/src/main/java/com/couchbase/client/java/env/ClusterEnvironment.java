@@ -27,6 +27,15 @@ public class ClusterEnvironment extends CoreEnvironment {
     super(builder);
   }
 
+  @Override
+  protected Package agentPackage() {
+    return ClusterEnvironment.class.getPackage();
+  }
+
+  @Override
+  protected String defaultAgentTitle() {
+    return "java";
+  }
 
   public static ClusterEnvironment create(final String username, final String password) {
     return builder(username, password).build();

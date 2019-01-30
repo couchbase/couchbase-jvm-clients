@@ -108,3 +108,13 @@ checkstyle {
   toolVersion = "8.12"
   configProperties 'checkstyle.header.file': file('../config/checkstyle/checkstyle-header.txt')
 }
+
+jar {
+  manifest {
+    attributes(
+      "Implementation-Vendor": "couchbase",
+      "Implementation-Title": "core-io",
+      "Implementation-Version": version
+    )
+  }
+}

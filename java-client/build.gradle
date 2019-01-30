@@ -76,6 +76,16 @@ task packageJavadoc(type: Jar) {
   classifier = 'javadoc'
 }
 
+jar {
+  manifest {
+    attributes(
+      "Implementation-Vendor": "couchbase",
+      "Implementation-Title": "java",
+      "Implementation-Version": version
+    )
+  }
+}
+
 publishing {
   publications {
     maven(MavenPublication) {
