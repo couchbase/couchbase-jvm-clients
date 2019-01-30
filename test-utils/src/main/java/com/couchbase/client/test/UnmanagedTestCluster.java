@@ -23,9 +23,14 @@ import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -84,13 +89,31 @@ public class UnmanagedTestCluster extends TestCluster {
 
     waitUntilAllNodesHealthy();
 
+    Optional<X509Certificate> cert = loadClusterCertificate();
+
     return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
       nodesFromRaw(seedHost, raw),
-      replicasFromRaw(raw)
+      replicasFromRaw(raw),
+      cert
     );
+  }
+
+  private Optional<X509Certificate> loadClusterCertificate() throws Exception {
+    Response getResponse = httpClient.newCall(new Request.Builder()
+      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+      .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
+      .build())
+      .execute();
+
+    String raw = getResponse.body().string();
+
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
+    System.err.println(cert);
+    return Optional.of((X509Certificate) cert);
   }
 
   private void waitUntilAllNodesHealthy() throws Exception {

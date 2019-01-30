@@ -21,6 +21,8 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -37,12 +40,20 @@ import static org.junit.Assert.assertTrue;
 class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
   private CoreEnvironment env;
-  private CoreContext coreContext;
+  private ServiceContext serviceContext;
 
   @BeforeEach
   void beforeEach() {
+    TestNodeConfig node = config().nodes().get(0);
+
     env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
-    coreContext = new CoreContext(null, 1, env);
+    serviceContext = new ServiceContext(
+      new CoreContext(null, 1, env),
+      NetworkAddress.create(node.hostname()),
+      node.ports().get(Services.MANAGER),
+      ServiceType.MANAGER,
+      Optional.empty()
+    );
   }
 
   @AfterEach
@@ -61,7 +72,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     TestNodeConfig node = config().nodes().get(0);
 
     ManagerEndpoint endpoint = new ManagerEndpoint(
-      coreContext,
+      serviceContext,
       NetworkAddress.create(node.hostname()),
       node.ports().get(Services.MANAGER)
     );
@@ -69,8 +80,8 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    TerseBucketConfigRequest request = new TerseBucketConfigRequest(Duration.ofSeconds(1), coreContext, null,
-      config().bucketname(), env.credentials(), null);
+    TerseBucketConfigRequest request = new TerseBucketConfigRequest(Duration.ofSeconds(1),
+      serviceContext, null, config().bucketname(), env.credentials(), null);
 
     assertTrue(request.id() > 0);
     endpoint.send(request);

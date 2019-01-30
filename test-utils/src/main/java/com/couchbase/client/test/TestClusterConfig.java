@@ -16,6 +16,7 @@
 
 package com.couchbase.client.test;
 
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,14 +33,16 @@ public class TestClusterConfig {
   private final String adminPassword;
   private final List<TestNodeConfig> nodes;
   private final int numReplicas;
+  private final Optional<X509Certificate> clusterCert;
 
   public TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
-                           List<TestNodeConfig> nodes, int numReplicas) {
+                           List<TestNodeConfig> nodes, int numReplicas, Optional<X509Certificate> clusterCert) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
     this.nodes = nodes;
     this.numReplicas = numReplicas;
+    this.clusterCert = clusterCert;
   }
 
   public String bucketname() {
@@ -62,6 +65,10 @@ public class TestClusterConfig {
     return numReplicas;
   }
 
+  public Optional<X509Certificate> clusterCert() {
+    return clusterCert;
+  }
+
   /**
    * Finds the first node with a given service enabled in the config.
    *
@@ -81,6 +88,8 @@ public class TestClusterConfig {
       ", adminUsername='" + adminUsername + '\'' +
       ", adminPassword='" + adminPassword + '\'' +
       ", nodes=" + nodes +
+      ", numReplicas=" + numReplicas +
+      ", clusterCert=" + clusterCert +
       '}';
   }
 }

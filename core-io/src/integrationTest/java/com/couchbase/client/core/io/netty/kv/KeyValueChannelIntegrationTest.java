@@ -17,12 +17,15 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -38,6 +41,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -53,13 +57,23 @@ import static org.junit.Assert.assertTrue;
 class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
-  private CoreContext coreContext;
+  private EndpointContext endpointContext;
   private NioEventLoopGroup eventLoopGroup;
 
   @BeforeEach
   void beforeEach() {
+    TestNodeConfig node = config().nodes().get(0);
+
     env = environment().build();
-    coreContext = new CoreContext(null, 1, env);
+    CoreContext coreContext = new CoreContext(null, 1, env);
+    endpointContext = new EndpointContext(
+      coreContext,
+      NetworkAddress.create(node.hostname()),
+      node.ports().get(Services.KV),
+      null,
+      ServiceType.KV,
+      Optional.of(config().bucketname())
+    );
     eventLoopGroup = new NioEventLoopGroup(1);
   }
 
@@ -89,7 +103,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         @Override
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
-            coreContext,
+            endpointContext,
             config().bucketname(),
             env.credentials()
           ).init(ch.pipeline());
@@ -100,7 +114,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     assertTrue(channel.isActive());
     assertTrue(channel.isOpen());
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, config().bucketname(), null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, endpointContext, config().bucketname(), null);
     channel.writeAndFlush(request);
     NoopResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());
@@ -119,7 +133,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         @Override
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
-            coreContext,
+            endpointContext,
             config().bucketname(),
             new RoleBasedCredentials(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
           ).init(ch.pipeline());
@@ -140,7 +154,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         @Override
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
-            coreContext,
+            endpointContext,
             config().bucketname(),
             new RoleBasedCredentials("vfwmf42343rew", config().adminPassword())
           ).init(ch.pipeline());
@@ -161,7 +175,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         @Override
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
-            coreContext,
+            endpointContext,
             "42eredwefrfe",
             env.credentials()
           ).init(ch.pipeline());

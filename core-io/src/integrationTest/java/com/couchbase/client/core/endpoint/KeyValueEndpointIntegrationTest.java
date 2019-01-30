@@ -21,6 +21,8 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -44,12 +47,20 @@ import static org.junit.Assert.assertTrue;
 class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
-  private CoreContext coreContext;
+  private ServiceContext serviceContext;
 
   @BeforeEach
   void beforeEach() {
+    TestNodeConfig node = config().nodes().get(0);
+
     env = environment().build();
-    coreContext = new CoreContext(null, 1, env);
+    serviceContext = new ServiceContext(
+      new CoreContext(null, 1, env),
+      NetworkAddress.create(node.hostname()),
+      node.ports().get(Services.KV),
+      ServiceType.KV,
+      Optional.empty()
+    );
   }
 
   @AfterEach
@@ -70,7 +81,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     TestNodeConfig node = config().nodes().get(0);
 
     KeyValueEndpoint endpoint = new KeyValueEndpoint(
-      coreContext,
+      serviceContext,
       NetworkAddress.create(node.hostname()),
       node.ports().get(Services.KV),
       config().bucketname(),
@@ -80,7 +91,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, config().bucketname(), null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, serviceContext, config().bucketname(), null);
     assertTrue(request.id() > 0);
     endpoint.send(request);
 

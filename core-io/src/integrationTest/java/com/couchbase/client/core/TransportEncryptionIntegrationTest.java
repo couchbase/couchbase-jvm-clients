@@ -111,6 +111,41 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+  void performsKeyValueWithServerCert() throws Exception {
+    CoreEnvironment env = secureEnvironment(SecurityConfig.builder()
+      .tlsEnabled(true)
+      .trustCertificates(config().clusterCert().get())
+      .build());
+    Core core = Core.create(env);
+    core.openBucket(config().bucketname()).block();
+
+    try {
+      String id = UUID.randomUUID().toString();
+      byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+
+      InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
+        Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      core.send(insertRequest);
+
+      InsertResponse insertResponse = insertRequest.response().get();
+      assertTrue(insertResponse.status().success());
+
+      GetRequest getRequest = new GetRequest(id, null, Duration.ofSeconds(1),
+        core.context(), config().bucketname(), env.retryStrategy());
+      core.send(getRequest);
+
+      GetResponse getResponse = getRequest.response().get();
+      assertTrue(getResponse.status().success());
+      assertArrayEquals(content, getResponse.content());
+      assertTrue(getResponse.cas() != 0);
+    } finally {
+      core.shutdown().block();
+      env.shutdown(Duration.ofSeconds(1));
+    }
+  }
+
+  @Test
   void failsIfNoTrustPresent() {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.builder()
       .tlsEnabled(true)

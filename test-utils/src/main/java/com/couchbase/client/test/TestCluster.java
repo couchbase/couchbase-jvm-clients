@@ -21,10 +21,12 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {

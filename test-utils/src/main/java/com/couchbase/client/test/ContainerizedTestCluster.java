@@ -117,7 +117,8 @@ public class ContainerizedTestCluster extends TestCluster {
       adminUsername,
       adminPassword,
       nodesFromRaw(seedHost, getResponse.body().string()),
-      0 // TODO: Implement me
+      0, // TODO: Implement me,
+      Optional.empty() // todo: implement me
     );
   }
 
