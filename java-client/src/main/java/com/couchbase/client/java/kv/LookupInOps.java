@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public class LookupInOps {
   public LookupInOps get(boolean xattr, final String... paths) {
     for (String path : paths) {
       commands.add(
-        new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, path, xattr)
+        new SubdocGetRequest.Command(SubdocCommandType.GET, path, xattr)
       );
     }
     return this;
@@ -54,7 +55,7 @@ public class LookupInOps {
   public LookupInOps exists(boolean xattr, final String... paths) {
     for (String path : paths) {
       commands.add(
-        new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, path, xattr)
+        new SubdocGetRequest.Command(SubdocCommandType.EXISTS, path, xattr)
       );
     }
     return this;
@@ -67,7 +68,7 @@ public class LookupInOps {
   public LookupInOps count(boolean xattr, final String... paths) {
     for (String path : paths) {
       commands.add(
-        new SubdocGetRequest.Command(SubdocGetRequest.CommandType.COUNT, path, xattr)
+        new SubdocGetRequest.Command(SubdocCommandType.COUNT, path, xattr)
       );
     }
     return this;

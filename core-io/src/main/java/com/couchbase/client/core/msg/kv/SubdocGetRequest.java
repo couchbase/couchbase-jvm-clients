@@ -100,16 +100,16 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   @Override
   public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
-    List<SubdocGetResponse.ResponseValue> values;
+    List<SubdocField> values;
     List<SubDocumentException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
       values = new ArrayList<>(commands.size());
       for (Command command : commands) {
         short statusRaw = body.readShort();
-        SubdocOperationResponseStatus status = decodeSubDocumentStatus(statusRaw);
+        SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
         Optional<SubDocumentException> error = Optional.empty();
-        if (status != SubdocOperationResponseStatus.SUCCESS) {
+        if (status != SubDocumentOpResponseStatus.SUCCESS) {
           if (errors == null) errors = new ArrayList<>();
           SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
           errors.add(err);
@@ -118,7 +118,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         int valueLength = body.readInt();
         byte[] value = new byte[valueLength];
         body.readBytes(value, 0, valueLength);
-        SubdocGetResponse.ResponseValue op = new SubdocGetResponse.ResponseValue(status, error, value, command.path, command.type);
+        SubdocField op = new SubdocField(status, error, value, command.path, command.type);
         values.add(op);
       }
     } else {
@@ -156,11 +156,11 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   public static class Command {
-    private final CommandType type;
+    private final SubdocCommandType type;
     private final String path;
     private final boolean xattr;
 
-    public Command(CommandType type, String path, boolean xattr) {
+    public Command(SubdocCommandType type, String path, boolean xattr) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
@@ -180,23 +180,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       buffer.writeShort(pathLength);
       buffer.writeBytes(path);
       return buffer;
-    }
-  }
-
-  public enum CommandType {
-    GET((byte) 0xc5),
-    EXISTS((byte) 0xc6),
-    COUNT((byte) 0xd2),
-    GET_DOC((byte) 0x00);
-
-    private final byte opcode;
-
-    CommandType(byte opcode) {
-      this.opcode = opcode;
-    }
-
-    byte opcode() {
-      return opcode;
     }
   }
 }

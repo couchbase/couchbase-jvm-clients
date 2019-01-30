@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class Projections {
     commands = new ArrayList<>();
   }
 
-  private Projections add(SubdocGetRequest.CommandType type, boolean xattr, String... paths) {
+  private Projections add(SubdocCommandType type, boolean xattr, String... paths) {
     for (String path : paths) {
       commands.add(new SubdocGetRequest.Command(type, path, xattr));
     }
@@ -42,27 +43,27 @@ public class Projections {
   }
 
   public Projections get(String... paths) {
-    return add(SubdocGetRequest.CommandType.GET, false, paths);
+    return add(SubdocCommandType.GET, false, paths);
   }
 
   public Projections exists(String... paths) {
-    return add(SubdocGetRequest.CommandType.EXISTS, false, paths);
+    return add(SubdocCommandType.EXISTS, false, paths);
   }
 
   public Projections count(String... paths) {
-    return add(SubdocGetRequest.CommandType.COUNT, false, paths);
+    return add(SubdocCommandType.COUNT, false, paths);
   }
 
   public Projections getXAttr(String... paths) {
-    return add(SubdocGetRequest.CommandType.GET, true, paths);
+    return add(SubdocCommandType.GET, true, paths);
   }
 
   public Projections existsXAttr(String... paths) {
-    return add(SubdocGetRequest.CommandType.EXISTS, true, paths);
+    return add(SubdocCommandType.EXISTS, true, paths);
   }
 
   public Projections countXAttr(String... paths) {
-    return add(SubdocGetRequest.CommandType.COUNT, true, paths);
+    return add(SubdocCommandType.COUNT, true, paths);
   }
 
   @Stability.Internal

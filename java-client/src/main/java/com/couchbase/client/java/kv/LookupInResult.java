@@ -16,15 +16,13 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
+import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.codec.DefaultDecoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Experimental prototype for a different result type on fetch.
@@ -32,15 +30,15 @@ import java.util.Optional;
 public class LookupInResult {
 
   private final String id;
-  private final List<SubdocGetResponse.ResponseValue> encoded;
+  private final List<SubdocField> encoded;
   private final long cas;
 
-  static LookupInResult create(final String id, final List<SubdocGetResponse.ResponseValue> encoded,
+  static LookupInResult create(final String id, final List<SubdocField> encoded,
                                final long cas) {
     return new LookupInResult(id, encoded, cas);
   }
 
-  private LookupInResult(final String id, final List<SubdocGetResponse.ResponseValue> encoded,
+  private LookupInResult(final String id, final List<SubdocField> encoded,
                          final long cas) {
     this.id = id;
     this.cas = cas;
@@ -63,7 +61,7 @@ public class LookupInResult {
 
   public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
     if (index >= 0 && index < encoded.size()) {
-      SubdocGetResponse.ResponseValue value = encoded.get(index);
+      SubdocField value = encoded.get(index);
       value.error().map(err -> {
         throw err;
       });
@@ -85,7 +83,7 @@ public class LookupInResult {
 
   public boolean exists(int index) {
     if (index >= 0 && index < encoded.size()) {
-      SubdocGetResponse.ResponseValue value = encoded.get(index);
+      SubdocField value = encoded.get(index);
       return value.status().success();
     }
     else {

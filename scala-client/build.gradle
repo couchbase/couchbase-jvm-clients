@@ -14,18 +14,6 @@ buildscript {
    > Task with name 'ideaProject' not found in root project 'couchbase-jvm-clients'.
    with Gradle 4.10 and 5.1.
  */
-//plugins {
-//  id 'scala'
-//  id 'java-library'
-//  id 'maven-publish'
-////  id 'idea'
-////  id 'nebula.optional-base'
-////  id 'nebula.provided-base'
-//}
-
-//plugins {
-//  id 'idea'
-//}
 
 version = '1.0.1-SNAPSHOT'
 
@@ -33,9 +21,7 @@ apply plugin: 'java'
 apply plugin: 'scala'
 apply plugin: 'nebula.optional-base'
 apply plugin: 'maven-publish'
-////
-////
-//
+
 sourceSets {
   integrationTest {
 //          {
@@ -179,7 +165,8 @@ dependencies {
 //  provided "org.scala-lang:scala-reflect:2.12.7"
 
   // TODO check this is not a transitive dep
-  implementation group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
+  // TODO need this for testCompile as well - possible?
+  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
 
   compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0', optional

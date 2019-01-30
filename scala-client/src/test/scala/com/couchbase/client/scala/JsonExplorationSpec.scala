@@ -138,9 +138,12 @@ Make sure that term default is in your classpath and check for conflicting depen
   }
 
   case class User(name: String, age: Int, address: Seq[Address])
+
   object User {
     implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
   }
+
+  // todo what does play, orm etc. do?
 
   case class Other()
 

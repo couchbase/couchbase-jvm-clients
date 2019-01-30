@@ -17,12 +17,12 @@
 package com.couchbase.client.core.msg.kv;
 
 /**
- * The {@link SubdocOperationResponseStatus} describes what kind of response came back for a specific
+ * The {@link SubDocumentOpResponseStatus} describes what kind of response came back for a specific
  * subdoc operation request.
  *
  * @since 2.0.0
  */
-public enum SubdocOperationResponseStatus {
+public enum SubDocumentOpResponseStatus {
   /**
    * Indicates a successful response in general.
    */
@@ -101,7 +101,7 @@ public enum SubdocOperationResponseStatus {
   UNKNOWN;
 
   public boolean success() {
-    return this == SubdocOperationResponseStatus.SUCCESS || this == SUCCESS_DELETED_DOCUMENT;
+    return this == SubDocumentOpResponseStatus.SUCCESS || this == SUCCESS_DELETED_DOCUMENT;
   }
 
 }

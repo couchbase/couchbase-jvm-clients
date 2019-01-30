@@ -122,7 +122,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
    */
   private void singleGetOpCheckExpectedFailure(String input, String path, Class<?> expected) {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, path,  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false));
 
     checkExpectedFailure(input, commands, expected);
   }
@@ -137,8 +137,8 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void notJsonMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "bar",  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "bar",  false));
 
     checkExpectedFailure("I am not json!", commands, DocumentNotJsonException.class);
   }
@@ -151,13 +151,13 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void pathMismatchMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "foo.bar[0].baz",  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo.bar[0].baz",  false));
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
 
     assertTrue(response.values().get(0).status().success());
-    assertEquals(SubdocOperationResponseStatus.PATH_MISMATCH, response.values().get(1).status());
+    assertEquals(SubDocumentOpResponseStatus.PATH_MISMATCH, response.values().get(1).status());
     assertTrue(response.values().get(1).error().get() instanceof PathMismatchException);
   }
 
@@ -170,22 +170,22 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void pathNotFoundMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "no_exist",  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "no_exist",  false));
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
 
     assertTrue(response.values().get(0).status().success());
-    assertEquals(SubdocOperationResponseStatus.PATH_NOT_FOUND, response.values().get(1).status());
+    assertEquals(SubDocumentOpResponseStatus.PATH_NOT_FOUND, response.values().get(1).status());
     assertTrue(response.values().get(1).error().get() instanceof PathNotFoundException);
-    assertEquals(SubdocGetRequest.CommandType.GET, response.values().get(0).type());
-    assertEquals(SubdocGetRequest.CommandType.GET, response.values().get(1).type());
+    assertEquals(SubdocCommandType.GET, response.values().get(0).type());
+    assertEquals(SubdocCommandType.GET, response.values().get(1).type());
   }
 
   @Test
   void existsDoesExistSingle() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, "foo",  false));
+            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "foo",  false));
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
 
@@ -196,7 +196,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void existsDoesNotExistSingle() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, "cat",  false));
+            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false));
 
     checkExpectedFailure("{\"foo\":\"bar\"}", commands, PathNotFoundException.class);
   }
@@ -205,13 +205,13 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void existsDoesNotExistMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, "cat",  false),
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, "foo",  false)
+            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false),
+            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false)
             );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
 
     assertFalse(response.values().get(0).status().success());
-    assertEquals(SubdocGetRequest.CommandType.EXISTS, response.values().get(0).type());
+    assertEquals(SubdocCommandType.EXISTS, response.values().get(0).type());
   }
 }

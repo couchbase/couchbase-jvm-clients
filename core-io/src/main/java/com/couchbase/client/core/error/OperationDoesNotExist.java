@@ -16,26 +16,26 @@
 package com.couchbase.client.core.error;
 
 /**
- * Raised when a requested subdoc field does not exist.
+ * Raised when a requested subdoc operation does not exist.
  *
  * @author Graham Pople
  * @since 2.0
  */
-public class FieldDoesNotExist extends CouchbaseException {
+public class OperationDoesNotExist extends CouchbaseException {
 
-    public FieldDoesNotExist() {
+    public OperationDoesNotExist() {
         super();
     }
 
-    public FieldDoesNotExist(String message) {
+    public OperationDoesNotExist(String message) {
         super(message);
     }
 
-    public FieldDoesNotExist(String message, Throwable cause) {
+    public OperationDoesNotExist(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public FieldDoesNotExist(Throwable cause) {
+    public OperationDoesNotExist(Throwable cause) {
         super(cause);
     }
 }

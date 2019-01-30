@@ -41,7 +41,7 @@ case class PathElements(paths: List[PathElement]) {
 case class GetResult(id: String,
                 private val _content: Array[Byte],
                 cas: Long,
-                expiration: Option[Duration]) extends Convertable {
+                expiration: Option[Duration]) {
 
 
 
@@ -77,6 +77,8 @@ case class GetResult(id: String,
 //    read[ujson.Obj](_content)
 //  }
 
+  // TODO support contentAs(path)
+
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     ev.decode(_content, Conversions.JsonDecodeParams)
@@ -93,9 +95,9 @@ case class GetResult(id: String,
 //  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
 //  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 
-  override def exists(path: PathElements): Boolean = ???
+//  override def exists(path: PathElements): Boolean = ???
 
-  override def contentAs[T](path: PathElements): T = ???
+//  override def contentAs[T](path: PathElements): T = ???
 }
 
 object GetResult {

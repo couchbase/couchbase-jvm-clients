@@ -112,11 +112,16 @@ class Collection(val async: AsyncCollection,
   }
 
   def mutateIn(id: String,
-               spec: MutateInSpec,
+               spec: MutateInOps,
                cas: Long = 0,
                durability: Durability = Disabled,
+               parentSpan: Option[Span] = None,
+               expiration: FiniteDuration = 0.seconds,
                timeout: FiniteDuration = kvTimeout,
-              ): Try[MutationResult] = ???
+               retryStrategy: RetryStrategy = async.environment.retryStrategy()
+              ): Try[MutateInResult] = {
+    block(async.mutateIn(id, spec, cas, durability, parentSpan, expiration, timeout, retryStrategy), timeout)
+  }
 
 
   def getAndLock(id: String,

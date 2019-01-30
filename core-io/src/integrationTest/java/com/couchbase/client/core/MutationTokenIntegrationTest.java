@@ -107,7 +107,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
     List<SubdocMutateRequest.Command> commands = new ArrayList<>();
     commands.add(new SubdocMutateRequest.Command(
-      SubdocMutateRequest.CommandType.DICT_ADD,
+      SubdocCommandType.DICT_ADD,
       "foo",
       "\"bar\"".getBytes(CharsetUtil.UTF_8),
       true,

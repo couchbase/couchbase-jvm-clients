@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
@@ -53,7 +54,7 @@ public class MutateInOps {
   public <T> MutateInOps replace(final boolean xattr, final String path, final T fragment,
                                  final boolean createParent) {
     commands.add(new SubdocMutateRequest.Command(
-      SubdocMutateRequest.CommandType.REPLACE,
+      SubdocCommandType.REPLACE,
       path,
       ENCODER.encode(fragment).content(),
       createParent,
@@ -78,7 +79,7 @@ public class MutateInOps {
   public <T> MutateInOps insert(final boolean xattr, final String path, final T fragment,
                                  final boolean createParent) {
     commands.add(new SubdocMutateRequest.Command(
-      SubdocMutateRequest.CommandType.DICT_ADD,
+      SubdocCommandType.DICT_ADD,
       path,
       ENCODER.encode(fragment).content(),
       createParent,
@@ -94,3 +95,4 @@ public class MutateInOps {
   }
 
 }
+

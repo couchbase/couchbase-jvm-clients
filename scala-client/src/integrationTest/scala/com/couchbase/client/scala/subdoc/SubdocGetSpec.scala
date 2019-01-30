@@ -34,8 +34,8 @@ class SubdocGetSpec extends FunSuite {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
-        assert(result.fieldAs[String]("foo").get == "bar")
-        assert(result.bodyAsBytes.isEmpty)
+        assert(result.contentAs[String]("foo").get == "bar")
+        assert(result.documentAsBytes.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -63,12 +63,12 @@ class SubdocGetSpec extends FunSuite {
 
     coll.lookupIn(docId, LookupInOps.get("not_exist").get("hello")) match {
       case Success(result) =>
-        result.fieldAs[String]("not_exist") match {
+        result.contentAs[String]("not_exist") match {
           case Success(body) => assert(false, s"should not succeed")
           case Failure(err: PathNotFoundException) =>
           case Failure(err) => assert(false, s"unexpected error $err")
         }
-        assert(result.fieldAs[String]("hello").get == "world")
+        assert(result.contentAs[String]("hello").get == "world")
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -83,9 +83,9 @@ class SubdocGetSpec extends FunSuite {
 
     coll.lookupIn(docId, LookupInOps.get("foo").get("age").getDoc) match {
       case Success(result) =>
-        assert(result.fieldAs[String]("foo").get == "bar")
-        assert(result.bodyAsBytes.isDefined)
-        result.bodyAs[ujson.Obj] match {
+        assert(result.contentAs[String]("foo").get == "bar")
+        assert(result.documentAsBytes.isDefined)
+        result.documentAs[ujson.Obj] match {
           case Success(body) =>
             assert(body("hello").str == "world")
             assert(body("age").num == 22)
@@ -128,18 +128,18 @@ class SubdocGetSpec extends FunSuite {
         .exists("age")
         .exists("does_not_exist")) match {
       case Success(result) =>
-        assert(result.fieldAs[Boolean]("age").get)
-        result.fieldAs[Boolean]("does_not_exist") match {
+        assert(result.contentAs[Boolean]("age").get)
+        result.contentAs[Boolean]("does_not_exist") match {
           case Failure(err: PathNotFoundException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
-        result.fieldAs[String]("age") match {
+        result.contentAs[String]("age") match {
           case Failure(err: IllegalStateException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
-        assert(result.fieldAs[Int]("hello").get == 1)
+        assert(result.contentAs[Int]("hello").get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -158,18 +158,18 @@ class SubdocGetSpec extends FunSuite {
         .exists("age")
         .exists("does_not_exist")) match {
       case Success(result) =>
-        assert(result.fieldAs[Boolean]("age").get)
-        result.fieldAs[Boolean]("does_not_exist") match {
+        assert(result.contentAs[Boolean]("age").get)
+        result.contentAs[Boolean]("does_not_exist") match {
           case Failure(err: PathNotFoundException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
-        result.fieldAs[String]("age") match {
+        result.contentAs[String]("age") match {
           case Failure(err: IllegalStateException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
-        assert(result.fieldAs[Int]("hello").get == 1)
+        assert(result.contentAs[Int]("hello").get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

@@ -56,6 +56,7 @@ import ujson._
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 import scala.compat.java8.OptionConverters._
+import collection.JavaConverters._
 
 
 class AsyncCollection(name: String,
@@ -295,7 +296,7 @@ class AsyncCollection(name: String,
 
     if (withExpiration) {
       getSubDoc(id, LookupInOps.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-        GetResult(id, lookupInResult.bodyAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
+        GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -330,19 +331,19 @@ class AsyncCollection(name: String,
                         timeout: FiniteDuration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
     // TODO support projections
-    // TODO support expiration
+    // TODO support expiration (probs works, check unit tested)
 
     val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
     if (withExpiration) {
-      commands.add(new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, ExpTime, true))
+      commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
     }
 
     spec.operations.map {
-      case x: GetOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, x.path, x.xattr)
-      case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET_DOC, "", false)
-      case x: ExistsOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.EXISTS, x.path, x.xattr)
-      case x: CountOperation => new SubdocGetRequest.Command(SubdocGetRequest.CommandType.COUNT, x.path, x.xattr)
+      case x: GetOperation => new SubdocGetRequest.Command(SubdocCommandType.GET, x.path, x.xattr)
+      case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false)
+      case x: ExistsOperation => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x.xattr)
+      case x: CountOperation => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x.xattr)
     }.foreach(commands.add)
 
 
@@ -353,8 +354,6 @@ class AsyncCollection(name: String,
 
     FutureConverters.toScala(request.response())
       .map(response => {
-        import collection.JavaConverters._
-
         response.status() match {
 
           case ResponseStatus.SUCCESS =>
@@ -362,7 +361,7 @@ class AsyncCollection(name: String,
 
             var exptime: Option[FiniteDuration] = None
             var fulldoc: Option[Array[Byte]] = None
-            val fields = collection.mutable.Map.empty[String, SubdocGetResponse.ResponseValue]
+            val fields = collection.mutable.Map.empty[String, SubdocField]
 
             values.foreach(value => {
               if (value.path() == ExpTime) {
@@ -390,6 +389,57 @@ class AsyncCollection(name: String,
         }
       })
 
+  }
+
+  def mutateIn(id: String,
+               spec: MutateInOps,
+               cas: Long = 0,
+               durability: Durability = Disabled,
+               parentSpan: Option[Span] = None,
+               expiration: FiniteDuration,
+               timeout: FiniteDuration = kvTimeout,
+               retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
+    // TODO support projections
+    // TODO support expiration (probs works, check unit tested)
+
+    val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
+
+    spec.operations.find(_.fragment.isFailure) match {
+      case Some(failed) =>
+        // If any of the decodes failed, abort
+        Future.failed(failed.fragment.failed.get)
+      case _ =>
+
+        val mapped: Seq[SubdocMutateRequest.Command] = spec.operations.map(_.convert)
+
+        // TODO flags?
+        // TODO expiration
+        val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0)
+
+        core.send(request)
+
+        FutureConverters.toScala(request.response())
+          .map(response => {
+
+            response.status() match {
+
+              case ResponseStatus.SUCCESS =>
+                val values: Seq[SubdocField] = response.values().asScala
+                val fields: Map[String, SubdocField] = values.map(v => v.path() -> v).toMap
+
+                MutateInResult(id, fields, response.cas(), response.mutationToken().asScala)
+
+              case ResponseStatus.SUBDOC_FAILURE =>
+
+                response.error().asScala match {
+                  case Some(err) => throw err
+                  case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+                }
+
+              case _ => throw throwOnBadResult(response.status())
+            }
+          })
+    }
   }
 
 

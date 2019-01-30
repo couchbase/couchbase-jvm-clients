@@ -160,7 +160,7 @@ public enum GetAccessor {
     byte[] exptime = null;
     byte[] content = null;
 
-    for (SubdocGetResponse.ResponseValue value : response.values()) {
+    for (SubdocField value : response.values()) {
       if (EXPIRATION_MACRO.equals(value.path())) {
         exptime = value.value();
       } else if (value.path().isEmpty()) {
@@ -194,8 +194,8 @@ public enum GetAccessor {
   static byte[] projectRecursive(final SubdocGetResponse response) throws IOException {
     ObjectNode root = Mapper.mapper().createObjectNode();
 
-    for (SubdocGetResponse.ResponseValue value : response.values()) {
-      if (value.status() != SubdocOperationResponseStatus.SUCCESS
+    for (SubdocField value : response.values()) {
+      if (value.status() != SubDocumentOpResponseStatus.SUCCESS
               || value.path().isEmpty()
               || EXPIRATION_MACRO.equals(value.path())) {
         continue;

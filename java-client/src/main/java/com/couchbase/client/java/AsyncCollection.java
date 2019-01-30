@@ -222,7 +222,7 @@ public class AsyncCollection {
 
     if (options.withExpiration()) {
       commands.add(new SubdocGetRequest.Command(
-        SubdocGetRequest.CommandType.GET,
+        SubdocCommandType.GET,
         EXPIRATION_MACRO,
         true
       ));
@@ -238,12 +238,12 @@ public class AsyncCollection {
         .projections()
         .stream()
         .filter(s -> s != null && !s.isEmpty())
-        .map(s -> new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, s, false))
+        .map(s -> new SubdocGetRequest.Command(SubdocCommandType.GET, s, false))
         .collect(Collectors.toList())
       );
     } else {
       commands.add(new SubdocGetRequest.Command(
-        SubdocGetRequest.CommandType.GET_DOC,
+        SubdocCommandType.GET_DOC,
         "",
         false
       ));

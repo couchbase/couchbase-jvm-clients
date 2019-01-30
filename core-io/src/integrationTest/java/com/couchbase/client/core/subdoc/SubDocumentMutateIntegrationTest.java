@@ -20,10 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.InsertRequest;
-import com.couchbase.client.core.msg.kv.InsertResponse;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
+import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -109,7 +106,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
    */
   private void testSingleGetChildFailure(String input, String path, Class<?> expected) {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocGetRequest.CommandType.GET, path,  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false));
 
     testChildFailure(input, commands, expected);
    }
