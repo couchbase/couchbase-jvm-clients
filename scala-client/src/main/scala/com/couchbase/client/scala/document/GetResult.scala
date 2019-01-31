@@ -7,9 +7,6 @@ import scala.util.Try
 //import upickle.default.read
 
 import scala.concurrent.duration.Duration
-//import scala.language.dynamics
-//import scala.reflect.runtime.universe._
-//import upickle.default._
 
 trait Convertable {
   def contentAs[T](path: PathElements): T
@@ -35,61 +32,23 @@ case class PathElements(paths: List[PathElement]) {
 }
 
 
-
-
-
 case class GetResult(id: String,
                 private val _content: Array[Byte],
+                     private[scala] val flags: Int,
                 cas: Long,
                 expiration: Option[Duration]) {
 
-
-
-
-
-//  def contentAsObject: JsonObject = ???
-//
-//  def contentAsObject(path: String): JsonObject = contentAs[JsonObject](path)
-//
-//  def contentAsArray: JsonArray = ???
-//
-//  def contentAsArray(path: String): JsonArray = contentAs[JsonArray](path)
-
-//  def content: JsonType = ???
-
   def contentAsBytes: Array[Byte] = _content
-
-//  def contentAsStr: String = {
-//    import upickle.default._
-//
-//    read[String](_content)
-//  }
-
-//  def content(idx: Int): JsonType = ???
-//
-//  def content(path: String): JsonType = ???
-
-  // TODO MVP improve
-//  def contentAsUjson = {
-//
-////    ByteArrayParser.transform(_content, new BaseRenderer)
-////    transform(Readable.fromByteArray(_content), BytesRenderer())
-//    read[ujson.Obj](_content)
-//  }
-
-  // TODO support contentAs(path)
 
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonDecodeParams)
+    ev.decode(_content, DecodeParams(flags))
   }
 
   // TODO support
 //  def contentAs[T](path: String): Try[T] = {
 //
 //  }
-
-//  def contentAs[T](path: String, decoder: Array[Byte] => T): T = ???
 
   // TODO MVP decide: nope, far too easy to get this wrong, and drops you into GetSelector.  Must do .dyn or something first.
 //  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))

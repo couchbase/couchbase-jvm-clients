@@ -13,6 +13,7 @@ import scala.compat.java8.OptionConverters._
 case class LookupInResult(id: String,
                           private val body: Option[Array[Byte]],
                           private val _content: GenMap[String, SubdocField],
+                          private[scala] val flags: Int,
                           cas: Long,
                           expiration: Option[Duration]) {
 

@@ -156,5 +156,4 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").str == "bar2")
   }
 
-
 }

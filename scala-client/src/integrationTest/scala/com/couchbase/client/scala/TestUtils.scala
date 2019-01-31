@@ -1,8 +1,11 @@
 package com.couchbase.client.scala
 
+import java.util.UUID
+
 object TestUtils {
   def docId(idx: Int = 0): String = {
-    val st = Thread.currentThread.getStackTrace
-    st(2).getMethodName + "_" + idx
+    // This used to use Thread.getStackTrace to generate a good test-dependent name, but it doesn't work with ScalaTest
+    // due to anonymous names
+    UUID.randomUUID().toString
   }
 }

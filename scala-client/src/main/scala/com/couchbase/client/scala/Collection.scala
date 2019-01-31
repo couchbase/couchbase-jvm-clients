@@ -71,7 +71,6 @@ class Collection(val async: AsyncCollection,
                 retryStrategy: RetryStrategy = async.environment.retryStrategy(),
                )
                (implicit ev: Conversions.Encodable[T])
-  //               (implicit tag: TypeTag[T])
   : Try[MutationResult] = {
     block(async.insert(id, content, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
   }

@@ -70,42 +70,41 @@ class AsyncCollection(name: String,
 
   import annotation.implicitNotFound
 
-  @implicitNotFound("No member of type class NumberLike in scope for ${T}")
-  def encode[T](content: T)
-               (implicit ev: Conversions.Encodable[T])
-  //                       (implicit tag: TypeTag[T])
-  : Try[Array[Byte]] = {
-    //    Try.apply(mapper.writeValueAsBytes(content))
-
-    ev.encode(content).map(_._1)
-
-    //    content match {
-    //        // My JsonType
-    //        // TODO MVP probably remove my JsonType
-    ////      case v: JsonType =>
-    ////        val json = v.asJson
-    ////          json.as[Array[Byte]].toTry
-    //
-    //        // circe's Json
-    //      case v: Json =>
-    //        v.as[Array[Byte]].toTry
-    //
-    //        // ujson's Json
-    //      case v: ujson.Value =>
-    //        Try(transform(v, BytesRenderer()).toBytes)
-    //
-    //      case v: Array[Byte] =>
-    //        // TODO check it's not MessagePack from upickle.default.writeBinary
-    //        Try(v)
-    //
-    //      case _ =>
-    //        // TODO MVP support json string
-    ////        val circe = content.asJson
-    //        val dbg = mapper.writeValueAsString(content)
-    //        Try.apply(mapper.writeValueAsBytes(content))
-    ////          circe.as[Array[Byte]].toTry
-    //    }
-  }
+//  @implicitNotFound("No member of type class in scope for ${T}")
+//  def encode[T](content: T)
+//               (implicit ev: Conversions.Encodable[T])
+//  : Try[Array[Byte]] = {
+//    //    Try.apply(mapper.writeValueAsBytes(content))
+//
+//    ev.encode(content).map(_._1)
+//
+//    //    content match {
+//    //        // My JsonType
+//    //        // TODO MVP probably remove my JsonType
+//    ////      case v: JsonType =>
+//    ////        val json = v.asJson
+//    ////          json.as[Array[Byte]].toTry
+//    //
+//    //        // circe's Json
+//    //      case v: Json =>
+//    //        v.as[Array[Byte]].toTry
+//    //
+//    //        // ujson's Json
+//    //      case v: ujson.Value =>
+//    //        Try(transform(v, BytesRenderer()).toBytes)
+//    //
+//    //      case v: Array[Byte] =>
+//    //        // TODO check it's not MessagePack from upickle.default.writeBinary
+//    //        Try(v)
+//    //
+//    //      case _ =>
+//    //        // TODO MVP support json string
+//    ////        val circe = content.asJson
+//    //        val dbg = mapper.writeValueAsString(content)
+//    //        Try.apply(mapper.writeValueAsBytes(content))
+//    ////          circe.as[Array[Byte]].toTry
+//    //    }
+//  }
 
   implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
@@ -161,33 +160,28 @@ class AsyncCollection(name: String,
                 retryStrategy: RetryStrategy = environment.retryStrategy()
                )
                (implicit ev: Conversions.Encodable[T])
-  //               (implicit tag: TypeTag[T])
   : Future[MutationResult] = {
     // TODO validation with Try
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
     Validators.notNull(content, "timeout")
 
-    // TODO custom encoders
-    encode(content) match {
+    ev.encode(content) match {
       case Success(encoded) =>
-        // TODO flags
-        // TODO datatype
-        // TODO retry strategies
         val request = new InsertRequest(id,
-          collectionIdEncoded, encoded, expiration.toSeconds, 0, timeout, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
             response.status() match {
               case ResponseStatus.EXISTS =>
-                throw new DocumentDoesNotExistException() // TODO MVP fix
+                throw new DocumentAlreadyExistsException()
               case ResponseStatus.SUCCESS =>
                 MutationResult(response.cas(), response.mutationToken().asScala)
             }
           })
       case Failure(err) =>
-        Future.failed(new EncodingFailed(err))
+        Future.failed(new EncodingFailedException(err))
     }
   }
 
@@ -205,10 +199,10 @@ class AsyncCollection(name: String,
     Validators.notNull(content, "content")
     Validators.notNull(cas, "cas")
 
-    encode(content) match {
+    ev.encode(content) match {
       case Success(encoded) =>
         val request = new ReplaceRequest(id,
-          collectionIdEncoded, encoded, expiration.toSeconds, 0, timeout, cas, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, cas, core.context(), bucketName, retryStrategy)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
@@ -219,7 +213,7 @@ class AsyncCollection(name: String,
             }
           })
       case Failure(err) =>
-        Future.failed(new EncodingFailed(err))
+        Future.failed(new EncodingFailedException(err))
     }
   }
 
@@ -235,10 +229,10 @@ class AsyncCollection(name: String,
     Validators.notNullOrEmpty(id, "id")
     Validators.notNull(content, "content")
 
-    encode(content) match {
+    ev.encode(content) match {
       case Success(encoded) =>
         val request = new UpsertRequest(id,
-          collectionIdEncoded, encoded, expiration.toSeconds, 0, timeout, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
@@ -249,7 +243,7 @@ class AsyncCollection(name: String,
             }
           })
       case Failure(err) =>
-        Future.failed(new EncodingFailed(err))
+        Future.failed(new EncodingFailedException(err))
     }
   }
 
@@ -295,7 +289,7 @@ class AsyncCollection(name: String,
 
     if (withExpiration) {
       getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-        GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
+        GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -314,7 +308,7 @@ class AsyncCollection(name: String,
       .map(response => {
         response.status() match {
           case ResponseStatus.SUCCESS =>
-            new GetResult(id, response.content, response.cas, Option.empty)
+            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
 
           case _ => throw throwOnBadResult(response.status())
         }
@@ -375,7 +369,7 @@ class AsyncCollection(name: String,
               }
             })
 
-            LookupInResult(id, fulldoc, fields, response.cas(), exptime)
+            LookupInResult(id, fulldoc, fields, DocumentFlags.Json, response.cas(), exptime)
 
           case ResponseStatus.SUBDOC_FAILURE =>
 
@@ -458,8 +452,7 @@ class AsyncCollection(name: String,
       .map(response => {
         response.status() match {
           case ResponseStatus.SUCCESS =>
-            // TODO flags in GetResult?
-            new GetResult(id, response.content, response.cas, Option.empty)
+            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
 
           case _ => throw throwOnBadResult(response.status())
         }
@@ -480,8 +473,7 @@ class AsyncCollection(name: String,
       .map(response => {
         response.status() match {
           case ResponseStatus.SUCCESS =>
-            // TODO flags in GetResult?
-            new GetResult(id, response.content, response.cas, Option.empty)
+            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
 
           case _ => throw throwOnBadResult(response.status())
         }
