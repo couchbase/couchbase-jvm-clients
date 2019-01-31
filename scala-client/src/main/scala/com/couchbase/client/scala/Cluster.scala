@@ -17,41 +17,52 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.env.ClusterEnvironment
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, TimeUnit}
 
+import com.couchbase.client.scala.api.QueryOptions
+import com.couchbase.client.scala.query.QueryResult
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 class Cluster(env: => ClusterEnvironment)
              (implicit ec: ExecutionContext) {
 
-  private val asyncCluster = new AsyncCluster(env)
+  private val async = new AsyncCluster(env)
   // TODO MVP? reactive cluster
-//  private val coreEnv = CoreEnvironment.create("ADMIN-TODO", "PASSWORD-TODO")
-//  private val networkSet = new util.HashSet[NetworkAddress]()
-//  networkSet.add(NetworkAddress.create(node))
-
-//  val core = Core.create(coreEnv)
 
   def bucket(name: String) = {
-    AsyncUtils.block(asyncCluster.bucket(name))
+    AsyncUtils.block(async.bucket(name))
       .map(new Bucket(_))
   }
 
+  // TODO share this code
+  implicit def scalaFiniteDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
+    java.time.Duration.ofNanos(in.toNanos)
+  }
+
+  implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
+    java.time.Duration.ofNanos(in.toNanos)
+  }
+
+  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
+    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
+  }
+
   // TODO MVP
-//  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = {
-//    null
-//  }
-//
-//  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = {
-//    null
-//  }
+  def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
+    val timeout: java.time.Duration = options.timeout match {
+      case Some(v) => v
+      case _ => env.queryTimeout()
+    }
 
+    AsyncUtils.block(async.query(statement, options), timeout)
+  }
+
+  // TODO see how other libs do case class encoding/decoding
 }
-
-/// TODO     db.entries.select(_.car, _.id, _.velocity).where(_.car eqs carId).fetch()
 
 object Cluster {
   private val threadPool = Executors.newFixedThreadPool(10) // TODO 10?
@@ -62,4 +73,6 @@ object Cluster {
   def connect(connectionString: String, username: String, password: String) = {
     Try(new Cluster(ClusterEnvironment.create(connectionString, username, password)))
   }
+
+  // TODO MVP support credentials
 }

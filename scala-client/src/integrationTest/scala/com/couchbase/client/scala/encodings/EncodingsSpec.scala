@@ -190,5 +190,4 @@ class EncodingsSpec extends FunSuite {
 
     assert(coll.get(docId).get.contentAsBytes sameElements content)
   }
-
 }

@@ -144,7 +144,6 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-
   test("count") {
     val docId = TestUtils.docId()
     coll.remove(docId)

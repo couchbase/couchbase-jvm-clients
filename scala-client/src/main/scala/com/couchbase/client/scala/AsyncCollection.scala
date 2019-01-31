@@ -106,6 +106,7 @@ class AsyncCollection(name: String,
 //    //    }
 //  }
 
+
   implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
   }

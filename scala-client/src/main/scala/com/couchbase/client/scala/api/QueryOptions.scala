@@ -19,6 +19,7 @@ package com.couchbase.client.scala.api
 import java.util.Objects
 
 import com.couchbase.client.core.msg.kv.MutationToken
+import com.couchbase.client.core.retry.RetryStrategy
 
 import scala.concurrent.duration.Duration
 
@@ -49,6 +50,7 @@ case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
                         pipelineCap: Option[Int] = None,
                         profile: Option[N1qlProfile.Value] = None,
                         readonly: Option[Boolean] = None,
+                        retryStrategy: Option[RetryStrategy] = None,
                         scanCap: Option[Int] = None,
                         scanConsistency: Option[ScanConsistency] = None,
 //                        consistentWith: Option[List[MutationToken]]

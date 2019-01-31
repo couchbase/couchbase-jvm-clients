@@ -16,19 +16,30 @@
 
 package com.couchbase.client.scala.query
 
+import com.couchbase.client.core.msg.query.QueryResponse
 import com.couchbase.client.scala.document._
 
+import scala.util.Try
+
 // TODO MVP
-//class N1qlResult[T] {
-//  def rows(): Iterable[T] = null
-//  def allRows(): List[T] = null
-//  def status(): String = null
-//  def requestId(): String = null
-//  def clientContextId(): String = null
-//  // TODO other params
-//}
-//
-//case class N1qlRow(bytes: List[Byte]) extends Dynamic {
+class N1qlResult[T] {
+  def rows(): Iterable[T] = null
+  def allRows(): List[T] = null
+  def status(): String = null
+  def requestId(): String = null
+  def clientContextId(): String = null
+  // TODO other params
+}
+
+case class QueryRow(_content: Array[Byte]) {
+
+  def contentAsBytes: Array[Byte] = _content
+
+  def contentAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    ev.decode(_content, Conversions.JsonDecodeParams)
+  }
+
 //  def value: JsonObject = ???
 //
 //  def contentAs[T]: T = ???
@@ -55,6 +66,14 @@ import com.couchbase.client.scala.document._
 //
 //  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
 //  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
-//}
-//
-//class N1qlQueryResult extends N1qlResult[N1qlRow]
+}
+
+class QueryResult(_result: QueryConsumer) {
+  def rows: Iterator[QueryRow] = {
+    // TODO error handling
+    _result.rows
+      .view // make it lazy so we don't do the entire map in one go
+      .map(row => QueryRow(row.data()))
+      .iterator
+  }
+}
