@@ -29,16 +29,16 @@ case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
 case class CountOperation(path: String, xattr: Boolean) extends LookupOperation
 //case class WithExpiryOperation() extends LookupOperation
 
-case class LookupInOps(val operations: List[LookupOperation]) {
-  def getDoc: LookupInOps = {
+case class LookupInSpec(val operations: List[LookupOperation]) {
+  def getDoc: LookupInSpec = {
     copy(operations = operations :+ GetFullDocumentOperation())
   }
 
-  def getMulti(path: String*): LookupInOps = {
+  def getMulti(path: String*): LookupInSpec = {
     copy(operations = operations ++ path.map(v => GetOperation(v, false)))
   }
 
-  def get(path: String, xattr: Boolean = false): LookupInOps = {
+  def get(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
@@ -50,11 +50,11 @@ case class LookupInOps(val operations: List[LookupOperation]) {
 //    copy(operations = operations :+ GetIntOperation(path, xattr))
 //  }
 
-  def count(path: String, xattr: Boolean = false): LookupInOps = {
+  def count(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ CountOperation(path, xattr))
   }
 
-  def exists(path: String, xattr: Boolean = false): LookupInOps = {
+  def exists(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
   }
 
@@ -64,28 +64,28 @@ case class LookupInOps(val operations: List[LookupOperation]) {
 //  }
 }
 
-object LookupInOps {
-  def apply() = new LookupInOps(List.empty[LookupOperation])
+object LookupInSpec {
+  def apply() = new LookupInSpec(List.empty[LookupOperation])
 
-  def empty = LookupInOps(List())
+  def empty = LookupInSpec(List())
 
-  def getDoc: LookupInOps = {
+  def getDoc: LookupInSpec = {
     empty.getDoc
   }
 
-  def getMulti(path: String*): LookupInOps = {
+  def getMulti(path: String*): LookupInSpec = {
     empty.getMulti(path: _*)
   }
 
-  def get(path: String, xattr: Boolean = false): LookupInOps = {
+  def get(path: String, xattr: Boolean = false): LookupInSpec = {
     empty.get(path, xattr)
   }
 
-  def count(path: String, xattr: Boolean = false): LookupInOps = {
+  def count(path: String, xattr: Boolean = false): LookupInSpec = {
     empty.count(path, xattr)
   }
 
-  def exists(path: String, xattr: Boolean = false): LookupInOps = {
+  def exists(path: String, xattr: Boolean = false): LookupInSpec = {
     empty.exists(path, xattr)
   }
 }

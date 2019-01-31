@@ -2,7 +2,7 @@ package com.couchbase.client.scala.subdoc
 
 import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException, SubDocumentException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
-import com.couchbase.client.scala.api.{LookupInOps, MutateInOps}
+import com.couchbase.client.scala.api.{LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 
@@ -49,7 +49,7 @@ class SubdocMutateSpec extends FunSuite {
       "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, MutateInOps.insert("foo2", "bar2")) match {
+    coll.mutateIn(docId, MutateInSpec.insert("foo2", "bar2")) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) =>
         assert(false, s"unexpected error $err")
@@ -59,7 +59,7 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-  private def checkSingleOpSuccess(content: ujson.Obj, ops: MutateInOps) = {
+  private def checkSingleOpSuccess(content: ujson.Obj, ops: MutateInSpec) = {
     val (docId, cas) = prepare(content)
 
     coll.mutateIn(docId, ops) match {
@@ -71,7 +71,7 @@ class SubdocMutateSpec extends FunSuite {
     coll.get(docId).get.contentAs[ujson.Obj].get
   }
 
-  private def checkSingleOpFailure(content: ujson.Obj, ops: MutateInOps, expected: SubDocumentOpResponseStatus) = {
+  private def checkSingleOpFailure(content: ujson.Obj, ops: MutateInSpec, expected: SubDocumentOpResponseStatus) = {
     val (docId, cas) = prepare(content)
 
     coll.mutateIn(docId, ops) match {
@@ -83,7 +83,7 @@ class SubdocMutateSpec extends FunSuite {
   }
 
   test("mutateIn insert string already there") {
-    checkSingleOpFailure(ujson.Obj("foo" -> "bar"), MutateInOps.insert("foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS)
+    checkSingleOpFailure(ujson.Obj("foo" -> "bar"), MutateInSpec.insert("foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
 
@@ -133,7 +133,7 @@ class SubdocMutateSpec extends FunSuite {
       "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, MutateInOps.replace("foo", "bar2")) match {
+    coll.mutateIn(docId, MutateInSpec.replace("foo", "bar2")) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) =>
         assert(false, s"unexpected error $err")
@@ -143,17 +143,18 @@ class SubdocMutateSpec extends FunSuite {
   }
 
   test("replace string does not exist") {
-    checkSingleOpFailure(ujson.Obj(), MutateInOps.replace("foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+    checkSingleOpFailure(ujson.Obj(), MutateInSpec.replace("foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
   test("upsert string") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> "bar"), MutateInOps.upsert("foo", "bar2"))
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> "bar"), MutateInSpec.upsert("foo", "bar2"))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("upsert string does not exist") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj(), MutateInOps.upsert("foo", "bar2"))
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(), MutateInSpec.upsert("foo", "bar2"))
     assert(updatedContent("foo").str == "bar2")
   }
+
 
 }

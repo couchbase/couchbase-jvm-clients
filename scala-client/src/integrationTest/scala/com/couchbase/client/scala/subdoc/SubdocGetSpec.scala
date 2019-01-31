@@ -3,7 +3,7 @@ package com.couchbase.client.scala.subdoc
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
 import com.couchbase.client.scala.{Cluster, TestUtils}
-import com.couchbase.client.scala.api.LookupInOps
+import com.couchbase.client.scala.api.LookupInSpec
 import org.scalatest.FunSuite
 
 import scala.concurrent.duration._
@@ -30,7 +30,7 @@ class SubdocGetSpec extends FunSuite {
       "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, LookupInOps.get("foo").get("age")) match {
+    coll.lookupIn(docId, LookupInSpec.get("foo").get("age")) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
@@ -47,7 +47,7 @@ class SubdocGetSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, LookupInOps.get("not_exist")) match {
+    coll.lookupIn(docId, LookupInSpec.get("not_exist")) match {
       case Success(result) => assert(false, s"should not succeed")
       case Failure(err: PathNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -61,7 +61,7 @@ class SubdocGetSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, LookupInOps.get("not_exist").get("hello")) match {
+    coll.lookupIn(docId, LookupInSpec.get("not_exist").get("hello")) match {
       case Success(result) =>
         result.contentAs[String]("not_exist") match {
           case Success(body) => assert(false, s"should not succeed")
@@ -81,7 +81,7 @@ class SubdocGetSpec extends FunSuite {
       "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, LookupInOps.get("foo").get("age").getDoc) match {
+    coll.lookupIn(docId, LookupInSpec.get("foo").get("age").getDoc) match {
       case Success(result) =>
         assert(result.contentAs[String]("foo").get == "bar")
         assert(result.documentAsBytes.isDefined)
@@ -124,7 +124,7 @@ class SubdocGetSpec extends FunSuite {
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId,
-      LookupInOps.count("hello")
+      LookupInSpec.count("hello")
         .exists("age")
         .exists("does_not_exist")) match {
       case Success(result) =>
@@ -154,7 +154,7 @@ class SubdocGetSpec extends FunSuite {
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId,
-      LookupInOps.count("hello")
+      LookupInSpec.count("hello")
         .exists("age")
         .exists("does_not_exist")) match {
       case Success(result) =>

@@ -112,7 +112,8 @@ class Collection(val async: AsyncCollection,
   }
 
   def mutateIn(id: String,
-               spec: MutateInOps,
+               // TODO PENDING this may change to a list
+               spec: MutateInSpec,
                cas: Long = 0,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
@@ -153,10 +154,10 @@ class Collection(val async: AsyncCollection,
 
 
   def lookupIn(id: String,
-               spec: LookupInOps,
-          parentSpan: Option[Span] = None,
-          timeout: FiniteDuration = kvTimeout,
-          retryStrategy: RetryStrategy = async.environment.retryStrategy()
+               spec: LookupInSpec,
+               parentSpan: Option[Span] = None,
+               timeout: FiniteDuration = kvTimeout,
+               retryStrategy: RetryStrategy = async.environment.retryStrategy()
          ): Try[LookupInResult] = {
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }

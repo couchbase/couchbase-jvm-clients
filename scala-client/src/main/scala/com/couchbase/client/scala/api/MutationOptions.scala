@@ -46,20 +46,20 @@ case class UpsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParam
 //case class ContentOperation(content: JsonObject) extends MutateOperation
 //case class MutateOptions(xattrs: Boolean = false, expandMacros: Boolean = false, createPath: Boolean = false)
 
-case class MutateInOps(operations: List[MutateOperation]) {
+case class MutateInSpec(operations: List[MutateOperation]) {
   def insert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-               (implicit ev: EncodableField[T]): MutateInOps = {
+               (implicit ev: EncodableField[T]): MutateInSpec = {
     val encoded = ev.encode(value)
     copy(operations = operations :+ InsertOperation(path, encoded, xattrs, createPath, expandMacros))
   }
 
   def replace[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-               (implicit ev: EncodableField[T]): MutateInOps = {
+               (implicit ev: EncodableField[T]): MutateInSpec = {
     copy(operations = operations :+ ReplaceOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
   }
 
   def upsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-                (implicit ev: EncodableField[T]): MutateInOps = {
+                (implicit ev: EncodableField[T]): MutateInSpec = {
     copy(operations = operations :+ UpsertOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
   }
 
@@ -94,23 +94,23 @@ case class MutateInOps(operations: List[MutateOperation]) {
 
 }
 
-object MutateInOps {
-  def apply() = new MutateInOps(List.empty)
+object MutateInSpec {
+  def apply() = new MutateInSpec(List.empty)
 
-  val empty = MutateInOps(List())
+  val empty = MutateInSpec(List())
 
   def insert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-               (implicit ev: EncodableField[T]): MutateInOps = {
+               (implicit ev: EncodableField[T]): MutateInSpec = {
     empty.insert(path, value, xattrs, createPath, expandMacros)
   }
 
   def replace[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-               (implicit ev: EncodableField[T]): MutateInOps = {
+               (implicit ev: EncodableField[T]): MutateInSpec = {
     empty.replace(path, value, xattrs, createPath, expandMacros)
   }
 
   def upsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
-                (implicit ev: EncodableField[T]): MutateInOps = {
+                (implicit ev: EncodableField[T]): MutateInSpec = {
     empty.upsert(path, value, xattrs, createPath, expandMacros)
   }
 }

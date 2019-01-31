@@ -1,7 +1,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.api.LookupInOps
+import com.couchbase.client.scala.api.LookupInSpec
 import org.scalatest.{FunSpec, FunSuite}
 
 import scala.concurrent.duration._

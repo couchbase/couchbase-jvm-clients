@@ -278,7 +278,7 @@ class AsyncCollection(name: String,
   }
 
   def lookupInAs[T](id: String,
-                    operations: LookupInOps,
+                    operations: LookupInSpec,
                     timeout: FiniteDuration = kvTimeout)
   : Future[T] = {
     return null;
@@ -294,7 +294,7 @@ class AsyncCollection(name: String,
     Validators.notNull(timeout, "timeout")
 
     if (withExpiration) {
-      getSubDoc(id, LookupInOps.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
+      getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
         GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
@@ -324,7 +324,7 @@ class AsyncCollection(name: String,
   private val ExpTime = "$document.exptime"
 
   private def getSubDoc(id: String,
-                        spec: LookupInOps,
+                        spec: LookupInSpec,
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
                         timeout: FiniteDuration = kvTimeout,
@@ -391,7 +391,7 @@ class AsyncCollection(name: String,
   }
 
   def mutateIn(id: String,
-               spec: MutateInOps,
+               spec: MutateInSpec,
                cas: Long = 0,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
@@ -490,7 +490,7 @@ class AsyncCollection(name: String,
 
 
   def lookupIn(id: String,
-               spec: LookupInOps,
+               spec: LookupInSpec,
                parentSpan: Option[Span] = None,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()
