@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.diagnostics.PauseAnalyzer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -64,6 +65,8 @@ public class DiagnosticsMonitor {
    */
   private final EventBus eventBus;
 
+  private final Duration emitInterval;
+
   private final Thread diagnosticsThread;
   private final AtomicBoolean diagnosticsRunning = new AtomicBoolean(true);
   private final List<Analyzer> analyzers;
@@ -76,16 +79,21 @@ public class DiagnosticsMonitor {
   private DiagnosticsMonitor(final Builder builder) {
     this.eventBus = builder.eventBus;
     this.analyzers = Collections.synchronizedList(new ArrayList<>());
+    this.emitInterval = builder.emitInterval;
 
     diagnosticsThread = new Thread(() -> {
       try {
         while(diagnosticsRunning.get()) {
-          Thread.sleep(1000);
+          Thread.sleep(emitInterval.toMillis());
+          for (Analyzer analyzer : analyzers) {
+            eventBus.publish(analyzer.fetchEvent(Event.Severity.INFO, context()));
+          }
         }
       } catch (InterruptedException e) {
-        // for now don't do anything
+        // bail out on the interrupt.
       }
     }, "cb-diagnostics");
+    diagnosticsThread.setDaemon(true);
   }
 
   /**
@@ -97,12 +105,12 @@ public class DiagnosticsMonitor {
         return Mono.empty();
       })
       .then(Mono.defer(() -> {
-          GcAnalyzer analyzer = new GcAnalyzer(this);
+          GcAnalyzer analyzer = new GcAnalyzer();
           analyzers.add(analyzer);
           return analyzer.start();
       }))
       .then(Mono.defer(() -> {
-        PauseAnalyzer analyzer = new PauseAnalyzer(this);
+        PauseAnalyzer analyzer = new PauseAnalyzer();
         analyzers.add(analyzer);
         return analyzer.start();
       }));
@@ -117,17 +125,11 @@ public class DiagnosticsMonitor {
       .flatMap(Analyzer::stop)
       .then(Mono.defer(() -> {
         diagnosticsRunning.set(false);
+        diagnosticsThread.interrupt();
         return Mono.empty();
       }));
   }
 
-  public void emit(Event event) {
-    eventBus.publish(event);
-  }
-
-  public Event.Severity severity() {
-    return Event.Severity.DEBUG;
-  }
 
   public Context context() {
     return null;
@@ -138,10 +140,20 @@ public class DiagnosticsMonitor {
    */
   public static class Builder {
 
-    private EventBus eventBus;
+    private final EventBus eventBus;
 
-    public Builder(EventBus eventBus) {
+    /**
+     * By default, emit every 30 minutes.
+     */
+    private Duration emitInterval = Duration.ofMinutes(30);
+
+    public Builder(final EventBus eventBus) {
       this.eventBus = eventBus;
+    }
+
+    public Builder emitInterval(Duration emitInterval) {
+      this.emitInterval = emitInterval;
+      return this;
     }
 
     public DiagnosticsMonitor build() {

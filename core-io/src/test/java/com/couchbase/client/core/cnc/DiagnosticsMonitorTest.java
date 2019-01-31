@@ -16,11 +16,12 @@
 
 package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionDetectedEvent;
+import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionsDetectedEvent;
 import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import java.lang.management.ManagementFactory;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -42,23 +43,23 @@ class DiagnosticsMonitorTest {
     assumeTrue(explicitGcEnabled(), "-XX:+DisableExplicitGC set");
 
     SimpleEventBus eventBus = new SimpleEventBus(false);
-    DiagnosticsMonitor monitor = DiagnosticsMonitor.create(eventBus);
-    monitor.start().block();
+    DiagnosticsMonitor monitor = DiagnosticsMonitor.builder(eventBus)
+      .emitInterval(Duration.ofSeconds(2))
+      .build();
 
-    Supplier<Optional<GarbageCollectionDetectedEvent>> s = () -> new ArrayList<>(eventBus.publishedEvents())
+    monitor.start().block();
+    Supplier<Optional<GarbageCollectionsDetectedEvent>> s = () -> new ArrayList<>(eventBus.publishedEvents())
       .stream()
-      .filter(event -> event instanceof GarbageCollectionDetectedEvent)
-      .map(event -> (GarbageCollectionDetectedEvent) event)
-      .filter(event -> event.cause().equals("System.gc()"))
+      .filter(event -> event instanceof GarbageCollectionsDetectedEvent)
+      .map(event -> (GarbageCollectionsDetectedEvent) event)
       .findFirst();
 
     System.gc();
     waitUntilCondition(() -> s.get().isPresent());
 
-    GarbageCollectionDetectedEvent event = s.get().get();
-    assertEquals("System.gc()", event.cause());
-    assertTrue(event.memoryBefore() != 0 || event.memoryAfter() != 0);
-    assertTrue(event.duration().toNanos() > 0);
+    GarbageCollectionsDetectedEvent event = s.get().get();
+    assertTrue(event.description().startsWith("Detected GC pauses during the " +
+      "collection interval: "));
 
     monitor.stop().block();
   }

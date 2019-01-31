@@ -16,8 +16,11 @@
 
 package com.couchbase.client.core.cnc.diagnostics;
 
-import com.couchbase.client.core.cnc.DiagnosticsMonitor;
-import com.couchbase.client.core.cnc.events.diagnostics.PauseDetectedEvent;
+import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.diagnostics.PausesDetectedEvent;
+import org.HdrHistogram.Histogram;
+import org.HdrHistogram.Recorder;
 import org.LatencyUtils.PauseDetector;
 import org.LatencyUtils.PauseDetectorListener;
 import org.LatencyUtils.SimplePauseDetector;
@@ -33,19 +36,19 @@ import java.util.concurrent.TimeUnit;
  */
 public class PauseAnalyzer implements PauseDetectorListener, Analyzer {
 
-  /**
-   * Not sure if this is the right default, but in early tests we've seen "noise" in the
-   * low ms range that might not be effective to log. This might be tweakable in the
-   * future?
-   */
-  private static final long LOW_THRESHOLD = TimeUnit.MILLISECONDS.toNanos(50);
-
-  private final DiagnosticsMonitor monitor;
   private final PauseDetector detector;
 
-  public PauseAnalyzer(final DiagnosticsMonitor monitor) {
-    this.monitor = monitor;
+  private final Recorder recorder;
+
+  public PauseAnalyzer() {
     detector = new SimplePauseDetector();
+    recorder = new Recorder(4);
+  }
+
+  @Override
+  public PausesDetectedEvent fetchEvent(Event.Severity severity, Context context) {
+    Histogram histogram = recorder.getIntervalHistogram();
+    return new PausesDetectedEvent(severity, context, histogram);
   }
 
   @Override
@@ -67,12 +70,9 @@ public class PauseAnalyzer implements PauseDetectorListener, Analyzer {
 
   @Override
   public void handlePauseEvent(final long pauseLength, final long pauseEndTime) {
-    if (pauseLength > LOW_THRESHOLD) {
-      monitor.emit(new PauseDetectedEvent(
-        monitor.severity(),
-        Duration.ofNanos(pauseLength),
-        monitor.context())
-      );
+    long pauseMillis = TimeUnit.NANOSECONDS.toMillis(pauseLength);
+    if (pauseMillis > 0) {
+      recorder.recordValue(pauseMillis);
     }
   }
 

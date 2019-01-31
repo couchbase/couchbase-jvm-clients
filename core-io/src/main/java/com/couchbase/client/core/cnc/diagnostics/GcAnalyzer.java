@@ -16,10 +16,13 @@
 
 package com.couchbase.client.core.cnc.diagnostics;
 
-import com.couchbase.client.core.cnc.DiagnosticsMonitor;
-import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionDetectedEvent;
+import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionsDetectedEvent;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
+import org.HdrHistogram.Histogram;
+import org.HdrHistogram.Recorder;
 import reactor.core.publisher.Mono;
 
 import javax.management.ListenerNotFoundException;
@@ -29,9 +32,9 @@ import javax.management.NotificationListener;
 import javax.management.openmbean.CompositeData;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The {@link GcAnalyzer} takes incoming {@link GarbageCollectionNotificationInfo} from the
@@ -44,10 +47,10 @@ import java.util.Map;
  */
 public class GcAnalyzer implements Analyzer, NotificationListener {
 
-  private final DiagnosticsMonitor monitor;
+  private final Map<GcType, Recorder> gcHistograms;
 
-  public GcAnalyzer(final DiagnosticsMonitor monitor) {
-    this.monitor = monitor;
+  public GcAnalyzer() {
+    gcHistograms = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -60,6 +63,16 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
       }
       return Mono.empty();
     });
+  }
+
+  @Override
+  public GarbageCollectionsDetectedEvent fetchEvent(final Event.Severity severity, final Context context) {
+    Map<GcType, Recorder> recorders = new HashMap<>(gcHistograms);
+    Map<GcType, Histogram> histograms = new HashMap<>(recorders.size());
+    for (Map.Entry<GcType, Recorder> recorder : recorders.entrySet()) {
+      histograms.put(recorder.getKey(), recorder.getValue().getIntervalHistogram());
+    }
+    return new GarbageCollectionsDetectedEvent(severity, context, histograms);
   }
 
   @Override
@@ -98,65 +111,16 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
     GcInfo gcInfo = info.getGcInfo();
     GcType gcType = GcType.fromString(info.getGcName());
 
-    if (gcType == GcType.UNKNOWN) {
-      // Ignore unknown GC types
-      return;
-    }
-
-    monitor.emit(new GarbageCollectionDetectedEvent(
-      monitor.severity(),
-      Duration.ofMillis(gcInfo.getDuration()),
-      info.getGcAction(),
-      info.getGcCause(),
-      gcType,
-      calculateUsage(gcType, gcInfo.getMemoryUsageBeforeGc()),
-      calculateUsage(gcType, gcInfo.getMemoryUsageAfterGc())
-    ));
-  }
-
-  /**
-   * Helper method to calculate the proper usage for each gc type detected.
-   *
-   * @param pools the pools to calculate from.
-   * @return a proper value based on the gc or 0 if it couldn't be figured out.
-   */
-  private long calculateUsage(final GcType gcType, final Map<String, MemoryUsage> pools) {
-    long usage = 0;
-    try {
-      switch (gcType) {
-        case PS_MARK_SWEEP:
-          usage += pools.get("PS Old Gen").getUsed();
-          break;
-        case PS_SCAVENGE:
-          usage += pools.get("PS Eden Space").getUsed();
-          usage += pools.get("PS Survivor Space").getUsed();
-          break;
-        case COPY:
-          usage += pools.get("Eden Space").getUsed();
-          usage += pools.get("Survivor Space").getUsed();
-          break;
-        case MARK_SWEEP_COMPACT:
-          usage += pools.get("Tenured Gen").getUsed();
-          break;
-        case G1_OLD:
-          usage += pools.get("G1 Old Gen").getUsed();
-          break;
-        case G1_YOUNG:
-          usage += pools.get("G1 Eden Space").getUsed();
-          usage += pools.get("G1 Survivor Space").getUsed();
-          break;
-        case PAR_NEW:
-          usage += pools.get("Par Eden Space").getUsed();
-          usage += pools.get("Par Survivor Space").getUsed();
-          break;
-        case CONCURRENT_MARK_SWEEP:
-          usage += pools.get("CMS Old Gen").getUsed();
-          break;
+    synchronized (this) {
+      if (!gcHistograms.containsKey(gcType)) {
+        gcHistograms.put(gcType, new Recorder(4));
       }
-    } catch (Exception ex) {
-      // ignore, we just return 0 since this is best effort.
     }
-    return usage;
+
+    long durationMs = gcInfo.getDuration();
+    if (durationMs > 0) {
+      gcHistograms.get(gcType).recordValue(durationMs);
+    }
   }
 
   /**
