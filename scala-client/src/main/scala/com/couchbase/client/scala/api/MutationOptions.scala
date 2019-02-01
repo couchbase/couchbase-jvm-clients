@@ -2,7 +2,7 @@ package com.couchbase.client.scala.api
 
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.document.Conversions.{Encodable, EncodableField}
-import com.couchbase.client.scala.document.{EncodeParams, JsonObject}
+import com.couchbase.client.scala.document.{EncodeParams}
 
 import scala.util.Try
 

@@ -16,8 +16,6 @@
 
 package com.couchbase.client.scala.api
 
-import com.couchbase.client.scala.document.{JsonArray, JsonObject}
-
 import scala.language.dynamics
 
 sealed trait LookupOperation

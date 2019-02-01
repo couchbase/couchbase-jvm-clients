@@ -1,7 +1,6 @@
 package com.couchbase.client.scala
 import java.util.UUID
 
-import com.couchbase.client.scala.document.{JsonObject, JsonType}
 import io.circe.Json.JObject
 import org.scalatest._
 import org.scalatest.{FlatSpec, FunSpec, Matchers}

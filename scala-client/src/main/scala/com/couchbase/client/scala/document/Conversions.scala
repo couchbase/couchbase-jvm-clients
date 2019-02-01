@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField, SubdocGetResponse}
 import io.netty.util.CharsetUtil
+import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -43,6 +44,15 @@ object Conversions {
   val StringEncodeParams = EncodeParams(DocumentFlags.String)
   val BinaryEncodeParams = EncodeParams(DocumentFlags.Binary)
   val JsonDecodeParams = DecodeParams(DocumentFlags.Json)
+
+  def encode[T](in: T)(implicit ev: Encodable[T]): Try[(Array[Byte], EncodeParams)] = {
+    ev.encode(in)
+  }
+
+  def decode[T](bytes: Array[Byte], params: DecodeParams = JsonDecodeParams)
+               (implicit ev: Decodable[T]): Try[T] = {
+    ev.decode(bytes, params)
+  }
 
   trait Encodable[-T] {
     def encode(content: T): Try[(Array[Byte], EncodeParams)]
@@ -98,6 +108,12 @@ object Conversions {
       }
     }
 
+    implicit object PlayEncode extends Encodable[play.api.libs.json.JsValue] {
+      override def encode(content: play.api.libs.json.JsValue) = {
+        Try(content.as[Array[Byte]]).map((_, JsonEncodeParams))
+      }
+
+    }
 
   }
 
@@ -147,6 +163,16 @@ object Conversions {
         }
       }
     }
+
+//    implicit object CirceConvert extends Decodable[io.circe.Json] {
+//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+//        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
+//        out match {
+//          case Success(_) => out
+//          case Failure(err) => Failure(new DecodingFailedException(err))
+//        }
+//      }
+//    }
 
   }
 

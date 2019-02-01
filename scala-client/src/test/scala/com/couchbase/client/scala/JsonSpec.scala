@@ -30,8 +30,6 @@ object User {
 
 class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
-  // TODO MVP demo encoding non-json flags
-
   private val DocId = "doc"
   private val (cluster, bucket, coll) = (for {
     cluster <- Cluster.connect("localhost", "Administrator", "password")
@@ -181,8 +179,8 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 //    import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
 //
 //    val content = User("John Smith", 29, List(Address("123 Fake Street")))
-//val json = content.asJson
-//    val bytes = json.as[Array[Byte]]
+//    val json: io.circe.Json = content.asJson
+//
 //    coll.insert(DocId, json) match {
 //      case Success(v) =>
 //      case Failure(err) =>
@@ -190,16 +188,16 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 //        assert(false)
 //    }
 //
-////    (for {
-////      doc <- coll.get(DocId)
-////      content <- Try(decode[User](doc.contentAsBytes))
-////
-////    } yield content) match {
-////      case Success(result: User) =>
-////        assert(result.name == "John Smith")
-////      case Failure(err) =>
-////        assert(false)
-////    }
+//    (for {
+//      doc <- coll.get(DocId)
+//      content <- doc.contentAs[io.circe.Json]
+//
+//    } yield content) match {
+//      case Success(result: User) =>
+//        assert(result.name == "John Smith")
+//      case Failure(err) =>
+//        assert(false)
+//    }
 //  }
 
   def docId(idx: Int): String = {

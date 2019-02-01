@@ -2,7 +2,6 @@ package com.couchbase.client.scala
 
 //import com.couchbase.client.scala.N1qlQuery._
 import com.couchbase.client.scala.api.LookupInSpec
-import com.couchbase.client.scala.document.JsonString
 import org.scalatest.FunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global

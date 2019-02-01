@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{GetResult, JsonObject}
+import com.couchbase.client.scala.document.{GetResult}
 import reactor.core.scala.publisher.Mono
 
 import scala.concurrent.duration.{FiniteDuration, _}

@@ -1,20 +1,18 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.scala.document.{JsonArray, JsonObject}
 import org.scalatest.{FlatSpec, FunSuite}
 
 class JsonObjectSpec extends FunSuite {
 
-  test("field = 'value'") {
-    val obj = JsonObject.create
-    val out = obj.put("field", "value")
-    assert(out.field.exists)
-    assert(out.field.path.toString == "field")
-    assert(out.field.getString == "value")
-  }
+//  test("field = 'value'") {
+//    val obj = JsonObject.create
+//    val out = obj.put("field", "value")
+//    assert(out.field.exists)
+//    assert(out.field.path.toString == "field")
+//    assert(out.field.getString == "value")
+//  }
+//
 
-
-  // TODO MVP
 //  test("field1.field2 = 'value'") {
 //    val obj = JsonObject.create
 //    val out = obj.put("field1", JsonObject.create.put("field2", "value"))

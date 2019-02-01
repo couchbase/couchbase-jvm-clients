@@ -272,13 +272,6 @@ class AsyncCollection(name: String,
       })
   }
 
-  def lookupInAs[T](id: String,
-                    operations: LookupInSpec,
-                    timeout: FiniteDuration = kvTimeout)
-  : Future[T] = {
-    return null;
-  }
-
   def get(id: String,
           withExpiration: Boolean = false,
           parentSpan: Option[Span] = None,

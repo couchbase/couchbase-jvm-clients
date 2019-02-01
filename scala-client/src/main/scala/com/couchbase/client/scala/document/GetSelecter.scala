@@ -11,6 +11,5 @@ case class GetSelecter(private val result: Convertable, path: PathElements) exte
   def getString: String = result.contentAs[String](path)
   // TODO see what Jackson transcoding produces in terms of ints, longs, floats, doubles
   def getInt: Int = result.contentAs[Int](path)
-  def getObject: JsonObject = result.contentAs[JsonObject](path)
   def getAs[T]: T = result.contentAs[T](path)
 }

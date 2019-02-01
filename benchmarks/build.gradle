@@ -1,0 +1,72 @@
+plugins {
+    id 'scala'
+    id 'java'
+//    id 'idea'
+
+    // https://github.com/melix/jmh-gradle-plugin
+    id 'me.champeau.gradle.jmh' version '0.2.0'
+//    id 'me.champeau.gradle.jmh' version '0.4.8'
+}
+
+group 'com.mariolopezjr'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+jmh {
+    // if you want to decide which version of JMH is used to run the benchmarks
+    jmhVersion = '1.17.4'
+
+    // necessary if you have both Java and Scala benchmarks
+//    duplicateClassesStrategy = 'warn'
+
+    // optional parameters for benchmarking
+    // for more options: https://github.com/melix/jmh-gradle-plugin#configuration-options
+    iterations = 1
+    benchmarkMode = ['thrpt']
+    fork = 1
+    forceGC = false
+//    profilers = ['comp', 'gc']
+    profilers = ['comp']
+//    timeout = '2s'
+    timeUnit = 'us'
+    warmupIterations = 1
+    warmupMode = 'INDI'
+
+//    include = ['json\\.Creating.*','json\\.*Encoding.*']
+    include = ['json\\.Creating.*']
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.12.7'
+
+    // if you want to choose which version of JMH the code gets compiled against
+    jmh 'org.openjdk.jmh:jmh-core:1.17.4'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.17.4'
+
+    // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
+    compile group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.21'
+
+    compile project(':scala-client')
+    compile project(':java-client')
+
+    compile group: 'org.scalamacros', name: 'paradise_2.12.7', version: '2.1.1'
+}
+
+//idea {
+//    module {
+//        // marks the Scala source directory correctly in IntelliJ
+//        testSourceDirs += sourceSets.jmh.scala.srcDirs
+//    }
+//}
+
+
+//task deleteEmptyBmList(type: Delete) {
+//    delete "$buildDir/jmh-generated-classes/META-INF/BenchmarkList"
+//}
+//jmhCompileGeneratedClasses.finalizedBy deleteEmptyBmList

@@ -18,7 +18,6 @@ class QuerySpec extends FunSuite {
     case Failure(err) => throw err
   }
 
-
   def getContent(docId: String): ujson.Obj = {
     coll.get(docId) match {
       case Success(result) =>

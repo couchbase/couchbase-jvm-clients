@@ -6,5 +6,6 @@ include 'scala-client'
 include 'kotlin-client'
 include 'test-utils'
 include 'java-examples'
+include 'benchmarks'
 
-enableFeaturePreview 'STABLE_PUBLISHING'
+//enableFeaturePreview 'STABLE_PUBLISHING'
