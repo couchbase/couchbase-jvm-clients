@@ -67,4 +67,6 @@ public interface Service {
 
   ServiceContext context();
 
+  ServiceType type();
+
 }

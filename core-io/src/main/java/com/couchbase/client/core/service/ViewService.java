@@ -46,4 +46,8 @@ public class ViewService extends PooledService {
     return new RoundRobinSelectionStrategy();
   }
 
+  @Override
+  public ServiceType type() {
+    return ServiceType.VIEWS;
+  }
 }

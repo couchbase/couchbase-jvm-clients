@@ -52,4 +52,9 @@ public class ManagerService extends PooledService {
       return false;
     }
   }
+
+  @Override
+  public ServiceType type() {
+    return ServiceType.MANAGER;
+  }
 }

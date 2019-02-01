@@ -46,4 +46,8 @@ public class AnalyticsService extends PooledService {
     return new RoundRobinSelectionStrategy();
   }
 
+  @Override
+  public ServiceType type() {
+    return ServiceType.ANALYTICS;
+  }
 }

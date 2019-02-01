@@ -296,6 +296,11 @@ class PooledServiceTest {
     List<Endpoint> trackedEndpoints() {
       return trackedEndpoints;
     }
+
+    @Override
+    public ServiceType type() {
+      return ServiceType.KV;
+    }
   }
 
   class MockedServiceConfig implements ServiceConfig {

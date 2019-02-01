@@ -46,4 +46,8 @@ public class SearchService extends PooledService {
     return new RoundRobinSelectionStrategy();
   }
 
+  @Override
+  public ServiceType type() {
+    return ServiceType.SEARCH;
+  }
 }

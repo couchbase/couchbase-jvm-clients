@@ -57,4 +57,9 @@ public class KeyValueService extends PooledService {
   protected EndpointSelectionStrategy selectionStrategy() {
     return STRATEGY;
   }
+
+  @Override
+  public ServiceType type() {
+    return ServiceType.KV;
+  }
 }
