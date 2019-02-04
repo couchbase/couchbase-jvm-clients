@@ -30,6 +30,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -349,6 +350,7 @@ class NodeTest {
     KeyValueRequest r = mock(KeyValueRequest.class);
     when(r.serviceType()).thenReturn(ServiceType.KV);
     when(r.bucket()).thenReturn("bucket");
+    when(r.context()).thenReturn(new RequestContext(CTX, r));
     node.send(r);
 
     verify(s, times(1)).send(eq(r));
@@ -370,6 +372,7 @@ class NodeTest {
 
     QueryRequest r = mock(QueryRequest.class);
     when(r.serviceType()).thenReturn(ServiceType.QUERY);
+    when(r.context()).thenReturn(new RequestContext(CTX, r));
     node.send(r);
 
     verify(s, times(1)).send(eq(r));

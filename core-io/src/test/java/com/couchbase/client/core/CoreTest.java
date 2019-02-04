@@ -96,7 +96,7 @@ class CoreTest {
     mocks.put("10.143.190.102", mock102);
     new Core(ENV) {
       @Override
-      protected ConfigurationProvider configurationProvider() {
+      public ConfigurationProvider configurationProvider() {
         return configProvider;
       }
 
@@ -187,7 +187,7 @@ class CoreTest {
     mocks.put("10.143.190.102", mock102);
     new Core(ENV) {
       @Override
-      protected ConfigurationProvider configurationProvider() {
+      public ConfigurationProvider configurationProvider() {
         return configProvider;
       }
 
@@ -283,7 +283,7 @@ class CoreTest {
     mocks.put("10.143.190.102", mock102);
     new Core(ENV) {
       @Override
-      protected ConfigurationProvider configurationProvider() {
+      public ConfigurationProvider configurationProvider() {
         return configProvider;
       }
 
@@ -363,7 +363,7 @@ class CoreTest {
     mocks.put("10.143.190.102", mock102);
     new Core(ENV) {
       @Override
-      protected ConfigurationProvider configurationProvider() {
+      public ConfigurationProvider configurationProvider() {
         return configProvider;
       }
 

@@ -21,6 +21,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
+import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
@@ -138,12 +140,17 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   }
 
   @Override
+  @SuppressWarnings({"unchecked"})
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof KeyValueRequest) {
-      KeyValueRequest request = (KeyValueRequest) msg;
+      KeyValueRequest<Response> request = (KeyValueRequest<Response>) msg;
 
-      int nextOpaque = ++opaque;
-      handleSameOpaqueRequest(writtenRequests.put(nextOpaque, request));
+      int nextOpaque;
+      do {
+        nextOpaque = ++opaque;
+      } while (writtenRequests.containsKey(nextOpaque));
+
+      writtenRequests.put(nextOpaque, request);
       ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext));
       writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
     } else {
@@ -155,61 +162,55 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
   }
 
-  private void handleSameOpaqueRequest(final KeyValueRequest requestWithSameOpaque) {
-    if (requestWithSameOpaque == null) {
-      return;
-    }
-
-    // TODO: figure out what to do if there was already one request with the
-    // TODO: same opaque.. likely the new one, before sending, needs to be
-    // TODO: assigned a new opaque!
-  }
-
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof ByteBuf) {
-      decode(ctx, (ByteBuf) msg);
+      decode((ByteBuf) msg);
     } else {
-      // todo: ERROR!! something weird came back...
+      ioContext.environment().eventBus().publish(
+        new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
+      );
+      ReferenceCountUtil.release(msg);
     }
   }
 
   /**
    * Main method to start dispatching the decode.
    *
-   * @param ctx
-   * @param response
+   * @param response the response to decode and handle.
    */
-  private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
+  private void decode(final ByteBuf response) {
     int opaque = MemcacheProtocol.opaque(response);
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
-    if (request == null) {
-      // todo: this is a problem! no request found with the opaque for a given
-      // todo: response.. server error? ignore the request and release its resources
-      // todo: but raise event if this happens and keep going...
-    }
-
     long start = writtenRequestDispatchTimings.remove(opaque);
-    request.context().dispatchLatency(System.nanoTime() - start);
 
-
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    if (status == ResponseStatus.NOT_MY_VBUCKET) {
-      Core core = ioContext.core();
-      core.send(request, false);
-      body(response)
-        .map(b -> b.toString(CharsetUtil.UTF_8).trim())
-        .filter(c -> c.startsWith("{"))
-        .ifPresent(c -> core.configurationProvider().proposeBucketConfig(
-          new ProposedBucketConfigContext(
-            bucketName,
-            c,
-            request.context().dispatchedTo()
-          )
-        ));
+    if (request == null) {
+      byte[] packet = new byte[response.readableBytes()];
+      response.readBytes(packet);
+      ioContext.environment().eventBus().publish(
+        new UnknownResponseReceivedEvent(ioContext, packet)
+      );
     } else {
-      Response decoded = request.decode(response, channelContext);
-      request.succeed(decoded);
+      request.context().dispatchLatency(System.nanoTime() - start);
+
+      ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+      if (status == ResponseStatus.NOT_MY_VBUCKET) {
+        Core core = ioContext.core();
+        core.send(request, false);
+        body(response)
+          .map(b -> b.toString(CharsetUtil.UTF_8).trim())
+          .filter(c -> c.startsWith("{"))
+          .ifPresent(c -> core.configurationProvider().proposeBucketConfig(
+            new ProposedBucketConfigContext(
+              bucketName,
+              c,
+              request.context().dispatchedTo()
+            )
+          ));
+      } else {
+        Response decoded = request.decode(response, channelContext);
+        request.succeed(decoded);
+      }
     }
 
     ReferenceCountUtil.release(response);
