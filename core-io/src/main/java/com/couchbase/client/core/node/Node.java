@@ -306,6 +306,7 @@ public class Node {
       return;
     }
 
+    request.context().dispatchedTo(address);
     service.send(request);
   }
 

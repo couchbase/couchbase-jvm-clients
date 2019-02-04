@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.NetworkAddress;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +45,8 @@ public class RequestContext extends CoreContext {
    * Allows to attach a custom payload to the request for the user.
    */
   private volatile Map<String, Object> payload;
+
+  private volatile NetworkAddress dispatchedTo;
 
   /**
    * The number of times the attached request has been retried.
@@ -90,6 +93,15 @@ public class RequestContext extends CoreContext {
 
   public RequestContext incrementRetryAttempt() {
     retryAttempts.incrementAndGet();
+    return this;
+  }
+
+  public NetworkAddress dispatchedTo() {
+    return dispatchedTo;
+  }
+
+  public RequestContext dispatchedTo(NetworkAddress dispatchedTo) {
+    this.dispatchedTo = dispatchedTo;
     return this;
   }
 

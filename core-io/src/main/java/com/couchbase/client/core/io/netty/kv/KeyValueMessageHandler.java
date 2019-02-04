@@ -16,10 +16,12 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.IoContext;
@@ -31,11 +33,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
 import java.util.List;
+
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 
 /**
  * This handler is responsible for writing KV requests and completing their associated responses
@@ -187,11 +192,23 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     long start = writtenRequestDispatchTimings.remove(opaque);
     request.context().dispatchLatency(System.nanoTime() - start);
 
-    Response decoded = request.decode(response, channelContext);
 
-    if (decoded.status() == ResponseStatus.NOT_MY_VBUCKET) {
-      ioContext.core().send(request, false);
+    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+    if (status == ResponseStatus.NOT_MY_VBUCKET) {
+      Core core = ioContext.core();
+      core.send(request, false);
+      body(response)
+        .map(b -> b.toString(CharsetUtil.UTF_8).trim())
+        .filter(c -> c.startsWith("{"))
+        .ifPresent(c -> core.configurationProvider().proposeBucketConfig(
+          new ProposedBucketConfigContext(
+            bucketName,
+            c,
+            request.context().dispatchedTo()
+          )
+        ));
     } else {
+      Response decoded = request.decode(response, channelContext);
       request.succeed(decoded);
     }
 

@@ -125,7 +125,8 @@ public class Core {
    *
    * @return by default returns the default config provider.
    */
-  protected ConfigurationProvider configurationProvider() {
+  @Stability.Internal
+  public ConfigurationProvider configurationProvider() {
     return new DefaultConfigurationProvider(this);
   }
 
