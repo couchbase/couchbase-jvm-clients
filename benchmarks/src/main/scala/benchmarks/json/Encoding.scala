@@ -1,17 +1,17 @@
 package benchmarks
 
-import com.couchbase.client.java.codec.DefaultEncoder
-import com.couchbase.client.java.json.JsonObject
-import com.couchbase.client.scala.document.Conversions
-import org.openjdk.jmh.annotations.{Benchmark, Scope, Setup, State}
-import org.openjdk.jmh.runner.Runner
-import org.openjdk.jmh.runner.RunnerException
-import org.openjdk.jmh.runner.options.Options
-import org.openjdk.jmh.runner.options.OptionsBuilder
-import io.circe._
-import io.circe.generic.auto._
-import io.circe.parser._
-import io.circe.syntax._
+//import com.couchbase.client.java.codec.DefaultEncoder
+//import com.couchbase.client.java.json.JsonObject
+//import com.couchbase.client.scala.document.Conversions
+//import org.openjdk.jmh.annotations.{Benchmark, Scope, Setup, State}
+//import org.openjdk.jmh.runner.Runner
+//import org.openjdk.jmh.runner.RunnerException
+//import org.openjdk.jmh.runner.options.Options
+//import org.openjdk.jmh.runner.options.OptionsBuilder
+//import io.circe._
+//import io.circe.generic.auto._
+//import io.circe.parser._
+//import io.circe.syntax._
 
 //object Encoding {
 //  @State(Scope.Thread)

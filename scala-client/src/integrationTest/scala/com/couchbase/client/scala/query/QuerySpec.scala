@@ -67,4 +67,17 @@ class QuerySpec extends FunSuite {
         throw err
     }
   }
+
+  test("error") {
+    cluster.query("""select "hello world" as Greeting""") match {
+      case Success(result) =>
+        // TODO should any errors result in fail?
+        assert(result.rows.size == 0)
+        // TODO expose errors better, e.g. not just the raw JSON
+        assert(result.errors.size == 1)
+//        assert(rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+      case Failure(err) => throw err
+    }
+  }
+
 }

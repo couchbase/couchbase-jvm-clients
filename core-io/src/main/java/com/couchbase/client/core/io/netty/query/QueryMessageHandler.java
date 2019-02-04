@@ -59,6 +59,16 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         // TODO GP this looks expensive, could we instead just pass up data and ROW without creating an object?
         currentResponse.subscriber().onNext(new QueryResponse.QueryEvent(QueryResponse.QueryEventType.ROW, data));
       }
+    }),
+
+    new JsonPointer("/errors/-", new JsonPointerCB1() {
+        @Override
+        public void call(final ByteBuf value) {
+            byte[] data = new byte[value.readableBytes()];
+            value.readBytes(data);
+            value.release();
+            currentResponse.subscriber().onNext(new QueryResponse.QueryEvent(QueryResponse.QueryEventType.ERROR, data));
+        }
     })
   });
 

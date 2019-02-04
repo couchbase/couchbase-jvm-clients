@@ -24,7 +24,7 @@ public abstract class QueryResponse extends BaseResponse {
   }
 
   public enum QueryEventType {
-    ROW
+    ROW, ERROR
   }
 
   public interface QueryEventSubscriber {

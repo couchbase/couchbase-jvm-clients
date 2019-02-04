@@ -69,11 +69,27 @@ case class QueryRow(_content: Array[Byte]) {
 }
 
 class QueryResult(_result: QueryConsumer) {
-  def rows: Iterator[QueryRow] = {
-    // TODO error handling
+  def rowsIt: Iterator[QueryRow] = {
     _result.rows
       .view // make it lazy so we don't do the entire map in one go
       .map(row => QueryRow(row.data()))
       .iterator
+  }
+
+  def errorsIt: Iterator[QueryRow] = {
+    _result.errors
+      .view // make it lazy so we don't do the entire map in one go
+      .map(row => QueryRow(row.data()))
+      .iterator
+  }
+
+  def rows: Seq[QueryRow] = {
+    _result.rows
+      .map(row => QueryRow(row.data()))
+  }
+
+  def errors: Seq[QueryRow] = {
+    _result.errors
+      .map(row => QueryRow(row.data()))
   }
 }

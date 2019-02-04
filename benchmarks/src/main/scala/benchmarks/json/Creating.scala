@@ -22,39 +22,41 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package benchmarks
+package benchmarks.json
 
 import com.couchbase.client.java.codec.DefaultEncoder
 import com.couchbase.client.java.json.JsonObject
 import com.couchbase.client.scala.document.Conversions
-import org.openjdk.jmh.annotations.Benchmark
-import org.openjdk.jmh.runner.Runner
-import org.openjdk.jmh.runner.RunnerException
-import org.openjdk.jmh.runner.options.Options
-import org.openjdk.jmh.runner.options.OptionsBuilder
+//import org.openjdk.jmh.annotations.Benchmark
+//import org.openjdk.jmh.runner.Runner
+//import org.openjdk.jmh.runner.RunnerException
+//import org.openjdk.jmh.runner.options.Options
+//import org.openjdk.jmh.runner.options.OptionsBuilder
 
+import org.scalameter.api._
 
-class Creating {
-  @Benchmark def upickleScala(): Unit = {
-    val json = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-  }
-
-//  @Benchmark def upickle2Scala(): Unit = {
-//    val json = ujson.Obj.from(Seq("hello" -> "world", "foo" -> "bar", "age" -> 22))
-//  }
-
-  //  @Benchmark def circeScala(): Unit = {
-//    import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
 //
-//    val json: io.circe.Json = Map("hello" -> "world",
-//      "foo" -> "bar",
-//    "age" -> 22).asJson
+//class Creating {
+//  @Benchmark def upickleScala(): Unit = {
+//    val json = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
 //  }
-
-  @Benchmark def JsonObjectJava(): Unit = {
-    val json = JsonObject.create()
-      .put("hello", "world")
-      .put("foo", "bar")
-      .put("age", 22)
-  }
-}
+//
+////  @Benchmark def upickle2Scala(): Unit = {
+////    val json = ujson.Obj.from(Seq("hello" -> "world", "foo" -> "bar", "age" -> 22))
+////  }
+//
+//  //  @Benchmark def circeScala(): Unit = {
+////    import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+////
+////    val json: io.circe.Json = Map("hello" -> "world",
+////      "foo" -> "bar",
+////    "age" -> 22).asJson
+////  }
+//
+//  @Benchmark def JsonObjectJava(): Unit = {
+//    val json = JsonObject.create()
+//      .put("hello", "world")
+//      .put("foo", "bar")
+//      .put("age", 22)
+//  }
+//}
