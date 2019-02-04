@@ -41,8 +41,8 @@ public class ClusterConfig {
     return bucketConfigs.get(bucketName);
   }
 
-  public void setBucketConfig(final String bucketName, final BucketConfig config) {
-    bucketConfigs.put(bucketName, config);
+  public void setBucketConfig(final BucketConfig config) {
+    bucketConfigs.put(config.name(), config);
   }
 
   public void deleteBucketConfig(String bucketName) {

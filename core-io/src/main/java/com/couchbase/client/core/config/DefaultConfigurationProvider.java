@@ -89,6 +89,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     keyValueRefresher = new KeyValueRefresher(this, core);
     clusterManagerRefresher = new ClusterManagerRefresher(this, core);
 
+    configsSink.next(currentConfig);
     keyValueRefresher.configs().subscribe(this::proposeBucketConfig);
     clusterManagerRefresher.configs().subscribe(this::proposeBucketConfig);
   }
@@ -238,7 +239,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     }
 
     eventBus.publish(new ConfigUpdatedEvent(core.context(), newConfig));
-    currentConfig.setBucketConfig(name, newConfig);
+    currentConfig.setBucketConfig(newConfig);
     pushConfig();
   }
 

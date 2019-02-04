@@ -19,6 +19,7 @@ package com.couchbase.client.core.cnc.events.node;
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.node.NodeContext;
 
 import java.time.Duration;
 
@@ -35,12 +36,12 @@ public class NodeDisconnectedEvent extends AbstractEvent {
    * @param duration the duration of the event.
    * @param context the context.
    */
-  public NodeDisconnectedEvent(final Duration duration, final Context context) {
-    super(Severity.DEBUG, Category.NODE, duration, context);
+  public NodeDisconnectedEvent(final Duration duration, final NodeContext context) {
+    super(Severity.INFO, Category.NODE, duration, context);
   }
 
   @Override
   public String description() {
-    return "Node disconnected successfully";
+    return "Node disconnected";
   }
 }

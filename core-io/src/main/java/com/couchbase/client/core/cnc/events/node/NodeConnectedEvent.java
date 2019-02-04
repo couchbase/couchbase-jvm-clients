@@ -14,29 +14,33 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.cnc.events.config;
+package com.couchbase.client.core.cnc.events.node;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
-import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.node.NodeContext;
 
 import java.time.Duration;
 
-public class ConfigUpdatedEvent extends AbstractEvent {
+/**
+ * This event is generated when a node is correctly connected.
+ *
+ * @since 2.0.0
+ */
+public class NodeConnectedEvent extends AbstractEvent {
 
-  private final BucketConfig config;
-
-  public ConfigUpdatedEvent(final Context context, final BucketConfig config) {
-    super(Severity.DEBUG, Category.CONFIG, Duration.ZERO, context);
-    this.config = config;
-  }
-
-  public BucketConfig config() {
-    return config;
+  /**
+   * Creates a new node connected event.
+   *
+   * @param duration the duration of the event.
+   * @param context the context.
+   */
+  public NodeConnectedEvent(final Duration duration, final NodeContext context) {
+    super(Severity.INFO, Category.NODE, duration, context);
   }
 
   @Override
   public String description() {
-    return "Bucket configuration updated: " + config;
+    return "Node connected";
   }
 }

@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
+import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
@@ -32,12 +34,17 @@ import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
+import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,13 +68,17 @@ public class Core {
 
   private static final ManagerLocator MANAGER_LOCATOR = new ManagerLocator();
 
-  private static final RoundRobinLocator QUERY_LOCATOR = new RoundRobinLocator(ServiceType.QUERY);
+  private static final RoundRobinLocator QUERY_LOCATOR =
+    new RoundRobinLocator(ServiceType.QUERY);
 
-  private static final RoundRobinLocator ANALYTICS_LOCATOR = new RoundRobinLocator(ServiceType.ANALYTICS);
+  private static final RoundRobinLocator ANALYTICS_LOCATOR =
+    new RoundRobinLocator(ServiceType.ANALYTICS);
 
-  private static final RoundRobinLocator SEARCH_LOCATOR = new RoundRobinLocator(ServiceType.SEARCH);
+  private static final RoundRobinLocator SEARCH_LOCATOR =
+    new RoundRobinLocator(ServiceType.SEARCH);
 
-  private static final RoundRobinLocator VIEWS_LOCATOR = new RoundRobinLocator(ServiceType.VIEWS);
+  private static final RoundRobinLocator VIEWS_LOCATOR =
+    new RoundRobinLocator(ServiceType.VIEWS);
 
   /**
    * Holds the current core context.
@@ -79,6 +90,9 @@ public class Core {
    */
   private final ConfigurationProvider configurationProvider;
 
+  /**
+   * Holds the current configuration for all buckets.
+   */
   private volatile ClusterConfig currentConfig;
 
   /**
@@ -94,7 +108,7 @@ public class Core {
     return new Core(environment);
   }
 
-  private Core(final CoreEnvironment environment) {
+  protected Core(final CoreEnvironment environment) {
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
     this.configurationProvider = configurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -121,7 +135,7 @@ public class Core {
 
   @Stability.Internal
   @SuppressWarnings({"unchecked"})
-  public <R extends Response> void send(final Request<R> request, boolean registerForTimeout) {
+  public <R extends Response> void send(final Request<R> request, final boolean registerForTimeout) {
     if (registerForTimeout) {
       context().environment().timer().register((Request<Response>) request);
     }
@@ -183,11 +197,44 @@ public class Core {
       .fromIterable(nodes)
       .filter(n -> n.address().equals(target))
       .switchIfEmpty(Mono.defer(() -> {
-        Node node = Node.create(coreContext, target, coreContext.environment().credentials());
+        Node node = createNode(target);
         nodes.add(node);
         return Mono.just(node);
       }))
       .flatMap(node -> node.addService(serviceType, port, bucket))
+      .then();
+  }
+
+  protected Node createNode(final NetworkAddress target) {
+    return Node.create(coreContext, target);
+  }
+
+  private Mono<Void> maybeRemoveNode(final Node node) {
+    if (node.hasServicesEnabled()) {
+      return Mono.empty();
+    } else {
+      nodes.remove(node);
+      return node.disconnect();
+    }
+  }
+
+  /**
+   * This method is used to remove a service from a node.
+   *
+   * @param target the node to check.
+   * @param serviceType the service type to remove if present.
+   * @return a {@link Mono} which completes once initiated.
+   */
+  private Mono<Void> removeServiceFrom(final NetworkAddress target, final ServiceType serviceType,
+                                       final Optional<String> bucket) {
+    return Flux
+      .fromIterable(new ArrayList<>(nodes))
+      .filter(n -> n.address().equals(target))
+      .filter(node -> node.serviceEnabled(serviceType))
+      .flatMap(node -> node
+        .removeService(serviceType, bucket)
+        .flatMap(v -> maybeRemoveNode(node))
+      )
       .then();
   }
 
@@ -218,47 +265,137 @@ public class Core {
     if (reconfigureInProgress.compareAndSet(false, true) && !shutdown.get()) {
       long start = System.nanoTime();
 
-      // TODO: in the stream, also REMOVE stuff that is not needed anymore
+      if (currentConfig.bucketConfigs().isEmpty()) {
+        Flux
+          .fromIterable(new ArrayList<>(nodes))
+          .flatMap(Node::disconnect)
+          .doOnComplete(nodes::clear)
+          .subscribe(
+            v -> {},
+            e -> {
+              reconfigureInProgress.set(false);
+              coreContext
+                .environment()
+                .eventBus()
+                .publish(new ReconfigurationErrorDetectedEvent(context(), e));
+            },
+            () -> {
+              reconfigureInProgress.set(false);
+              coreContext
+                .environment()
+                .eventBus()
+                .publish(new ReconfigurationCompletedEvent(
+                  Duration.ofNanos(System.nanoTime() - start),
+                  coreContext
+                ));
+            }
+          );
 
-      Flux
+        return;
+      }
+
+      Flux<BucketConfig> bucketConfigFlux = Flux
         .just(currentConfig)
-        .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()))
-        .flatMap(bc -> Flux.fromIterable(bc.nodes())
-          .flatMap(ni -> {
-            boolean tls = coreContext.environment().ioEnvironment().securityConfig().tlsEnabled();
-            return Flux
-              .fromIterable(tls ? ni.sslServices().entrySet() : ni.services().entrySet())
-              .flatMap(s -> ensureServiceAt(
-                ni.hostname(), s.getKey(), s.getValue(), Optional.of(bc.name())
-              ));
-          })
-        )
+        .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
+
+      reconfigureBuckets(bucketConfigFlux)
+        .then(Mono.defer(() ->
+          Flux
+            .fromIterable(new ArrayList<>(nodes))
+            .flatMap(this::maybeRemoveNode)
+            .then()
+        ))
         .subscribe(
-          v -> {},
-          e -> {
-            reconfigureInProgress.set(false);
-            coreContext
-              .environment()
-              .eventBus()
-              .publish(new ReconfigurationErrorDetectedEvent(context(), e));
-          },
-          () -> {
-            reconfigureInProgress.set(false);
-            coreContext
-              .environment()
-              .eventBus()
-              .publish(new ReconfigurationCompletedEvent(
-                Duration.ofNanos(System.nanoTime() - start),
-                coreContext
-              ));
-          }
-        );
+        v -> {},
+        e -> {
+          reconfigureInProgress.set(false);
+          coreContext
+            .environment()
+            .eventBus()
+            .publish(new ReconfigurationErrorDetectedEvent(context(), e));
+        },
+        () -> {
+          reconfigureInProgress.set(false);
+          coreContext
+            .environment()
+            .eventBus()
+            .publish(new ReconfigurationCompletedEvent(
+              Duration.ofNanos(System.nanoTime() - start),
+              coreContext
+            ));
+        }
+      );
     } else {
       coreContext
         .environment()
         .eventBus()
         .publish(new ReconfigurationIgnoredEvent(coreContext));
     }
+  }
+
+  /**
+   * Contains logic to perform reconfiguration for a bucket config.
+   *
+   * @param bucketConfigs the flux of bucket configs currently open.
+   * @return a mono once reconfiguration for all buckets is complete
+   */
+  private Mono<Void> reconfigureBuckets(final Flux<BucketConfig> bucketConfigs) {
+    return bucketConfigs.flatMap(bc ->
+      Flux.fromIterable(bc.nodes())
+        .flatMap(ni -> {
+          boolean tls = coreContext.environment().ioEnvironment().securityConfig().tlsEnabled();
+          Set<Map.Entry<ServiceType, Integer>> services = tls
+            ? ni.sslServices().entrySet()
+            : ni.services().entrySet();
+
+          Flux<Void> serviceRemoveFlux = Flux
+            .fromIterable(Arrays.asList(ServiceType.values()))
+            .filter(s -> {
+              for (Map.Entry<ServiceType, Integer> inConfig : services) {
+                if (inConfig.getKey() == s) {
+                  return false;
+                }
+              }
+              return true;
+            })
+            .flatMap(s -> removeServiceFrom(
+              ni.hostname(),
+              s,
+              s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
+              .onErrorResume(throwable -> {
+                throwable.printStackTrace();
+                coreContext.environment().eventBus().publish(new ServiceReconfigurationFailedEvent(
+                  coreContext,
+                  ni.hostname(),
+                  s,
+                  throwable
+                ));
+                return Mono.empty();
+              })
+            );
+
+          Flux<Void> serviceAddFlux = Flux
+            .fromIterable(services)
+            .flatMap(s -> ensureServiceAt(
+              ni.hostname(),
+              s.getKey(),
+              s.getValue(),
+              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
+              .onErrorResume(throwable -> {
+                throwable.printStackTrace();
+                coreContext.environment().eventBus().publish(new ServiceReconfigurationFailedEvent(
+                  coreContext,
+                  ni.hostname(),
+                  s.getKey(),
+                  throwable
+                ));
+                return Mono.empty();
+              })
+            );
+
+          return Flux.merge(serviceAddFlux, serviceRemoveFlux);
+        })
+    ).then();
   }
 
   private static Locator locator(final ServiceType serviceType) {

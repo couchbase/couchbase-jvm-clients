@@ -18,6 +18,7 @@ package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectIgnoredEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
@@ -71,18 +72,18 @@ public class Node {
    */
   private final AtomicInteger enabledServices = new AtomicInteger(0);
 
-  public static Node create(final CoreContext ctx, final NetworkAddress address,
-                            final Credentials credentials) {
-    return new Node(ctx, address, credentials);
+  public static Node create(final CoreContext ctx, final NetworkAddress address) {
+    return new Node(ctx, address);
   }
 
-  protected Node(final CoreContext ctx, final NetworkAddress address,
-                 final Credentials credentials) {
+  protected Node(final CoreContext ctx, final NetworkAddress address) {
     this.address = address;
     this.ctx = new NodeContext(ctx, address);
-    this.credentials = credentials;
+    this.credentials = ctx.environment().credentials();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
+
+    ctx.environment().eventBus().publish(new NodeConnectedEvent(Duration.ZERO, this.ctx));
   }
 
   /**
@@ -332,8 +333,12 @@ public class Node {
    * @param type the service type to check.
    * @return true if enabled, false otherwise.
    */
-  boolean serviceEnabled(final ServiceType type) {
+  public boolean serviceEnabled(final ServiceType type) {
     return (enabledServices.get() & (1 << type.ordinal())) != 0;
+  }
+
+  public boolean hasServicesEnabled() {
+    return enabledServices.get() != 0;
   }
 
   /**
