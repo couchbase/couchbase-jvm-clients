@@ -40,6 +40,23 @@ import java.util.Optional;
 public class RetryOrchestrator {
 
   /**
+   * Retries the given request immediatly, unless it is already completed.
+   *
+   * <p>This method is usually used in contexts like "not my vbucket" where we need to retry
+   * completely transparently and not based on the retry strategy configured.</p>
+   *
+   * @param ctx the core context into which timer the request is submitted.
+   * @param request the request in question.
+   */
+  public static void retryImmediately(final CoreContext ctx,
+                                      final Request<? extends Response> request) {
+    if (request.completed()) {
+      return;
+    }
+    retryWithDuration(ctx, request, Duration.ofMillis(1));
+  }
+
+  /**
    * Retry or cancel the given request, depending on its state and the configured
    * {@link RetryStrategy}.
    *
@@ -53,18 +70,31 @@ public class RetryOrchestrator {
 
     Optional<Duration> duration = request.retryStrategy().shouldRetry(request);
     if (duration.isPresent()) {
-      ctx.environment().eventBus().publish(
-        new RequestRetriedEvent(duration.get(), request.context(), request.getClass())
-      );
-      request.context().incrementRetryAttempt();
-      ctx.environment().timer().schedule(
-        () -> ctx.core().send(request,false),
-        duration.get()
-      );
+      retryWithDuration(ctx, request, duration.get());
     } else {
       ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.context()));
       request.cancel(CancellationReason.NO_MORE_RETRIES);
     }
+  }
+
+  /**
+   * Helper method to perform the actual retry with the given duration.
+   *
+   * @param ctx the core context into which timer the request is submitted.
+   * @param request the request in question.
+   * @param duration the duration when to retry.
+   */
+  private static void retryWithDuration(final CoreContext ctx,
+                                        final Request<? extends Response> request,
+                                        final Duration duration) {
+    ctx.environment().eventBus().publish(
+      new RequestRetriedEvent(duration, request.context(), request.getClass())
+    );
+    request.context().incrementRetryAttempt();
+    ctx.environment().timer().schedule(
+      () -> ctx.core().send(request,false),
+      duration
+    );
   }
 
 }

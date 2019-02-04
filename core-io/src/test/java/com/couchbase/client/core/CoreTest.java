@@ -48,6 +48,7 @@ import static org.mockito.Mockito.when;
 /**
  * Verifies the various functionality of the {@link Core}.
  */
+@SuppressWarnings("UnassignedFluxMonoInstance")
 class CoreTest {
 
   private static CoreEnvironment ENV;

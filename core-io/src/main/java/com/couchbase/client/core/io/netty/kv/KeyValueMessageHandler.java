@@ -30,6 +30,7 @@ import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -195,12 +196,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
       ResponseStatus status = MemcacheProtocol.decodeStatus(response);
       if (status == ResponseStatus.NOT_MY_VBUCKET) {
-        Core core = ioContext.core();
-        core.send(request, false);
+        RetryOrchestrator.retryImmediately(ioContext, request);
         body(response)
           .map(b -> b.toString(CharsetUtil.UTF_8).trim())
           .filter(c -> c.startsWith("{"))
-          .ifPresent(c -> core.configurationProvider().proposeBucketConfig(
+          .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
             new ProposedBucketConfigContext(
               bucketName,
               c,
