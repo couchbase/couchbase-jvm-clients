@@ -39,6 +39,7 @@ public class NodeContext extends CoreContext {
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
+    super.injectExportableParams(input);
     input.put("remote", remoteHostname().nameOrAddress());
   }
 
