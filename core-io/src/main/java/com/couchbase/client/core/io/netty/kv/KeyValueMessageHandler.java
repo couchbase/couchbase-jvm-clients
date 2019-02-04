@@ -24,6 +24,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.buffer.ByteBuf;
@@ -187,7 +188,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     request.context().dispatchLatency(System.nanoTime() - start);
 
     Response decoded = request.decode(response, channelContext);
-    request.succeed(decoded);
+
+    if (decoded.status() == ResponseStatus.NOT_MY_VBUCKET) {
+      ioContext.core().send(request, false);
+    } else {
+      request.succeed(decoded);
+    }
 
     ReferenceCountUtil.release(response);
   }
