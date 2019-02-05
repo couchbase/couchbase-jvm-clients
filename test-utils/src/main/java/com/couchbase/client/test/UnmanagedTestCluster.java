@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -97,7 +98,8 @@ public class UnmanagedTestCluster extends TestCluster {
       adminPassword,
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
-      cert
+      cert,
+      Collections.emptySet() // no supported capabilities right now
     );
   }
 

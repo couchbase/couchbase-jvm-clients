@@ -21,7 +21,11 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.msg.kv.UpsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import io.netty.util.CharsetUtil;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +34,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.Assert.assertTrue;
 
 /**
  * These integration tests verify synchronous replication capabilities against
@@ -55,18 +60,28 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     env.shutdown(Duration.ofSeconds(1));
   }
 
+  /**
+   * This test works if a cluster has two or more nodes and one replica configured.
+   */
   @Test
-  void upserts() throws Exception {
+  @IgnoreWhen(
+    nodesLessThan = 2,
+    replicasLessThan = 1,
+    replicasGreaterThan = 1,
+    missesCapabilities = { Capabilities.SYNC_REPLICATION }
+  )
+  void upsertSuccessfullyToMajority() throws Exception {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.of(DurabilityLevel.MAJORITY));
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),
+      Optional.of(DurabilityLevel.MAJORITY));
     core.send(upsertRequest);
 
     UpsertResponse upsertResponse = upsertRequest.response().get();
-    System.err.println(upsertResponse);
+    assertTrue(upsertResponse.status().success());
+    assertTrue(upsertResponse.cas() != 0);
   }
-
 
 }

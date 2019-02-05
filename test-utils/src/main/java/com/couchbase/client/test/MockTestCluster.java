@@ -99,7 +99,8 @@ public class MockTestCluster extends TestCluster {
       bucketConfig.password,
       nodeConfigs,
       bucketConfig.numReplicas,
-      Optional.empty() // mock does not support certs
+      Optional.empty(), // mock does not support certs
+      Collections.emptySet() // no supported capabilities right now
     );
   }
 

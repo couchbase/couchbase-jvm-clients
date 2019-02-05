@@ -246,7 +246,7 @@ public class Core {
   public Mono<Void> shutdown() {
     return Mono.defer(() -> {
       if (shutdown.compareAndSet(false, true)) {
-        // tODO: implement me
+        return configurationProvider.shutdown();
       }
       return Mono.empty();
     });

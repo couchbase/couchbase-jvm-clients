@@ -11,6 +11,8 @@ public @interface IgnoreWhen {
 
   ClusterType[] clusterTypes() default {};
 
+  Capabilities[] missesCapabilities() default {};
+
   int nodesLessThan() default 0;
 
   int nodesGreaterThan() default Integer.MAX_VALUE;

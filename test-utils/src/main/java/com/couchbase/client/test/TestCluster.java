@@ -91,7 +91,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       decoded = (Map<String, Object>)
         MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException("Error decoding, raw: " + config, e);
     }
     List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
     for (Map<String, Object> node : ext) {

@@ -100,6 +100,12 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
         return ConditionEvaluationResult.disabled("Test disabled on the number of replicas ("
           + numReplicas + ") based on @IgnoreWhen");
       }
+      for (Capabilities neededCapability : found.missesCapabilities()) {
+        if (!testCluster.config().capabilities().contains(neededCapability)) {
+          return ConditionEvaluationResult.disabled("Test disabled because capability of " +
+            neededCapability + " is missing on cluster based on @IgnoreWhen");
+        }
+      }
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
   }

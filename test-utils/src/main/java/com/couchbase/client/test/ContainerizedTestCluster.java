@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -122,7 +123,8 @@ public class ContainerizedTestCluster extends TestCluster {
       adminPassword,
       nodesFromRaw(seedHost, getResponse.body().string()),
       0, // TODO: Implement me,
-      loadClusterCertificate(seedHost, seedPort)
+      loadClusterCertificate(seedHost, seedPort),
+      Collections.emptySet() // no supported capabilities right now
     );
   }
 

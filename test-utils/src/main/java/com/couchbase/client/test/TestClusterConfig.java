@@ -19,6 +19,7 @@ package com.couchbase.client.test;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * This configuration is populated from the cluster container and represents the
@@ -34,15 +35,18 @@ public class TestClusterConfig {
   private final List<TestNodeConfig> nodes;
   private final int numReplicas;
   private final Optional<X509Certificate> clusterCert;
+  private final Set<Capabilities> capabilities;
 
-  public TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
-                           List<TestNodeConfig> nodes, int numReplicas, Optional<X509Certificate> clusterCert) {
+  TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
+                    List<TestNodeConfig> nodes, int numReplicas,
+                    Optional<X509Certificate> clusterCert, Set<Capabilities> capabilities) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
     this.nodes = nodes;
     this.numReplicas = numReplicas;
     this.clusterCert = clusterCert;
+    this.capabilities = capabilities;
   }
 
   public String bucketname() {
@@ -63,6 +67,10 @@ public class TestClusterConfig {
 
   public int numReplicas() {
     return numReplicas;
+  }
+
+  public Set<Capabilities> capabilities() {
+    return capabilities;
   }
 
   public Optional<X509Certificate> clusterCert() {
@@ -90,6 +98,7 @@ public class TestClusterConfig {
       ", nodes=" + nodes +
       ", numReplicas=" + numReplicas +
       ", clusterCert=" + clusterCert +
+      ", capabilities=" + capabilities +
       '}';
   }
 }
