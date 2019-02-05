@@ -41,50 +41,52 @@ public class MutateInOps {
   }
 
   public <T> MutateInOps replace(final boolean xattr, final String path, final T fragment) {
-    return replace(xattr, path, fragment, false);
+    return replace(xattr, path, fragment, false, false);
   }
 
   public <T> MutateInOps replace(final String path, final T fragment, final boolean createParent) {
-    return replace(false, path, fragment, createParent);
+    return replace(false, path, fragment, createParent, false);
   }
 
   public <T> MutateInOps replace(final String path, final T fragment) {
-    return replace(false, path, fragment, false);
+    return replace(false, path, fragment, false, false);
   }
 
   public <T> MutateInOps replace(final boolean xattr, final String path, final T fragment,
-                                 final boolean createParent) {
+                                 final boolean createParent, final boolean expandMacro) {
     commands.add(new SubdocMutateRequest.Command(
       SubdocCommandType.REPLACE,
       path,
       ENCODER.encode(fragment).content(),
       createParent,
-      xattr
+      xattr,
+      expandMacro
     ));
     return this;
   }
 
   public <T> MutateInOps insert(final boolean xattr, final String path, final T fragment) {
-    return insert(xattr, path, fragment, false);
+    return insert(xattr, path, fragment, false, false);
   }
 
   public <T> MutateInOps insert(final String path, final T fragment, final boolean createParent) {
-    return insert(false, path, fragment, createParent);
+    return insert(false, path, fragment, createParent, false);
   }
 
 
   public <T> MutateInOps insert(final String path, final T fragment) {
-    return insert(false, path, fragment, false);
+    return insert(false, path, fragment, false, false);
   }
 
   public <T> MutateInOps insert(final boolean xattr, final String path, final T fragment,
-                                 final boolean createParent) {
+                                 final boolean createParent, final boolean expandMacro) {
     commands.add(new SubdocMutateRequest.Command(
       SubdocCommandType.DICT_ADD,
       path,
       ENCODER.encode(fragment).content(),
       createParent,
-      xattr
+      xattr,
+      expandMacro
     ));
     return this;
   }
