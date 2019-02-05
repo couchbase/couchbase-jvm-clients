@@ -3,7 +3,7 @@ package com.couchbase.client.scala.subdoc
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
 import com.couchbase.client.scala.{Cluster, TestUtils}
-import com.couchbase.client.scala.api.LookupInSpec
+import com.couchbase.client.scala.api.{LookupInSpec, MutateInSpec}
 import org.scalatest.FunSuite
 
 import scala.concurrent.duration._
@@ -20,6 +20,15 @@ class SubdocGetSpec extends FunSuite {
     case Failure(err) => throw err
   }
 
+  test("no commands") {
+    val docId = TestUtils.docId()
+    coll.lookupIn(docId, LookupInSpec.empty) match {
+      case Success(result) => assert(false, s"unexpected success")
+      case Failure(err: IllegalArgumentException) =>
+      case Failure(err) =>
+        assert(false, s"unexpected error $err")
+    }
+  }
 
 
   test("lookupIn") {

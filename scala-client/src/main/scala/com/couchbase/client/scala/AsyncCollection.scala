@@ -334,48 +334,52 @@ class AsyncCollection(name: String,
     }.foreach(commands.add)
 
 
-    // TODO flags?
-    val request = new SubdocGetRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands)
+    if (commands.isEmpty) {
+      Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
+    }
+    else {
+      // TODO flags?
+      val request = new SubdocGetRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands)
 
-    core.send(request)
+      core.send(request)
 
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
+      FutureConverters.toScala(request.response())
+        .map(response => {
+          response.status() match {
 
-          case ResponseStatus.SUCCESS =>
-            val values = response.values().asScala
+            case ResponseStatus.SUCCESS =>
+              val values = response.values().asScala
 
-            var exptime: Option[FiniteDuration] = None
-            var fulldoc: Option[Array[Byte]] = None
-            val fields = collection.mutable.Map.empty[String, SubdocField]
+              var exptime: Option[FiniteDuration] = None
+              var fulldoc: Option[Array[Byte]] = None
+              val fields = collection.mutable.Map.empty[String, SubdocField]
 
-            values.foreach(value => {
-              if (value.path() == ExpTime) {
-                val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-                exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
+              values.foreach(value => {
+                if (value.path() == ExpTime) {
+                  val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
+                  exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
+                }
+                else if (value.path == "") {
+                  fulldoc = Some(value.value())
+                }
+                else {
+                  fields += value.path() -> value
+                }
+              })
+
+              LookupInResult(id, fulldoc, fields, DocumentFlags.Json, response.cas(), exptime)
+
+            case ResponseStatus.SUBDOC_FAILURE =>
+
+              response.error().asScala match {
+                case Some(err) => throw err
+                case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
               }
-              else if (value.path == "") {
-                fulldoc = Some(value.value())
-              }
-              else {
-                fields += value.path() -> value
-              }
-            })
 
-            LookupInResult(id, fulldoc, fields, DocumentFlags.Json, response.cas(), exptime)
-
-          case ResponseStatus.SUBDOC_FAILURE =>
-
-            response.error().asScala match {
-              case Some(err) => throw err
-              case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
-            }
-
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
-
+            case _ => throw throwOnBadResult(response.status())
+          }
+        })
+    }
   }
 
   def mutateIn(id: String,
@@ -390,8 +394,13 @@ class AsyncCollection(name: String,
     // TODO support expiration (probs works, check unit tested)
 
 
-    spec.operations.find(_.fragment.isFailure) match {
-      case Some(failed) =>
+    val failed: Option[MutateOperation] = spec.operations
+      .filter(_.isInstanceOf[MutateOperationSimple])
+        .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
+
+
+    failed match {
+      case Some(failed: MutateOperationSimple) =>
         // If any of the decodes failed, abort
         Future.failed(failed.fragment.failed.get)
       case _ =>
@@ -399,35 +408,38 @@ class AsyncCollection(name: String,
         val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
         spec.operations.map(_.convert).foreach(commands.add)
 
-        // TODO check for no commands
+        if (commands.isEmpty) {
+          Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
+        }
+        else {
+          // TODO flags?
+          // TODO expiration
+          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0)
 
-        // TODO flags?
-        // TODO expiration
-        val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0)
+          core.send(request)
 
-        core.send(request)
+          FutureConverters.toScala(request.response())
+            .map(response => {
 
-        FutureConverters.toScala(request.response())
-          .map(response => {
+              response.status() match {
 
-            response.status() match {
+                case ResponseStatus.SUCCESS =>
+                  val values: Seq[SubdocField] = response.values().asScala
+                  val fields: Map[String, SubdocField] = values.map(v => v.path() -> v).toMap
 
-              case ResponseStatus.SUCCESS =>
-                val values: Seq[SubdocField] = response.values().asScala
-                val fields: Map[String, SubdocField] = values.map(v => v.path() -> v).toMap
+                  MutateInResult(id, fields, response.cas(), response.mutationToken().asScala)
 
-                MutateInResult(id, fields, response.cas(), response.mutationToken().asScala)
+                case ResponseStatus.SUBDOC_FAILURE =>
 
-              case ResponseStatus.SUBDOC_FAILURE =>
+                  response.error().asScala match {
+                    case Some(err) => throw err
+                    case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+                  }
 
-                response.error().asScala match {
-                  case Some(err) => throw err
-                  case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
-                }
-
-              case _ => throw throwOnBadResult(response.status())
-            }
-          })
+                case _ => throw throwOnBadResult(response.status())
+              }
+            })
+        }
     }
   }
 

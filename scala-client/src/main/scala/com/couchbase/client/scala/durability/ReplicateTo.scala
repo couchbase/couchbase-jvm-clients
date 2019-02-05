@@ -30,6 +30,6 @@ object DurabilityLevel extends Enumeration {
 
 sealed trait Durability
 case object Disabled extends Durability
-case class ObserveBased(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value) extends Durability
+case class ClientVerified(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value) extends Durability
 case object ReplicateToMajority extends Durability
 case object PersistToMajority extends Durability

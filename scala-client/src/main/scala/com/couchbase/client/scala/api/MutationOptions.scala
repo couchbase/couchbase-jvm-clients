@@ -7,19 +7,18 @@ import com.couchbase.client.scala.document.{EncodeParams}
 import scala.util.Try
 
 sealed trait MutateOperation {
-  val fragment: Try[(Array[Byte], EncodeParams)]
-  def value = fragment.get._1
   def convert: SubdocMutateRequest.Command
+  val typ: SubdocCommandType
 }
 
 trait MutateOperationSimple extends MutateOperation {
-  val typ: SubdocCommandType
   val path: String
   val fragment: Try[(Array[Byte], EncodeParams)]
   val xattrs: Boolean
   val createParent: Boolean
   val expandMacros: Boolean
   def convert = new SubdocMutateRequest.Command(typ, path, value, createParent, xattrs)
+  def value = fragment.get._1
 }
 
 case class InsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
@@ -36,15 +35,34 @@ case class UpsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParam
                             xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
   override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
 }
-//case class ReplaceOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
-//case class UpsertOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
 //case class MergeOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
-//case class RemoveOperation(path: String, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
-//case class CounterOperation(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
-//case class ArrayPrependOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
-// TODO other array ops
-//case class ContentOperation(content: JsonObject) extends MutateOperation
-//case class MutateOptions(xattrs: Boolean = false, expandMacros: Boolean = false, createPath: Boolean = false)
+case class RemoveOperation(path: String, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation {
+  override val typ: SubdocCommandType = SubdocCommandType.DELETE
+  def convert = new SubdocMutateRequest.Command(typ, path, null, false, xattrs)
+}
+case class ArrayAppendOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                           xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_LAST
+}
+case class ArrayPrependOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                                xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_FIRST
+}
+case class ArrayInsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                                xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_INSERT
+}
+case class ArrayAddUniqueOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                                   xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
+}
+// TODO increment
+//case class IncrementOperation(path: String, delta: Long,
+//                                xattrs: Boolean, createParent: Boolean) extends MutateOperation {
+//  override val typ: SubdocCommandType = SubdocCommandType.COUNTER
+//  def convert = new SubdocMutateRequest.Command(typ, path, Array(delta.toByte), false, xattrs)
+//}
+// TODO decrement
 
 case class MutateInSpec(operations: List[MutateOperation]) {
   def insert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
@@ -63,33 +81,32 @@ case class MutateInSpec(operations: List[MutateOperation]) {
     copy(operations = operations :+ UpsertOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
   }
 
-  //  def replace(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ ReplaceOperation(path, value, xattrs, createPath, expandMacros))
-//  }
-//
-//  // Given `case class(name: String, age: Int)`, merge will upsert only fields name and age
-//  def upsert(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ UpsertOperation(path, value, xattrs, createPath, expandMacros))
-//  }
-//
-//  def mergeUpsert(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ MergeOperation(path, value, xattrs, createPath, expandMacros))
-//  }
-//
-//  def remove(path: String, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ RemoveOperation(path, xattrs, createPath, expandMacros))
-//  }
-//
-//  def counter(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ CounterOperation(path, delta, xattrs, createPath, expandMacros))
-//  }
-//
-//  def arrayPrepend(path: String, value: Any, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false): MutateInOps = {
-//    copy(operations = operations :+ ArrayPrependOperation(path, value, xattrs, createPath, expandMacros))
-//  }
-//
-//  def content(content: JsonObject): MutateInOps = {
-//    copy(operations = operations :+ ContentOperation(content))
+  def remove(path: String, xattrs: Boolean = false): MutateInSpec = {
+    copy(operations = operations :+ RemoveOperation(path, xattrs))
+  }
+
+  def arrayAppend[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                (implicit ev: EncodableField[T]): MutateInSpec = {
+    copy(operations = operations :+ ArrayAppendOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+  def arrayPrepend[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                    (implicit ev: EncodableField[T]): MutateInSpec = {
+    copy(operations = operations :+ ArrayPrependOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+  def arrayInsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                    (implicit ev: EncodableField[T]): MutateInSpec = {
+    copy(operations = operations :+ ArrayInsertOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+  def arrayAddUnique[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                       (implicit ev: EncodableField[T]): MutateInSpec = {
+    copy(operations = operations :+ ArrayAddUniqueOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
+  }
+
+//  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+//    copy(operations = operations :+ IncrementOperation(path, delta, xattrs, createPath))
 //  }
 
 }
@@ -113,4 +130,32 @@ object MutateInSpec {
                 (implicit ev: EncodableField[T]): MutateInSpec = {
     empty.upsert(path, value, xattrs, createPath, expandMacros)
   }
+
+  def remove(path: String, xattrs: Boolean = false): MutateInSpec = {
+    empty.remove(path, xattrs)
+  }
+
+  def arrayAppend[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+               (implicit ev: EncodableField[T]): MutateInSpec = {
+    empty.arrayAppend(path, value, xattrs, createPath, expandMacros)
+  }
+
+  def arrayPrepend[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                    (implicit ev: EncodableField[T]): MutateInSpec = {
+    empty.arrayPrepend(path, value, xattrs, createPath, expandMacros)
+  }
+
+  def arrayInsert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                    (implicit ev: EncodableField[T]): MutateInSpec = {
+    empty.arrayInsert(path, value, xattrs, createPath, expandMacros)
+  }
+
+  def arrayAddUnique[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
+                       (implicit ev: EncodableField[T]): MutateInSpec = {
+    empty.arrayAddUnique(path, value, xattrs, createPath, expandMacros)
+  }
+
+//  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+//    empty.increment(path, delta, xattrs, createPath)
+//  }
 }

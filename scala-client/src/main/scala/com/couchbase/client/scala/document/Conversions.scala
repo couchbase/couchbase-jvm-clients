@@ -110,11 +110,23 @@ object Conversions {
 
     implicit object PlayEncode extends Encodable[play.api.libs.json.JsValue] {
       override def encode(content: play.api.libs.json.JsValue) = {
-        Try(content.as[Array[Byte]]).map((_, JsonEncodeParams))
+        Try(play.api.libs.json.Json.stringify(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
       }
-
     }
 
+
+    implicit object Json4sEncode extends Encodable[org.json4s.JsonAST.JValue] {
+      override def encode(content: org.json4s.JsonAST.JValue) = {
+        Try(org.json4s.jackson.JsonMethods.compact(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
+      }
+    }
+
+
+    implicit object JawnConvert extends Encodable[org.typelevel.jawn.ast.JValue] {
+      override def encode(content: org.typelevel.jawn.ast.JValue) = {
+        Try(content.render().getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
+      }
+    }
   }
 
   object Decodable {
@@ -156,15 +168,38 @@ object Conversions {
 
     implicit object UjsonArrConvert extends Decodable[ujson.Arr] {
       override def decode(bytes: Array[Byte], params: DecodeParams) = {
-        val out = Try(upickle.default.read[ujson.Arr](bytes))
-        out match {
-          case Success(_) => out
-          case Failure(err) => Failure(new DecodingFailedException(err))
-        }
+        tryDecode(upickle.default.read[ujson.Arr](bytes))
       }
     }
 
-//    implicit object CirceConvert extends Decodable[io.circe.Json] {
+    def tryDecode[T](in: => T) = {
+      val out = Try(in)
+      out match {
+        case Success(_) => out
+        case Failure(err) => Failure(new DecodingFailedException(err))
+      }
+    }
+
+    implicit object PlayConvert extends Decodable[play.api.libs.json.JsValue] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        tryDecode(play.api.libs.json.Json.parse(bytes))
+      }
+    }
+
+    implicit object Play4sConvert extends Decodable[org.json4s.JsonAST.JValue] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        tryDecode(org.json4s.native.JsonMethods.parse(new String(bytes, CharsetUtil.UTF_8)))
+      }
+    }
+
+    implicit object JawnConvert extends Decodable[org.typelevel.jawn.ast.JValue] {
+      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+        org.typelevel.jawn.Parser.parseFromString[org.typelevel.jawn.ast.JValue](new String(bytes, CharsetUtil.UTF_8))
+      }
+    }
+
+
+    //    implicit object CirceConvert extends Decodable[io.circe.Json] {
 //      override def decode(bytes: Array[Byte], params: DecodeParams) = {
 //        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
 //        out match {

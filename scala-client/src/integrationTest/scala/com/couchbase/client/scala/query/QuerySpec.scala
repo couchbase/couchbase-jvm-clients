@@ -43,9 +43,8 @@ class QuerySpec extends FunSuite {
   test("hello world") {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
-        val rows = result.rows.toSeq
-        assert(rows.size == 1)
-        assert(rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+        assert(result.rows.size == 1)
+        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
       case Failure(err) => throw err
     }
   }

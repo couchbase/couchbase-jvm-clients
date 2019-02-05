@@ -3,6 +3,7 @@
 plugins {
     id 'java'
     id 'scala'
+    id "com.github.johnrengelman.shadow" version "4.0.4"
 }
 
 
@@ -19,7 +20,7 @@ dependencies {
     compile 'org.scala-lang:scala-library:2.12.7'
 
 //    compile group: 'com.storm-enroute', name: 'scalameter-core_2.12', version: '0.10.1'
-    compile group: "com.storm-enroute", name: "scalameter_2.12", version: "0.8.2"
+    compile group: "com.storm-enroute", name: "scalameter_2.12", version: "2.8.5"
     compile project(':scala-client')
     compile project(':java-client')
 
@@ -30,7 +31,8 @@ jar {
     manifest {
         attributes(
                 'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
-                'Main-Class': 'benchmarks.json.RangeBenchmark.scala'
+//                'Main-Class': 'benchmarks.json.RangeBenchmark.scala'
+                'Main-Class': 'benchmarks.json.Creating'
         )
     }
 }
