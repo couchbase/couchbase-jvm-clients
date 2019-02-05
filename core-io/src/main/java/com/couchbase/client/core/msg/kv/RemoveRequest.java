@@ -38,21 +38,35 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
 
   private final long cas;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public RemoveRequest(final String key, final byte[] collection, final long cas, final Duration timeout,
                        final CoreContext ctx, final String bucket,
-                       final RetryStrategy retryStrategy) {
+                       final RetryStrategy retryStrategy,
+                       final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.cas = cas;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-      partition(), opaque, cas, noExtras(), key, noBody());
+
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
+        partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
+        partition(), opaque, cas, noExtras(), key, noBody());
+    }
+
     key.release();
-    return r;
+    return request;
   }
 
   @Override

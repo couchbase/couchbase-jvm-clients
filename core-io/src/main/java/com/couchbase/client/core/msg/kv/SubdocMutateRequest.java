@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.netty.buffer.ByteBuf;
@@ -46,15 +47,19 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final long expiration;
   private final List<Command> commands;
   private final String origKey;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                              final RetryStrategy retryStrategy, final String key,
-                             final byte[] collection, final byte flags, final List<Command> commands, long expiration) {
+                             final byte[] collection, final byte flags, final List<Command> commands, long expiration,
+                             final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.flags = flags;
     this.commands = commands;
     this.expiration = expiration;
     this.origKey = key;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -82,8 +87,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       }
     }
 
-    ByteBuf request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-      noCas(), extras, key, body);
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+        noCas(), flexibleExtras, extras, key, body);
+      flexibleExtras.release();
+    } else {
+      request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+        noCas(), extras, key, body);
+    }
 
     extras.release();
     key.release();

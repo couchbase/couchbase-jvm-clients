@@ -136,10 +136,11 @@ class Collection(val async: AsyncCollection,
   def getAndTouch(id: String,
                   expiration: FiniteDuration,
                  parentSpan: Option[Span] = None,
+                  durability: Durability = Disabled,
                  timeout: FiniteDuration = kvTimeout,
                  retryStrategy: RetryStrategy = async.environment.retryStrategy()
                 ): Try[GetResult] = {
-    block(async.getAndTouch(id, expiration, parentSpan, timeout, retryStrategy), timeout)
+    block(async.getAndTouch(id, expiration, parentSpan, durability, timeout, retryStrategy), timeout)
   }
 
   def get(id: String,

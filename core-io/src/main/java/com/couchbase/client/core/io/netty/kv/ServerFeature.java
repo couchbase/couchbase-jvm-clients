@@ -87,13 +87,6 @@ public enum ServerFeature {
   SELECT_BUCKET((short) 0x08),
 
   /**
-   * Enables the collections feature.
-   *
-   * @since Couchbase Server Spock (5.0)
-   */
-  COLLECTIONS((short) 0x12),
-
-  /**
    * Enable snappy-based compression support.
    *
    * @since Couchbase Server Vulcan (5.5)
@@ -129,7 +122,24 @@ public enum ServerFeature {
    *
    * @since Couchbase Server Vulcan (5.5)
    */
-  TRACING((short) 0x0f);
+  TRACING((short) 0x0f),
+
+  /**
+   * Allows the server to accept requests with flexible extras.
+   */
+  ALT_REQUEST((short) 0x10),
+
+  /**
+   * Specify durability requirements for mutations.
+   */
+  SYNC_REPLICATION((short) 0x11),
+
+  /**
+   * Enables the collections feature.
+   *
+   * @since Couchbase Server Spock (5.0)
+   */
+  COLLECTIONS((short) 0x12);
 
   /**
    * The actual byte representation on the wire.
@@ -178,8 +188,6 @@ public enum ServerFeature {
         return XERROR;
       case 0x08:
         return SELECT_BUCKET;
-      case 0x09:
-        return COLLECTIONS;
       case 0x0a:
         return SNAPPY;
       case 0x0b:
@@ -192,6 +200,12 @@ public enum ServerFeature {
         return UNORDERED_EXECUTION;
       case 0x0f:
         return TRACING;
+      case 0x10:
+        return ALT_REQUEST;
+      case 0x11:
+        return SYNC_REPLICATION;
+      case 0x12:
+        return COLLECTIONS;
       default:
         return null;
     }

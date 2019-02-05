@@ -40,4 +40,13 @@ public class UpsertResponse extends BaseResponse {
   public Optional<MutationToken> mutationToken() {
     return mutationToken;
   }
+
+  @Override
+  public String toString() {
+    return "UpsertResponse{" +
+      "status=" + status() +
+      ", cas=" + cas +
+      ", mutationToken=" + mutationToken +
+      '}';
+  }
 }

@@ -16,9 +16,12 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class IncrementOptions extends CommonOptions<IncrementOptions> {
   public static IncrementOptions DEFAULT = new IncrementOptions();
@@ -26,6 +29,9 @@ public class IncrementOptions extends CommonOptions<IncrementOptions> {
   private long delta;
   private Optional<Long> initial;
   private int expiry;
+  private PersistTo persistTo;
+  private ReplicateTo replicateTo;
+  private DurabilityLevel durabilityLevel;
 
   public static IncrementOptions incrementOptions() {
     return new IncrementOptions();
@@ -35,6 +41,41 @@ public class IncrementOptions extends CommonOptions<IncrementOptions> {
     delta = 1;
     initial = Optional.empty();
     expiry = 0;
+  }
+
+  public PersistTo persistTo() {
+    return persistTo;
+  }
+
+
+  public ReplicateTo replicateTo() {
+    return replicateTo;
+  }
+
+  public IncrementOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
+    notNull(persistTo, "PersistTo");
+    notNull(persistTo, "ReplicateTo");
+    if (durabilityLevel != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.persistTo = persistTo;
+    this.replicateTo = replicateTo;
+    return this;
+  }
+
+  public IncrementOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
+    notNull(persistTo, "DurabilityLevel");
+    if (persistTo != null || replicateTo != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.durabilityLevel = durabilityLevel;
+    return this;
+  }
+
+  public DurabilityLevel durabilityLevel() {
+    return durabilityLevel;
   }
 
   public long delta() {

@@ -57,7 +57,7 @@ public class ProtocolVerifier {
     );
 
     assertEquals(
-      MemcacheProtocol.MAGIC_REQUEST,
+      MemcacheProtocol.Magic.REQUEST.magic(),
       request.getByte(0),
       "request magic does not match"
     );

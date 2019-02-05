@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
@@ -32,6 +33,7 @@ public class ReplaceOptions extends CommonOptions<ReplaceOptions> {
   private Duration expiry = Duration.ZERO;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
+  private DurabilityLevel durabilityLevel;
   private Encoder encoder = DefaultEncoder.INSTANCE;
   private long cas;
 
@@ -54,18 +56,35 @@ public class ReplaceOptions extends CommonOptions<ReplaceOptions> {
     return persistTo;
   }
 
-  public ReplaceOptions persistTo(final PersistTo persistTo) {
-    this.persistTo = persistTo;
-    return this;
-  }
 
   public ReplicateTo replicateTo() {
     return replicateTo;
   }
 
-  public ReplaceOptions replicateTo(final ReplicateTo replicateTo) {
+  public ReplaceOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
+    notNull(persistTo, "PersistTo");
+    notNull(persistTo, "ReplicateTo");
+    if (durabilityLevel != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.persistTo = persistTo;
     this.replicateTo = replicateTo;
     return this;
+  }
+
+  public ReplaceOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
+    notNull(persistTo, "DurabilityLevel");
+    if (persistTo != null || replicateTo != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.durabilityLevel = durabilityLevel;
+    return this;
+  }
+
+  public DurabilityLevel durabilityLevel() {
+    return durabilityLevel;
   }
 
   public Encoder encoder() {

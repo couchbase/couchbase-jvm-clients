@@ -353,7 +353,7 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new GetAndTouchRequest(id, collectionId, timeout, coreContext,
-      bucket, retryStrategy, expiration);
+      bucket, retryStrategy, expiration, Optional.ofNullable(options.durabilityLevel()));
   }
 
   /**
@@ -506,7 +506,7 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new RemoveRequest(id, collectionId, options.cas(), timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.ofNullable(options.durabilityLevel()));
   }
 
   /**
@@ -553,7 +553,7 @@ public class AsyncCollection {
 
     return new InsertRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
       encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.ofNullable(options.durabilityLevel()));
   }
 
   /**
@@ -600,7 +600,7 @@ public class AsyncCollection {
 
     return new UpsertRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
       encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.ofNullable(options.durabilityLevel()));
   }
 
   /**
@@ -647,7 +647,7 @@ public class AsyncCollection {
 
     return new ReplaceRequest(id, collectionId, encoded.content(), options.expiry().getSeconds(),
       encoded.flags(), Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout()),
-      options.cas(), coreContext, bucket, retryStrategy);
+      options.cas(), coreContext, bucket, retryStrategy, Optional.ofNullable(options.durabilityLevel()));
   }
 
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry) {
@@ -667,7 +667,8 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = options.retryStrategy() == null
       ? environment.retryStrategy()
       : options.retryStrategy();
-    return new TouchRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, expiry.getSeconds());
+    return new TouchRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      expiry.getSeconds(), Optional.ofNullable(options.durabilityLevel()));
   }
 
   public CompletableFuture<Void> unlock(final String id, final long cas) {
@@ -747,7 +748,8 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      (byte) 0, spec.commands(), options.expiry().getSeconds());
+      (byte) 0, spec.commands(), options.expiry().getSeconds(),
+      Optional.ofNullable(options.durabilityLevel()));
   }
 
 }

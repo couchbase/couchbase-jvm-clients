@@ -20,11 +20,14 @@ import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import org.iq80.snappy.Snappy;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -35,21 +38,6 @@ import java.util.Optional;
  */
 public enum MemcacheProtocol {
   ;
-
-  /**
-   * Magic byte identifying a request.
-   */
-  static final byte MAGIC_REQUEST = (byte) 0x80;
-
-  /**
-   * Magic byte for a response with flexible framing extras.
-   */
-  static final byte MAGIC_FLEXIBLE = (byte) 0x18;
-
-  /**
-   * Magic byte for a response without flexible framing extras.
-   */
-  static final byte MAGIC_RESPONSE = (byte) 0x81;
 
   /**
    * The fixed header size.
@@ -92,28 +80,54 @@ public enum MemcacheProtocol {
   static final int CAS_OFFSET = 16;
 
   /**
-   * Create a memcached protocol request with all fields necessary.
-   *
-   * @param alloc
-   * @param opcode
-   * @param datatype
-   * @param partition
-   * @param opaque
-   * @param cas
-   * @param extras
-   * @param key
-   * @param body
-   * @return the created request.
+   * Flag which indicates that this flexible extra frame is for syc replication.
    */
-  public static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
-                         final short partition, final int opaque, final long cas,
-                         final ByteBuf extras, final ByteBuf key, final ByteBuf body) {
+  public static final byte SYNC_REPLICATION_FLEXIBLE_IDENT = 0b00010000;
+
+
+  /**
+   * Create a flexible memcached protocol request with all fields necessary.
+   */
+  public static ByteBuf flexibleRequest(final ByteBufAllocator alloc, final Opcode opcode,
+                                        final byte datatype, final short partition,
+                                        final int opaque, final long cas,
+                                        final ByteBuf framingExtras, final ByteBuf extras,
+                                        final ByteBuf key, final ByteBuf body) {
+    int keySize = key.readableBytes();
+    int extrasSize = extras.readableBytes();
+    int framingExtrasSize = framingExtras.readableBytes();
+    int totalBodySize = framingExtrasSize + extrasSize + keySize + body.readableBytes();
+    return alloc
+      .buffer(HEADER_SIZE + totalBodySize)
+      .writeByte(Magic.FLEXIBLE_REQUEST.magic())
+      .writeByte(opcode.opcode())
+      .writeByte(framingExtrasSize)
+      .writeByte(keySize)
+      .writeByte(extrasSize)
+      .writeByte(datatype)
+      .writeShort(partition)
+      .writeInt(totalBodySize)
+      .writeInt(opaque)
+      .writeLong(cas)
+      .writeBytes(framingExtras)
+      .writeBytes(extras)
+      .writeBytes(key)
+      .writeBytes(body);
+  }
+
+  /**
+   * Create a regular, non-flexible memcached protocol request with all fields necessary.
+   */
+  public static ByteBuf request(final ByteBufAllocator alloc,
+                                final Opcode opcode, final byte datatype, final short partition,
+                                final int opaque, final long cas, final ByteBuf extras,
+                                final ByteBuf key, final ByteBuf body) {
     int keySize = key.readableBytes();
     int extrasSize = extras.readableBytes();
     int totalBodySize = extrasSize + keySize + body.readableBytes();
     return alloc
       .buffer(HEADER_SIZE + totalBodySize)
-      .writeByte(MAGIC_REQUEST)
+      .writeByte(Magic.REQUEST.magic())
       .writeByte(opcode.opcode())
       .writeShort(keySize)
       .writeByte(extrasSize)
@@ -197,7 +211,7 @@ public enum MemcacheProtocol {
     if (message == null) {
       return Optional.empty();
     }
-    boolean flexible = message.getByte(0) == MAGIC_FLEXIBLE;
+    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
 
     int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
     int keyLength = flexible ? message.getByte(3) : message.getShort(2);
@@ -216,7 +230,7 @@ public enum MemcacheProtocol {
   }
 
   public static Optional<ByteBuf> extras(final ByteBuf message) {
-    boolean flexible = message.getByte(0) == MAGIC_FLEXIBLE;
+    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
     byte extrasLength = message.getByte(4);
     int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
 
@@ -246,7 +260,8 @@ public enum MemcacheProtocol {
     }
     byte magic = request.getByte(MAGIC_OFFSET);
     int bodyPlusHeader = request.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
-    return magic == MemcacheProtocol.MAGIC_REQUEST && readableBytes == bodyPlusHeader;
+    return (magic == Magic.REQUEST.magic() || magic == Magic.FLEXIBLE_REQUEST.magic())
+      && readableBytes == bodyPlusHeader;
   }
 
   /**
@@ -267,7 +282,7 @@ public enum MemcacheProtocol {
     int bodyPlusHeader = response.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
 
     return
-      (magic == MemcacheProtocol.MAGIC_FLEXIBLE || magic == MemcacheProtocol.MAGIC_RESPONSE)
+      (magic == Magic.RESPONSE.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic())
       && readableBytes == bodyPlusHeader;
   }
 
@@ -282,6 +297,13 @@ public enum MemcacheProtocol {
    * Helper to express no extras are used for this message.
    */
   public static ByteBuf noExtras() {
+    return Unpooled.EMPTY_BUFFER;
+  }
+
+  /**
+   * Helper to express no framing extras are used for this message.
+   */
+  public static ByteBuf noFramingExtras() {
     return Unpooled.EMPTY_BUFFER;
   }
 
@@ -330,6 +352,29 @@ public enum MemcacheProtocol {
    */
   public static ResponseStatus decodeStatus(ByteBuf message) {
     return decodeStatus(status(message));
+  }
+
+  /**
+   * Helper method to create the flexible extras for sync replication.
+   *
+   * <p>TODO: the server right now does not support sending the timeout, so it needs
+   * to be reenabled once the server supports it.</p>
+   *
+   * @param alloc the allocator to use.
+   * @param type the type of sync replication.
+   * @param timeout the timeout to use.
+   * @return a buffer which contains the flexible extras.
+   */
+  public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc,
+                                                final DurabilityLevel type,
+                                                final Duration timeout) {
+    ByteBuf flexibleExtras = alloc.buffer(3);
+    flexibleExtras.writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03);
+    flexibleExtras.writeByte(type.code());
+    flexibleExtras.writeShort(0);
+    // TODO: reenable timeout once the server implements it!
+    //flexibleExtras.writeShort((short) timeout.toMillis());
+    return flexibleExtras;
   }
 
   /**
@@ -835,8 +880,36 @@ public enum MemcacheProtocol {
     /**
      * The subdoc operation completed successfully on the deleted document
      */
-    SUBDOC_SUCCESS_DELETED_DOCUMENT((short)0xcd);
+    SUBDOC_SUCCESS_DELETED_DOCUMENT((short) 0xcd),
 
+    /**
+     * Invalid request. Returned if an invalid durability level is specified.
+     */
+    DURABILITY_INVALID_LEVEL((short) 0xa0),
+
+    /**
+     * Valid request, but given durability requirements are impossible to achieve.
+     *
+     * <p>because insufficient configured replicas are connected. Assuming level=majority and
+     * C=number of configured nodes, durability becomes impossible if floor((C + 1) / 2)
+     * nodes or greater are offline.</p>
+     */
+    DURABILITY_IMPOSSIBLE((short) 0xa1),
+
+    /**
+     * Returned if an attempt is made to mutate a key which already has a SyncWrite pending.
+     *
+     * <p>Transient, the client would typically retry (possibly with backoff). Similar to
+     * ELOCKED.</p>
+     */
+    SYNC_WRITE_IN_PROGRESS((short) 0xa2),
+
+    /**
+     * The SyncWrite request has not completed in the specified time and has ambiguous result.
+     *
+     * <p>it may Succeed or Fail; but the final value is not yet known.</p>
+     */
+    SYNC_WRITE_AMBIGUOUS((short) 0xa3);
 
     private final short status;
 

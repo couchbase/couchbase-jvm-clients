@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.DefaultEncoder;

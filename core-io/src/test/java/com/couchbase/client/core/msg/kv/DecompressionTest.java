@@ -23,6 +23,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.util.Utils.readResource;
@@ -96,7 +97,7 @@ class DecompressionTest {
 
     GetAndTouchRequest request = new GetAndTouchRequest("mydoc", null,
       Duration.ofSeconds(1), mock(CoreContext.class), "bucket",
-      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1));
+      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), Optional.empty());
     GetAndTouchResponse decoded = request.decode(response, null);
 
     assertEquals(

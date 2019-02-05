@@ -29,6 +29,8 @@ import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -93,7 +95,9 @@ public class KeyValueEndpoint extends BaseEndpoint {
       Set<ServerFeature> features = new HashSet<>(Arrays.asList(
         ServerFeature.SELECT_BUCKET,
         ServerFeature.XATTR,
-        ServerFeature.XERROR
+        ServerFeature.XERROR,
+        ServerFeature.ALT_REQUEST,
+        ServerFeature.SYNC_REPLICATION
         // ServerFeature.COLLECTIONS
       ));
 

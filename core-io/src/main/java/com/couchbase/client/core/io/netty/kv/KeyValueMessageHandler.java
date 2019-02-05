@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
@@ -26,6 +25,7 @@ import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEv
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -78,6 +78,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private final EventBus eventBus;
 
+  /**
+   * The name of the bucket.
+   */
   private final String bucketName;
 
   /**
@@ -90,6 +93,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private int opaque;
 
+  /**
+   * Once connected/active, holds the channel context.
+   */
   private ChannelContext channelContext;
 
   /**
@@ -127,14 +133,24 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     opaque = Utils.opaque(ctx.channel(), false);
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    boolean compressionEnabled = features != null && features.contains(ServerFeature.SNAPPY);
-    boolean collectionsEnabled = features != null && features.contains(ServerFeature.COLLECTIONS);
-    boolean mutationTokensEnabled = features != null && features.contains(ServerFeature.MUTATION_SEQNO);
+    boolean compression = features != null && features.contains(ServerFeature.SNAPPY);
+    boolean collections = features != null && features.contains(ServerFeature.COLLECTIONS);
+    boolean mutationTokens = features != null && features.contains(ServerFeature.MUTATION_SEQNO);
+    boolean syncReplication = features != null && features.contains(ServerFeature.SYNC_REPLICATION);
+    boolean altRequest = features != null && features.contains(ServerFeature.ALT_REQUEST);
+
+    if (syncReplication && !altRequest) {
+      throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
+        "must negotiate Alternate Requests. This is a bug! - please report.");
+    }
+
     channelContext = new ChannelContext(
-      compressionEnabled ? compressionConfig : null,
-      collectionsEnabled,
-      mutationTokensEnabled,
-      bucketName
+      compression ? compressionConfig : null,
+      collections,
+      mutationTokens,
+      bucketName,
+      syncReplication,
+      altRequest
     );
 
     ctx.fireChannelActive();
@@ -196,24 +212,38 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
       ResponseStatus status = MemcacheProtocol.decodeStatus(response);
       if (status == ResponseStatus.NOT_MY_VBUCKET) {
-        RetryOrchestrator.retryImmediately(ioContext, request);
-        body(response)
-          .map(b -> b.toString(CharsetUtil.UTF_8).trim())
-          .filter(c -> c.startsWith("{"))
-          .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
-            new ProposedBucketConfigContext(
-              bucketName,
-              c,
-              request.context().dispatchedTo()
-            )
-          ));
+        handleNotMyVbucket(request, response);
       } else {
-        Response decoded = request.decode(response, channelContext);
-        request.succeed(decoded);
+        try {
+          Response decoded = request.decode(response, channelContext);
+          request.succeed(decoded);
+        } catch (Throwable t) {
+          request.fail(new DecodingFailedException(t));
+        }
       }
     }
 
     ReferenceCountUtil.release(response);
+  }
+
+  /**
+   * Helper method to handle a "not my vbucket" response.
+   *
+   * @param request the request to retry.
+   * @param response the response to extract the config from, potentially.
+   */
+  private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
+    RetryOrchestrator.retryImmediately(ioContext, request);
+    body(response)
+      .map(b -> b.toString(CharsetUtil.UTF_8).trim())
+      .filter(c -> c.startsWith("{"))
+      .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
+        new ProposedBucketConfigContext(
+          bucketName,
+          c,
+          request.context().dispatchedTo()
+        )
+      ));
   }
 
 }

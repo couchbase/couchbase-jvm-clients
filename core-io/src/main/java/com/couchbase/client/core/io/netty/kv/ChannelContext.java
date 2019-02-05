@@ -29,12 +29,18 @@ public class ChannelContext {
   private final CompressionConfig compression;
   private final boolean collections;
   private final boolean mutationTokensEnabled;
+  private final boolean syncReplication;
+  private final boolean altRequest;
 
-  public ChannelContext(CompressionConfig compression, boolean collections, boolean mutationTokens, String bucket) {
+  public ChannelContext(final CompressionConfig compression, final boolean collections,
+                        final boolean mutationTokens, final String bucket,
+                        final boolean syncReplication, final boolean altRequest) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
     this.bucket = bucket;
+    this.syncReplication = syncReplication;
+    this.altRequest = altRequest;
   }
 
   public boolean collectionsEnabled() {
@@ -45,14 +51,25 @@ public class ChannelContext {
     return compression != null;
   }
 
-  public boolean mutationTokensEnabled() {
-    return mutationTokensEnabled;
-  }
-
   public CompressionConfig compressionConfig() {
     return compression;
   }
 
+  public boolean mutationTokensEnabled() {
+    return mutationTokensEnabled;
+  }
+
+  public boolean syncReplicationEnabled() {
+    return syncReplication;
+  }
+
+  public boolean alternateRequestEnabled() {
+    return altRequest;
+  }
+
+  /**
+   * The name of the bucket.
+   */
   public String bucket() {
     return bucket;
   }

@@ -170,7 +170,7 @@ class AsyncCollection(name: String,
     ev.encode(content) match {
       case Success(encoded) =>
         val request = new InsertRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
@@ -203,7 +203,7 @@ class AsyncCollection(name: String,
     ev.encode(content) match {
       case Success(encoded) =>
         val request = new ReplaceRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, cas, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, cas, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
@@ -233,7 +233,7 @@ class AsyncCollection(name: String,
     ev.encode(content) match {
       case Success(encoded) =>
         val request = new UpsertRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy)
+          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
         core.send(request)
         FutureConverters.toScala(request.response())
           .map(response => {
@@ -260,7 +260,7 @@ class AsyncCollection(name: String,
     Validators.notNull(cas, "cas")
 
     val request = new RemoveRequest(id,
-      collectionIdEncoded, cas, timeout, core.context(), bucketName, retryStrategy)
+      collectionIdEncoded, cas, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
     core.send(request)
     FutureConverters.toScala(request.response())
       .map(response => {
@@ -414,7 +414,7 @@ class AsyncCollection(name: String,
         else {
           // TODO flags?
           // TODO expiration
-          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0)
+          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0, durability.toDurabilityLevel)
 
           core.send(request)
 
@@ -468,10 +468,12 @@ class AsyncCollection(name: String,
   def getAndTouch(id: String,
                   expiration: FiniteDuration,
                   parentSpan: Option[Span] = None,
+                  durability: Durability = Disabled,
                   timeout: FiniteDuration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy()
                  ): Future[GetResult] = {
-    val request = new GetAndTouchRequest(id, collectionIdEncoded, timeout, core.context(), bucketName, retryStrategy, expiration)
+    val request = new GetAndTouchRequest(id, collectionIdEncoded, timeout, core.context(),
+      bucketName, retryStrategy, expiration, durability.toDurabilityLevel)
 
     core.send(request)
 

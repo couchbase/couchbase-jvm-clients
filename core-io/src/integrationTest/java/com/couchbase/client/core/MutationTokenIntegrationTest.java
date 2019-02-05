@@ -57,7 +57,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
@@ -78,7 +78,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
@@ -99,7 +99,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "{}".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
@@ -128,7 +128,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
 
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -142,7 +142,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
@@ -163,7 +163,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());

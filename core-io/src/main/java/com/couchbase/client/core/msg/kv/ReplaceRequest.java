@@ -31,6 +31,8 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyncReplication;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
  * Uses the KV replace command to replace a document if it exists.
@@ -43,16 +45,19 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
   private final long expiration;
   private final int flags;
   private final long cas;
+  private final Optional<DurabilityLevel> syncReplicationType;
 
   public ReplaceRequest(final String key, final byte[] collection, final byte[] content, final long expiration,
                         final int flags, final Duration timeout,
                         final long cas, final CoreContext ctx, final String bucket,
-                        final RetryStrategy retryStrategy) {
+                        final RetryStrategy retryStrategy,
+                        final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
     this.cas = cas;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -78,14 +83,23 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
     extras.writeInt(flags);
     extras.writeInt((int) expiration);
 
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
-      opaque, cas, extras, key, content);
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
+        opaque, cas, flexibleExtras, extras, key, content);
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
+        opaque, cas, extras, key, content);
+    }
 
     key.release();
     extras.release();
     content.release();
 
-    return r;  }
+    return request;
+  }
 
   @Override
   public ReplaceResponse decode(final ByteBuf response, ChannelContext ctx) {

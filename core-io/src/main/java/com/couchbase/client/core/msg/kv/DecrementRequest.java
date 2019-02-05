@@ -35,10 +35,13 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
   private final long delta;
   private final Optional<Long> initial;
   private final int expiry;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public DecrementRequest(Duration timeout, CoreContext ctx, String bucket,
                           RetryStrategy retryStrategy, String key, byte[] collection,
-                          long delta, Optional<Long> initial, int expiry) {
+                          long delta, Optional<Long> initial, int expiry,
+                          final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     if (initial.isPresent() && initial.get() < 0) {
       throw new IllegalArgumentException("The initial needs to be >= 0");
@@ -46,6 +49,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
     this.delta = delta;
     this.initial = initial;
     this.expiry = expiry;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -61,11 +65,20 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
       extras.writeInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY);
     }
 
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-      partition(), opaque, noCas(), extras, key, noBody());
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
+        partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
+    }
+
     extras.release();
     key.release();
-    return r;
+    return request;
   }
 
   @Override

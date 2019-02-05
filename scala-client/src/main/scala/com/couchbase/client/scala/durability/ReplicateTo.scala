@@ -16,6 +16,10 @@
 
 package com.couchbase.client.scala.durability
 
+import java.util.Optional
+
+import com.couchbase.client.core.msg.kv.{DurabilityLevel => CoreLevel}
+
 object ReplicateTo extends Enumeration {
   val None, One, Two, Three = Value
 }
@@ -28,8 +32,19 @@ object DurabilityLevel extends Enumeration {
   val None, Majority, MajorityAndPersistActive, PersistToMajority = Value
 }
 
-sealed trait Durability
+sealed trait Durability {
+
+  def toDurabilityLevel: Optional[CoreLevel] = {
+    this match {
+      case Majority => Optional.of(CoreLevel.MAJORITY)
+      case PersistToMajority => Optional.of(CoreLevel.PERSIST_TO_MAJORITY)
+      case MajorityAndPersistOnMaster => Optional.of(CoreLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+      case _ => Optional.empty()
+    }
+  }
+}
 case object Disabled extends Durability
 case class ClientVerified(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value) extends Durability
-case object ReplicateToMajority extends Durability
+case object Majority extends Durability
+case object MajorityAndPersistOnMaster extends Durability
 case object PersistToMajority extends Durability

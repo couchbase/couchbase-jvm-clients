@@ -29,6 +29,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyncReplication;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -36,11 +37,15 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
 
   private final long expiry;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public TouchRequest(Duration timeout, CoreContext ctx, String bucket,
-                      RetryStrategy retryStrategy, String key, byte[] collection, long expiry) {
+                      RetryStrategy retryStrategy, String key, byte[] collection, long expiry,
+                      final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.expiry = expiry;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -49,12 +54,20 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
     ByteBuf extras = alloc.buffer(4);
     extras.writeInt((int) expiry);
 
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
-      partition(), opaque, noCas(), extras, key, noBody());
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
+        partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
+    }
 
     key.release();
     extras.release();
-    return r;
+    return request;
   }
 
   @Override

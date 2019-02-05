@@ -49,7 +49,7 @@ public class AsyncBinaryCollection {
   private final String bucket;
   private final byte[] collectionId;
 
-  public AsyncBinaryCollection(Core core, CoreEnvironment environment, String bucket, byte[] collectionId) {
+  AsyncBinaryCollection(Core core, CoreEnvironment environment, String bucket, byte[] collectionId) {
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
@@ -76,7 +76,7 @@ public class AsyncBinaryCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new AppendRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
-      options.cas()
+      options.cas(), Optional.ofNullable(options.durabilityLevel())
     );
   }
 
@@ -99,7 +99,7 @@ public class AsyncBinaryCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new PrependRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
-      options.cas()
+      options.cas(), Optional.ofNullable(options.durabilityLevel())
     );
   }
 
@@ -120,7 +120,7 @@ public class AsyncBinaryCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      options.delta(), options.initial(), options.expiry());
+      options.delta(), options.initial(), options.expiry(), Optional.ofNullable(options.durabilityLevel()));
   }
 
   public CompletableFuture<CounterResult> decrement(final String id) {
@@ -140,6 +140,6 @@ public class AsyncBinaryCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      options.delta(), options.initial(), options.expiry());
+      options.delta(), options.initial(), options.expiry(), Optional.ofNullable(options.durabilityLevel()));
   }
 }

@@ -16,10 +16,13 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
 import java.time.Duration;
 import java.util.Optional;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class RemoveOptions extends CommonOptions<RemoveOptions> {
 
@@ -28,6 +31,7 @@ public class RemoveOptions extends CommonOptions<RemoveOptions> {
   private Duration expiry;
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
+  private DurabilityLevel durabilityLevel;
   private long cas;
 
   private RemoveOptions() { }
@@ -49,18 +53,35 @@ public class RemoveOptions extends CommonOptions<RemoveOptions> {
     return persistTo;
   }
 
-  public RemoveOptions persistTo(final PersistTo persistTo) {
-    this.persistTo = persistTo;
-    return this;
-  }
 
   public ReplicateTo replicateTo() {
     return replicateTo;
   }
 
-  public RemoveOptions replicateTo(final ReplicateTo replicateTo) {
+  public RemoveOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
+    notNull(persistTo, "PersistTo");
+    notNull(persistTo, "ReplicateTo");
+    if (durabilityLevel != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.persistTo = persistTo;
     this.replicateTo = replicateTo;
     return this;
+  }
+
+  public RemoveOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
+    notNull(persistTo, "DurabilityLevel");
+    if (persistTo != null || replicateTo != null) {
+      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+        "the same time!");
+    }
+    this.durabilityLevel = durabilityLevel;
+    return this;
+  }
+
+  public DurabilityLevel durabilityLevel() {
+    return durabilityLevel;
   }
 
   public long cas() {

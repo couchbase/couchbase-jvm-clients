@@ -34,13 +34,15 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> {
 
   private final byte[] content;
   private final long cas;
+  private final Optional<DurabilityLevel> syncReplicationType;
 
   public PrependRequest(Duration timeout, CoreContext ctx, String bucket,
                         RetryStrategy retryStrategy, String key, byte[] collection, byte[] content,
-                        long cas) {
+                        long cas, final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.content = content;
     this.cas = cas;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -61,13 +63,21 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> {
     } else {
       content = Unpooled.wrappedBuffer(this.content);
     }
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
-      opaque, cas, noExtras(), key, content);
+
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
+        opaque, cas, flexibleExtras, noExtras(), key, content);
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
+        opaque, cas, noExtras(), key, content);
+    }
 
     key.release();
     content.release();
-
-    return r;
+    return request;
   }
 
   @Override

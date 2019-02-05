@@ -9,6 +9,7 @@ import com.couchbase.client.java.kv.MutateInOps;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.ReplicateTo;
 
 import java.util.Optional;
 
@@ -58,7 +59,7 @@ public class Samples {
   }
 
   static void scenarioC(final Collection collection) {
-    MutationResult result = collection.remove("id", removeOptions().persistTo(PersistTo.ONE));
+    MutationResult result = collection.remove("id", removeOptions().withDurability(PersistTo.ONE, ReplicateTo.NONE));
   }
 
   static void scenarioD(final Collection collection) {

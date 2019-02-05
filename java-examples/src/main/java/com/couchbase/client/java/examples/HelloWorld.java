@@ -19,8 +19,10 @@ package com.couchbase.client.java.examples;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -37,7 +39,7 @@ public class HelloWorld {
     /*
      * Connect to the cluster with a hostname and credentials.
      */
-    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+    Cluster cluster = Cluster.connect("10.143.190.101", "Administrator", "password");
 
     /*
      * Open a bucket with the bucket name.
@@ -50,15 +52,30 @@ public class HelloWorld {
      */
     Collection collection = bucket.defaultCollection();
 
+
+    while(true) {
+      for (int i = 0; i < 1024; i++) {
+        try {
+          collection.get("foo-" + i, GetOptions.getOptions().timeout(Duration.ofSeconds(10)));
+        } catch (Exception ex) {
+          ex.printStackTrace();
+        }
+      }
+      Thread.sleep(100);
+    }
+
+
+    //Thread.sleep(1000000);
+
     /*
      * Fetch a document from the travel-sample bucket.
      */
-    Optional<GetResult> airport_10 = collection.get("airport_1291");
+    //Optional<GetResult> airport_10 = collection.get("airport_1291");
 
     /*
      * Print the fetched document.
      */
-    System.err.println(airport_10);
+    //System.err.println(airport_10);
 
   }
 }

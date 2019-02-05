@@ -27,6 +27,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
@@ -38,23 +39,36 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse> {
 
   private final Duration expiration;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public GetAndTouchRequest(final String key, final byte[] collection, final Duration timeout,
                             final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy,
-                            final Duration expiration) {
+                            final Duration expiration, final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.expiration = expiration;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
     ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
-      partition(), opaque, noCas(), extras, key, noBody());
+
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
+        partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
+    }
+
     extras.release();
     key.release();
-    return r;
+    return request;
   }
 
   @Override

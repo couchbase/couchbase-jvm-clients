@@ -41,15 +41,19 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
   private final byte[] content;
   private final long expiration;
   private final int flags;
+  private final Optional<DurabilityLevel> syncReplicationType;
+
 
   public InsertRequest(final String key, final byte[] collection, final byte[] content, final long expiration,
                        final int flags, final Duration timeout,
                        final CoreContext ctx, final String bucket,
-                       final RetryStrategy retryStrategy) {
+                       final RetryStrategy retryStrategy,
+                       final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;
+    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
@@ -75,14 +79,22 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
     extras.writeInt(flags);
     extras.writeInt((int) expiration);
 
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.ADD, datatype, partition(),
-      opaque, noCas(), extras, key, content);
+    ByteBuf request;
+    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
+      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.ADD, datatype,
+        partition(), opaque, noCas(), flexibleExtras, extras, key, content);
+      flexibleExtras.release();
+    } else {
+      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.ADD, datatype, partition(),
+        opaque, noCas(), extras, key, content);
+    }
 
     key.release();
     extras.release();
     content.release();
 
-    return r;
+    return request;
   }
 
   @Override

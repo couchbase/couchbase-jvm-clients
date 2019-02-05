@@ -31,6 +31,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
@@ -54,6 +55,7 @@ class CompressionTest {
   private final ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
   private final long expiry = 0;
   private final int flags = 0;
+  private final Optional<DurabilityLevel> durability = Optional.empty();
 
   private final byte[] shortContent = "short".getBytes(CharsetUtil.UTF_8);
   private final byte[] longContent = Utils.readResource(
@@ -64,7 +66,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfDisabledAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, longContent, cas);
+      collection, longContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -74,7 +76,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfTooShortAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, shortContent, cas);
+      collection, shortContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -84,7 +86,7 @@ class CompressionTest {
   @Test
   void doesCompressLongAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, longContent, cas);
+      collection, longContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -94,7 +96,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfDisabledPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, longContent, cas);
+      collection, longContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -104,7 +106,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfTooShortPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, shortContent, cas);
+      collection, shortContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -114,7 +116,7 @@ class CompressionTest {
   @Test
   void doesCompressLongPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, bucket, retryStrategy, key,
-      collection, longContent, cas);
+      collection, longContent, cas, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -124,7 +126,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfDisabledInsert() {
     InsertRequest request = new InsertRequest(key, collection, longContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -134,7 +136,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfTooShortInsert() {
     InsertRequest request = new InsertRequest(key, collection, shortContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -144,7 +146,7 @@ class CompressionTest {
   @Test
   void doesCompressLongInsert() {
     InsertRequest request = new InsertRequest(key, collection, longContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -154,7 +156,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfDisabledUpsert() {
     UpsertRequest request = new UpsertRequest(key, collection, longContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.empty());
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -164,7 +166,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfTooShortUpsert() {
     UpsertRequest request = new UpsertRequest(key, collection, shortContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.empty());
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -174,7 +176,7 @@ class CompressionTest {
   @Test
   void doesCompressLongUpsert() {
     UpsertRequest request = new UpsertRequest(key, collection, longContent, expiry, flags, timeout,
-      coreContext, bucket, retryStrategy);
+      coreContext, bucket, retryStrategy, Optional.empty());
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -184,7 +186,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfDisabledReplace() {
     ReplaceRequest request = new ReplaceRequest(key, collection, longContent, expiry, flags, timeout,
-      cas, coreContext, bucket, retryStrategy);
+      cas, coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -194,7 +196,7 @@ class CompressionTest {
   @Test
   void doesNotCompressIfTooShortReplace() {
     ReplaceRequest request = new ReplaceRequest(key, collection, shortContent, expiry, flags, timeout,
-      cas, coreContext, bucket, retryStrategy);
+      cas, coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -204,7 +206,7 @@ class CompressionTest {
   @Test
   void doesCompressLongReplace() {
     ReplaceRequest request = new ReplaceRequest(key, collection, longContent, expiry, flags, timeout,
-      cas, coreContext, bucket, retryStrategy);
+      cas, coreContext, bucket, retryStrategy, durability);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -216,7 +218,9 @@ class CompressionTest {
       CompressionConfig.builder().enabled(enabled).build(),
       false,
       false,
-      bucket
+      bucket,
+      false,
+      false
     );
   }
 
