@@ -43,6 +43,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
 
+  private static final byte SUBDOC_DOC_FLAG_MKDOC = (byte) 0x01;
+  private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
+  private static final byte SUBDOC_DOC_FLAG_ACCESS_DELETED = (byte) 0x04;
+
   private final byte flags;
   private final long expiration;
   private final List<Command> commands;
@@ -52,9 +56,14 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                              final RetryStrategy retryStrategy, final String key,
-                             final byte[] collection, final byte flags, final List<Command> commands, long expiration,
+                             final byte[] collection, final boolean InsertDoc, final List<Command> commands, long expiration,
                              final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
+    byte flags = 0;
+    // TODO May want to add support for MKDOC, waiting on RFC
+    if (insertDoc) {
+      flags |= SUBDOC_DOC_FLAG_ADD;
+    }
     this.flags = flags;
     this.commands = commands;
     this.expiration = expiration;

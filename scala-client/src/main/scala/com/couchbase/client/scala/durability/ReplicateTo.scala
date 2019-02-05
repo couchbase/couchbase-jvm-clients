@@ -28,6 +28,7 @@ object PersistTo extends Enumeration {
   val None, One, Two, Three = Value
 }
 
+@Deprecated
 object DurabilityLevel extends Enumeration {
   val None, Majority, MajorityAndPersistActive, PersistToMajority = Value
 }

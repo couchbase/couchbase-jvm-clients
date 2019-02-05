@@ -748,7 +748,8 @@ public class AsyncCollection {
       ? environment.retryStrategy()
       : options.retryStrategy();
     return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      (byte) 0, spec.commands(), options.expiry().getSeconds(),
+      // TODO insertDoc support
+      false, spec.commands(), options.expiry().getSeconds(),
       Optional.ofNullable(options.durabilityLevel()));
   }
 

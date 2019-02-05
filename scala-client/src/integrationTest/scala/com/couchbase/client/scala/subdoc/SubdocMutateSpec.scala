@@ -44,6 +44,14 @@ class SubdocMutateSpec extends FunSuite {
     (docId, insertResult.cas)
   }
 
+
+  def prepareXattrs(content: ujson.Value): (String, Long) = {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val insertResult = coll.mutateIn(docId, MutateInSpec.insert("x", content), insertDocument = true).get
+    (docId, insertResult.cas)
+  }
+
   test("no commands") {
     val docId = TestUtils.docId()
     coll.mutateIn(docId, MutateInSpec.empty) match {
@@ -101,6 +109,18 @@ class SubdocMutateSpec extends FunSuite {
     }
 
     coll.get(docId).get.contentAs[ujson.Obj].get
+  }
+
+  private def checkSingleOpSuccessXattrs(content: ujson.Obj, ops: MutateInSpec) = {
+    val (docId, cas) = prepareXattrs(content)
+
+    coll.mutateIn(docId, ops) match {
+      case Success(result) =>
+        assert(result.cas != cas)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.lookupIn(docId, LookupInSpec.get("x", xattr = true)).get.contentAs[ujson.Obj]("x").get
   }
 
   private def checkSingleOpFailure(content: ujson.Obj, ops: MutateInSpec, expected: SubDocumentOpResponseStatus) = {
@@ -220,7 +240,6 @@ class SubdocMutateSpec extends FunSuite {
       SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
-
     test("counter +5") {
       val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
         MutateInSpec.increment("foo", 5))
@@ -232,4 +251,104 @@ class SubdocMutateSpec extends FunSuite {
       MutateInSpec.decrement("foo", 3))
     assert(updatedContent("foo").num == 7)
   }
+
+
+
+
+
+
+  test("insert xattrs") {
+    val updatedContent = checkSingleOpSuccessXattrs(ujson.Obj(), MutateInSpec.insert("x.foo", "bar2", xattrs = true))
+    assert(updatedContent("foo").str == "bar2")
+  }
+
+//  test("mutateIn remove") {
+//    val content = ujson.Obj("hello" -> "world",
+//      "foo" -> "bar",
+//      "age" -> 22)
+//    val (docId, cas) = prepare(content)
+//
+//    coll.mutateIn(docId, MutateInSpec.remove("foo")) match {
+//      case Success(result) => assert(result.cas != cas)
+//      case Failure(err) => assert(false, s"unexpected error $err")
+//    }
+//
+//    assertThrows[NoSuchElementException](getContent(docId)("foo"))
+//  }
+//
+//  test("mutateIn insert string already there") {
+//    checkSingleOpFailure(ujson.Obj("foo" -> "bar"), MutateInSpec.insert("foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS)
+//  }
+//
+//
+//  test("replace string") {
+//    val content = ujson.Obj("hello" -> "world",
+//      "foo" -> "bar",
+//      "age" -> 22)
+//    val (docId, cas) = prepare(content)
+//
+//    coll.mutateIn(docId, MutateInSpec.replace("foo", "bar2")) match {
+//      case Success(result) => assert(result.cas != cas)
+//      case Failure(err) =>
+//        assert(false, s"unexpected error $err")
+//    }
+//
+//    assert(getContent(docId)("foo").str == "bar2")
+//  }
+//
+//  test("replace string does not exist") {
+//    checkSingleOpFailure(ujson.Obj(), MutateInSpec.replace("foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+//  }
+//
+//  test("upsert string") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> "bar"), MutateInSpec.upsert("foo", "bar2"))
+//    assert(updatedContent("foo").str == "bar2")
+//  }
+//
+//  test("upsert string does not exist") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj(), MutateInSpec.upsert("foo", "bar2"))
+//    assert(updatedContent("foo").str == "bar2")
+//  }
+//
+//  test("array append") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
+//      MutateInSpec.arrayAppend("foo", "world"))
+//    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world"))
+//  }
+//
+//  test("array prepend") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
+//      MutateInSpec.arrayPrepend("foo", "world"))
+//    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world", "hello"))
+//  }
+//
+//  test("array insert") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
+//      MutateInSpec.arrayInsert("foo[1]", "cruel"))
+//    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
+//  }
+//
+//  test("array insert unique does not exist") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
+//      MutateInSpec.arrayAddUnique("foo", "cruel"))
+//    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+//  }
+//
+//  test("array insert unique does exist") {
+//    val updatedContent = checkSingleOpFailure(ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
+//      MutateInSpec.arrayAddUnique("foo", "cruel"),
+//      SubDocumentOpResponseStatus.PATH_EXISTS)
+//  }
+//
+//  test("counter +5") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
+//      MutateInSpec.increment("foo", 5))
+//    assert(updatedContent("foo").num == 15)
+//  }
+//
+//  test("counter -5") {
+//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
+//      MutateInSpec.decrement("foo", 3))
+//    assert(updatedContent("foo").num == 7)
+//  }
 }

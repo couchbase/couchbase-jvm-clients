@@ -12,20 +12,26 @@ import scala.util.{Failure, Success, Try}
 
 trait CodecParams {
   val flags: Int
+
   def isPrivate = (flags & DocumentFlags.Private) != 0
+
   def isJson = (flags & DocumentFlags.Json) != 0
+
   def isBinary = (flags & DocumentFlags.Binary) != 0
+
   def isString = (flags & DocumentFlags.String) != 0
 
   override def toString = "CodecParams{" +
     "flags=" + flags +
-  "private=" + isPrivate +
-  "json=" + isJson +
-  "binary=" + isBinary +
-  "str=" + isString +
-  "}"
+    "private=" + isPrivate +
+    "json=" + isJson +
+    "binary=" + isBinary +
+    "str=" + isString +
+    "}"
 }
+
 case class EncodeParams(flags: Int) extends CodecParams
+
 case class DecodeParams(flags: Int) extends CodecParams
 
 
@@ -78,7 +84,7 @@ object Conversions {
             Try((content, BinaryEncodeParams))
         }
       }
-  }
+    }
 
     // This is the safe String converter: it parses the input, and sets the flags to Json or String as appropriate.
     // TODO add higher-performance unsafe converters that trusts the app
@@ -91,7 +97,7 @@ object Conversions {
             // TODO can probably get upickle to encode directly to Array[Byte]
             Try((content.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
           case Failure(_) =>
-            Try((content.getBytes(CharsetUtil.UTF_8), StringEncodeParams))
+            Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), StringEncodeParams))
         }
       }
     }
@@ -127,6 +133,7 @@ object Conversions {
         Try(content.render().getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
       }
     }
+
   }
 
   object Decodable {
@@ -200,35 +207,44 @@ object Conversions {
 
 
     //    implicit object CirceConvert extends Decodable[io.circe.Json] {
-//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
-//        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
-//        out match {
-//          case Success(_) => out
-//          case Failure(err) => Failure(new DecodingFailedException(err))
-//        }
-//      }
-//    }
+    //      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+    //        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
+    //        out match {
+    //          case Success(_) => out
+    //          case Failure(err) => Failure(new DecodingFailedException(err))
+    //        }
+    //      }
+    //    }
 
   }
 
 
+  /*
+    * Do we need EncodableField vs Encodable?
+    * - Encoding String with "" - needed?
+    * Could handle with a param instead
+    *
+    * Do we need DecodableField vs Decoable?
+    * - Lets us handle exists separately
+    */
 
-  trait EncodableField[-T] {
+  trait EncodableField[-T] extends Encodable[T] {
     def encode(content: T): Try[(Array[Byte], EncodeParams)]
   }
 
   object EncodableField {
+
     implicit object StringConvert extends EncodableField[String] {
       override def encode(content: String) = {
         Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
       }
     }
 
-//    implicit object BoolConvert extends EncodableField[Boolean] {
-//      override def encode(content: Boolean) = {
-//        Try((content..getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
-//      }
-//    }
+    //    implicit object BoolConvert extends EncodableField[Boolean] {
+    //      override def encode(content: Boolean) = {
+    //        Try((content..getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+    //      }
+    //    }
   }
 
   trait DecodableField[T] {
@@ -240,22 +256,21 @@ object Conversions {
     }
 
     def decodeGet(in: SubdocField, params: DecodeParams): Try[T]
-    
+
     def decodeExists(in: SubdocField, params: DecodeParams): Try[T] = {
       Failure(new IllegalStateException()) // TODO replace with proper exception
     }
   }
 
 
-
   object DecodableField {
 
-        implicit object StringConvert extends DecodableField[String] {
-          override def decodeGet(in: SubdocField, params: DecodeParams) = {
-            // Note this means we actually depend on ujson
-            Try(upickle.default.read[String](in.value()))
-          }
-        }
+    implicit object StringConvert extends DecodableField[String] {
+      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+        // Note this means we actually depend on ujson
+        Try(upickle.default.read[String](in.value()))
+      }
+    }
 
     implicit object BooleanConvert extends DecodableField[Boolean] {
       override def decodeGet(in: SubdocField, params: DecodeParams) = {
@@ -295,6 +310,6 @@ object Conversions {
     }
 
 
-
   }
+
 }

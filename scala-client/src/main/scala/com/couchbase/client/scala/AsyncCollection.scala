@@ -385,6 +385,7 @@ class AsyncCollection(name: String,
   def mutateIn(id: String,
                spec: MutateInSpec,
                cas: Long = 0,
+               insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
                expiration: FiniteDuration,
@@ -414,7 +415,7 @@ class AsyncCollection(name: String,
         else {
           // TODO flags?
           // TODO expiration
-          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands, 0, durability.toDurabilityLevel)
+          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, insertDocument, commands, durability.toDurabilityLevel)
 
           core.send(request)
 
