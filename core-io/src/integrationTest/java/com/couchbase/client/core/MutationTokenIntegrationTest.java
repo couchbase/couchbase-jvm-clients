@@ -111,7 +111,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
       "foo",
       "\"bar\"".getBytes(CharsetUtil.UTF_8),
       true,
-      false)
+      false,
+            false)
     );
     SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(Duration.ofSeconds(1), core.context(),
       config().bucketname(), env.retryStrategy(), id, null, false, commands, 0, Optional.empty());

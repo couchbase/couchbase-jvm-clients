@@ -78,9 +78,7 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo2").str == "bar2")
   }
 
-  // TODO test expand macros
   // TODO test createPath
-  // TODO test xattr
   // TODO test expiration
   // TODO test two commands
 
@@ -346,5 +344,17 @@ class SubdocMutateSpec extends FunSuite {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10),
       MutateInSpec.decrement("x.foo", 3, xattr = true))
     assert(updatedContent("foo").num == 7)
+  }
+
+
+
+  test("insert expand macro xattr do not flag") {
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), MutateInSpec.insert("x.foo", "${Mutation.CAS}", xattr = true))
+    assert(updatedContent("foo").str == "${Mutation.CAS}")
+  }
+
+  test("insert expand macro xattr") {
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), MutateInSpec.insert("x.foo", "${Mutation.CAS}", xattr = true, expandMacro = true))
+    assert(updatedContent("foo").str != "${Mutation.CAS}")
   }
 }

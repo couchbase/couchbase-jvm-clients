@@ -42,6 +42,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
+  private static final byte SUBDOC_FLAG_EXPAND_MACRO = (byte) 0x10;
 
   private static final byte SUBDOC_DOC_FLAG_MKDOC = (byte) 0x01;
   private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
@@ -186,13 +187,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     private final byte[] fragment;
     private final boolean createParent;
     private final boolean xattr;
+    private final boolean expandMacro;
 
-    public Command(SubdocCommandType type, String path, byte[] fragment, boolean createParent, boolean xattr) {
+    public Command(SubdocCommandType type, String path, byte[] fragment,
+                   boolean createParent, boolean xattr, boolean expandMacro) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
       this.fragment = fragment;
       this.createParent = createParent;
+      this.expandMacro = expandMacro;
     }
 
     public ByteBuf encode(final ByteBufAllocator alloc) {
@@ -207,6 +211,9 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       }
       if(createParent) {
         flags |= SUBDOC_FLAG_CREATE_PATH;
+      }
+      if(expandMacro) {
+        flags |= SUBDOC_FLAG_EXPAND_MACRO;
       }
       buffer.writeByte(flags);
       buffer.writeShort(pathLength);
