@@ -76,21 +76,19 @@ class SubdocMutateSpec extends FunSuite {
   // TODO test expiration
   // TODO test two commands
 
-  // TODO this doesn't send a message
-//  test("mutateIn remove") {
-//    val content = ujson.Obj("hello" -> "world",
-//      "foo" -> "bar",
-//      "age" -> 22)
-//    val (docId, cas) = prepare(content)
-//
-//    coll.mutateIn(docId, MutateInSpec.remove("foo")) match {
-//      case Success(result) => assert(result.cas != cas)
-//      case Failure(err) => assert(false, s"unexpected error $err")
-//    }
-//
-//    assert(getContent(docId)("foo").str == null)
-//  }
+    test("mutateIn remove") {
+      val content = ujson.Obj("hello" -> "world",
+        "foo" -> "bar",
+        "age" -> 22)
+      val (docId, cas) = prepare(content)
 
+      coll.mutateIn(docId, MutateInSpec.remove("foo")) match {
+        case Success(result) => assert(result.cas != cas)
+        case Failure(err) => assert(false, s"unexpected error $err")
+      }
+
+      assertThrows[NoSuchElementException](getContent(docId)("foo"))
+    }
 
 
   private def checkSingleOpSuccess(content: ujson.Obj, ops: MutateInSpec) = {
@@ -111,7 +109,7 @@ class SubdocMutateSpec extends FunSuite {
     coll.mutateIn(docId, ops) match {
       case Success(result) => assert(false, "should not succeed")
       case Failure(err: MultiMutationException) =>
-        assert (err.firstFailureStatus() == expected)
+        assert(err.firstFailureStatus() == expected)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -124,44 +122,44 @@ class SubdocMutateSpec extends FunSuite {
   // TODO get these working
 
   //  test("mutateIn insert bool") {
-//    val content = ujson.Obj()
-//    val (docId, cas) = prepare(content)
-//
-//    coll.mutateIn(docId, MutateInOps.insert("foo2", false)) match {
-//      case Success(result) => assert(result.cas != cas)
-//      case Failure(err) =>
-//        assert(false, s"unexpected error $err")
-//    }
-//
-//    assert(!getContent(docId)("foo2").bool)
-//  }
-//
-//  test("mutateIn insert int") {
-//    val content = ujson.Obj()
-//    val (docId, cas) = prepare(content)
-//
-//    coll.mutateIn(docId, MutateInOps.insert("foo2", 42)) match {
-//      case Success(result) => assert(result.cas != cas)
-//      case Failure(err) =>
-//        assert(false, s"unexpected error $err")
-//    }
-//
-//    assert(getContent(docId)("foo2").num == 42)
-//  }
-//
-//
-//  test("mutateIn insert double") {
-//    val content = ujson.Obj()
-//    val (docId, cas) = prepare(content)
-//
-//    coll.mutateIn(docId, MutateInOps.insert("foo2", 42.3)) match {
-//      case Success(result) => assert(result.cas != cas)
-//      case Failure(err) =>
-//        assert(false, s"unexpected error $err")
-//    }
-//
-//    assert(getContent(docId)("foo2").num == 42.3)
-//  }
+  //    val content = ujson.Obj()
+  //    val (docId, cas) = prepare(content)
+  //
+  //    coll.mutateIn(docId, MutateInOps.insert("foo2", false)) match {
+  //      case Success(result) => assert(result.cas != cas)
+  //      case Failure(err) =>
+  //        assert(false, s"unexpected error $err")
+  //    }
+  //
+  //    assert(!getContent(docId)("foo2").bool)
+  //  }
+  //
+  //  test("mutateIn insert int") {
+  //    val content = ujson.Obj()
+  //    val (docId, cas) = prepare(content)
+  //
+  //    coll.mutateIn(docId, MutateInOps.insert("foo2", 42)) match {
+  //      case Success(result) => assert(result.cas != cas)
+  //      case Failure(err) =>
+  //        assert(false, s"unexpected error $err")
+  //    }
+  //
+  //    assert(getContent(docId)("foo2").num == 42)
+  //  }
+  //
+  //
+  //  test("mutateIn insert double") {
+  //    val content = ujson.Obj()
+  //    val (docId, cas) = prepare(content)
+  //
+  //    coll.mutateIn(docId, MutateInOps.insert("foo2", 42.3)) match {
+  //      case Success(result) => assert(result.cas != cas)
+  //      case Failure(err) =>
+  //        assert(false, s"unexpected error $err")
+  //    }
+  //
+  //    assert(getContent(docId)("foo2").num == 42.3)
+  //  }
 
   test("replace string") {
     val content = ujson.Obj("hello" -> "world",
@@ -204,18 +202,17 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world", "hello"))
   }
 
-      test("array insert") {
-      val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
+  test("array insert") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       MutateInSpec.arrayInsert("foo[1]", "cruel"))
-      assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
-      }
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
+  }
 
   test("array insert unique does not exist") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       MutateInSpec.arrayAddUnique("foo", "cruel"))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   }
-
 
   test("array insert unique does exist") {
     val updatedContent = checkSingleOpFailure(ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
@@ -224,9 +221,15 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-//  test("counter +5") {
-//    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
-//      MutateInSpec.increment("foo", 5))
-//    assert(updatedContent("foo").num == 15)
-//  }
+    test("counter +5") {
+      val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
+        MutateInSpec.increment("foo", 5))
+      assert(updatedContent("foo").num == 15)
+    }
+
+  test("counter -5") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
+      MutateInSpec.decrement("foo", 3))
+    assert(updatedContent("foo").num == 7)
+  }
 }

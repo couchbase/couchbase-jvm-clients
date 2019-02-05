@@ -2,7 +2,9 @@ package com.couchbase.client.scala.api
 
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.document.Conversions.{Encodable, EncodableField}
-import com.couchbase.client.scala.document.{EncodeParams}
+import com.couchbase.client.scala.document.EncodeParams
+import io.netty.buffer.Unpooled
+import io.netty.util.CharsetUtil
 
 import scala.util.Try
 
@@ -38,7 +40,7 @@ case class UpsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParam
 //case class MergeOperation(path: String, value: Array[Byte], xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation
 case class RemoveOperation(path: String, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false) extends MutateOperation {
   override val typ: SubdocCommandType = SubdocCommandType.DELETE
-  def convert = new SubdocMutateRequest.Command(typ, path, null, false, xattrs)
+  def convert = new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, xattrs)
 }
 case class ArrayAppendOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
                            xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
@@ -56,13 +58,14 @@ case class ArrayAddUniqueOperation(path: String, fragment: Try[(Array[Byte], Enc
                                    xattrs: Boolean, createParent: Boolean, expandMacros: Boolean) extends MutateOperationSimple {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
 }
-// TODO increment
-//case class IncrementOperation(path: String, delta: Long,
-//                                xattrs: Boolean, createParent: Boolean) extends MutateOperation {
-//  override val typ: SubdocCommandType = SubdocCommandType.COUNTER
-//  def convert = new SubdocMutateRequest.Command(typ, path, Array(delta.toByte), false, xattrs)
-//}
-// TODO decrement
+case class IncrementOperation(path: String, delta: Long,
+                                xattrs: Boolean, createParent: Boolean) extends MutateOperation {
+  override val typ: SubdocCommandType = SubdocCommandType.COUNTER
+  def convert = {
+    val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
+    new SubdocMutateRequest.Command(typ, path, bytes, false, xattrs)
+  }
+}
 
 case class MutateInSpec(operations: List[MutateOperation]) {
   def insert[T](path: String, value: T, xattrs: Boolean = false, createPath: Boolean = false, expandMacros: Boolean = false)
@@ -105,10 +108,13 @@ case class MutateInSpec(operations: List[MutateOperation]) {
     copy(operations = operations :+ ArrayAddUniqueOperation(path, ev.encode(value), xattrs, createPath, expandMacros))
   }
 
-//  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
-//    copy(operations = operations :+ IncrementOperation(path, delta, xattrs, createPath))
-//  }
+  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+    copy(operations = operations :+ IncrementOperation(path, delta, xattrs, createPath))
+  }
 
+  def decrement(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+    copy(operations = operations :+ IncrementOperation(path, delta * -1, xattrs, createPath))
+  }
 }
 
 object MutateInSpec {
@@ -155,7 +161,11 @@ object MutateInSpec {
     empty.arrayAddUnique(path, value, xattrs, createPath, expandMacros)
   }
 
-//  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
-//    empty.increment(path, delta, xattrs, createPath)
-//  }
+  def increment(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+    empty.increment(path, delta, xattrs, createPath)
+  }
+
+  def decrement(path: String, delta: Long, xattrs: Boolean = false, createPath: Boolean = false): MutateInSpec = {
+    empty.decrement(path, delta, xattrs, createPath)
+  }
 }
