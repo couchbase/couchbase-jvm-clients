@@ -94,7 +94,7 @@ class FeatureNegotiatingHandlerTest {
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
-      null, ServiceType.KV, Optional.empty(), Optional.empty());
+      null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   @AfterEach

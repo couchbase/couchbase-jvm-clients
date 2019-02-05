@@ -50,6 +50,8 @@ public class EndpointContext extends CoreContext {
 
   private final Optional<String> bucket;
 
+  private final Optional<String> channelId;
+
   /**
    * Creates a new {@link EndpointContext}.
    *
@@ -59,7 +61,7 @@ public class EndpointContext extends CoreContext {
    */
   public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
                          CircuitBreaker circuitBreaker, ServiceType serviceType,
-                         Optional<SocketAddress> localSocket, Optional<String> bucket) {
+                         Optional<SocketAddress> localSocket, Optional<String> bucket, Optional<String> channelId) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
@@ -67,6 +69,7 @@ public class EndpointContext extends CoreContext {
     this.serviceType = serviceType;
     this.bucket = bucket;
     this.localSocket = localSocket;
+    this.channelId = channelId;
   }
 
   @Override
@@ -77,6 +80,7 @@ public class EndpointContext extends CoreContext {
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
     bucket.ifPresent(b -> input.put("bucket", b));
+    channelId.ifPresent(i -> input.put("channelId", i));
   }
 
   public NetworkAddress remoteHostname() {

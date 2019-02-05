@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
+import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -133,7 +134,7 @@ public abstract class BaseEndpoint implements Endpoint {
       : NoopCircuitBreaker.INSTANCE;
     this.endpointContext = new AtomicReference<>(
       new EndpointContext(serviceContext, hostname, port, circuitBreaker, serviceType,
-        Optional.empty(), serviceContext.bucket())
+        Optional.empty(), serviceContext.bucket(), Optional.empty())
     );
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
@@ -274,7 +275,8 @@ public abstract class BaseEndpoint implements Endpoint {
               endpointContext.circuitBreaker(),
               endpointContext.serviceType(),
               Optional.of(channel.localAddress()),
-              endpointContext.bucket()
+              endpointContext.bucket(),
+              Optional.ofNullable(channel.attr(ChannelAttributes.CHANNEL_ID_KEY).get())
             );
             this.endpointContext.get().environment().eventBus().publish(new EndpointConnectedEvent(
               Duration.ofNanos(System.nanoTime() - attemptStart.get()),

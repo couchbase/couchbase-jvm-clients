@@ -298,7 +298,10 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       convertedChannelId = new Random().nextInt();
     }
     String paddedChannelId = paddedHex(convertedChannelId);
-    result.put("i", paddedHex(endpointContext.id()) + "/" + paddedChannelId);
+    String fullId = paddedHex(endpointContext.id()) + "/" + paddedChannelId;
+    result.put("i", fullId);
+
+    ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).set(fullId);
 
     return ctx.alloc().buffer().writeBytes(Mapper.encodeAsBytes(result));
   }

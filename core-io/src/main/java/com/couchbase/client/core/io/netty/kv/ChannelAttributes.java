@@ -54,4 +54,10 @@ public class ChannelAttributes {
   static final AttributeKey<Integer> OPAQUE_KEY =
     AttributeKey.newInstance("Opaque");
 
+  /**
+   * Holds the channel ID negotiated with KV engine once set.
+   */
+  public static final AttributeKey<String> CHANNEL_ID_KEY =
+    AttributeKey.newInstance("ChannelId");
+
 }

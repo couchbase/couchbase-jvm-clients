@@ -46,7 +46,7 @@ class KeyValueMessageHandlerTest {
     ENV = CoreEnvironment.create("foo", "bar");
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, ENV);
     CTX = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
-      null, ServiceType.KV, Optional.empty(), Optional.empty());
+      null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   @AfterAll
