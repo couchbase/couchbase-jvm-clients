@@ -74,19 +74,19 @@ object Creating extends Bench.ForkedTime {
       case class Address(address: String)
       case class User(name: String, age: Int, addresses: List[Address])
 
-      object Address {
-        implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
-        implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
-//        implicit val decoder: Decoder[Address] = deriveDecoder
-//        implicit val encoder: Encoder[Address] = deriveEncoder
-      }
-
-      object User {
-        implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
-        implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
-//        implicit val decoder: Decoder[User] = deriveDecoder
-//        implicit val encoder: Encoder[User] = deriveEncoder
-      }
+//      object Address {
+//        implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
+//        implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
+////        implicit val decoder: Decoder[Address] = deriveDecoder
+////        implicit val encoder: Encoder[Address] = deriveEncoder
+//      }
+//
+//      object User {
+//        implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
+//        implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
+////        implicit val decoder: Decoder[User] = deriveDecoder
+////        implicit val encoder: Encoder[User] = deriveEncoder
+//      }
 
 
       //    performance of "upickle" in {

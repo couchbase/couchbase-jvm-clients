@@ -20,7 +20,8 @@ dependencies {
     compile 'org.scala-lang:scala-library:2.12.7'
 
 //    compile group: 'com.storm-enroute', name: 'scalameter-core_2.12', version: '0.10.1'
-    compile group: "com.storm-enroute", name: "scalameter_2.12", version: "2.8.5"
+    compile group: 'com.storm-enroute', name: 'scalameter_2.12', version: '0.8.2'
+
     compile project(':scala-client')
     compile project(':java-client')
 

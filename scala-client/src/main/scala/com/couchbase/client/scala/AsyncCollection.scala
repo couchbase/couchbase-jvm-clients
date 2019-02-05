@@ -413,9 +413,9 @@ class AsyncCollection(name: String,
           Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
         }
         else {
-          // TODO flags?
           // TODO expiration
-          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, insertDocument, commands, durability.toDurabilityLevel)
+          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id,
+            collectionIdEncoded, insertDocument, commands, 0, durability.toDurabilityLevel)
 
           core.send(request)
 
