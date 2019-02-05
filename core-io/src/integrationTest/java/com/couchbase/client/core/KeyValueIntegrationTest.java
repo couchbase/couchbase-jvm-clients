@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -60,7 +61,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();

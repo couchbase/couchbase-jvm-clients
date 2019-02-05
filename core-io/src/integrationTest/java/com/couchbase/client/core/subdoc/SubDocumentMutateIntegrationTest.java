@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -57,7 +58,8 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     byte[] content = in.getBytes(CharsetUtil.UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
-            Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());
+            Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),
+      Optional.empty());
     core.send(insertRequest);
 
     InsertResponse insertResponse = null;
