@@ -29,8 +29,9 @@ case class InsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParam
 }
 
 case class ReplaceOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                           xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateOperationSimple {
+                           xattr: Boolean, expandMacro: Boolean) extends MutateOperation {
   override val typ: SubdocCommandType = SubdocCommandType.REPLACE
+  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get._1, false, xattr, expandMacro)
 }
 
 case class UpsertOperation(path: String, fragment: Try[(Array[Byte], EncodeParams)],
@@ -74,9 +75,9 @@ case class MutateInSpec(operations: List[MutateOperation]) {
     copy(operations = operations :+ InsertOperation(path, encoded, xattr, createPath, expandMacro))
   }
 
-  def replace[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def replace[T](path: String, value: T, xattr: Boolean = false, expandMacro: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ReplaceOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ ReplaceOperation(path, ev.encode(value), xattr, expandMacro))
   }
 
   def upsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
@@ -127,9 +128,9 @@ object MutateInSpec {
     empty.insert(path, value, xattr, createPath, expandMacro)
   }
 
-  def replace[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def replace[T](path: String, value: T, xattr: Boolean = false, expandMacro: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
-    empty.replace(path, value, xattr, createPath, expandMacro)
+    empty.replace(path, value, xattr, expandMacro)
   }
 
   def upsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
