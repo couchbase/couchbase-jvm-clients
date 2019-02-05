@@ -417,4 +417,65 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").num == -3)
   }
 
+
+
+  
+
+  test("insert createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(), MutateInSpec.insert("foo.baz", "bar2", createPath = true))
+    assert(updatedContent("foo").obj("baz").str == "bar2")
+  }
+
+  test("insert string already there createPath") {
+    checkSingleOpFailure(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), MutateInSpec.insert("foo.baz", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS)
+  }
+
+  test("upsert string createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), MutateInSpec.upsert("foo", "bar2", createPath = true))
+    assert(updatedContent("foo").str == "bar2")
+  }
+
+  test("upsert string does not exist createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(), MutateInSpec.upsert("foo.baz", "bar2", createPath = true))
+    assert(updatedContent("foo").obj("baz").str == "bar2")
+  }
+
+  test("array append createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+      MutateInSpec.arrayAppend("foo", "world", createPath = true))
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
+  }
+
+  test("array prepend createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+      MutateInSpec.arrayPrepend("foo", "world", createPath = true))
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
+  }
+
+  // TODO failing with bad input server error
+  //  test("array insert createPath") {
+  //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+  //      MutateInSpec.arrayInsert("foo[0]", "cruel", createPath = true))
+  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
+  //  }
+  //
+  //  test("array insert unique does not exist createPath") {
+  //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+  //      MutateInSpec.arrayAddUnique("foo", "cruel", createPath = true))
+  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+  //  }
+
+
+  test("counter +5 createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+      MutateInSpec.increment("foo", 5, createPath = true))
+    assert(updatedContent("foo").num == 5)
+  }
+
+  test("counter -5 createPath") {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+      MutateInSpec.decrement("foo", 3, createPath = true))
+    assert(updatedContent("foo").num == -3)
+  }
+
 }
