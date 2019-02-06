@@ -21,46 +21,7 @@ import com.couchbase.client.java.CommonOptions;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class TouchOptions extends CommonOptions<TouchOptions> {
+public class TouchOptions extends CommonDurabilityOptions<TouchOptions> {
   public static TouchOptions DEFAULT = new TouchOptions();
-
-  private PersistTo persistTo;
-  private ReplicateTo replicateTo;
-  private DurabilityLevel durabilityLevel;
-
-  public PersistTo persistTo() {
-    return persistTo;
-  }
-
-
-  public ReplicateTo replicateTo() {
-    return replicateTo;
-  }
-
-  public TouchOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "PersistTo");
-    notNull(persistTo, "ReplicateTo");
-    if (durabilityLevel != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.persistTo = persistTo;
-    this.replicateTo = replicateTo;
-    return this;
-  }
-
-  public TouchOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
-    notNull(persistTo, "DurabilityLevel");
-    if (persistTo != null || replicateTo != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.durabilityLevel = durabilityLevel;
-    return this;
-  }
-
-  public DurabilityLevel durabilityLevel() {
-    return durabilityLevel;
-  }
 
 }

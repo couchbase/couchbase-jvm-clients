@@ -16,8 +16,6 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
 
@@ -25,14 +23,11 @@ import java.time.Duration;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class InsertOptions extends CommonOptions<InsertOptions> {
+public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
 
   public static InsertOptions DEFAULT = new InsertOptions();
 
   private Duration expiry = Duration.ZERO;
-  private PersistTo persistTo;
-  private ReplicateTo replicateTo;
-  private DurabilityLevel durabilityLevel;
   private Encoder encoder = DefaultEncoder.INSTANCE;
 
   private InsertOptions() { }
@@ -49,41 +44,6 @@ public class InsertOptions extends CommonOptions<InsertOptions> {
   public InsertOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
-  }
-
-  public PersistTo persistTo() {
-    return persistTo;
-  }
-
-
-  public ReplicateTo replicateTo() {
-    return replicateTo;
-  }
-
-  public InsertOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "PersistTo");
-    notNull(persistTo, "ReplicateTo");
-    if (durabilityLevel != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.persistTo = persistTo;
-    this.replicateTo = replicateTo;
-    return this;
-  }
-
-  public InsertOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
-    notNull(persistTo, "DurabilityLevel");
-    if (persistTo != null || replicateTo != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.durabilityLevel = durabilityLevel;
-    return this;
-  }
-
-  public DurabilityLevel durabilityLevel() {
-    return durabilityLevel;
   }
 
   public Encoder encoder() {

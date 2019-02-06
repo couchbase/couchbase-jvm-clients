@@ -35,7 +35,6 @@ import com.couchbase.client.java.kv.PrependAccessor;
 import com.couchbase.client.java.kv.PrependOptions;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -49,7 +48,8 @@ public class AsyncBinaryCollection {
   private final String bucket;
   private final byte[] collectionId;
 
-  AsyncBinaryCollection(Core core, CoreEnvironment environment, String bucket, byte[] collectionId) {
+  AsyncBinaryCollection(final Core core, final CoreEnvironment environment, final String bucket,
+                        final byte[] collectionId) {
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
@@ -71,13 +71,10 @@ public class AsyncBinaryCollection {
     notNull(content, "Content");
     notNull(options, "AppendOptions");
 
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy() == null
-      ? environment.retryStrategy()
-      : options.retryStrategy();
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
     return new AppendRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
-      options.cas(), Optional.ofNullable(options.durabilityLevel())
-    );
+      options.cas(), options.durabilityLevel());
   }
 
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content) {
@@ -94,13 +91,10 @@ public class AsyncBinaryCollection {
     notNull(content, "Content");
     notNull(options, "PrependOptions");
 
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy() == null
-      ? environment.retryStrategy()
-      : options.retryStrategy();
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
     return new PrependRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
-      options.cas(), Optional.ofNullable(options.durabilityLevel())
-    );
+      options.cas(), options.durabilityLevel());
   }
 
   public CompletableFuture<CounterResult> increment(final String id) {
@@ -115,12 +109,10 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "IncrementOptions");
 
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy() == null
-      ? environment.retryStrategy()
-      : options.retryStrategy();
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
     return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      options.delta(), options.initial(), options.expiry(), Optional.ofNullable(options.durabilityLevel()));
+      options.delta(), options.initial(), options.expiry(), options.durabilityLevel());
   }
 
   public CompletableFuture<CounterResult> decrement(final String id) {
@@ -135,11 +127,9 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id");
     notNull(options, "DecrementOptions");
 
-    Duration timeout = Optional.ofNullable(options.timeout()).orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy() == null
-      ? environment.retryStrategy()
-      : options.retryStrategy();
+    Duration timeout = options.timeout().orElse(environment.kvTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
     return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      options.delta(), options.initial(), options.expiry(), Optional.ofNullable(options.durabilityLevel()));
+      options.delta(), options.initial(), options.expiry(), options.durabilityLevel());
   }
 }

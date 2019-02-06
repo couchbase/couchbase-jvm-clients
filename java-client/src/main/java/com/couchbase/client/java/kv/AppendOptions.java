@@ -21,14 +21,11 @@ import com.couchbase.client.java.CommonOptions;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class AppendOptions extends CommonOptions<AppendOptions> {
+public class AppendOptions extends CommonDurabilityOptions<AppendOptions> {
   public static AppendOptions DEFAULT = new AppendOptions();
 
 
   private long cas = 0;
-  private PersistTo persistTo;
-  private ReplicateTo replicateTo;
-  private DurabilityLevel durabilityLevel;
 
   public long cas() {
     return cas;
@@ -37,41 +34,6 @@ public class AppendOptions extends CommonOptions<AppendOptions> {
   public AppendOptions cas(long cas) {
     this.cas = cas;
     return this;
-  }
-
-  public PersistTo persistTo() {
-    return persistTo;
-  }
-
-
-  public ReplicateTo replicateTo() {
-    return replicateTo;
-  }
-
-  public AppendOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "PersistTo");
-    notNull(persistTo, "ReplicateTo");
-    if (durabilityLevel != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.persistTo = persistTo;
-    this.replicateTo = replicateTo;
-    return this;
-  }
-
-  public AppendOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
-    notNull(persistTo, "DurabilityLevel");
-    if (persistTo != null || replicateTo != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.durabilityLevel = durabilityLevel;
-    return this;
-  }
-
-  public DurabilityLevel durabilityLevel() {
-    return durabilityLevel;
   }
 
 }

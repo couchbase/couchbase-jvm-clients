@@ -23,15 +23,12 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-public class DecrementOptions extends CommonOptions<DecrementOptions> {
+public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> {
   public static DecrementOptions DEFAULT = new DecrementOptions();
 
   private long delta;
   private Optional<Long> initial;
   private int expiry;
-  private PersistTo persistTo;
-  private ReplicateTo replicateTo;
-  private DurabilityLevel durabilityLevel;
 
   public static DecrementOptions decrementOptions() {
     return new DecrementOptions();
@@ -41,41 +38,6 @@ public class DecrementOptions extends CommonOptions<DecrementOptions> {
     delta = 1;
     initial = Optional.empty();
     expiry = 0;
-  }
-
-  public PersistTo persistTo() {
-    return persistTo;
-  }
-
-
-  public ReplicateTo replicateTo() {
-    return replicateTo;
-  }
-
-  public DecrementOptions withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "PersistTo");
-    notNull(persistTo, "ReplicateTo");
-    if (durabilityLevel != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.persistTo = persistTo;
-    this.replicateTo = replicateTo;
-    return this;
-  }
-
-  public DecrementOptions withDurabilityLevel(final DurabilityLevel durabilityLevel) {
-    notNull(persistTo, "DurabilityLevel");
-    if (persistTo != null || replicateTo != null) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
-    }
-    this.durabilityLevel = durabilityLevel;
-    return this;
-  }
-
-  public DurabilityLevel durabilityLevel() {
-    return durabilityLevel;
   }
 
   public long delta() {
