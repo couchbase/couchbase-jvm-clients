@@ -110,7 +110,8 @@ public class ReactiveCollection {
    */
   public Mono<GetResult> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
-      if (options.projections() == null && !options.withExpiration()) {
+      GetOptions.BuiltGetOptions opts = options.build();
+      if (opts.projections() == null && !opts.withExpiration()) {
         GetRequest request = asyncCollection.fullGetRequest(id, options);
         return Reactor
           .wrap(request, GetAccessor.get(core, id, request), true)
@@ -219,7 +220,8 @@ public class ReactiveCollection {
           .wrap(request, GetAccessor.get(core, id, request), true)
           .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
 
-        if (options.replicaMode() == ReplicaMode.ALL) {
+        GetFromReplicaOptions.BuiltGetFromReplicaOptions opts = options.build();
+        if (opts.replicaMode() == ReplicaMode.ALL) {
           result = result.onErrorResume(t -> {
             coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(
               request.context()

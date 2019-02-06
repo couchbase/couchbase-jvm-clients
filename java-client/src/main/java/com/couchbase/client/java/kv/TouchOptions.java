@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -23,5 +24,14 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 public class TouchOptions extends CommonDurabilityOptions<TouchOptions> {
   public static TouchOptions DEFAULT = new TouchOptions();
+
+  @Stability.Internal
+  public BuiltTouchOptions build() {
+    return new BuiltTouchOptions();
+  }
+
+  public class BuiltTouchOptions extends BuiltCommonDurabilityOptions {
+
+  }
 
 }

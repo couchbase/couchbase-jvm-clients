@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -37,21 +38,30 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
     return new RemoveOptions();
   }
 
-  public Duration expiry() {
-    return expiry;
-  }
-
   public RemoveOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
 
-  public long cas() {
-    return cas;
-  }
-
   public RemoveOptions cas(long cas) {
     this.cas = cas;
     return this;
+  }
+
+
+  @Stability.Internal
+  public BuiltRemoveOptions build() {
+    return new BuiltRemoveOptions();
+  }
+
+  public class BuiltRemoveOptions extends BuiltCommonDurabilityOptions {
+
+    public long cas() {
+      return cas;
+    }
+
+    public Duration expiry() {
+      return expiry;
+    }
   }
 }

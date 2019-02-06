@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 public class QueryOptions extends CommonOptions<QueryOptions> {
@@ -24,4 +25,12 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
   private QueryOptions() {}
 
+  @Stability.Internal
+  public BuiltQueryOptions build() {
+    return new BuiltQueryOptions();
+  }
+
+  public class BuiltQueryOptions extends BuiltCommonOptions {
+
+  }
 }

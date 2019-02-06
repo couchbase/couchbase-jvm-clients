@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -40,10 +41,6 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     expiry = 0;
   }
 
-  public long delta() {
-    return delta;
-  }
-
   public IncrementOptions delta(long delta) {
     if (delta < 0) {
       throw new IllegalArgumentException("The delta cannot be less than 0");
@@ -52,22 +49,35 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     return this;
   }
 
-  public Optional<Long> initial() {
-    return initial;
-  }
-
   public IncrementOptions initial(Optional<Long> initial) {
     this.initial = initial;
     return this;
   }
 
-  public int expiry() {
-    return expiry;
-  }
-
   public IncrementOptions expiry(int expiry) {
     this.expiry = expiry;
     return this;
+  }
+
+  @Stability.Internal
+  public BuiltIncrementOptions build() {
+    return new BuiltIncrementOptions();
+  }
+
+  public class BuiltIncrementOptions extends BuiltCommonDurabilityOptions {
+
+    public int expiry() {
+      return expiry;
+    }
+
+    public Optional<Long> initial() {
+      return initial;
+    }
+
+    public long delta() {
+      return delta;
+    }
+
   }
 
 }

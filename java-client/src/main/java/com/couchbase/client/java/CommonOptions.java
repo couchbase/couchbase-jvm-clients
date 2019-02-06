@@ -67,13 +67,6 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
   }
 
   /**
-   * Returns the custom timeout if provided.
-   */
-  public Optional<Duration> timeout() {
-    return timeout;
-  }
-
-  /**
    * Specifies a custom {@link RetryStrategy} for this operation.
    *
    * <p>Note: if a custom strategy is provided through this builder, it will override the default set
@@ -85,13 +78,6 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
   public SELF retryStrategy(final RetryStrategy retryStrategy) {
     this.retryStrategy = Optional.ofNullable(retryStrategy);
     return self();
-  }
-
-  /**
-   * Returns the custom retry strategy if provided.
-   */
-  public Optional<RetryStrategy> retryStrategy() {
-    return retryStrategy;
   }
 
   /**
@@ -108,11 +94,28 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
     return self();
   }
 
-  /**
-   * Returns the parent span if provided.
-   */
-  public Optional<Span> parentSpan() {
-    return parentSpan;
+  public abstract class BuiltCommonOptions {
+
+    /**
+     * Returns the parent span if provided.
+     */
+    public Optional<Span> parentSpan() {
+      return parentSpan;
+    }
+
+    /**
+     * Returns the custom retry strategy if provided.
+     */
+    public Optional<RetryStrategy> retryStrategy() {
+      return retryStrategy;
+    }
+
+    /**
+     * Returns the custom timeout if provided.
+     */
+    public Optional<Duration> timeout() {
+      return timeout;
+    }
   }
 
 }

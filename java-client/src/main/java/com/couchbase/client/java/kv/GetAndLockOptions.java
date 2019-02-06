@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 import java.time.Duration;
@@ -32,6 +33,19 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
 
   public Duration lockFor() {
     return lockFor;
+  }
+
+  @Stability.Internal
+  public BuiltGetAndLockOptions build() {
+    return new BuiltGetAndLockOptions();
+  }
+
+  public class BuiltGetAndLockOptions extends BuiltCommonOptions {
+
+    public Duration lockFor() {
+      return lockFor;
+    }
+
   }
 
 

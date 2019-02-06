@@ -91,9 +91,10 @@ public class AsyncCluster {
                                                    final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
+    QueryOptions.BuiltQueryOptions opts = options.build();
 
-    Duration timeout = options.timeout().orElse(environment.get().queryTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.get().retryStrategy());
+    Duration timeout = opts.timeout().orElse(environment.get().queryTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
     // FIXME: proper jackson encoding with options
     byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);

@@ -87,13 +87,20 @@ public class GetOptions extends CommonOptions<GetOptions> {
   }
 
   @Stability.Internal
-  public boolean withExpiration() {
-    return withExpiration;
+  public BuiltGetOptions build() {
+    return new BuiltGetOptions();
   }
 
-  @Stability.Internal
-  public List<String> projections() {
-    return projections;
+  public class BuiltGetOptions extends BuiltCommonOptions {
+
+    public boolean withExpiration() {
+      return withExpiration;
+    }
+
+    public List<String> projections() {
+      return projections;
+    }
+
   }
 
 }

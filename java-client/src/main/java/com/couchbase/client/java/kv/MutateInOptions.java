@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.time.Duration;
 
 public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
@@ -33,22 +35,31 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
   }
 
-  public Duration expiry() {
-    return expiry;
-  }
-
   public MutateInOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
 
-  public long cas() {
-    return cas;
-  }
-
   public MutateInOptions cas(long cas) {
     this.cas = cas;
     return this;
+  }
+
+  @Stability.Internal
+  public BuiltMutateInOptions build() {
+    return new BuiltMutateInOptions();
+  }
+
+  public class BuiltMutateInOptions extends BuiltCommonDurabilityOptions {
+
+    public Duration expiry() {
+      return expiry;
+    }
+
+    public long cas() {
+      return cas;
+    }
+
   }
 
 }

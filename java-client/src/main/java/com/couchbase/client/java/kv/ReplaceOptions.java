@@ -16,8 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
 
@@ -39,17 +38,9 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
     return new ReplaceOptions();
   }
 
-  public Duration expiry() {
-    return expiry;
-  }
-
   public ReplaceOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
-  }
-
-  public Encoder encoder() {
-    return encoder;
   }
 
   public ReplaceOptions encoder(final Encoder encoder) {
@@ -59,12 +50,29 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
     return this;
   }
 
-  public long cas() {
-    return cas;
-  }
-
   public ReplaceOptions cas(long cas) {
     this.cas = cas;
     return this;
+  }
+
+  @Stability.Internal
+  public BuiltReplaceOptions build() {
+    return new BuiltReplaceOptions();
+  }
+
+  public class BuiltReplaceOptions extends BuiltCommonDurabilityOptions {
+
+    public Duration expiry() {
+      return expiry;
+    }
+
+    public Encoder encoder() {
+      return encoder;
+    }
+
+    public long cas() {
+      return cas;
+    }
+
   }
 }

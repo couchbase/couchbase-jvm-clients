@@ -95,8 +95,9 @@ public class ReactiveCluster {
     });*/
 
 
-    Duration timeout = options.timeout().orElse(asyncCluster.environment().get().kvTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy().orElse(asyncCluster.environment().get().retryStrategy());
+    QueryOptions.BuiltQueryOptions opts = options.build();
+    Duration timeout = opts.timeout().orElse(asyncCluster.environment().get().kvTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(asyncCluster.environment().get().retryStrategy());
 
     // FIXME: proper jackson encoding with options
     byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);

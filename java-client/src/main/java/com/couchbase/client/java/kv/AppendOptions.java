@@ -16,24 +16,29 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
-
-import static com.couchbase.client.core.util.Validators.notNull;
+import com.couchbase.client.core.annotation.Stability;
 
 public class AppendOptions extends CommonDurabilityOptions<AppendOptions> {
   public static AppendOptions DEFAULT = new AppendOptions();
 
-
   private long cas = 0;
-
-  public long cas() {
-    return cas;
-  }
 
   public AppendOptions cas(long cas) {
     this.cas = cas;
     return this;
+  }
+
+  @Stability.Internal
+  public BuiltAppendOptions build() {
+    return new BuiltAppendOptions();
+  }
+
+  public class BuiltAppendOptions extends BuiltCommonDurabilityOptions {
+
+    public long cas() {
+      return cas;
+    }
+
   }
 
 }

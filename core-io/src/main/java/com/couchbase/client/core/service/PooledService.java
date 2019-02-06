@@ -94,7 +94,10 @@ abstract class PooledService implements Service {
     scheduleCleanIdleConnections();
   }
 
-  public ServiceContext serviceContext() {
+  /**
+   * Returns the created {@link ServiceContext} for implementations to use.
+   */
+  protected ServiceContext serviceContext() {
     return serviceContext;
   }
 
@@ -124,11 +127,11 @@ abstract class PooledService implements Service {
         break;
       }
 
-      long timespan = TimeUnit.NANOSECONDS.toSeconds(
+      long actualIdleTime = TimeUnit.NANOSECONDS.toSeconds(
         System.nanoTime() - endpoint.lastResponseReceived()
       );
 
-      if (endpoint.free() && timespan >= serviceConfig.idleTime().toNanos()) {
+      if (endpoint.free() && actualIdleTime >= serviceConfig.idleTime().toNanos()) {
         this.endpoints.remove(endpoint);
         endpoint.disconnect();
       }
@@ -172,9 +175,10 @@ abstract class PooledService implements Service {
           endpoints.add(endpoint);
         }
       }
+      RetryOrchestrator.retryImmediately(serviceContext, request);
+    } else {
+      RetryOrchestrator.maybeRetry(serviceContext, request);
     }
-
-    RetryOrchestrator.maybeRetry(serviceContext, request);
   }
 
   @Override

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -44,27 +45,6 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
    * The custom enhanced durability level setting, if set.
    */
   private Optional<DurabilityLevel> durabilityLevel = Optional.empty();
-
-  /**
-   * Returns the persistence durability setting if provided.
-   */
-  public Optional<PersistTo> persistTo() {
-    return persistTo;
-  }
-
-  /**
-   * Returns the replication durability setting if provided.
-   */
-  public Optional<ReplicateTo> replicateTo() {
-    return replicateTo;
-  }
-
-  /**
-   * Returns the enhanced durability setting if provided.
-   */
-  public Optional<DurabilityLevel> durabilityLevel() {
-    return durabilityLevel;
-  }
 
   /**
    * Allows to customize the poll-based durability requirements for this operation.
@@ -107,6 +87,32 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
 
     this.durabilityLevel = Optional.of(durabilityLevel);
     return self();
+  }
+
+  public abstract class BuiltCommonDurabilityOptions extends BuiltCommonOptions {
+
+    /**
+     * Returns the persistence durability setting if provided.
+     */
+    public Optional<PersistTo> persistTo() {
+      return persistTo;
+    }
+
+    /**
+     * Returns the replication durability setting if provided.
+     */
+    public Optional<ReplicateTo> replicateTo() {
+      return replicateTo;
+    }
+
+    /**
+     * Returns the enhanced durability setting if provided.
+     */
+    public Optional<DurabilityLevel> durabilityLevel() {
+      return durabilityLevel;
+    }
+
+
   }
 
 }

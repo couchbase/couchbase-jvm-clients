@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.DefaultEncoder;
 import com.couchbase.client.java.codec.Encoder;
 
@@ -36,18 +37,9 @@ public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
     return new InsertOptions();
   }
 
-
-  public Duration expiry() {
-    return expiry;
-  }
-
   public InsertOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
-  }
-
-  public Encoder encoder() {
-    return encoder;
   }
 
   public InsertOptions encoder(final Encoder encoder) {
@@ -55,5 +47,22 @@ public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
 
     this.encoder = encoder;
     return this;
+  }
+
+  @Stability.Internal
+  public BuiltInsertOptions build() {
+    return new BuiltInsertOptions();
+  }
+
+  public class BuiltInsertOptions extends BuiltCommonDurabilityOptions {
+
+    public Duration expiry() {
+      return expiry;
+    }
+
+    public Encoder encoder() {
+      return encoder;
+    }
+
   }
 }

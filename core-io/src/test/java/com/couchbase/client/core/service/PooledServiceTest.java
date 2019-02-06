@@ -263,6 +263,26 @@ class PooledServiceTest {
     verify(mock2, never()).send(request);
   }
 
+  @Test
+  void opensAndRetriesDynamicallyIfSlotAvailable() {
+
+  }
+
+  @Test
+  void retriesIfNoSlotAvailable() {
+
+  }
+
+  @Test
+  void retriesIfFixedSize() {
+
+  }
+
+  @Test
+  void cleansIdleConnections() {
+
+  }
+
   class MockedService extends PooledService {
 
     List<Endpoint> trackedEndpoints = new ArrayList<>();
