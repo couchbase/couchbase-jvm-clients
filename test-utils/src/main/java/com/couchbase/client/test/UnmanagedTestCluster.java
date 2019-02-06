@@ -103,18 +103,23 @@ public class UnmanagedTestCluster extends TestCluster {
     );
   }
 
-  private Optional<X509Certificate> loadClusterCertificate() throws Exception {
-    Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
-      .build())
-      .execute();
+  private Optional<X509Certificate> loadClusterCertificate() {
+    try {
+      Response getResponse = httpClient.newCall(new Request.Builder()
+        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+        .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
+        .build())
+        .execute();
 
-    String raw = getResponse.body().string();
+      String raw = getResponse.body().string();
 
-    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
-    return Optional.of((X509Certificate) cert);
+      CertificateFactory cf = CertificateFactory.getInstance("X.509");
+      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
+      return Optional.of((X509Certificate) cert);
+    } catch (Exception ex) {
+      // could not load certificate, maybe add logging? could be CE instance.
+      return Optional.empty();
+    }
   }
 
   private void waitUntilAllNodesHealthy() throws Exception {
