@@ -4,7 +4,7 @@ import java.time.temporal.ChronoUnit
 import com.couchbase.client.core.error._
 import com.couchbase.client.scala.{Cluster}
 import com.couchbase.client.scala.api._
-import reactor.retry.{Jitter, Retry, RetryContext}
+import com.couchbase.client.core.retry.reactor.{Jitter, Retry, RetryContext}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
