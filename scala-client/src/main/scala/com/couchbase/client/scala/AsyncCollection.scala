@@ -322,7 +322,6 @@ class AsyncCollection(name: String,
 
     val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
-    // TODO test I think you get this for free
     if (withExpiration) {
       commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
     }

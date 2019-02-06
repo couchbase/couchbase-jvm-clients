@@ -91,6 +91,196 @@ public class MutateInOps {
     return this;
   }
 
+  public <T> MutateInOps remove(final String path) {
+    return remove(false, path);
+  }
+
+  public <T> MutateInOps remove(final boolean xattr, final String path) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.DELETE,
+            path,
+            new byte[] {},
+            false,
+            xattr,
+            false
+    ));
+    return this;
+  }
+
+
+  public <T> MutateInOps upsert(final boolean xattr, final String path, final T fragment) {
+    return upsert(xattr, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps upsert(final String path, final T fragment, final boolean createParent) {
+    return upsert(false, path, fragment, createParent, false);
+  }
+
+
+  public <T> MutateInOps upsert(final String path, final T fragment) {
+    return upsert(false, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps upsert(final boolean xattr, final String path, final T fragment,
+                                final boolean createParent, final boolean expandMacro) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.DICT_UPSERT,
+            path,
+            ENCODER.encode(fragment).content(),
+            createParent,
+            xattr,
+            expandMacro
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps arrayAppend(final boolean xattr, final String path, final T fragment) {
+    return arrayAppend(xattr, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayAppend(final String path, final T fragment, final boolean createParent) {
+    return arrayAppend(false, path, fragment, createParent, false);
+  }
+
+
+  public <T> MutateInOps arrayAppend(final String path, final T fragment) {
+    return arrayAppend(false, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayAppend(final boolean xattr, final String path, final T fragment,
+                                final boolean createParent, final boolean expandMacro) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.ARRAY_PUSH_LAST,
+            path,
+            ENCODER.encode(fragment).content(),
+            createParent,
+            xattr,
+            expandMacro
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps arrayPrepend(final boolean xattr, final String path, final T fragment) {
+    return arrayPrepend(xattr, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayPrepend(final String path, final T fragment, final boolean createParent) {
+    return arrayPrepend(false, path, fragment, createParent, false);
+  }
+
+
+  public <T> MutateInOps arrayPrepend(final String path, final T fragment) {
+    return arrayPrepend(false, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayPrepend(final boolean xattr, final String path, final T fragment,
+                                     final boolean createParent, final boolean expandMacro) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.ARRAY_PUSH_FIRST,
+            path,
+            ENCODER.encode(fragment).content(),
+            createParent,
+            xattr,
+            expandMacro
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps arrayInsert(final boolean xattr, final String path, final T fragment) {
+    return arrayInsert(xattr, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayInsert(final String path, final T fragment, final boolean createParent) {
+    return arrayInsert(false, path, fragment, createParent, false);
+  }
+
+
+  public <T> MutateInOps arrayInsert(final String path, final T fragment) {
+    return arrayInsert(false, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayInsert(final boolean xattr, final String path, final T fragment,
+                                      final boolean createParent, final boolean expandMacro) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.ARRAY_INSERT,
+            path,
+            ENCODER.encode(fragment).content(),
+            createParent,
+            xattr,
+            expandMacro
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps arrayAddUnique(final boolean xattr, final String path, final T fragment) {
+    return arrayAddUnique(xattr, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayAddUnique(final String path, final T fragment, final boolean createParent) {
+    return arrayAddUnique(false, path, fragment, createParent, false);
+  }
+
+  public <T> MutateInOps arrayAddUnique(final String path, final T fragment) {
+    return arrayAddUnique(false, path, fragment, false, false);
+  }
+
+  public <T> MutateInOps arrayAddUnique(final boolean xattr, final String path, final T fragment,
+                                     final boolean createParent, final boolean expandMacro) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.ARRAY_ADD_UNIQUE,
+            path,
+            ENCODER.encode(fragment).content(),
+            createParent,
+            xattr,
+            expandMacro
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps increment(final boolean xattr, final String path, final long delta) {
+    return increment(xattr, path, delta, false);
+  }
+
+  public <T> MutateInOps increment(final String path, final long delta, final boolean createParent) {
+    return increment(false, path, delta, createParent);
+  }
+
+
+  public <T> MutateInOps increment(final String path, final long delta) {
+    return increment(false, path, delta, false);
+  }
+
+  public <T> MutateInOps increment(final boolean xattr, final String path, final long delta,
+                                        final boolean createParent) {
+    commands.add(new SubdocMutateRequest.Command(
+            SubdocCommandType.COUNTER,
+            path,
+            ENCODER.encode(delta).content(),
+            createParent,
+            xattr,
+            false
+    ));
+    return this;
+  }
+
+  public <T> MutateInOps decrement(final boolean xattr, final String path, final long delta) {
+    return decrement(xattr, path, delta, false);
+  }
+
+  public <T> MutateInOps decrement(final String path, final long delta, final boolean createParent) {
+    return decrement(false, path, delta, createParent);
+  }
+
+
+  public <T> MutateInOps decrement(final String path, final long delta) {
+    return decrement(false, path, delta, false);
+  }
+
+  public <T> MutateInOps decrement(final boolean xattr, final String path, final long delta,
+                                   final boolean createParent) {
+    return increment(xattr, path, delta * -1, createParent);
+  }
+
 
   @Stability.Internal
   public List<SubdocMutateRequest.Command> commands() {
