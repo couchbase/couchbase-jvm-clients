@@ -182,6 +182,14 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     );
   }
 
+  public static RuntimeException errIfNoCommands() {
+    return new IllegalArgumentException("No SubDocument commands provided");
+  }
+
+  public static RuntimeException errIfTooManyCommands() {
+    return new IllegalArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided");
+  }
+
   public static class Command {
 
     private final SubdocCommandType type;

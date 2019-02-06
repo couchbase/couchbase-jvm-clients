@@ -406,10 +406,10 @@ class AsyncCollection(name: String,
         spec.operations.map(_.convert).foreach(commands.add)
 
         if (commands.isEmpty) {
-          Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
+          Future.failed(SubdocMutateRequest.errIfNoCommands())
         }
         else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-          Future.failed(new IllegalArgumentException(s"A maximum of ${SubdocMutateRequest.SUBDOC_MAX_FIELDS} fields can be provided"))
+          Future.failed(SubdocMutateRequest.errIfNoCommands())
         }
         else {
           val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id,

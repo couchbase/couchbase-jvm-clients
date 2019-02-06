@@ -728,15 +728,23 @@ public class AsyncCollection {
 
   SubdocMutateRequest mutateInRequest(final String id, final MutateInOps spec,
                                       final MutateInOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(spec, "MutateInSpec");
-    notNull(options, "MutateInOptions");
-    MutateInOptions.BuiltMutateInOptions opts = options.build();
+    if (spec.commands().isEmpty()) {
+      throw SubdocMutateRequest.errIfNoCommands();
+    }
+    else if (spec.commands().size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+      throw SubdocMutateRequest.errIfTooManyCommands();
+    }
+    else {
+      notNullOrEmpty(id, "Id");
+      notNull(spec, "MutateInSpec");
+      notNull(options, "MutateInOptions");
+      MutateInOptions.BuiltMutateInOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      opts.insertDocument(), spec.commands(), opts.expiry().getSeconds(), opts.durabilityLevel());
+      Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+      RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+      return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+              opts.insertDocument(), spec.commands(), opts.expiry().getSeconds(), opts.durabilityLevel());
+    }
   }
 
 }
