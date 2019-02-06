@@ -128,9 +128,17 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static Properties loadProperties() {
     Properties defaults = new Properties();
     try {
-      defaults.load(
-        TestCluster.class.getResourceAsStream("/integration.properties")
-      );
+      try {
+        // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
+        defaults.load(
+                TestCluster.class.getResourceAsStream("/integration.local.properties")
+        );
+      }
+      catch (Exception ex) {
+        defaults.load(
+                TestCluster.class.getResourceAsStream("/integration.properties")
+        );
+      }
     } catch (Exception ex) {
       throw new RuntimeException("Could not load properties", ex);
     }
