@@ -258,13 +258,13 @@ public class IoEnvironment {
    * @param poolName the name of the threads.
    * @return the created group.
    */
-  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(int numThreads, String poolName) {
+  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final int numThreads, final String poolName) {
     ThreadFactory threadFactory = new DefaultThreadFactory(poolName);
 
-    if (KQueue.isAvailable()) {
-      return new OwnedSupplier<>(new KQueueEventLoopGroup(numThreads, threadFactory));
-    } else if (Epoll.isAvailable()) {
+    if (Epoll.isAvailable()) {
       return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
+    } else if (KQueue.isAvailable()) {
+      return new OwnedSupplier<>(new KQueueEventLoopGroup(numThreads, threadFactory));
     } else {
       return new OwnedSupplier<>(new NioEventLoopGroup(numThreads, threadFactory));
     }
