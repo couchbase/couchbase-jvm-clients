@@ -46,6 +46,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 abstract class PooledService implements Service {
 
   /**
+   * The interval when to check if idle sockets are to be cleaned up.
+   */
+  private static final Duration DEFAULT_IDLE_TIME_CHECK_INTERVAL = Duration.ofSeconds(5);
+
+  /**
    * Holds the config for this service.
    */
   private final ServiceConfig serviceConfig;
@@ -107,8 +112,15 @@ abstract class PooledService implements Service {
   private void scheduleCleanIdleConnections() {
     final Duration idleTime = serviceConfig.idleTime();
     if (idleTime != null && !idleTime.isZero()) {
-      serviceContext.environment().timer().schedule(this::cleanIdleConnections, idleTime);
+      serviceContext.environment().timer().schedule(this::cleanIdleConnections, idleTimeCheckInterval());
     }
+  }
+
+  /**
+   * Can be overridden for unit tests.
+   */
+  protected Duration idleTimeCheckInterval() {
+    return DEFAULT_IDLE_TIME_CHECK_INTERVAL;
   }
 
   /**
@@ -127,10 +139,7 @@ abstract class PooledService implements Service {
         break;
       }
 
-      long actualIdleTime = TimeUnit.NANOSECONDS.toSeconds(
-        System.nanoTime() - endpoint.lastResponseReceived()
-      );
-
+      long actualIdleTime = System.nanoTime() - endpoint.lastResponseReceived();
       if (endpoint.free() && actualIdleTime >= serviceConfig.idleTime().toNanos()) {
         this.endpoints.remove(endpoint);
         endpoint.disconnect();

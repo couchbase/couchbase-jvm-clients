@@ -28,19 +28,19 @@ import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.NoopRequest;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,7 +61,7 @@ class PooledServiceTest {
   private Credentials credentials = mock(Credentials.class);
 
   @BeforeEach
-  void setup() {
+  void beforeEach() {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
@@ -70,7 +70,7 @@ class PooledServiceTest {
   }
 
   @AfterEach
-  void teardown() {
+  void afterEach() {
     environment.shutdown(Duration.ofSeconds(1));
   }
 
@@ -214,6 +214,7 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.free()).thenReturn(true);
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
 
@@ -265,22 +266,157 @@ class PooledServiceTest {
 
   @Test
   void opensAndRetriesDynamicallyIfSlotAvailable() {
+    int minEndpoints = 0;
 
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.free()).thenReturn(true);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    service.send(request);
+
+    waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
+    assertEquals(1, service.trackedEndpoints().size());
+    assertTrue(request.context().retryAttempts() > 0);
+    verify(mock1, never()).send(request);
   }
 
   @Test
   void retriesIfNoSlotAvailable() {
+    int minEndpoints = 0;
 
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.free()).thenReturn(false);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 1, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request1 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    NoopRequest request2 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    service.send(request1);
+    service.send(request2);
+    assertEquals(1, service.trackedEndpoints().size());
+    assertTrue(request1.context().retryAttempts() > 0);
+    assertTrue(request2.context().retryAttempts() > 0);
+    verify(mock1, never()).send(request1);
+    verify(mock1, never()).send(request2);
   }
 
   @Test
   void retriesIfFixedSize() {
+    int minEndpoints = 1;
 
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.free()).thenReturn(false);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 1, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertFalse(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    service.send(request);
+    assertEquals(1, service.trackedEndpoints().size());
+    assertTrue(request.context().retryAttempts() > 0);
+    verify(mock1, never()).send(request);
   }
 
   @Test
-  void cleansIdleConnections() {
+  void cleansIdleConnections() throws Exception {
+    int minEndpoints = 0;
+    long now = System.nanoTime();
 
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.free()).thenReturn(false);
+    when(mock1.lastResponseReceived()).thenReturn(now);
+
+    Endpoint mock2 = mock(Endpoint.class);
+    when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.free()).thenReturn(false);
+    when(mock2.lastResponseReceived()).thenReturn(now);
+
+    final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request1 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    service.send(request1);
+    NoopRequest request2 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      "bucket",
+      BestEffortRetryStrategy.INSTANCE
+    );
+    service.send(request2);
+
+    waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
+
+    when(mock1.free()).thenReturn(true);
+
+    Thread.sleep(600);
+
+    verify(mock1, times(1)).disconnect();
+    verify(mock2, never()).disconnect();
   }
 
   class MockedService extends PooledService {
@@ -320,6 +456,11 @@ class PooledServiceTest {
     @Override
     public ServiceType type() {
       return ServiceType.KV;
+    }
+
+    @Override
+    protected Duration idleTimeCheckInterval() {
+      return Duration.ofMillis(10);
     }
   }
 
@@ -366,7 +507,12 @@ class PooledServiceTest {
   class FirstEndpointSelectionStrategy implements EndpointSelectionStrategy {
     @Override
     public <R extends Request<? extends Response>> Endpoint select(R r, List<Endpoint> endpoints) {
-      return endpoints.get(0);
+      for (Endpoint ep : endpoints) {
+        if (ep.free()) {
+          return ep;
+        }
+      }
+      return null;
     }
   }
 
