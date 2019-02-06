@@ -322,6 +322,7 @@ class AsyncCollection(name: String,
 
     val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
+    // TODO test I think you get this for free
     if (withExpiration) {
       commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
     }
@@ -391,10 +392,6 @@ class AsyncCollection(name: String,
                expiration: FiniteDuration,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
-    // TODO support projections
-    // TODO support expiration (probs works, check unit tested)
-
-
     val failed: Option[MutateOperation] = spec.operations
       .filter(_.isInstanceOf[MutateOperationSimple])
         .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
@@ -412,11 +409,12 @@ class AsyncCollection(name: String,
         if (commands.isEmpty) {
           Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
         }
+        else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+          Future.failed(new IllegalArgumentException(s"A maximum of ${SubdocMutateRequest.SUBDOC_MAX_FIELDS} fields can be provided"))
+        }
         else {
-          // TODO test failure on > 16 subdocs
-          // TODO expiration
           val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id,
-            collectionIdEncoded, insertDocument, commands, 0, durability.toDurabilityLevel)
+            collectionIdEncoded, insertDocument, commands,  expiration.toSeconds, durability.toDurabilityLevel)
 
           core.send(request)
 

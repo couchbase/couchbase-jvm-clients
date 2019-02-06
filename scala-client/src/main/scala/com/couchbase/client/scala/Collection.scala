@@ -42,7 +42,7 @@ class Collection(val async: AsyncCollection,
   // TODO MVP reactive collection
   private val SafetyTimeout = 1.second
   //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
-  private val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
+  private[scala] val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
 
   private def block[T](in: Future[T], timeout: FiniteDuration): Try[T] = {
     try {

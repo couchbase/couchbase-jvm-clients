@@ -8,6 +8,7 @@ import org.scalatest.FunSuite
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success}
+import scala.concurrent.duration._
 
 class SubdocMutateSpec extends FunSuite {
   // TODO support Jenkins
@@ -77,10 +78,6 @@ class SubdocMutateSpec extends FunSuite {
 
     assert(getContent(docId)("foo2").str == "bar2")
   }
-
-  // TODO test createPath
-  // TODO test expiration
-  // TODO test two commands
 
     test("mutateIn remove") {
       val content = ujson.Obj("hello" -> "world",
@@ -478,4 +475,83 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").num == -3)
   }
 
+
+
+  test("expiration") {
+    val content = ujson.Obj("hello" -> "world")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, MutateInSpec.insert("foo2", "bar2"), expiration = 10.seconds) match {
+      case Success(result) => assert(result.cas != cas)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.get(docId, withExpiration = true) match {
+      case Success(result) =>
+        assert(result.expiration.isDefined)
+        assert(result.expiration.get != 0)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+
+  test("> 16") {
+    val content = ujson.Obj("hello" -> "world")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, MutateInSpec.insert("foo0", "bar0")
+      .insert("foo1", "bar1")
+      .insert("foo2", "bar2")
+      .insert("foo3", "bar3")
+      .insert("foo4", "bar4")
+      .insert("foo5", "bar5")
+      .insert("foo6", "bar6")
+      .insert("foo7", "bar7")
+      .insert("foo8", "bar8")
+      .insert("foo9", "bar9")
+      .insert("foo10", "bar10")
+      .insert("foo11", "bar11")
+      .insert("foo12", "bar12")
+      .insert("foo13", "bar13")
+      .insert("foo14", "bar14")
+      .insert("foo15", "bar15")
+      .insert("foo16", "bar16")) match {
+      case Success(result) => assert(false, "should not succeed")
+      case Failure(err: IllegalArgumentException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("two commands succeed") {
+    val content = ujson.Obj("hello" -> "world")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, MutateInSpec.insert("foo0", "bar0")
+      .insert("foo1", "bar1")
+      .insert("foo2", "bar2")) match {
+      case Success(result) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    val updated = getContent(docId)
+    assert(updated("foo1").str == "bar1")
+    assert(updated("foo2").str == "bar2")
+  }
+
+
+  test("two commands one fails") {
+    val content = ujson.Obj("foo1" -> "bar_orig_1", "foo2" -> "bar_orig_2")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, MutateInSpec.insert("foo0", "bar0")
+      .insert("foo1", "bar1")
+      .remove("foo3")) match {
+      case Success(result) =>
+      case Failure(err: MultiMutationException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    val updated = getContent(docId)
+    assert(updated("foo1").str == "bar_orig_1")
+  }
 }

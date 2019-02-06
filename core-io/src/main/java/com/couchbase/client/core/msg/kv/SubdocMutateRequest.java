@@ -48,6 +48,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
   private static final byte SUBDOC_DOC_FLAG_ACCESS_DELETED = (byte) 0x04;
 
+  public static final int SUBDOC_MAX_FIELDS = 16;
+
   private final byte flags;
   private final long expiration;
   private final List<Command> commands;
