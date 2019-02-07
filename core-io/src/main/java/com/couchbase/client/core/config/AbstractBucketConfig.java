@@ -96,9 +96,15 @@ public abstract class AbstractBucketConfig implements BucketConfig {
             // make sure only kv nodes are added if they are actually also in the nodes
             // list and not just in nodesExt, since the kv service might be available
             // on the cluster but not yet enabled for this specific bucket.
+            //
+            // Since in the past we have seen that views only work properly on a node if
+            // kv is available, don't route view ops here as well.
             if (nodeInfo == null) {
                 ports.remove(ServiceType.KV);
                 sslPorts.remove(ServiceType.KV);
+
+                ports.remove(ServiceType.VIEWS);
+                sslPorts.remove(ServiceType.VIEWS);
             }
 
             converted.add(new NodeInfo(hostname, ports, sslPorts, aa));
