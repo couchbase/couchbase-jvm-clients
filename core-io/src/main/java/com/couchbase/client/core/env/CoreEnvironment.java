@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -50,7 +51,7 @@ public class CoreEnvironment {
     new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
-  private final Supplier<String> userAgent;
+  private final Supplier<UserAgent> userAgent;
   private final Supplier<EventBus> eventBus;
   private final Supplier<Set<SeedNode>> seedNodes;
   private final Timer timer;
@@ -138,14 +139,25 @@ public class CoreEnvironment {
    *
    * @return the user agent string, in a best effort manner.
    */
-  private String defaultUserAgent() {
+  private UserAgent defaultUserAgent() {
     try {
       final Package p = agentPackage();
       String t = p.getImplementationTitle() == null ? defaultAgentTitle() : p.getImplementationTitle();
       String v = p.getImplementationVersion() == null ? "0.0.0" : p.getImplementationVersion();
-      return t + "/" + v;
+      String os = String.format(
+        "%s %s %s",
+        System.getProperty("os.name"),
+        System.getProperty("os.version"),
+        System.getProperty("os.arch")
+      );
+      String platform = String.format(
+        "%s %s",
+        System.getProperty("java.vm.name"),
+        System.getProperty("java.runtime.version")
+      );
+      return new UserAgent(t, v, Optional.of(os), Optional.of(platform));
     } catch (Throwable t) {
-      return "core-io/0.0.0";
+      return new UserAgent(defaultAgentTitle(), "0.0.0", Optional.empty(), Optional.empty());
     }
   }
 
@@ -162,7 +174,7 @@ public class CoreEnvironment {
   }
 
   protected String defaultAgentTitle() {
-    return "core-io";
+    return "java-core";
   }
 
   public static CoreEnvironment create(final String username, final String password) {
@@ -206,7 +218,7 @@ public class CoreEnvironment {
    *
    * @return the user agent as a string representation.
    */
-  public String userAgent() {
+  public UserAgent userAgent() {
     return userAgent.get();
   }
 
@@ -311,7 +323,7 @@ public class CoreEnvironment {
 
   public static class Builder<SELF extends Builder<SELF>> {
 
-    private Supplier<String> userAgent = null;
+    private Supplier<UserAgent> userAgent = null;
     private Supplier<EventBus> eventBus = null;
     private Supplier<Set<SeedNode>> seedNodes = null;
     private Timer timer = null;
@@ -341,11 +353,11 @@ public class CoreEnvironment {
       return (SELF) this;
     }
 
-    public SELF userAgent(final String userAgent) {
+    public SELF userAgent(final UserAgent userAgent) {
       return userAgent(() -> userAgent);
     }
 
-    public SELF userAgent(final Supplier<String> userAgent) {
+    public SELF userAgent(final Supplier<UserAgent> userAgent) {
       this.userAgent = userAgent;
       return self();
     }

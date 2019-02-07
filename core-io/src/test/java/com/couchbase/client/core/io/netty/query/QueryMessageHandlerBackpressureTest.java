@@ -17,8 +17,10 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UserAgent;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -53,11 +55,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * These tests make sure that explicit backpressure is handled from the {@link QueryMessageHandler},
@@ -98,10 +102,16 @@ class QueryMessageHandlerBackpressureTest {
       });
     Channel channel = client.connect().awaitUninterruptibly().channel();
 
+    CoreContext ctx = mock(CoreContext.class);
+    CoreEnvironment env = mock(CoreEnvironment.class);
+    UserAgent agent = new UserAgent("name", "0.0.0", Optional.empty(), Optional.empty());
+    when(ctx.environment()).thenReturn(env);
+    when(env.userAgent()).thenReturn(agent);
+
     final List<QueryResponse.QueryEvent> rows = Collections.synchronizedList(new ArrayList<>());
     QueryRequest request = new QueryRequest(
       Duration.ofSeconds(1),
-      mock(CoreContext.class),
+      ctx,
       mock(RetryStrategy.class),
       new RoleBasedCredentials("admin", "password"),
       "myquery".getBytes(CharsetUtil.UTF_8),

@@ -280,9 +280,9 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   private ByteBuf buildHelloKey(final ChannelHandlerContext ctx) {
     TreeMap<String, String> result = new TreeMap<>();
 
-    String agent = endpointContext.environment().userAgent();
+    String agent = endpointContext.environment().userAgent().formattedShort();
     if (agent == null || agent.isEmpty()) {
-      agent = "java-core-io/unknown";
+      agent = "couchbase-java-core/0.0.0";
     } else if (agent.length() > 200) {
       agent = agent.substring(0, 200);
     }

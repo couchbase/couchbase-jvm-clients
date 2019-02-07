@@ -52,6 +52,7 @@ public class QueryRequest extends BaseRequest<QueryResponse> {
       URI, content);
     request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
     request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+    request.headers().set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
     addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
     return request;
   }

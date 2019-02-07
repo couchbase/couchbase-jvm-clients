@@ -36,6 +36,7 @@ import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.env.UserAgent;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
@@ -91,6 +92,7 @@ class FeatureNegotiatingHandlerTest {
     ioEnv = mock(IoEnvironment.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(env.userAgent()).thenReturn(new UserAgent("some", "0.0.0", Optional.empty(), Optional.empty()));
     when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
@@ -201,7 +203,7 @@ class FeatureNegotiatingHandlerTest {
     assertTrue(ProtocolVerifier.key(writtenRequest).isPresent());
     String json = ProtocolVerifier.key(writtenRequest).get().toString(CharsetUtil.UTF_8);
     assertEquals(
-      "{\"a\":\"java-core-io/unknown\",\"i\":\"0000000000000001/0000000000000001\"}",
+      "{\"a\":\"some/0.0.0\",\"i\":\"0000000000000001/0000000000000001\"}",
       json
     );
 
