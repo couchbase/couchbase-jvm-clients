@@ -1,6 +1,7 @@
 package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.scala.codec.Conversions
 
 import scala.util.Try
 //import ujson.Obj

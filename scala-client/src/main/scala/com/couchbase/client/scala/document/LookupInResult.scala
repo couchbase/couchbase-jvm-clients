@@ -3,6 +3,7 @@ package com.couchbase.client.scala.document
 import com.couchbase.client.core.error.OperationDoesNotExist
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{SubDocumentOpResponseStatus, SubdocCommandType, SubdocField, SubdocGetResponse}
+import com.couchbase.client.scala.codec.Conversions
 
 import scala.collection.GenMap
 import scala.util.{Failure, Success, Try}

@@ -27,7 +27,7 @@ package benchmarks.json
 import com.couchbase.client.java.codec.{Decoder, DefaultDecoder, DefaultEncoder}
 import com.couchbase.client.java.json.JsonObject
 import com.couchbase.client.java.kv.EncodedDocument
-import com.couchbase.client.scala.document.Conversions
+import com.couchbase.client.scala.codec.Conversions
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
 import io.circe.Encoder

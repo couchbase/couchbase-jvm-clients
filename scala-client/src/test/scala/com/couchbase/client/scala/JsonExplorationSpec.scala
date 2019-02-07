@@ -2,7 +2,7 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
-import com.couchbase.client.scala.document.Conversions.{Encodable, JsonEncodeParams}
+import com.couchbase.client.scala.codec.Conversions.{Encodable, JsonEncodeParams}
 import com.couchbase.client.scala.document.DecodeParams
 import org.scalatest.{FlatSpec, Matchers, _}
 

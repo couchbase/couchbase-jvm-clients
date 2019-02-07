@@ -2,6 +2,7 @@ package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.OperationDoesNotExist
 import com.couchbase.client.core.msg.kv.{MutationToken, SubDocumentOpResponseStatus, SubdocField}
+import com.couchbase.client.scala.codec.Conversions
 
 import scala.collection.GenMap
 import scala.compat.java8.OptionConverters._

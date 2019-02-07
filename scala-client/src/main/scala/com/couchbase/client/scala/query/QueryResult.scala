@@ -17,6 +17,7 @@
 package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.msg.query.QueryResponse
+import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document._
 
 import scala.util.Try

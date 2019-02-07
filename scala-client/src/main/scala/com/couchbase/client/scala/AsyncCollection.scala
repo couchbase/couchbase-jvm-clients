@@ -35,6 +35,7 @@ import io.circe.syntax._
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
+import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{LookupInResult, _}
 import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.env.ClusterEnvironment

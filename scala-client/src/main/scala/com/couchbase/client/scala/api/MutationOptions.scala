@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.api
 
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
-import com.couchbase.client.scala.document.Conversions.{Encodable}
+import com.couchbase.client.scala.codec.Conversions.{Encodable}
 import com.couchbase.client.scala.document.EncodeParams
 import io.netty.buffer.Unpooled
 import io.netty.util.CharsetUtil
