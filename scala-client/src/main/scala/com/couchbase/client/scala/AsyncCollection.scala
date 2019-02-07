@@ -122,6 +122,7 @@ class AsyncCollection(name: String,
       case ResponseStatus.NOT_FOUND => new DocumentDoesNotExistException()
       case ResponseStatus.SERVER_BUSY => new TemporaryFailureException()
       case ResponseStatus.OUT_OF_MEMORY => new CouchbaseOutOfMemoryException()
+      case rs => new CouchbaseException("Unknown ResponseStatus: " + rs)
       // TODO remaining failures
     }
   }
@@ -179,6 +180,7 @@ class AsyncCollection(name: String,
                 throw new DocumentAlreadyExistsException()
               case ResponseStatus.SUCCESS =>
                 MutationResult(response.cas(), response.mutationToken().asScala)
+              case rs => throw new CouchbaseException("Unknown ResponseStatus: " + rs)
             }
           })
       case Failure(err) =>

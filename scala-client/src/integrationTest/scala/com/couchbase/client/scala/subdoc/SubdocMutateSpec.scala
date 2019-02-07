@@ -489,7 +489,7 @@ class SubdocMutateSpec extends FunSuite {
     coll.get(docId, withExpiration = true) match {
       case Success(result) =>
         assert(result.expiration.isDefined)
-        assert(result.expiration.get != 0)
+        assert(result.expiration.get.toSeconds != 0)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
