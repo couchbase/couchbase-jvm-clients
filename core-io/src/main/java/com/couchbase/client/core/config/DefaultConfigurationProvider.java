@@ -109,7 +109,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     return Mono.defer(() -> {
       if (!shutdown.get()) {
 
-        boolean tls = core.context().environment().ioEnvironment().securityConfig().tlsEnabled();
+        boolean tls = core.context().environment().securityConfig().tlsEnabled();
         int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
         int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
 

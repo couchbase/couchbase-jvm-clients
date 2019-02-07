@@ -72,7 +72,7 @@ public class AsyncBinaryCollection {
     notNull(options, "AppendOptions");
     AppendOptions.BuiltAppendOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new AppendRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
       opts.cas(), opts.durabilityLevel());
@@ -93,7 +93,7 @@ public class AsyncBinaryCollection {
     notNull(options, "PrependOptions");
     PrependOptions.BuiltPrependOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new PrependRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
       opts.cas(), opts.durabilityLevel());
@@ -112,7 +112,7 @@ public class AsyncBinaryCollection {
     notNull(options, "IncrementOptions");
     IncrementOptions.BuiltIncrementOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
@@ -131,7 +131,7 @@ public class AsyncBinaryCollection {
     notNull(options, "DecrementOptions");
     DecrementOptions.BuiltDecrementOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());

@@ -66,7 +66,7 @@ class AsyncCollection(name: String,
                       val environment: ClusterEnvironment)
                      (implicit ec: ExecutionContext) {
   private val mapper = new ObjectMapper()
-  private val kvTimeout = javaDurationToScala(environment.kvTimeout())
+  private val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
   private val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
 
   import annotation.implicitNotFound

@@ -198,7 +198,7 @@ public class AsyncCollection {
     notNull(options, "GetOptions");
     GetOptions.BuiltGetOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
   }
@@ -216,7 +216,7 @@ public class AsyncCollection {
     notNull(options, "GetOptions");
     GetOptions.BuiltGetOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     List<SubdocGetRequest.Command> commands = new ArrayList<>();
@@ -296,7 +296,7 @@ public class AsyncCollection {
     notNull(options, "GetAndLockOptions");
     GetAndLockOptions.BuiltGetAndLockOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     Duration lockFor = options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor();
@@ -349,7 +349,7 @@ public class AsyncCollection {
     notNull(options, "GetAndTouchOptions");
     GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new GetAndTouchRequest(id, collectionId, timeout, coreContext,
       bucket, retryStrategy, expiration, opts.durabilityLevel());
@@ -393,7 +393,7 @@ public class AsyncCollection {
     notNull(options, "GetFromReplicaOptions");
     GetFromReplicaOptions.BuiltGetFromReplicaOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     BucketConfig config = core.clusterConfig().bucketConfig(bucket);
@@ -459,7 +459,7 @@ public class AsyncCollection {
     notNull(options, "ExistsOptions");
     ExistsOptions.BuiltExistsOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new ObserveViaCasRequest(timeout, coreContext, bucket,
       retryStrategy, id, collectionId);
@@ -499,7 +499,7 @@ public class AsyncCollection {
     notNull(options, "RemoveOptions");
     RemoveOptions.BuiltRemoveOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new RemoveRequest(id, collectionId, opts.cas(), timeout,
       coreContext, bucket, retryStrategy, opts.durabilityLevel());
@@ -544,7 +544,7 @@ public class AsyncCollection {
     InsertOptions.BuiltInsertOptions opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     return new InsertRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
@@ -590,7 +590,7 @@ public class AsyncCollection {
     UpsertOptions.BuiltUpsertOptions opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new UpsertRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
       encoded.flags(), timeout, coreContext, bucket, retryStrategy, opts.durabilityLevel());
@@ -635,7 +635,7 @@ public class AsyncCollection {
     ReplaceOptions.BuiltReplaceOptions opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     return new ReplaceRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
@@ -656,7 +656,7 @@ public class AsyncCollection {
     notNull(options, "TouchOptions");
     TouchOptions.BuiltTouchOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new TouchRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
       expiry.getSeconds(), opts.durabilityLevel());
@@ -675,7 +675,7 @@ public class AsyncCollection {
     notNull(options, "UnlockOptions");
     UnlockOptions.BuiltUnlockoptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
@@ -696,7 +696,7 @@ public class AsyncCollection {
     notNull(options, "LookupInOptions");
     LookupInOptions.BuiltLookupInOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
       (byte) 0, spec.commands());
@@ -740,7 +740,7 @@ public class AsyncCollection {
       notNull(options, "MutateInOptions");
       MutateInOptions.BuiltMutateInOptions opts = options.build();
 
-      Duration timeout = opts.timeout().orElse(environment.kvTimeout());
+      Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
       return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
               opts.insertDocument(), spec.commands(), opts.expiry().getSeconds(), opts.durabilityLevel());

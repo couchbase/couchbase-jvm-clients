@@ -19,6 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -57,7 +58,7 @@ class ClusterManagerLoaderTest {
   @BeforeEach
   void setup() {
     CoreEnvironment env = mock(CoreEnvironment.class);
-    when(env.managerTimeout()).thenReturn(Duration.ofSeconds(5));
+    when(env.timeoutConfig()).thenReturn(TimeoutConfig.create());
     when(env.retryStrategy()).thenReturn(BestEffortRetryStrategy.INSTANCE);
 
     core = mock(Core.class);

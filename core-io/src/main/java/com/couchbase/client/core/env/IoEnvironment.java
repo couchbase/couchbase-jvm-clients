@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -25,9 +24,6 @@ import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
-import java.time.Duration;
-import java.util.EnumSet;
-import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
@@ -38,25 +34,12 @@ import java.util.function.Supplier;
  */
 public class IoEnvironment {
 
-  private final Duration connectTimeout;
-  private final CompressionConfig compressionConfig;
-  private final SecurityConfig securityConfig;
-  private final Set<SaslMechanism> allowedSaslMechanisms;
-
   private final Supplier<EventLoopGroup> managerEventLoopGroup;
   private final Supplier<EventLoopGroup> kvEventLoopGroup;
   private final Supplier<EventLoopGroup> queryEventLoopGroup;
   private final Supplier<EventLoopGroup> analyticsEventLoopGroup;
   private final Supplier<EventLoopGroup> searchEventLoopGroup;
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
-
-  private final CircuitBreakerConfig kvCircuitBreakerConfig;
-  private final CircuitBreakerConfig queryCircuitBreakerConfig;
-  private final CircuitBreakerConfig viewCircuitBreakerConfig;
-  private final CircuitBreakerConfig searchCircuitBreakerConfig;
-  private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
-  private final CircuitBreakerConfig managerCircuitBreakerConfig;
-
 
   public static IoEnvironment create() {
     return builder().build();
@@ -67,19 +50,6 @@ public class IoEnvironment {
   }
 
   private IoEnvironment(final Builder builder) {
-    connectTimeout = builder.connectTimeout == null
-      ? Duration.ofSeconds(5)
-      : builder.connectTimeout;
-    compressionConfig = builder.compressionConfig == null
-      ? CompressionConfig.create()
-      : builder.compressionConfig;
-    securityConfig = builder.securityConfig == null
-      ? SecurityConfig.create()
-      : builder.securityConfig;
-    allowedSaslMechanisms = builder.allowedSaslMechanisms == null
-      ? EnumSet.allOf(SaslMechanism.class)
-      : builder.allowedSaslMechanisms;
-
     Supplier<EventLoopGroup> httpDefaultGroup = null;
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
@@ -106,67 +76,8 @@ public class IoEnvironment {
     viewEventLoopGroup = builder.viewEventLoopGroup == null
       ? httpDefaultGroup
       : builder.viewEventLoopGroup;
-
-    kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.kvCircuitBreakerConfig;
-
-    queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.queryCircuitBreakerConfig;
-    analyticsCircuitBreakerConfig = builder.analyticsCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.analyticsCircuitBreakerConfig;
-    searchCircuitBreakerConfig = builder.searchCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.searchCircuitBreakerConfig;
-    viewCircuitBreakerConfig = builder.viewCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.viewCircuitBreakerConfig;
-
-    managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig == null
-      ? CircuitBreakerConfig.disabled()
-      : builder.managerCircuitBreakerConfig;
   }
 
-  /**
-   * The full timeout for a channel to be established, includes the
-   * socket connect as well all the back and forth depending on the
-   * service used.
-   *
-   * @return the full connect timeout for a channel.
-   */
-  public Duration connectTimeout() {
-    return connectTimeout;
-  }
-
-  /**
-   * Configures the way {@link CompressionConfig} is set up in the client.
-   *
-   * @return the compression settings.
-   */
-  public CompressionConfig compressionConfig() {
-    return compressionConfig;
-  }
-
-  /**
-   * Configures the way transport layer security is set up in the client.
-   *
-   * @return the security settings.
-   */
-  public SecurityConfig securityConfig() {
-    return securityConfig;
-  }
-
-  /**
-   * Customizes the SASL mechanisms that are allowed to be negotiated, even
-   * if the server would support more/different ones.
-   *
-   * @return the set of mechanisms allowed.
-   */
-  public Set<SaslMechanism> allowedSaslMechanisms() {
-    return allowedSaslMechanisms;
-  }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for config traffic.
@@ -222,31 +133,6 @@ public class IoEnvironment {
     return viewEventLoopGroup;
   }
 
-  public CircuitBreakerConfig kvCircuitBreakerConfig() {
-    return kvCircuitBreakerConfig;
-  }
-
-  public CircuitBreakerConfig queryCircuitBreakerConfig() {
-    return queryCircuitBreakerConfig;
-  }
-
-  public CircuitBreakerConfig viewCircuitBreakerConfig() {
-    return viewCircuitBreakerConfig;
-  }
-
-  public CircuitBreakerConfig analyticsCircuitBreakerConfig() {
-    return analyticsCircuitBreakerConfig;
-  }
-
-  public CircuitBreakerConfig searchCircuitBreakerConfig() {
-    return searchCircuitBreakerConfig;
-  }
-
-  public CircuitBreakerConfig managerCircuitBreakerConfig() {
-    return managerCircuitBreakerConfig;
-  }
-
-
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
@@ -289,33 +175,12 @@ public class IoEnvironment {
 
   public static class Builder {
 
-    private Duration connectTimeout = null;
-    private CompressionConfig compressionConfig = null;
-    private SecurityConfig securityConfig = null;
-    private Set<SaslMechanism> allowedSaslMechanisms = null;
     private Supplier<EventLoopGroup> managerEventLoopGroup = null;
     private Supplier<EventLoopGroup> kvEventLoopGroup = null;
     private Supplier<EventLoopGroup> queryEventLoopGroup = null;
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
-    private CircuitBreakerConfig kvCircuitBreakerConfig = null;
-    private CircuitBreakerConfig queryCircuitBreakerConfig = null;
-    private CircuitBreakerConfig searchCircuitBreakerConfig = null;
-    private CircuitBreakerConfig viewCircuitBreakerConfig = null;
-    private CircuitBreakerConfig analyticsCircuitBreakerConfig = null;
-    private CircuitBreakerConfig managerCircuitBreakerConfig = null;
-
-
-    public Builder connectTimeout(Duration connectTimeout) {
-      this.connectTimeout = connectTimeout;
-      return this;
-    }
-
-    public Builder securityConfig(SecurityConfig securityConfig) {
-      this.securityConfig = securityConfig;
-      return this;
-    }
 
     public IoEnvironment build() {
       return new IoEnvironment(this);

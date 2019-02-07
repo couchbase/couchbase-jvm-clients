@@ -97,7 +97,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    */
   public ErrorMapLoadingHandler(final EndpointContext endpointContext) {
     this.endpointContext = endpointContext;
-    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
+    this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
   }
 
   /**

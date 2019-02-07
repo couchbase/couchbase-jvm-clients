@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.env.LoggerConfig;
 
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
@@ -47,31 +48,26 @@ public class LoggingEventConsumer implements Consumer<Event> {
   private final Logger logger;
 
   /**
-   * Returns a {@link Builder} that allows to customize a {@link LoggingEventConsumer}.
-   *
-   * @return the builder to customize.
-   */
-  public static LoggingEventConsumer.Builder builder() {
-    return new Builder();
-  }
-
-  /**
    * Creates a new {@link LoggingEventConsumer} with all defaults.
    *
    * @return a {@link LoggingEventConsumer}.
    */
   public static LoggingEventConsumer create() {
-    return builder().build();
+    return new LoggingEventConsumer(LoggerConfig.create());
   }
 
-  private LoggingEventConsumer(final Builder builder) {
-    String name = builder.loggerName;
+  public static LoggingEventConsumer create(LoggerConfig loggerConfig) {
+    return new LoggingEventConsumer(loggerConfig);
+  }
 
-    if (builder.customLogger != null) {
-      logger = builder.customLogger;
-    } else if (SLF4J_AVAILABLE && !builder.disableSlf4J) {
+  private LoggingEventConsumer(LoggerConfig loggerConfig) {
+    String name = loggerConfig.loggerName();
+
+    if (loggerConfig.customLogger() != null) {
+      logger = loggerConfig.customLogger();
+    } else if (SLF4J_AVAILABLE && !loggerConfig.disableSlf4J()) {
       logger = new Slf4JLogger(name);
-    } else if (builder.fallbackToConsole) {
+    } else if (loggerConfig.fallbackToConsole()) {
       logger = new ConsoleLogger(name);
     } else {
       logger = new JdkLogger(name);
@@ -136,57 +132,11 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
   }
 
-  public static class Builder {
-
-    private Logger customLogger;
-    private boolean fallbackToConsole;
-    private boolean disableSlf4J;
-    private String loggerName;
-
-    Builder() {
-      fallbackToConsole = false;
-      disableSlf4J = false;
-      loggerName = "CouchbaseLogger";
-      customLogger = null;
-    }
-
-    /**
-     * Allows to specify a custom logger. This is used for testing only.
-     *
-     * @param customLogger the custom logger
-     * @return the Builder for chaining purposes
-     */
-    @Stability.Internal
-    Builder customLogger(Logger customLogger) {
-      this.customLogger = customLogger;
-      return this;
-    }
-
-    public Builder fallbackToConsole(boolean fallbackToConsole) {
-      this.fallbackToConsole = fallbackToConsole;
-      return this;
-    }
-
-    public Builder disableSlf4J(boolean disableSlf4J) {
-      this.disableSlf4J = disableSlf4J;
-      return this;
-    }
-
-    public Builder loggerName(String loggerName) {
-      this.loggerName = loggerName;
-      return this;
-    }
-
-    public LoggingEventConsumer build() {
-      return new LoggingEventConsumer(this);
-    }
-  }
-
   /**
    * Generic logger interface.
    */
   @Stability.Internal
-  interface Logger {
+  public interface Logger {
 
     /**
      * Return the name of this <code>Logger</code> instance.

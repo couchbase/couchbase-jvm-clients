@@ -98,7 +98,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
    */
   public SelectBucketHandler(final EndpointContext endpointContext, final String bucketName) {
     this.endpointContext = endpointContext;
-    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
+    this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
     this.bucketName = bucketName;
   }
 

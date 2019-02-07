@@ -44,7 +44,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
   public KeyValueEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                           final int port, final String bucketname, final Credentials credentials) {
     super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
-      ctx, ctx.environment().ioEnvironment().kvCircuitBreakerConfig(), ServiceType.KV);
+      ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV);
     this.credentials = credentials;
     this.bucketname = bucketname;
   }
@@ -74,7 +74,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
-      if (!ctx.environment().ioEnvironment().securityConfig().certAuthEnabled()) {
+      if (!ctx.environment().securityConfig().certAuthEnabled()) {
         pipeline.addLast(new SaslAuthenticationHandler(
           ctx,
           credentials.usernameForBucket(bucketname),
@@ -101,11 +101,11 @@ public class KeyValueEndpoint extends BaseEndpoint {
         // ServerFeature.COLLECTIONS
       ));
 
-      if (ctx.environment().mutationTokensEnabled()) {
+      if (ctx.environment().ioConfig().mutationTokensEnabled()) {
         features.add(ServerFeature.MUTATION_SEQNO);
       }
 
-      if (ctx.environment().ioEnvironment().compressionConfig().enabled()) {
+      if (ctx.environment().compressionConfig().enabled()) {
         features.add(ServerFeature.SNAPPY);
       }
 

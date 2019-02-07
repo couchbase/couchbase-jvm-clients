@@ -56,7 +56,7 @@ public class ClusterManagerLoader extends BaseLoader {
 
     return Mono.defer(() -> {
       TerseBucketConfigRequest request = new TerseBucketConfigRequest(
-        ctx.environment().managerTimeout(),
+        ctx.environment().timeoutConfig().managerTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
         bucket,

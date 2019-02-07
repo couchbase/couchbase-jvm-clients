@@ -14,25 +14,37 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.env;
+package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.annotation.Stability;
-import reactor.core.publisher.Mono;
+import java.time.Duration;
 
-import java.util.function.Supplier;
+/**
+ *
+ */
+public interface ServiceConfig {
 
-@Stability.Internal
-public class OwnedSupplier<T> implements Supplier<T> {
+  /**
+   *
+   * @return
+   */
+  int minEndpoints();
 
-  private final T value;
+  /**
+   *
+   * @return
+   */
+  int maxEndpoints();
 
-  public OwnedSupplier(final T value) {
-    this.value = value;
-  }
+  /**
+   *
+   * @return
+   */
+  Duration idleTime();
 
-  @Override
-  public T get() {
-    return value;
-  }
+  /**
+   *
+   * @return
+   */
+  boolean pipelined();
 
 }

@@ -1,7 +1,5 @@
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.env.ServiceConfig;
-
 import java.time.Duration;
 
 public class AnalyticsServiceConfig implements ServiceConfig {

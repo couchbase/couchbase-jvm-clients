@@ -196,7 +196,7 @@ public abstract class BaseEndpoint implements Endpoint {
       .defer((Supplier<Mono<Channel>>) () -> {
         long connectTimeoutMs = endpointContext
           .environment()
-          .ioEnvironment()
+          .timeoutConfig()
           .connectTimeout()
           .toMillis();
 
@@ -211,7 +211,7 @@ public abstract class BaseEndpoint implements Endpoint {
             protected void initChannel(SocketChannel ch) {
               ChannelPipeline pipeline = ch.pipeline();
 
-              SecurityConfig config = endpointContext.environment().ioEnvironment().securityConfig();
+              SecurityConfig config = endpointContext.environment().securityConfig();
               if (config.tlsEnabled()) {
                 try {
                   pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config));
@@ -227,7 +227,7 @@ public abstract class BaseEndpoint implements Endpoint {
         attemptStart.set(System.nanoTime());
         return channelFutureIntoMono(channelBootstrap.connect());
       })
-      .timeout(endpointContext.environment().ioEnvironment().connectTimeout())
+      .timeout(endpointContext.environment().timeoutConfig().connectTimeout())
       .onErrorResume(throwable -> {
         if (disconnect.get()) {
           endpointContext.environment().eventBus().publish(
@@ -247,7 +247,7 @@ public abstract class BaseEndpoint implements Endpoint {
         .retryMax(Long.MAX_VALUE)
         .doOnRetry(retryContext -> {
           Duration duration = retryContext.exception() instanceof TimeoutException
-            ? endpointContext.environment().ioEnvironment().connectTimeout()
+            ? endpointContext.environment().timeoutConfig().connectTimeout()
             : Duration.ofNanos(System.nanoTime() - attemptStart.get());
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             duration,

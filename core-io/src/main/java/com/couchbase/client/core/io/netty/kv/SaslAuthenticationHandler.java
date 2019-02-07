@@ -119,8 +119,8 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     this.endpointContext = endpointContext;
     this.username = username;
     this.password = password;
-    this.allowedMechanisms = endpointContext.environment().ioEnvironment().allowedSaslMechanisms();
-    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
+    this.allowedMechanisms = endpointContext.environment().ioConfig().allowedSaslMechanisms();
+    this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
   }
 
   /**

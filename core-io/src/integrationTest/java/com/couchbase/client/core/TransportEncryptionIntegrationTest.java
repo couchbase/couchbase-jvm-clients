@@ -68,9 +68,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       Optional.of(cfg.ports().get(Services.MANAGER_TLS))
     )).collect(Collectors.toSet());
 
-    IoEnvironment ioEnvironment = IoEnvironment.builder().securityConfig(config).build();
     return environment()
-      .ioEnvironment(ioEnvironment)
+      .securityConfig(config)
       .seedNodes(seeds)
       .build();
   }

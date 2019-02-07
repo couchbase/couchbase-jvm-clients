@@ -18,7 +18,6 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;

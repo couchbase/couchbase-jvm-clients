@@ -98,6 +98,12 @@ public class DefaultEventBus implements EventBus {
     return builder().build();
   }
 
+  public static DefaultEventBus createAndStart() {
+    DefaultEventBus eventBus = create();
+    eventBus.start();
+    return eventBus;
+  }
+
   private DefaultEventBus(final Builder builder) {
     subscribers = new CopyOnWriteArraySet<>();
     running = new AtomicBoolean(false);

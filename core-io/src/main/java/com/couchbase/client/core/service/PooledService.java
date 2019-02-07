@@ -19,7 +19,6 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**

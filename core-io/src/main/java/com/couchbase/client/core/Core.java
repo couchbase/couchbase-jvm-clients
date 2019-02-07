@@ -344,7 +344,7 @@ public class Core {
     return bucketConfigs.flatMap(bc ->
       Flux.fromIterable(bc.nodes())
         .flatMap(ni -> {
-          boolean tls = coreContext.environment().ioEnvironment().securityConfig().tlsEnabled();
+          boolean tls = coreContext.environment().securityConfig().tlsEnabled();
           Set<Map.Entry<ServiceType, Integer>> services = tls
             ? ni.sslServices().entrySet()
             : ni.services().entrySet();

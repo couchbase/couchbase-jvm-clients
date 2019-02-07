@@ -107,7 +107,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
     this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
-    this.compressionConfig = endpointContext.environment().ioEnvironment().compressionConfig();
+    this.compressionConfig = endpointContext.environment().compressionConfig();
     this.eventBus = endpointContext.environment().eventBus();
     this.bucketName = bucketName;
   }

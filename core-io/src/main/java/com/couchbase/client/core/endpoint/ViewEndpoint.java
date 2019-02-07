@@ -29,7 +29,7 @@ public class ViewEndpoint extends BaseEndpoint {
   public ViewEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                       final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().viewEventLoopGroup().get(),
-      ctx, ctx.environment().ioEnvironment().viewCircuitBreakerConfig(), ServiceType.VIEWS);
+      ctx, ctx.environment().ioConfig().viewCircuitBreakerConfig(), ServiceType.VIEWS);
   }
 
   @Override

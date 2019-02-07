@@ -19,6 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.NetworkAddress;
@@ -58,7 +59,7 @@ class KeyValueLoaderTest {
   @BeforeEach
   void setup() {
     CoreEnvironment env = mock(CoreEnvironment.class);
-    when(env.kvTimeout()).thenReturn(Duration.ofSeconds(1));
+    when(env.timeoutConfig()).thenReturn(TimeoutConfig.create());
     when(env.retryStrategy()).thenReturn(BestEffortRetryStrategy.INSTANCE);
 
     core = mock(Core.class);

@@ -34,9 +34,7 @@ import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoEnvironment;
-import com.couchbase.client.core.env.UserAgent;
+import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
@@ -82,18 +80,18 @@ class FeatureNegotiatingHandlerTest {
   private EndpointContext endpointContext;
   private EmbeddedChannel channel;
   private SimpleEventBus simpleEventBus;
-  private IoEnvironment ioEnv;
+  private TimeoutConfig timeoutConfig;
 
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
-    ioEnv = mock(IoEnvironment.class);
+    timeoutConfig = mock(TimeoutConfig.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
-    when(env.ioEnvironment()).thenReturn(ioEnv);
+    when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(env.userAgent()).thenReturn(new UserAgent("some", "0.0.0", Optional.empty(), Optional.empty()));
-    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
+    when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
@@ -136,7 +134,7 @@ class FeatureNegotiatingHandlerTest {
   @Test
   void failConnectIfPromiseTimesOut() throws Exception {
     Duration timeout = Duration.ofMillis(100);
-    when(ioEnv.connectTimeout()).thenReturn(timeout);
+    when(timeoutConfig.connectTimeout()).thenReturn(timeout);
 
     FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
       endpointContext,

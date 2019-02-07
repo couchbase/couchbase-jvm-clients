@@ -58,7 +58,7 @@ public class KeyValueLoader extends BaseLoader {
 
     return Mono.defer(() -> {
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
-        ctx.environment().kvTimeout(),
+        ctx.environment().timeoutConfig().kvTimeout(),
         ctx,
         bucket,
         BestEffortRetryStrategy.INSTANCE,

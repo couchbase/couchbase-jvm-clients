@@ -93,7 +93,7 @@ public class AsyncCluster {
     notNull(options, "QueryOptions");
     QueryOptions.BuiltQueryOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.get().queryTimeout());
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
     // FIXME: proper jackson encoding with options

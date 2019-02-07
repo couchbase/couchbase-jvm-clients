@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import io.netty.util.CharsetUtil;
@@ -40,7 +41,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    env = environment().mutationTokensEnabled(true).build();
+    env = environment().ioConfig(IoConfig.builder().mutationTokensEnabled(true).build()).build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
   }

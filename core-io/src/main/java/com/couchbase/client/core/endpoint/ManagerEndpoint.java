@@ -1,6 +1,5 @@
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.config.ManagerMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
@@ -12,7 +11,7 @@ public class ManagerEndpoint extends BaseEndpoint {
 
   public ManagerEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().managerEventLoopGroup().get(),
-      ctx, ctx.environment().ioEnvironment().managerCircuitBreakerConfig(), ServiceType.MANAGER);
+      ctx, ctx.environment().ioConfig().managerCircuitBreakerConfig(), ServiceType.MANAGER);
   }
 
   @Override

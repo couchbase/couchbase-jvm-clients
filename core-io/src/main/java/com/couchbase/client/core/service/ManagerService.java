@@ -3,7 +3,6 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.ManagerEndpoint;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.RoundRobinSelectionStrategy;
 

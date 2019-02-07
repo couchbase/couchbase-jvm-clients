@@ -25,9 +25,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -126,9 +124,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
-      .ioEnvironment(IoEnvironment.builder()
-        .connectTimeout(Duration.ofMillis(10))
-        .build())
+      .timeoutConfig(TimeoutConfig.builder().connectTimeout(Duration.ofMillis(10)).build())
       .build();
 
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
@@ -250,9 +246,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
-      .ioEnvironment(IoEnvironment.builder()
-        .connectTimeout(Duration.ofMillis(10))
-        .build())
+      .timeoutConfig(TimeoutConfig.builder().connectTimeout(Duration.ofMillis(10)).build())
       .build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,

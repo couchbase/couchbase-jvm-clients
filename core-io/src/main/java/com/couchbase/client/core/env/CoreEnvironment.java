@@ -17,10 +17,8 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
-import com.couchbase.client.core.cnc.DefaultEventBus;
-import com.couchbase.client.core.cnc.DiagnosticsMonitor;
-import com.couchbase.client.core.cnc.EventBus;
-import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.*;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -32,6 +30,8 @@ import com.couchbase.client.core.service.SearchServiceConfig;
 import com.couchbase.client.core.service.ViewServiceConfig;
 import reactor.core.publisher.Mono;
 
+import javax.print.attribute.standard.Compression;
+import javax.swing.text.html.Option;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
@@ -51,85 +51,83 @@ public class CoreEnvironment {
     new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
-  private final Supplier<UserAgent> userAgent;
+  /**
+   * Holds the user agent for this client instance.
+   */
+  private final UserAgent userAgent;
   private final Supplier<EventBus> eventBus;
-  private final Supplier<Set<SeedNode>> seedNodes;
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
-  private final DiagnosticsMonitor diagnosticsMonitor;
-  private final Duration kvTimeout;
-  private final Duration managerTimeout;
-  private final Duration queryTimeout;
-  private final Duration configPollInterval;
-  private final Credentials credentials;
-  private final MemcachedHashingStrategy memcachedHashingStrategy;
-  private final RetryStrategy retryStrategy;
-  private final KeyValueServiceConfig keyValueServiceConfig;
-  private final QueryServiceConfig queryServiceConfig;
-  private final ViewServiceConfig viewServiceConfig;
-  private final SearchServiceConfig searchServiceConfig;
-  private final AnalyticsServiceConfig analyticsServiceConfig;
-  private final boolean mutationTokensEnabled;
+  private final IoConfig ioConfig;
+  private final CompressionConfig compressionConfig;
+  private final SecurityConfig securityConfig;
+  private final TimeoutConfig timeoutConfig;
+  private final ServiceConfig serviceConfig;
 
+  private final LoggerConfig loggerConfig;
+  private final DiagnosticsMonitor diagnosticsMonitor;
+
+  private final Supplier<Set<SeedNode>> seedNodes;
+  //private final DiagnosticsMonitor diagnosticsMonitor;
+  private final Credentials credentials;
+  private final RetryStrategy retryStrategy;
+
+
+  public static CoreEnvironment create(final String username, final String password) {
+    return builder(username, password).build();
+  }
+
+  public static CoreEnvironment create(final Credentials credentials) {
+    return builder(credentials).build();
+  }
+
+  public static CoreEnvironment create(final String connectionString, String username, String password) {
+    return builder(connectionString, username, password).build();
+  }
+
+  public static CoreEnvironment create(final String connectionString, Credentials credentials) {
+    return builder(connectionString, credentials).build();
+  }
+
+  public static CoreEnvironment.Builder builder(final String username, final String password) {
+    return builder(new RoleBasedCredentials(username, password));
+  }
+
+  public static CoreEnvironment.Builder builder(final Credentials credentials) {
+    return new Builder(credentials);
+  }
+
+  public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
+    return builder(connectionString, new RoleBasedCredentials(username, password));
+  }
+
+  public static CoreEnvironment.Builder builder(final String connectionString, final Credentials credentials) {
+    return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
+  }
+
+  @SuppressWarnings({"unchecked"})
   protected CoreEnvironment(final Builder builder) {
-    this.userAgent = builder.userAgent == null
-      ? this::defaultUserAgent
-      : builder.userAgent;
-    this.eventBus = builder.eventBus == null
-      ? new OwnedSupplier<>(DefaultEventBus.create())
-      : builder.eventBus;
-    this.timer = builder.timer == null
-      ? Timer.createAndStart()
-      : builder.timer;
-    this.ioEnvironment = builder.ioEnvironment == null
-      ? IoEnvironment.create()
-      : builder.ioEnvironment;
-    this.kvTimeout = builder.kvTimeout == null
-      ? Duration.ofMillis(2500)
-      : builder.kvTimeout;
-    this.managerTimeout = builder.managerTimeout == null
-      ? Duration.ofSeconds(5)
-      : builder.managerTimeout;
-    this.queryTimeout = builder.queryTimeout == null
-      ? Duration.ofMillis(75000)
-      : builder.queryTimeout;
+    this.userAgent = defaultUserAgent();
+    this.eventBus = Optional
+      .ofNullable(builder.eventBus)
+      .orElse(new OwnedSupplier<>(DefaultEventBus.createAndStart()));
+    this.timer = Timer.createAndStart();
+
+    this.ioEnvironment = Optional.ofNullable(builder.ioEnvironment).orElse(IoEnvironment.create());
+    this.ioConfig = Optional.ofNullable(builder.ioConfig).orElse(IoConfig.create());
+    this.compressionConfig = Optional.ofNullable(builder.compressionConfig).orElse(CompressionConfig.create());
+    this.securityConfig = Optional.ofNullable(builder.securityConfig).orElse(SecurityConfig.create());
+    this.timeoutConfig = Optional.ofNullable(builder.timeoutConfig).orElse(TimeoutConfig.create());
+    this.serviceConfig = Optional.ofNullable(builder.serviceConfig).orElse(ServiceConfig.create());
+    this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
+    this.loggerConfig = Optional.ofNullable(builder.loggerConfig).orElse(LoggerConfig.create());
+
     this.seedNodes = builder.seedNodes == null
       ? DEFAULT_SEED_NODES
       : builder.seedNodes;
-    this.configPollInterval = builder.configPollInterval == null
-      ? Duration.ofMillis(2500)
-      : builder.configPollInterval;
-    this.memcachedHashingStrategy = builder.memcachedHashingStrategy == null
-      ? StandardMemcachedHashingStrategy.INSTANCE
-      : builder.memcachedHashingStrategy;
-    this.retryStrategy = builder.retryStrategy == null
-      ? DEFAULT_RETRY_STRATEGY
-      : builder.retryStrategy;
-    this.keyValueServiceConfig = builder.keyValueServiceConfig == null
-      ? KeyValueServiceConfig.create()
-      : builder.keyValueServiceConfig;
-    this.queryServiceConfig = builder.queryServiceConfig == null
-      ? QueryServiceConfig.create()
-      : builder.queryServiceConfig;
-    this.viewServiceConfig = builder.viewServiceConfig == null
-      ? ViewServiceConfig.create()
-      : builder.viewServiceConfig;
-    this.searchServiceConfig = builder.searchServiceConfig == null
-      ? SearchServiceConfig.create()
-      : builder.searchServiceConfig;
-    this.analyticsServiceConfig = builder.analyticsServiceConfig == null
-      ? AnalyticsServiceConfig.create()
-      : builder.analyticsServiceConfig;
-    this.mutationTokensEnabled = builder.mutationTokensEnabled;
-
     this.credentials = builder.credentials;
 
-    if (this.eventBus instanceof OwnedSupplier) {
-      ((DefaultEventBus) eventBus.get()).start();
-    }
-
-    // TODO: make configurable!
-    eventBus.get().subscribe(LoggingEventConsumer.create());
+    eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
     diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
     diagnosticsMonitor.start().block();
   }
@@ -173,53 +171,25 @@ public class CoreEnvironment {
     return CoreEnvironment.class.getPackage();
   }
 
+  /**
+   * Returns the default user agent name that is used as part of the resulting string.
+   */
   protected String defaultAgentTitle() {
     return "java-core";
   }
 
-  public static CoreEnvironment create(final String username, final String password) {
-    return builder(username, password).build();
-  }
-
-  public static CoreEnvironment create(final Credentials credentials) {
-    return builder(credentials).build();
-  }
-
-  public static CoreEnvironment create(final String connectionString, String username, String password) {
-    return builder(connectionString, username, password).build();
-  }
-
-  public static CoreEnvironment create(final String connectionString, Credentials credentials) {
-    return builder(connectionString, credentials).build();
-  }
-
-  public static CoreEnvironment.Builder builder(final String username, final String password) {
-    return builder(new RoleBasedCredentials(username, password));
-  }
-
-  public static CoreEnvironment.Builder builder(final Credentials credentials) {
-    return new Builder(credentials);
-  }
-
-  public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, new RoleBasedCredentials(username, password));
-  }
-
-  public static CoreEnvironment.Builder builder(final String connectionString, final Credentials credentials) {
-    return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
-  }
-
+  /**
+   * Returns the {@link Credentials} attached to this environment.
+   */
   public Credentials credentials() {
     return credentials;
   }
 
   /**
    * User agent used to identify this client against the server.
-   *
-   * @return the user agent as a string representation.
    */
   public UserAgent userAgent() {
-    return userAgent.get();
+    return userAgent;
   }
 
   /**
@@ -233,14 +203,37 @@ public class CoreEnvironment {
   }
 
   /**
-   * Holds the environmental configuration/state that is tied to the IO
-   * layer.
-   *
-   * @return the IO environment currently in use.
+   * Holds the environmental configuration/state that is tied to the IO layer.
    */
   public IoEnvironment ioEnvironment() {
     return ioEnvironment;
   }
+
+  public IoConfig ioConfig() {
+    return ioConfig;
+  }
+
+  public TimeoutConfig timeoutConfig() {
+    return timeoutConfig;
+  }
+
+  public SecurityConfig securityConfig() {
+    return securityConfig;
+  }
+
+  public ServiceConfig serviceConfig() {
+    return serviceConfig;
+  }
+
+  public CompressionConfig compressionConfig() {
+    return compressionConfig;
+  }
+
+  public LoggerConfig loggerConfig() {
+    return loggerConfig;
+  }
+
+
 
   /**
    * Holds the timer which is used to schedule tasks and trigger their callback,
@@ -252,61 +245,12 @@ public class CoreEnvironment {
     return timer;
   }
 
-  public Duration kvTimeout() {
-    return kvTimeout;
-  }
-
-  public Duration managerTimeout() {
-    return managerTimeout;
-  }
-
-  public Duration queryTimeout() {
-    return queryTimeout;
-  }
-
   public Set<SeedNode> seedNodes() {
     return seedNodes.get();
   }
 
-  public Duration configPollInterval() {
-    return configPollInterval;
-  }
-
-  /**
-   * Allows to specify a custom strategy to hash memcached bucket documents.
-   *
-   * @return the memcached hashing strategy.
-   */
-  public MemcachedHashingStrategy memcachedHashingStrategy() {
-    return memcachedHashingStrategy;
-  }
-
   public RetryStrategy retryStrategy() {
     return retryStrategy;
-  }
-
-  public KeyValueServiceConfig keyValueServiceConfig() {
-    return keyValueServiceConfig;
-  }
-
-  public AnalyticsServiceConfig analyticsServiceConfig() {
-    return analyticsServiceConfig;
-  }
-
-  public ViewServiceConfig viewServiceConfig() {
-    return viewServiceConfig;
-  }
-
-  public QueryServiceConfig queryServiceConfig() {
-    return queryServiceConfig;
-  }
-
-  public SearchServiceConfig searchServiceConfig() {
-    return searchServiceConfig;
-  }
-
-  public boolean mutationTokensEnabled() {
-    return mutationTokensEnabled;
   }
 
   public void shutdown(final Duration timeout) {
@@ -315,32 +259,27 @@ public class CoreEnvironment {
 
   public Mono<Void> shutdownAsync(final Duration timeout) {
     return Mono.defer(() -> {
-      // todo: implement
-      diagnosticsMonitor.stop();
-      return Mono.empty();
+      if (eventBus instanceof OwnedSupplier && eventBus.get() instanceof DefaultEventBus) {
+        // TODO
+        ((DefaultEventBus) eventBus.get()).stop();
+      }
+      return diagnosticsMonitor.stop();
     });
   }
 
   public static class Builder<SELF extends Builder<SELF>> {
 
-    private Supplier<UserAgent> userAgent = null;
-    private Supplier<EventBus> eventBus = null;
-    private Supplier<Set<SeedNode>> seedNodes = null;
-    private Timer timer = null;
     private IoEnvironment ioEnvironment = null;
-    private Duration kvTimeout = null;
-    private Duration managerTimeout = null;
-    private Duration queryTimeout = null;
-    private Duration configPollInterval = null;
-    private boolean mutationTokensEnabled = false;
+    private IoConfig ioConfig = null;
+    private CompressionConfig compressionConfig = null;
+    private SecurityConfig securityConfig = null;
+    private TimeoutConfig timeoutConfig = null;
+    private ServiceConfig serviceConfig = null;
+    private LoggerConfig loggerConfig = null;
+    private Supplier<EventBus> eventBus = null;
 
-    private MemcachedHashingStrategy memcachedHashingStrategy;
+    private Supplier<Set<SeedNode>> seedNodes = null;
     private RetryStrategy retryStrategy;
-    private KeyValueServiceConfig keyValueServiceConfig;
-    private QueryServiceConfig queryServiceConfig;
-    private ViewServiceConfig viewServiceConfig;
-    private SearchServiceConfig searchServiceConfig;
-    private AnalyticsServiceConfig analyticsServiceConfig;
 
     private final Credentials credentials;
 
@@ -353,15 +292,6 @@ public class CoreEnvironment {
       return (SELF) this;
     }
 
-    public SELF userAgent(final UserAgent userAgent) {
-      return userAgent(() -> userAgent);
-    }
-
-    public SELF userAgent(final Supplier<UserAgent> userAgent) {
-      this.userAgent = userAgent;
-      return self();
-    }
-
     public SELF load(final PropertyLoader<Builder> loader) {
       loader.load(this);
       return self();
@@ -372,97 +302,54 @@ public class CoreEnvironment {
       return self();
     }
 
-    public SELF eventBus(final EventBus eventBus) {
-      return eventBus(() -> eventBus);
-    }
-
-    public SELF eventBus(final Supplier<EventBus> eventBus) {
-      this.eventBus = eventBus;
+    public SELF ioConfig(final IoConfig ioConfig) {
+      this.ioConfig = ioConfig;
       return self();
     }
 
-    public SELF seedNodes(Supplier<Set<SeedNode>> seedNodes) {
+    public SELF compressionConfig(final CompressionConfig compressionConfig) {
+      this.compressionConfig = compressionConfig;
+      return self();
+    }
+
+    public SELF securityConfig(final SecurityConfig securityConfig) {
+      this.securityConfig = securityConfig;
+      return self();
+    }
+
+    public SELF timeoutConfig(final TimeoutConfig timeoutConfig) {
+      this.timeoutConfig = timeoutConfig;
+      return self();
+    }
+
+    public SELF serviceConfig(final ServiceConfig serviceConfig) {
+      this.serviceConfig = serviceConfig;
+      return self();
+    }
+
+    public SELF loggerConfig(final LoggerConfig loggerConfig) {
+      this.loggerConfig = loggerConfig;
+      return self();
+    }
+
+    @Stability.Uncommitted
+    public SELF eventBus(final EventBus eventBus) {
+      this.eventBus = new ExternalSupplier<>(eventBus);
+      return self();
+    }
+
+
+    public SELF seedNodes(final Supplier<Set<SeedNode>> seedNodes) {
       this.seedNodes = seedNodes;
       return self();
     }
 
-    public SELF seedNodes(Set<SeedNode> seedNodes) {
+    public SELF seedNodes(final Set<SeedNode> seedNodes) {
       return seedNodes(() -> seedNodes);
-    }
-
-
-    public SELF kvTimeout(final Duration kvTimeout) {
-      this.kvTimeout = kvTimeout;
-      return self();
-    }
-
-    public SELF managerTimeout(final Duration managerTimeout) {
-      this.managerTimeout = managerTimeout;
-      return self();
-    }
-
-    public SELF queryTimeout(final Duration queryTimeout) {
-      this.queryTimeout = queryTimeout;
-      return self();
-    }
-
-    public SELF configPollInterval(final Duration configPollInterval) {
-      this.configPollInterval = configPollInterval;
-      return self();
-    }
-
-    /**
-     * Allows to pass in a custom {@link Timer}.
-     *
-     * Note that this is advanced API! Also if a timer is passed in, it needs
-     * to be started manually. If this is not done it can lead to unintended
-     * consequences like requests not timing out!
-     *
-     * @param timer the timer to use.
-     * @return this build for chaining purposes.
-     */
-    public SELF timer(final Timer timer) {
-      this.timer = timer;
-      return self();
-    }
-
-    public SELF memcachedHashingStrategy(final MemcachedHashingStrategy strategy) {
-      this.memcachedHashingStrategy = strategy;
-      return self();
     }
 
     public SELF retryStrategy(final RetryStrategy retryStrategy) {
       this.retryStrategy = retryStrategy;
-      return self();
-    }
-
-    public SELF keyValueServiceConfig(final KeyValueServiceConfig config) {
-      this.keyValueServiceConfig = config;
-      return self();
-    }
-
-    public SELF analyticsServiceConfig(final AnalyticsServiceConfig config) {
-      this.analyticsServiceConfig = config;
-      return self();
-    }
-
-    public SELF searchServiceConfig(final SearchServiceConfig config) {
-      this.searchServiceConfig = config;
-      return self();
-    }
-
-    public SELF queryServiceConfig(final QueryServiceConfig config) {
-      this.queryServiceConfig = config;
-      return self();
-    }
-
-    public SELF viewServiceConfig(final ViewServiceConfig config) {
-      this.viewServiceConfig = config;
-      return self();
-    }
-
-    public SELF mutationTokensEnabled(final boolean mutationTokensEnabled) {
-      this.mutationTokensEnabled = mutationTokensEnabled;
       return self();
     }
 

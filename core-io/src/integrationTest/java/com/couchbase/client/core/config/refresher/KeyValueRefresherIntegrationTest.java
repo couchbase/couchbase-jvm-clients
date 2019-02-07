@@ -21,6 +21,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .configPollInterval(Duration.ofSeconds(1))
+      .ioConfig(IoConfig.builder().configPollInterval(Duration.ofSeconds(1)).build())
       .build();
   }
 
@@ -81,13 +82,13 @@ class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
 
     Util.waitUntilCondition(() -> timings.size() >= 2);
 
-    long expected = env.configPollInterval().toNanos();
+    long expected = env.ioConfig().configPollInterval().toNanos();
     assertTrue((timings.get(1) - timings.get(0)) > expected);
 
     refresher.deregister(config().bucketname()).block();
 
     long size = timings.size();
-    Thread.sleep(env.configPollInterval().toMillis());
+    Thread.sleep(env.ioConfig().configPollInterval().toMillis());
     assertEquals(size, timings.size());
 
     for (ProposedBucketConfigContext config : configs) {

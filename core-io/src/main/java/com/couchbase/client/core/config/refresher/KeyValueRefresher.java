@@ -115,7 +115,7 @@ public class KeyValueRefresher implements Refresher {
   public KeyValueRefresher(final ConfigurationProvider provider, final Core core) {
     this.core = core;
     this.provider = provider;
-    this.configPollInterval = core.context().environment().configPollInterval().toNanos();
+    this.configPollInterval = core.context().environment().ioConfig().configPollInterval().toNanos();
 
     pollRegistration = Flux
       .interval(POLLER_INTERVAL)
@@ -193,7 +193,7 @@ public class KeyValueRefresher implements Refresher {
     return nodes.flatMap(nodeInfo -> {
       CoreContext ctx = core.context();
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
-        ctx.environment().kvTimeout(),
+        ctx.environment().timeoutConfig().kvTimeout(),
         ctx,
         name,
         BestEffortRetryStrategy.INSTANCE,

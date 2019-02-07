@@ -98,7 +98,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
   public FeatureNegotiatingHandler(final EndpointContext endpointContext,
                             final Set<ServerFeature> features) {
     this.endpointContext = endpointContext;
-    this.timeout = endpointContext.environment().ioEnvironment().connectTimeout();
+    this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
     this.features = features;
   }
 

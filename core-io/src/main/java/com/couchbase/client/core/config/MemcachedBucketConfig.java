@@ -18,6 +18,8 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -36,7 +38,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
 
     private final long rev;
     private final TreeMap<Long, NodeInfo> ketamaNodes;
-    private final CoreEnvironment env;
+    private final MemcachedHashingStrategy hashingStrategy;
 
     /**
      * Creates a new {@link MemcachedBucketConfig}.
@@ -62,9 +64,9 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
             @JacksonInject("origin") NetworkAddress origin) {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities, origin);
-        this.env = env;
         this.rev = rev;
-        this.ketamaNodes = new TreeMap<Long, NodeInfo>();
+        this.ketamaNodes = new TreeMap<>();
+        this.hashingStrategy = StandardMemcachedHashingStrategy.INSTANCE;
         populateKetamaNodes();
     }
 
@@ -97,7 +99,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
                 MessageDigest md5;
                 try {
                     md5 = MessageDigest.getInstance("MD5");
-                    md5.update(env.memcachedHashingStrategy().hash(node, i).getBytes(CharsetUtil.UTF_8));
+                    md5.update(hashingStrategy.hash(node, i).getBytes(CharsetUtil.UTF_8));
                     byte[] digest = md5.digest();
                     for (int j = 0; j < 4; j++) {
                         Long key = ((long) (digest[3 + j * 4] & 0xFF) << 24)

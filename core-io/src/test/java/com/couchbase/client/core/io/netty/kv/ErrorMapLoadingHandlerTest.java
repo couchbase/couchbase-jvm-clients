@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
@@ -75,10 +76,10 @@ class ErrorMapLoadingHandlerTest {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
-    IoEnvironment ioEnv = mock(IoEnvironment.class);
+    TimeoutConfig timeoutConfig = mock(TimeoutConfig.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
-    when(env.ioEnvironment()).thenReturn(ioEnv);
-    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(1000));
+    when(env.timeoutConfig()).thenReturn(timeoutConfig);
+    when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
@@ -120,10 +121,10 @@ class ErrorMapLoadingHandlerTest {
     channel = new EmbeddedChannel();
     simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
-    IoEnvironment ioEnv = mock(IoEnvironment.class);
+    TimeoutConfig timeoutConfig = mock(TimeoutConfig.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
-    when(env.ioEnvironment()).thenReturn(ioEnv);
-    when(ioEnv.connectTimeout()).thenReturn(Duration.ofMillis(100));
+    when(env.timeoutConfig()).thenReturn(timeoutConfig);
+    when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(100));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     EndpointContext endpointContext = endpointContext = new EndpointContext(coreContext,
       NetworkAddress.localhost(), 1234, null, ServiceType.KV,

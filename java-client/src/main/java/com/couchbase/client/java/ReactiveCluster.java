@@ -96,7 +96,7 @@ public class ReactiveCluster {
 
 
     QueryOptions.BuiltQueryOptions opts = options.build();
-    Duration timeout = opts.timeout().orElse(asyncCluster.environment().get().kvTimeout());
+    Duration timeout = opts.timeout().orElse(asyncCluster.environment().get().timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(asyncCluster.environment().get().retryStrategy());
 
     // FIXME: proper jackson encoding with options

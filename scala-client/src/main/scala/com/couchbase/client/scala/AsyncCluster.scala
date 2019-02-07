@@ -48,7 +48,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
 
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _ => environment.queryTimeout()
+      case _ => environment.timeoutConfig.queryTimeout()
     }
 
     val retryStrategy = options.retryStrategy match {

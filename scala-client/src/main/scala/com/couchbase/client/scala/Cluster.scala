@@ -55,7 +55,7 @@ class Cluster(env: => ClusterEnvironment)
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _ => env.queryTimeout()
+      case _ => env.timeoutConfig.queryTimeout()
     }
 
     AsyncUtils.block(async.query(statement, options), timeout)

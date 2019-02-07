@@ -17,16 +17,15 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
 
 @Stability.Internal
-public class OwnedSupplier<T> implements Supplier<T> {
+public class ExternalSupplier<T> implements Supplier<T> {
 
   private final T value;
 
-  public OwnedSupplier(final T value) {
+  public ExternalSupplier(final T value) {
     this.value = value;
   }
 

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.couchbase.client.core.env.LoggerConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,10 +39,7 @@ class LoggingEventConsumerTest {
   @BeforeEach
   void setup() {
     logger = mock(LoggingEventConsumer.Logger.class);
-    loggingEventConsumer = LoggingEventConsumer
-      .builder()
-      .customLogger(logger)
-      .build();
+    loggingEventConsumer = LoggingEventConsumer.create(LoggerConfig.builder().customLogger(logger).build());
   }
 
   @Test

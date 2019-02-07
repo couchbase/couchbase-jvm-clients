@@ -27,6 +27,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -353,10 +354,11 @@ public class Node {
   protected Service createService(final ServiceType serviceType, final int port,
                                 final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
+    ServiceConfig sc = env.serviceConfig();
     switch (serviceType) {
       case KV:
         if (bucket.isPresent()) {
-          return new KeyValueService(env.keyValueServiceConfig(), ctx, address, port,
+          return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port,
             bucket.get(), credentials);
         } else {
           throw new IllegalStateException("Bucket needs to be present when the " +
@@ -365,13 +367,13 @@ public class Node {
       case MANAGER:
         return new ManagerService(ctx, address, port);
       case QUERY:
-        return new QueryService(env.queryServiceConfig(), ctx, address, port);
+        return new QueryService(sc.queryServiceConfig(), ctx, address, port);
       case VIEWS:
-        return new ViewService(env.viewServiceConfig(), ctx, address, port);
+        return new ViewService(sc.viewServiceConfig(), ctx, address, port);
       case SEARCH:
-        return new SearchService(env.searchServiceConfig(), ctx, address, port);
+        return new SearchService(sc.searchServiceConfig(), ctx, address, port);
       case ANALYTICS:
-        return new AnalyticsService(env.analyticsServiceConfig(), ctx, address, port);
+        return new AnalyticsService(sc.analyticsServiceConfig(), ctx, address, port);
       default:
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }

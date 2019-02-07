@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -47,7 +48,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    environment = environment().mutationTokensEnabled(true).build();
+    environment = environment().ioConfig(IoConfig.builder().mutationTokensEnabled(true).build()).build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -151,8 +152,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .kvTimeout(Duration.ofMillis(500))
-      .managerTimeout(Duration.ofMillis(500))
+      .timeoutConfig(TimeoutConfig.builder()
+        .kvTimeout(Duration.ofMillis(500))
+        .managerTimeout(Duration.ofMillis(500))
+        .build()
+      )
       .build();
     core = Core.create(environment);
 
@@ -181,8 +185,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .kvTimeout(Duration.ofMillis(500))
-      .managerTimeout(Duration.ofMillis(500))
+      .timeoutConfig(TimeoutConfig.builder()
+        .kvTimeout(Duration.ofMillis(500))
+        .managerTimeout(Duration.ofMillis(500))
+        .build()
+      )
       .build();
     core = Core.create(environment);
 
@@ -211,8 +218,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .kvTimeout(Duration.ofSeconds(1))
-      .managerTimeout(Duration.ofSeconds(1))
+      .timeoutConfig(TimeoutConfig.builder()
+        .kvTimeout(Duration.ofSeconds(1))
+        .managerTimeout(Duration.ofSeconds(1))
+        .build()
+      )
       .build();
     core = Core.create(environment);
 
