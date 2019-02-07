@@ -251,7 +251,7 @@ object Conversions {
     def decodeGet(in: SubdocField, params: DecodeParams): Try[T]
 
     def decodeExists(in: SubdocField, params: DecodeParams): Try[T] = {
-      Failure(new IllegalStateException()) // TODO replace with proper exception
+      Failure(new DecodingFailedException("Field cannot be checked with exists"))
     }
   }
 
