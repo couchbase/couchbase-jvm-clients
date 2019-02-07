@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.cnc;
 
+import reactor.core.publisher.Mono;
+
 import java.util.function.Consumer;
 
 /**
@@ -49,6 +51,10 @@ public interface EventBus {
    * @param subscription the subscription used.
    */
   void unsubscribe(EventSubscription subscription);
+
+  Mono<Void> start();
+
+  Mono<Void> stop();
 
   /**
    * Signals if a publish call was successful and if not why.

@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc;
 
 import org.jctools.queues.QueueFactory;
 import org.jctools.queues.spec.ConcurrentQueueSpec;
+import reactor.core.publisher.Mono;
 
 import java.io.PrintStream;
 import java.time.Duration;
@@ -98,12 +99,6 @@ public class DefaultEventBus implements EventBus {
     return builder().build();
   }
 
-  public static DefaultEventBus createAndStart() {
-    DefaultEventBus eventBus = create();
-    eventBus.start();
-    return eventBus;
-  }
-
   private DefaultEventBus(final Builder builder) {
     subscribers = new CopyOnWriteArraySet<>();
     running = new AtomicBoolean(false);
@@ -142,50 +137,59 @@ public class DefaultEventBus implements EventBus {
   /**
    * Starts the {@link DefaultEventBus}.
    */
-  public void start() {
-    if (running.compareAndSet(false, true)) {
-      runningThread = new Thread(() -> {
-        long idleSleepTime = idleSleepDuration.toMillis();
-        while (isRunning()) {
-          Event event = eventQueue.poll();
-          while (event != null) {
-            for (Consumer<Event> subscriber : subscribers) {
-              try {
-                subscriber.accept(event);
-              } catch (Throwable t) {
-                // any exception thrown in the event consumer is
-                // ignored, since it would otherwise kill the
-                // event bus thread!
-                if (errorLogging != null) {
-                  errorLogging.println("Exception caught in EventBus Consumer: " + t);
+  @Override
+  public Mono<Void> start() {
+    return Mono.defer(() -> {
+      if (running.compareAndSet(false, true)) {
+        runningThread = new Thread(() -> {
+          long idleSleepTime = idleSleepDuration.toMillis();
+          while (isRunning()) {
+            Event event = eventQueue.poll();
+            while (event != null) {
+              for (Consumer<Event> subscriber : subscribers) {
+                try {
+                  subscriber.accept(event);
+                } catch (Throwable t) {
+                  // any exception thrown in the event consumer is
+                  // ignored, since it would otherwise kill the
+                  // event bus thread!
+                  if (errorLogging != null) {
+                    errorLogging.println("Exception caught in EventBus Consumer: " + t);
+                  }
                 }
               }
+              event = eventQueue.poll();
             }
-            event = eventQueue.poll();
-          }
 
-          try {
-            Thread.sleep(idleSleepTime);
-          } catch (InterruptedException e) {
-            // If this thread is interrupted, we continue
-            // into the loop early. so if interrupted for
-            // shutdown it completes quickly while sleeping
+            try {
+              Thread.sleep(idleSleepTime);
+            } catch (InterruptedException e) {
+              // If this thread is interrupted, we continue
+              // into the loop early. so if interrupted for
+              // shutdown it completes quickly while sleeping
+            }
           }
-        }
-      });
+        });
 
-      runningThread.setDaemon(true);
-      runningThread.setName(threadName);
-      runningThread.start();
-    }
+        runningThread.setDaemon(true);
+        runningThread.setName(threadName);
+        runningThread.start();
+      }
+      return Mono.empty();
+    });
   }
 
   /**
    * Stops the {@link DefaultEventBus} from running.
    */
-  public void stop() {
-    running.compareAndSet(true, false);
-    runningThread.interrupt();
+  @Override
+  public Mono<Void> stop() {
+    return Mono.defer(() -> {
+      if(running.compareAndSet(true, false)) {
+        runningThread.interrupt();
+      }
+      return Mono.empty();
+    });
   }
 
   /**

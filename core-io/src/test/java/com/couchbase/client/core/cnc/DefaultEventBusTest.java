@@ -46,11 +46,11 @@ class DefaultEventBusTest {
     assertFalse(eventBus.isRunning());
     assertThreadNotRunning(threadName);
 
-    eventBus.start();
+    eventBus.start().block();
     assertTrue(eventBus.isRunning());
     assertThreadRunning(threadName);
 
-    eventBus.stop();
+    eventBus.stop().block();
     waitUntilCondition(() -> !threadRunning(threadName));
     assertFalse(eventBus.isRunning());
     assertThreadNotRunning(threadName);
@@ -76,7 +76,7 @@ class DefaultEventBusTest {
     AtomicInteger eventsReceived = new AtomicInteger();
     eventBus.subscribe(event -> eventsReceived.incrementAndGet());
 
-    eventBus.start();
+    eventBus.start().block();
 
     assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
     assertEquals(EventBus.PublishResult.SUCCESS, eventBus.publish(mock(Event.class)));
@@ -84,6 +84,6 @@ class DefaultEventBusTest {
 
     waitUntilCondition(() -> eventsReceived.get() == 3);
 
-    eventBus.stop();
+    eventBus.stop().block();
   }
 }

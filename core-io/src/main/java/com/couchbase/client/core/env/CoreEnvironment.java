@@ -37,7 +37,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * The {@link CoreEnvironment} is an extendable, configurable and stateful
@@ -47,9 +51,17 @@ import java.util.function.Supplier;
  */
 public class CoreEnvironment {
 
-  private static final Supplier<Set<SeedNode>> DEFAULT_SEED_NODES = () ->
-    new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
-  private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
+  /**
+   * Holds the default seed nodes (going to localhost) with default ports.
+   */
+  public static final Set<SeedNode> DEFAULT_SEED_NODES = new HashSet<>(Collections.singletonList(
+    SeedNode.create("127.0.0.1")
+  ));
+
+  /**
+   * The default retry strategy used for all ops if not overridden.
+   */
+  public static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   /**
    * Holds the user agent for this client instance.
@@ -67,8 +79,7 @@ public class CoreEnvironment {
   private final LoggerConfig loggerConfig;
   private final DiagnosticsMonitor diagnosticsMonitor;
 
-  private final Supplier<Set<SeedNode>> seedNodes;
-  //private final DiagnosticsMonitor diagnosticsMonitor;
+  private final Set<SeedNode> seedNodes;
   private final Credentials credentials;
   private final RetryStrategy retryStrategy;
 
@@ -107,10 +118,11 @@ public class CoreEnvironment {
 
   @SuppressWarnings({"unchecked"})
   protected CoreEnvironment(final Builder builder) {
+    this.credentials = builder.credentials;
     this.userAgent = defaultUserAgent();
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
-      .orElse(new OwnedSupplier<>(DefaultEventBus.createAndStart()));
+      .orElse(new OwnedSupplier<>(DefaultEventBus.create()));
     this.timer = Timer.createAndStart();
 
     this.ioEnvironment = Optional.ofNullable(builder.ioEnvironment).orElse(IoEnvironment.create());
@@ -121,12 +133,11 @@ public class CoreEnvironment {
     this.serviceConfig = Optional.ofNullable(builder.serviceConfig).orElse(ServiceConfig.create());
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = Optional.ofNullable(builder.loggerConfig).orElse(LoggerConfig.create());
+    this.seedNodes = Optional.ofNullable(builder.seedNodes).orElse(DEFAULT_SEED_NODES);
 
-    this.seedNodes = builder.seedNodes == null
-      ? DEFAULT_SEED_NODES
-      : builder.seedNodes;
-    this.credentials = builder.credentials;
-
+    if (eventBus instanceof OwnedSupplier) {
+      eventBus.get().start().block();
+    }
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
     diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
     diagnosticsMonitor.start().block();
@@ -233,8 +244,6 @@ public class CoreEnvironment {
     return loggerConfig;
   }
 
-
-
   /**
    * Holds the timer which is used to schedule tasks and trigger their callback,
    * for example to time out requests.
@@ -246,25 +255,55 @@ public class CoreEnvironment {
   }
 
   public Set<SeedNode> seedNodes() {
-    return seedNodes.get();
+    return seedNodes;
   }
 
   public RetryStrategy retryStrategy() {
     return retryStrategy;
   }
 
-  public void shutdown(final Duration timeout) {
-    shutdownAsync(timeout).block();
+  /**
+   * Shuts down this environment reactively.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   *
+   * @param timeout the timeout to wait maximum.
+   * @return a mono that completes once the shutdown is either successful or aborted.
+   */
+  public Mono<Void> shutdownReactive(final Duration timeout) {
+    return diagnosticsMonitor.stop()
+      .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop() : Mono.empty()))
+      .then(Mono.defer(() -> {
+        timer.stop();
+        return Mono.<Void>empty();
+      }))
+      .timeout(timeout);
   }
 
-  public Mono<Void> shutdownAsync(final Duration timeout) {
-    return Mono.defer(() -> {
-      if (eventBus instanceof OwnedSupplier && eventBus.get() instanceof DefaultEventBus) {
-        // TODO
-        ((DefaultEventBus) eventBus.get()).stop();
-      }
-      return diagnosticsMonitor.stop();
-    });
+  /**
+   * Shuts down this environment asynchronously.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   *
+   * @param timeout the timeout to wait maximum.
+   * @return a future that completes once the shutdown is either successful or aborted.
+   */
+  public CompletableFuture<Void> shutdownAsync(final Duration timeout) {
+    return shutdownReactive(timeout).toFuture();
+  }
+
+  /**
+   * Shuts down this Environment.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   *
+   * @param timeout the timeout to wait maximum.
+   */
+  public void shutdown(final Duration timeout) {
+    shutdownReactive(timeout).block();
   }
 
   public static class Builder<SELF extends Builder<SELF>> {
@@ -278,12 +317,13 @@ public class CoreEnvironment {
     private LoggerConfig loggerConfig = null;
     private Supplier<EventBus> eventBus = null;
 
-    private Supplier<Set<SeedNode>> seedNodes = null;
+    private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
 
     private final Credentials credentials;
 
-    protected Builder(Credentials credentials) {
+    protected Builder(final Credentials credentials) {
+      notNull(credentials, "Credentials");
       this.credentials = credentials;
     }
 
@@ -338,14 +378,9 @@ public class CoreEnvironment {
       return self();
     }
 
-
-    public SELF seedNodes(final Supplier<Set<SeedNode>> seedNodes) {
+    public SELF seedNodes(final Set<SeedNode> seedNodes) {
       this.seedNodes = seedNodes;
       return self();
-    }
-
-    public SELF seedNodes(final Set<SeedNode> seedNodes) {
-      return seedNodes(() -> seedNodes);
     }
 
     public SELF retryStrategy(final RetryStrategy retryStrategy) {

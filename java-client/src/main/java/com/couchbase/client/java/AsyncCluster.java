@@ -149,8 +149,7 @@ public class AsyncCluster {
 
   public CompletableFuture<Void> shutdown() {
     if (environment instanceof OwnedSupplier) {
-      // TODO: fixme
-      return environment.get().shutdownAsync(Duration.ofSeconds(1)).toFuture();
+      return environment.get().shutdownAsync(environment.get().timeoutConfig().disconnectTimeout());
     } else {
       CompletableFuture<Void> cf = new CompletableFuture<>();
       cf.complete(null);

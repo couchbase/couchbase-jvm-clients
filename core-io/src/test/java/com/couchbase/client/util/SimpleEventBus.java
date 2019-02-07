@@ -19,6 +19,7 @@ package com.couchbase.client.util;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.EventSubscription;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,4 +77,13 @@ public class SimpleEventBus implements EventBus {
     return publishedEvents;
   }
 
+  @Override
+  public Mono<Void> start() {
+    return Mono.empty();
+  }
+
+  @Override
+  public Mono<Void> stop() {
+    return Mono.empty();
+  }
 }
