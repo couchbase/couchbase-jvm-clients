@@ -234,7 +234,6 @@ class EncodingsSpec extends FunSuite {
     coll.insert(docId, encoded)(Encodable.AsJson.BytesConvert).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out) =>
       case Success(out) => assert(false, "should not succeed")
       case Failure(err: DecodingFailedException) =>
       case Failure(err) => assert(false, s"unexpected error $err")

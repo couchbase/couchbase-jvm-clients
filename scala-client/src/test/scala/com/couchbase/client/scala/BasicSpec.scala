@@ -13,8 +13,13 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
+
 import scala.reflect.runtime.universe._
 import com.couchbase.client.scala.document.GetResult._
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+
+case class User2(name: String, age: Int)
 
 class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
   val (cluster, bucket, scope, coll) = (for {
@@ -31,6 +36,7 @@ class BasicSpec extends FlatSpec with Matchers with BeforeAndAfterAll  {
     // TODO MVP bucketManager
 //    bucket.bucketManager().flush()
   }
+
 
 //  "insert and get of ujson" should "succeed" in {
 //    val id = docId(0)

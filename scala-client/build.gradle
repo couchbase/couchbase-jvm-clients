@@ -159,10 +159,7 @@ dependencies {
   testCompile 'org.scalatest:scalatest_2.12:3.0.5'
   compile project(':core-io')
 
-  // TODO Can remove some of these when settled on a json lib
-  // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
   compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
-//  provided "org.scala-lang:scala-reflect:2.12.7"
 
   // TODO check this is not a transitive dep
   // TODO need this for testCompile as well - possible?
@@ -179,8 +176,11 @@ dependencies {
   compile group: "org.json4s", name: "json4s-jackson_2.12", version: "3.6.4", optional
 
   compile group: "org.typelevel", name: "jawn-ast_2.12", version: "0.14.0", optional
-  
+
   compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-core_2.12", version: "0.39.0", optional
   compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-macros_2.12", version: "0.39.0", optional // TODO get provided working
-//  integrationTestCompile project(':test-utils')
+
+
+  // Evaluating Java version for parsing
+  compile 'com.jsoniter:jsoniter:0.9.19', optional
 }

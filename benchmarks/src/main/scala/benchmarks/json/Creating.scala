@@ -35,13 +35,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+import experiments.JsoniterObject
 import io.circe.Encoder
 import io.netty.util.CharsetUtil
+import jsonobject.JsonObjectExperiment
 import org.scalameter
 import org.scalameter.CurveData
 import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue}
 import org.scalameter.api._
 import org.scalameter.utils.Tree
+import org.typelevel.jawn.ast.{JNum, JObject, JString}
 import ujson.BytesRenderer
 
 
@@ -76,7 +79,8 @@ case class SimpleLoggingReporter[T]() extends Reporter[T] {
 
 case class Address(address: String)
 
-case class User(name: String, age: Int, addresses: List[Address])
+case class User(name: String, age: Int, addresses: Seq[Address])
+case class User2(name: String, age: Int)
 
 object Address {
   implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
@@ -92,54 +96,33 @@ object User {
   implicit val encoder: io.circe.Encoder[User] = io.circe.generic.semiauto.deriveEncoder[User]
 }
 
+// Jackson gets unhappy about being run directly inside the scalameter closures, for reasons know only to itself
+object Jackson {
+  def read(encoded: Array[Byte], value: Class[_]) = {
+    mapper.readValue(encoded, value)
+  }
 
-object Creating extends Bench.LocalTime {
+  val content = User("John Smith", 29, List(Address("123 Fake Street")))
+  val mapper = new ObjectMapper()
+  mapper.registerModule(DefaultScalaModule)
+
+  def jacksonToBytes() = {
+    val bytes: Array[Byte] = mapper.writeValueAsBytes(Jackson.content)
+    bytes
+
+  }
+
+  val json = "{\"hello\":\"world\",\"foo\":\"bar\",\"age\":22}"
+  val encoded = json.getBytes(CharsetUtil.UTF_8)
+}
+
+// Change this to LocalTime for a fast result
+object Creating extends Bench.ForkedTime {
   val gen = Gen.unit("num")
-
-  override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]
-
-  performance of "Data structures" in {
-    performance of "Java HashMap" in {
-      using(gen) in {
-        r =>
-          val map = new util.HashMap[String, Object]()
-          map.put("hello", "world")
-          map.put("foo", "bar")
-          map.put("age", "22")
-      }
-    }
-
-    performance of "Scala mutable Map" in {
-      using(gen) in {
-        r =>
-          val map = collection.mutable.Map.empty[String, Any]
-          map.put("hello", "world")
-          map.put("foo", "bar")
-          map.put("age", "22")
-      }
-    }
+  val content = Jackson.content
 
 
-    performance of "Scala mutable AnyRefMap" in {
-      using(gen) in {
-        r =>
-          val map = collection.mutable.AnyRefMap.empty[String, Any]
-          map.put("hello", "world")
-          map.put("foo", "bar")
-          map.put("age", "22")
-      }
-    }
-
-    performance of "Scala immutable Map" in {
-      using(gen) in {
-        r =>
-          val map = collection.immutable.Map[String, Any]("hello" -> "world",
-            "foo" -> "bar",
-            "age" -> "22")
-      }
-    }
-    }
-
+  override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]//
   performance of "Just creating JSON AST" in {
     performance of "upickle" in {
       using(gen) in {
@@ -165,10 +148,20 @@ object Creating extends Bench.LocalTime {
       }
     }
 
-    performance of "JsonObject" in {
+    performance of "JsonObject (Java)" in {
       using(gen) in {
         r =>
-          val json = JsonObject.create()
+          val json = com.couchbase.client.java.json.JsonObject.create()
+            .put("hello", "world")
+            .put("foo", "bar")
+            .put("age", 22)
+      }
+    }
+
+    performance of "JsonObject (Scala)" in {
+      using(gen) in {
+        r =>
+          val json = jsonobject.JsonObjectExperiment.create
             .put("hello", "world")
             .put("foo", "bar")
             .put("age", 22)
@@ -179,8 +172,6 @@ object Creating extends Bench.LocalTime {
 
   performance of "Encoding case class to byte array" in {
 
-
-    val content = User("John Smith", 29, List(Address("123 Fake Street")))
 
     performance of "upickle (fast)" in {
       using(gen) in {
@@ -200,14 +191,12 @@ object Creating extends Bench.LocalTime {
       }
     }
 
-    val mapper = new ObjectMapper()
-    mapper.registerModule(DefaultScalaModule)
 
 
     performance of "jackson bytes (fast)" in {
       using(gen) in {
         r => {
-          val bytes: Array[Byte] = mapper.writeValueAsBytes(content)
+          val bytes: Array[Byte] = Jackson.jacksonToBytes()
           val encoded: Array[Byte] = Conversions.encode(bytes)(Encodable.AsJson.BytesConvert).get._1
         }
       }
@@ -217,13 +206,13 @@ object Creating extends Bench.LocalTime {
     performance of "jackson string (fast)" in {
       using(gen) in {
         r => {
-          val json: String = mapper.writeValueAsString(content)
+          val json: String = Jackson.mapper.writeValueAsString(content)
           val encoded: Array[Byte] = Conversions.encode(json)(Encodable.AsJson.StringConvert).get._1
         }
       }
     }
 
-    performance of "upickle (safe)" in {
+    performance of "upickle (default)" in {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = upickle.default.transform(content).to(BytesRenderer()).toBytes
@@ -232,7 +221,7 @@ object Creating extends Bench.LocalTime {
       }
     }
 
-    performance of "jsoniter (safe)" in {
+    performance of "jsoniter (default)" in {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = com.github.plokhotnyuk.jsoniter_scala.core.writeToArray(content)
@@ -242,34 +231,34 @@ object Creating extends Bench.LocalTime {
     }
 
 
-    performance of "jackson bytes (safe)" in {
+    performance of "jackson bytes (default)" in {
       using(gen) in {
         r => {
-          val bytes: Array[Byte] = mapper.writeValueAsBytes(content)
+          val bytes: Array[Byte] = Jackson.mapper.writeValueAsBytes(content)
           val encoded: Array[Byte] = Conversions.encode(bytes).get._1
         }
       }
     }
 
-    performance of "jackson string (safe)" in {
+    performance of "jackson string (default)" in {
       using(gen) in {
         r => {
-          val json: String = mapper.writeValueAsString(content)
+          val json: String = Jackson.mapper.writeValueAsString(content)
           val encoded: Array[Byte] = Conversions.encode(json).get._1
         }
       }
     }
 
-    //    performance of "circe" in {
-    //              import io.circe.syntax._
+    //        performance of "circe" in {
+    //                  import io.circe.syntax._
     //
-    //      using(gen) in {
-    //        r => {
-    //          val json: io.circe.Json  = content.asJson
-    //          val encoded: Array[Byte] = Conversions.encode(json).get._1
+    //          using(gen) in {
+    //            r => {
+    //              val json: io.circe.Json  = content.asJson
+    //              val encoded: Array[Byte] = Conversions.encode(json).get._1
+    //            }
+    //          }
     //        }
-    //      }
-    //    }
 
 
   }
@@ -297,29 +286,27 @@ object Creating extends Bench.LocalTime {
       }
     }
 
-    val mapper = new ObjectMapper()
-    mapper.registerModule(DefaultScalaModule)
-
     performance of "jackson" in {
       using(gen) in {
         r => {
-          val user = mapper.readValue(encoded, classOf[User])
+          val user = Jackson.read(encoded, classOf[User])
         }
       }
     }
 
-    performance of "circe" in {
-      using(gen) in {
-        r => {
-          val json = new String(encoded, CharsetUtil.UTF_8)
-          val user = io.circe.parser.decode[User](json)
-        }
-      }
-    }
+    //    performance of "circe" in {
+    //      using(gen) in {
+    //        r => {
+    //          val json = new String(encoded, CharsetUtil.UTF_8)
+    //          println(json)
+    //          val user = io.circe.parser.decode[User](json)
+    //        }
+    //      }
+    //    }
 
   }
 
-  performance of "Creating JSON AST and encoding to byte array" in {
+  performance of "Encoding JSON AST to byte array" in {
 
     performance of "upickle" in {
       using(gen) in {
@@ -330,14 +317,38 @@ object Creating extends Bench.LocalTime {
       }
     }
 
-    performance of "JsonObject" in {
+    performance of "JsonObject (Java)" in {
       using(gen) in {
         r => {
-          val json = JsonObject.create()
+          val json = com.couchbase.client.java.json.JsonObject.create()
             .put("hello", "world")
             .put("foo", "bar")
             .put("age", 22)
           val encoded: Array[Byte] = DefaultEncoder.INSTANCE.encode(json).content()
+        }
+      }
+    }
+
+    performance of "JsonObject (Scala)" in {
+      using(gen) in {
+        r => {
+          val json = jsonobject.JsonObjectExperiment.create
+            .put("hello", "world")
+            .put("foo", "bar")
+            .put("age", 22)
+          val encoded: Array[Byte] = Conversions.encode(json)(jsonobject.Encoders.JsonObjectExperimentConvert).get._1
+        }
+      }
+    }
+
+    performance of "JsoniterObject (Scala)" in {
+      using(gen) in {
+        r => {
+          val json = JsoniterObject.create
+            .put("hello", "world")
+            .put("foo", "bar")
+            .put("age", 22)
+          val encoded: Array[Byte] = Conversions.encode(json)(jsonobject.Encoders.JsoniterObjectConvert).get._1
         }
       }
     }
@@ -380,47 +391,63 @@ object Creating extends Bench.LocalTime {
 
   performance of "Decoding byte array to JSON AST" in {
     performance of "Play" in {
-      val json = play.api.libs.json.Json.obj("hello" -> "world",
-        "foo" -> "bar",
-        "age" -> 22)
-      val encoded: Array[Byte] = Conversions.encode(json).get._1
-
       using(gen) in {
         r => {
-          Conversions.decode[play.api.libs.json.JsValue](encoded).get.asInstanceOf[JsObject]
+          val decoded = Conversions.decode[play.api.libs.json.JsValue](Jackson.encoded).get.asInstanceOf[JsObject]
+          // Some parsers do lazy decoding, so read a subset of fields to get a fairer comparison
+          val hello = decoded("hello").as[String]
+          val age = decoded("age").as[Int]
         }
       }
     }
 
-        performance of "JsonObject" in {
 
-          val json = "{\"hello\":\"world\", \"foo\":\"bar\", \"age\": 22}"
-          val encoded = DefaultEncoder.INSTANCE.encode(json).content()
-          val doc = new EncodedDocument(0, encoded)
+    performance of "JsonObject (Java)" in {
 
-    //        def contentAs[T](target: Class[T]): T = contentAs(target, DefaultDecoder.INSTANCE.asInstanceOf[Decoder[T]])
-    //
-    //        def contentAs[T](target: Class[T], decoder: Decoder[T]): T = decoder.decode(target, doc)
+      val doc = new EncodedDocument(0, Jackson.encoded)
 
+      using(gen) in {
+        r => {
+          val decoded = DefaultDecoder.INSTANCE.asInstanceOf[Decoder[JsonObject]].decode(classOf[JsonObject], doc)
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
 
-          using(gen) in {
-            r => {
-              DefaultDecoder.INSTANCE.asInstanceOf[Decoder[JsonObject]].decode(classOf[JsonObject], doc)
-    //          val decoded = contentAs(classOf[JsonObject])
-            }
-          }
         }
+      }
+    }
+
+    performance of "JsonObject (Scala)" in {
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsonObjectExperiment).get
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
+        }
+      }
+    }
+
+    performance of "JsoniterObject (Scala)" in {
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsoniterObjectConvert).get
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
+        }
+      }
+    }
 
     performance of "Jawn" in {
       import org.typelevel.jawn.ast._
 
-      val json = JObject.fromSeq(Seq("hello" -> JString("world"),
-        "foo" -> JString("bar"),
-        "age" -> JNum(22)))
-      val encoded: Array[Byte] = Conversions.encode(json).get._1
 
       using(gen) in {
-        r => Conversions.decode[JValue](encoded).get.asInstanceOf[JObject]
+        r => {
+          val decoded = Conversions.decode[JValue](Jackson.encoded).get.asInstanceOf[JObject]
+          val hello = decoded.get("hello").asString
+          val age = decoded.get("age").asInt
+        }
       }
     }
 
@@ -431,7 +458,11 @@ object Creating extends Bench.LocalTime {
       val encoded: Array[Byte] = Conversions.encode(json).get._1
 
       using(gen) in {
-        r => Conversions.decode[org.json4s.JsonAST.JValue](encoded).get.asInstanceOf[org.json4s.JsonAST.JValue]
+        r => {
+          val decoded = Conversions.decode[org.json4s.JsonAST.JValue](encoded).get.asInstanceOf[org.json4s.JsonAST.JValue]
+          // Not clear how to pull fields out
+//          val hello: String = org.json4s.render(decoded \ "hello")
+        }
       }
     }
 
@@ -440,19 +471,13 @@ object Creating extends Bench.LocalTime {
       val encoded: Array[Byte] = Conversions.encode(json).get._1
 
       using(gen) in {
-        r => Conversions.decode[ujson.Obj](encoded).get
+        r => {
+          val decoded = Conversions.decode[ujson.Obj](encoded).get
+          val hello = decoded("hello").str
+          val age = decoded("age").num
+        }
       }
     }
-
-
-    //  @Benchmark def upickleScala(): Unit = {
-    //    val decoded: ujson.Obj = Conversions.decode[ujson.Obj](Decoding.encoded).get
-    //  }
-    //
-    //
-    //  @Benchmark def playScala(): Unit = {
-    //  }
-    //
 
   }
 }

@@ -18,6 +18,7 @@ case class LookupInResult(id: String,
                           cas: Long,
                           expiration: Option[Duration]) {
 
+  // TODO change path to index
   def contentAs[T](path: String)
                   (implicit ev: Conversions.DecodableField[T]): Try[T] = {
     _content.get(path) match {

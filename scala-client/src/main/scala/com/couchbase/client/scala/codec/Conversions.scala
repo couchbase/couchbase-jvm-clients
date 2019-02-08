@@ -3,6 +3,7 @@ package com.couchbase.client.scala.codec
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField}
 import com.couchbase.client.scala.document.{DecodeParams, DocumentFlags, EncodeParams}
+import com.couchbase.client.scala.json.JsonObject
 import io.netty.util.CharsetUtil
 
 import scala.util.{Failure, Success, Try}
