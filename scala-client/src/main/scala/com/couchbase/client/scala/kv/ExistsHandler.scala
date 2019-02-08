@@ -2,10 +2,11 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.{Core, CoreContext}
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{ObserveViaCasRequest, ObserveViaCasResponse}
+import com.couchbase.client.core.msg.kv.{InsertRequest, ObserveViaCasRequest, ObserveViaCasResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.ExistsResult
+import com.couchbase.client.scala.util.Validate
 import io.opentracing.Span
 
 import scala.compat.java8.FutureConverters
@@ -22,15 +23,27 @@ class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasRespo
               timeout: java.time.Duration,
               retryStrategy: RetryStrategy
              ): Try[ObserveViaCasRequest] = {
-    Success(new ObserveViaCasRequest(timeout,
-      hp.core.context(),
-      hp.bucketName,
-      retryStrategy,
-      id,
-      hp.collectionIdEncoded,
-      true,
-      0
-    ))
+    val validations: Try[ObserveViaCasRequest] = for {
+      _ <- Validate.notNullOrEmpty(id, "id")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
+      _ <- Validate.notNull(timeout, "timeout")
+      _ <- Validate.notNull(retryStrategy, "retryStrategy")
+    } yield null
+
+    if (validations.isFailure) {
+      validations
+    }
+    else {
+      Success(new ObserveViaCasRequest(timeout,
+        hp.core.context(),
+        hp.bucketName,
+        retryStrategy,
+        id,
+        hp.collectionIdEncoded,
+        true,
+        0
+      ))
+    }
   }
 
   override def response(id: String, response: ObserveViaCasResponse): ExistsResult = {

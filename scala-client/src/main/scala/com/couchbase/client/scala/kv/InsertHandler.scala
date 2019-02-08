@@ -10,6 +10,7 @@ import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.{ExistsResult, MutationResult}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.util.Validate
 import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._
@@ -28,25 +29,36 @@ class InsertHandler(hp: HandlerParams) extends RequestHandler[InsertResponse, Mu
                  retryStrategy: RetryStrategy)
                 (implicit ev: Conversions.Encodable[T])
   : Try[InsertRequest] = {
-    // TODO validation with Try
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(content, "content")
-    Validators.notNull(content, "timeout")
 
-    ev.encode(content) match {
-      case Success(encoded) =>
-        Success(new InsertRequest(id,
-          hp.collectionIdEncoded,
-          encoded._1,
-          expiration.getSeconds,
-          encoded._2.flags,
-          timeout,
-          hp.core.context(),
-          hp.bucketName,
-          retryStrategy,
-          durability.toDurabilityLevel))
-      case Failure(err) =>
-        Failure(new EncodingFailedException(err))
+    val validations: Try[InsertRequest] = for {
+      _ <- Validate.notNullOrEmpty(id, "id")
+      _ <- Validate.notNull(content, "content")
+      _ <- Validate.notNull(durability, "durability")
+      _ <- Validate.notNull(expiration, "expiration")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
+      _ <- Validate.notNull(timeout, "timeout")
+      _ <- Validate.notNull(retryStrategy, "retryStrategy")
+    } yield null
+
+    if (validations.isFailure) {
+      validations
+    }
+    else {
+      ev.encode(content) match {
+        case Success(encoded) =>
+          Success(new InsertRequest(id,
+            hp.collectionIdEncoded,
+            encoded._1,
+            expiration.getSeconds,
+            encoded._2.flags,
+            timeout,
+            hp.core.context(),
+            hp.bucketName,
+            retryStrategy,
+            durability.toDurabilityLevel))
+        case Failure(err) =>
+          Failure(new EncodingFailedException(err))
+      }
     }
   }
 

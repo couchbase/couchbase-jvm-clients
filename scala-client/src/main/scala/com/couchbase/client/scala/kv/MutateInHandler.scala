@@ -11,6 +11,7 @@ import com.couchbase.client.scala.api.{MutateInSpec, MutateOperation, MutateOper
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.MutateInResult
 import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.util.Validate
 import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._
@@ -32,41 +33,55 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[SubdocMutateRequest] = {
-    Validators.notNullOrEmpty(id, "id")
+    val validations: Try[SubdocMutateRequest] = for {
+      _ <- Validate.notNullOrEmpty(id, "id")
+      _ <- Validate.notNull(cas, "cas")
+      _ <- Validate.notNull(insertDocument, "insertDocument")
+      _ <- Validate.notNull(durability, "durability")
+      _ <- Validate.notNull(expiration, "expiration")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
+      _ <- Validate.notNull(timeout, "timeout")
+      _ <- Validate.notNull(retryStrategy, "retryStrategy")
+    } yield null
 
-    // Find any decode failure
-    val failed: Option[MutateOperation] = spec.operations
-      .filter(_.isInstanceOf[MutateOperationSimple])
-      .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
+    if (validations.isFailure) {
+      validations
+    }
+    else {
+      // Find any decode failure
+      val failed: Option[MutateOperation] = spec.operations
+        .filter(_.isInstanceOf[MutateOperationSimple])
+        .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
 
-    failed match {
-      case Some(failed: MutateOperationSimple) =>
-        // If any of the decodes failed, abort
-        Failure(failed.fragment.failed.get)
+      failed match {
+        case Some(failed: MutateOperationSimple) =>
+          // If any of the decodes failed, abort
+          Failure(failed.fragment.failed.get)
 
-      case _ =>
+        case _ =>
 
-        val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
-        spec.operations.map(_.convert).foreach(commands.add)
+          val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
+          spec.operations.map(_.convert).foreach(commands.add)
 
-        if (commands.isEmpty) {
-          Failure(SubdocMutateRequest.errIfNoCommands())
-        }
-        else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-          Failure(SubdocMutateRequest.errIfNoCommands())
-        }
-        else {
-          Success(new SubdocMutateRequest(timeout,
-            hp.core.context(),
-            hp.bucketName,
-            retryStrategy,
-            id,
-            hp.collectionIdEncoded,
-            insertDocument,
-            commands,
-            expiration.getSeconds,
-            durability.toDurabilityLevel))
-        }
+          if (commands.isEmpty) {
+            Failure(SubdocMutateRequest.errIfNoCommands())
+          }
+          else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+            Failure(SubdocMutateRequest.errIfNoCommands())
+          }
+          else {
+            Success(new SubdocMutateRequest(timeout,
+              hp.core.context(),
+              hp.bucketName,
+              retryStrategy,
+              id,
+              hp.collectionIdEncoded,
+              insertDocument,
+              commands,
+              expiration.getSeconds,
+              durability.toDurabilityLevel))
+          }
+      }
     }
   }
 

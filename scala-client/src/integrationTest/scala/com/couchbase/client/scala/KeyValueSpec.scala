@@ -2,10 +2,11 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
 import com.couchbase.client.scala.api.LookupInSpec
+import com.couchbase.client.scala.util.Validate
 import org.scalatest.{FunSpec, FunSuite}
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class KeyValueSpec extends FunSuite {
   // TODO support Jenkins
@@ -265,4 +266,11 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
+  test("validations") {
+    val validations: Try[Any] = for {
+      _ <- Validate.notNullOrEmpty("", "id")
+    } yield null
+
+    assert(validations.isFailure)
+  }
 }
