@@ -27,7 +27,10 @@ class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasRespo
       hp.bucketName,
       retryStrategy,
       id,
-      hp.collectionIdEncoded))
+      hp.collectionIdEncoded,
+      true,
+      0
+    ))
   }
 
   override def response(id: String, response: ObserveViaCasResponse): ExistsResult = {
