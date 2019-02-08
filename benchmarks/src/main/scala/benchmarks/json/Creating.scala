@@ -114,6 +114,8 @@ object Jackson {
 
   val json = "{\"hello\":\"world\",\"foo\":\"bar\",\"age\":22}"
   val encoded = json.getBytes(CharsetUtil.UTF_8)
+
+  val doc = new EncodedDocument(0, encoded)
 }
 
 // Change this to LocalTime for a fast result
@@ -122,7 +124,100 @@ object Creating extends Bench.ForkedTime {
   val content = Jackson.content
 
 
-  override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]//
+  override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]
+
+
+  performance of "Decoding byte array to JSON AST" in {
+    performance of "JsonObject (Java)" in {
+
+
+      using(gen) in {
+        r => {
+          val decoded = DefaultDecoder.INSTANCE.asInstanceOf[Decoder[JsonObject]].decode(classOf[JsonObject], Jackson.doc)
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
+
+        }
+      }
+    }
+
+    performance of "JsonObject (Scala)" in {
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsonObjectExperiment).get
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
+        }
+      }
+    }
+
+    performance of "JsoniterObject (Scala)" in {
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsoniterObjectConvert).get
+          val hello = decoded.getString("hello")
+          val age = decoded.getInt("age")
+        }
+      }
+    }
+
+    performance of "Play" in {
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode[play.api.libs.json.JsValue](Jackson.encoded).get.asInstanceOf[JsObject]
+          // Some parsers do lazy decoding, so read a subset of fields to get a fairer comparison
+          val hello = decoded("hello").as[String]
+          val age = decoded("age").as[Int]
+        }
+      }
+    }
+
+    performance of "Jawn" in {
+      import org.typelevel.jawn.ast._
+
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode[JValue](Jackson.encoded).get.asInstanceOf[JObject]
+          val hello = decoded.get("hello").asString
+          val age = decoded.get("age").asInt
+        }
+      }
+    }
+
+    performance of "Json4s" in {
+      val json = play.api.libs.json.Json.obj("hello" -> "world",
+        "foo" -> "bar",
+        "age" -> 22)
+      val encoded: Array[Byte] = Conversions.encode(json).get._1
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode[org.json4s.JsonAST.JValue](encoded).get.asInstanceOf[org.json4s.JsonAST.JValue]
+          // Not clear how to pull fields out
+          //          val hello: String = org.json4s.render(decoded \ "hello")
+        }
+      }
+    }
+
+    performance of "upickle" in {
+      val json = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
+      val encoded: Array[Byte] = Conversions.encode(json).get._1
+
+      using(gen) in {
+        r => {
+          val decoded = Conversions.decode[ujson.Obj](encoded).get
+          val hello = decoded("hello").str
+          val age = decoded("age").num
+        }
+      }
+    }
+
+  }
+
+
   performance of "Just creating JSON AST" in {
     performance of "upickle" in {
       using(gen) in {
@@ -389,95 +484,4 @@ object Creating extends Bench.ForkedTime {
     }
   }
 
-  performance of "Decoding byte array to JSON AST" in {
-    performance of "Play" in {
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode[play.api.libs.json.JsValue](Jackson.encoded).get.asInstanceOf[JsObject]
-          // Some parsers do lazy decoding, so read a subset of fields to get a fairer comparison
-          val hello = decoded("hello").as[String]
-          val age = decoded("age").as[Int]
-        }
-      }
-    }
-
-
-    performance of "JsonObject (Java)" in {
-
-      val doc = new EncodedDocument(0, Jackson.encoded)
-
-      using(gen) in {
-        r => {
-          val decoded = DefaultDecoder.INSTANCE.asInstanceOf[Decoder[JsonObject]].decode(classOf[JsonObject], doc)
-          val hello = decoded.getString("hello")
-          val age = decoded.getInt("age")
-
-        }
-      }
-    }
-
-    performance of "JsonObject (Scala)" in {
-
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsonObjectExperiment).get
-          val hello = decoded.getString("hello")
-          val age = decoded.getInt("age")
-        }
-      }
-    }
-
-    performance of "JsoniterObject (Scala)" in {
-
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode(Jackson.encoded)(jsonobject.Decoders.JsoniterObjectConvert).get
-          val hello = decoded.getString("hello")
-          val age = decoded.getInt("age")
-        }
-      }
-    }
-
-    performance of "Jawn" in {
-      import org.typelevel.jawn.ast._
-
-
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode[JValue](Jackson.encoded).get.asInstanceOf[JObject]
-          val hello = decoded.get("hello").asString
-          val age = decoded.get("age").asInt
-        }
-      }
-    }
-
-    performance of "Json4s" in {
-      val json = play.api.libs.json.Json.obj("hello" -> "world",
-        "foo" -> "bar",
-        "age" -> 22)
-      val encoded: Array[Byte] = Conversions.encode(json).get._1
-
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode[org.json4s.JsonAST.JValue](encoded).get.asInstanceOf[org.json4s.JsonAST.JValue]
-          // Not clear how to pull fields out
-//          val hello: String = org.json4s.render(decoded \ "hello")
-        }
-      }
-    }
-
-    performance of "upickle" in {
-      val json = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-      val encoded: Array[Byte] = Conversions.encode(json).get._1
-
-      using(gen) in {
-        r => {
-          val decoded = Conversions.decode[ujson.Obj](encoded).get
-          val hello = decoded("hello").str
-          val age = decoded("age").num
-        }
-      }
-    }
-
-  }
 }

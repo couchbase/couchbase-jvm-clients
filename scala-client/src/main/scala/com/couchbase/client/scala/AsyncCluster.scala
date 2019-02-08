@@ -8,7 +8,7 @@ import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryConsumer, QueryResult}
-import com.couchbase.client.scala.util.Conversions
+import com.couchbase.client.scala.util.FutureConversions
 import io.netty.util.CharsetUtil
 
 import scala.compat.java8.FutureConverters
@@ -36,7 +36,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
   }
 
   def bucket(name: String): Future[AsyncBucket] = {
-    Conversions.monoToFuture(core.openBucket(name))
+    FutureConversions.javaMonoToFuture(core.openBucket(name))
       .map(v => new AsyncBucket(name, core, environment))
   }
 

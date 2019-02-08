@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.subdoc.SubDocumentException
-import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.msg.{Request, ResponseStatus}
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
@@ -39,6 +39,7 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{LookupInResult, _}
 import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.kv.{DefaultErrors, ExistsHandler, InsertHandler, RequestHandler}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import io.netty.util.CharsetUtil
@@ -58,54 +59,21 @@ import scala.language.implicitConversions
 import scala.compat.java8.OptionConverters._
 import collection.JavaConverters._
 
+case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Array[Byte])
 
 class AsyncCollection(name: String,
                       collectionId: Long,
                       bucketName: String,
-                      core: Core,
+                      val core: Core,
                       val environment: ClusterEnvironment)
                      (implicit ec: ExecutionContext) {
-  private val mapper = new ObjectMapper()
-  private val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
-  private val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
+  private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
+  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
+  private val hp = HandlerParams(core, bucketName, collectionIdEncoded)
+  private[scala] val existsHandler = new ExistsHandler(hp)
+  private[scala] val insertHandler = new InsertHandler(hp)
 
-  import annotation.implicitNotFound
-
-//  @implicitNotFound("No member of type class in scope for ${T}")
-//  def encode[T](content: T)
-//               (implicit ev: Conversions.Encodable[T])
-//  : Try[Array[Byte]] = {
-//    //    Try.apply(mapper.writeValueAsBytes(content))
-//
-//    ev.encode(content).map(_._1)
-//
-//    //    content match {
-//    //        // My JsonType
-//    //        // TODO MVP probably remove my JsonType
-//    ////      case v: JsonType =>
-//    ////        val json = v.asJson
-//    ////          json.as[Array[Byte]].toTry
-//    //
-//    //        // circe's Json
-//    //      case v: Json =>
-//    //        v.as[Array[Byte]].toTry
-//    //
-//    //        // ujson's Json
-//    //      case v: ujson.Value =>
-//    //        Try(transform(v, BytesRenderer()).toBytes)
-//    //
-//    //      case v: Array[Byte] =>
-//    //        // TODO check it's not MessagePack from upickle.default.writeBinary
-//    //        Try(v)
-//    //
-//    //      case _ =>
-//    //        // TODO MVP support json string
-//    ////        val circe = content.asJson
-//    //        val dbg = mapper.writeValueAsString(content)
-//    //        Try.apply(mapper.writeValueAsBytes(content))
-//    ////          circe.as[Array[Byte]].toTry
-//    //    }
-//  }
+  // TODO AsyncBinaryCollection
 
 
   implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
@@ -117,41 +85,29 @@ class AsyncCollection(name: String,
   }
 
   private def throwOnBadResult(status: ResponseStatus): RuntimeException = {
-    status match {
-      case ResponseStatus.EXISTS => new DocumentAlreadyExistsException()
-      case ResponseStatus.LOCKED | ResponseStatus.TEMPORARY_FAILURE => new TemporaryLockFailureException()
-      case ResponseStatus.NOT_FOUND => new DocumentDoesNotExistException()
-      case ResponseStatus.SERVER_BUSY => new TemporaryFailureException()
-      case ResponseStatus.OUT_OF_MEMORY => new CouchbaseOutOfMemoryException()
-      case rs => new CouchbaseException("Unknown ResponseStatus: " + rs)
-      // TODO remaining failures
+    DefaultErrors.throwOnBadResult(status)
+  }
+
+  private def wrap[Resp,Res](in: Try[Request[Resp]], handler: RequestHandler[Resp,Res]): Future[Res] = {
+    in match {
+      case Success(request) =>
+        core.send[Resp](request)
+
+        FutureConverters.toScala(request.response())
+          .map(response => handler.response(response))
+
+      case Failure(err) => Future.failed(err)
     }
   }
 
-  def exists[T](id: String,
+  def exists(id: String,
                 parentSpan: Option[Span] = None,
                 timeout: FiniteDuration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy()
                )
   : Future[ExistsResult] = {
-    val request = new ObserveViaCasRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, true, 0)
-
-    core.send(request)
-
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
-          case ResponseStatus.SUCCESS =>
-            val exists: Boolean = response.observeStatus() match {
-              case ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED | ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED => true
-              case _ => false
-            }
-
-            ExistsResult(exists)
-
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
+    val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
+    wrap(req, existsHandler)
   }
 
   def insert[T](id: String,
@@ -160,33 +116,11 @@ class AsyncCollection(name: String,
                 expiration: FiniteDuration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: FiniteDuration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()
-               )
+                retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T])
   : Future[MutationResult] = {
-    // TODO validation with Try
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(content, "content")
-    Validators.notNull(content, "timeout")
-
-    ev.encode(content) match {
-      case Success(encoded) =>
-        val request = new InsertRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
-        core.send(request)
-        FutureConverters.toScala(request.response())
-          .map(response => {
-            response.status() match {
-              case ResponseStatus.EXISTS =>
-                throw new DocumentAlreadyExistsException()
-              case ResponseStatus.SUCCESS =>
-                MutationResult(response.cas(), response.mutationToken().asScala)
-              case rs => throw new CouchbaseException("Unknown ResponseStatus: " + rs)
-            }
-          })
-      case Failure(err) =>
-        Future.failed(new EncodingFailedException(err))
-    }
+    val req = insertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, insertHandler)
   }
 
   def replace[T](id: String,

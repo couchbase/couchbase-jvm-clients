@@ -24,6 +24,7 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document._
 import com.couchbase.client.scala.durability.{Disabled, Durability}
 import io.opentracing.Span
+import reactor.core.scala.publisher.Mono
 //import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -36,11 +37,8 @@ import scala.reflect.runtime.universe._
 class Collection(val async: AsyncCollection,
                  bucketName: String)
                 (implicit ec: ExecutionContext) {
-  private val config: CouchbaseEnvironment = null // scope.cluster.env
-  //  private val asyncCollection = new AsyncCollection(this)
-  //  private val reactiveColl = new ReactiveCollection(this)
+  val reactive = new ReactiveCollection(async)
   // TODO binary collection
-  // TODO MVP reactive collection
   private val SafetyTimeout = 1.second
   //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   private[scala] val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)

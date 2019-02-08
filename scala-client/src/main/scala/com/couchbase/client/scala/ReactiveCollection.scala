@@ -16,67 +16,70 @@
 
 package com.couchbase.client.scala
 
+import java.util.Optional
+import java.util.concurrent.TimeUnit
+
+import com.couchbase.client.core.Reactor
+import com.couchbase.client.core.msg.Request
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{GetResult}
+import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.document.GetResult
+import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.kv.RequestHandler
+import com.couchbase.client.scala.util.FutureConversions
+import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
 
+import scala.compat.java8.FutureConverters
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
-// During prototyping, leaving reactive collection support very skimpy.  It's just the same as Collection but returning Mono
-//class ReactiveCollection(val coll: Collection) {
-//  private val async = coll.async()
-//  private val kvTimeout = coll.kvTimeout
-//
-//  def insertContent(id: String,
-//                    content: JsonObject,
-//                    timeout: FiniteDuration = kvTimeout,
-//                    expiration: FiniteDuration = 0.seconds,
-//                    replicateTo: ObserveReplicateTo.Value = ObserveReplicateTo.None,
-//                    persistTo: ObservePersistTo.Value = ObservePersistTo.None
-//            )(implicit ec: ExecutionContext): Mono[MutationResult] = {
-//    Mono.fromFuture(async.insert(id, content, timeout, expiration, replicateTo, persistTo))
-//  }
-//
-//  def remove(id: String,
-//             cas: Long,
-//             options: RemoveOptions = RemoveOptions()): Mono[MutationResult] = ???
-//
-//  def get(id: String,
-//          timeout: FiniteDuration = kvTimeout)
-//         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-//    Mono.fromFuture(async.get(id, timeout))
-//  }
-//
-//  def get(id: String,
-//          options: GetOptions)
-//         (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-//    Mono.fromFuture(async.get(id, options))
-//  }
-//
-//  def getOrError(id: String,
-//                 timeout: FiniteDuration = kvTimeout)
-//                (implicit ec: ExecutionContext): Mono[GetResult] = {
-//    Mono.fromFuture(async.getOrError(id, timeout))
-//  }
-//
-//  def getOrError(id: String,
-//                 options: GetOptions)
-//                (implicit ec: ExecutionContext): Mono[GetResult] = {
-//    Mono.fromFuture(async.getOrError(id, options))
-//  }
-//
-//  def getAndLock(id: String,
-//                 lockFor: FiniteDuration,
-//                 timeout: FiniteDuration = kvTimeout)
-//                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-//    Mono.fromFuture(async.getAndLock(id, lockFor, timeout))
-//  }
-//
-//  def getAndLock(id: String,
-//                 lockFor: FiniteDuration,
-//                 options: GetAndLockOptions)
-//                (implicit ec: ExecutionContext): Mono[Option[GetResult]] = {
-//    Mono.fromFuture(async.getAndLock(id, lockFor, options))
-//  }
-//}
+class ReactiveCollection(async: AsyncCollection) {
+  private val kvTimeout = async.kvTimeout
+  private val environment = async.environment
+  private val core = async.core
+
+  implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
+    java.time.Duration.ofNanos(in.toNanos)
+  }
+
+  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
+    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
+  }
+
+  private def wrap[Resp,Res](in: Try[Request[Resp]], handler: RequestHandler[Resp,Res]): Mono[Res] = {
+    in match {
+      case Success(request) =>
+        core.send[Resp](request)
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .map(r => handler.response(r))
+
+      case Failure(err) => Mono.error(err)
+    }
+  }
+
+  def exists[T](id: String,
+                parentSpan: Option[Span] = None,
+                timeout: FiniteDuration = kvTimeout,
+                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[ExistsResult] = {
+    val request = async.existsHandler.request(id, parentSpan, timeout, retryStrategy)
+    wrap(request, async.existsHandler)
+  }
+
+  def insert[T](id: String,
+                content: T,
+                durability: Durability = Disabled,
+                expiration: FiniteDuration = 0.seconds,
+                parentSpan: Option[Span] = None,
+                timeout: FiniteDuration = kvTimeout,
+                retryStrategy: RetryStrategy = environment.retryStrategy())
+               (implicit ev: Conversions.Encodable[T])
+  : Future[MutationResult] = {
+    val req = async.insertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, async.insertHandler)
+  }
+
+}
