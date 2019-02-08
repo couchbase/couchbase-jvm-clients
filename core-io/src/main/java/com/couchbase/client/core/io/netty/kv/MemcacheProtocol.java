@@ -736,6 +736,10 @@ public enum MemcacheProtocol {
      */
     OBSERVE_CAS((byte) 0x92),
     /**
+     * Performs an observe call via sequence numbers.
+     */
+    OBSERVE_SEQ((byte) 0x91),
+    /**
      * A replica get operation.
      */
     GET_REPLICA((byte) 0x83),
@@ -805,6 +809,10 @@ public enum MemcacheProtocol {
      * The server is busy for some reason.
      */
     SERVER_BUSY((short) 0x85),
+    /**
+     * Unknown command.
+     */
+    UNKNOWN_COMMAND((short) 0x81),
     /**
      * The server is out of memory.
      */

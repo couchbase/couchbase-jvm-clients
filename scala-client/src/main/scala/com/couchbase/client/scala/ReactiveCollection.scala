@@ -32,8 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 //                    content: JsonObject,
 //                    timeout: FiniteDuration = kvTimeout,
 //                    expiration: FiniteDuration = 0.seconds,
-//                    replicateTo: ReplicateTo.Value = ReplicateTo.None,
-//                    persistTo: PersistTo.Value = PersistTo.None
+//                    replicateTo: ObserveReplicateTo.Value = ObserveReplicateTo.None,
+//                    persistTo: ObservePersistTo.Value = ObservePersistTo.None
 //            )(implicit ec: ExecutionContext): Mono[MutationResult] = {
 //    Mono.fromFuture(async.insert(id, content, timeout, expiration, replicateTo, persistTo))
 //  }

@@ -60,20 +60,20 @@ class Scenarios {
 //    // Use a helper wrapper to retry our operation in the face of durability failures
 //    // remove is idempotent iff the app guarantees that the doc's id won't be reused (e.g. if it's a UUID).  This seems
 //    // a reasonable restriction.
-//    retryIdempotentRemoveClientSide((replicateTo: ReplicateTo.Value) => {
-//      val result: MutationResult = coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, PersistTo.None))
-//    }, ReplicateTo.Two, ReplicateTo.Two, System.nanoTime().nanos.plus(30.seconds))
+//    retryIdempotentRemoveClientSide((replicateTo: ObserveReplicateTo.Value) => {
+//      val result: MutationResult = coll.remove("id", cas = 0, RemoveOptions().durabilityClient(replicateTo, ObservePersistTo.None))
+//    }, ObserveReplicateTo.Two, ObserveReplicateTo.Two, System.nanoTime().nanos.plus(30.seconds))
 //  }
 //
 //  /**
 //    * Automatically retries an idempotent operation in the face of durability failures
 //    * TODO this is quite complex logic.  Should this be folded into the client as a per-operation retry strategy?
 //    * @param callback an idempotent remove operation to perform
-//    * @param replicateTo the current ReplicateTo setting being tried
-//    * @param originalReplicateTo the originally requested ReplicateTo setting
+//    * @param replicateTo the current ObserveReplicateTo setting being tried
+//    * @param originalReplicateTo the originally requested ObserveReplicateTo setting
 //    * @param until prevent the operation looping indefinitely
 //    */
-//  private def retryIdempotentRemoveClientSide(callback: (ReplicateTo.Value) => Unit, replicateTo: ReplicateTo.Value, originalReplicateTo: ReplicateTo.Value, until: FiniteDuration): Unit = {
+//  private def retryIdempotentRemoveClientSide(callback: (ObserveReplicateTo.Value) => Unit, replicateTo: ObserveReplicateTo.Value, originalReplicateTo: ObserveReplicateTo.Value, until: FiniteDuration): Unit = {
 //    if (System.nanoTime().nanos >= until) {
 //      // Depending on the durability requirements, may want to also log this to an external system for human review
 //      // and reconciliation
@@ -102,10 +102,10 @@ class Scenarios {
 //      case err: ReplicaNotAvailableException =>
 //        // TODO this isn't necessary.  If replica is not available, the write will still go to as many as possible.
 //        val newReplicateTo = replicateTo match {
-//          case ReplicateTo.One => ReplicateTo.None
-//          case ReplicateTo.Two => ReplicateTo.One
-//          case ReplicateTo.Three => ReplicateTo.Two
-//          case _ => ReplicateTo.None
+//          case ObserveReplicateTo.One => ObserveReplicateTo.None
+//          case ObserveReplicateTo.Two => ObserveReplicateTo.One
+//          case ObserveReplicateTo.Three => ObserveReplicateTo.Two
+//          case _ => ObserveReplicateTo.None
 //        }
 //        println("Temporary replica failure, retrying with lower durability " + newReplicateTo)
 //        retryIdempotentRemoveClientSide(callback, newReplicateTo, originalReplicateTo, until)

@@ -46,17 +46,8 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    return MemcacheProtocol.request(
-      alloc,
-      MemcacheProtocol.Opcode.NOOP,
-      noDatatype(),
-      noPartition(),
-      opaque,
-      noCas(),
-      noExtras(),
-      noKey(),
-      noBody()
-    );
+    return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.NOOP, noDatatype(), noPartition(),
+      opaque, noCas(), noExtras(), noKey(), noBody());
   }
 
   @Override

@@ -59,7 +59,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
 
     ByteBuf extras = flags != 0
-      ? alloc.buffer(1, 1).writeByte(flags)
+      ? alloc.buffer(Byte.BYTES).writeByte(flags)
       : noExtras();
 
     ByteBuf body;

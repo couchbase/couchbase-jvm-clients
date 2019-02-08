@@ -60,7 +60,7 @@ public class OperationOptions {
     );
 
     /*
-     * Finally, you can set an opentracing span as a parent for the operation.
+     * Finally, you can set an OpenTracing span as a parent for the operation.
      */
     Span parent = null; // this would be your parent span
     collection.get(

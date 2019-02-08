@@ -51,7 +51,7 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
-    ByteBuf extras = alloc.buffer(4);
+    ByteBuf extras = alloc.buffer(Integer.BYTES);
     extras.writeInt((int) expiry);
 
     ByteBuf request;

@@ -21,3 +21,9 @@ checkstyle {
   toolVersion = "8.12"
   configProperties 'checkstyle.header.file': file('../config/checkstyle/checkstyle-header.txt')
 }
+
+compileTestJava {
+  // compile classpath leaks org.apache.logging.log4j.core.config.plugins.processor.PluginProcessor
+  // but we don't need annotation processors here. This will be the default in Gradle 5.0
+  options.compilerArgs += '-proc:none'
+}

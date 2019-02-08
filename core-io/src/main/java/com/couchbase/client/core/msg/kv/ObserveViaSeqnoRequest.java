@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.core.msg.kv;
+
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+
+import java.time.Duration;
+import java.util.Optional;
+
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+
+public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoResponse> {
+
+  private final int replica;
+  private final boolean active;
+  private final long vbucketUUID;
+
+  public ObserveViaSeqnoRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+                                final RetryStrategy retryStrategy,
+                                final int replica, final boolean active, final long vbucketUUID, final String key,
+                                final byte[] collection) {
+    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    this.replica = replica;
+    this.active = active;
+    this.vbucketUUID = vbucketUUID;
+  }
+
+  public int replica() {
+    return replica;
+  }
+
+  public boolean active() {
+    return active;
+  }
+
+  @Override
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final ChannelContext ctx) {
+    ByteBuf body = alloc.buffer(Long.BYTES).writeLong(vbucketUUID);
+    ByteBuf request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.OBSERVE_SEQ, noDatatype(), partition(),
+      opaque, noCas(), noExtras(), noKey(), body);
+    body.release();
+    return request;
+  }
+
+  @Override
+  public ObserveViaSeqnoResponse decode(final ByteBuf response, final ChannelContext ctx) {
+    ResponseStatus status = decodeStatus(response);
+    if (status.success()) {
+      ByteBuf content = body(response).get();
+      byte format = content.readByte();
+      short vbucketId = content.readShort();
+      long vbucketUUID = content.readLong();
+      long lastPersistedSeqno = content.readLong();
+      long currentSeqno = content.readLong();
+      switch (format) {
+        case 0:
+          return new ObserveViaSeqnoResponse(status, active, vbucketId, vbucketUUID, lastPersistedSeqno, currentSeqno,
+            Optional.empty(), Optional.empty());
+        case 1:
+          return new ObserveViaSeqnoResponse(status, active, vbucketId,vbucketUUID, lastPersistedSeqno, currentSeqno,
+            Optional.of(content.readLong()), Optional.of(content.readLong()));
+        default:
+          throw new IllegalStateException("Unsupported format 0x" + Integer.toHexString(format));
+      }
+    } else {
+      return new ObserveViaSeqnoResponse(status, active, (short) 0, 0L, 0L, 0L,
+        Optional.empty(), Optional.empty());
+    }
+  }
+}

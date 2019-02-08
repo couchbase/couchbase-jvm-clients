@@ -28,6 +28,8 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
+import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 
@@ -88,7 +90,7 @@ public class KeyValueLocator implements Locator {
 
     int nodeId = calculateNodeId(partitionId, request, config);
     if (nodeId < 0) {
-      // TODO errorObservables(nodeId, request, config.name(), env, responseBuffer);
+      RetryOrchestrator.maybeRetry(ctx, request);
       return;
     }
 
@@ -107,6 +109,7 @@ public class KeyValueLocator implements Locator {
 
     throw new IllegalStateException("Node not found for request" + request);
   }
+
   /**
    * Helper method to calculate the node if for the given partition and request type.
    *
@@ -119,11 +122,11 @@ public class KeyValueLocator implements Locator {
                                      final CouchbaseBucketConfig config) {
     boolean useFastForward = request.context().retryAttempts() > 0 && config.hasFastForwardMap();
     if (request instanceof ReplicaGetRequest) {
-      return config.nodeIndexForReplica(
-        partitionId,
-        ((ReplicaGetRequest) request).replica() - 1,
-        useFastForward
-      );
+      return config.nodeIndexForReplica(partitionId, ((ReplicaGetRequest) request).replica() - 1, useFastForward);
+    } else if (request instanceof ObserveViaCasRequest && ((ObserveViaCasRequest) request).replica() > 0) {
+      return config.nodeIndexForReplica(partitionId, ((ObserveViaCasRequest) request).replica() - 1, useFastForward);
+    } else if (request instanceof ObserveViaSeqnoRequest && ((ObserveViaSeqnoRequest) request).replica() > 0) {
+      return config.nodeIndexForReplica(partitionId, ((ObserveViaSeqnoRequest) request).replica() - 1, useFastForward);
     } else {
       return config.nodeIndexForMaster(partitionId, useFastForward);
     }

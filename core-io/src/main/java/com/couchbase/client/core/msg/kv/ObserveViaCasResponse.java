@@ -23,11 +23,16 @@ public class ObserveViaCasResponse extends BaseResponse {
 
   private final long cas;
   private final ObserveStatus observeStatus;
+  private final boolean active;
+  private final ResponseStatusDetails statusDetails;
 
-  public ObserveViaCasResponse(ResponseStatus status, long cas, ObserveStatus observeStatus) {
+  public ObserveViaCasResponse(ResponseStatus status, long cas, ObserveStatus observeStatus, final boolean active,
+                               final ResponseStatusDetails statusDetails) {
     super(status);
     this.cas = cas;
     this.observeStatus = observeStatus;
+    this.active = active;
+    this.statusDetails = statusDetails;
   }
 
   public long cas() {
@@ -36,6 +41,14 @@ public class ObserveViaCasResponse extends BaseResponse {
 
   public ObserveStatus observeStatus() {
     return observeStatus;
+  }
+
+  public boolean active() {
+    return active;
+  }
+
+  public ResponseStatusDetails statusDetails() {
+    return statusDetails;
   }
 
   public enum ObserveStatus {
@@ -98,5 +111,15 @@ public class ObserveViaCasResponse extends BaseResponse {
     public byte value() {
       return value;
     }
+  }
+
+  @Override
+  public String toString() {
+    return "ObserveViaCasResponse{" +
+      "cas=" + cas +
+      ", observeStatus=" + observeStatus +
+      ", active=" + active +
+      ", statusDetails=" + statusDetails +
+      '}';
   }
 }

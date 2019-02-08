@@ -58,7 +58,7 @@
 //
 //
 //    // In Java:
-//    // coll.replace("id", JsonObject.create(), 0, replaceOptions().timeoutMsecs(1500).replicateTo(ReplicateTo.One));
+//    // coll.replace("id", JsonObject.create(), 0, replaceOptions().timeoutMsecs(1500).replicateTo(ObserveReplicateTo.One));
 //
 //
 //    // 2.2 Merge subdoc and make it easier to use (one method, same result)
@@ -88,7 +88,7 @@
 //    coll.replace("id", JsonObject.create, cas = 0, durability = Durability.PersistToMajority)
 //
 //    // Open question - how to best support 'old' and 'new' durability?
-//    coll.replace("id", JsonObject.create, cas = 0, replicateTo = ReplicateTo.One, persistTo = PersistTo.None)
+//    coll.replace("id", JsonObject.create, cas = 0, replicateTo = ObserveReplicateTo.One, persistTo = ObservePersistTo.None)
 //
 //
 //

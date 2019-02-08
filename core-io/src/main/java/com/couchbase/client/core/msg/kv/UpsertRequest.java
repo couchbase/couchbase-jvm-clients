@@ -75,7 +75,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
       content = Unpooled.wrappedBuffer(this.content);
     }
 
-    ByteBuf extras = alloc.buffer(8);
+    ByteBuf extras = alloc.buffer(Integer.BYTES * 2);
     extras.writeInt(flags);
     extras.writeInt((int) expiration);
 

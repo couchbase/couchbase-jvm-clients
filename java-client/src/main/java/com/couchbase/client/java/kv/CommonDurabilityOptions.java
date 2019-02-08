@@ -57,8 +57,8 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
    * @return this options builder for chaining purposes.
    */
   public SELF withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "PersistTo");
-    notNull(replicateTo, "ReplicateTo");
+    notNull(persistTo, "ObservePersistTo");
+    notNull(replicateTo, "ObserveReplicateTo");
     if (durabilityLevel.isPresent()) {
       throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
         "the same time!");

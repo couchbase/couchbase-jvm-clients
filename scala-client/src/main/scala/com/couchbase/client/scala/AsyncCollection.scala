@@ -134,7 +134,7 @@ class AsyncCollection(name: String,
                 retryStrategy: RetryStrategy = environment.retryStrategy()
                )
   : Future[ExistsResult] = {
-    val request = new ObserveViaCasRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded)
+    val request = new ObserveViaCasRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, true, 0)
 
     core.send(request)
 

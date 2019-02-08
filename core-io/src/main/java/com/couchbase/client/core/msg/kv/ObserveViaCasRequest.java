@@ -26,20 +26,27 @@ import io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasResponse> {
 
+  private final int replica;
+  private final boolean active;
+
   public ObserveViaCasRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                               final RetryStrategy retryStrategy, final String key,
-                              final byte[] collection) {
+                              final byte[] collection, boolean active, int replica) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
+    this.active = active;
+    this.replica = replica;
+  }
+
+  public int replica() {
+    return replica;
+  }
+
+  public boolean active() {
+    return active;
   }
 
   @Override
@@ -62,16 +69,22 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
     ResponseStatus status = decodeStatus(response);
     byte observed = ObserveViaCasResponse.ObserveStatus.UNKNOWN.value();
     long observedCas = 0;
+    ResponseStatusDetails statusDetails = null;
     if (status.success()) {
       ByteBuf content = body(response).get();
       short keyLength = content.getShort(2);
       observed = content.getByte(keyLength + 4);
       observedCas = content.getLong(keyLength + 5);
+    } else {
+      // TODO: implement once xerror is fully implemented
+      statusDetails = null; //ResponseStatus.convertDetails(datatype(response), );
     }
     return new ObserveViaCasResponse(
       status,
       observedCas,
-      ObserveViaCasResponse.ObserveStatus.valueOf(observed)
+      ObserveViaCasResponse.ObserveStatus.valueOf(observed),
+      active,
+      statusDetails
     );
   }
 
