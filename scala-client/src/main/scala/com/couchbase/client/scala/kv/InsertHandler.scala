@@ -38,7 +38,7 @@ class InsertHandler(hp: HandlerParams) extends RequestHandler[InsertResponse, Mu
         Success(new InsertRequest(id,
           hp.collectionIdEncoded,
           encoded._1,
-          expiration.toSeconds,
+          expiration.getSeconds,
           encoded._2.flags,
           timeout,
           hp.core.context(),

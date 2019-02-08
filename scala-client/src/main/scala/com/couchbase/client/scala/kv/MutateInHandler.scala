@@ -64,7 +64,7 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
             hp.collectionIdEncoded,
             insertDocument,
             commands,
-            expiration.toSeconds,
+            expiration.getSeconds,
             durability.toDurabilityLevel))
         }
     }

@@ -34,7 +34,7 @@ class UpsertHandler(hp: HandlerParams) extends RequestHandler[UpsertResponse, Mu
         Success(new UpsertRequest(id,
           hp.collectionIdEncoded,
           encoded._1,
-          expiration.toSeconds,
+          expiration.getSeconds,
           encoded._2.flags,
           timeout,
           hp.core.context(),
