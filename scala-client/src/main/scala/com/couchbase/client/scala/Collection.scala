@@ -125,22 +125,22 @@ class Collection(val async: AsyncCollection,
 
 
   def getAndLock(id: String,
-          lockFor: FiniteDuration = 30.seconds,
-          parentSpan: Option[Span] = None,
-          timeout: FiniteDuration = kvTimeout,
-          retryStrategy: RetryStrategy = async.environment.retryStrategy()
-         ): Try[GetResult] = {
+                 lockFor: FiniteDuration = 30.seconds,
+                 parentSpan: Option[Span] = None,
+                 timeout: FiniteDuration = kvTimeout,
+                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                ): Try[GetResult] = {
     block(async.getAndLock(id, lockFor, parentSpan, timeout, retryStrategy), timeout)
   }
 
   def getAndTouch(id: String,
                   expiration: FiniteDuration,
-                 parentSpan: Option[Span] = None,
                   durability: Durability = Disabled,
-                 timeout: FiniteDuration = kvTimeout,
-                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
-                ): Try[GetResult] = {
-    block(async.getAndTouch(id, expiration, parentSpan, durability, timeout, retryStrategy), timeout)
+                  parentSpan: Option[Span] = None,
+                  timeout: FiniteDuration = kvTimeout,
+                  retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                 ): Try[GetResult] = {
+    block(async.getAndTouch(id, expiration, durability, parentSpan, timeout, retryStrategy), timeout)
   }
 
   def get(id: String,
@@ -158,7 +158,7 @@ class Collection(val async: AsyncCollection,
                parentSpan: Option[Span] = None,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = async.environment.retryStrategy()
-         ): Try[LookupInResult] = {
+              ): Try[LookupInResult] = {
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }
 

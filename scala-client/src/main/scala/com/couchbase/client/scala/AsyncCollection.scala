@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.subdoc.SubDocumentException
-import com.couchbase.client.core.msg.{Request, ResponseStatus}
+import com.couchbase.client.core.msg.{Request, Response, ResponseStatus}
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
@@ -39,7 +39,7 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{LookupInResult, _}
 import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.kv.{DefaultErrors, ExistsHandler, InsertHandler, RequestHandler}
+import com.couchbase.client.scala.kv._
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import io.netty.util.CharsetUtil
@@ -72,6 +72,14 @@ class AsyncCollection(name: String,
   private val hp = HandlerParams(core, bucketName, collectionIdEncoded)
   private[scala] val existsHandler = new ExistsHandler(hp)
   private[scala] val insertHandler = new InsertHandler(hp)
+  private[scala] val replaceHandler = new ReplaceHandler(hp)
+  private[scala] val upsertHandler = new UpsertHandler(hp)
+  private[scala] val removeHandler = new RemoveHandler(hp)
+  private[scala] val getFullDocHandler = new GetFullDocHandler(hp)
+  private[scala] val getSubDocHandler = new GetSubDocHandler(hp)
+  private[scala] val getAndTouchHandler = new GetAndTouchHandler(hp)
+  private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
+  private[scala] val mutateInHandler = new MutateInHandler(hp)
 
   // TODO AsyncBinaryCollection
 
@@ -88,13 +96,13 @@ class AsyncCollection(name: String,
     DefaultErrors.throwOnBadResult(status)
   }
 
-  private def wrap[Resp,Res](in: Try[Request[Resp]], handler: RequestHandler[Resp,Res]): Future[Res] = {
+  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): Future[Res] = {
     in match {
       case Success(request) =>
         core.send[Resp](request)
 
         FutureConverters.toScala(request.response())
-          .map(response => handler.response(response))
+          .map(response => handler.response(id, response))
 
       case Failure(err) => Future.failed(err)
     }
@@ -103,11 +111,9 @@ class AsyncCollection(name: String,
   def exists(id: String,
                 parentSpan: Option[Span] = None,
                 timeout: FiniteDuration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()
-               )
-  : Future[ExistsResult] = {
+                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
     val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
-    wrap(req, existsHandler)
+    wrap(req, id, existsHandler)
   }
 
   def insert[T](id: String,
@@ -120,7 +126,7 @@ class AsyncCollection(name: String,
                (implicit ev: Conversions.Encodable[T])
   : Future[MutationResult] = {
     val req = insertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
-    wrap(req, insertHandler)
+    wrap(req, id, insertHandler)
   }
 
   def replace[T](id: String,
@@ -130,29 +136,10 @@ class AsyncCollection(name: String,
                  expiration: FiniteDuration = 0.seconds,
                  parentSpan: Option[Span] = None,
                  timeout: FiniteDuration = kvTimeout,
-                 retryStrategy: RetryStrategy = environment.retryStrategy()
-                )
+                 retryStrategy: RetryStrategy = environment.retryStrategy())
                 (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(content, "content")
-    Validators.notNull(cas, "cas")
-
-    ev.encode(content) match {
-      case Success(encoded) =>
-        val request = new ReplaceRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, cas, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
-        core.send(request)
-        FutureConverters.toScala(request.response())
-          .map(response => {
-            response.status() match {
-              case ResponseStatus.SUCCESS =>
-                MutationResult(response.cas(), response.mutationToken().asScala)
-              case _ => throw throwOnBadResult(response.status())
-            }
-          })
-      case Failure(err) =>
-        Future.failed(new EncodingFailedException(err))
-    }
+    val req = replaceHandler.request(id, content, cas, durability, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, id, replaceHandler)
   }
 
   def upsert[T](id: String,
@@ -161,28 +148,10 @@ class AsyncCollection(name: String,
                 expiration: FiniteDuration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: FiniteDuration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()
-               )
+                retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(content, "content")
-
-    ev.encode(content) match {
-      case Success(encoded) =>
-        val request = new UpsertRequest(id,
-          collectionIdEncoded, encoded._1, expiration.toSeconds, encoded._2.flags, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
-        core.send(request)
-        FutureConverters.toScala(request.response())
-          .map(response => {
-            response.status() match {
-              case ResponseStatus.SUCCESS =>
-                MutationResult(response.cas(), response.mutationToken().asScala)
-              case _ => throw throwOnBadResult(response.status())
-            }
-          })
-      case Failure(err) =>
-        Future.failed(new EncodingFailedException(err))
-    }
+    val req = upsertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, id, upsertHandler)
   }
 
 
@@ -191,22 +160,9 @@ class AsyncCollection(name: String,
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
              timeout: FiniteDuration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy()
-            ): Future[MutationResult] = {
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(cas, "cas")
-
-    val request = new RemoveRequest(id,
-      collectionIdEncoded, cas, timeout, core.context(), bucketName, retryStrategy, durability.toDurabilityLevel)
-    core.send(request)
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
-          case ResponseStatus.SUCCESS =>
-            MutationResult(response.cas(), response.mutationToken().asScala)
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
+             retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutationResult] = {
+    val req = removeHandler.request(id, cas, durability, parentSpan, timeout, retryStrategy)
+    wrap(req, id, removeHandler)
   }
 
   def get(id: String,
@@ -215,9 +171,6 @@ class AsyncCollection(name: String,
           timeout: FiniteDuration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Future[GetResult] = {
-    Validators.notNullOrEmpty(id, "id")
-    Validators.notNull(timeout, "timeout")
-
     if (withExpiration) {
       getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
         GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
@@ -231,22 +184,10 @@ class AsyncCollection(name: String,
                          parentSpan: Option[Span] = None,
                          timeout: FiniteDuration = kvTimeout,
                          retryStrategy: RetryStrategy = environment.retryStrategy()): Future[GetResult] = {
-    val request = new GetRequest(id, collectionIdEncoded, timeout, core.context(), bucketName, retryStrategy)
-
-    core.send(request)
-
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
-          case ResponseStatus.SUCCESS =>
-            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
-
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
+    val req = getFullDocHandler.request(id, parentSpan, timeout, retryStrategy)
+    wrap(req, id, getFullDocHandler)
   }
 
-  private val ExpTime = "$document.exptime"
 
   private def getSubDoc(id: String,
                         spec: LookupInSpec,
@@ -254,69 +195,8 @@ class AsyncCollection(name: String,
                         parentSpan: Option[Span] = None,
                         timeout: FiniteDuration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
-    // TODO support projections
-    // TODO support expiration (probs works, check unit tested)
-
-    val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
-
-    if (withExpiration) {
-      commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
-    }
-
-    spec.operations.map {
-      case x: GetOperation => new SubdocGetRequest.Command(SubdocCommandType.GET, x.path, x.xattr)
-      case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false)
-      case x: ExistsOperation => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x.xattr)
-      case x: CountOperation => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x.xattr)
-    }.foreach(commands.add)
-
-
-    if (commands.isEmpty) {
-      Future.failed(new IllegalArgumentException("No SubDocument commands provided"))
-    }
-    else {
-      // TODO flags?
-      val request = new SubdocGetRequest(timeout, core.context(), bucketName, retryStrategy, id, collectionIdEncoded, 0, commands)
-
-      core.send(request)
-
-      FutureConverters.toScala(request.response())
-        .map(response => {
-          response.status() match {
-
-            case ResponseStatus.SUCCESS =>
-              val values = response.values().asScala
-
-              var exptime: Option[FiniteDuration] = None
-              var fulldoc: Option[Array[Byte]] = None
-              val fields = collection.mutable.Map.empty[String, SubdocField]
-
-              values.foreach(value => {
-                if (value.path() == ExpTime) {
-                  val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-                  exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
-                }
-                else if (value.path == "") {
-                  fulldoc = Some(value.value())
-                }
-                else {
-                  fields += value.path() -> value
-                }
-              })
-
-              LookupInResult(id, fulldoc, fields, DocumentFlags.Json, response.cas(), exptime)
-
-            case ResponseStatus.SUBDOC_FAILURE =>
-
-              response.error().asScala match {
-                case Some(err) => throw err
-                case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
-              }
-
-            case _ => throw throwOnBadResult(response.status())
-          }
-        })
-    }
+    val req = getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy)
+    wrap(req, id, getSubDocHandler)
   }
 
   def mutateIn(id: String,
@@ -328,100 +208,29 @@ class AsyncCollection(name: String,
                expiration: FiniteDuration,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
-    val failed: Option[MutateOperation] = spec.operations
-      .filter(_.isInstanceOf[MutateOperationSimple])
-        .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
-
-
-    failed match {
-      case Some(failed: MutateOperationSimple) =>
-        // If any of the decodes failed, abort
-        Future.failed(failed.fragment.failed.get)
-      case _ =>
-
-        val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
-        spec.operations.map(_.convert).foreach(commands.add)
-
-        if (commands.isEmpty) {
-          Future.failed(SubdocMutateRequest.errIfNoCommands())
-        }
-        else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-          Future.failed(SubdocMutateRequest.errIfNoCommands())
-        }
-        else {
-          val request = new SubdocMutateRequest(timeout, core.context(), bucketName, retryStrategy, id,
-            collectionIdEncoded, insertDocument, commands,  expiration.toSeconds, durability.toDurabilityLevel)
-
-          core.send(request)
-
-          FutureConverters.toScala(request.response())
-            .map(response => {
-
-              response.status() match {
-
-                case ResponseStatus.SUCCESS =>
-                  val values: Seq[SubdocField] = response.values().asScala
-                  val fields: Map[String, SubdocField] = values.map(v => v.path() -> v).toMap
-
-                  MutateInResult(id, fields, response.cas(), response.mutationToken().asScala)
-
-                case ResponseStatus.SUBDOC_FAILURE =>
-
-                  response.error().asScala match {
-                    case Some(err) => throw err
-                    case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
-                  }
-
-                case _ => throw throwOnBadResult(response.status())
-              }
-            })
-        }
-    }
+    val req = mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, id, mutateInHandler)
   }
 
-
   def getAndLock(id: String,
-                 lockFor: FiniteDuration = 30.seconds,
+                 expiration: FiniteDuration = 30.seconds,
                  parentSpan: Option[Span] = None,
                  timeout: FiniteDuration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy()
                 ): Future[GetResult] = {
-    val request = new GetAndLockRequest(id, collectionIdEncoded, timeout, core.context(), bucketName, retryStrategy, lockFor)
-
-    core.send(request)
-
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
-          case ResponseStatus.SUCCESS =>
-            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
-
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
+    val req = getAndLockHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
+    wrap(req, id, getAndLockHandler)
   }
 
   def getAndTouch(id: String,
                   expiration: FiniteDuration,
-                  parentSpan: Option[Span] = None,
                   durability: Durability = Disabled,
+                  parentSpan: Option[Span] = None,
                   timeout: FiniteDuration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy()
                  ): Future[GetResult] = {
-    val request = new GetAndTouchRequest(id, collectionIdEncoded, timeout, core.context(),
-      bucketName, retryStrategy, expiration, durability.toDurabilityLevel)
-
-    core.send(request)
-
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        response.status() match {
-          case ResponseStatus.SUCCESS =>
-            new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
-
-          case _ => throw throwOnBadResult(response.status())
-        }
-      })
+    val req = getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
+    wrap(req, id, getAndTouchHandler)
   }
 
 
@@ -433,7 +242,8 @@ class AsyncCollection(name: String,
               ): Future[LookupInResult] = {
     // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app
     // may expect error to be raised and it won't
-    getSubDoc(id, spec, false, parentSpan, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
+  // TODO getfromreplica
 }

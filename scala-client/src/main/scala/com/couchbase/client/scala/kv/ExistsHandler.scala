@@ -13,9 +13,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Success, Try}
 
-trait RequestHandler[Resp,Res] {
-  def response(response: Resp): Res
-}
+
 
 // TODO how to handle flush - this will create a new collectionId
 class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
@@ -32,7 +30,7 @@ class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasRespo
       hp.collectionIdEncoded))
   }
 
-  override def response(response: ObserveViaCasResponse): ExistsResult = {
+  override def response(id: String, response: ObserveViaCasResponse): ExistsResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val exists: Boolean = response.observeStatus() match {

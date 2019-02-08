@@ -67,7 +67,6 @@ class ReactiveKeyValueSpec extends FunSuite {
 
   private def cleanupDoc(docIdx: Int = 0): String = {
     val docId = TestUtils.docId(docIdx)
-    coll.remove(docId)
     docId
   }
 
@@ -110,7 +109,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content).get
+    val insertResult = wrap(coll.insert(docId, content)).get
 
     wrap(coll.getAndLock(docId)) match {
       case Success(result) =>
@@ -131,7 +130,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content, expiration = 10.seconds).get
+    val insertResult = wrap(coll.insert(docId, content, expiration = 10.seconds)).get
 
     assert (insertResult.cas != 0)
 
@@ -163,7 +162,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val upsertResult = coll.upsert(docId, content)
+    val upsertResult = wrap(coll.upsert(docId, content))
 
     upsertResult match {
       case Success(result) =>
@@ -185,12 +184,12 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content)
+    val insertResult = wrap(coll.insert(docId, content))
 
     assert (insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
-    val upsertResult = coll.upsert(docId, content2)
+    val upsertResult = wrap(coll.upsert(docId, content2))
 
     upsertResult match {
       case Success(result) =>
@@ -213,7 +212,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val upsertResult = coll.replace(docId, content)
+    val upsertResult = wrap(coll.replace(docId, content))
 
     upsertResult match {
       case Success(result) => assert(false, s"doc should not exist")
@@ -227,12 +226,12 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content)
+    val insertResult = wrap(coll.insert(docId, content))
 
     assert (insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
-    val replaceResult = coll.replace(docId, content2)
+    val replaceResult = wrap(coll.replace(docId, content2))
 
     replaceResult match {
       case Success(result) =>
@@ -255,12 +254,12 @@ class ReactiveKeyValueSpec extends FunSuite {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content)
+    val insertResult = wrap(coll.insert(docId, content))
 
     assert (insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
-    val replaceResult = coll.replace(docId, content2, insertResult.get.cas)
+    val replaceResult = wrap(coll.replace(docId, content2, insertResult.get.cas))
 
     replaceResult match {
       case Success(result) =>
@@ -277,5 +276,4 @@ class ReactiveKeyValueSpec extends FunSuite {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
-
 }
