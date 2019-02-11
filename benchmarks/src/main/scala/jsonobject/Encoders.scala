@@ -2,8 +2,7 @@ package jsonobject
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.scala.codec.Conversions.{BinaryFlags, Decodable, Encodable, JsonFlags}
-import com.couchbase.client.scala.document.EncodeParams
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.codec.EncodeParams
 import experiments.JsoniterObject
 import io.netty.util.CharsetUtil
 

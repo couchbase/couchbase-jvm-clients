@@ -2,6 +2,7 @@ package com.couchbase.client.scala.codec
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField}
+import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
 import io.netty.util.CharsetUtil
 
 import scala.util.{Failure, Success, Try}
@@ -41,7 +42,6 @@ object DocumentFlags {
   // Non-JSON String, utf-8 encoded, no BOM: "hello world"
   val String = 4 << 24
 }
-
 
 
 object Conversions {
@@ -92,7 +92,6 @@ object Conversions {
 
         upickleAttempt match {
           case Success(json) =>
-            // TODO can probably get upickle to encode directly to Array[Byte]
             Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
           case Failure(_) =>
             Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
@@ -102,35 +101,45 @@ object Conversions {
 
     // These encoders treat the provided values as encoded Json
     object AsJson {
+
       // This is a high-performance Array[Bytes] converter that trusts that the input is indeed Json and sets the appropriate flag
       implicit object BytesConvert extends Encodable[Array[Byte]] {
         override def encode(content: Array[Byte]) = {
-              Try((content, JsonFlags))
+          Try((content, JsonFlags))
         }
       }
 
       // This is a high-performance String converter that trusts that the input is indeed Json and sets the appropriate flag
       implicit object StringConvert extends Encodable[String] {
         override def encode(content: String) = {
-              Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
+          Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
         }
       }
+
     }
 
     // These encoders treat the provided values as raw binary or strings
     object AsValue {
+
       // This is a high-performance Array[Byte] converter that trusts that the input is a binary blob and sets the appropriate flag
       implicit object BytesConvert extends Encodable[Array[Byte]] {
         override def encode(content: Array[Byte]) = {
-            Try((content, BinaryFlags))
+          Try((content, BinaryFlags))
         }
       }
 
       // This is a high-performance String converter that trusts that the input is a regular non-Json String and sets the appropriate flag
       implicit object StringConvert extends Encodable[String] {
         override def encode(content: String) = {
-              Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
+          Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
         }
+      }
+
+    }
+
+    implicit object JsonObjectExperimentConvert extends Encodable[JsonObject] {
+      override def encode(content: JsonObject) = {
+        Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonFlags)
       }
     }
 
@@ -216,6 +225,16 @@ object Conversions {
       }
     }
 
+    implicit object JsonObjectExperiment extends Decodable[JsonObject] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
+        out match {
+          case Success(_) => out
+          case Failure(err) => Failure(new DecodingFailedException(err))
+        }
+      }
+    }
+
     implicit object UjsonValueConvert extends Decodable[ujson.Value] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(upickle.default.read[ujson.Value](bytes))
@@ -268,17 +287,16 @@ object Conversions {
       }
     }
 
-
-    //    implicit object CirceConvert extends Decodable[io.circe.Json] {
-    //      override def decode(bytes: Array[Byte], params: EncodeParams) = {
-    //        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
-    //        out match {
-    //          case Success(_) => out
-    //          case Failure(err) => Failure(new DecodingFailedException(err))
-    //        }
-    //      }
-    //    }
-
+    implicit object CirceConvert extends Decodable[io.circe.Json] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val str = new String(bytes, CharsetUtil.UTF_8)
+        val out = io.circe.parser.decode[io.circe.Json](str).toTry
+        out match {
+          case Success(_) => out
+          case Failure(err) => Failure(new DecodingFailedException(err))
+        }
+      }
+    }
   }
 
 

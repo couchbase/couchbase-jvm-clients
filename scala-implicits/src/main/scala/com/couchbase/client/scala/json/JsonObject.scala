@@ -18,19 +18,12 @@ package com.couchbase.client.scala.json
 
 import java.util
 
+import scala.collection.{GenSet, mutable}
 import scala.language.dynamics
-import java.util.Objects
-
-import scala.annotation.switch
-import scala.collection.GenSet
-import scala.collection.mutable.ArrayBuffer
 
 //import com.fasterxml.jackson.databind.ObjectMapper
 
-import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
-
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
   * There are plenty of JSON libraries for Scala already.  Why make another one?
@@ -159,70 +152,20 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
     content.isEmpty
   }
 
-//  private type ContentType = Map[String, Any]
+  def toMap: collection.GenMap[String, Any] = {
+    val copy = new mutable.AnyRefMap[String, Any](content.size)
+    import scala.collection.JavaConverters._
+    for (entry <- content.entrySet.asScala) {
+      val content = entry.getValue
+      content match {
+        case v: JsonObject => copy.put(entry.getKey, v.toMap)
+        case v: JsonArray => copy.put(entry.getKey, v.toSeq)
+        case _ => copy.put(entry.getKey, content)
+      }
+    }
+    copy
+  }
 
-//  @tailrec
-//  private def contentRecurse(cur: ContentType, paths: List[PathElement]): Any = {
-//    paths match {
-//      case Nil =>
-//        throw new PathNotFound()
-//
-//      case x :: Nil =>
-//        x match {
-//          case x: PathArray =>
-//            cur.get(x.name).map(_.asInstanceOf[JsonArray]) match {
-//              case Some(y) => y.get(x.index)
-//              case _ => throw new PathNotFound()
-//            }
-//          case x: PathObjectOrField =>
-//            cur.get(x.toString) match {
-//              case Some(y) => y
-//              case _ => throw new PathNotFound()
-//            }
-//        }
-//
-//      case x :: rest =>
-//        x match {
-//          case x: PathArray =>
-//            cur.get(x.name) match {
-//              case None => throw new PathNotFound()
-//              case Some(y: JsonArray) =>
-//                val arr = y.get(x.index).asInstanceOf[JsonObject]
-//                contentRecurse(arr.content, rest)
-//            }
-//
-//          case x: PathObjectOrField =>
-//            cur.get(x.toString) match {
-//              case None => throw new PathNotFound()
-//              case Some(z) =>
-//                val next = z match {
-//                  case jo: JsonObject => jo.content
-//                  case _ => z.asInstanceOf[ContentType]
-//                }
-//                contentRecurse(next, rest)
-//            }
-//        }
-//    }
-//  }
-//
-//
-//  override def contentAs[T](path: PathElements): T = {
-//    contentRecurse(content, path.paths).asInstanceOf[T]
-//  }
-
-//  override def exists(path: PathElements): Boolean = {
-//    // TODO more performant implementation without catch
-//    try {
-//      contentRecurse(content, path.paths)
-//      true
-//    }
-//    catch {
-//      case e: PathNotFound => false
-//    }
-//  }
-
-
-  // TODO toMap
   // TODO toString
 
   def size: Int = {
@@ -263,7 +206,7 @@ object JsonObject {
 
   def create: JsonObject = new JsonObject(new util.HashMap[String, Any]())
 
-  // TODO from(Map)
+  // TODO from(Map), and key -> value, generally make it really easy to create json
 }
 
 

@@ -183,8 +183,6 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
     }
   }
 
-  // TODO test all inserted can be pulled out using another json lib
-
 
   "inserting case class with jackson" should "succeed" in {
     import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}

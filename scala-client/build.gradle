@@ -153,6 +153,7 @@ ScalaCompileOptions.metaClass.useAnt = false
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
   compile group: 'org.scala-lang', name: 'scala-reflect', version: '2.12.8'
+  testCompile group: 'org.scalacheck', name: 'scalacheck_2.12', version: '1.14.0'
 
   compile "io.projectreactor:reactor-scala-extensions_2.12:0.3.5"
   implementation group: 'io.projectreactor.addons', name: 'reactor-adapter', version: '3.2.0.RELEASE'
