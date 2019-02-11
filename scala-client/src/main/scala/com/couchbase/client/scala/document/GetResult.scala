@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
 
 import scala.util.Try
 //import ujson.Obj
@@ -43,7 +43,7 @@ case class GetResult(id: String,
 
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, DecodeParams(flags))
+    ev.decode(_content, EncodeParams(flags))
   }
 
   // TODO support

@@ -27,7 +27,6 @@ package benchmarks.json
 import java.util
 
 import com.couchbase.client.java.codec.{Decoder, DefaultDecoder, DefaultEncoder}
-import com.couchbase.client.java.json.JsonObject
 import com.couchbase.client.java.kv.EncodedDocument
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.codec.Conversions.Encodable
@@ -129,7 +128,7 @@ object Creating extends Bench.ForkedTime {
 
   performance of "Decoding byte array to JSON AST" in {
     performance of "JsonObject (Java)" in {
-
+      import com.couchbase.client.java.json.JsonObject
 
       using(gen) in {
         r => {

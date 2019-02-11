@@ -5,7 +5,7 @@ import com.couchbase.client.core.error.subdoc.MultiMutationException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.api.MutateInSpec
 import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.couchbase.client.scala.document.DocumentFlags
+import com.couchbase.client.scala.codec.DocumentFlags
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 

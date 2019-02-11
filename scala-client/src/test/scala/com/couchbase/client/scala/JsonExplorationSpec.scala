@@ -2,8 +2,7 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
-import com.couchbase.client.scala.codec.Conversions.{Encodable, JsonEncodeParams}
-import com.couchbase.client.scala.document.DecodeParams
+import com.couchbase.client.scala.codec.Conversions.{Encodable, JsonFlags}
 import org.scalatest.{FlatSpec, Matchers, _}
 
 import scala.util.{Failure, Success, Try}
@@ -131,7 +130,7 @@ Make sure that term default is in your classpath and check for conflicting depen
 //          out.map((_, JsonEncodeParams))
 //      }
 //
-//      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+//      override def decode(bytes: Array[Byte], params: EncodeParams) = {
 //        Try(upickle.default.read[Address](bytes))
 //      }
 //    }

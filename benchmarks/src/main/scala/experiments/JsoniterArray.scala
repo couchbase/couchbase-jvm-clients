@@ -25,7 +25,6 @@ case class JsoniterArray(val values: ArrayBuffer[Any]) {
     Option(values(idx))
   }
   def getString(idx: Int): String = values(idx).asInstanceOf[String]
-  // TODO does getLong & getInt make sense?  Always using wrong one...
   def getLong(idx: Int): Long = values(idx).asInstanceOf[Long]
   def getInt(idx: Int): Int = values(idx).asInstanceOf[Int]
   def getDouble(idx: Int): Double = values(idx).asInstanceOf[Double]

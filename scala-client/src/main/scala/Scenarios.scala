@@ -67,7 +67,6 @@ class Scenarios {
 //
 //  /**
 //    * Automatically retries an idempotent operation in the face of durability failures
-//    * TODO this is quite complex logic.  Should this be folded into the client as a per-operation retry strategy?
 //    * @param callback an idempotent remove operation to perform
 //    * @param replicateTo the current ObserveReplicateTo setting being tried
 //    * @param originalReplicateTo the originally requested ObserveReplicateTo setting
@@ -100,7 +99,7 @@ class Scenarios {
 //        retryIdempotentRemoveClientSide(callback, originalReplicateTo, originalReplicateTo, until)
 //
 //      case err: ReplicaNotAvailableException =>
-//        // TODO this isn't necessary.  If replica is not available, the write will still go to as many as possible.
+//        // Note this isn't necessary.  If replica is not available, the write will still go to as many as possible.
 //        val newReplicateTo = replicateTo match {
 //          case ObserveReplicateTo.One => ObserveReplicateTo.None
 //          case ObserveReplicateTo.Two => ObserveReplicateTo.One
@@ -124,7 +123,6 @@ class Scenarios {
 //
 //  /**
 //    * Automatically retries an idempotent operation in the face of durability failures
-//    * TODO Should this be folded into the client as a per-operation retry strategy?
 //    * @param callback an idempotent remove operation to perform
 //    * @param until prevent the operation looping indefinitely
 //    */

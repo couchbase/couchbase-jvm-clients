@@ -26,7 +26,7 @@ case class LookupInResult(id: String,
         field.error().asScala match {
           case Some(err) => Failure(err)
           case _ =>
-            ev.decode(field, Conversions.JsonDecodeParams)
+            ev.decode(field, Conversions.JsonFlags)
         }
       case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
     }
@@ -36,7 +36,7 @@ case class LookupInResult(id: String,
   def documentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     body match {
-      case Some(b) => ev.decode(b, Conversions.JsonDecodeParams)
+      case Some(b) => ev.decode(b, Conversions.JsonFlags)
       case _ => Failure(new OperationDoesNotExist("Content could not be parsed"))
     }
   }

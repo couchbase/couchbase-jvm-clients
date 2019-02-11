@@ -2,17 +2,7 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
-import com.couchbase.client.scala.codec.Conversions._
-import com.couchbase.client.scala.codec.EncodeParams
-import com.couchbase.client.scala.implicits.Codecs
-import com.couchbase.client.scala.implicits.Codecs.{decoder, encoder}
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
-import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
-import io.netty.util.CharsetUtil
 import org.scalatest.{FlatSpec, Matchers, _}
-import upickle.implicits.MacroImplicits.dieIfNothing
 
 import scala.util.{Failure, Success, Try}
 
@@ -20,53 +10,6 @@ import scala.util.{Failure, Success, Try}
 //object Codecs2 {
 //  def codec[T]: (Decodable[T], Encodable[T]) = (decoder[T], encoder[T])
 //}
-
-case class Address(address: String)
-object Address {
-  // upickle requires adding this implicit thing to support conversion to/from JSON.  It is at least not much
-  // hassle to write.
-  implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
-//  implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
-//  Codecs.decoder[Address]
-//  implicit val decoder: Decodable[Address] = Codecs.decoder[Address]
-//  implicit val encoder: Encodable[Address] = Codecs.encoder[Address]
-//  implicit val cbCodec: Codec[Address] = Codecs.codec[Address]
-//  implicit val (dec: Decodable[Address], enc: Encodable[Address]) = Codecs2.codec[Address]
-
-  //  implicit val decoder: Decodable[Address] = new Decodable[Address] {
-//  override def decode(bytes: Array[Byte], params: EncodeParams): Try[Address] = {
-//    Try(readFromArray(bytes))
-//  }
-//}
-//  implicit object Decode extends Decodable[Address] {
-//    override def decode(bytes: Array[Byte], params: EncodeParams) = {
-//      Try(readFromArray(bytes))
-//    }
-//  }
-//  implicit val encoder: Encodable[Address] = new Encodable[Address] {
-//    override def encode(content: Address): Try[(Array[Byte], EncodeParams)] = {
-//     Try(writeToArray(content), JsonFlags)
-//    }
-//  }
-}
-
-case class User(name: String, age: Int, address: Seq[Address])
-object User {
-  implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
-  implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
-  implicit val cbCodec: Codec[User] = Codecs.codec[User]
-
-  //  implicit object Decode extends Decodable[User] {
-//    override def decode(bytes: Array[Byte], params: EncodeParams) = {
-//      Try(readFromArray(bytes))
-//    }
-//  }
-//  implicit object Encode extends Encodable[User] {
-//    override def encode(content: User) = {
-//      Try(writeToArray(content), JsonFlags)
-//    }
-//  }
-}
 
 
 class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {
@@ -125,9 +68,8 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 
 
   "inserting case class with jsoniter via Array[Byte]" should "succeed" in {
-    import com.github.plokhotnyuk.jsoniter_scala.macros._
-    import com.github.plokhotnyuk.jsoniter_scala.core._
     import User._
+    import com.github.plokhotnyuk.jsoniter_scala.core._
 
     val content = User("John Smith", 29, List(Address("123 Fake Street")))
 
@@ -187,8 +129,7 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 
 
   "inserting case class with jackson" should "succeed" in {
-    import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
-    import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+    import com.fasterxml.jackson.databind.ObjectMapper
     import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
     val mapper = new ObjectMapper()

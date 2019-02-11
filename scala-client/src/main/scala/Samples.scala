@@ -60,7 +60,6 @@
 //      case Failure(err) =>
 //    }
 //
-//    // TODO
 ////    val fetched2 = coll.get("id", LookupInOps().getDoc)
 //    val fetched3 = coll.get("id", timeout = 1000.milliseconds)
 //
@@ -78,7 +77,6 @@
 ////    getResult.users.getAs[List[User]]
 //
 //    case class MyUsersEntity(users: List[User])
-//    // TODO
 ////    val users = getResult.contentAs[MyUsersEntity]
 //
 ////    getResult.some.field.getString
@@ -105,7 +103,6 @@
 ////      println(result.contentAs[String]("field1"))
 //////      println(result.field1.asInstanceOf[String])
 ////      case class MyProjection(field1: String, field2: Int)
-////      // TODO
 //////      val proj = result.contentAs[MyProjection]
 ////    })
 //
@@ -118,7 +115,6 @@
 //
 //
 //    // Various ways of inserting
-//    // TODO
 ////    val inserted: Try[MutationResult] = coll.insert("id", JsonObject.create)
 ////    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds, expiration = 10.days)
 ////    coll.insert("id", JsonObject.create, timeout = 1000.milliseconds)
@@ -131,7 +127,6 @@
 //      // JsonDocument will be an immutable Scala case class and it's trivial to copy it with different content:
 //      // val toReplace = fetched1.get.copy(content = JsonObject.empty())
 //      val toReplace = fetched1.get
-//      // TODO
 ////      val replaced: Try[MutationResult] = coll.replace(toReplace.id, JsonObject.create, toReplace.cas)
 ////      coll.replace(toReplace.id, JsonObject.create, toReplace.cas, timeout = 1000.milliseconds)
 ////      coll.replace(toReplace.id, User("John", 25), toReplace.cas, timeout = 5.seconds)

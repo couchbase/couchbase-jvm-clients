@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.scala.document.DocumentFlags
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 

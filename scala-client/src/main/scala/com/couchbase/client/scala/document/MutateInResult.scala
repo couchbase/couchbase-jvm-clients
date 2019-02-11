@@ -23,7 +23,7 @@ case class MutateInResult(id: String,
         field.error().asScala match {
           case Some(err) => Failure(err)
           case _ =>
-            ev.decode(field, Conversions.JsonDecodeParams)
+            ev.decode(field, Conversions.JsonFlags)
         }
       case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
     }

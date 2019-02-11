@@ -2,23 +2,58 @@ package com.couchbase.client.scala.codec
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField}
-import com.couchbase.client.scala.document.{DecodeParams, DocumentFlags, EncodeParams}
-import com.couchbase.client.scala.json.JsonObject
 import io.netty.util.CharsetUtil
 
 import scala.util.{Failure, Success, Try}
 
+
+trait CodecParams {
+  val flags: Int
+
+  def isPrivate = (flags & DocumentFlags.Private) != 0
+
+  def isJson = (flags & DocumentFlags.Json) != 0
+
+  def isBinary = (flags & DocumentFlags.Binary) != 0
+
+  def isString = (flags & DocumentFlags.String) != 0
+
+  override def toString = "CodecParams{" +
+    "flags=" + flags +
+    ",private=" + isPrivate +
+    ",json=" + isJson +
+    ",binary=" + isBinary +
+    ",str=" + isString +
+    "}"
+}
+
+case class EncodeParams(flags: Int) extends CodecParams
+
+//case class EncodeParams(flags: Int) extends CodecParams
+
+
+object DocumentFlags {
+  val Reserved = 0
+  val Private = 1 << 24
+  val Json = 2 << 24
+  val Binary = 3 << 24
+
+  // Non-JSON String, utf-8 encoded, no BOM: "hello world"
+  val String = 4 << 24
+}
+
+
+
 object Conversions {
-  val JsonEncodeParams = EncodeParams(DocumentFlags.Json)
-  val StringEncodeParams = EncodeParams(DocumentFlags.String)
-  val BinaryEncodeParams = EncodeParams(DocumentFlags.Binary)
-  val JsonDecodeParams = DecodeParams(DocumentFlags.Json)
+  val JsonFlags = EncodeParams(DocumentFlags.Json)
+  val StringFlags = EncodeParams(DocumentFlags.String)
+  val BinaryFlags = EncodeParams(DocumentFlags.Binary)
 
   def encode[T](in: T)(implicit ev: Encodable[T]): Try[(Array[Byte], EncodeParams)] = {
     ev.encode(in)
   }
 
-  def decode[T](bytes: Array[Byte], params: DecodeParams = JsonDecodeParams)
+  def decode[T](bytes: Array[Byte], params: EncodeParams = JsonFlags)
                (implicit ev: Decodable[T]): Try[T] = {
     ev.decode(bytes, params)
   }
@@ -28,7 +63,10 @@ object Conversions {
   }
 
   trait Decodable[T] {
-    def decode(bytes: Array[Byte], params: DecodeParams): Try[T]
+    def decode(bytes: Array[Byte], params: EncodeParams): Try[T]
+  }
+
+  trait Codec[T] extends Encodable[T] with Decodable[T] {
   }
 
   object Encodable {
@@ -41,8 +79,8 @@ object Conversions {
         val upickleAttempt = Try(upickle.default.read[ujson.Value](content))
 
         upickleAttempt match {
-          case Success(json) => Try((content, JsonEncodeParams))
-          case Failure(_) => Try((content, BinaryEncodeParams))
+          case Success(json) => Try((content, JsonFlags))
+          case Failure(_) => Try((content, BinaryFlags))
         }
       }
     }
@@ -55,9 +93,9 @@ object Conversions {
         upickleAttempt match {
           case Success(json) =>
             // TODO can probably get upickle to encode directly to Array[Byte]
-            Try((content.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+            Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
           case Failure(_) =>
-            Try(((content).getBytes(CharsetUtil.UTF_8), StringEncodeParams))
+            Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
         }
       }
     }
@@ -67,14 +105,14 @@ object Conversions {
       // This is a high-performance Array[Bytes] converter that trusts that the input is indeed Json and sets the appropriate flag
       implicit object BytesConvert extends Encodable[Array[Byte]] {
         override def encode(content: Array[Byte]) = {
-              Try((content, JsonEncodeParams))
+              Try((content, JsonFlags))
         }
       }
 
       // This is a high-performance String converter that trusts that the input is indeed Json and sets the appropriate flag
       implicit object StringConvert extends Encodable[String] {
         override def encode(content: String) = {
-              Try((content.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+              Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
         }
       }
     }
@@ -84,14 +122,14 @@ object Conversions {
       // This is a high-performance Array[Byte] converter that trusts that the input is a binary blob and sets the appropriate flag
       implicit object BytesConvert extends Encodable[Array[Byte]] {
         override def encode(content: Array[Byte]) = {
-            Try((content, BinaryEncodeParams))
+            Try((content, BinaryFlags))
         }
       }
 
       // This is a high-performance String converter that trusts that the input is a regular non-Json String and sets the appropriate flag
       implicit object StringConvert extends Encodable[String] {
         override def encode(content: String) = {
-              Try(((content).getBytes(CharsetUtil.UTF_8), StringEncodeParams))
+              Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
         }
       }
     }
@@ -99,63 +137,63 @@ object Conversions {
     implicit object BooleanConvert extends Encodable[Boolean] {
       override def encode(content: Boolean) = {
         val str = if (content) "true" else "false"
-        Try((str.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((str.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
     implicit object IntConvert extends Encodable[Int] {
       override def encode(content: Int) = {
-        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
     implicit object DoubleConvert extends Encodable[Double] {
       override def encode(content: Double) = {
-        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
     implicit object LongConvert extends Encodable[Long] {
       override def encode(content: Long) = {
-        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
     implicit object ShortConvert extends Encodable[Short] {
       override def encode(content: Short) = {
-        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
     implicit object UjsonConvert extends Encodable[ujson.Value] {
       override def encode(content: ujson.Value) = {
-        Try((ujson.transform(content, ujson.BytesRenderer()).toBytes, JsonEncodeParams))
+        Try((ujson.transform(content, ujson.BytesRenderer()).toBytes, JsonFlags))
       }
     }
 
     implicit object CirceEncode extends Encodable[io.circe.Json] {
       override def encode(content: io.circe.Json) = {
-        content.as[Array[Byte]].toTry.map((_, JsonEncodeParams))
+        content.as[Array[Byte]].toTry.map((_, JsonFlags))
       }
     }
 
     implicit object PlayEncode extends Encodable[play.api.libs.json.JsValue] {
       override def encode(content: play.api.libs.json.JsValue) = {
-        Try(play.api.libs.json.Json.stringify(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
+        Try(play.api.libs.json.Json.stringify(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonFlags))
       }
     }
 
 
     implicit object Json4sEncode extends Encodable[org.json4s.JsonAST.JValue] {
       override def encode(content: org.json4s.JsonAST.JValue) = {
-        Try(org.json4s.jackson.JsonMethods.compact(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
+        Try(org.json4s.jackson.JsonMethods.compact(content).getBytes(CharsetUtil.UTF_8)).map((_, JsonFlags))
       }
     }
 
 
     implicit object JawnConvert extends Encodable[org.typelevel.jawn.ast.JValue] {
       override def encode(content: org.typelevel.jawn.ast.JValue) = {
-        Try(content.render().getBytes(CharsetUtil.UTF_8)).map((_, JsonEncodeParams))
+        Try(content.render().getBytes(CharsetUtil.UTF_8)).map((_, JsonFlags))
       }
     }
 
@@ -164,11 +202,11 @@ object Conversions {
   object Decodable {
 
     implicit object RawConvert extends Decodable[Array[Byte]] {
-      override def decode(bytes: Array[Byte], params: DecodeParams): Try[Array[Byte]] = Try(bytes)
+      override def decode(bytes: Array[Byte], params: EncodeParams): Try[Array[Byte]] = Try(bytes)
     }
 
     implicit object StringConvert extends Decodable[String] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         if (params.isJson || params.isString) {
           Try(new String(bytes, CharsetUtil.UTF_8))
         }
@@ -179,7 +217,7 @@ object Conversions {
     }
 
     implicit object UjsonValueConvert extends Decodable[ujson.Value] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(upickle.default.read[ujson.Value](bytes))
         out match {
           case Success(_) => out
@@ -189,7 +227,7 @@ object Conversions {
     }
 
     implicit object UjsonObjConvert extends Decodable[ujson.Obj] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(upickle.default.read[ujson.Obj](bytes))
         out match {
           case Success(_) => out
@@ -199,7 +237,7 @@ object Conversions {
     }
 
     implicit object UjsonArrConvert extends Decodable[ujson.Arr] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         tryDecode(upickle.default.read[ujson.Arr](bytes))
       }
     }
@@ -213,26 +251,26 @@ object Conversions {
     }
 
     implicit object PlayConvert extends Decodable[play.api.libs.json.JsValue] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         tryDecode(play.api.libs.json.Json.parse(bytes))
       }
     }
 
     implicit object Play4sConvert extends Decodable[org.json4s.JsonAST.JValue] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         tryDecode(org.json4s.native.JsonMethods.parse(new String(bytes, CharsetUtil.UTF_8)))
       }
     }
 
     implicit object JawnConvert extends Decodable[org.typelevel.jawn.ast.JValue] {
-      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
         org.typelevel.jawn.Parser.parseFromString[org.typelevel.jawn.ast.JValue](new String(bytes, CharsetUtil.UTF_8))
       }
     }
 
 
     //    implicit object CirceConvert extends Decodable[io.circe.Json] {
-    //      override def decode(bytes: Array[Byte], params: DecodeParams) = {
+    //      override def decode(bytes: Array[Byte], params: EncodeParams) = {
     //        val out = Try(io.circe.parser.decode[io.circe.Json](bytes))
     //        out match {
     //          case Success(_) => out
@@ -261,7 +299,7 @@ object Conversions {
 
     implicit object StringConvert extends EncodableField[String] {
       override def encode(content: String) = {
-        Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+        Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
@@ -273,16 +311,16 @@ object Conversions {
   }
 
   trait DecodableField[T] {
-    def decode(in: SubdocField, params: DecodeParams): Try[T] = {
+    def decode(in: SubdocField, params: EncodeParams): Try[T] = {
       in.`type`() match {
         case SubdocCommandType.EXISTS => decodeExists(in, params)
         case _ => decodeGet(in, params)
       }
     }
 
-    def decodeGet(in: SubdocField, params: DecodeParams): Try[T]
+    def decodeGet(in: SubdocField, params: EncodeParams): Try[T]
 
-    def decodeExists(in: SubdocField, params: DecodeParams): Try[T] = {
+    def decodeExists(in: SubdocField, params: EncodeParams): Try[T] = {
       Failure(new DecodingFailedException("Field cannot be checked with exists"))
     }
   }
@@ -291,45 +329,45 @@ object Conversions {
   object DecodableField {
 
     implicit object StringConvert extends DecodableField[String] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         // Note this means we actually depend on ujson
         Try(upickle.default.read[String](in.value()))
       }
     }
 
     implicit object BooleanConvert extends DecodableField[Boolean] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[Boolean](in.value()))
       }
 
-      override def decodeExists(in: SubdocField, params: DecodeParams): Try[Boolean] = {
+      override def decodeExists(in: SubdocField, params: EncodeParams): Try[Boolean] = {
         Try(in.status().success())
       }
     }
 
 
     implicit object IntConvert extends DecodableField[Int] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[Int](in.value()))
       }
     }
 
 
     implicit object DoubleConvert extends DecodableField[Double] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[Double](in.value()))
       }
     }
 
     implicit object UsjonValueConvert extends DecodableField[ujson.Value] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[ujson.Value](in.value()))
       }
     }
 
 
     implicit object UsjonObjConvert extends DecodableField[ujson.Obj] {
-      override def decodeGet(in: SubdocField, params: DecodeParams) = {
+      override def decodeGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[ujson.Obj](in.value()))
       }
     }

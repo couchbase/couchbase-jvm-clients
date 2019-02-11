@@ -28,7 +28,7 @@ object JsoniterTransformers {
 //      val map = new util.HashMap[String,Any]()
 //      val n = it.whatIsNext()
 //      if (n == ValueType.STRING) {
-//        // TODO could use slice here
+//        // could use slice here for perf
 //        val t = it.readStringAsSlice()
 //      }
 //    }

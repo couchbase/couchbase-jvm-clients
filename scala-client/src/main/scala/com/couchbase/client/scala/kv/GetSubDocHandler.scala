@@ -8,7 +8,8 @@ import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.document.{DocumentFlags, LookupInResult}
+import com.couchbase.client.scala.codec.DocumentFlags
+import com.couchbase.client.scala.document.LookupInResult
 import com.couchbase.client.scala.util.Validate
 import io.netty.util.CharsetUtil
 import io.opentracing.Span

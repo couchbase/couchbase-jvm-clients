@@ -45,9 +45,6 @@ import collection.JavaConverters._
 case class JsonObjectExperiment(private val content: java.util.HashMap[String, Any]) {
 
   // Don't make this Dynamic, it makes it easy to misuse
-  // TODO going back and forwards on this
-  //  def dyn(): GetSelecter = GetSelecter(this, "")
-
   //  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
   //  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 
@@ -154,70 +151,6 @@ case class JsonObjectExperiment(private val content: java.util.HashMap[String, A
     content.isEmpty
   }
 
-  //  private type ContentType = Map[String, Any]
-
-  //  @tailrec
-  //  private def contentRecurse(cur: ContentType, paths: List[PathElement]): Any = {
-  //    paths match {
-  //      case Nil =>
-  //        throw new PathNotFound()
-  //
-  //      case x :: Nil =>
-  //        x match {
-  //          case x: PathArray =>
-  //            cur.get(x.name).map(_.asInstanceOf[JsonArray]) match {
-  //              case Some(y) => y.get(x.index)
-  //              case _ => throw new PathNotFound()
-  //            }
-  //          case x: PathObjectOrField =>
-  //            cur.get(x.toString) match {
-  //              case Some(y) => y
-  //              case _ => throw new PathNotFound()
-  //            }
-  //        }
-  //
-  //      case x :: rest =>
-  //        x match {
-  //          case x: PathArray =>
-  //            cur.get(x.name) match {
-  //              case None => throw new PathNotFound()
-  //              case Some(y: JsonArray) =>
-  //                val arr = y.get(x.index).asInstanceOf[JsonObject]
-  //                contentRecurse(arr.content, rest)
-  //            }
-  //
-  //          case x: PathObjectOrField =>
-  //            cur.get(x.toString) match {
-  //              case None => throw new PathNotFound()
-  //              case Some(z) =>
-  //                val next = z match {
-  //                  case jo: JsonObject => jo.content
-  //                  case _ => z.asInstanceOf[ContentType]
-  //                }
-  //                contentRecurse(next, rest)
-  //            }
-  //        }
-  //    }
-  //  }
-  //
-  //
-  //  override def contentAs[T](path: PathElements): T = {
-  //    contentRecurse(content, path.paths).asInstanceOf[T]
-  //  }
-
-  //  override def exists(path: PathElements): Boolean = {
-  //    // TODO more performant implementation without catch
-  //    try {
-  //      contentRecurse(content, path.paths)
-  //      true
-  //    }
-  //    catch {
-  //      case e: PathNotFound => false
-  //    }
-  //  }
-
-
-  // TODO toString
 
   def size: Int = {
     content.size
@@ -238,10 +171,10 @@ case class JsonObjectExperiment(private val content: java.util.HashMap[String, A
     }
   }
 
-  def toMap: Map[String, Any] = {
+  def toMap: collection.GenMap[String, Any] = {
     val copy = new mutable.AnyRefMap[String, Any](content.size)
-    import scala.collection.JavaConversions._
-    for (entry <- content.entrySet) {
+    import scala.collection.JavaConverters._
+    for (entry <- content.entrySet.asScala) {
       val content = entry.getValue
       content match {
         case v: JsonObjectExperiment => copy.put(entry.getKey, v.toMap)
@@ -266,8 +199,6 @@ object JsonObjectExperiment {
 
   def create: JsonObjectExperiment = new JsonObjectExperiment(new util.HashMap[String, Any]())
   def empty: JsonObjectExperiment = new JsonObjectExperiment(new util.HashMap[String, Any]())
-
-  // TODO from(Map)
 }
 
 
@@ -291,7 +222,6 @@ case class JsonArrayExperiment(val values: ArrayBuffer[Any]) {
     Option(values(idx))
   }
   def getString(idx: Int): String = values(idx).asInstanceOf[String]
-  // TODO does getLong & getInt make sense?  Always using wrong one...
   def getLong(idx: Int): Long = values(idx).asInstanceOf[Long]
   def getInt(idx: Int): Int = values(idx).asInstanceOf[Int]
   def getDouble(idx: Int): Double = values(idx).asInstanceOf[Double]
@@ -326,41 +256,3 @@ object JsonArrayExperiment {
   def create = new JsonArrayExperiment(new ArrayBuffer[Any]())
   def empty = new JsonArrayExperiment(new ArrayBuffer[Any]())
 }
-//  private val mapper = new ObjectMapper()
-//
-//  def fromJson(json: String): JsonArray = {
-//    mapper.readValue(json, classOf[JsonArray])
-//  }
-//
-//  def toJsonType(in: Any): Try[JsonType] = {
-//    in match {
-//      case x: String => Success(JsonString(x))
-//      case x: Int => Success(JsonNumber(x))
-//      case x: Long => Success(JsonNumber(x))
-//      case x: Double => Success(JsonNumber(x))
-//      case x: Boolean => Success(JsonBoolean(x))
-//        // TODO MVP Seq
-////      case x: Seq[_] =>
-////        val arr: Try[Seq[JsonType]] = x.map(toJsonType(_))
-////          arr.map(v => JsonArray(v)))
-//      case _ => Failure(CouldNotEncodeToJsonType(in))
-//    }
-//  }
-//
-//  // TODO checkItems
-//  def from(items: Any*): Try[JsonArray] = {
-//    // TODO MVP
-//    ???
-////    val arr = items.map(toJsonType(_))
-////    new JsonArray(.toVector
-//  }
-//  // TODO more advanced from that converts into JsonObjects etc
-//
-//  private val EMPTY = JsonArray.create
-//
-//  def empty: JsonArray = EMPTY
-//
-//  def create: JsonArray = new JsonArray(Vector.empty)
-//
-//  // TODO from(Map)
-//}

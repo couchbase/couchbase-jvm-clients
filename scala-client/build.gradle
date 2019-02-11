@@ -151,13 +151,16 @@ compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
 
 dependencies {
-  compile 'org.scala-lang:scala-library:2.12.7'
+  compile 'org.scala-lang:scala-library:2.12.8'
+  compile group: 'org.scala-lang', name: 'scala-reflect', version: '2.12.8'
+
   compile "io.projectreactor:reactor-scala-extensions_2.12:0.3.5"
   implementation group: 'io.projectreactor.addons', name: 'reactor-adapter', version: '3.2.0.RELEASE'
   compile 'org.scala-lang.modules:scala-java8-compat_2.12:0.9.0'
   implementation 'io.reactivex:rxjava-reactive-streams:1.2.1'
   testCompile 'org.scalatest:scalatest_2.12:3.0.5'
   compile project(':core-io')
+  compile project(':scala-implicits')
 
   compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
 

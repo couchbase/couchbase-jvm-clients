@@ -38,7 +38,7 @@ case class QueryRow(_content: Array[Byte]) {
 
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonDecodeParams)
+    ev.decode(_content, Conversions.JsonFlags)
   }
 
 //  def value: JsonObject = ???

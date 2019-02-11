@@ -1,9 +1,8 @@
 package jsonobject
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.java.json.JacksonTransformers
-import com.couchbase.client.scala.codec.Conversions.{BinaryEncodeParams, Decodable, Encodable, JsonEncodeParams}
-import com.couchbase.client.scala.document.DecodeParams
+import com.couchbase.client.scala.codec.Conversions.{BinaryFlags, Decodable, Encodable, JsonFlags}
+import com.couchbase.client.scala.document.EncodeParams
 import com.couchbase.client.scala.json.JsonObject
 import experiments.JsoniterObject
 import io.netty.util.CharsetUtil
@@ -21,21 +20,21 @@ object Encoders {
 
   implicit object JsonObjectExperimentConvert extends Encodable[JsonObjectExperiment] {
     override def encode(content: JsonObjectExperiment) = {
-      Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonEncodeParams)
+      Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonFlags)
     }
   }
 
 
   implicit object JsoniterObjectConvert extends Encodable[JsoniterObject] {
     override def encode(content: JsoniterObject) = {
-      Try(JsoniterTransformers.encode(content), JsonEncodeParams)
+      Try(JsoniterTransformers.encode(content), JsonFlags)
     }
   }
 }
 
 object Decoders {
   implicit object JsoniterObjectConvert extends Decodable[JsoniterObject] {
-    override def decode(bytes: Array[Byte], params: DecodeParams) = {
+    override def decode(bytes: Array[Byte], params: EncodeParams) = {
       val out = Try(JsoniterTransformers.decode(bytes))
       out match {
         case Success(_) => out
@@ -45,7 +44,7 @@ object Decoders {
   }
 
   implicit object JsonObjectExperiment extends Decodable[JsonObjectExperiment] {
-    override def decode(bytes: Array[Byte], params: DecodeParams) = {
+    override def decode(bytes: Array[Byte], params: EncodeParams) = {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObjectExperiment]))
       out match {
         case Success(_) => out
