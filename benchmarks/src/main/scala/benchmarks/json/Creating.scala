@@ -458,17 +458,6 @@ object Creating extends Bench.ForkedTime {
       }
     }
 
-    performance of "Json4s" in {
-      using(gen) in {
-        r => {
-          val json = play.api.libs.json.Json.obj("hello" -> "world",
-            "foo" -> "bar",
-            "age" -> 22)
-          val encoded: Array[Byte] = Conversions.encode(json).get._1
-        }
-      }
-    }
-
     performance of "Jawn" in {
       import org.typelevel.jawn.ast._
 

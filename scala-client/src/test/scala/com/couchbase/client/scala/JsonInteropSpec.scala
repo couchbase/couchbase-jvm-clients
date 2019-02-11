@@ -6,7 +6,6 @@ import com.couchbase.client.scala.document.GetResult
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.github.plokhotnyuk.jsoniter_scala.core.readFromArray
 import org.scalatest.prop.{GeneratorDrivenPropertyChecks, PropertyChecks}
 import org.scalatest.{FlatSpec, Matchers, _}
 
@@ -25,10 +24,10 @@ import org.scalacheck.{Arbitrary, Gen}
   * ✓ upickle-encoded case class
   * ✓ jsoniter-encoded case class
   * ✓ couchbase-encoded case class (really jsoniter)
-  * hardcoded json string
-  * json4s ast
-  * play ast
-  * jawn ast
+  * ✓ hardcoded json string
+  * ✓ json4s ast
+  * ✓ play ast
+  * ✓ jawn ast
   * circe ast
   * circe-encoded case class
   * ✓ jackson-encoded case class
@@ -117,6 +116,19 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       }
     }
 
+    case object JacksonEncodedString extends Source {
+      def insert(id: String): Unit = {
+        import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
+        import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+        import com.fasterxml.jackson.module.scala.DefaultScalaModule
+
+        val mapper = new ObjectMapper()
+        mapper.registerModule(DefaultScalaModule)
+
+        assert(coll.insert(id, mapper.writeValueAsString(ReferenceUser)).isSuccess)
+      }
+    }
+
     case object JacksonEncodedCaseClass extends Source {
       def insert(id: String): Unit = {
         import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
@@ -140,23 +152,29 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       }
     }
 
-    //    case object UpickleCaseClass extends Source {
-    //      def insert(id: String): Unit = {
-    //        assert(coll.insert(id, content).isSuccess)
-    //      }
-    //    }
-    //
-    //    case object UpickleCaseClass extends Source {
-    //      def insert(id: String): Unit = {
-    //        assert(coll.insert(id, content).isSuccess)
-    //      }
-    //    }
-    //
-    //    case object UpickleCaseClass extends Source {
-    //      def insert(id: String): Unit = {
-    //        assert(coll.insert(id, content).isSuccess)
-    //      }
-    //    }
+        case object PlayAST extends Source {
+          import play.api.libs.json.Json._
+
+          def insert(id: String): Unit = {
+            val json = obj("name" -> "John Smith",
+              "age" -> 29,
+            "address" -> arr(obj("address" -> "123 Fake Street")))
+
+            assert(coll.insert(id, json).isSuccess)
+          }
+        }
+
+        case object JawnAST extends Source {
+          import org.typelevel.jawn.ast._
+
+          def insert(id: String): Unit = {
+            val json = JObject.fromSeq(Seq("name" -> JString("John Smith"),
+              "age" -> JNum(29),
+            "address" -> JArray.fromSeq(Seq(JObject.fromSeq(Seq("address" -> JString("123 Fake Street")))))))
+
+            assert(coll.insert(id, json).isSuccess)
+          }
+        }
     //
     //    case object UpickleCaseClass extends Source {
     //      def insert(id: String): Unit = {
@@ -188,7 +206,7 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
 
     case object Jsoniter extends Sink {
       def decode(in: GetResult): Unit = {
-        val c = readFromArray[User](in.contentAsBytes)
+        val c = com.github.plokhotnyuk.jsoniter_scala.core.readFromArray[User](in.contentAsBytes)
         assert(c == ReferenceUser)
       }
     }
@@ -225,33 +243,42 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       }
     }
 
-    //    case object UpickleAST extends Sink {
-    //      def decode(in: GetResult): Unit = {
-    //        val c = in.contentAs[ujson.Obj].get
-    //        assert(c("name").str == "John Smith")
-    //        assert(c("age").num == 29)
-    //        assert(c("address").arr(0)("address").str == "123 Fake Street")
-    //      }
-    //    }
-    //
-    //    case object UpickleAST extends Sink {
-    //      def decode(in: GetResult): Unit = {
-    //        val c = in.contentAs[ujson.Obj].get
-    //        assert(c("name").str == "John Smith")
-    //        assert(c("age").num == 29)
-    //        assert(c("address").arr(0)("address").str == "123 Fake Street")
-    //      }
-    //    }
-    //
-    //    case object UpickleAST extends Sink {
-    //      def decode(in: GetResult): Unit = {
-    //        val c = in.contentAs[ujson.Obj].get
-    //        assert(c("name").str == "John Smith")
-    //        assert(c("age").num == 29)
-    //        assert(c("address").arr(0)("address").str == "123 Fake Street")
-    //      }
-    //    }
-    //
+        case object PlayAST extends Sink {
+          def decode(in: GetResult): Unit = {
+            val c = in.contentAs[play.api.libs.json.JsValue].get
+            val address = (c \ "address" \ 0 \ "address").get.toString()
+            assert(c("name").as[String] == "John Smith")
+            assert(c("age").as[Int] == 29)
+            assert(address == "123 Fake Street")
+          }
+        }
+
+        case object JawnAST extends Sink {
+          import org.typelevel.jawn.ast._
+
+          def decode(in: GetResult): Unit = {
+            val c = in.contentAs[JValue].get
+            assert(c.get("name").asString == "John Smith")
+            assert(c.get("age").asInt == 29)
+            assert(c.get("address").asInstanceOf[JArray].get(0).get("address").asString == "123 Fake Street")
+          }
+        }
+
+    // TODO support
+//        case object Json4sAST extends Sink {
+//          import org.json4s.JsonAST._
+//
+//          def decode(in: GetResult): Unit = {
+//            val c = in.contentAs[JValue].get
+//            val JString(name) = c \ "name"
+//            assert (name.toString == "John Smith")
+//            val JInt(age) = c \ "age"
+//            assert (age.intValue() == 29)
+//            val JString(address) = (c \ "address").extract[List] \ 0 \ address
+//            assert(address.toString == "123 Fake Street")
+//          }
+//        }
+//    //
     //    case object UpickleAST extends Sink {
     //      def decode(in: GetResult): Unit = {
     //        val c = in.contentAs[ujson.Obj].get
@@ -281,8 +308,11 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       Source.JsonIterCaseClass,
       Source.UpickleCaseClassToAST,
       Source.CouchbaseEncodedCaseClass,
+      Source.JacksonEncodedString,
       Source.JacksonEncodedCaseClass,
-      Source.HardCodedString
+      Source.HardCodedString,
+      Source.PlayAST,
+      Source.JawnAST
     ))
     val sinks: Gen[Sink] = Gen.oneOf(Seq(
       Sink.UpickleAST,
@@ -290,7 +320,11 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       Sink.Upickle,
       Sink.CouchbaseCaseClass,
       Sink.Jackson,
-      Sink.CirceAST))
+      Sink.CirceAST,
+      Sink.PlayAST,
+      Sink.JawnAST
+//      Sink.Json4sAST
+    ))
 
     implicit lazy val arbSource: Arbitrary[Source] = Arbitrary(sources)
     implicit lazy val arbSink: Arbitrary[Sink] = Arbitrary(sinks)
