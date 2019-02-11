@@ -2,6 +2,7 @@ package com.couchbase.client.scala.document
 
 import com.couchbase.client.core.error.OperationDoesNotExist
 import com.couchbase.client.core.msg.kv.{MutationToken, SubDocumentOpResponseStatus, SubdocField}
+import com.couchbase.client.scala.api.HasDurabilityTokens
 import com.couchbase.client.scala.codec.Conversions
 
 import scala.collection.GenMap
@@ -13,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 case class MutateInResult(id: String,
                           private val _content: GenMap[String, SubdocField],
                           cas: Long,
-                          mutationToken: Option[MutationToken]) {
+                          mutationToken: Option[MutationToken]) extends HasDurabilityTokens {
 
   def contentAs[T](path: String)
                   (implicit ev: Conversions.DecodableField[T]): Try[T] = {

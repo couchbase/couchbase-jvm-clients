@@ -36,7 +36,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
   }
 
   def bucket(name: String): Future[AsyncBucket] = {
-    FutureConversions.javaMonoToFuture(core.openBucket(name))
+    FutureConversions.javaMonoToScalaFuture(core.openBucket(name))
       .map(v => new AsyncBucket(name, core, environment))
   }
 

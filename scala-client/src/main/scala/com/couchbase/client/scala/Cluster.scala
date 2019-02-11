@@ -27,6 +27,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
+// TODO: v important, check what happens when converting CompletableFuture to Future - want to happen on core's threadpool
 class Cluster(env: => ClusterEnvironment)
              (implicit ec: ExecutionContext) {
 

@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.{Request, Response, ResponseStatus}
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
+import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
 import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
 import io.circe._
 import io.circe.generic.auto._
@@ -37,9 +38,10 @@ import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{LookupInResult, _}
-import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.util.FutureConversions
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.ByteBuf
 import io.netty.util.CharsetUtil
@@ -96,7 +98,9 @@ class AsyncCollection(name: String,
     DefaultErrors.throwOnBadResult(status)
   }
 
-  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): Future[Res] = {
+  private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
+                                          id: String,
+                                          handler: RequestHandler[Resp, Res]): Future[Res] = {
     in match {
       case Success(request) =>
         core.send[Resp](request)
@@ -108,10 +112,45 @@ class AsyncCollection(name: String,
     }
   }
 
+  // TODO support mutation tokens
+
+  private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
+                                                                               id: String,
+                                                                               handler: RequestHandler[Resp, Res],
+                                                                               durability: Durability,
+                                                                               remove: Boolean,
+                                                                               timeout: java.time.Duration): Future[Res] = {
+    val initial: Future[Res] = wrap(in, id, handler)
+
+    durability match {
+      case ClientVerified(replicateTo, persistTo) =>
+        initial.flatMap(response => {
+
+          val observeCtx = new ObserveContext(core.context(),
+            PersistTo.asCore(persistTo),
+            ReplicateTo.asCore(replicateTo),
+            response.mutationToken.asJava,
+            response.cas,
+            bucketName,
+            id,
+            collectionIdEncoded,
+            remove,
+            timeout
+          )
+          FutureConversions.javaMonoToScalaFuture(Observe.poll(observeCtx))
+
+            // After the observe return the original response
+            .map(_ => response)
+        })
+
+      case _ => initial
+    }
+  }
+
   def exists(id: String,
-                parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
+             parentSpan: Option[Span] = None,
+             timeout: FiniteDuration = kvTimeout,
+             retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
     val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, existsHandler)
   }
@@ -126,7 +165,7 @@ class AsyncCollection(name: String,
                (implicit ev: Conversions.Encodable[T])
   : Future[MutationResult] = {
     val req = insertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, insertHandler)
+    wrapWithDurability(req, id, insertHandler, durability, false, timeout)
   }
 
   def replace[T](id: String,
@@ -139,7 +178,7 @@ class AsyncCollection(name: String,
                  retryStrategy: RetryStrategy = environment.retryStrategy())
                 (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
     val req = replaceHandler.request(id, content, cas, durability, expiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, replaceHandler)
+    wrapWithDurability(req, id, replaceHandler, durability, false, timeout)
   }
 
   def upsert[T](id: String,
@@ -151,7 +190,7 @@ class AsyncCollection(name: String,
                 retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
     val req = upsertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, upsertHandler)
+    wrapWithDurability(req, id, upsertHandler, durability, false, timeout)
   }
 
 
@@ -162,7 +201,7 @@ class AsyncCollection(name: String,
              timeout: FiniteDuration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutationResult] = {
     val req = removeHandler.request(id, cas, durability, parentSpan, timeout, retryStrategy)
-    wrap(req, id, removeHandler)
+    wrapWithDurability(req, id, removeHandler, durability, true, timeout)
   }
 
   def get(id: String,
@@ -209,7 +248,7 @@ class AsyncCollection(name: String,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, mutateInHandler)
+    wrapWithDurability(req, id, mutateInHandler, durability, false, timeout)
   }
 
   def getAndLock(id: String,

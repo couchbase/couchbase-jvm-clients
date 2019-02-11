@@ -96,6 +96,37 @@ object Conversions {
       }
     }
 
+    implicit object BooleanConvert extends Encodable[Boolean] {
+      override def encode(content: Boolean) = {
+        val str = if (content) "true" else "false"
+        Try((str.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+      }
+    }
+
+    implicit object IntConvert extends Encodable[Int] {
+      override def encode(content: Int) = {
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+      }
+    }
+
+    implicit object DoubleConvert extends Encodable[Double] {
+      override def encode(content: Double) = {
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+      }
+    }
+
+    implicit object LongConvert extends Encodable[Long] {
+      override def encode(content: Long) = {
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+      }
+    }
+
+    implicit object ShortConvert extends Encodable[Short] {
+      override def encode(content: Short) = {
+        Try((content.toString.getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
+      }
+    }
+
     implicit object UjsonConvert extends Encodable[ujson.Value] {
       override def encode(content: ujson.Value) = {
         Try((ujson.transform(content, ujson.BytesRenderer()).toBytes, JsonEncodeParams))

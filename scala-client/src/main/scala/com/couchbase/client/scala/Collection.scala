@@ -110,7 +110,7 @@ class Collection(val async: AsyncCollection,
   }
 
   def mutateIn(id: String,
-               // TODO PENDING this may change to a list
+               // TODO change to a list
                spec: MutateInSpec,
                cas: Long = 0,
                insertDocument: Boolean = false,

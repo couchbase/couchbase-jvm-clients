@@ -16,7 +16,7 @@ import reactor.core.scala.publisher.{Mono => ScalaMono}
   * Note: Scala Monos are different classes to Java Monos
   */
 object FutureConversions {
-  def javaMonoToFuture[T](in: JavaMono[T]): Future[T] = {
+  def javaMonoToScalaFuture[T](in: JavaMono[T]): Future[T] = {
     FutureConverters.toScala(in.toFuture)
   }
 

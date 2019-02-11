@@ -19,13 +19,32 @@ package com.couchbase.client.scala.durability
 import java.util.Optional
 
 import com.couchbase.client.core.msg.kv.{DurabilityLevel => CoreLevel}
+import com.couchbase.client.core.service.kv.Observe
+import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
 
 object ReplicateTo extends Enumeration {
   val None, One, Two, Three = Value
+
+  def asCore(v: ReplicateTo.Value): Observe.ObserveReplicateTo = v match {
+    case None => ObserveReplicateTo.NONE
+    case One => ObserveReplicateTo.ONE
+    case Two => ObserveReplicateTo.TWO
+    case Three => ObserveReplicateTo.THREE
+  }
+
 }
 
 object PersistTo extends Enumeration {
-  val None, One, Two, Three = Value
+  val None, Active, One, Two, Three, Four = Value
+
+  def asCore(v: PersistTo.Value): Observe.ObservePersistTo = v match {
+    case None => ObservePersistTo.NONE
+    case Active => ObservePersistTo.ACTIVE
+    case One => ObservePersistTo.ONE
+    case Two => ObservePersistTo.TWO
+    case Three => ObservePersistTo.THREE
+    case Four => ObservePersistTo.FOUR
+  }
 }
 
 @Deprecated
@@ -45,7 +64,7 @@ sealed trait Durability {
   }
 }
 case object Disabled extends Durability
-case class ClientVerified(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value) extends Durability
+case class ClientVerified(replicateTo: ReplicateTo.Value, persistTo: PersistTo.Value = PersistTo.None) extends Durability
 case object Majority extends Durability
 case object MajorityAndPersistOnMaster extends Durability
 case object PersistToMajority extends Durability

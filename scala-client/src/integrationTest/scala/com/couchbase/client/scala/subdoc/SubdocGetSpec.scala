@@ -10,7 +10,6 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 class SubdocGetSpec extends FunSuite {
-  // TODO support Jenkins
   val (cluster, bucket, coll) = (for {
     cluster <- Cluster.connect("localhost", "Administrator", "password")
     bucket <- cluster.bucket("default")
@@ -124,6 +123,7 @@ class SubdocGetSpec extends FunSuite {
 //    }
 //  }
 
+  // TODO failing
   test("exists multi") {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -153,6 +153,7 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
+  // TODO failing
   test("count") {
     val docId = TestUtils.docId()
     coll.remove(docId)
