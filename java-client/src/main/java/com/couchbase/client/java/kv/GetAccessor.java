@@ -24,6 +24,8 @@ import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.service.kv.Observe;
+import com.couchbase.client.core.service.kv.ObserveContext;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.util.CharsetUtil;
 
@@ -105,8 +107,11 @@ public enum GetAccessor {
       });
   }
 
-  public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core, final String id,
-                                                                   final GetAndTouchRequest request) {
+  public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core,
+                                                                   final String id,
+                                                                   final GetAndTouchRequest request,
+                                                                   final PersistTo persistTo,
+                                                                   final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -130,6 +135,25 @@ public enum GetAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
+      }).thenCompose(r -> {
+        Optional<GetResult> result = (Optional<GetResult>) r;
+        if (!result.isPresent()) {
+          return CompletableFuture.completedFuture(result);
+        }
+
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          Optional.empty(), // GAT does NOT support mutation tokens.
+          result.get().cas(),
+          request.bucket(),
+          id,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 

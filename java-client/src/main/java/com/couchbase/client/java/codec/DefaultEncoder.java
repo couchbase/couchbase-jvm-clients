@@ -18,6 +18,7 @@ package com.couchbase.client.java.codec;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.kv.EncodedDocument;
 
@@ -27,6 +28,10 @@ public class DefaultEncoder implements Encoder {
 
   @Override
   public EncodedDocument encode(final Object input) {
+    if (input instanceof CommonOptions.BuiltCommonOptions || input instanceof CommonOptions) {
+      throw new IllegalArgumentException("No content provided, cannot " +
+        "encode the Options as content!");
+    }
     try {
       int flags = 0; // TODO: FIXME
       byte[] encoded;

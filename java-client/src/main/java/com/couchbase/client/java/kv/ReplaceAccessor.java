@@ -26,6 +26,8 @@ import com.couchbase.client.core.error.RequestTooBigException;
 import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.service.kv.Observe;
+import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +36,11 @@ import java.util.concurrent.CompletableFuture;
 public enum ReplaceAccessor {
   ;
 
-  public static CompletableFuture<MutationResult> replace(final Core core, final ReplaceRequest request) {
+  public static CompletableFuture<MutationResult> replace(final Core core,
+                                                          final ReplaceRequest request,
+                                                          final String key,
+                                                          final PersistTo persistTo,
+                                                          final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -57,6 +63,20 @@ public enum ReplaceAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
+      }).thenCompose(result -> {
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          result.mutationToken(),
+          result.cas(),
+          request.bucket(),
+          key,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 

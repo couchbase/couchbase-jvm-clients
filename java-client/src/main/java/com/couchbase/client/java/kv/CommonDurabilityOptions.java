@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -34,12 +33,12 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
   /**
    * The custom durability persistence setting, if set.
    */
-  private Optional<PersistTo> persistTo = Optional.empty();
+  private PersistTo persistTo = PersistTo.NONE;
 
   /**
    * The custom replication setting, if set.
    */
-  private Optional<ReplicateTo> replicateTo = Optional.empty();
+  private ReplicateTo replicateTo = ReplicateTo.NONE;
 
   /**
    * The custom enhanced durability level setting, if set.
@@ -64,8 +63,8 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
         "the same time!");
     }
 
-    this.persistTo = Optional.of(persistTo);
-    this.replicateTo = Optional.of(replicateTo);
+    this.persistTo = persistTo;
+    this.replicateTo = replicateTo;
     return self();
   }
 
@@ -80,7 +79,7 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
    */
   public SELF withDurabilityLevel(final DurabilityLevel durabilityLevel) {
     notNull(persistTo, "DurabilityLevel");
-    if (persistTo.isPresent()|| replicateTo.isPresent()) {
+    if (persistTo != PersistTo.NONE || replicateTo != ReplicateTo.NONE) {
       throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
         "the same time!");
     }
@@ -94,14 +93,14 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
     /**
      * Returns the persistence durability setting if provided.
      */
-    public Optional<PersistTo> persistTo() {
+    public PersistTo persistTo() {
       return persistTo;
     }
 
     /**
      * Returns the replication durability setting if provided.
      */
-    public Optional<ReplicateTo> replicateTo() {
+    public ReplicateTo replicateTo() {
       return replicateTo;
     }
 

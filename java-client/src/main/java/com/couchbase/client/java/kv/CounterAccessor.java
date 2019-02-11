@@ -25,6 +25,8 @@ import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
+import com.couchbase.client.core.service.kv.Observe;
+import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +34,10 @@ import java.util.concurrent.CompletableFuture;
 public class CounterAccessor {
 
   public static CompletableFuture<CounterResult> increment(final Core core,
-                                                            final IncrementRequest request) {
+                                                           final IncrementRequest request,
+                                                           final String key,
+                                                           final PersistTo persistTo,
+                                                           final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -52,11 +57,28 @@ public class CounterAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
+      }).thenCompose(result -> {
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          result.mutationToken(),
+          result.cas(),
+          request.bucket(),
+          key,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 
   public static CompletableFuture<CounterResult> decrement(final Core core,
-                                                           final DecrementRequest request) {
+                                                           final DecrementRequest request,
+                                                           final String key,
+                                                           final PersistTo persistTo,
+                                                           final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -76,6 +98,20 @@ public class CounterAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
+      }).thenCompose(result -> {
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          result.mutationToken(),
+          result.cas(),
+          request.bucket(),
+          key,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 

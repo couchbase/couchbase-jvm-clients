@@ -52,8 +52,13 @@ public class ReactiveBinaryCollection {
   public Mono<MutationResult> append(final String id, final byte[] content,
                                      final AppendOptions options) {
     return Mono.defer(() -> {
+      AppendOptions.BuiltAppendOptions opts = options.build();
       AppendRequest request = async.appendRequest(id, content, options);
-      return Reactor.wrap(request, AppendAccessor.append(core, request), true);
+      return Reactor.wrap(
+        request,
+        AppendAccessor.append(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -65,7 +70,12 @@ public class ReactiveBinaryCollection {
                                       final PrependOptions options) {
     return Mono.defer(() -> {
       PrependRequest request = async.prependRequest(id, content, options);
-      return Reactor.wrap(request, PrependAccessor.prepend(core, request), true);
+      PrependOptions.BuiltPrependOptions opts = options.build();
+      return Reactor.wrap(
+        request,
+        PrependAccessor.prepend(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -76,7 +86,12 @@ public class ReactiveBinaryCollection {
   public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
     return Mono.defer(() -> {
       IncrementRequest request = async.incrementRequest(id, options);
-      return Reactor.wrap(request, CounterAccessor.increment(core, request), true);
+      IncrementOptions.BuiltIncrementOptions opts = options.build();
+      return Reactor.wrap(
+        request,
+        CounterAccessor.increment(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -87,7 +102,12 @@ public class ReactiveBinaryCollection {
   public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
     return Mono.defer(() -> {
       DecrementRequest request = async.decrementRequest(id, options);
-      return Reactor.wrap(request, CounterAccessor.decrement(core, request), true);
+      DecrementOptions.BuiltDecrementOptions opts = options.build();
+      return Reactor.wrap(
+        request,
+        CounterAccessor.decrement(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 

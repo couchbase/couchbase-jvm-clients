@@ -63,7 +63,14 @@ public class AsyncBinaryCollection {
 
   public CompletableFuture<MutationResult> append(final String id, final byte[] content,
                                                   final AppendOptions options) {
-    return AppendAccessor.append(core, appendRequest(id, content, options));
+    AppendOptions.BuiltAppendOptions opts = options.build();
+    return AppendAccessor.append(
+      core,
+      appendRequest(id, content, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   AppendRequest appendRequest(final String id, final byte[] content, final AppendOptions options) {
@@ -84,7 +91,14 @@ public class AsyncBinaryCollection {
 
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
                                                    final PrependOptions options) {
-    return PrependAccessor.prepend(core, prependRequest(id, content, options));
+    PrependOptions.BuiltPrependOptions opts = options.build();
+    return PrependAccessor.prepend(
+      core,
+      prependRequest(id, content, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   PrependRequest prependRequest(final String id, final byte[] content, final PrependOptions options) {
@@ -104,7 +118,14 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
-    return CounterAccessor.increment(core, incrementRequest(id, options));
+    IncrementOptions.BuiltIncrementOptions opts = options.build();
+    return CounterAccessor.increment(
+      core,
+      incrementRequest(id, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   IncrementRequest incrementRequest(final String id, final IncrementOptions options) {
@@ -123,7 +144,14 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
-    return CounterAccessor.decrement(core, decrementRequest(id, options));
+    DecrementOptions.BuiltDecrementOptions opts = options.build();
+    return CounterAccessor.decrement(
+      core,
+      decrementRequest(id, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   DecrementRequest decrementRequest(final String id, final DecrementOptions options) {

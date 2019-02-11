@@ -16,6 +16,21 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.service.kv.Observe;
+
 public enum ReplicateTo {
-  NONE
+  NONE(Observe.ObserveReplicateTo.NONE),
+  ONE(Observe.ObserveReplicateTo.ONE),
+  TWO(Observe.ObserveReplicateTo.TWO),
+  THREE(Observe.ObserveReplicateTo.THREE);
+
+  private final Observe.ObserveReplicateTo coreHandle;
+
+  ReplicateTo(Observe.ObserveReplicateTo coreHandle) {
+    this.coreHandle = coreHandle;
+  }
+
+  public Observe.ObserveReplicateTo coreHandle() {
+    return coreHandle;
+  }
 }

@@ -25,12 +25,18 @@ import com.couchbase.client.core.error.RequestTooBigException;
 import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
 import com.couchbase.client.core.msg.kv.AppendRequest;
+import com.couchbase.client.core.service.kv.Observe;
+import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.concurrent.CompletableFuture;
 
 public class AppendAccessor {
 
-  public static CompletableFuture<MutationResult> append(final Core core, final AppendRequest request) {
+  public static CompletableFuture<MutationResult> append(final Core core,
+                                                         final AppendRequest request,
+                                                         final String key,
+                                                         final PersistTo persistTo,
+                                                         final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -54,6 +60,20 @@ public class AppendAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
+      }).thenCompose(result -> {
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          result.mutationToken(),
+          result.cas(),
+          request.bucket(),
+          key,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 }

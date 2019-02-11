@@ -40,6 +40,8 @@ public class Timer {
    */
   private HashedWheelTimer wheelTimer;
 
+  private volatile boolean stoppped = false;
+
   /**
    * Creates a new {@link Timer} with default values.
    *
@@ -72,6 +74,9 @@ public class Timer {
    */
   @Stability.Internal
   public Timeout schedule(Runnable callback, Duration runAfter) {
+    if (stoppped) {
+      return null;
+    }
     return wheelTimer.newTimeout(timeout -> callback.run(), runAfter.toNanos(), TimeUnit.NANOSECONDS);
   }
 
@@ -82,6 +87,10 @@ public class Timer {
    */
   @Stability.Internal
   public void register(final Request<Response> request) {
+    if (stoppped) {
+      return;
+    }
+
     final Timeout registration = wheelTimer.newTimeout(
       timeout -> request.cancel(CancellationReason.TIMEOUT),
       request.timeout().toNanos(),
@@ -110,6 +119,7 @@ public class Timer {
    * Stops this timer.
    */
   public void stop() {
+    stoppped = true;
     wheelTimer.stop();
   }
 

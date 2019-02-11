@@ -16,7 +16,23 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.service.kv.Observe;
+
 public enum PersistTo {
-  NONE,
-  ONE
+  NONE(Observe.ObservePersistTo.NONE),
+  ACTIVE(Observe.ObservePersistTo.ACTIVE),
+  ONE(Observe.ObservePersistTo.ONE),
+  TWO(Observe.ObservePersistTo.TWO),
+  THREE(Observe.ObservePersistTo.THREE),
+  FOUR(Observe.ObservePersistTo.FOUR);
+
+  private final Observe.ObservePersistTo coreHandle;
+
+  PersistTo(Observe.ObservePersistTo coreHandle) {
+    this.coreHandle = coreHandle;
+  }
+
+  public Observe.ObservePersistTo coreHandle() {
+    return coreHandle;
+  }
 }

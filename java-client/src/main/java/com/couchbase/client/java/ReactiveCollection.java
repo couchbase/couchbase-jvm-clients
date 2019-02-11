@@ -21,16 +21,12 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.msg.kv.*;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
-
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * The {@link ReactiveCollection} provides sophisticated asynchronous access to all collection APIs.
@@ -182,8 +178,13 @@ public class ReactiveCollection {
                                      final GetAndTouchOptions options) {
     return Mono.defer(() -> {
       GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
+      GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
       return Reactor
-        .wrap(request, GetAccessor.getAndTouch(core, id, request), true)
+        .wrap(
+          request,
+          GetAccessor.getAndTouch(core, id, request, opts.persistTo(), opts.replicateTo()),
+          true
+        )
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }
@@ -279,8 +280,13 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> remove(final String id, final RemoveOptions options) {
     return Mono.defer(() -> {
+      RemoveOptions.BuiltRemoveOptions opts = options.build();
       RemoveRequest request = asyncCollection.removeRequest(id, options);
-      return Reactor.wrap(request, RemoveAccessor.remove(core, request), true);
+      return Reactor.wrap(
+        request,
+        RemoveAccessor.remove(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -305,8 +311,13 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> insert(final String id, Object content, final InsertOptions options) {
     return Mono.defer(() -> {
+      InsertOptions.BuiltInsertOptions opts = options.build();
       InsertRequest request = asyncCollection.insertRequest(id, content, options);
-      return Reactor.wrap(request, InsertAccessor.insert(core, request), true);
+      return Reactor.wrap(
+        request,
+        InsertAccessor.insert(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -332,7 +343,12 @@ public class ReactiveCollection {
   public Mono<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
     return Mono.defer(() -> {
       UpsertRequest request = asyncCollection.upsertRequest(id, content, options);
-      return Reactor.wrap(request, UpsertAccessor.upsert(core, request), true);
+      UpsertOptions.BuiltUpsertOptions opts = options.build();
+      return Reactor.wrap(
+        request,
+        UpsertAccessor.upsert(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -357,8 +373,13 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
     return Mono.defer(() -> {
+      ReplaceOptions.BuiltReplaceOptions opts = options.build();
       ReplaceRequest request = asyncCollection.replaceRequest(id, content, options);
-      return Reactor.wrap(request, ReplaceAccessor.replace(core, request), true);
+      return Reactor.wrap(
+        request,
+        ReplaceAccessor.replace(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -368,8 +389,13 @@ public class ReactiveCollection {
 
   public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
     return Mono.defer(() -> {
+      TouchOptions.BuiltTouchOptions opts = options.build();
       TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
-      return Reactor.wrap(request, TouchAccessor.touch(core, request), true);
+      return Reactor.wrap(
+        request,
+        TouchAccessor.touch(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 
@@ -420,8 +446,13 @@ public class ReactiveCollection {
   public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                        final MutateInOptions options) {
     return Mono.defer(() -> {
+      MutateInOptions.BuiltMutateInOptions opts = options.build();
       SubdocMutateRequest request = asyncCollection.mutateInRequest(id, spec, options);
-      return Reactor.wrap(request, MutateInAccessor.mutateIn(core, request), true);
+      return Reactor.wrap(
+        request,
+        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo()),
+        true
+      );
     });
   }
 

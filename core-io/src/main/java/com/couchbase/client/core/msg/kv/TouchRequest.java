@@ -29,6 +29,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyncReplication;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
@@ -72,6 +73,10 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
 
   @Override
   public TouchResponse decode(ByteBuf response, ChannelContext ctx) {
-    return new TouchResponse(decodeStatus(response), cas(response), Optional.empty());
+    return new TouchResponse(
+      decodeStatus(response),
+      cas(response),
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+    );
   }
 }

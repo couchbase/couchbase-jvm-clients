@@ -75,7 +75,6 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   public GetAndTouchResponse decode(final ByteBuf response, ChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     long cas = cas(response);
-
     if (status.success()) {
       byte[] content = body(response)
         .map(ByteBufUtil::getBytes)

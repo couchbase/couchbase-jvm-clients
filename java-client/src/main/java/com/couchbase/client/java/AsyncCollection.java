@@ -330,7 +330,14 @@ public class AsyncCollection {
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
-    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options));
+    GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
+    return GetAccessor.getAndTouch(
+      core,
+      id,
+      getAndTouchRequest(id, expiration, options),
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   /**
@@ -484,7 +491,9 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
-    return RemoveAccessor.remove(core, removeRequest(id, options));
+    RemoveOptions.BuiltRemoveOptions opts = options.build();
+    return RemoveAccessor.remove(core, removeRequest(id, options), id, opts.persistTo(),
+      opts.replicateTo());
   }
 
   /**
@@ -526,7 +535,9 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content,
                                                   final InsertOptions options) {
-    return InsertAccessor.insert(core, insertRequest(id, content, options));
+    InsertOptions.BuiltInsertOptions opts = options.build();
+    return InsertAccessor.insert(core, insertRequest(id, content, options), id, opts.persistTo(),
+      opts.replicateTo());
   }
 
   /**
@@ -572,7 +583,14 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content,
                                                   final UpsertOptions options) {
-    return UpsertAccessor.upsert(core, upsertRequest(id, content, options));
+    UpsertOptions.BuiltUpsertOptions opts = options.build();
+    return UpsertAccessor.upsert(
+      core,
+      upsertRequest(id, content, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   /**
@@ -617,7 +635,14 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content,
                                                    final ReplaceOptions options) {
-    return ReplaceAccessor.replace(core, replaceRequest(id, content, options));
+    ReplaceOptions.BuiltReplaceOptions opts = options.build();
+    return ReplaceAccessor.replace(
+      core,
+      replaceRequest(id, content, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   /**
@@ -648,7 +673,14 @@ public class AsyncCollection {
 
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry,
                                                  final TouchOptions options) {
-    return TouchAccessor.touch(core, touchRequest(id, expiry, options));
+    TouchOptions.BuiltTouchOptions opts = options.build();
+    return TouchAccessor.touch(
+      core,
+      touchRequest(id, expiry, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
@@ -723,7 +755,14 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec,
                                                     final MutateInOptions options) {
-    return MutateInAccessor.mutateIn(core, mutateInRequest(id, spec, options));
+    MutateInOptions.BuiltMutateInOptions opts = options.build();
+    return MutateInAccessor.mutateIn(
+      core,
+      mutateInRequest(id, spec, options),
+      id,
+      opts.persistTo(),
+      opts.replicateTo()
+    );
   }
 
   SubdocMutateRequest mutateInRequest(final String id, final MutateInOps spec,

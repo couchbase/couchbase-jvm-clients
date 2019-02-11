@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 public enum AsyncUtils {
   ;
@@ -40,6 +41,8 @@ public enum AsyncUtils {
     } catch (ExecutionException e) {
       if (e.getCause() != null && e.getCause() instanceof CouchbaseException) {
         throw (CouchbaseException) e.getCause();
+      } else if (e.getCause() != null && e.getCause() instanceof TimeoutException) {
+        throw new RuntimeException(e.getCause());
       } else {
         throw new RuntimeException(e);
       }

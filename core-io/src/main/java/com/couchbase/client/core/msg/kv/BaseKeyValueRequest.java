@@ -120,4 +120,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
   public byte[] key() {
     return key;
   }
+
+  public byte[] collection() {
+    return collection;
+  }
 }

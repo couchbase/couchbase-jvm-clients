@@ -25,7 +25,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class GetAndTouchOptions extends CommonDurabilityOptions<GetAndTouchOptions> {
   public static GetAndTouchOptions DEFAULT = new GetAndTouchOptions();
 
-
   @Stability.Internal
   public BuiltGetAndTouchOptions build() {
     return new BuiltGetAndTouchOptions();

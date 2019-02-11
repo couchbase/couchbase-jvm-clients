@@ -25,6 +25,8 @@ import com.couchbase.client.core.error.RequestTooBigException;
 import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.service.kv.Observe;
+import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,7 +35,11 @@ import java.util.concurrent.CompletableFuture;
 public enum InsertAccessor {
   ;
 
-  public static CompletableFuture<MutationResult> insert(final Core core, final InsertRequest request) {
+  public static CompletableFuture<MutationResult> insert(final Core core,
+                                                         final InsertRequest request,
+                                                         final String key,
+                                                         final PersistTo persistTo,
+                                                         final ReplicateTo replicateTo) {
     core.send(request);
     return request
       .response()
@@ -53,6 +59,20 @@ public enum InsertAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
+      }).thenCompose(result -> {
+        final ObserveContext ctx = new ObserveContext(
+          core.context(),
+          persistTo.coreHandle(),
+          replicateTo.coreHandle(),
+          result.mutationToken(),
+          result.cas(),
+          request.bucket(),
+          key,
+          request.collection(),
+          false,
+          request.timeout()
+        );
+        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
   }
 
