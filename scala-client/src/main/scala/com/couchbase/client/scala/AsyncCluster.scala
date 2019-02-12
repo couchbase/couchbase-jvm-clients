@@ -4,16 +4,18 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryConsumer, QueryResult}
-import com.couchbase.client.scala.util.FutureConversions
+import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 class AsyncCluster(environment: => ClusterEnvironment)
                   (implicit ec: ExecutionContext) {
@@ -41,34 +43,58 @@ class AsyncCluster(environment: => ClusterEnvironment)
   }
 
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
-    val result = new QueryConsumer()
+    val validations: Try[QueryRequest] = for {
+      _ <- Validate.notNullOrEmpty(statement, "statement")
+      _ <- Validate.notNull(options, "options")
+      _ <- Validate.optNotNull(options.namedParameters, "namedParameters")
+      _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
+      _ <- Validate.optNotNull(options.contextId, "contextId")
+      _ <- Validate.optNotNull(options.credentials, "credentials")
+      _ <- Validate.optNotNull(options.maxParallelism, "maxParallelism")
+      _ <- Validate.optNotNull(options.disableMetrics, "disableMetrics")
+      _ <- Validate.optNotNull(options.pipelineBatch, "pipelineBatch")
+      _ <- Validate.optNotNull(options.pipelineCap, "pipelineCap")
+      _ <- Validate.optNotNull(options.profile, "profile")
+      _ <- Validate.optNotNull(options.readonly, "readonly")
+      _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
+      _ <- Validate.optNotNull(options.scanCap, "scanCap")
+      _ <- Validate.optNotNull(options.scanConsistency, "scanConsistency")
+      _ <- Validate.optNotNull(options.serverSideTimeout, "serverSideTimeout")
+      _ <- Validate.optNotNull(options.timeout, "timeout")
+    } yield null
 
-    // TODO: proper jackson encoding with options
-    val query = ("{\"statement\":\"" + statement + "\"}").getBytes(CharsetUtil.UTF_8)
+    validations match {
+      case Failure(err) => Future.failed(err)
+      case Success(_) =>
+        val result = new QueryConsumer()
 
-    val timeout: java.time.Duration = options.timeout match {
-      case Some(v) => v
-      case _ => environment.timeoutConfig.queryTimeout()
+        // TODO: proper jackson encoding with options
+        val query = ("{\"statement\":\"" + statement + "\"}").getBytes(CharsetUtil.UTF_8)
+
+        val timeout: java.time.Duration = options.timeout match {
+          case Some(v) => v
+          case _ => environment.timeoutConfig.queryTimeout()
+        }
+
+        val retryStrategy = options.retryStrategy match {
+          case Some(v) => v
+          case _ => environment.retryStrategy()
+        }
+
+        val request = new QueryRequest(timeout,
+          core.context(),
+          retryStrategy,
+          environment.credentials(),
+          query,
+          result)
+
+        core.send(request)
+
+        FutureConverters.toScala(request.response())
+          .map(response => {
+            new QueryResult(result)
+          })
     }
-
-    val retryStrategy = options.retryStrategy match {
-      case Some(v) => v
-      case _ => environment.retryStrategy()
-    }
-
-    val request = new QueryRequest(timeout,
-      core.context(),
-      retryStrategy,
-      environment.credentials(),
-      query,
-      result)
-
-    core.send(request)
-
-    FutureConverters.toScala(request.response())
-      .map(response => {
-        new QueryResult(result)
-      })
   }
 }
 

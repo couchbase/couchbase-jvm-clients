@@ -55,72 +55,54 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val timeout: Option[Duration] = None
                        ) {
   def namedParameter(name: String, value: Any): QueryOptions = {
-    Objects.requireNonNull(name)
-    Objects.requireNonNull(value)
     copy(namedParameters = Some(namedParameters.getOrElse(Map()) + (name -> value)))
   }
 
-  def namedParameters(value: (String, Any),
-                      values: (String, Any)*): QueryOptions = {
-    Objects.requireNonNull(namedParameters)
-    val map: Map[String, Any] = values.toMap + (value._1 -> value._2)
-    copy(namedParameters = Option(map))
+  def namedParameters(values: (String, Any)*): QueryOptions = {
+    copy(namedParameters = Option(values.toMap))
   }
 
   def namedParameters(values: Map[String,Any]): QueryOptions = {
-    Objects.requireNonNull(namedParameters)
     copy(namedParameters = Option(values))
   }
 
   def positionalParameters(values: Any*): QueryOptions = {
-    Objects.requireNonNull(values)
-
     copy(positionalParameters = Option(values.toList))
   }
 
   def contextId(contextId: String): QueryOptions = {
-    Objects.requireNonNull(contextId)
     copy(contextId = Option(contextId))
   }
 
   def credentials(credentials: List[Credentials]): QueryOptions = {
-    Objects.requireNonNull(credentials)
     copy(credentials = Option(credentials))
   }
 
   def credentials(login: String, password: String): QueryOptions = {
-    Objects.requireNonNull(login)
-    Objects.requireNonNull(password)
     copy(credentials = Option(List(new RoleBasedCredentials(login, password))))
   }
 
   def maxParallelism(maxParellism: Int): QueryOptions = {
-    Objects.requireNonNull(maxParellism)
     copy(maxParallelism = Option(maxParellism))
   }
 
   def disableMetrics(disableMetrics: Boolean): QueryOptions = {
-    Objects.requireNonNull(disableMetrics)
     copy(disableMetrics = Option(disableMetrics))
   }
 
   def profile(profile: N1qlProfile.Value): QueryOptions = {
-    Objects.requireNonNull(profile)
     copy(profile = Option(profile))
   }
 
   def readonly(readonly: Boolean): QueryOptions= {
-    Objects.requireNonNull(readonly)
     copy(readonly = Option(readonly))
   }
 
   def scanCap(scanCap: Int): QueryOptions = {
-    Objects.requireNonNull(scanCap)
     copy(scanCap = Option(scanCap))
   }
 
   def scanConsistency(scanConsistency: ScanConsistency): QueryOptions = {
-    Objects.requireNonNull(scanCap)
     copy(scanConsistency = Some(scanConsistency))
   }
 
@@ -130,12 +112,10 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 
   // TODO remove
   def serverSideTimeout(serverSideTimeout: Duration): QueryOptions = {
-    Objects.requireNonNull(serverSideTimeout)
     copy(serverSideTimeout = Option(serverSideTimeout))
   }
 
   def timeout(timeout: Duration): QueryOptions = {
-    Objects.requireNonNull(timeout)
     copy(timeout = Option(timeout))
   }
 }

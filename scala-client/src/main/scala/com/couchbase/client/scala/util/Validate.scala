@@ -3,6 +3,13 @@ package com.couchbase.client.scala.util
 import scala.util.{Failure, Success, Try}
 
 object Validate {
+  def optNotNull(input: Option[Any], identifier: String): Try[Any] = {
+    if (input == null) Failure(new IllegalArgumentException(identifier + " cannot be null"))
+    if (input.isDefined && input.get == null) Failure(new IllegalArgumentException(identifier + " cannot be null"))
+    else Success(input)
+  }
+
+
   def notNull(input: Any, identifier: String): Try[Any] = {
     if (input == null) Failure(new IllegalArgumentException(identifier + " cannot be null"))
     else Success(input)

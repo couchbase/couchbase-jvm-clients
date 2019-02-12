@@ -1,6 +1,6 @@
 ## Tracking RFC on these areas and may need to make changes
 - Decision may be made to defer errors until the operation level, e.g. opening resources would always succeed
-
+- Projections IMO need some design iteration before implementing.
 
 ## Material to recycle for 'choosing a json lib' docs later
 
