@@ -14,18 +14,15 @@ apply plugin: 'nebula.optional-base'
 
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
-  compile group: 'org.scala-lang', name: 'scala-reflect', version: '2.12.8'
 
-  // TODO many of these can go
-  compile "io.projectreactor:reactor-scala-extensions_2.12:0.3.5"
-  implementation group: 'io.projectreactor.addons', name: 'reactor-adapter', version: '3.2.0.RELEASE'
-  compile 'org.scala-lang.modules:scala-java8-compat_2.12:0.9.0'
-  testCompile 'org.scalatest:scalatest_2.12:3.0.5'
-
-  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
-
+  // Dependencies that are used in the implementation
+  // TODO not convinced we require upickle
   compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
+  // Jsoniter offers very fast conversion of case classes to/from Array[Byte]
+  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-core_2.12", version: "0.39.0", optional
+  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-macros_2.12", version: "0.39.0", optional
 
+  // Dependencies that are optional.  If app has them in classpath and uses them, then we support them.
   compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0', optional
@@ -38,11 +35,7 @@ dependencies {
 
   compile group: "org.typelevel", name: "jawn-ast_2.12", version: "0.14.0", optional
 
-  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-core_2.12", version: "0.39.0", optional
-  compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-macros_2.12", version: "0.39.0", optional
+  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7', optional
 
   compile project(':core-io')
-
-  // Evaluating Java version for parsing
-  compile 'com.jsoniter:jsoniter:0.9.19', optional
 }

@@ -58,17 +58,29 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
 //    copy(content + (name -> JsonNumber(value)))
 //  }
 
+//  def getString(name: String): String = {
+//    (content.get(name)) match {
+//      case v: com.jsoniter.any.Any => v.toString
+//      case v: String => v
+//    }
+//  }
+
+
   def getString(name: String): String = {
     (content.get(name)) match {
-      case v: com.jsoniter.any.Any => v.toString
       case v: String => v
     }
   }
 
   def getInt(name: String): Int = {
-    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
-//    content.get(name).asInstanceOf[Int]
+//    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
+        content.get(name).asInstanceOf[Int]
   }
+
+//  def getInt(name: String): Int = {
+//    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
+////    content.get(name).asInstanceOf[Int]
+//  }
 
   def getBoolean(name: String): Boolean = {
     content.get(name).asInstanceOf[Boolean]
