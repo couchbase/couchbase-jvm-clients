@@ -54,7 +54,8 @@ import scala.collection.mutable.ArrayBuffer
 case class SimpleLoggingReporter[T]() extends Reporter[T] {
 
   def report(result: CurveData[T], persistor: Persistor) {
-    val time: Int = (result.measurements(0).value.toString.toDouble * 1000).toInt
+    // Multiply and int purely to get more readable results.  Absolutely values not that important after all
+    val time: Int = (result.measurements(0).value.toString.toDouble * 10000).toInt
 //    val time = result.measurements(0).value + result.measurements(0).units
 
     val name = result.context.scope.toString
@@ -108,7 +109,7 @@ object Jackson {
 }
 
 // Change this to LocalTime for a fast result
-object Creating extends Bench.LocalTime {
+object JsonBench extends Bench.LocalTime {
   val gen = Gen.unit("num")
   val content = Jackson.content
 
@@ -239,12 +240,9 @@ object Creating extends Bench.LocalTime {
       import org.typelevel.jawn.ast._
 
       using(gen) in {
-        // Found this is fastest of the ujson.Obj methods
-        // ujson.Obj.from(Seq(...
-        // and ujson.Obj(); json("name") =
-        r => val json = JObject("name" -> JString(FieldName),
-          "age" -> JNum(29),
-          "address" -> JArray(JObject("address" -> JString(FieldAddress))))
+        r => val json = JObject.fromSeq(Seq("name" -> JString(FieldName),
+          "address" -> JArray(Array(JObject.fromSeq(Seq("address" -> JString(FieldAddress))))),
+          "age" -> JNum(29)))
       }
     }
     
@@ -479,9 +477,9 @@ object Creating extends Bench.LocalTime {
 
       using(gen) in {
         r => {
-          val json = JObject("name" -> JString(FieldName),
-            "address" -> JArray(Array(JObject("address" -> JString(FieldAddress)))),
-            "age" -> JNum(29))
+          val json = JObject.fromSeq(Seq("name" -> JString(FieldName),
+            "address" -> JArray(Array(JObject.fromSeq(Seq("address" -> JString(FieldAddress))))),
+            "age" -> JNum(29)))
           val encoded: Array[Byte] = Conversions.encode(json).get._1
         }
       }

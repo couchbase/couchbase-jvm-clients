@@ -1,80 +1,60 @@
 package com.couchbase.client.scala.json
 
+import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-// Choosing vector as we'll mostly be adding to the end of it
-case class JsonArray(val values: ArrayBuffer[Any]) {
+// Using Java ArrayList as benchmarking found it 4x faster than ArrayBuffer
+case class JsonArray(private val values: java.util.ArrayList[Any]) {
   def add(item: Any): JsonArray = {
-    values += item
+    values.add(item)
     this
   }
   def addNull: JsonArray = {
-    values += null
+    values.add(null)
     this
   }
   def get(idx: Int): Any = {
-    values(idx)
+    values.get(idx)
   }
   def getOpt(idx: Int): Option[Any] = {
-    Option(values(idx))
+    Option(values.get(idx))
   }
-  def getString(idx: Int): String = values(idx).asInstanceOf[String]
-  // TODO does getLong & getInt make sense?  Always using wrong one...
-  def getLong(idx: Int): Long = values(idx).asInstanceOf[Long]
-  def getInt(idx: Int): Int = values(idx).asInstanceOf[Int]
-  def getDouble(idx: Int): Double = values(idx).asInstanceOf[Double]
-  def getFloat(idx: Int): Float = values(idx).asInstanceOf[Float]
-  def getObject(idx: Int): JsonObject = values(idx).asInstanceOf[JsonObject]
+  def getString(idx: Int): String = values.get(idx).asInstanceOf[String]
+  def getLong(idx: Int): Long = values.get(idx).asInstanceOf[Long]
+  def getInt(idx: Int): Int = values.get(idx).asInstanceOf[Int]
+  def getDouble(idx: Int): Double = values.get(idx).asInstanceOf[Double]
+  def getFloat(idx: Int): Float = values.get(idx).asInstanceOf[Float]
+  def getObject(idx: Int): JsonObject = values.get(idx).asInstanceOf[JsonObject]
   def isEmpty: Boolean = values.isEmpty
-  def iterator: Iterator[Any] = values.iterator
+  def iterator: Iterator[Any] = values.asScala.iterator
   def size: Int = values.size
 
-  def toSeq: Seq[Any] = values
-  def toJavaList: java.util.List[Any] = values.asJava
+  def toSeq: Seq[Any] = values.asScala
+  def toJavaList: java.util.List[Any] = values
 }
 
 
 
 object JsonArray {
-  def create: JsonArray = new JsonArray(ArrayBuffer())
+  def create: JsonArray = new JsonArray(new util.ArrayList[Any])
 
-  def apply(in: Any*): JsonArray = new JsonArray(ArrayBuffer(in))
+  /**
+    * Performance note: benchmarking indicates it's much faster to do JsonArray.create.put(x).put(y)
+    * than JsonArray(x, y)
+    */
+  def apply(in: Any*): JsonArray = {
+    val lst = new util.ArrayList[Any](in.size)
+    // Iterators benchmarked as much faster than foreach
+    val it = in.iterator
+    while (it.hasNext) {
+      lst.add(it.next())
+    }
+    new JsonArray(lst)
+  }
+
+
+
+  // TODO checkType
 }
-
-//  private val mapper = new ObjectMapper()
-//
-//  def fromJson(json: String): JsonArray = {
-//    mapper.readValue(json, classOf[JsonArray])
-//  }
-//
-//  def toJsonType(in: Any): Try[JsonType] = {
-//    in match {
-//      case x: String => Success(JsonString(x))
-//      case x: Int => Success(JsonNumber(x))
-//      case x: Long => Success(JsonNumber(x))
-//      case x: Double => Success(JsonNumber(x))
-//      case x: Boolean => Success(JsonBoolean(x))
-//        // TODO MVP Seq
-////      case x: Seq[_] =>
-////        val arr: Try[Seq[JsonType]] = x.map(toJsonType(_))
-////          arr.map(v => JsonArray(v)))
-//      case _ => Failure(CouldNotEncodeToJsonType(in))
-//    }
-//  }
-//
-//  // TODO checkItems
-//  def from(items: Any*): Try[JsonArray] = {
-//    // TODO MVP
-//    ???
-////    val arr = items.map(toJsonType(_))
-////    new JsonArray(.toVector
-//  }
-//  // TODO more advanced from that converts into JsonObjects etc
-//
-//  private val EMPTY = JsonArray.create
-//
-//  def empty: JsonArray = EMPTY
-//
-//  def create: JsonArray = new JsonArray(Vector.empty)
-////}

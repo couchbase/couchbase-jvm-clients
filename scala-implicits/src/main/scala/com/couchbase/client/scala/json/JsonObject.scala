@@ -198,31 +198,26 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
       case _ => false
     }
   }
-
-  // TODO this also needs to walk through recursively and find any JsonArrays & JsonObjects and convert them.  Am I sure I want immutability.
-//  def mutable = JsonObjectMutable(collection.mutable.Map(content.toSeq: _*))
 }
 
 
 object JsonObject {
-  // TOOD base on Jawn
-//  private val mapper = new ObjectMapper()
-//
-//  def fromJson(json: String): JsonObject = {
-//    mapper.readValue(json, classOf[JsonObject])
-//  }
-
-//  private val EMPTY = JsonObject.create
-//
-//  def empty: JsonObject = EMPTY
-
   def create: JsonObject = new JsonObject(new util.HashMap[String, Any]())
 
-//  def apply(values: Seq(String,Any))
+  // Note, benchmarking indicates it's roughly twice as fast to simple create and put all fields, than it is to use this.
+  def apply(values: (String,Any)*): JsonObject = {
+    val map = new util.HashMap[String, Any](values.size)
+    values.foreach(v => map.put(v._1, v._2))
+    new JsonObject(map)
+  }
+
+  def apply(values: Map[String,Any]): JsonObject = {
+    val map = new util.HashMap[String, Any](values.size)
+    values.foreach(v => map.put(v._1, v._2))
+    new JsonObject(map)
+  }
+
+
 
   // TODO from(Map), and key -> value, generally make it really easy to create json
 }
-
-
-//case class CouldNotEncodeToJsonType(in: Any) extends RuntimeException
-

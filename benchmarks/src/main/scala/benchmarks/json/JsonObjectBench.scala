@@ -26,24 +26,158 @@ package benchmarks.json
 
 import java.util
 
-import com.couchbase.client.java.codec.DefaultEncoder
-import com.couchbase.client
-import com.couchbase.client.java.json.JacksonTransformers
+import benchmarks.json.JsonObjectBench.{gen, using}
+import com.couchbase.client.java.codec.{Decoder, DefaultDecoder, DefaultEncoder}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.fasterxml.jackson.databind.ObjectMapper
+//import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+//import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+//import experiments.{JsoniterArray, JsoniterObject}
+//import io.circe.Encoder
+//import jsonobject.JsonObjectExperiment
+//import play.api.libs.json.{JsNumber, JsObject, JsString, JsValue}
 import org.scalameter.api._
-import play.api.libs.json.JsObject
-import ujson.BytesRenderer
+//import org.typelevel.jawn.ast.{JNum, JObject, JString}
+//import ujson.ujson.BytesRenderer
+
+import scala.collection.mutable.ArrayBuffer
 
 
-// A deep dive into the performance of the Scala JsonObject
-object JsonObjectBench extends Bench.LocalTime {
+/**
+  * In the red corner: JsonObject (Java edition)!  In the blue: JsonObject (Scala edition)!  Fight!
+  */
+object JsonObjectBench extends Bench.ForkedTime {
   val gen = Gen.unit("num")
+  val content = Jackson.content
+
 
   override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]
 
+
+  private val FieldAddress = "123 Fake Street"
+  private val FieldName = "John Smith"
+
+  performance of "Scala" in {
+    import com.couchbase.client.scala.json._
+
+    performance of "creating full" in {
+      import com.couchbase.client.scala.json._
+
+      using(gen) in {
+        r =>
+          val json = JsonObject.create
+            .put("name", FieldName)
+            .put("address", JsonArray.create.add(JsonObject.create.put("address", FieldAddress)))
+            .put("age", 29)
+      }
+    }
+
+    performance of "scalating object" in {
+      using(gen) in {
+        r =>
+          val json = JsonObject.create
+      }
+    }
+
+    performance of "creating object and putting two" in {
+      using(gen) in {
+        r =>
+          val json = JsonObject.create
+            .put("name", FieldName)
+            .put("age", 29)
+      }
+    }
+
+    performance of "just creating array" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray.create
+      }
+    }
+
+    performance of "creating array and putting two" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray.create
+            .add(FieldName).add(29)
+      }
+    }
+
+    performance of "creating array from" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray(FieldName, FieldName)
+      }
+    }
+
+    performance of "creating array from existing map" in {
+      val map = Map("name" -> FieldName, "age" -> 29)
+
+      using(gen) in {
+        r =>
+          val json = JsonArray(map)
+      }
+    }
+
+  }
+
+  performance of "Java" in {
+    import com.couchbase.client.java.json._
+
+    performance of "creating full" in {
+      using(gen) in {
+        r =>
+          val json = JsonObject.create()
+            .put("name", FieldName)
+            .put("address", JsonArray.create.add(JsonObject.create.put("address", FieldAddress)))
+            .put("age", 29)
+      }
+    }
+
+    performance of "just creating object" in {
+      using(gen) in {
+        r =>
+          val json = JsonObject.create()
+      }
+    }
+
+    performance of "creating object and putting two" in {
+      using(gen) in {
+        r =>
+          val json = JsonObject.create
+            .put("name", FieldName)
+            .put("age", 29)
+      }
+    }
+
+
+    performance of "just creating array" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray.create
+      }
+    }
+
+    performance of "creating array and putting two" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray.create
+              .add(FieldName).add(29)
+      }
+    }
+
+    performance of "creating array from" in {
+      using(gen) in {
+        r =>
+          val json = JsonArray.from(FieldName, FieldName)
+      }
+    }
+
+  }
+
+  // Benchmarking the underlying data structures
   performance of "Data structures" in {
     performance of "Java HashMap" in {
       using(gen) in {
@@ -86,59 +220,4 @@ object JsonObjectBench extends Bench.LocalTime {
     }
   }
 
-  performance of "Just creating JSON AST" in {
-
-    performance of "JsonObject (Java)" in {
-      using(gen) in {
-        r =>
-          val json = com.couchbase.client.java.json.JsonObject.create()
-            .put("hello", "world")
-            .put("foo", "bar")
-            .put("age", 22)
-      }
-    }
-
-    performance of "JsonObject (Scala)" in {
-      using(gen) in {
-        r =>
-          val json = com.couchbase.client.scala.json.JsonObject.create
-            .put("hello", "world")
-            .put("foo", "bar")
-            .put("age", 22)
-      }
-    }
-  }
-
-
-
-
-  performance of "Creating JSON AST and encoding to byte array" in {
-
-
-    performance of "JsonObject (Java)" in {
-      using(gen) in {
-        r => {
-          val json = com.couchbase.client.java.json.JsonObject.create()
-            .put("hello", "world")
-            .put("foo", "bar")
-            .put("age", 22)
-          val encoded: Array[Byte] = DefaultEncoder.INSTANCE.encode(json).content()
-        }
-      }
-    }
-
-
-    performance of "JsonObject (Scala)" in {
-      using(gen) in {
-        r => {
-          val json = jsonobject.JsonObjectExperiment.create
-            .put("hello", "world")
-            .put("foo", "bar")
-            .put("age", 22)
-
-          val encoded: Array[Byte] = Conversions.encode(json)(jsonobject.Encoders.JsonObjectExperimentConvert).get._1
-        }
-      }
-    }
-  }
 }
