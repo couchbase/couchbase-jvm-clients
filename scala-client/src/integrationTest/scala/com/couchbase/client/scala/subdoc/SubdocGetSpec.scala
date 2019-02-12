@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.subdoc
 
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
-import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
+import com.couchbase.client.core.error.{DecodingFailedException, DocumentDoesNotExistException, TemporaryLockFailureException}
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.scala.api.{LookupInSpec, MutateInSpec}
 import org.scalatest.FunSuite
@@ -123,7 +123,6 @@ class SubdocGetSpec extends FunSuite {
 //    }
 //  }
 
-  // TODO failing
   test("exists multi") {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -144,7 +143,7 @@ class SubdocGetSpec extends FunSuite {
           case Failure(err) => assert(false, s"unexpected error $err")
         }
         result.contentAs[String]("age") match {
-          case Failure(err: IllegalStateException) =>
+          case Failure(err: DecodingFailedException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
@@ -153,7 +152,6 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  // TODO failing
   test("count") {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -174,7 +172,7 @@ class SubdocGetSpec extends FunSuite {
           case Failure(err) => assert(false, s"unexpected error $err")
         }
         result.contentAs[String]("age") match {
-          case Failure(err: IllegalStateException) =>
+          case Failure(err: DecodingFailedException) =>
           case Success(v) => assert(false, s"should not succeed")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
