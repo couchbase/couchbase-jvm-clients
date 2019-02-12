@@ -218,6 +218,8 @@ object JsonObject {
 
   def create: JsonObject = new JsonObject(new util.HashMap[String, Any]())
 
+//  def apply(values: Seq(String,Any))
+
   // TODO from(Map), and key -> value, generally make it really easy to create json
 }
 

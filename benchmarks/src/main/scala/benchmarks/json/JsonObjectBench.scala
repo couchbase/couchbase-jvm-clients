@@ -39,7 +39,7 @@ import ujson.BytesRenderer
 
 
 // A deep dive into the performance of the Scala JsonObject
-object JsonObject extends Bench.LocalTime {
+object JsonObjectBench extends Bench.LocalTime {
   val gen = Gen.unit("num")
 
   override def reporter: Reporter[Double] = new SimpleLoggingReporter[Double]

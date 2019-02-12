@@ -16,13 +16,16 @@ dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
 
   // Dependencies that are used in the implementation
-  // TODO not convinced we require upickle
-  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1'
   // Jsoniter offers very fast conversion of case classes to/from Array[Byte]
   compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-core_2.12", version: "0.39.0", optional
   compile group: "com.github.plokhotnyuk.jsoniter-scala", name: "jsoniter-scala-macros_2.12", version: "0.39.0", optional
+  // Jackson has a parser that can convert Scala's JsonObject to/from String]
+  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7'
+  // Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support
+  compile 'com.jsoniter:jsoniter:0.9.19', optional
 
   // Dependencies that are optional.  If app has them in classpath and uses them, then we support them.
+  compile group: 'com.lihaoyi', name: 'upickle_2.12', version: '0.7.1', optional
   compile group: 'io.circe', name: 'circe-core_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-generic_2.12', version: '0.10.0', optional
   compile group: 'io.circe', name: 'circe-parser_2.12', version: '0.10.0', optional
@@ -35,10 +38,7 @@ dependencies {
 
   compile group: "org.typelevel", name: "jawn-ast_2.12", version: "0.14.0", optional
 
-  compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7', optional
 
   compile project(':core-io')
 
-  // Needed only for experimenting currently, though could expose support
-  compile 'com.jsoniter:jsoniter:0.9.19', optional
 }
