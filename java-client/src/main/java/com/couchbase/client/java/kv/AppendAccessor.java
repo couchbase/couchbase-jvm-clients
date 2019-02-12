@@ -47,6 +47,7 @@ public class AppendAccessor {
           case TOO_BIG:
             throw new RequestTooBigException();
           case NOT_STORED:
+            // todo: gp not DocumentMutationLostException?
             throw new DocumentDoesNotExistException();
           case EXISTS:
             throw new CASMismatchException();
