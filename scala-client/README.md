@@ -1,3 +1,7 @@
+## Tracking RFC on these areas and may need to make changes
+- Decision may be made to defer errors until the operation level, e.g. opening resources would always succeed
+
+
 ## Material to recycle for 'choosing a json lib' docs later
 
   /**
@@ -29,3 +33,5 @@
     * Here we'll use uJson to encode and decode Array[Byte], but any JSON lib that can support that could be used
     * When given Array[Byte], the lib will assume it's JSON and send the corresponding flag
     */
+
+

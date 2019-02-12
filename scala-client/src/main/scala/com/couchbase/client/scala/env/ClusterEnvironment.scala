@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.env
 
-import com.couchbase.client.core.env.{CoreEnvironment, Credentials}
+import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, CoreEnvironment, Credentials, RoleBasedCredentials}
 
 
 
@@ -14,8 +14,10 @@ class Builder(credentials: Credentials) extends CoreEnvironment.Builder[Builder]
 
 object ClusterEnvironment {
   def create(connectionString: String, username: String, password: String) = {
-    new ClusterEnvironment(new Builder(RoleBasedCredentials(username, password)))
+    new ClusterEnvironment(new Builder(new RoleBasedCredentials(username, password)))
   }
 
-  // TODO MVP implement other credentials
+  def create(connectionString: String, credentials: Credentials): ClusterEnvironment = {
+    new ClusterEnvironment(new Builder(credentials).load(new ConnectionStringPropertyLoader(connectionString)))
+  }
 }

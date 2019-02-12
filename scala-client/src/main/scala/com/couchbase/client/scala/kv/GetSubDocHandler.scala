@@ -24,7 +24,6 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
   private val ExpTime = "$document.exptime"
 
   // TODO support projections
-  // TODO support expiration (probs works, check unit tested)
 
 
   def request[T](id: String,

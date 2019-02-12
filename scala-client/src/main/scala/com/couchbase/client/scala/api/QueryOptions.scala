@@ -18,18 +18,15 @@ package com.couchbase.client.scala.api
 
 import java.util.Objects
 
+import com.couchbase.client.core.env.{Credentials, RoleBasedCredentials}
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
 
 import scala.concurrent.duration.Duration
 
-case class Credential(login: String, password: String)
-
 object N1qlProfile extends Enumeration {
   val Off, Phases, Timing = Value
 }
-
-//case class ScanVector(value: Int, guard: String)
 
 sealed trait ScanConsistency
 case class NotBounded() extends ScanConsistency
@@ -41,9 +38,7 @@ case class StatementPlus(scanWait: Option[Duration] = None) extends ScanConsiste
 case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
                         positionalParameters: Option[List[Any]] = None,
                         contextId: Option[String] = None,
-                        // TODO remove?
-                        pretty: Option[Boolean] = None,
-                        credentials: Option[List[Credential]] = None,
+                        credentials: Option[List[Credentials]] = None,
                         maxParallelism: Option[Int] = None,
                         disableMetrics: Option[Boolean] = None,
                         pipelineBatch: Option[Int] = None,
@@ -80,12 +75,7 @@ case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
     copy(contextId = Option(contextId))
   }
 
-  def pretty(pretty: Boolean): QueryOptions = {
-    Objects.requireNonNull(pretty)
-    copy(pretty = Option(pretty))
-  }
-
-  def credentials(credentials: List[Credential]): QueryOptions = {
+  def credentials(credentials: List[Credentials]): QueryOptions = {
     Objects.requireNonNull(credentials)
     copy(credentials = Option(credentials))
   }
@@ -93,7 +83,7 @@ case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
   def credentials(login: String, password: String): QueryOptions = {
     Objects.requireNonNull(login)
     Objects.requireNonNull(password)
-    copy(credentials = Option(List(Credential(login, password))))
+    copy(credentials = Option(List(new RoleBasedCredentials(login, password))))
   }
 
   def maxParallelism(maxParellism: Int): QueryOptions = {

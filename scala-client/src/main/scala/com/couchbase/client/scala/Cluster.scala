@@ -19,7 +19,8 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.env.ClusterEnvironment
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.couchbase.client.scala.api.QueryOptions
+import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.scala.api.{QueryOptions}
 import com.couchbase.client.scala.query.QueryResult
 import com.couchbase.client.scala.util.AsyncUtils
 
@@ -31,15 +32,15 @@ import scala.util.Try
 class Cluster(env: => ClusterEnvironment)
              (implicit ec: ExecutionContext) {
 
-  private val async = new AsyncCluster(env)
-  // TODO MVP? reactive cluster
+  val async = new AsyncCluster(env)
+  // TODO
+  //  val reactive = new ReactiveCluster(async)
 
   def bucket(name: String) = {
     AsyncUtils.block(async.bucket(name))
       .map(new Bucket(_))
   }
 
-  // TODO share this code
   implicit def scalaFiniteDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
   }
@@ -61,19 +62,21 @@ class Cluster(env: => ClusterEnvironment)
 
     AsyncUtils.block(async.query(statement, options), timeout)
   }
-
-  // TODO see how other libs do case class encoding/decoding
 }
 
 object Cluster {
-  private val threadPool = Executors.newFixedThreadPool(10) // TODO 10?
+  private val threadPool = Executors.newFixedThreadPool(10) // TODO 10? should we use core's instead?
   private implicit val ec = ExecutionContext.fromExecutor(threadPool)
 
-  // TODO MVP decision may be made to defer errors until the operation level, e.g. opening resources would always
-  // succeed
-  def connect(connectionString: String, username: String, password: String) = {
+  def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
     Try(new Cluster(ClusterEnvironment.create(connectionString, username, password)))
   }
 
-  // TODO MVP support credentials
+  def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
+    Try(new Cluster(ClusterEnvironment.create(connectionString, credentials)))
+  }
+
+  def connect(environment: ClusterEnvironment): Try[Cluster] = {
+    Try(new Cluster(environment))
+  }
 }
