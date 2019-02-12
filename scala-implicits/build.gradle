@@ -38,4 +38,7 @@ dependencies {
   compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.9.7', optional
 
   compile project(':core-io')
+
+  // Needed only for experimenting currently, though could expose support
+  compile 'com.jsoniter:jsoniter:0.9.19', optional
 }

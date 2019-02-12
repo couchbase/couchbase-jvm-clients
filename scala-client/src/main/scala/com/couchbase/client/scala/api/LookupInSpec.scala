@@ -21,13 +21,10 @@ import scala.language.dynamics
 sealed trait LookupOperation
 case class GetOperation(path: String, xattr: Boolean) extends LookupOperation
 case class GetFullDocumentOperation() extends LookupOperation
-//case class GetStringOperation(path: String, xattr: Boolean) extends LookupOperation
-//case class GetIntOperation(path: String, xattr: Boolean) extends LookupOperation
 case class ExistsOperation(path: String, xattr: Boolean) extends LookupOperation
 case class CountOperation(path: String, xattr: Boolean) extends LookupOperation
-//case class WithExpiryOperation() extends LookupOperation
 
-case class LookupInSpec(val operations: List[LookupOperation]) {
+case class LookupInSpec(private [scala] val operations: List[LookupOperation]) {
   def getDoc: LookupInSpec = {
     copy(operations = operations :+ GetFullDocumentOperation())
   }
@@ -40,14 +37,6 @@ case class LookupInSpec(val operations: List[LookupOperation]) {
     copy(operations = operations :+ GetOperation(path, xattr))
   }
 
-//  def getString(path: String, xattr: Boolean = false): LookupInOps = {
-//    copy(operations = operations :+ GetStringOperation(path, xattr))
-//  }
-//
-//  def getInt(path: String, xattr: Boolean = false): LookupInOps = {
-//    copy(operations = operations :+ GetIntOperation(path, xattr))
-//  }
-
   def count(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ CountOperation(path, xattr))
   }
@@ -55,11 +44,6 @@ case class LookupInSpec(val operations: List[LookupOperation]) {
   def exists(path: String, xattr: Boolean = false): LookupInSpec = {
     copy(operations = operations :+ ExistsOperation(path, xattr))
   }
-
-
-//  def withExpiry: LookupInOps = {
-//    copy(operations = operations :+ WithExpiryOperation())
-//  }
 }
 
 object LookupInSpec {
@@ -87,27 +71,3 @@ object LookupInSpec {
     empty.exists(path, xattr)
   }
 }
-
-//class SubDocument extends Dynamic {
-//  def id: String = ???
-//  def cas: Int = ???
-//
-//  def content(idx: Int): Any = null
-//  def content(idx: String): Any = null
-//
-//  def contentAsArray: JsonArray = contentAs[JsonArray](null)
-//  def contentAsObject: JsonObject = contentAs[JsonObject](null)
-//
-//  def contentAs[T]: T = contentAs(null)
-//
-//  def contentAs[T](path: String): T = contentAs(path, null)
-//
-//  def contentAs[T](path: String, decoder: (Array[Byte]) => T): T = None.asInstanceOf[T]
-//
-//  def selectDynamic(name: String): Any = content(name)
-//
-//}
-//
-//object SubDocument {
-//  def unapplySeq(m: SubDocument): Option[Seq[Any]] = null
-//}

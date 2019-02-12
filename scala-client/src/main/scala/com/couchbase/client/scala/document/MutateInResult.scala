@@ -17,13 +17,12 @@ case class MutateInResult(id: String,
                           mutationToken: Option[MutationToken]) extends HasDurabilityTokens {
 
   def contentAs[T](path: String)
-                  (implicit ev: Conversions.DecodableField[T]): Try[T] = {
+                  (implicit ev: Conversions.Decodable[T]): Try[T] = {
     _content.get(path) match {
       case Some(field) =>
         field.error().asScala match {
           case Some(err) => Failure(err)
-          case _ =>
-            ev.decode(field, Conversions.JsonFlags)
+          case _ => ev.decodeSubDocumentField(field, Conversions.JsonFlags)
         }
       case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
     }

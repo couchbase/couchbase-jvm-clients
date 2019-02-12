@@ -127,7 +127,7 @@ class ReactiveCollection(async: AsyncCollection) {
   : Mono[GetResult] = {
     if (withExpiration) {
       getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-        GetResult(id, lookupInResult.documentAsBytes.get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
+        GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)

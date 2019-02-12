@@ -9,28 +9,28 @@ import scala.util.Try
 
 import scala.concurrent.duration.Duration
 
-trait Convertable {
-  def contentAs[T](path: PathElements): T
-  def exists(path: PathElements): Boolean
-}
+//trait Convertable {
+//  def contentAs[T](path: PathElements): T
+//  def exists(path: PathElements): Boolean
+//}
 
-class PathNotFound extends CouchbaseException
-
-sealed trait PathElement
-case class PathObjectOrField(name: String) extends PathElement {
-  override def toString: String = name
-}
-case class PathArray(name: String, index: Int) extends PathElement {
-  override def toString: String = name + "[" + index + "]"
-}
-
-case class PathElements(paths: List[PathElement]) {
-  def add(elem: PathElement) = copy(paths :+ elem)
-
-  override def toString: String = {
-    paths.map(_.toString).mkString(".")
-  }
-}
+//class PathNotFound extends CouchbaseException
+//
+//sealed trait PathElement
+//case class PathObjectOrField(name: String) extends PathElement {
+//  override def toString: String = name
+//}
+//case class PathArray(name: String, index: Int) extends PathElement {
+//  override def toString: String = name + "[" + index + "]"
+//}
+//
+//case class PathElements(paths: List[PathElement]) {
+//  def add(elem: PathElement) = copy(paths :+ elem)
+//
+//  override def toString: String = {
+//    paths.map(_.toString).mkString(".")
+//  }
+//}
 
 
 case class GetResult(id: String,

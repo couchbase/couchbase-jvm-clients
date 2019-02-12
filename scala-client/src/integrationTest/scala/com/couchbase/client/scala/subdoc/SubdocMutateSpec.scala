@@ -78,8 +78,6 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo2").str == "bar2")
   }
 
-  // TODO most of these are failing
-
   test("remove") {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
@@ -116,7 +114,7 @@ class SubdocMutateSpec extends FunSuite {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.lookupIn(docId, LookupInSpec.get("x", xattr = true)).get.contentAs[ujson.Obj]("x").get
+    coll.lookupIn(docId, LookupInSpec.get("x", xattr = true)).get.contentAs[ujson.Obj](0).get
   }
 
   private def checkSingleOpFailure(content: ujson.Obj, ops: MutateInSpec, expected: SubDocumentOpResponseStatus) = {
@@ -473,7 +471,6 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").num == -3)
   }
 
-
   test("expiration") {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
@@ -550,5 +547,71 @@ class SubdocMutateSpec extends FunSuite {
 
     val updated = getContent(docId)
     assert(updated("foo1").str == "bar_orig_1")
+  }
+
+  test("write and read primitive boolean") {
+    val docId = TestUtils.docId()
+    assert(coll.mutateIn(docId, MutateInSpec.upsert("foo", true), insertDocument = true).isSuccess)
+
+    (for {
+      result <- coll.lookupIn(docId, LookupInSpec.get("foo"))
+      content <- result.contentAs[Boolean](0)
+    } yield content) match {
+      case Success(content: Boolean) =>
+        assert(content)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("write and read primitive int") {
+    val docId = TestUtils.docId()
+    assert(coll.mutateIn(docId, MutateInSpec.upsert("foo", 42), insertDocument = true).isSuccess)
+
+    (for {
+      result <- coll.lookupIn(docId, LookupInSpec.get("foo"))
+      content <- result.contentAs[Int](0)
+    } yield content) match {
+      case Success(content) => assert(content == 42)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("write and read primitive double") {
+    val docId = TestUtils.docId()
+    assert(coll.mutateIn(docId, MutateInSpec.upsert("foo", 42.3), insertDocument = true).isSuccess)
+
+    (for {
+      result <- coll.lookupIn(docId, LookupInSpec.get("foo"))
+      content <- result.contentAs[Double](0)
+    } yield content) match {
+      case Success(content) => assert(content == 42.3)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("write and read primitive long") {
+    val docId = TestUtils.docId()
+    assert(coll.mutateIn(docId, MutateInSpec.upsert("foo", Long.MaxValue), insertDocument = true).isSuccess)
+
+    (for {
+      result <- coll.lookupIn(docId, LookupInSpec.get("foo"))
+      content <- result.contentAs[Long](0)
+    } yield content) match {
+      case Success(content) => assert(content == Long.MaxValue)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("write and read primitive short") {
+    val docId = TestUtils.docId()
+    assert(coll.mutateIn(docId, MutateInSpec.upsert("foo", Short.MaxValue), insertDocument = true).isSuccess)
+
+    (for {
+      result <- coll.lookupIn(docId, LookupInSpec.get("foo"))
+      content <- result.contentAs[Short](0)
+    } yield content) match {
+      case Success(content) => assert(content == Short.MaxValue)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
   }
 }

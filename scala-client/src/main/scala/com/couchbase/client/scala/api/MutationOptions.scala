@@ -70,18 +70,18 @@ case class IncrementOperation(path: String, delta: Long,
 case class MutateInSpec(operations: List[MutateOperation]) {
   def insert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
-    val encoded = ev.encode(value)
+    val encoded = ev.encodeSubDocumentField(value)
     copy(operations = operations :+ InsertOperation(path, encoded, xattr, createPath, expandMacro))
   }
 
   def replace[T](path: String, value: T, xattr: Boolean = false, expandMacro: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ReplaceOperation(path, ev.encode(value), xattr, expandMacro))
+    copy(operations = operations :+ ReplaceOperation(path, ev.encodeSubDocumentField(value), xattr, expandMacro))
   }
 
   def upsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                 (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ UpsertOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ UpsertOperation(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro))
   }
 
   def remove(path: String, xattr: Boolean = false): MutateInSpec = {
@@ -90,22 +90,22 @@ case class MutateInSpec(operations: List[MutateOperation]) {
 
   def arrayAppend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                 (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ArrayAppendOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ ArrayAppendOperation(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro))
   }
 
   def arrayPrepend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                     (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ArrayPrependOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ ArrayPrependOperation(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro))
   }
 
   def arrayInsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                     (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ArrayInsertOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ ArrayInsertOperation(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro))
   }
 
   def arrayAddUnique[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
                        (implicit ev: Encodable[T]): MutateInSpec = {
-    copy(operations = operations :+ ArrayAddUniqueOperation(path, ev.encode(value), xattr, createPath, expandMacro))
+    copy(operations = operations :+ ArrayAddUniqueOperation(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro))
   }
 
   def increment(path: String, delta: Long, xattr: Boolean = false, createPath: Boolean = false): MutateInSpec = {

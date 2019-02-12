@@ -47,6 +47,9 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
     else {
       val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
+      // Put expiration on the end so it doesn't mess up indexing
+      // Update: no, all xattr commands need to at start. But only support expiration with full doc anyway (to avoid
+      // app accidentally going over 16 subdoc commands), so can put it here
       if (withExpiration) {
         commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
       }
@@ -57,7 +60,6 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
         case x: ExistsOperation => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x.xattr)
         case x: CountOperation => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x.xattr)
       }.foreach(commands.add)
-
 
       if (commands.isEmpty) {
         Failure(new IllegalArgumentException("No SubDocument commands provided"))
@@ -78,10 +80,9 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
   def response(id: String, response: SubdocGetResponse): LookupInResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values = response.values().asScala
+        val values: Seq[SubdocField] = response.values().asScala
 
         var exptime: Option[FiniteDuration] = None
-        var fulldoc: Option[Array[Byte]] = None
         val fields = collection.mutable.Map.empty[String, SubdocField]
 
         values.foreach(value => {
@@ -89,15 +90,9 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
             val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
             exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
           }
-          else if (value.path == "") {
-            fulldoc = Some(value.value())
-          }
-          else {
-            fields += value.path() -> value
-          }
         })
 
-        LookupInResult(id, fulldoc, fields, DocumentFlags.Json, response.cas(), exptime)
+        LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
 
       case ResponseStatus.SUBDOC_FAILURE =>
 

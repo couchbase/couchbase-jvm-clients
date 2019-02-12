@@ -12,42 +12,59 @@ import scala.compat.java8.OptionConverters._
 
 
 case class LookupInResult(id: String,
-                          private val body: Option[Array[Byte]],
-                          private val _content: GenMap[String, SubdocField],
+                          private val content: Seq[SubdocField],
                           private[scala] val flags: Int,
                           cas: Long,
                           expiration: Option[Duration]) {
 
-  // TODO change path to index
-  def contentAs[T](path: String)
-                  (implicit ev: Conversions.DecodableField[T]): Try[T] = {
-    _content.get(path) match {
-      case Some(field) =>
-        field.error().asScala match {
-          case Some(err) => Failure(err)
-          case _ =>
-            ev.decode(field, Conversions.JsonFlags)
-        }
-      case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
+  def contentAs[T](index: Int)
+                  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    if (index < 0 || index >= content.size) {
+      Failure(new IllegalArgumentException(s"$index is out of bounds"))
+    }
+    else {
+      val field = content(index)
+      field.error().asScala match {
+        case Some(err) => Failure(err)
+        case _ =>
+          ev.decodeSubDocumentField(field, Conversions.JsonFlags)
+      }
     }
   }
 
-  // Only valid if the entire document was requested
-  def documentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    body match {
-      case Some(b) => ev.decode(b, Conversions.JsonFlags)
-      case _ => Failure(new OperationDoesNotExist("Content could not be parsed"))
+  def exists(index: Int): Boolean = {
+    if (index < 0 || index >= content.size) {
+      false
+    }
+    else {
+      val field = content(index)
+      field.error().asScala match {
+        case Some(err) => false
+        case _ => true
+      }
     }
   }
 
-  // Only valid if the entire document was requested
-  def documentAsBytes = body
+  def contentAsBytes(index: Int): Try[Array[Byte]] = {
+    if (index < 0 || index >= content.size) {
+      Failure(new IllegalArgumentException(s"$index is out of bounds"))
+    }
+    else {
+      val field = content(index)
+      field.error().asScala match {
+        case Some(err) => Failure(err)
+        case _ => Success(field.value())
+      }
+    }
+  }
 
-  def opStatus(path: String): Try[SubDocumentOpResponseStatus] = {
-    _content.get(path) match {
-      case Some(field) => Success(field.status())
-      case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
+  def opStatus(index: Int): Try[SubDocumentOpResponseStatus] = {
+    if (index < 0 || index >= content.size) {
+      Failure(new IllegalArgumentException(s"$index is out of bounds"))
+    }
+    else {
+      val field = content(index)
+      Success(field.status())
     }
   }
 }

@@ -5,6 +5,7 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Optional;
 
+// TODO rename SubDocumentField as part of public interface now
 public class SubdocField {
   private final SubDocumentOpResponseStatus status;
   private final Optional<SubDocumentException> error;

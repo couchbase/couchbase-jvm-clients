@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.codec
 
+import java.nio.ByteBuffer
+
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField}
 import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
@@ -60,10 +62,29 @@ object Conversions {
 
   trait Encodable[-T] {
     def encode(content: T): Try[(Array[Byte], EncodeParams)]
+
+    def encodeSubDocumentField(content: T): Try[(Array[Byte], EncodeParams)] = encode(content)
   }
 
   trait Decodable[T] {
     def decode(bytes: Array[Byte], params: EncodeParams): Try[T]
+
+    def decodeSubDocumentField(in: SubdocField, params: EncodeParams): Try[T] = {
+      in.`type`() match {
+        case SubdocCommandType.EXISTS => decodeSubDocumentExists(in, params)
+        case _ => decodeSubDocumentGet(in, params)
+      }
+    }
+
+    def decodeSubDocumentGet(in: SubdocField, params: EncodeParams): Try[T] = {
+      if (in.error().isPresent) Failure(in.error().get())
+      else decode(in.value(), params)
+    }
+
+    def decodeSubDocumentExists(in: SubdocField, params: EncodeParams): Try[T] = {
+      Failure(new DecodingFailedException("Field cannot be checked with exists"))
+    }
+
   }
 
   trait Codec[T] extends Encodable[T] with Decodable[T] {
@@ -96,6 +117,10 @@ object Conversions {
           case Failure(_) =>
             Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
         }
+      }
+
+      override def encodeSubDocumentField(content: String): Try[(Array[Byte], EncodeParams)] = {
+        Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
     }
 
@@ -223,6 +248,17 @@ object Conversions {
           Failure(new DecodingFailedException(s"Cannot decode data with flags ${params} as a String"))
         }
       }
+
+      override def decodeSubDocumentGet(in: SubdocField, params: EncodeParams): Try[String] = {
+        if (in.error().isPresent) Failure(in.error().get())
+        else {
+          Try({
+            val str = new String(in.value(), CharsetUtil.UTF_8)
+            // Strip off the " from start and end
+            str.substring(1, str.size - 1)
+          })
+        }
+      }
     }
 
     implicit object JsonObjectExperiment extends Decodable[JsonObject] {
@@ -297,100 +333,47 @@ object Conversions {
         }
       }
     }
-  }
 
-
-  /*
-    * Do we need EncodableField vs Encodable?
-    * - Encoding String with "" - needed?
-    * Could handle with a param instead
-    *
-    * Do we need DecodableField vs Decoable?
-    * - Lets us handle exists separately
-    */
-
-  trait EncodableField[-T] extends Encodable[T] {
-    def encode(content: T): Try[(Array[Byte], EncodeParams)]
-  }
-
-  object EncodableField {
-
-    implicit object StringConvert extends EncodableField[String] {
-      override def encode(content: String) = {
-        Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonFlags))
+    implicit object BooleanConvert extends Decodable[Boolean] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val str = new String(bytes, CharsetUtil.UTF_8)
+        if (str == "true") Try(true)
+        else if (str == "false") Try(false)
+        else Failure(new DecodingFailedException(s"Boolean field has invalid value '${str}'"))
       }
-    }
 
-    //    implicit object BoolConvert extends EncodableField[Boolean] {
-    //      override def encode(content: Boolean) = {
-    //        Try((content..getBytes(CharsetUtil.UTF_8), JsonEncodeParams))
-    //      }
-    //    }
-  }
-
-  trait DecodableField[T] {
-    def decode(in: SubdocField, params: EncodeParams): Try[T] = {
-      in.`type`() match {
-        case SubdocCommandType.EXISTS => decodeExists(in, params)
-        case _ => decodeGet(in, params)
-      }
-    }
-
-    def decodeGet(in: SubdocField, params: EncodeParams): Try[T]
-
-    def decodeExists(in: SubdocField, params: EncodeParams): Try[T] = {
-      Failure(new DecodingFailedException("Field cannot be checked with exists"))
-    }
-  }
-
-
-  object DecodableField {
-
-    implicit object StringConvert extends DecodableField[String] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
-        // Note this means we actually depend on ujson
-        Try(upickle.default.read[String](in.value()))
-      }
-    }
-
-    implicit object BooleanConvert extends DecodableField[Boolean] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
+      override def decodeSubDocumentGet(in: SubdocField, params: EncodeParams) = {
         Try(upickle.default.read[Boolean](in.value()))
       }
 
-      override def decodeExists(in: SubdocField, params: EncodeParams): Try[Boolean] = {
+      override def decodeSubDocumentExists(in: SubdocField, params: EncodeParams): Try[Boolean] = {
         Try(in.status().success())
       }
     }
 
-
-    implicit object IntConvert extends DecodableField[Int] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
-        Try(upickle.default.read[Int](in.value()))
+    implicit object IntConvert extends Decodable[Int] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        Try(new String(bytes, CharsetUtil.UTF_8).toInt)
       }
     }
 
-
-    implicit object DoubleConvert extends DecodableField[Double] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
-        Try(upickle.default.read[Double](in.value()))
+    implicit object DoubleConvert extends Decodable[Double] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        Try(new String(bytes, CharsetUtil.UTF_8).toDouble)
       }
     }
 
-    implicit object UsjonValueConvert extends DecodableField[ujson.Value] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
-        Try(upickle.default.read[ujson.Value](in.value()))
+    implicit object LongConvert extends Decodable[Long] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        Try(new String(bytes, CharsetUtil.UTF_8).toLong)
       }
     }
 
-
-    implicit object UsjonObjConvert extends DecodableField[ujson.Obj] {
-      override def decodeGet(in: SubdocField, params: EncodeParams) = {
-        Try(upickle.default.read[ujson.Obj](in.value()))
+    implicit object ShortConvert extends Decodable[Short] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        Try(new String(bytes, CharsetUtil.UTF_8).toShort)
       }
     }
-
-
   }
 
 }
