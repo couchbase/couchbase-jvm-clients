@@ -7,7 +7,6 @@ import org.scalatest.FunSuite
 import scala.util.{Failure, Success}
 
 class QuerySpec extends FunSuite {
-  // TODO support Jenkins
   val (cluster, bucket, coll) = (for {
     cluster <- Cluster.connect("localhost", "Administrator", "password")
     bucket <- cluster.bucket("default")

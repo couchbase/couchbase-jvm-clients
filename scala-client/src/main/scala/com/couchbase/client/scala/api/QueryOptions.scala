@@ -21,7 +21,9 @@ import java.util.Objects
 import com.couchbase.client.core.env.{Credentials, RoleBasedCredentials}
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
+import ujson.Value
 
+import scala.collection.{GenMap, mutable}
 import scala.concurrent.duration.Duration
 
 object N1qlProfile extends Enumeration {
@@ -34,23 +36,23 @@ case class AtPlus(consistentWith: List[MutationToken], scanWait: Option[Duration
 case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency
 case class StatementPlus(scanWait: Option[Duration] = None) extends ScanConsistency
 
-
-case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
-                        positionalParameters: Option[List[Any]] = None,
-                        contextId: Option[String] = None,
-                        credentials: Option[List[Credentials]] = None,
-                        maxParallelism: Option[Int] = None,
-                        disableMetrics: Option[Boolean] = None,
-                        pipelineBatch: Option[Int] = None,
-                        pipelineCap: Option[Int] = None,
-                        profile: Option[N1qlProfile.Value] = None,
-                        readonly: Option[Boolean] = None,
-                        retryStrategy: Option[RetryStrategy] = None,
-                        scanCap: Option[Int] = None,
-                        scanConsistency: Option[ScanConsistency] = None,
+case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
+                        private[scala] val positionalParameters: Option[List[Any]] = None,
+                        private[scala] val contextId: Option[String] = None,
+                        private[scala] val credentials: Option[List[Credentials]] = None,
+                        private[scala] val maxParallelism: Option[Int] = None,
+                        private[scala] val disableMetrics: Option[Boolean] = None,
+                        private[scala] val pipelineBatch: Option[Int] = None,
+                        private[scala] val pipelineCap: Option[Int] = None,
+                        private[scala] val profile: Option[N1qlProfile.Value] = None,
+                        private[scala] val readonly: Option[Boolean] = None,
+                        private[scala] val retryStrategy: Option[RetryStrategy] = None,
+                        private[scala] val scanCap: Option[Int] = None,
+                        private[scala] val scanConsistency: Option[ScanConsistency] = None,
+                       // TODO support
 //                        consistentWith: Option[List[MutationToken]]
-                       serverSideTimeout: Option[Duration] = None,
-                        timeout: Option[Duration] = None
+                        private[scala] val serverSideTimeout: Option[Duration] = None,
+                        private[scala] val timeout: Option[Duration] = None
                        ) {
   def namedParameter(name: String, value: Any): QueryOptions = {
     Objects.requireNonNull(name)
@@ -58,9 +60,15 @@ case class QueryOptions(namedParameters: Option[Map[String,Any]] = None,
     copy(namedParameters = Some(namedParameters.getOrElse(Map()) + (name -> value)))
   }
 
+  def namedParameters(value: (String, Any),
+                      values: (String, Any)*): QueryOptions = {
+    Objects.requireNonNull(namedParameters)
+    val map: Map[String, Any] = values.toMap + (value._1 -> value._2)
+    copy(namedParameters = Option(map))
+  }
+
   def namedParameters(values: Map[String,Any]): QueryOptions = {
     Objects.requireNonNull(namedParameters)
-    // TODO maybe can support "name" -> "value" syntax
     copy(namedParameters = Option(values))
   }
 
