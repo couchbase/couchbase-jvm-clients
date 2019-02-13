@@ -27,7 +27,7 @@ import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{GetResult, LookupInResult, MutateInResult}
 import com.couchbase.client.scala.durability.{Disabled, Durability}
-import com.couchbase.client.scala.kv.RequestHandler
+import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec, RequestHandler}
 import com.couchbase.client.scala.util.FutureConversions
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
@@ -126,7 +126,7 @@ class ReactiveCollection(async: AsyncCollection) {
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Mono[GetResult] = {
     if (withExpiration) {
-      getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
         GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
@@ -144,7 +144,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
 
   private def getSubDoc(id: String,
-                        spec: LookupInSpec,
+                        spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
                         timeout: FiniteDuration = kvTimeout,
@@ -154,7 +154,7 @@ class ReactiveCollection(async: AsyncCollection) {
   }
   
   def mutateIn(id: String,
-               spec: MutateInSpec,
+               spec: Seq[MutateInSpec],
                cas: Long = 0,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
@@ -189,7 +189,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
 
   def lookupIn(id: String,
-               spec: LookupInSpec,
+               spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()

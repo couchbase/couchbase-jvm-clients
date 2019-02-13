@@ -211,7 +211,7 @@ class AsyncCollection(name: String,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Future[GetResult] = {
     if (withExpiration) {
-      getSubDoc(id, LookupInSpec.getDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
         GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
@@ -229,7 +229,7 @@ class AsyncCollection(name: String,
 
 
   private def getSubDoc(id: String,
-                        spec: LookupInSpec,
+                        spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
                         timeout: FiniteDuration = kvTimeout,
@@ -241,7 +241,7 @@ class AsyncCollection(name: String,
   // TODO add unlock
 
   def mutateIn(id: String,
-               spec: MutateInSpec,
+               spec: Seq[MutateInSpec],
                cas: Long = 0,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
@@ -276,7 +276,7 @@ class AsyncCollection(name: String,
 
 
   def lookupIn(id: String,
-               spec: LookupInSpec,
+               spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()
@@ -287,4 +287,8 @@ class AsyncCollection(name: String,
   }
 
   // TODO getfromreplica
+}
+
+object AsyncCollection {
+  val getFullDoc = Array(LookupInSpec.getDoc)
 }

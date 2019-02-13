@@ -23,6 +23,7 @@ import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document._
 import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
 //import com.couchbase.client.scala.query.N1qlQueryResult
@@ -110,8 +111,7 @@ class Collection(val async: AsyncCollection,
   }
 
   def mutateIn(id: String,
-               // TODO change to a list
-               spec: MutateInSpec,
+               spec: Seq[MutateInSpec],
                cas: Long = 0,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
@@ -154,7 +154,7 @@ class Collection(val async: AsyncCollection,
 
 
   def lookupIn(id: String,
-               spec: LookupInSpec,
+               spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
                timeout: FiniteDuration = kvTimeout,
                retryStrategy: RetryStrategy = async.environment.retryStrategy()

@@ -7,7 +7,6 @@ import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.Validators
 import com.couchbase.client.scala.HandlerParams
-import com.couchbase.client.scala.api.{MutateInSpec, MutateOperation, MutateOperationSimple, MutationResult}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.MutateInResult
 import com.couchbase.client.scala.durability.{Disabled, Durability}
@@ -24,7 +23,7 @@ import collection.JavaConverters._
 class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResponse, MutateInResult] {
 
   def request[T](id: String,
-                 spec: MutateInSpec,
+                 spec: Seq[MutateInSpec],
                  cas: Long,
                  insertDocument: Boolean,
                  durability: Durability,
@@ -49,19 +48,19 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
     }
     else {
       // Find any decode failure
-      val failed: Option[MutateOperation] = spec.operations
-        .filter(_.isInstanceOf[MutateOperationSimple])
-        .find(v => v.asInstanceOf[MutateOperationSimple].fragment.isFailure)
+      val failed: Option[MutateInSpec] = spec
+        .filter(_.isInstanceOf[MutateInSpecStandard])
+        .find(v => v.asInstanceOf[MutateInSpecStandard].fragment.isFailure)
 
       failed match {
-        case Some(failed: MutateOperationSimple) =>
+        case Some(failed: MutateInSpecStandard) =>
           // If any of the decodes failed, abort
           Failure(failed.fragment.failed.get)
 
         case _ =>
 
           val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
-          spec.operations.map(_.convert).foreach(commands.add)
+          spec.map(_.convert).foreach(commands.add)
 
           if (commands.isEmpty) {
             Failure(SubdocMutateRequest.errIfNoCommands())

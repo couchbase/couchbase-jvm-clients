@@ -1,7 +1,6 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.api.LookupInSpec
 import com.couchbase.client.scala.util.Validate
 import org.scalatest.{FunSpec, FunSuite}
 

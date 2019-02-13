@@ -26,6 +26,7 @@ import com.couchbase.client.java.codec.Encoder;
 import java.util.ArrayList;
 import java.util.List;
 
+// todo: these are MutateInSpec in the spec
 public class MutateInOps {
 
   private final List<SubdocMutateRequest.Command> commands;

@@ -3,7 +3,6 @@ package com.couchbase.client.scala.encodings
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.error.subdoc.MultiMutationException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
-import com.couchbase.client.scala.api.MutateInSpec
 import com.couchbase.client.scala.codec.Conversions.Encodable
 import com.couchbase.client.scala.codec.DocumentFlags
 import com.couchbase.client.scala.{Cluster, TestUtils}

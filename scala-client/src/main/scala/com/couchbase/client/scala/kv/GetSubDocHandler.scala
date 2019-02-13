@@ -27,7 +27,7 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
 
 
   def request[T](id: String,
-                 spec: LookupInSpec,
+                 spec: Seq[LookupInSpec],
                  withExpiration: Boolean,
                  parentSpan: Option[Span],
                  timeout: java.time.Duration,
@@ -54,11 +54,11 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
         commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
       }
 
-      spec.operations.map {
-        case x: GetOperation => new SubdocGetRequest.Command(SubdocCommandType.GET, x.path, x.xattr)
-        case x: GetFullDocumentOperation => new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false)
-        case x: ExistsOperation => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x.xattr)
-        case x: CountOperation => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x.xattr)
+      spec.map {
+        case x: Get => new SubdocGetRequest.Command(SubdocCommandType.GET, x.path, x.xattr)
+        case x: GetFullDocument => new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false)
+        case x: Exists => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x.xattr)
+        case x: Count => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x.xattr)
       }.foreach(commands.add)
 
       if (commands.isEmpty) {
