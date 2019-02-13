@@ -216,8 +216,4 @@ object JsonObject {
     values.foreach(v => map.put(v._1, v._2))
     new JsonObject(map)
   }
-
-
-
-  // TODO from(Map), and key -> value, generally make it really easy to create json
 }

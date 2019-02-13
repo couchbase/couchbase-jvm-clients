@@ -115,7 +115,7 @@ object JsonObjectBench extends Bench.ForkedTime {
     performance of "creating array from existing map" in {
       val map = Map("name" -> FieldName, "age" -> 29)
 
-      using(gen) in {
+      using(gen) in {cmu
         r =>
           val json = JsonArray(map)
       }

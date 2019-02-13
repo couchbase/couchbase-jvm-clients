@@ -64,9 +64,10 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     ByteBuf body;
     if (commands.size() == 1) {
-      // todo: Optimize into single get request only?
       // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
       // add the others if do the single lookup optimisation.
+      // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
+      // minimal performance gains, in return for additional client complexity.
       body = commands.get(0).encode(alloc);
     } else {
       body = alloc.compositeBuffer(commands.size());
@@ -132,8 +133,12 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
+      // Special case logic for CMD_EXISTS
+      if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
+        status = ResponseStatus.SUCCESS;
+      }
       // If a single subdoc op was tried and failed, return that directly
-      if (commands.size() == 1 && errors != null && errors.size() == 1) {
+      else if (commands.size() == 1 && errors != null && errors.size() == 1) {
         error = Optional.of(errors.get(0));
       }
       else {

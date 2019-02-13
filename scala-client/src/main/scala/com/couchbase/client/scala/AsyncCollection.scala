@@ -238,6 +238,8 @@ class AsyncCollection(name: String,
     wrap(req, id, getSubDocHandler)
   }
 
+  // TODO add unlock
+
   def mutateIn(id: String,
                spec: MutateInSpec,
                cas: Long = 0,

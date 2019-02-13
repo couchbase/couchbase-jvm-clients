@@ -102,25 +102,23 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder
-//  test("exists single") {
-//    val docId = TestUtils.docId()
-//    coll.remove(docId)
-//    val content = ujson.Obj("hello" -> ujson.Arr("world"))
-//    val insertResult = coll.insert(docId, content).get
-//
-//    coll.lookupIn(docId,
-//      LookupInOps.exists("does_not_exist")) match {
-//      case Success(result) =>
-//        result.fieldAs[Boolean]("does_not_exist") match {
-//          case Failure(err: PathNotFoundException) =>
-//          case Success(v) => assert(false, s"should not succeed")
-//          case Failure(err) => assert(false, s"unexpected error $err")
-//        }
-//        assert(result.fieldAs[Int]("hello").get == 1)
-//      case Failure(err) => assert(false, s"unexpected error $err")
-//    }
-//  }
+  test("exists single") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> ujson.Arr("world"))
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId,
+      LookupInSpec.exists("does_not_exist")) match {
+      case Success(result) =>
+        result.contentAs[Boolean](0) match {
+          case Failure(err: PathNotFoundException) =>
+          case Success(v) => assert(false, s"should not succeed")
+          case Failure(err) => assert(false, s"unexpected error $err")
+        }
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
 
   test("exists multi") {
     val docId = TestUtils.docId()
