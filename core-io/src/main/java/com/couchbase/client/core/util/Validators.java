@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.util;
 
+import java.util.List;
+
 /**
  * Common validators used throughout the client.
  *
@@ -49,6 +51,12 @@ public class Validators {
    * @param identifier the identifier that is part of the exception message.
    */
   public static void notNullOrEmpty(final String input, final String identifier) {
+    if (input == null || input.isEmpty()) {
+      throw new IllegalArgumentException(identifier + " cannot be null or empty");
+    }
+  }
+
+  public static void notNullOrEmpty(final List<?> input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw new IllegalArgumentException(identifier + " cannot be null or empty");
     }

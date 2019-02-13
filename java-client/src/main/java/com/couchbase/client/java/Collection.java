@@ -24,7 +24,7 @@ import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInOps;
+import com.couchbase.client.java.kv.LookupInOp;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
@@ -38,6 +38,7 @@ import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -334,13 +335,13 @@ public class Collection {
     block(async().unlock(id, cas, options));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, final LookupInOps spec) {
-    return block(async().lookupIn(id, spec));
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInOp> ops) {
+    return block(async().lookupIn(id, ops));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, final LookupInOps spec,
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInOp> ops,
                                            final LookupInOptions options) {
-    return block(async().lookupIn(id, spec, options));
+    return block(async().lookupIn(id, ops, options));
   }
 
   /**

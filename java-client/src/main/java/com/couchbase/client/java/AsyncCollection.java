@@ -712,26 +712,31 @@ public class AsyncCollection {
     return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInOps spec) {
-    return lookupIn(id, spec, LookupInOptions.DEFAULT);
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInOp> ops) {
+    return lookupIn(id, ops, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final LookupInOps spec,
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInOp> ops,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, spec, options));
+    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, ops, options));
   }
 
-  SubdocGetRequest lookupInRequest(final String id, final LookupInOps spec,
+  SubdocGetRequest lookupInRequest(final String id, final List<LookupInOp> ops,
                                     final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(spec, "LookupInOps");
+    notNullOrEmpty(ops, "LookupInOps");
     notNull(options, "LookupInOptions");
     LookupInOptions.BuiltLookupInOptions opts = options.build();
+
+    List<SubdocGetRequest.Command> commands = ops
+      .stream()
+      .map(LookupInOp::export)
+      .collect(Collectors.toList());
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     return new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-      (byte) 0, spec.commands());
+      (byte) 0, commands);
   }
 
   /**

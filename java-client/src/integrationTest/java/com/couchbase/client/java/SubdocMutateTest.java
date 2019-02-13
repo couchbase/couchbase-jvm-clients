@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
-import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
@@ -29,10 +28,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Optional;
+import java.util.Arrays;
 import java.util.UUID;
 
-import static com.couchbase.client.java.kv.LookupInOps.lookupInOps;
 import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static org.junit.jupiter.api.Assertions.*;
@@ -128,7 +126,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         coll.mutateIn(docId, ops);
 
-        return coll.lookupIn(docId, lookupInOps().get(true, "x")).get().contentAsObject(0);
+        return coll.lookupIn(docId, Arrays.asList(LookupInOp.get("x").xattr())).get().contentAsObject(0);
     }
 
     private void checkSingleOpFailure(JsonObject content, MutateInOps ops, SubDocumentOpResponseStatus expected) {

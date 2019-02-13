@@ -26,6 +26,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -410,14 +411,14 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, final LookupInOps spec) {
-    return lookupIn(id, spec, LookupInOptions.DEFAULT);
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInOp> ops) {
+    return lookupIn(id, ops, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, final LookupInOps spec,
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInOp> ops,
                                        final LookupInOptions options) {
     return Mono.defer(() -> {
-      SubdocGetRequest request = asyncCollection.lookupInRequest(id, spec, options);
+      SubdocGetRequest request = asyncCollection.lookupInRequest(id, ops, options);
       return Reactor
         .wrap(request, LookupInAccessor.lookupInAccessor(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
