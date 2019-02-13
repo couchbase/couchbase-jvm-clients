@@ -33,7 +33,7 @@ import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -42,13 +42,7 @@ class ReactiveCollection(async: AsyncCollection) {
   private val environment = async.environment
   private val core = async.core
 
-  implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
-
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
-    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
-  }
+  import DurationConversions._
 
   private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): Mono[Res] = {
     in match {
@@ -64,7 +58,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
   def exists[T](id: String,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[ExistsResult] = {
     val req = async.existsHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.existsHandler)
@@ -73,9 +67,9 @@ class ReactiveCollection(async: AsyncCollection) {
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
     val req = async.insertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -87,9 +81,9 @@ class ReactiveCollection(async: AsyncCollection) {
                  content: T,
                  cas: Long = 0,
                  durability: Durability = Disabled,
-                 expiration: FiniteDuration = 0.seconds,
+                 expiration: Duration = 0.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy())
                 (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
     val req = async.replaceHandler.request(id, content, cas, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -99,9 +93,9 @@ class ReactiveCollection(async: AsyncCollection) {
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
     val req = async.upsertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -113,7 +107,7 @@ class ReactiveCollection(async: AsyncCollection) {
              cas: Long = 0,
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
-             timeout: FiniteDuration = kvTimeout,
+             timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutationResult] = {
     val req = async.removeHandler.request(id, cas, durability, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.removeHandler)
@@ -122,7 +116,7 @@ class ReactiveCollection(async: AsyncCollection) {
   def get(id: String,
           withExpiration: Boolean = false,
           parentSpan: Option[Span] = None,
-          timeout: FiniteDuration = kvTimeout,
+          timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Mono[GetResult] = {
     if (withExpiration) {
@@ -136,7 +130,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
   private def getFullDoc(id: String,
                          parentSpan: Option[Span] = None,
-                         timeout: FiniteDuration = kvTimeout,
+                         timeout: Duration = kvTimeout,
                          retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[GetResult] = {
     val req = async.getFullDocHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.getFullDocHandler)
@@ -147,7 +141,7 @@ class ReactiveCollection(async: AsyncCollection) {
                         spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
-                        timeout: FiniteDuration = kvTimeout,
+                        timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[LookupInResult] = {
     val req = async.getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.getSubDocHandler)
@@ -159,17 +153,17 @@ class ReactiveCollection(async: AsyncCollection) {
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
-               expiration: FiniteDuration,
-               timeout: FiniteDuration = kvTimeout,
+               expiration: Duration,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutateInResult] = {
     val req = async.mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.mutateInHandler)
   }
 
   def getAndLock(id: String,
-                 expiration: FiniteDuration = 30.seconds,
+                 expiration: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy()
                 ): Mono[GetResult] = {
     val req = async.getAndLockHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
@@ -177,10 +171,10 @@ class ReactiveCollection(async: AsyncCollection) {
   }
 
   def getAndTouch(id: String,
-                  expiration: FiniteDuration,
+                  expiration: Duration,
                   durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
-                  timeout: FiniteDuration = kvTimeout,
+                  timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy()
                  ): Mono[GetResult] = {
     val req = async.getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
@@ -191,7 +185,7 @@ class ReactiveCollection(async: AsyncCollection) {
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
-               timeout: FiniteDuration = kvTimeout,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()
               ): Mono[LookupInResult] = {
     // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app

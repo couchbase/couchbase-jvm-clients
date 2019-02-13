@@ -20,12 +20,12 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.couchbase.client.core.env.Credentials
-import com.couchbase.client.scala.api.{QueryOptions}
+import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.query.QueryResult
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{Duration}
 import scala.util.Try
 
 // TODO: v important, check what happens when converting CompletableFuture to Future - want to happen on core's threadpool
@@ -41,16 +41,12 @@ class Cluster(env: => ClusterEnvironment)
       .map(new Bucket(_))
   }
 
-  implicit def scalaFiniteDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
-
   implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
   }
 
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
-    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
+  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.Duration = {
+    Duration.apply(in.toNanos, TimeUnit.NANOSECONDS)
   }
 
   // TODO MVP
@@ -61,6 +57,10 @@ class Cluster(env: => ClusterEnvironment)
     }
 
     AsyncUtils.block(async.query(statement, options), timeout)
+  }
+
+  def shutdown(): Unit = {
+    AsyncUtils.block(async.shutdown(), Duration.Inf)
   }
 }
 

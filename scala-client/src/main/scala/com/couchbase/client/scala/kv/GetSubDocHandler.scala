@@ -16,7 +16,7 @@ import io.opentracing.Span
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 
@@ -82,13 +82,13 @@ class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetRespon
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
 
-        var exptime: Option[FiniteDuration] = None
+        var exptime: Option[Duration] = None
         val fields = collection.mutable.Map.empty[String, SubdocField]
 
         values.foreach(value => {
           if (value.path() == ExpTime) {
             val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-            exptime = Some(FiniteDuration(str.toLong, TimeUnit.SECONDS))
+            exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
           }
         })
 

@@ -29,7 +29,6 @@ import reactor.core.scala.publisher.Mono
 //import com.couchbase.client.scala.query.N1qlQueryResult
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
@@ -42,9 +41,9 @@ class Collection(val async: AsyncCollection,
   // TODO binary collection
   private val SafetyTimeout = 1.second
   //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
-  private[scala] val kvTimeout = FiniteDuration(2500, TimeUnit.MILLISECONDS)
+  private[scala] val kvTimeout = Duration(2500, TimeUnit.MILLISECONDS)
 
-  private def block[T](in: Future[T], timeout: FiniteDuration): Try[T] = {
+  private def block[T](in: Future[T], timeout: Duration): Try[T] = {
     try {
       Try(Await.result(in, timeout + SafetyTimeout))
     }
@@ -55,7 +54,7 @@ class Collection(val async: AsyncCollection,
 
   def exists[T](id: String,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
                )
   : Try[ExistsResult] = {
@@ -65,9 +64,9 @@ class Collection(val async: AsyncCollection,
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = async.environment.retryStrategy(),
                )
                (implicit ev: Conversions.Encodable[T])
@@ -79,9 +78,9 @@ class Collection(val async: AsyncCollection,
                  content: T,
                  cas: Long = 0,
                  durability: Durability = Disabled,
-                 expiration: FiniteDuration = 0.seconds,
+                 expiration: Duration = 0.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = async.environment.retryStrategy()
                 )
                 (implicit ev: Conversions.Encodable[T]): Try[MutationResult] = {
@@ -91,9 +90,9 @@ class Collection(val async: AsyncCollection,
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = async.environment.retryStrategy()
                )
                (implicit ev: Conversions.Encodable[T]): Try[MutationResult] = {
@@ -104,7 +103,7 @@ class Collection(val async: AsyncCollection,
              cas: Long = 0,
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
-             timeout: FiniteDuration = kvTimeout,
+             timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = async.environment.retryStrategy()
             ): Try[MutationResult] = {
     block(async.remove(id, cas, durability, parentSpan, timeout, retryStrategy), timeout)
@@ -116,8 +115,8 @@ class Collection(val async: AsyncCollection,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
-               expiration: FiniteDuration = 0.seconds,
-               timeout: FiniteDuration = kvTimeout,
+               expiration: Duration = 0.seconds,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = async.environment.retryStrategy()
               ): Try[MutateInResult] = {
     block(async.mutateIn(id, spec, cas, insertDocument, durability, parentSpan, expiration, timeout, retryStrategy), timeout)
@@ -125,19 +124,19 @@ class Collection(val async: AsyncCollection,
 
 
   def getAndLock(id: String,
-                 lockFor: FiniteDuration = 30.seconds,
+                 lockFor: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = async.environment.retryStrategy()
                 ): Try[GetResult] = {
     block(async.getAndLock(id, lockFor, parentSpan, timeout, retryStrategy), timeout)
   }
 
   def getAndTouch(id: String,
-                  expiration: FiniteDuration,
+                  expiration: Duration,
                   durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
-                  timeout: FiniteDuration = kvTimeout,
+                  timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = async.environment.retryStrategy()
                  ): Try[GetResult] = {
     block(async.getAndTouch(id, expiration, durability, parentSpan, timeout, retryStrategy), timeout)
@@ -146,7 +145,7 @@ class Collection(val async: AsyncCollection,
   def get(id: String,
           withExpiration: Boolean = false,
           parentSpan: Option[Span] = None,
-          timeout: FiniteDuration = kvTimeout,
+          timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = async.environment.retryStrategy()
          ): Try[GetResult] = {
     block(async.get(id, withExpiration, parentSpan, timeout, retryStrategy), timeout)
@@ -156,7 +155,7 @@ class Collection(val async: AsyncCollection,
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
-               timeout: FiniteDuration = kvTimeout,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = async.environment.retryStrategy()
               ): Try[LookupInResult] = {
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)

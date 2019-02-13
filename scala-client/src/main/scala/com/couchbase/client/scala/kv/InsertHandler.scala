@@ -15,7 +15,6 @@ import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 
 class InsertHandler(hp: HandlerParams) extends RequestHandler[InsertResponse, MutationResult] {

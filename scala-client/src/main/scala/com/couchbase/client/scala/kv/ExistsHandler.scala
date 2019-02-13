@@ -11,7 +11,6 @@ import io.opentracing.Span
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{Success, Try}
 
 

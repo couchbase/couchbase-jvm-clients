@@ -13,29 +13,29 @@ import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+
+object DurationConversions {
+  implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
+    java.time.Duration.ofNanos(in.toNanos)
+  }
+
+  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.Duration = {
+    scala.concurrent.duration.Duration(in.toNanos, TimeUnit.NANOSECONDS)
+  }
+
+}
 
 class AsyncCluster(environment: => ClusterEnvironment)
                   (implicit ec: ExecutionContext) {
   private val core = Core.create(environment)
 
-  // TODO MVP other credentials
   // TODO MVP query
-  // TODO MVP shutdown
 
-  implicit def scalaFiniteDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
+  import DurationConversions._
 
-  implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
-
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
-    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
-  }
 
   def bucket(name: String): Future[AsyncBucket] = {
     FutureConversions.javaMonoToScalaFuture(core.openBucket(name))
@@ -96,10 +96,10 @@ class AsyncCluster(environment: => ClusterEnvironment)
           })
     }
   }
-}
 
-//object AsyncCluster {
-////  def connect(username: String, password: String) = {
-////    AsyncCluster(() => ClusterEnvironment.create(usernmae, password))
-////  }
-//}
+  def shutdown(): Future[Unit] = {
+    Future {
+      environment.shutdown(environment.timeoutConfig().disconnectTimeout())
+    }
+  }
+}

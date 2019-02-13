@@ -17,9 +17,9 @@
 package com.couchbase.client.scala
 
 import java.nio.charset.Charset
-import java.time.Duration
 import java.util.Optional
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
@@ -51,7 +51,7 @@ import rx.RxReactiveStreams
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future, JavaConversions}
-import scala.concurrent.duration.{Duration, FiniteDuration, _}
+import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 import ujson._
@@ -69,6 +69,8 @@ class AsyncCollection(name: String,
                       val core: Core,
                       val environment: ClusterEnvironment)
                      (implicit ec: ExecutionContext) {
+  import DurationConversions._
+
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
   private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
   private val hp = HandlerParams(core, bucketName, collectionIdEncoded)
@@ -86,13 +88,6 @@ class AsyncCollection(name: String,
   // TODO AsyncBinaryCollection
 
 
-  implicit def scalaDurationToJava(in: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
-
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
-    FiniteDuration.apply(in.toNanos, TimeUnit.NANOSECONDS)
-  }
 
   private def throwOnBadResult(status: ResponseStatus): RuntimeException = {
     DefaultErrors.throwOnBadResult(status)
@@ -146,10 +141,9 @@ class AsyncCollection(name: String,
       case _ => initial
     }
   }
-
   def exists(id: String,
              parentSpan: Option[Span] = None,
-             timeout: FiniteDuration = kvTimeout,
+             timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
     val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, existsHandler)
@@ -158,9 +152,9 @@ class AsyncCollection(name: String,
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T])
   : Future[MutationResult] = {
@@ -172,9 +166,9 @@ class AsyncCollection(name: String,
                  content: T,
                  cas: Long = 0,
                  durability: Durability = Disabled,
-                 expiration: FiniteDuration = 0.seconds,
+                 expiration: Duration = 0.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy())
                 (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
     val req = replaceHandler.request(id, content, cas, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -184,9 +178,9 @@ class AsyncCollection(name: String,
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: FiniteDuration = 0.seconds,
+                expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
-                timeout: FiniteDuration = kvTimeout,
+                timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy())
                (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
     val req = upsertHandler.request(id, content, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -198,7 +192,7 @@ class AsyncCollection(name: String,
              cas: Long = 0,
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
-             timeout: FiniteDuration = kvTimeout,
+             timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutationResult] = {
     val req = removeHandler.request(id, cas, durability, parentSpan, timeout, retryStrategy)
     wrapWithDurability(req, id, removeHandler, durability, true, timeout)
@@ -207,7 +201,7 @@ class AsyncCollection(name: String,
   def get(id: String,
           withExpiration: Boolean = false,
           parentSpan: Option[Span] = None,
-          timeout: FiniteDuration = kvTimeout,
+          timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Future[GetResult] = {
     if (withExpiration) {
@@ -221,7 +215,7 @@ class AsyncCollection(name: String,
 
   private def getFullDoc(id: String,
                          parentSpan: Option[Span] = None,
-                         timeout: FiniteDuration = kvTimeout,
+                         timeout: Duration = kvTimeout,
                          retryStrategy: RetryStrategy = environment.retryStrategy()): Future[GetResult] = {
     val req = getFullDocHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, getFullDocHandler)
@@ -232,7 +226,7 @@ class AsyncCollection(name: String,
                         spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
                         parentSpan: Option[Span] = None,
-                        timeout: FiniteDuration = kvTimeout,
+                        timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
     val req = getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, getSubDocHandler)
@@ -246,17 +240,17 @@ class AsyncCollection(name: String,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
-               expiration: FiniteDuration,
-               timeout: FiniteDuration = kvTimeout,
+               expiration: Duration,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
     wrapWithDurability(req, id, mutateInHandler, durability, false, timeout)
   }
 
   def getAndLock(id: String,
-                 expiration: FiniteDuration = 30.seconds,
+                 expiration: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
-                 timeout: FiniteDuration = kvTimeout,
+                 timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy()
                 ): Future[GetResult] = {
     val req = getAndLockHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
@@ -264,10 +258,10 @@ class AsyncCollection(name: String,
   }
 
   def getAndTouch(id: String,
-                  expiration: FiniteDuration,
+                  expiration: Duration,
                   durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
-                  timeout: FiniteDuration = kvTimeout,
+                  timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy()
                  ): Future[GetResult] = {
     val req = getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
@@ -278,7 +272,7 @@ class AsyncCollection(name: String,
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
-               timeout: FiniteDuration = kvTimeout,
+               timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()
               ): Future[LookupInResult] = {
     // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app

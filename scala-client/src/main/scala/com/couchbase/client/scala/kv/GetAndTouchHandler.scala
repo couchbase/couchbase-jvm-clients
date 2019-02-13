@@ -11,7 +11,6 @@ import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.util.Validate
 import io.opentracing.Span
 
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{Success, Try}
 
 

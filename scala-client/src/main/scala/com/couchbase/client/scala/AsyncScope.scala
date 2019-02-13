@@ -9,8 +9,6 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO replicateTo and persistTo support
-
 class AsyncScope(scopeName: String,
                  bucketName: String,
                  core: Core,
