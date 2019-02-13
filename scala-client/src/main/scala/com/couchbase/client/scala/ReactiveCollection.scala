@@ -170,6 +170,16 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.getAndLockHandler)
   }
 
+  def unlock(id: String,
+             cas: Long,
+             parentSpan: Option[Span] = None,
+             timeout: Duration = kvTimeout,
+             retryStrategy: RetryStrategy = async.environment.retryStrategy()
+            ): Mono[Unit] = {
+    val req = async.unlockHandler.request(id, cas, parentSpan, timeout, retryStrategy)
+    wrap(req, id, async.unlockHandler)
+  }
+
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,

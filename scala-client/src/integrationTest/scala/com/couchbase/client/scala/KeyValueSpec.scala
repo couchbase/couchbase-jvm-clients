@@ -114,6 +114,33 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
+  test("unlock") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("hello" -> "world")
+    val insertResult = coll.insert(docId, content).get
+
+    coll.getAndLock(docId) match {
+      case Success(result) =>
+        assert(result.cas != 0)
+        assert(result.cas != insertResult.cas)
+        assert(result.contentAs[ujson.Obj].get == content)
+
+        coll.unlock(docId, result.cas) match {
+          case Success(_) =>
+          case Failure(err) => assert(false, s"unexpected error $err")
+        }
+
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.getAndLock(docId) match {
+      case Success(result) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+
   test("get and touch") {
     val docId = TestUtils.docId()
     coll.remove(docId)

@@ -85,6 +85,7 @@ class AsyncCollection(name: String,
   private[scala] val getAndTouchHandler = new GetAndTouchHandler(hp)
   private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
   private[scala] val mutateInHandler = new MutateInHandler(hp)
+  private[scala] val unlockHandler = new UnlockHandler(hp)
 
   // TODO AsyncBinaryCollection
 
@@ -107,8 +108,6 @@ class AsyncCollection(name: String,
       case Failure(err) => Future.failed(err)
     }
   }
-
-  // TODO support mutation tokens
 
   private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
                                                                                id: String,
@@ -233,8 +232,6 @@ class AsyncCollection(name: String,
     wrap(req, id, getSubDocHandler)
   }
 
-  // TODO add unlock
-
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
@@ -258,6 +255,16 @@ class AsyncCollection(name: String,
     wrap(req, id, getAndLockHandler)
   }
 
+  def unlock(id: String,
+             cas: Long,
+             parentSpan: Option[Span] = None,
+             timeout: Duration = kvTimeout,
+             retryStrategy: RetryStrategy = environment.retryStrategy()
+            ): Future[Unit] = {
+    val req = unlockHandler.request(id, cas, parentSpan, timeout, retryStrategy)
+    wrap(req, id, unlockHandler)
+  }
+
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
@@ -268,7 +275,6 @@ class AsyncCollection(name: String,
     val req = getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
     wrap(req, id, getAndTouchHandler)
   }
-
 
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],

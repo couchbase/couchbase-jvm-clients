@@ -132,6 +132,15 @@ class Collection(val async: AsyncCollection,
     block(async.getAndLock(id, lockFor, parentSpan, timeout, retryStrategy), timeout)
   }
 
+  def unlock(id: String,
+             cas: Long,
+             parentSpan: Option[Span] = None,
+             timeout: Duration = kvTimeout,
+             retryStrategy: RetryStrategy = async.environment.retryStrategy()
+            ): Try[Unit] = {
+    block(async.unlock(id, cas, parentSpan, timeout, retryStrategy), timeout)
+  }
+
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
