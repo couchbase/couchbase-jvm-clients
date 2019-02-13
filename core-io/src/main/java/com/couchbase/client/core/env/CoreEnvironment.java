@@ -19,26 +19,18 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.*;
-import com.couchbase.client.core.node.MemcachedHashingStrategy;
-import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.AnalyticsServiceConfig;
-import com.couchbase.client.core.service.KeyValueServiceConfig;
-import com.couchbase.client.core.service.QueryServiceConfig;
-import com.couchbase.client.core.service.SearchServiceConfig;
-import com.couchbase.client.core.service.ViewServiceConfig;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
-import javax.print.attribute.standard.Compression;
-import javax.swing.text.html.Option;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -82,6 +74,7 @@ public class CoreEnvironment {
   private final Set<SeedNode> seedNodes;
   private final Credentials credentials;
   private final RetryStrategy retryStrategy;
+  private final Supplier<Scheduler> scheduler;
 
 
   public static CoreEnvironment create(final String username, final String password) {
@@ -124,6 +117,11 @@ public class CoreEnvironment {
       .ofNullable(builder.eventBus)
       .orElse(new OwnedSupplier<>(DefaultEventBus.create()));
     this.timer = Timer.createAndStart();
+    this.scheduler = Optional
+      .ofNullable(builder.scheduler)
+      .orElse(new OwnedSupplier<>(
+        Schedulers.newParallel("cb-comp", Schedulers.DEFAULT_POOL_SIZE, true))
+      );
 
     this.ioEnvironment = Optional.ofNullable(builder.ioEnvironment).orElse(IoEnvironment.create());
     this.ioConfig = Optional.ofNullable(builder.ioConfig).orElse(IoConfig.create());
@@ -244,6 +242,10 @@ public class CoreEnvironment {
     return loggerConfig;
   }
 
+  public Scheduler scheduler() {
+    return scheduler.get();
+  }
+
   /**
    * Holds the timer which is used to schedule tasks and trigger their callback,
    * for example to time out requests.
@@ -276,6 +278,12 @@ public class CoreEnvironment {
       .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop() : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
+        return Mono.<Void>empty();
+      }))
+      .then(Mono.defer(() -> {
+        if (scheduler instanceof OwnedSupplier) {
+          scheduler.get().dispose();
+        }
         return Mono.<Void>empty();
       }))
       .timeout(timeout);
@@ -316,6 +324,7 @@ public class CoreEnvironment {
     private ServiceConfig serviceConfig = null;
     private LoggerConfig loggerConfig = null;
     private Supplier<EventBus> eventBus = null;
+    private Supplier<Scheduler> scheduler = null;
 
     private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
@@ -375,6 +384,12 @@ public class CoreEnvironment {
     @Stability.Uncommitted
     public SELF eventBus(final EventBus eventBus) {
       this.eventBus = new ExternalSupplier<>(eventBus);
+      return self();
+    }
+
+    @Stability.Uncommitted
+    public SELF scheduler(final Scheduler scheduler) {
+      this.scheduler = new ExternalSupplier<>(scheduler);
       return self();
     }
 
