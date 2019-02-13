@@ -68,7 +68,8 @@ class AsyncCollection(name: String,
                       bucketName: String,
                       val core: Core,
                       val environment: ClusterEnvironment)
-                     (implicit ec: ExecutionContext) {
+                     (implicit ec: ExecutionContext)
+{
   import DurationConversions._
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())

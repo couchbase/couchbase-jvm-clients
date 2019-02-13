@@ -28,7 +28,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration}
 import scala.util.Try
 
-// TODO: v important, check what happens when converting CompletableFuture to Future - want to happen on core's threadpool
 class Cluster(env: => ClusterEnvironment)
              (implicit ec: ExecutionContext) {
 
@@ -65,7 +64,9 @@ class Cluster(env: => ClusterEnvironment)
 }
 
 object Cluster {
-  private val threadPool = Executors.newFixedThreadPool(10) // TODO 10? should we use core's instead?
+  // TODO create a reactive scheduler based on the pool
+  // TODO see if can detect blocking app-side callbacks
+  private val threadPool = Executors.newFixedThreadPool(10)
   private implicit val ec = ExecutionContext.fromExecutor(threadPool)
 
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
