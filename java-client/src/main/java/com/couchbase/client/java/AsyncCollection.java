@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -427,8 +428,7 @@ public class AsyncCollection {
         ));
       }
     } else {
-      throw new UnsupportedOperationException("Only couchbase buckets are supported "
-        + "for replica get requests!");
+      throw CommonExceptions.getFromReplicaNotCouchbaseBucket();
     }
   }
 

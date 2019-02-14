@@ -54,6 +54,7 @@ class InsertHandler(hp: HandlerParams) extends RequestHandler[InsertResponse, Mu
             hp.core.context(),
             hp.bucketName,
             retryStrategy,
+            // TODO new durability should raise new errors
             durability.toDurabilityLevel))
         case Failure(err) =>
           Failure(new EncodingFailedException(err))

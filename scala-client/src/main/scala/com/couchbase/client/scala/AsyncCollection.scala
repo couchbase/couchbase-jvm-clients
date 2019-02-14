@@ -63,13 +63,30 @@ import collection.JavaConverters._
 
 case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Array[Byte])
 
+
+sealed trait ReplicaMode
+
+object ReplicaMode {
+
+  case object All extends ReplicaMode
+
+  case object Any extends ReplicaMode
+
+  case object First extends ReplicaMode
+
+  case object Second extends ReplicaMode
+
+  case object Third extends ReplicaMode
+
+}
+
 class AsyncCollection(name: String,
                       collectionId: Long,
                       bucketName: String,
                       val core: Core,
                       val environment: ClusterEnvironment)
-                     (implicit ec: ExecutionContext)
-{
+                     (implicit ec: ExecutionContext) {
+
   import DurationConversions._
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
@@ -86,9 +103,9 @@ class AsyncCollection(name: String,
   private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
   private[scala] val mutateInHandler = new MutateInHandler(hp)
   private[scala] val unlockHandler = new UnlockHandler(hp)
+  private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
 
   // TODO AsyncBinaryCollection
-
 
 
   private def throwOnBadResult(status: ResponseStatus): RuntimeException = {
@@ -141,6 +158,7 @@ class AsyncCollection(name: String,
       case _ => initial
     }
   }
+
   def exists(id: String,
              parentSpan: Option[Span] = None,
              timeout: Duration = kvTimeout,
@@ -287,7 +305,35 @@ class AsyncCollection(name: String,
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
-  // TODO getfromreplica
+  def getFromReplica(id: String,
+                     replicaMode: ReplicaMode,
+                     parentSpan: Option[Span] = None,
+                     timeout: Duration = kvTimeout,
+                     retryStrategy: RetryStrategy = environment.retryStrategy()
+                    ): Seq[Future[GetResult]] = {
+    val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.request(id, replicaMode, parentSpan, timeout, retryStrategy)
+
+    reqsTry match {
+      case Failure(err) => Seq(Future.failed(err))
+
+      case Success(reqs: Seq[GetRequest]) =>
+        val out = reqs.map(request => {
+          core.send(request)
+
+          FutureConverters.toScala(request.response())
+            .map(response => {
+              getFullDocHandler.response(id, response)
+            })
+        })
+
+        replicaMode match {
+            // The main benefit of Any is to avoid blocking for all results when one will do
+          case ReplicaMode.Any => out.take(1)
+          case _ => out
+        }
+
+    }
+  }
 }
 
 object AsyncCollection {

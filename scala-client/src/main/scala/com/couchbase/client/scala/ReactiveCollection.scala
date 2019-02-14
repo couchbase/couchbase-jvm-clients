@@ -20,6 +20,7 @@ import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Reactor
+import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.Validators
@@ -30,7 +31,7 @@ import com.couchbase.client.scala.durability.{Disabled, Durability}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec, RequestHandler}
 import com.couchbase.client.scala.util.FutureConversions
 import io.opentracing.Span
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.duration._
@@ -203,4 +204,32 @@ class ReactiveCollection(async: AsyncCollection) {
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
+  def getFromReplica(id: String,
+                     replicaMode: ReplicaMode,
+                     parentSpan: Option[Span] = None,
+                     timeout: Duration = kvTimeout,
+                     retryStrategy: RetryStrategy = environment.retryStrategy()
+                    ): Flux[GetResult] = {
+    val reqsTry: Try[Seq[GetRequest]] = async.getFromReplicaHandler.request(id, replicaMode, parentSpan, timeout, retryStrategy)
+
+    reqsTry match {
+      case Failure(err) => Flux.error(err)
+
+      case Success(reqs: Seq[GetRequest]) =>
+        val monos: Seq[Mono[GetResult]] = reqs.map(request => {
+          core.send(request)
+
+          FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => async.getFullDocHandler.response(id, r))
+        })
+
+        val out = Flux.merge(monos)
+
+        replicaMode match {
+          case ReplicaMode.Any => out.take(1)
+          case _ => out
+        }
+    }
+
+  }
 }

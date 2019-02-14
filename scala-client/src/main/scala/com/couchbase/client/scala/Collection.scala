@@ -170,4 +170,12 @@ class Collection(val async: AsyncCollection,
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }
 
+  def getFromReplica(id: String,
+                     replicaMode: ReplicaMode,
+                     parentSpan: Option[Span] = None,
+                     timeout: Duration = kvTimeout,
+                     retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                    ): Iterable[GetResult] = {
+    reactive.getFromReplica(id, replicaMode, parentSpan, timeout, retryStrategy).toIterable()
+  }
 }
