@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // todo: these are MutateInSpec in the spec
+// todo: sync up with rfc - list of ops now
 public class MutateInOps {
 
   private final List<SubdocMutateRequest.Command> commands;

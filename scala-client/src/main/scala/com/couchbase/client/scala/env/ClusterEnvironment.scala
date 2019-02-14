@@ -1,6 +1,12 @@
 package com.couchbase.client.scala.env
 
+import java.util.concurrent.Executors
+
 import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, CoreEnvironment, Credentials, RoleBasedCredentials}
+import reactor.core.scala.scheduler.ExecutionContextScheduler
+import reactor.core.scheduler.Scheduler
+
+import scala.concurrent.ExecutionContext
 
 
 
@@ -12,8 +18,14 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnviro
 }
 
 object ClusterEnvironment {
+  // TODO see if can detect blocking app-side callbacks
+  private val numCores = Runtime.getRuntime.availableProcessors
+  private val threadPool = Executors.newFixedThreadPool(numCores)
+  private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  private val defaultScheduler = ExecutionContextScheduler(ec)
+
   class Builder(credentials: Credentials) extends CoreEnvironment.Builder[Builder](credentials) {
-    override def build = new ClusterEnvironment(this)
+    override def build = new ClusterEnvironment(scheduler(defaultScheduler))
   }
 
   def create(connectionString: String, username: String, password: String) = {

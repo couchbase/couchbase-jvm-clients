@@ -64,13 +64,11 @@ class Cluster(env: => ClusterEnvironment)
 }
 
 object Cluster {
-  // TODO create a reactive scheduler based on the pool
-  // TODO see if can detect blocking app-side callbacks
-  private val threadPool = Executors.newFixedThreadPool(10)
-  private implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  implicit val ec = ClusterEnvironment.ec
 
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
-    Try(new Cluster(ClusterEnvironment.create(connectionString, username, password)))
+    val env = ClusterEnvironment.create(connectionString, username, password)
+    Try(new Cluster(env)())
   }
 
   def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
