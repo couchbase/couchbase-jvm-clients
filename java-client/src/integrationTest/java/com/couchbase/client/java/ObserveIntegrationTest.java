@@ -152,7 +152,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     @BeforeEach
     void beforeEach() {
       environment = environment()
-        .ioConfig(IoConfig.builder().mutationTokensEnabled(true).build())
+        .ioConfig(IoConfig.mutationTokensEnabled(true))
         .build();
       cluster = Cluster.connect(environment);
       Bucket bucket = cluster.bucket(config().bucketname());

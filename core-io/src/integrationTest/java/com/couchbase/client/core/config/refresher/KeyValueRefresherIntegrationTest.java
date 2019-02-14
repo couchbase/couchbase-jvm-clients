@@ -54,7 +54,7 @@ class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .ioConfig(IoConfig.builder().configPollInterval(Duration.ofSeconds(1)).build())
+      .ioConfig(IoConfig.configPollInterval(Duration.ofSeconds(1)))
       .build();
   }
 

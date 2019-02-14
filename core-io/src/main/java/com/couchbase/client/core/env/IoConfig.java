@@ -66,12 +66,48 @@ public class IoConfig {
       .orElse(CircuitBreakerConfig.disabled());
   }
 
+  public static IoConfig create() {
+    return builder().build();
+  }
+
   public static IoConfig.Builder builder() {
     return new IoConfig.Builder();
   }
 
-  public static IoConfig create() {
-    return builder().build();
+  public static IoConfig.Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
+    return builder().mutationTokensEnabled(mutationTokensEnabled);
+  }
+
+  public static IoConfig.Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
+    return builder().allowedSaslMechanisms(allowedSaslMechanisms);
+  }
+
+  public static IoConfig.Builder configPollInterval(Duration configPollInterval) {
+    return builder().configPollInterval(configPollInterval);
+  }
+
+  public static IoConfig.Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
+    return builder().kvCircuitBreakerConfig(kvCircuitBreakerConfig);
+  }
+
+  public static IoConfig.Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
+    return builder().queryCircuitBreakerConfig(queryCircuitBreakerConfig);
+  }
+
+  public static IoConfig.Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
+    return builder().viewCircuitBreakerConfig(viewCircuitBreakerConfig);
+  }
+
+  public static IoConfig.Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
+    return builder().searchCircuitBreakerConfig(searchCircuitBreakerConfig);
+  }
+
+  public static IoConfig.Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
+    return builder().analyticsCircuitBreakerConfig(analyticsCircuitBreakerConfig);
+  }
+
+  public static IoConfig.Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
+    return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 
   public Set<SaslMechanism> allowedSaslMechanisms() {

@@ -351,8 +351,8 @@ public class CoreEnvironment {
       return self();
     }
 
-    public SELF ioConfig(final IoConfig ioConfig) {
-      this.ioConfig = ioConfig;
+    public SELF ioConfig(final IoConfig.Builder ioConfig) {
+      this.ioConfig = ioConfig.build();
       return self();
     }
 

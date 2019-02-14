@@ -48,7 +48,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .ioConfig(IoConfig.builder().mutationTokensEnabled(true).build())
+      .ioConfig(IoConfig.mutationTokensEnabled(true))
       .build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();

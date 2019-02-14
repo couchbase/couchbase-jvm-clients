@@ -13,7 +13,7 @@ class MutationTokensSpec extends FunSuite {
   val (cluster, bucket, coll) = (for {
     env <- Try(ClusterEnvironment
       .builder("localhost", "Administrator", "password")
-      .ioConfig(IoConfig.builder().mutationTokensEnabled(true).build())
+      .ioConfig(IoConfig.mutationTokensEnabled(true))
       .build())
     cluster <- Cluster.connect(env)
     bucket <- cluster.bucket("default")
