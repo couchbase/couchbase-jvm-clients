@@ -48,7 +48,7 @@ class DefaultConfigurationProviderTest {
 
   @AfterAll
   static void teardown() {
-    ENVIRONMENT.shutdown(Duration.ofSeconds(1));
+    ENVIRONMENT.shutdown();
   }
 
   @Test

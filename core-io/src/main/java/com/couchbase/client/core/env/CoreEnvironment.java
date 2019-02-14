@@ -280,6 +280,7 @@ public class CoreEnvironment {
         timer.stop();
         return Mono.<Void>empty();
       }))
+      .then(ioEnvironment.shutdown(timeout))
       .then(Mono.defer(() -> {
         if (scheduler instanceof OwnedSupplier) {
           scheduler.get().dispose();
@@ -287,6 +288,10 @@ public class CoreEnvironment {
         return Mono.<Void>empty();
       }))
       .timeout(timeout);
+  }
+
+  public Mono<Void> shutdownReactive() {
+    return shutdownReactive(timeoutConfig.disconnectTimeout());
   }
 
   /**
@@ -302,6 +307,10 @@ public class CoreEnvironment {
     return shutdownReactive(timeout).toFuture();
   }
 
+  public CompletableFuture<Void> shutdownAsync() {
+    return shutdownReactive(timeoutConfig.disconnectTimeout()).toFuture();
+  }
+
   /**
    * Shuts down this Environment.
    *
@@ -312,6 +321,10 @@ public class CoreEnvironment {
    */
   public void shutdown(final Duration timeout) {
     shutdownReactive(timeout).block();
+  }
+
+  public void shutdown() {
+    shutdownReactive(timeoutConfig.disconnectTimeout()).block();
   }
 
   public static class Builder<SELF extends Builder<SELF>> {
@@ -356,28 +369,28 @@ public class CoreEnvironment {
       return self();
     }
 
-    public SELF compressionConfig(final CompressionConfig compressionConfig) {
-      this.compressionConfig = compressionConfig;
+    public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
+      this.compressionConfig = compressionConfig.build();
       return self();
     }
 
-    public SELF securityConfig(final SecurityConfig securityConfig) {
-      this.securityConfig = securityConfig;
+    public SELF securityConfig(final SecurityConfig.Builder securityConfig) {
+      this.securityConfig = securityConfig.build();
       return self();
     }
 
-    public SELF timeoutConfig(final TimeoutConfig timeoutConfig) {
-      this.timeoutConfig = timeoutConfig;
+    public SELF timeoutConfig(final TimeoutConfig.Builder timeoutConfig) {
+      this.timeoutConfig = timeoutConfig.build();
       return self();
     }
 
-    public SELF serviceConfig(final ServiceConfig serviceConfig) {
-      this.serviceConfig = serviceConfig;
+    public SELF serviceConfig(final ServiceConfig.Builder serviceConfig) {
+      this.serviceConfig = serviceConfig.build();
       return self();
     }
 
-    public SELF loggerConfig(final LoggerConfig loggerConfig) {
-      this.loggerConfig = loggerConfig;
+    public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
+      this.loggerConfig = loggerConfig.build();
       return self();
     }
 

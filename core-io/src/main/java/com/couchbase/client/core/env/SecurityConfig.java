@@ -34,6 +34,22 @@ public class SecurityConfig {
     return new SecurityConfig(builder());
   }
 
+  public static Builder tlsEnabled(boolean tlsEnabled) {
+    return builder().tlsEnabled(tlsEnabled);
+  }
+
+  public static Builder certAuthEnabled(boolean certAuthEnabled) {
+    return builder().certAuthEnabled(certAuthEnabled);
+  }
+
+  public static Builder trustCertificates(final X509Certificate... certificates) {
+    return builder().trustCertificates(certificates);
+  }
+
+  public static Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
+    return builder().trustManagerFactory(trustManagerFactory);
+  }
+
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
     certAuthEnabled = builder.certAuthEnabled;
@@ -84,11 +100,11 @@ public class SecurityConfig {
       return this;
     }
 
-    /*
     public Builder certAuthEnabled(boolean certAuthEnabled) {
-      this.certAuthEnabled = certAuthEnabled;
-      return this;
-    }*/
+      throw new UnsupportedOperationException("not yet supported");
+      // this.certAuthEnabled = certAuthEnabled;
+      // return this;
+    }
 
     public Builder trustCertificates(final X509Certificate... certificates) {
       this.trustCertificates = certificates;

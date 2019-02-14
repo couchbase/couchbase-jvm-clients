@@ -81,7 +81,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    env.shutdown(Duration.ofSeconds(1));
+    env.shutdown();
     eventLoopGroup.shutdownGracefully();
   }
 

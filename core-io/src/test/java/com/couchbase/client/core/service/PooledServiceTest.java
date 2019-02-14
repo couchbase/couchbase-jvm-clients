@@ -70,7 +70,7 @@ class PooledServiceTest {
 
   @AfterEach
   void afterEach() {
-    environment.shutdown(Duration.ofSeconds(1));
+    environment.shutdown();
   }
 
   /**

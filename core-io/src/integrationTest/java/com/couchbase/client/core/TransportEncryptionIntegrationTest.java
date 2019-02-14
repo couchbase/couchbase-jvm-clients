@@ -61,7 +61,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
    * @param config the security config to use.
    * @return a core environment, set up for encrypted networking.
    */
-  private CoreEnvironment secureEnvironment(final SecurityConfig config) {
+  private CoreEnvironment secureEnvironment(final SecurityConfig.Builder config) {
     Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV_TLS)),
@@ -77,10 +77,9 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueIgnoringServerCert() throws Exception {
-    CoreEnvironment env = secureEnvironment(SecurityConfig.builder()
+    CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
-      .build());
+      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
     Core core = Core.create(env);
     core.openBucket(config().bucketname()).block();
 
@@ -105,17 +104,16 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       assertTrue(getResponse.cas() != 0);
     } finally {
       core.shutdown().block();
-      env.shutdown(Duration.ofSeconds(1));
+      env.shutdown();
     }
   }
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueWithServerCert() throws Exception {
-    CoreEnvironment env = secureEnvironment(SecurityConfig.builder()
+    CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(config().clusterCert().get())
-      .build());
+      .trustCertificates(config().clusterCert().get()));
     Core core = Core.create(env);
     core.openBucket(config().bucketname()).block();
 
@@ -140,35 +138,30 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       assertTrue(getResponse.cas() != 0);
     } finally {
       core.shutdown().block();
-      env.shutdown(Duration.ofSeconds(1));
+      env.shutdown();
     }
   }
 
   @Test
   void failsIfNoTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.builder()
-      .tlsEnabled(true)
-      .build())
-    );
+    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.tlsEnabled(true)));
   }
 
   @Test
   void failsIfMoreThanOneTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.builder()
+    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustManagerFactory(mock(TrustManagerFactory.class))
-      .trustCertificates(mock(X509Certificate.class))
-      .build())
+      .trustCertificates(mock(X509Certificate.class)))
     );
   }
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfWrongCertPresent() {
-    CoreEnvironment env = secureEnvironment(SecurityConfig.builder()
+    CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(mock(X509Certificate.class))
-      .build());
+      .trustCertificates(mock(X509Certificate.class)));
     Core core = Core.create(env);
 
     // Todo: this must not throw, but the op underneath timeout! .. also assert based
@@ -187,7 +180,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       assertTrue(insertResponse.status().success());*/
     } finally {
       core.shutdown().block();
-      env.shutdown(Duration.ofSeconds(1));
+      env.shutdown();
     }
   }
 

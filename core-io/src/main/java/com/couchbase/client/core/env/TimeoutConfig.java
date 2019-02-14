@@ -58,6 +58,40 @@ public class TimeoutConfig {
     return builder().build();
   }
 
+  public static Builder kvTimeout(Duration kvTimeout) {
+    return builder().kvTimeout(kvTimeout);
+  }
+
+  public static Builder managerTimeout(Duration managerTimeout) {
+    return builder().managerTimeout(managerTimeout);
+  }
+
+  public static Builder queryTimeout(Duration queryTimeout) {
+    return builder().queryTimeout(queryTimeout);
+  }
+
+  public static Builder viewTimeout(Duration viewTimeout) {
+    return builder().viewTimeout(viewTimeout);
+  }
+
+  public static Builder searchTimeout(Duration searchTimeout) {
+    return builder().searchTimeout(searchTimeout);
+  }
+
+  public static Builder analyticsTimeout(Duration analyticsTimeout) {
+    return builder().analyticsTimeout(analyticsTimeout);
+  }
+
+  public static Builder connectTimeout(Duration connectTimeout) {
+    return builder().connectTimeout(connectTimeout);
+
+  }
+
+  public static Builder disconnectTimeout(Duration disconnectTimeout) {
+    return builder().disconnectTimeout(disconnectTimeout);
+  }
+
+
   public Duration kvTimeout() {
     return kvTimeout;
   }

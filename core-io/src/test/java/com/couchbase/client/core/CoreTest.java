@@ -60,7 +60,7 @@ class CoreTest {
 
   @AfterAll
   static void afterAll() {
-    ENV.shutdown(Duration.ofSeconds(1));
+    ENV.shutdown();
   }
 
   /**

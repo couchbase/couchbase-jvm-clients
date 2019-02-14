@@ -46,7 +46,7 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    env.shutdown(Duration.ofSeconds(1));
+    env.shutdown();
   }
 
   /**

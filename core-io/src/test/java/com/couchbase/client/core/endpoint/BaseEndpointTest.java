@@ -93,7 +93,7 @@ class BaseEndpointTest {
   @AfterEach
   void afterEach() {
     eventLoopGroup.shutdownGracefully();
-    environment.shutdown(Duration.ofSeconds(1));
+    environment.shutdown();
   }
 
   /**
@@ -124,7 +124,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.builder().connectTimeout(Duration.ofMillis(10)).build())
+      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
 
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
@@ -163,7 +163,7 @@ class BaseEndpointTest {
       assertTrue(failedFound);
       assertTrue(successFound);
     } finally {
-      env.shutdown(Duration.ofSeconds(1));
+      env.shutdown();
     }
   }
 
@@ -246,7 +246,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.builder().connectTimeout(Duration.ofMillis(10)).build())
+      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
@@ -284,7 +284,7 @@ class BaseEndpointTest {
       assertEquals(3, warn);
       assertEquals(1, debug);
     } finally {
-      environment.shutdown(Duration.ofSeconds(1));
+      environment.shutdown();
     }
   }
 

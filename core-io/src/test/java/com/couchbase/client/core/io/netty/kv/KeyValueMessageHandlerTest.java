@@ -51,7 +51,7 @@ class KeyValueMessageHandlerTest {
 
   @AfterAll
   private static void teardown() {
-    ENV.shutdown(Duration.ofSeconds(1));
+    ENV.shutdown();
   }
 
   /**

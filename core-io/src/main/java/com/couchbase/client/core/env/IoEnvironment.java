@@ -23,8 +23,16 @@ import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 
+import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -47,6 +55,30 @@ public class IoEnvironment {
 
   public static IoEnvironment.Builder builder() {
     return new Builder();
+  }
+
+  public static Builder managerEventLoopGroup(EventLoopGroup managerEventLoopGroup) {
+    return builder().managerEventLoopGroup(managerEventLoopGroup);
+  }
+
+  public static Builder kvEventLoopGroup(EventLoopGroup kvEventLoopGroup) {
+    return builder().kvEventLoopGroup(kvEventLoopGroup);
+  }
+
+  public static Builder queryEventLoopGroup(EventLoopGroup queryEventLoopGroup) {
+    return builder().queryEventLoopGroup(queryEventLoopGroup);
+  }
+
+  public static Builder analyticsEventLoopGroup(EventLoopGroup analyticsEventLoopGroup) {
+    return builder().analyticsEventLoopGroup(analyticsEventLoopGroup);
+  }
+
+  public static Builder searchEventLoopGroup(EventLoopGroup searchEventLoopGroup) {
+    return builder().searchEventLoopGroup(searchEventLoopGroup);
+  }
+
+  public static Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
+    return builder().viewEventLoopGroup(viewEventLoopGroup);
   }
 
   private IoEnvironment(final Builder builder) {
@@ -133,6 +165,38 @@ public class IoEnvironment {
     return viewEventLoopGroup;
   }
 
+  public Mono<Void> shutdown(Duration timeout) {
+    return Flux.merge(
+      shutdownGroup(managerEventLoopGroup, timeout),
+      shutdownGroup(kvEventLoopGroup, timeout),
+      shutdownGroup(queryEventLoopGroup, timeout),
+      shutdownGroup(analyticsEventLoopGroup, timeout),
+      shutdownGroup(searchEventLoopGroup, timeout),
+      shutdownGroup(viewEventLoopGroup, timeout)
+    ).then();
+  }
+
+  private Mono<Void> shutdownGroup(Supplier<EventLoopGroup> suppliedGroup, Duration timeout) {
+    if (suppliedGroup instanceof OwnedSupplier) {
+      EventLoopGroup group = suppliedGroup.get();
+      if (!group.isShutdown() && !group.isShuttingDown()) {
+        return Mono.create(sink -> group.shutdownGracefully(0, timeout.toMillis(), TimeUnit.MILLISECONDS)
+          .addListener(future -> {
+            if (future.isSuccess()) {
+              sink.success();
+            } else {
+              sink.error(future.cause());
+            }
+          })
+        );
+      } else {
+        return Mono.empty();
+      }
+    } else {
+      return Mono.empty();
+    }
+  }
+
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
@@ -181,6 +245,36 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
+
+    public Builder managerEventLoopGroup(EventLoopGroup managerEventLoopGroup) {
+      this.managerEventLoopGroup = new ExternalSupplier<>(managerEventLoopGroup);
+      return this;
+    }
+
+    public Builder kvEventLoopGroup(EventLoopGroup kvEventLoopGroup) {
+      this.kvEventLoopGroup = new ExternalSupplier<>(kvEventLoopGroup);
+      return this;
+    }
+
+    public Builder queryEventLoopGroup(EventLoopGroup queryEventLoopGroup) {
+      this.queryEventLoopGroup = new ExternalSupplier<>(queryEventLoopGroup);
+      return this;
+    }
+
+    public Builder analyticsEventLoopGroup(EventLoopGroup analyticsEventLoopGroup) {
+      this.analyticsEventLoopGroup = new ExternalSupplier<>(analyticsEventLoopGroup);
+      return this;
+    }
+
+    public Builder searchEventLoopGroup(EventLoopGroup searchEventLoopGroup) {
+      this.searchEventLoopGroup = new ExternalSupplier<>(searchEventLoopGroup);
+      return this;
+    }
+
+    public Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
+      this.viewEventLoopGroup = new ExternalSupplier<>(viewEventLoopGroup);
+      return this;
+    }
 
     public IoEnvironment build() {
       return new IoEnvironment(this);

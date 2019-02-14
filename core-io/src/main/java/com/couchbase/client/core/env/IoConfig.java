@@ -70,43 +70,43 @@ public class IoConfig {
     return builder().build();
   }
 
-  public static IoConfig.Builder builder() {
+  public static Builder builder() {
     return new IoConfig.Builder();
   }
 
-  public static IoConfig.Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
+  public static Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
     return builder().mutationTokensEnabled(mutationTokensEnabled);
   }
 
-  public static IoConfig.Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
+  public static Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
     return builder().allowedSaslMechanisms(allowedSaslMechanisms);
   }
 
-  public static IoConfig.Builder configPollInterval(Duration configPollInterval) {
+  public static Builder configPollInterval(Duration configPollInterval) {
     return builder().configPollInterval(configPollInterval);
   }
 
-  public static IoConfig.Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
+  public static Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
     return builder().kvCircuitBreakerConfig(kvCircuitBreakerConfig);
   }
 
-  public static IoConfig.Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
+  public static Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
     return builder().queryCircuitBreakerConfig(queryCircuitBreakerConfig);
   }
 
-  public static IoConfig.Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
+  public static Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
     return builder().viewCircuitBreakerConfig(viewCircuitBreakerConfig);
   }
 
-  public static IoConfig.Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
+  public static Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
     return builder().searchCircuitBreakerConfig(searchCircuitBreakerConfig);
   }
 
-  public static IoConfig.Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
+  public static Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
     return builder().analyticsCircuitBreakerConfig(analyticsCircuitBreakerConfig);
   }
 
-  public static IoConfig.Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
+  public static Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 

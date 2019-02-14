@@ -58,7 +58,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    env.shutdown(Duration.ofSeconds(1));
+    env.shutdown();
   }
 
   /**

@@ -56,7 +56,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    environment.shutdown(Duration.ofSeconds(1));
+    environment.shutdown();
     cluster.shutdown();
   }
 

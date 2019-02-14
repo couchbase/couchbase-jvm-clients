@@ -79,7 +79,7 @@ class NodeTest {
 
   @AfterAll
   static void afterAll() {
-    ENV.shutdown(Duration.ofSeconds(1));
+    ENV.shutdown();
   }
 
   @Test
@@ -487,7 +487,7 @@ class NodeTest {
       assertTrue(events.get(8) instanceof ServiceAddIgnoredEvent);
       assertTrue(events.get(9) instanceof ServiceRemoveIgnoredEvent);
     } finally {
-      env.shutdown(Duration.ofSeconds(1));
+      env.shutdown();
     }
   }
 

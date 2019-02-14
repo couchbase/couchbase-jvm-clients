@@ -50,7 +50,7 @@ class MemcachedBucketConfigTest {
 
     @AfterAll
     static void cleanup() {
-        ENV.shutdown(Duration.ofSeconds(1));
+        ENV.shutdown();
     }
 
     /**

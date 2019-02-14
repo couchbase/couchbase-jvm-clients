@@ -60,7 +60,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       core.shutdown().block();
     }
     if (environment != null) {
-      environment.shutdown(Duration.ofSeconds(1));
+      environment.shutdown();
     }
   }
 
@@ -152,10 +152,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .timeoutConfig(TimeoutConfig.builder()
+      .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(500))
         .managerTimeout(Duration.ofMillis(500))
-        .build()
       )
       .build();
     core = Core.create(environment);
@@ -185,10 +184,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .timeoutConfig(TimeoutConfig.builder()
+      .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(500))
         .managerTimeout(Duration.ofMillis(500))
-        .build()
       )
       .build();
     core = Core.create(environment);
@@ -218,10 +216,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
-      .timeoutConfig(TimeoutConfig.builder()
+      .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofSeconds(1))
         .managerTimeout(Duration.ofSeconds(1))
-        .build()
       )
       .build();
     core = Core.create(environment);

@@ -43,15 +43,6 @@ public class CompressionConfig {
   private final double minRatio;
 
   /**
-   * Creates a {@link CompressionConfig} which disables compression.
-   *
-   * @return  a new disabled {@link CompressionConfig}.
-   */
-  public static CompressionConfig disabled() {
-    return builder().enabled(false).build();
-  }
-
-  /**
    * Creates a {@link CompressionConfig} with default arguments.
    *
    * @return a new {@link CompressionConfig}.
@@ -65,8 +56,39 @@ public class CompressionConfig {
    *
    * @return a builder to configure {@link CompressionConfig}.
    */
-  public static CompressionConfig.Builder builder() {
+  public static Builder builder() {
     return new CompressionConfig.Builder();
+  }
+
+  /**
+   * If set to false, disabled compression.
+   *
+   * @param enabled true to enable, false otherwise.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder enabled(boolean enabled) {
+    return builder().enabled(enabled);
+  }
+
+  /**
+   * The minimum size after which compression is performed.
+   *
+   * @param minSize minimum size in bytes.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder minSize(int minSize) {
+    return builder().minSize(minSize);
+  }
+
+  /**
+   * The minimum ratio after which a compressed doc is sent compressed
+   * versus the uncompressed version is sent for efficiency.
+   *
+   * @param minRatio the minimum ratio.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder minRatio(double minRatio) {
+    return builder().minRatio(minRatio);
   }
 
   /**

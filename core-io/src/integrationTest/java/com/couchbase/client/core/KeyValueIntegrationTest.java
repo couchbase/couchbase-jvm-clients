@@ -49,7 +49,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
   @AfterEach
   void afterEach() {
     core.shutdown().block();
-    env.shutdown(Duration.ofSeconds(1));
+    env.shutdown();
   }
 
   /**

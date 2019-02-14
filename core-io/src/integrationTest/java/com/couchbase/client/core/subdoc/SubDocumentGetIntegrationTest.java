@@ -51,7 +51,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @AfterEach
   void afterEach() {
     core.shutdown().block();
-    env.shutdown(Duration.ofSeconds(1));
+    env.shutdown();
   }
 
   private byte[] insertContent(String id, String in) {
