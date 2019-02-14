@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.env
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, ThreadFactory}
 
 import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, CoreEnvironment, Credentials, RoleBasedCredentials}
 import reactor.core.scala.scheduler.ExecutionContextScheduler
@@ -20,7 +20,13 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnviro
 object ClusterEnvironment {
   // TODO see if can detect blocking app-side callbacks
   private val numCores = Runtime.getRuntime.availableProcessors
-  private val threadPool = Executors.newFixedThreadPool(numCores)
+  private val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
+    override def newThread(runnable: Runnable): Thread = {
+      val thread = new Thread(runnable)
+      thread.setName("cb-comp-" + thread.getId)
+      thread
+    }
+  })
   private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
   private val defaultScheduler = ExecutionContextScheduler(ec)
 
