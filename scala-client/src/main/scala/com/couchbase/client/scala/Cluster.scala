@@ -68,7 +68,7 @@ object Cluster {
 
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
     val env = ClusterEnvironment.create(connectionString, username, password)
-    Try(new Cluster(env)())
+    Try(new Cluster(env))
   }
 
   def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
