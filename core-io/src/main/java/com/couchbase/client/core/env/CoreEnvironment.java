@@ -359,8 +359,8 @@ public class CoreEnvironment {
       return self();
     }
 
-    public SELF ioEnvironment(final IoEnvironment ioEnvironment) {
-      this.ioEnvironment = ioEnvironment;
+    public SELF ioEnvironment(final IoEnvironment.Builder ioEnvironment) {
+      this.ioEnvironment = ioEnvironment.build();
       return self();
     }
 
