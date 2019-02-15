@@ -81,7 +81,8 @@ public enum GetAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
-    }).whenComplete((r, t) -> completeSpan(request));
+    })
+    .whenComplete((r, t) -> completeSpan(request));
   }
 
   public static CompletableFuture<Optional<GetResult>> getAndLock(final Core core, final String id,

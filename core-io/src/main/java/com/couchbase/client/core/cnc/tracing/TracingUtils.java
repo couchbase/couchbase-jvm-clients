@@ -27,13 +27,14 @@ import java.util.Optional;
 public enum TracingUtils {
   ;
 
-  public static void attachSpan(final CoreEnvironment env, final Optional<Span> parent,
+  public static void attachSpan(final String opName, final CoreEnvironment env, final Optional<Span> parent,
                                 final Request<?> request) {
     if (env.operationTracingEnabled()) {
       Scope scope = env.tracer()
-        .buildSpan("get")
+        .buildSpan(opName)
         .withTag(Tags.SPAN_KIND.getKey(), "client")
         .withTag(Tags.DB_TYPE.getKey(), "couchbase")
+        .withTag(Tags.PEER_SERVICE.getKey(), request.serviceType().tracingIdent())
         .withTag(Tags.COMPONENT.getKey(), env.userAgent().formattedLong())
         .asChildOf(parent.orElse(null))
         .startActive(false);
