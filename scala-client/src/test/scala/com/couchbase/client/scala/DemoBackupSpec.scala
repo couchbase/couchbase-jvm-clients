@@ -61,9 +61,9 @@ import scala.util.Success
 //      case Some(doc) =>
 //        val content = doc.contentAsObject
 //        content.get("name").asInstanceOf[String]
-//        content.getString("name")
-//        content.name.getString
-//        assert(content.addresses(0).address.getString == "123 Fake Street")
+//        content.str("name")
+//        content.name.str
+//        assert(content.addresses(0).address.str == "123 Fake Street")
 //
 //        assert(doc.expiry.isDefined)
 //
@@ -93,9 +93,9 @@ import scala.util.Success
 //        val name = doc.content("name") match {
 //          case JsonString(s) => s
 //        }
-//        doc.name.getString
+//        doc.name.str
 //        doc.contentAs[Int]("path")
-//        doc.age.getInt
+//        doc.age.int
 //        val x = doc.contentAs[List[Address]]("addresses")
 //        val alaskanAddresses = x.filter(_.isAlaskan)
 //

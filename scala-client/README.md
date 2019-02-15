@@ -3,6 +3,10 @@
 - Projections IMO need some design iteration before implementing.
 - Query also IMO needs some love.  Error handling may change, at least.  Plus unclear if async/blocking needs to stream rows.
 
+## Future plans
+See if can detect blocking app-side callbacks, e.g. is the app blocking the thread pool
+
+
 ## Material to recycle for 'choosing a json lib' docs later
 
   /**

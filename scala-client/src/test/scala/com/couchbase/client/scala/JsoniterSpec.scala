@@ -17,9 +17,9 @@
 //    val map = any.asMap().asInstanceOf[java.util.HashMap[String,Any]]
 //    val js = new JsonObject(map)
 //
-//    assert(js.getString("hello") == "world")
-//    assert(js.getString("foo") == "bar")
-//    assert(js.getInt("age") == 22)
+//    assert(js.str("hello") == "world")
+//    assert(js.str("foo") == "bar")
+//    assert(js.int("age") == 22)
 //  }
 //
 //  def createJsonObject(str: String) = {
@@ -37,9 +37,9 @@
 //    val gen = JsonStream.serialize(js.content)
 //    val regen = createJsonObject(str)
 //
-//    assert(regen.getString("hello") == "world")
-//    assert(regen.getString("foo") == "bar")
-//    assert(regen.getInt("age") == 22)
+//    assert(regen.str("hello") == "world")
+//    assert(regen.str("foo") == "bar")
+//    assert(regen.int("age") == 22)
 //  }
 //
 //  test("serialise with added field") {
@@ -48,15 +48,15 @@
 //
 //    js.put("cool", "spot")
 //
-//    assert(js.getString("cool") == "spot")
+//    assert(js.str("cool") == "spot")
 //
 //    val gen = JsonStream.serialize(js.content)
 //    val regen = createJsonObject(gen)
 //
-//    assert(regen.getString("hello") == "world")
-//    assert(regen.getString("foo") == "bar")
-//    assert(regen.getString("cool") == "spot")
-//    assert(regen.getInt("age") == 22)
+//    assert(regen.str("hello") == "world")
+//    assert(regen.str("foo") == "bar")
+//    assert(regen.str("cool") == "spot")
+//    assert(regen.int("age") == 22)
 //  }
 //
 //  //  test("deserialise array") {
@@ -66,7 +66,7 @@
 ////    val map = any.asMap().asInstanceOf[java.util.HashMap[String,Any]]
 ////    val js = new JsonObject(map)
 ////
-////    val arr = js.getArray("hello")
+////    val arr = js.arr("hello")
 ////    assert(arr.size == 2)
 ////    assert(arr.get(0) == "world")
 ////    assert(arr.get(1) == "foo")
@@ -85,8 +85,8 @@
 ////    val map = any.asMap().asInstanceOf[java.util.HashMap[String,Any]]
 ////    val js = new JsonObject(map)
 ////
-////    assert(js.getString("hello") == "world")
-////    assert(js.getString("foo") == "bar")
-////    assert(js.getInt("age") == 22)
+////    assert(js.str("hello") == "world")
+////    assert(js.str("foo") == "bar")
+////    assert(js.int("age") == 22)
 ////  }
 //}

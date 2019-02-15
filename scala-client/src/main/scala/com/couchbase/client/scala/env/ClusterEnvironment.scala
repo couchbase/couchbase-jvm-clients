@@ -18,7 +18,6 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnviro
 }
 
 object ClusterEnvironment {
-  // TODO see if can detect blocking app-side callbacks
   private val numCores = Runtime.getRuntime.availableProcessors
   private val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {

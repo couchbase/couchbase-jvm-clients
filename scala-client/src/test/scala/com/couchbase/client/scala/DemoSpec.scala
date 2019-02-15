@@ -221,9 +221,9 @@
 //
 //
 //        // 5.3 Dynamic support
-//        val name = doc.name.getString    // "Bob Smith"
-//        val age = doc.age.getInt   // 26
-//        val zipcode = doc.addresses(0).zipcode.getInt  // 99501
+//        val name = doc.name.str    // "Bob Smith"
+//        val age = doc.age.int   // 26
+//        val zipcode = doc.addresses(0).zipcode.int  // 99501
 //
 //
 //        // 5.4 Casting into a class (also in Java)
@@ -313,12 +313,12 @@
 //    val users: List[User] = rows.map(_.contentAs[User])
 //
 //    // Get just the states, using Dynamic
-//    val states: List[String] = rows.map(_.addresses(0).state.getString)
+//    val states: List[String] = rows.map(_.addresses(0).state.str)
 //
 //    // Can leverage the powerful Scala collections abilities, e.g. filtering to users in Alaska and then grouping by zipcode:
 //    val groupedByZipcode = rows
-//      .filter(_.addresses(0).state.getString == "AK")
-//      .groupBy(_.addresses(0).zipcode.getInt)
+//      .filter(_.addresses(0).state.str == "AK")
+//      .groupBy(_.addresses(0).zipcode.int)
 //
 //    val inZipcode99501: List[N1qlRow] = groupedByZipcode(99501)
 //

@@ -92,8 +92,6 @@ object Conversions {
 
   object Encodable {
 
-    // TODO unify all names here
-
     // This is the safe Bytes converter: it parses the input, and sets the flags to Json or String as appropriate.
     implicit object BytesConvert extends Encodable[Array[Byte]] {
       override def encode(content: Array[Byte]) = {
@@ -162,7 +160,7 @@ object Conversions {
 
     }
 
-    implicit object JsonObjectExperimentConvert extends Encodable[JsonObject] {
+    implicit object JsonObjectConvert extends Encodable[JsonObject] {
       override def encode(content: JsonObject) = {
         Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonFlags)
       }
@@ -261,7 +259,7 @@ object Conversions {
       }
     }
 
-    implicit object JsonObjectExperiment extends Decodable[JsonObject] {
+    implicit object JsonObjectConvert extends Decodable[JsonObject] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
         out match {

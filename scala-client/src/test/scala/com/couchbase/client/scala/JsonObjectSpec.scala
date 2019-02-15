@@ -9,7 +9,7 @@ class JsonObjectSpec extends FunSuite {
 //    val out = obj.put("field", "value")
 //    assert(out.field.exists)
 //    assert(out.field.path.toString == "field")
-//    assert(out.field.getString == "value")
+//    assert(out.field.str == "value")
 //  }
 //
 
@@ -19,7 +19,7 @@ class JsonObjectSpec extends FunSuite {
 //    assert(out.field1.exists)
 //    assert(out.field1.field2.exists)
 //    assert(out.field1.field2.path.toString == "field1.field2")
-//    assert(out.field1.field2.getString == "value")
+//    assert(out.field1.field2.str == "value")
 //  }
 //
 //  test("field1.field2 = 42") {
@@ -27,9 +27,9 @@ class JsonObjectSpec extends FunSuite {
 //    val out = obj.put("field1", JsonObject.create.put("field2", 42))
 //    assert(out.field1.exists)
 //    assert(out.field1.field2.exists)
-//    assert(out.field1.field2.getInt == 42)
+//    assert(out.field1.field2.int == 42)
 //    intercept[ClassCastException] {
-//      assert(out.field1.field2.getString == 42)
+//      assert(out.field1.field2.str == 42)
 //    }
 //  }
 //
@@ -39,7 +39,7 @@ class JsonObjectSpec extends FunSuite {
 //    assert(out.field1.exists)
 //    assert(out.field1.field2.exists)
 //    assert(out.field1.field2.field3.exists)
-//    assert(out.field1.field2.field3.getString == "value")
+//    assert(out.field1.field2.field3.str == "value")
 //  }
 //
 //  test("field1(0).field2 = 'value'") {
@@ -50,7 +50,7 @@ class JsonObjectSpec extends FunSuite {
 //    assert(out.field1(0).path.toString == "field1[0]")
 //    assert(out.field1(0).field2.exists)
 //    assert(out.field1(0).field2.path.toString == "field1[0].field2")
-//    assert(out.field1(0).field2.getString == "value")
+//    assert(out.field1(0).field2.str == "value")
 //  }
 //
 //  test("field1(0).field2(0) = 'value'") {
@@ -59,7 +59,7 @@ class JsonObjectSpec extends FunSuite {
 //    assert(out.field1.exists)
 //    assert(out.field1(0).field2(0).exists)
 //    assert(out.field1(0).field2(0).path.toString == "field1[0].field2[0]")
-//    assert(out.field1(0).field2(0).field2.getString == "value")
+//    assert(out.field1(0).field2(0).field2.str == "value")
 //  }
 
 }

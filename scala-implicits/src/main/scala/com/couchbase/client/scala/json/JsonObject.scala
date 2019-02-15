@@ -58,7 +58,7 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
 //    copy(content + (name -> JsonNumber(value)))
 //  }
 
-//  def getString(name: String): String = {
+//  def str(name: String): String = {
 //    (content.get(name)) match {
 //      case v: com.jsoniter.any.Any => v.toString
 //      case v: String => v
@@ -66,88 +66,71 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
 //  }
 
 
-  def getString(name: String): String = {
+  def str(name: String): String = {
     (content.get(name)) match {
       case v: String => v
     }
   }
 
-  def getInt(name: String): Int = {
+  def int(name: String): Int = {
 //    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
         content.get(name).asInstanceOf[Int]
   }
 
-//  def getInt(name: String): Int = {
+//  def int(name: String): Int = {
 //    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
 ////    content.get(name).asInstanceOf[Int]
 //  }
 
-  def getBoolean(name: String): Boolean = {
+  def bool(name: String): Boolean = {
     content.get(name).asInstanceOf[Boolean]
   }
 
-  def getLong(name: String): Long = {
+  def long(name: String): Long = {
     content.get(name).asInstanceOf[Long]
   }
 
-  def getDouble(name: String): Double = {
+  def double(name: String): Double = {
     content.get(name).asInstanceOf[Double]
   }
 
-  def getObject(name: String): JsonObject = {
+  def obj(name: String): JsonObject = {
     content.get(name).asInstanceOf[JsonObject]
   }
 
-  def getArray(name: String): JsonArray = {
+  def arr(name: String): JsonArray = {
     content.get(name).asInstanceOf[JsonArray]
   }
 
-  def getBigInt(name: String): BigInt = {
-    content.get(name).asInstanceOf[BigInt]
-  }
-
-  def getBigDecimal(name: String): BigDecimal = {
-    content.get(name).asInstanceOf[BigDecimal]
-  }
-
-
-  def getStringOpt(name: String): Option[String] = {
+  def strOpt(name: String): Option[String] = {
     Option(content.get(name)).map(_.asInstanceOf[String])
   }
 
-  def getIntOpt(name: String): Option[Int] = {
+  def intOpt(name: String): Option[Int] = {
     Option(content.get(name)).map(_.asInstanceOf[Int])
   }
 
-  def getBooleanOpt(name: String): Option[Boolean] = {
+  def boolOpt(name: String): Option[Boolean] = {
     Option(content.get(name)).map(_.asInstanceOf[Boolean])
   }
 
-  def getLongOpt(name: String): Option[Long] = {
+  def longOpt(name: String): Option[Long] = {
     Option(content.get(name)).map(_.asInstanceOf[Long])
   }
 
-  def getDoubleOpt(name: String): Option[Double] = {
+  def doubleOpt(name: String): Option[Double] = {
     Option(content.get(name)).map(_.asInstanceOf[Double])
   }
 
-  def getObjectOpt(name: String): Option[JsonObject] = {
+  def objOpt(name: String): Option[JsonObject] = {
     Option(content.get(name)).map(_.asInstanceOf[JsonObject])
   }
 
-  def getArrayOpt(name: String): Option[JsonArray] = {
+  def arrOpt(name: String): Option[JsonArray] = {
     Option(content.get(name)).map(_.asInstanceOf[JsonArray])
   }
 
-  def getBigIntOpt(name: String): Option[BigInt] = {
-    Option(content.get(name)).map(_.asInstanceOf[BigInt])
-  }
-
-  def getBigDecimalOpt(name: String): Option[BigDecimal] = {
-    Option(content.get(name)).map(_.asInstanceOf[BigDecimal])
-  }
-
-  def removeKey(name: String): JsonObject = {
+  def remove(name: String): JsonObject = {
     content.remove(name)
     this
   }
@@ -184,20 +167,18 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
     content.size
   }
 
-  private def checkType(value: Any): Boolean = {
-    value match {
-      case x: String => true
-      case x: Int => true
-      case x: Long => true
-      case x: Double => true
-      case x: Boolean => true
-      case x: BigInt => true
-      case x: BigDecimal => true
-      case x: JsonObject => true
-      case x: JsonArray => true
-      case _ => false
-    }
-  }
+//  private def checkType(value: Any): Boolean = {
+//    value match {
+//      case x: String => true
+//      case x: Int => true
+//      case x: Long => true
+//      case x: Double => true
+//      case x: Boolean => true
+//      case x: JsonObject => true
+//      case x: JsonArray => true
+//      case _ => false
+//    }
+//  }
 }
 
 

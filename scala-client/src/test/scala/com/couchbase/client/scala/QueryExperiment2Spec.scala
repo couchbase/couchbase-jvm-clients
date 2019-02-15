@@ -28,8 +28,8 @@ package com.couchbase.client.scala
 //
 //    val names = s"""SELECT name, age FROM `${coll.name}`""".execute(cluster)
 //      .allRows()
-//      .filter(row => row.age.getInt > 5)
-//      .filter(_.age.getInt > 5)
+//      .filter(row => row.age.int > 5)
+//      .filter(_.age.int > 5)
 //      .map(_.contentAs[Projection])
 //
 //  }

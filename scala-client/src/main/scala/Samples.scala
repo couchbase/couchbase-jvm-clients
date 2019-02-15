@@ -79,7 +79,7 @@
 //    case class MyUsersEntity(users: List[User])
 ////    val users = getResult.contentAs[MyUsersEntity]
 //
-////    getResult.some.field.getString
+////    getResult.some.field.str
 //
 //    fetched1 match {
 //      case Success(GetResult(id, content, cas, expiry)) => print("Doc has id " + id + " cas " + cas)
@@ -109,9 +109,9 @@
 //
 //    // JsonObject works pretty much as in SDK2, though it's now immutable (may change)
 ////    val age: Option[Any] = fetched1.get.contentAsObject.get("age")
-////    val age2: Option[Int] = fetched1.get.contentAsObject.getInt("age")
+////    val age2: Option[Int] = fetched1.get.contentAsObject.int("age")
 ////    // And Scala's Dynamic feature lets us do some cool stuff:
-////    val age3: Int = fetched1.get.contentAsObject.age.getInt
+////    val age3: Int = fetched1.get.contentAsObject.age.int
 //
 //
 //    // Various ways of inserting
