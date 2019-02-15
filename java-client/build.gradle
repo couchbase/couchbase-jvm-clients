@@ -32,12 +32,12 @@ idea {
 dependencies {
   compile project(':core-io')
 
-  testCompile 'io.projectreactor:reactor-test:3.2.3.RELEASE'
+  testCompile 'io.projectreactor:reactor-test:3.2.6.RELEASE'
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
   testCompile 'org.mockito:mockito-core:2.23.4'
-  testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
-  testCompile 'org.junit.jupiter:junit-jupiter-params:5.3.2'
-  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
+  testCompile 'org.junit.jupiter:junit-jupiter-api:5.4.0'
+  testCompile 'org.junit.jupiter:junit-jupiter-params:5.4.0'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.4.0'
 
   integrationTestCompile project(':test-utils')
   integrationTestCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
