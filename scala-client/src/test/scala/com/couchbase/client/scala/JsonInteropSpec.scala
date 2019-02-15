@@ -36,7 +36,7 @@ import org.scalacheck.{Arbitrary, Gen}
   *
   * all raw primitives
   */
-class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter with GeneratorDrivenPropertyChecks {
+class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with BeforeAndAfter with GeneratorDrivenPropertyChecks {
 
   private val (cluster, bucket, coll) = (for {
     cluster <- Cluster.connect("localhost", "Administrator", "password")
@@ -246,7 +246,7 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
         case object PlayAST extends Sink {
           def decode(in: GetResult): Unit = {
             val c = in.contentAs[play.api.libs.json.JsValue].get
-            val address = (c \ "address" \ 0 \ "address").get.toString()
+            val address = (c \ "address" \ 0 \ "address").get
             assert(c("name").as[String] == "John Smith")
             assert(c("age").as[Int] == 29)
             assert(address == "123 Fake Street")
@@ -300,7 +300,7 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   }
 
-  "check" should "succeed" in {
+  test("test all permutations") {
     val sources: Gen[Source] = Gen.oneOf(Seq(
       Source.JsonObjectAST,
       Source.UpickleAST,
@@ -336,5 +336,19 @@ class JsonInteropSpec extends FlatSpec with Matchers with BeforeAndAfterAll with
       val result = coll.get(docId).get
       b.decode(result)
     }
+  }
+
+  private def compare(source: Source, sink: Sink): Unit = {
+    val docId = TestUtils.docId()
+
+    source.insert(docId)
+    val result = coll.get(docId).get
+    sink.decode(result)
+  }
+
+  test("JacksonEncodedString to PlayAST") {
+    val source = Source.JacksonEncodedString
+    val sink = Sink.PlayAST
+    compare(source, sink)
   }
 }

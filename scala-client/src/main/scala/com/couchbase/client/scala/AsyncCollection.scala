@@ -119,8 +119,14 @@ class AsyncCollection(name: String,
       case Success(request) =>
         core.send[Resp](request)
 
-        FutureConverters.toScala(request.response())
+        val out = FutureConverters.toScala(request.response())
           .map(response => handler.response(id, response))
+
+          out.failed.foreach(err => {
+          println("badness! " + err)
+        })
+
+        out
 
       case Failure(err) => Future.failed(err)
     }
@@ -149,6 +155,7 @@ class AsyncCollection(name: String,
             remove,
             timeout
           )
+
           FutureConversions.javaMonoToScalaFuture(Observe.poll(observeCtx))
 
             // After the observe return the original response

@@ -16,6 +16,7 @@ case class MutateInResult(id: String,
                           cas: Long,
                           mutationToken: Option[MutationToken]) extends HasDurabilityTokens {
 
+  // TODO change to idx lookup
   def contentAs[T](path: String)
                   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     _content.get(path) match {

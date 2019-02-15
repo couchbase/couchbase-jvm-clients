@@ -168,8 +168,13 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       } while (writtenRequests.containsKey(nextOpaque));
 
       writtenRequests.put(nextOpaque, request);
-      ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext));
-      writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
+      try {
+        ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext));
+        writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
+      }
+      catch(RuntimeException err) {
+        request.response().completeExceptionally(err);
+      }
     } else {
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));
       ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(

@@ -23,7 +23,7 @@ object ClusterEnvironment {
   private val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {
       val thread = new Thread(runnable)
-      thread.setName("cb-comp-" + thread.getId)
+      thread.setName("cb-comps-" + thread.getId)
       thread
     }
   })
