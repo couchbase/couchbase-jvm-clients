@@ -38,10 +38,11 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
   private final Optional<Long> initial;
   private final int expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
+  private final long cas;
 
   public IncrementRequest(Duration timeout, CoreContext ctx, String bucket,
-                          RetryStrategy retryStrategy, String key, byte[] collection,
-                          long delta, Optional<Long> initial, int expiry,
+                          RetryStrategy retryStrategy, String key, long cas, byte[] collection,
+                          long delta, Optional<Long> initial, final int expiration,
                           final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     if (initial.isPresent() && initial.get() < 0) {
@@ -49,8 +50,9 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
     }
     this.delta = delta;
     this.initial = initial;
-    this.expiry = expiry;
+    this.expiry = expiration;
     this.syncReplicationType = syncReplicationType;
+    this.cas = cas;
   }
 
   @Override
@@ -71,7 +73,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
       if (ctx.syncReplicationEnabled()) {
         ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-                partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+                partition(), opaque, cas, flexibleExtras, extras, key, noBody());
         flexibleExtras.release();
       }
       else {
@@ -79,7 +81,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
       }
     } else {
       request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
+        partition(), opaque, cas, extras, key, noBody());
     }
 
     extras.release();

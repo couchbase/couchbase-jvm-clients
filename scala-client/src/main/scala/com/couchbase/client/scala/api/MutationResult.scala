@@ -8,3 +8,6 @@ trait HasDurabilityTokens {
 }
 
 case class MutationResult(cas: Long, mutationToken: Option[MutationToken]) extends HasDurabilityTokens
+case class CounterResult(cas: Long,
+                         mutationToken: Option[MutationToken],
+                         content: Long) extends HasDurabilityTokens

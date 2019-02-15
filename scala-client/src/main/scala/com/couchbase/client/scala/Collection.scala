@@ -34,21 +34,29 @@ import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 import scala.reflect.runtime.universe._
 
-class Collection(val async: AsyncCollection,
-                 bucketName: String)
-                (implicit ec: ExecutionContext) {
-  val reactive = new ReactiveCollection(async)
-  // TODO binary collection
+object Collection {
   private val SafetyTimeout = 1.second
-  private[scala] val kvTimeout = Duration(2500, TimeUnit.MILLISECONDS)
 
-  private def block[T](in: Future[T], timeout: Duration): Try[T] = {
+  private[scala] def block[T](in: Future[T], timeout: Duration): Try[T] = {
     try {
       Try(Await.result(in, timeout + SafetyTimeout))
     }
     catch {
       case NonFatal(err) => Failure(err)
     }
+  }
+
+}
+
+class Collection(val async: AsyncCollection,
+                 bucketName: String)
+                (implicit ec: ExecutionContext) {
+  val reactive = new ReactiveCollection(async)
+  val binary = new BinaryCollection(async.binary)
+  private[scala] val kvTimeout = Duration(2500, TimeUnit.MILLISECONDS)
+
+  private def block[T](in: Future[T], timeout: Duration): Try[T] = {
+    Collection.block(in, timeout)
   }
 
   def exists[T](id: String,

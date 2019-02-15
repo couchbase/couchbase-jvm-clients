@@ -170,8 +170,6 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
     copy
   }
 
-  // TODO toString
-
   def size: Int = {
     content.size
   }

@@ -30,6 +30,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   private long delta;
   private Optional<Long> initial;
   private int expiry;
+  private long cas;
 
   public static IncrementOptions incrementOptions() {
     return new IncrementOptions();
@@ -39,6 +40,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     delta = 1;
     initial = Optional.empty();
     expiry = 0;
+    cas = 0;
   }
 
   public IncrementOptions delta(long delta) {
@@ -56,6 +58,12 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
 
   public IncrementOptions expiry(int expiry) {
     this.expiry = expiry;
+    return this;
+  }
+
+
+  public IncrementOptions cas(long cas) {
+    this.cas = cas;
     return this;
   }
 
@@ -77,6 +85,8 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     public long delta() {
       return delta;
     }
+
+    public long cas() { return cas; }
 
   }
 

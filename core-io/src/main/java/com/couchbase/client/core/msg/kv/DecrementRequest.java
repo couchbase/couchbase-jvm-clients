@@ -37,10 +37,11 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
   private final Optional<Long> initial;
   private final int expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
+  private final long cas;
 
 
   public DecrementRequest(Duration timeout, CoreContext ctx, String bucket,
-                          RetryStrategy retryStrategy, String key, byte[] collection,
+                          RetryStrategy retryStrategy, String key, long cas, byte[] collection,
                           long delta, Optional<Long> initial, int expiry,
                           final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
@@ -51,6 +52,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
     this.initial = initial;
     this.expiry = expiry;
     this.syncReplicationType = syncReplicationType;
+    this.cas = cas;
   }
 
   @Override
@@ -71,7 +73,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
       if (ctx.syncReplicationEnabled()) {
         ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-                partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+                partition(), opaque, cas, flexibleExtras, extras, key, noBody());
         flexibleExtras.release();
       }
       else {
@@ -79,7 +81,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
       }
     } else {
       request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
+        partition(), opaque, cas, extras, key, noBody());
     }
 
     extras.release();

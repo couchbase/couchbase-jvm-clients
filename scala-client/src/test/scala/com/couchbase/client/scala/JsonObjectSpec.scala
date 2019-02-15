@@ -77,9 +77,7 @@ class JsonObjectSpec extends FunSuite {
     assert(json.dyn.address(0).regional.county.str.get == "essex")
   }
 
-
   test("address(0).regional.county.int") {
     assert(json.dyn.address(0).regional.county.int.isFailure)
   }
-
 }

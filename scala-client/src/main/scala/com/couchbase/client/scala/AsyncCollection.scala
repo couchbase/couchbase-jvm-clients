@@ -80,47 +80,20 @@ object ReplicaMode {
 
 }
 
-class AsyncCollection(name: String,
-                      collectionId: Long,
-                      bucketName: String,
-                      val core: Core,
-                      val environment: ClusterEnvironment)
-                     (implicit ec: ExecutionContext) {
-
-  import DurationConversions._
-
-  private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
-  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
-  private val hp = HandlerParams(core, bucketName, collectionIdEncoded)
-  private[scala] val existsHandler = new ExistsHandler(hp)
-  private[scala] val insertHandler = new InsertHandler(hp)
-  private[scala] val replaceHandler = new ReplaceHandler(hp)
-  private[scala] val upsertHandler = new UpsertHandler(hp)
-  private[scala] val removeHandler = new RemoveHandler(hp)
-  private[scala] val getFullDocHandler = new GetFullDocHandler(hp)
-  private[scala] val getSubDocHandler = new GetSubDocHandler(hp)
-  private[scala] val getAndTouchHandler = new GetAndTouchHandler(hp)
-  private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
-  private[scala] val mutateInHandler = new MutateInHandler(hp)
-  private[scala] val unlockHandler = new UnlockHandler(hp)
-  private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
-
-  // TODO AsyncBinaryCollection
-
+object AsyncCollection {
+  private[scala] val getFullDoc = Array(LookupInSpec.getDoc)
 
   private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
                                           id: String,
-                                          handler: RequestHandler[Resp, Res]): Future[Res] = {
+                                          handler: RequestHandler[Resp, Res],
+                                          core: Core)
+                                         (implicit ec: ExecutionContext): Future[Res] = {
     in match {
       case Success(request) =>
         core.send[Resp](request)
 
         val out = FutureConverters.toScala(request.response())
           .map(response => handler.response(id, response))
-
-          out.failed.foreach(err => {
-          println("badness! " + err)
-        })
 
         out
 
@@ -133,8 +106,12 @@ class AsyncCollection(name: String,
                                                                                handler: RequestHandler[Resp, Res],
                                                                                durability: Durability,
                                                                                remove: Boolean,
-                                                                               timeout: java.time.Duration): Future[Res] = {
-    val initial: Future[Res] = wrap(in, id, handler)
+                                                                               timeout: java.time.Duration,
+                                                                               core: Core,
+                                                                               bucketName: String,
+                                                                               collectionIdEncoded: Array[Byte])
+                                                                              (implicit ec: ExecutionContext): Future[Res] = {
+    val initial: Future[Res] = wrap(in, id, handler, core)
 
     durability match {
       case ClientVerified(replicateTo, persistTo) =>
@@ -160,6 +137,49 @@ class AsyncCollection(name: String,
 
       case _ => initial
     }
+  }
+}
+
+class AsyncCollection(name: String,
+                      collectionId: Long,
+                      bucketName: String,
+                      val core: Core,
+                      val environment: ClusterEnvironment)
+                     (implicit ec: ExecutionContext) {
+
+  import DurationConversions._
+
+  private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
+  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
+  private[scala] val hp = HandlerParams(core, bucketName, collectionIdEncoded)
+  private[scala] val existsHandler = new ExistsHandler(hp)
+  private[scala] val insertHandler = new InsertHandler(hp)
+  private[scala] val replaceHandler = new ReplaceHandler(hp)
+  private[scala] val upsertHandler = new UpsertHandler(hp)
+  private[scala] val removeHandler = new RemoveHandler(hp)
+  private[scala] val getFullDocHandler = new GetFullDocHandler(hp)
+  private[scala] val getSubDocHandler = new GetSubDocHandler(hp)
+  private[scala] val getAndTouchHandler = new GetAndTouchHandler(hp)
+  private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
+  private[scala] val mutateInHandler = new MutateInHandler(hp)
+  private[scala] val unlockHandler = new UnlockHandler(hp)
+  private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
+
+  val binary = new AsyncBinaryCollection(this)
+
+  private[scala] def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
+                                          id: String,
+                                          handler: RequestHandler[Resp, Res]): Future[Res] = {
+    AsyncCollection.wrap(in, id, handler, core)
+  }
+
+  private[scala] def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
+                                                                               id: String,
+                                                                               handler: RequestHandler[Resp, Res],
+                                                                               durability: Durability,
+                                                                               remove: Boolean,
+                                                                               timeout: java.time.Duration): Future[Res] = {
+    AsyncCollection.wrapWithDurability(in, id, handler, durability, remove, timeout, core, bucketName, collectionIdEncoded)
   }
 
   def exists(id: String,
@@ -259,7 +279,7 @@ class AsyncCollection(name: String,
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
-               expiration: Duration,
+               expiration: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
@@ -339,6 +359,3 @@ class AsyncCollection(name: String,
   }
 }
 
-object AsyncCollection {
-  val getFullDoc = Array(LookupInSpec.getDoc)
-}

@@ -135,7 +135,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+    return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, opts.cas(), collectionId,
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
   }
 
@@ -161,7 +161,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+    return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, opts.cas(), collectionId,
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
   }
 }
