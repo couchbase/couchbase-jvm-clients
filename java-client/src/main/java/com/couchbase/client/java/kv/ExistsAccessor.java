@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
@@ -24,10 +25,12 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
+
 public class ExistsAccessor {
 
-  public static final CompletableFuture<Optional<ExistsResult>> exists(final Core core, final String id,
-                                                                       final ObserveViaCasRequest request) {
+  public static CompletableFuture<Optional<ExistsResult>> exists(final Core core, final String id,
+                                                                 final ObserveViaCasRequest request) {
     core.send(request);
     return request
       .response()
@@ -37,11 +40,12 @@ public class ExistsAccessor {
             || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED) {
             return Optional.of(new ExistsResult(id, response.cas()));
           } else {
-            return Optional.empty();
+            return Optional.<ExistsResult>empty();
           }
         } else {
-          throw new UnsupportedOperationException("TODO Implement me");
+          throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
-      });
+      })
+      .whenComplete((r, t) -> completeSpan(request));
   }
 }

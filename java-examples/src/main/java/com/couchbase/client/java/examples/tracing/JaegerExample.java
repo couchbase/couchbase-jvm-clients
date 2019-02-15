@@ -23,6 +23,8 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import io.jaegertracing.Configuration;
 import io.opentracing.Tracer;
 
+import java.time.Duration;
+
 public class JaegerExample {
 
   public static void main(String... args) throws Exception {
@@ -40,6 +42,10 @@ public class JaegerExample {
     Bucket bucket = cluster.bucket("travel-sample");
     Collection collection = bucket.defaultCollection();
     System.err.println(collection.get("airline_10"));
+
+    System.err.println(collection.getAndTouch("airline_10", Duration.ZERO));
+    System.err.println(collection.getAndLock("airline_10"));
+    System.err.println(collection.exists("airline_10"));
 
     Thread.sleep(10000);
   }

@@ -59,7 +59,8 @@ public enum TracingUtils {
   public enum OpName {
     GET("get"),
     GET_AND_LOCK("get_and_lock"),
-    GET_AND_TOUCH("get_and_touch");
+    GET_AND_TOUCH("get_and_touch"),
+    EXISTS("exists");
 
     private final String ident;
 

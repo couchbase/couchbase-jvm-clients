@@ -479,8 +479,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new ObserveViaCasRequest(timeout, coreContext, bucket,
+    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, bucket,
       retryStrategy, id, collectionId, true, 0);
+    attachSpan(TracingUtils.OpName.EXISTS, environment, opts.parentSpan(), request);
+    return request;
   }
 
 
