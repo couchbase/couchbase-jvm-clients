@@ -28,6 +28,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.*;
+import io.opentracing.Scope;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.cnc.tracing.TracingUtils.attachSpan;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.kv.GetAccessor.EXPIRATION_MACRO;
@@ -201,7 +203,9 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
+    GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
+    attachSpan(environment, opts.parentSpan(), request);
+    return request;
   }
 
   /**

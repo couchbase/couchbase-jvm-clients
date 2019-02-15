@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.*;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
+import io.opentracing.Tracer;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -75,6 +76,7 @@ public class CoreEnvironment {
   private final Credentials credentials;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
+  private final Tracer tracer;
 
 
   public static CoreEnvironment create(final String username, final String password) {
@@ -132,6 +134,7 @@ public class CoreEnvironment {
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = Optional.ofNullable(builder.loggerConfig).orElse(LoggerConfig.create());
     this.seedNodes = Optional.ofNullable(builder.seedNodes).orElse(DEFAULT_SEED_NODES);
+    this.tracer = Optional.ofNullable(builder.tracer).orElse(null); // TODO fixme default
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -246,6 +249,14 @@ public class CoreEnvironment {
     return scheduler.get();
   }
 
+  public Tracer tracer() {
+    return tracer;
+  }
+
+  public boolean operationTracingEnabled() {
+    return tracer != null;
+  }
+
   /**
    * Holds the timer which is used to schedule tasks and trigger their callback,
    * for example to time out requests.
@@ -338,6 +349,7 @@ public class CoreEnvironment {
     private LoggerConfig loggerConfig = null;
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
+    private Tracer tracer;
 
     private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
@@ -391,6 +403,11 @@ public class CoreEnvironment {
 
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
       this.loggerConfig = loggerConfig.build();
+      return self();
+    }
+
+    public SELF tracer(final Tracer tracer) {
+      this.tracer = tracer;
       return self();
     }
 

@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.core.error.TemporaryFailureException;
@@ -28,11 +29,16 @@ import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.util.CharsetUtil;
+import io.opentracing.Span;
+import io.opentracing.Tracer;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+
+import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
 
 @Stability.Internal
 public enum GetAccessor {
@@ -66,7 +72,7 @@ public enum GetAccessor {
               Optional.empty()
             ));
           case NOT_FOUND:
-            return Optional.empty();
+            return Optional.<GetResult>empty();
           case TEMPORARY_FAILURE:
           case SERVER_BUSY:
             throw new TemporaryFailureException();
@@ -75,7 +81,7 @@ public enum GetAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
-    });
+    }).whenComplete((r, t) -> completeSpan(request));
   }
 
   public static CompletableFuture<Optional<GetResult>> getAndLock(final Core core, final String id,

@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.NetworkAddress;
+import io.opentracing.Span;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,8 @@ public class RequestContext extends CoreContext {
   private volatile Map<String, Object> payload;
 
   private volatile NetworkAddress dispatchedTo;
+
+  private volatile Span span;
 
   /**
    * The number of times the attached request has been retried.
@@ -85,6 +88,17 @@ public class RequestContext extends CoreContext {
   public RequestContext dispatchLatency(long dispatchLatency) {
     this.dispatchLatency = dispatchLatency;
     return this;
+  }
+
+  @Stability.Internal
+  public RequestContext span(final Span span) {
+    this.span = span;
+    return this;
+  }
+
+  @Stability.Volatile
+  public Span span() {
+    return span;
   }
 
   public int retryAttempts() {
