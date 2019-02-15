@@ -26,41 +26,39 @@ public enum ServiceType {
   /**
    * The Key/Value Service ("kv").
    */
-  KV(ServiceScope.BUCKET, "kv", "kv"),
+  KV(ServiceScope.BUCKET, "kv"),
 
   /**
    * The Query Service ("n1ql").
    */
-  QUERY(ServiceScope.CLUSTER, "query", "n1ql"),
+  QUERY(ServiceScope.CLUSTER, "query"),
 
   /**
    * The Analytics Service.
    */
-  ANALYTICS(ServiceScope.CLUSTER, "analytics", "analytics"),
+  ANALYTICS(ServiceScope.CLUSTER, "analytics"),
 
   /**
    * The Search Service ("fts").
    */
-  SEARCH(ServiceScope.CLUSTER, "search", "search"),
+  SEARCH(ServiceScope.CLUSTER, "search"),
 
   /**
    * The View Service.
    */
-  VIEWS(ServiceScope.CLUSTER, "views", "view"),
+  VIEWS(ServiceScope.CLUSTER, "views"),
 
   /**
    * The Cluster Manager service ("ns server")
    */
-  MANAGER(ServiceScope.CLUSTER, "manager", "manager");
+  MANAGER(ServiceScope.CLUSTER, "manager");
 
   private final ServiceScope scope;
   private final String ident;
-  private final String tracingIdent;
 
-  ServiceType(ServiceScope scope, String ident, String tracingIdent) {
+  ServiceType(ServiceScope scope, String ident) {
     this.scope = scope;
     this.ident = ident;
-    this.tracingIdent = tracingIdent;
   }
 
   public ServiceScope scope() {
@@ -71,6 +69,5 @@ public enum ServiceType {
     return ident;
   }
 
-  public String tracingIdent() {
-    return tracingIdent;
-  }}
+}
+

@@ -100,7 +100,7 @@ public enum GetAccessor {
               Optional.empty()
             ));
           case NOT_FOUND:
-            return Optional.empty();
+            return Optional.<GetResult>empty();
           case TEMPORARY_FAILURE:
           case LOCKED:
             throw new TemporaryLockFailureException();
@@ -111,7 +111,8 @@ public enum GetAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
-      });
+      })
+      .whenComplete((r, t) -> completeSpan(request));
   }
 
   public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core,
@@ -132,7 +133,7 @@ public enum GetAccessor {
               Optional.empty()
             ));
           case NOT_FOUND:
-            return Optional.empty();
+            return Optional.<GetResult>empty();
           case TEMPORARY_FAILURE:
           case LOCKED:
           case SERVER_BUSY:
@@ -142,8 +143,7 @@ public enum GetAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
         }
-      }).thenCompose(r -> {
-        Optional<GetResult> result = (Optional<GetResult>) r;
+      }).thenCompose(result -> {
         if (!result.isPresent()) {
           return CompletableFuture.completedFuture(result);
         }
@@ -161,7 +161,8 @@ public enum GetAccessor {
           request.timeout()
         );
         return Observe.poll(ctx).toFuture().thenApply(v -> result);
-      });
+      })
+      .whenComplete((r, t) -> completeSpan(request));
   }
 
   public static CompletableFuture<Optional<GetResult>> subdocGet(final Core core, final String id,

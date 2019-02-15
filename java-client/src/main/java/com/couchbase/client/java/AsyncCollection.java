@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.tracing.TracingUtils;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
@@ -204,7 +205,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
-    attachSpan("get", environment, opts.parentSpan(), request);
+    attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
   }
 
@@ -255,9 +256,11 @@ public class AsyncCollection {
       ));
     }
 
-    return new SubdocGetRequest(
+    SubdocGetRequest request = new SubdocGetRequest(
       timeout, coreContext, bucket, retryStrategy, id, collectionId, (byte) 0, commands
     );
+    attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
+    return request;
   }
 
   /**
@@ -305,9 +308,11 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     Duration lockFor = options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor();
-    return new GetAndLockRequest(
+    GetAndLockRequest request = new GetAndLockRequest(
       id, collectionId, timeout, coreContext, bucket, retryStrategy, lockFor
     );
+    attachSpan(TracingUtils.OpName.GET_AND_LOCK, environment, opts.parentSpan(), request);
+    return request;
   }
 
   /**
@@ -363,8 +368,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new GetAndTouchRequest(id, collectionId, timeout, coreContext,
+    GetAndTouchRequest request =  new GetAndTouchRequest(id, collectionId, timeout, coreContext,
       bucket, retryStrategy, expiration, opts.durabilityLevel());
+    attachSpan(TracingUtils.OpName.GET_AND_TOUCH, environment, opts.parentSpan(), request);
+    return request;
   }
 
   /**
