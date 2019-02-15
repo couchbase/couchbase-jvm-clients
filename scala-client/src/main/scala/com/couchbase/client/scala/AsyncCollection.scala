@@ -108,10 +108,6 @@ class AsyncCollection(name: String,
   // TODO AsyncBinaryCollection
 
 
-  private def throwOnBadResult(status: ResponseStatus): RuntimeException = {
-    DefaultErrors.throwOnBadResult(status)
-  }
-
   private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
                                           id: String,
                                           handler: RequestHandler[Resp, Res]): Future[Res] = {

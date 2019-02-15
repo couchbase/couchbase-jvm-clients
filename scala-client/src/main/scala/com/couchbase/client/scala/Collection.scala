@@ -40,7 +40,6 @@ class Collection(val async: AsyncCollection,
   val reactive = new ReactiveCollection(async)
   // TODO binary collection
   private val SafetyTimeout = 1.second
-  //  val kvTimeout = FiniteDuration(config.kvTimeout(), TimeUnit.MILLISECONDS)
   private[scala] val kvTimeout = Duration(2500, TimeUnit.MILLISECONDS)
 
   private def block[T](in: Future[T], timeout: Duration): Try[T] = {

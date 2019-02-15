@@ -1,65 +1,85 @@
 package com.couchbase.client.scala
 
+import com.couchbase.client.scala.json.JsonObject
 import org.scalatest.{FlatSpec, FunSuite}
 
 class JsonObjectSpec extends FunSuite {
 
-//  test("field = 'value'") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field", "value")
-//    assert(out.field.exists)
-//    assert(out.field.path.toString == "field")
-//    assert(out.field.str == "value")
-//  }
-//
+  val raw =
+    """{"name":"John Smith",
+      |"age":29,
+      |"address":[{"address":"123 Fake Street","regional":{"county:":"essex"}}]}""".stripMargin
+  val json = JsonObject.fromJson(raw).get
 
-//  test("field1.field2 = 'value'") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field1", JsonObject.create.put("field2", "value"))
-//    assert(out.field1.exists)
-//    assert(out.field1.field2.exists)
-//    assert(out.field1.field2.path.toString == "field1.field2")
-//    assert(out.field1.field2.str == "value")
-//  }
-//
-//  test("field1.field2 = 42") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field1", JsonObject.create.put("field2", 42))
-//    assert(out.field1.exists)
-//    assert(out.field1.field2.exists)
-//    assert(out.field1.field2.int == 42)
-//    intercept[ClassCastException] {
-//      assert(out.field1.field2.str == 42)
-//    }
-//  }
-//
-//  test("field1.field2.field3 = 'value'") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field1", JsonObject.create.put("field2", JsonObject.create.put("field3", "value")))
-//    assert(out.field1.exists)
-//    assert(out.field1.field2.exists)
-//    assert(out.field1.field2.field3.exists)
-//    assert(out.field1.field2.field3.str == "value")
-//  }
-//
-//  test("field1(0).field2 = 'value'") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field1", JsonArray.from(JsonObject.create.put("field2", "value")))
-//    assert(out.field1.exists)
-//    assert(out.field1(0).exists)
-//    assert(out.field1(0).path.toString == "field1[0]")
-//    assert(out.field1(0).field2.exists)
-//    assert(out.field1(0).field2.path.toString == "field1[0].field2")
-//    assert(out.field1(0).field2.str == "value")
-//  }
-//
-//  test("field1(0).field2(0) = 'value'") {
-//    val obj = JsonObject.create
-//    val out = obj.put("field1", JsonArray.from(JsonArray.from(JsonObject.create.put("field2", "value"))))
-//    assert(out.field1.exists)
-//    assert(out.field1(0).field2(0).exists)
-//    assert(out.field1(0).field2(0).path.toString == "field1[0].field2[0]")
-//    assert(out.field1(0).field2(0).field2.str == "value")
-//  }
+
+  test("root incorrectly read as object") {
+    assert(json.dyn.address.obj.isFailure)
+  }
+
+  test("name.str") {
+    assert(json.dyn.name.str.get == "John Smith")
+  }
+
+  test("name.int") {
+    assert(json.dyn.name.int.isFailure)
+  }
+
+  test("age.int") {
+    assert(json.dyn.age.int.get == 29)
+  }
+
+  test("age.double") {
+    assert(json.dyn.age.double.get == 29.0)
+  }
+
+  test("age.str") {
+    assert(json.dyn.age.str.get == "29")
+  }
+
+
+  test("address.arr") {
+    assert(json.dyn.address.arr.isSuccess)
+  }
+
+  test("name.arr") {
+    assert(json.dyn.name.arr.isFailure)
+  }
+
+  test("name(0).str") {
+    assert(json.dyn.name(0).str.isFailure)
+  }
+
+  test("address(0).address.str") {
+    assert(json.dyn.address(0).address.str.get == "123 Fake Street")
+  }
+
+  test("address(0).no_exist.str") {
+    assert(json.dyn.address(0).no_exist.str.isFailure)
+  }
+
+  test("address(0).obj") {
+    assert(json.dyn.address(0).obj.isSuccess)
+  }
+
+  test("address(1).obj") {
+    assert(json.dyn.address(1).obj.isFailure)
+  }
+
+  test("address(-1).obj") {
+    assert(json.dyn.address(-1).obj.isFailure)
+  }
+
+  test("address(0).regional.obj") {
+    assert(json.dyn.address(0).regional.obj.isSuccess)
+  }
+
+  test("address(0).regional.county.str") {
+    assert(json.dyn.address(0).regional.county.str.get == "essex")
+  }
+
+
+  test("address(0).regional.county.int") {
+    assert(json.dyn.address(0).regional.county.int.isFailure)
+  }
 
 }

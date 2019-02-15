@@ -36,6 +36,7 @@ import org.scalacheck.{Arbitrary, Gen}
   *
   * all raw primitives
   */
+// TODO test raw primitives
 class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with BeforeAndAfter with GeneratorDrivenPropertyChecks {
 
   private val (cluster, bucket, coll) = (for {

@@ -18,8 +18,12 @@ package com.couchbase.client.scala.json
 
 import java.util
 
+import com.couchbase.client.core.error.DecodingFailedException
+
 import scala.collection.{GenSet, mutable}
 import scala.language.dynamics
+import scala.util.{Failure, Success, Try}
+import scala.util.control.NonFatal
 
 //import com.fasterxml.jackson.databind.ObjectMapper
 
@@ -36,14 +40,19 @@ import scala.collection.JavaConverters._
   * - It doesn't use Try as there's overhead there.
   */
 
-case class JsonObject(val content: java.util.HashMap[String, Any]) {
+case class JsonObject(private val content: java.util.HashMap[String, Any]) {
+  def getOpt(name: String): Option[Any] = {
+    Option(content.get(name))
+  }
 
-  // Don't make this Dynamic, it makes it easy to misuse
-  // TODO going back and forwards on this
-  //  def dyn(): GetSelecter = GetSelecter(this, "")
+  def get(name: String): Any = {
+    content.get(name)
+  }
 
-//  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
-//  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
+
+  // Instead of making JsonObject itself Dynamic, which lends itself to all kinds of accidental errors, put it in a
+  // separate method
+  def dyn: GetSelecter = GetSelecter(Left(this), Seq())
 
   def put(name: String, value: Any): JsonObject = {
     content.put(name, value)
@@ -183,6 +192,15 @@ case class JsonObject(val content: java.util.HashMap[String, Any]) {
 
 
 object JsonObject {
+  def fromJson(json: String): Try[JsonObject] = {
+    try {
+      Success(JacksonTransformers.stringToJsonObject(json))
+    }
+    catch {
+      case NonFatal(err) => Failure(new DecodingFailedException(err))
+    }
+  }
+
   def create: JsonObject = new JsonObject(new util.HashMap[String, Any]())
 
   // Note, benchmarking indicates it's roughly twice as fast to simple create and put all fields, than it is to use this.

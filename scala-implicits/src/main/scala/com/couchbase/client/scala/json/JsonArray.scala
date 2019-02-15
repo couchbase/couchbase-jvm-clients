@@ -2,8 +2,12 @@ package com.couchbase.client.scala.json
 
 import java.util
 
+import com.couchbase.client.core.error.DecodingFailedException
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 // Using Java ArrayList as benchmarking found it 4x faster than ArrayBuffer
 case class JsonArray(private val values: java.util.ArrayList[Any]) {
@@ -43,12 +47,23 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
 
   def toSeq: Seq[Any] = values.asScala
   def toJavaList: java.util.List[Any] = values
+
+  def dyn: GetSelecter = GetSelecter(Right(this), Seq())
 }
 
 
 
 object JsonArray {
   def create: JsonArray = new JsonArray(new util.ArrayList[Any])
+
+  def fromJson(json: String): Try[JsonArray] = {
+    try {
+      Success(JacksonTransformers.stringToJsonArray(json))
+    }
+    catch {
+      case NonFatal(err) => Failure(new DecodingFailedException(err))
+    }
+  }
 
   /**
     * Performance note: benchmarking indicates it's much faster to do JsonArray.create.put(x).put(y)
