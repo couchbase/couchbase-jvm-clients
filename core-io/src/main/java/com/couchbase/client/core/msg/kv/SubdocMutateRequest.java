@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
@@ -88,7 +89,6 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     ByteBuf body;
     if (commands.size() == 1) {
-      // todo: Optimize into single get request only?
       body = commands.get(0).encode(alloc);
     } else {
       body = alloc.compositeBuffer(commands.size());
@@ -100,11 +100,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     }
 
     ByteBuf request;
-    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
-      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-      request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-        noCas(), flexibleExtras, extras, key, body);
-      flexibleExtras.release();
+    if (syncReplicationType.isPresent()) {
+      if (ctx.syncReplicationEnabled()) {
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+        request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+                noCas(), flexibleExtras, extras, key, body);
+        flexibleExtras.release();
+      }
+      else {
+        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+      }
     } else {
       request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
         noCas(), extras, key, body);

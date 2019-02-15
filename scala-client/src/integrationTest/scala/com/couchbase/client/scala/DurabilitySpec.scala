@@ -44,7 +44,9 @@ class DurabilitySpec extends FunSuite {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Majority) match {
+      case Success(result) =>assert(false, s"success not expected")
       case Failure(err: DurabilityLevelNotAvailableException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 

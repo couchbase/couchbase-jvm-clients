@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -56,11 +57,16 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
     ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
 
     ByteBuf request;
-    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
-      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
-        partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
-      flexibleExtras.release();
+    if (syncReplicationType.isPresent()) {
+      if (ctx.syncReplicationEnabled()) {
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+        request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
+                partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+        flexibleExtras.release();
+      }
+      else {
+        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+      }
     } else {
       request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
         partition(), opaque, noCas(), extras, key, noBody());

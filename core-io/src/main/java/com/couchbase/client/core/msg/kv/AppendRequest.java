@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -65,11 +66,16 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
     }
 
     ByteBuf request;
-    if (ctx.syncReplicationEnabled() && syncReplicationType.isPresent()) {
-      ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-      request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.APPEND, datatype, partition(),
-        opaque, cas, flexibleExtras, noExtras(), key, content);
-      flexibleExtras.release();
+    if (syncReplicationType.isPresent()) {
+      if (ctx.syncReplicationEnabled()) {
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+        request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.APPEND, datatype, partition(),
+                opaque, cas, flexibleExtras, noExtras(), key, content);
+        flexibleExtras.release();
+      }
+      else {
+        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+      }
     } else {
       request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.APPEND, datatype, partition(),
         opaque, cas, noExtras(), key, content);
