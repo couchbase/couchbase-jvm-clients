@@ -9,7 +9,7 @@ import com.couchbase.client.core.util.Validators
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.{ExistsResult, MutationResult}
 import com.couchbase.client.scala.codec.Conversions
-import com.couchbase.client.scala.durability.{Disabled, Durability, Majority}
+import com.couchbase.client.scala.durability.{Durability}
 import com.couchbase.client.scala.util.Validate
 import io.opentracing.Span
 
