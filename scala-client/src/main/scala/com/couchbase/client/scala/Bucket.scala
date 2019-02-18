@@ -37,7 +37,7 @@ class Bucket(val async: AsyncBucket)
       .map(asyncScope => new Scope(asyncScope, async.name))
   }
 
-  // TODO
+  // TODO BLOCKED
 //  def query(statement: String, query: QueryOptions = QueryOptions()): N1qlQueryResult = ???
 //
 //  def queryAs[T](statement: String, query: QueryOptions = QueryOptions()): N1qlResult[T] = ???

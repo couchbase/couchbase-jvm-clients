@@ -20,13 +20,17 @@ import scala.util.{Failure, Success, Try}
 //object Codecs2 {
 //  def codec[T]: (Decodable[T], Encodable[T]) = (decoder[T], encoder[T])
 //}
+import io.circe._, io.circe.generic.semiauto._
 
 case class Address(address: String)
 object Address {
   // upickle requires adding this implicit thing to support conversion to/from JSON.  It is at least not much
   // hassle to write.
   implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
-//  implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
+  implicit val decoder: io.circe.Decoder[Address] = deriveDecoder[Address]
+  implicit val encoder: io.circe.Encoder[Address] = deriveEncoder[Address]
+
+  //  implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
 //  Codecs.decoder[Address]
 //  implicit val decoder: Decodable[Address] = Codecs.decoder[Address]
 //  implicit val encoder: Encodable[Address] = Codecs.encoder[Address]
@@ -55,6 +59,9 @@ object User {
   implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
   implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
   implicit val cbCodec: Codec[User] = Codecs.codec[User]
+
+  implicit val decoder: io.circe.Decoder[User] = deriveDecoder[User]
+  implicit val encoder: io.circe.Encoder[User] = deriveEncoder[User]
 
   //  implicit object Decode extends Decodable[User] {
 //    override def decode(bytes: Array[Byte], params: EncodeParams) = {
@@ -211,31 +218,30 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
     }
   }
 
-  // TODO
-//  "inserting case class using circe AST" should "succeed" in {
-//    import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
-//
-//    val content = User("John Smith", 29, List(Address("123 Fake Street")))
-//    val json: io.circe.Json = content.asJson
-//
-//    coll.insert(DocId, json) match {
-//      case Success(v) =>
-//      case Failure(err) =>
-//        println(err)
-//        assert(false)
-//    }
-//
-//    (for {
-//      doc <- coll.get(DocId)
-//      content <- doc.contentAs[io.circe.Json]
-//
-//    } yield content) match {
-//      case Success(result: User) =>
-//        assert(result.name == "John Smith")
-//      case Failure(err) =>
-//        assert(false)
-//    }
-//  }
+  "inserting case class using circe AST" should "succeed" in {
+    import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+
+    val content = User("John Smith", 29, Seq(Address("123 Fake Street")))
+    val json: io.circe.Json = content.asJson
+
+    coll.insert(DocId, json) match {
+      case Success(v) =>
+      case Failure(err) =>
+        println(err)
+        assert(false)
+    }
+
+    (for {
+      doc <- coll.get(DocId)
+      content <- doc.contentAs[io.circe.Json]
+
+    } yield content) match {
+      case Success(result: User) =>
+        assert(result.name == "John Smith")
+      case Failure(err) =>
+        assert(false)
+    }
+  }
 
   def docId(idx: Int): String = {
     UUID.randomUUID().toString + "_" + idx

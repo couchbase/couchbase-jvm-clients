@@ -35,7 +35,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
   private val core = Core.create(environment)
   private[scala] val env = environment
 
-  // TODO MVP query
+  // TODO BLOCKED query
 
   import DurationConversions._
 
@@ -71,7 +71,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
       case Success(_) =>
         val result = new QueryConsumer()
 
-        // TODO: proper jackson encoding with options
+        // TODO BLOCKED proper jackson encoding with options
         val query = ("{\"statement\":\"" + statement + "\"}").getBytes(CharsetUtil.UTF_8)
 
         val timeout: java.time.Duration = options.timeout match {

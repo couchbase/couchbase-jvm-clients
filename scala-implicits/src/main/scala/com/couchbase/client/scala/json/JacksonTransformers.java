@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import scala.collection.Iterator;
 
 import java.io.IOException;
 
@@ -44,7 +45,15 @@ public class JacksonTransformers {
         @Override
         public void serialize(JsonObject value, JsonGenerator jgen,
                               SerializerProvider provider) throws IOException {
-            jgen.writeObject(value.toMap());
+            Iterator<String> it = value.names().iterator();
+
+            jgen.writeStartObject();
+            while (it.hasNext()) {
+                String name = it.next();
+                Object o = value.get(name);
+                jgen.writeObjectField(name, o);
+            }
+            jgen.writeEndObject();
         }
     }
 
@@ -52,7 +61,14 @@ public class JacksonTransformers {
         @Override
         public void serialize(JsonArray value, JsonGenerator jgen,
                               SerializerProvider provider) throws IOException {
-            jgen.writeObject(value.toJavaList());
+            Iterator<Object> it = value.iterator();
+
+            jgen.writeStartArray();
+            while (it.hasNext()) {
+                Object o = it.next();
+                jgen.writeObject(o);
+            }
+            jgen.writeEndArray();
         }
     }
 

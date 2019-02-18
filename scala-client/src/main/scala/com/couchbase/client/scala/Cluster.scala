@@ -41,7 +41,7 @@ class Cluster(env: => ClusterEnvironment)
 
   import DurationConversions._
 
-  // TODO MVP
+  // TODO BLOCKED query
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
