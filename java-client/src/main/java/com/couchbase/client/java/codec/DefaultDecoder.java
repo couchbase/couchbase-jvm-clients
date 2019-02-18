@@ -40,10 +40,12 @@ public class DefaultDecoder implements Decoder<Object> {
       } else {
         return JacksonTransformers.MAPPER.readValue(encoded.content(), target);
       }
-    } catch (DecodingFailedException e)  {
-      throw e;
-    } catch (Exception e) {
-      throw new DecodingFailedException(e);
+    } catch (Throwable e) {
+      if (e instanceof DecodingFailedException) {
+         e = e.getCause();
+      }
+      throw new DecodingFailedException("Decoding of content into target " + target
+        + " failed; encoded = " + encoded, e);
     }
   }
 

@@ -52,7 +52,7 @@ public class DefaultEncoder implements Encoder {
       }
       return EncodedDocument.of(flags, encoded);
     } catch (Exception e) {
-      throw new EncodingFailedException(e);
+      throw new EncodingFailedException("Encoding of content + " + input + " failed.", e);
     }
   }
 }
