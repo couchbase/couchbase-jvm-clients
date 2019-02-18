@@ -16,7 +16,6 @@ import scala.util.{Failure, Success}
   * The client supports multiple Json libraries.  These tests are to ensure that whatever we write with one lib,
   * can be read by another (and therefore hopefully any other Couchbase SDK also).
   */
-// TODO test raw primitives
 class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with BeforeAndAfter with GeneratorDrivenPropertyChecks {
 
   private val (_, _, coll) = (for {

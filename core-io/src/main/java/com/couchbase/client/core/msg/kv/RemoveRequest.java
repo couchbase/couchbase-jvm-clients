@@ -58,7 +58,8 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
     ByteBuf request;
     if (syncReplicationType.isPresent()) {
       if (ctx.syncReplicationEnabled()) {
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+        Duration timeoutAdjusted = RequestUtil.handleDurabilityTimeout(context(), timeout());
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeoutAdjusted);
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
                 partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
         flexibleExtras.release();

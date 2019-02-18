@@ -7,6 +7,7 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import org.scalatest.FunSuite
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 class DurabilitySpec extends FunSuite {
@@ -57,6 +58,16 @@ class DurabilitySpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Disabled) match {
       case Success(_) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  test("Majority, timeout too short") {
+    val docId = TestUtils.docId()
+    val content = ujson.Obj("hello" -> "world")
+    coll.insert(docId, content, durability = Majority, timeout = Duration.Zero) match {
+      case Success(_) =>assert(false, s"unexpected success")
+      case Failure(err: IllegalArgumentException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
