@@ -32,9 +32,9 @@ trait CodecParams {
 
 case class EncodeParams(flags: Int) extends CodecParams
 
-//case class EncodeParams(flags: Int) extends CodecParams
 
 
+// TODO replace with core versions
 object DocumentFlags {
   val Reserved = 0
   val Private = 1 << 24
@@ -104,9 +104,17 @@ object Conversions {
       }
     }
 
+    // TODO support Serializable
+
+    // Note there are 3 ways of representing strings:
+    // {"hello":"world"}  written with flags=Json
+    // foobar             written with flags=Json (note that a single string is perfectly valid json)
+    // foobar             written with flags=String
+
     // This is the safe String converter: it parses the input, and sets the flags to Json or String as appropriate.
     implicit object StringConvert extends Encodable[String] {
       override def encode(content: String) = {
+        // TODO this requires upickle, exchange for jsoniter
         val upickleAttempt = Try(upickle.default.read[ujson.Value](content))
 
         upickleAttempt match {

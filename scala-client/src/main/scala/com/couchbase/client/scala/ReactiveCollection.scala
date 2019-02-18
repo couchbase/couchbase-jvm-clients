@@ -27,7 +27,7 @@ import com.couchbase.client.core.util.Validators
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document.{GetResult, LookupInResult, MutateInResult}
-import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.durability.{Durability}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec, RequestHandler}
 import com.couchbase.client.scala.util.FutureConversions
 import io.opentracing.Span
@@ -37,6 +37,7 @@ import scala.compat.java8.FutureConverters
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import com.couchbase.client.scala.durability.Durability._
 
 class ReactiveCollection(async: AsyncCollection) {
   private val kvTimeout = async.kvTimeout

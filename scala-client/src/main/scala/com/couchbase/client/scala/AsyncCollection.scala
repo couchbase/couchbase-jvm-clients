@@ -55,6 +55,7 @@ import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 import ujson._
+import com.couchbase.client.scala.durability.Durability._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions

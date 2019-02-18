@@ -259,6 +259,17 @@ class SubdocMutateSpec extends FunSuite {
     assert(updatedContent("foo").num == 15)
   }
 
+  test("counter +5 returned") {
+    val content = ujson.Obj("foo" -> 10)
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, Array(increment("foo", 5))) match {
+      case Success(result) =>
+        assert(result.contentAs[Long](0).get == 5)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
   test("counter -5") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
       Array(decrement("foo", 3)))

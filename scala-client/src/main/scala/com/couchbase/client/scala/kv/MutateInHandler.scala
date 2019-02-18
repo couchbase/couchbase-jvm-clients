@@ -89,9 +89,8 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
 
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
-        val fields: Map[String, SubdocField] = values.map(v => v.path() -> v).toMap
 
-        MutateInResult(id, fields, response.cas(), response.mutationToken().asScala)
+        MutateInResult(id, values, response.cas(), response.mutationToken().asScala)
 
       case ResponseStatus.SUBDOC_FAILURE =>
 

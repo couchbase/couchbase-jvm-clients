@@ -2,8 +2,9 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
-import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.durability.{Durability}
 import io.opentracing.Span
+import com.couchbase.client.scala.durability.Durability._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration

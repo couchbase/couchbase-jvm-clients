@@ -16,6 +16,7 @@ import scala.util.{Success, Try}
 
 
 // TODO how to handle flush - this will create a new collectionId
+// TODO handle span closing
 class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
   def request(id: String,
               parentSpan: Option[Span],

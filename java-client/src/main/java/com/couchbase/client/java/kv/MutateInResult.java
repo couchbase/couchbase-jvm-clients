@@ -38,4 +38,6 @@ public class MutateInResult {
   public Optional<MutationToken> mutationToken() {
     return mutationToken;
   }
+
+  // todo contentAs by index (for subdoc mutating a counter)
 }

@@ -12,20 +12,21 @@ import scala.util.{Failure, Success, Try}
 
 
 case class MutateInResult(id: String,
-                          private val _content: GenMap[String, SubdocField],
+                          private val content: Seq[SubdocField],
                           cas: Long,
                           mutationToken: Option[MutationToken]) extends HasDurabilityTokens {
 
-  // TODO change to idx lookup
-  def contentAs[T](path: String)
+  def contentAs[T](index: Int)
                   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    _content.get(path) match {
-      case Some(field) =>
-        field.error().asScala match {
-          case Some(err) => Failure(err)
-          case _ => ev.decodeSubDocumentField(field, Conversions.JsonFlags)
-        }
-      case _ => Failure(new OperationDoesNotExist(s"Operation $path could not be found in results"))
+    if (index < 0 || index >= content.size) {
+      Failure(new IllegalArgumentException(s"$index is out of bounds"))
+    }
+    else {
+      val field = content(index)
+      field.error().asScala match {
+        case Some(err) => Failure(err)
+        case _ => ev.decodeSubDocumentField(field, Conversions.JsonFlags)
+      }
     }
   }
 }

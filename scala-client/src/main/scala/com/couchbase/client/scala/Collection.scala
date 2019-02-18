@@ -22,7 +22,9 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.document._
-import com.couchbase.client.scala.durability.{Disabled, Durability}
+import com.couchbase.client.scala.durability.Durability._
+
+import com.couchbase.client.scala.durability.{Durability}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
