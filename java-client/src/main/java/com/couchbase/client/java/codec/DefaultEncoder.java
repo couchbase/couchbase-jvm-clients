@@ -16,14 +16,22 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.error.EncodingFailedException;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.kv.EncodedDocument;
 
+/**
+ * The default encoder used which registers common types and knows how to encode them
+ * into their binary representation with the proper flags.
+ *
+ * @since 3.0.0
+ */
 public class DefaultEncoder implements Encoder {
 
+  /**
+   * The default instance to reuse.
+   */
   public static final DefaultEncoder INSTANCE = new DefaultEncoder();
 
   @Override
@@ -32,18 +40,19 @@ public class DefaultEncoder implements Encoder {
       throw new IllegalArgumentException("No content provided, cannot " +
         "encode the Options as content!");
     }
+
     try {
-      int flags = 0; // TODO: FIXME
+      int flags = Encoder.JSON_FLAGS;
       byte[] encoded;
-      if (input instanceof BinaryContent) {
-        encoded = ((BinaryContent) input).content();
+      if (input instanceof TypedContent) {
+        flags = ((TypedContent) input).flags();
+        encoded = ((TypedContent) input).content();
       } else {
-        encoded = JacksonTransformers.MAPPER.writeValueAsBytes(input); // FIXME
+        encoded = JacksonTransformers.MAPPER.writeValueAsBytes(input);
       }
-      return new EncodedDocument(flags, encoded);
-    } catch (Exception ex) {
-      // TODO: better hierachy
-      throw new CouchbaseException(ex);
+      return EncodedDocument.of(flags, encoded);
+    } catch (Exception e) {
+      throw new EncodingFailedException(e);
     }
   }
 }

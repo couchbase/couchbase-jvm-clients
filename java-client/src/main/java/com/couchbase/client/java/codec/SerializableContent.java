@@ -16,24 +16,32 @@
 
 package com.couchbase.client.java.codec;
 
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.error.EncodingFailedException;
 
-public class EncodedJsonContent extends TypedContent {
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
-  public static EncodedJsonContent wrap(String content) {
-    return wrap(content.getBytes(CharsetUtil.UTF_8));
+public class SerializableContent extends TypedContent {
+
+
+  public static SerializableContent wrap(final Serializable content) {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+         ObjectOutput out = new ObjectOutputStream(bos)) {
+      out.writeObject(content);
+      return new SerializableContent(bos.toByteArray());
+    } catch (Exception e) {
+      throw new EncodingFailedException(e);
+    }
   }
 
-  public static EncodedJsonContent wrap(byte[] content) {
-    return new EncodedJsonContent(content);
-  }
-
-  private EncodedJsonContent(byte[] content) {
+  private SerializableContent(byte[] content) {
     super(content);
   }
 
   @Override
   public int flags() {
-    return Encoder.JSON_FLAGS;
+    return Encoder.SERIALIZED_FLAGS;
   }
 }

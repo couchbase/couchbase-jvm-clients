@@ -34,7 +34,11 @@ public class EncodedDocument {
   private final int flags;
   private final byte[] content;
 
-  public EncodedDocument(int flags, byte[] content) {
+  public static EncodedDocument of(int flags, byte[] content) {
+    return new EncodedDocument(flags, content);
+  }
+
+  private EncodedDocument(int flags, byte[] content) {
     this.flags = flags;
     this.content = content;
   }

@@ -16,19 +16,18 @@
 
 package com.couchbase.client.java.codec;
 
-public class BinaryContent {
-
-  private final byte[] content;
+public class BinaryContent extends TypedContent {
 
   public static BinaryContent wrap(byte[] content) {
     return new BinaryContent(content);
   }
 
   private BinaryContent(byte[] content) {
-    this.content = content;
+    super(content);
   }
 
-  public byte[] content() {
-    return content;
+  @Override
+  public int flags() {
+    return Encoder.BINARY_FLAGS;
   }
 }

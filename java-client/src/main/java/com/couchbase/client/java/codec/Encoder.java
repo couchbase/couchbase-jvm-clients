@@ -16,9 +16,15 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.kv.EncodedDocument;
 
 public interface Encoder {
+
+  int JSON_FLAGS = CodecFlags.JSON_COMPAT_FLAGS;
+  int BINARY_FLAGS = CodecFlags.BINARY_COMPAT_FLAGS;
+  int STRING_FLAGS = CodecFlags.STRING_COMPAT_FLAGS;
+  int SERIALIZED_FLAGS = CodecFlags.SERIALIZED_COMPAT_FLAGS;
 
   EncodedDocument encode(Object input);
 

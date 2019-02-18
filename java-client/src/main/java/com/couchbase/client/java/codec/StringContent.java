@@ -16,5 +16,24 @@
 
 package com.couchbase.client.java.codec;
 
-public class NonJsonStringContent {
+import io.netty.util.CharsetUtil;
+
+public class StringContent extends TypedContent {
+
+  public static StringContent wrap(String content) {
+    return wrap(content.getBytes(CharsetUtil.UTF_8));
+  }
+
+  public static StringContent wrap(byte[] content) {
+    return new StringContent(content);
+  }
+
+  private StringContent(byte[] content) {
+    super(content);
+  }
+
+  @Override
+  public int flags() {
+    return Encoder.STRING_FLAGS;
+  }
 }

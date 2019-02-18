@@ -65,7 +65,7 @@ public class LookupInResult {
       value.error().map(err -> {
         throw err;
       });
-      return decoder.decode(target, new EncodedDocument(0, value.value()));
+      return decoder.decode(target, EncodedDocument.of(0, value.value()));
     }
     else {
       throw new IllegalArgumentException("Index " + index + " is invalid");
