@@ -1,7 +1,6 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.durability.ClientVerified
 import com.couchbase.client.scala.util.Validate
 import org.scalatest.FunSuite
 
@@ -110,5 +109,6 @@ class ReadFromReplicaSpec extends FunSuite {
     })
       .blockLast()
   }
+
 
 }

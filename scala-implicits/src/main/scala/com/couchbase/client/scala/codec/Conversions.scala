@@ -3,7 +3,7 @@ package com.couchbase.client.scala.codec
 import java.nio.ByteBuffer
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocField}
+import com.couchbase.client.core.msg.kv.{CodecFlags, SubdocCommandType, SubdocField}
 import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
 import io.netty.util.CharsetUtil
 
@@ -13,8 +13,6 @@ import scala.util.{Failure, Success, Try}
 trait CodecParams {
   val flags: Int
 
-  def isPrivate = (flags & DocumentFlags.Private) != 0
-
   def isJson = (flags & DocumentFlags.Json) != 0
 
   def isBinary = (flags & DocumentFlags.Binary) != 0
@@ -23,7 +21,6 @@ trait CodecParams {
 
   override def toString = "CodecParams{" +
     "flags=" + flags +
-    ",private=" + isPrivate +
     ",json=" + isJson +
     ",binary=" + isBinary +
     ",str=" + isString +
@@ -33,16 +30,13 @@ trait CodecParams {
 case class EncodeParams(flags: Int) extends CodecParams
 
 
-
-// TODO replace with core versions
 object DocumentFlags {
-  val Reserved = 0
-  val Private = 1 << 24
-  val Json = 2 << 24
-  val Binary = 3 << 24
+  val Json = CodecFlags.JSON_COMPAT_FLAGS
+  val Binary = CodecFlags.BINARY_COMPAT_FLAGS
 
   // Non-JSON String, utf-8 encoded, no BOM: "hello world"
-  val String = 4 << 24
+  // (note "hello world" is still valid Json)
+  val String = CodecFlags.STRING_COMPAT_FLAGS
 }
 
 
@@ -113,6 +107,7 @@ object Conversions {
 
     // This is the safe String converter: it parses the input, and sets the flags to Json or String as appropriate.
     implicit object StringConvert extends Encodable[String] {
+      // TODO default StringConvert perhaps shouldn't be safe - talk with Matt
       override def encode(content: String) = {
         // TODO this requires upickle, exchange for jsoniter
         val upickleAttempt = Try(upickle.default.read[ujson.Value](content))

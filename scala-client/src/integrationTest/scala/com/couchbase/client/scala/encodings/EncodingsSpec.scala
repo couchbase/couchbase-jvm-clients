@@ -238,8 +238,6 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-
-
   test("encode raw-bytes") {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()

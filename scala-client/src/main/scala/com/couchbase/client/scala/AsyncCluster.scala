@@ -4,6 +4,7 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
@@ -11,6 +12,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryConsumer, QueryResult}
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
+import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.duration.Duration
@@ -31,6 +33,7 @@ object DurationConversions {
 class AsyncCluster(environment: => ClusterEnvironment)
                   (implicit ec: ExecutionContext) {
   private val core = Core.create(environment)
+  private[scala] val env = environment
 
   // TODO MVP query
 
@@ -100,6 +103,31 @@ class AsyncCluster(environment: => ClusterEnvironment)
   def shutdown(): Future[Unit] = {
     Future {
       environment.shutdown(environment.timeoutConfig().disconnectTimeout())
+    }
+  }
+}
+
+object AsyncCluster {
+  private implicit val ec = Cluster.ec
+
+  def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
+    Cluster.connect(connectionString, username, password) match {
+      case Success(cluster) => Future { cluster.async }
+      case Failure(err) => Future.failed(err)
+    }
+  }
+
+  def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
+    Cluster.connect(connectionString, credentials) match {
+      case Success(cluster) => Future { cluster.async }
+      case Failure(err) => Future.failed(err)
+    }
+  }
+
+  def connect(environment: ClusterEnvironment): Future[AsyncCluster] = {
+    Cluster.connect(environment) match {
+      case Success(cluster) => Future { cluster.async }
+      case Failure(err) => Future.failed(err)
     }
   }
 }

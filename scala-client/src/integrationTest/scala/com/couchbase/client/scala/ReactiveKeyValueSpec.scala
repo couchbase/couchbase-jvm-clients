@@ -8,6 +8,7 @@ import scala.util.{Failure, Success, Try}
 import reactor.core.publisher.{Mono => JavaMono}
 import reactor.core.scala.publisher.{Mono => ScalaMono}
 
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 
@@ -275,5 +276,23 @@ class ReactiveKeyValueSpec extends FunSuite {
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
+  }
+
+  test("initialise reactively") {
+    val coll: ReactiveCollection = ReactiveCluster.connect("localhost", "Administrator", "password")
+      .flatMap(cluster => cluster.bucket("default"))
+      .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
+      .flatMap(scope => scope.defaultCollection())
+      .block()
+  }
+
+  test("initialise async") {
+    import Cluster.ec
+    val coll: Future[AsyncCollection] = AsyncCluster.connect("localhost", "Administrator", "password")
+      .flatMap(cluster => cluster.bucket("default"))
+      .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
+      .flatMap(scope => scope.defaultCollection())
+
+    val c: AsyncCollection = Await.result(coll, Duration.Inf)
   }
 }

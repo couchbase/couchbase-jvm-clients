@@ -32,21 +32,14 @@ class Cluster(env: => ClusterEnvironment)
              (implicit ec: ExecutionContext) {
 
   val async = new AsyncCluster(env)
-  // TODO
-  //  val reactive = new ReactiveCluster(async)
+  val reactive = new ReactiveCluster(async)
 
   def bucket(name: String) = {
     AsyncUtils.block(async.bucket(name))
       .map(new Bucket(_))
   }
 
-  implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
-    java.time.Duration.ofNanos(in.toNanos)
-  }
-
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.Duration = {
-    Duration.apply(in.toNanos, TimeUnit.NANOSECONDS)
-  }
+  import DurationConversions._
 
   // TODO MVP
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
@@ -64,7 +57,7 @@ class Cluster(env: => ClusterEnvironment)
 }
 
 object Cluster {
-  implicit val ec = ClusterEnvironment.ec
+  private[scala] implicit val ec = ClusterEnvironment.ec
 
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
     val env = ClusterEnvironment.create(connectionString, username, password)
