@@ -77,6 +77,7 @@ public class Cluster {
     return new QueryResult(block(async().query(statement, null, options)));
   }
 
+  /*
   public AnalyticsResult analyticsQuery(final String statement) {
     return new AnalyticsResult(block(async().analyticsQuery(statement)));
   }
@@ -91,7 +92,7 @@ public class Cluster {
 
   public SearchResult searchQuery(final SearchQuery query, final SearchOptions options) {
     return new SearchResult(block(async().searchQuery(query, options)));
-  }
+  }*/
 
   public Bucket bucket(String name) {
     AsyncBucket b = block(asyncCluster.bucket(name));

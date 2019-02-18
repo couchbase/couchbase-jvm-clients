@@ -131,6 +131,7 @@ public class ReactiveCluster {
     return null;
   }
 
+  /*
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
     return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
   }
@@ -152,6 +153,7 @@ public class ReactiveCluster {
 
     return null;
   }
+  */
 
   public Mono<ReactiveBucket> bucket(String name) {
     return Mono.fromFuture(asyncCluster.bucket(name)).map(ReactiveBucket::new);

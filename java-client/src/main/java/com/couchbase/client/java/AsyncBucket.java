@@ -61,6 +61,7 @@ public class AsyncBucket {
     return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
   }
 
+  /*
   public CompletableFuture<AsyncViewResult> viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
   }
@@ -85,7 +86,7 @@ public class AsyncBucket {
     notNull(options, "SpatialViewOptions");
 
     return null;
-  }
+  }*/
 
   ClusterEnvironment environment() {
     return environment;

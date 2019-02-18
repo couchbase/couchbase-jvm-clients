@@ -55,6 +55,7 @@ public class Bucket {
     return scope(DEFAULT_SCOPE).collection(name);
   }
 
+  /*
   public ViewResult viewQuery(final String designDoc, final String viewName) {
     return block(asyncBucket.viewQuery(designDoc, viewName)
       .thenApply(avr -> new ViewResult()));
@@ -77,6 +78,6 @@ public class Bucket {
     return block(asyncBucket.spatialViewQuery(designDoc, viewName, options)
       .thenApply(avr -> new ViewResult()));
 
-  }
+  }*/
 
 }

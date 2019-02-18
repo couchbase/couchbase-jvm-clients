@@ -118,6 +118,7 @@ public class AsyncCluster {
     });
   }
 
+  /*
   public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
     return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
   }
@@ -139,7 +140,7 @@ public class AsyncCluster {
 
     return null;
   }
-
+*/
   public CompletableFuture<AsyncBucket> bucket(final String name) {
     return core
       .openBucket(name)

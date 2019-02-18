@@ -49,6 +49,7 @@ public class ReactiveBucket {
     return scope(DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
   }
 
+  /*
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
   }
@@ -74,5 +75,5 @@ public class ReactiveBucket {
 
     return null;
   }
-
+*/
 }
