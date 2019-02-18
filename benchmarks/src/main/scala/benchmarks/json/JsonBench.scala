@@ -105,7 +105,7 @@ object Jackson {
   val json = """{"name":"John Smith","age":29,"address":[{"address":"123 Fake Street"}]}"""
   val encoded = json.getBytes(CharsetUtil.UTF_8)
 
-  val doc = new EncodedDocument(0, encoded)
+  val doc = EncodedDocument.of(0, encoded)
 }
 
 // Change this to LocalTime for a fast result

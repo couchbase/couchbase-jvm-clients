@@ -41,6 +41,7 @@ class DefaultDecoderTest {
   private static final Decoder DECODER = DefaultDecoder.INSTANCE;
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void decodesJsonObject() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
     JsonObject result = (JsonObject) DECODER.decode(JsonObject.class, encoded);
@@ -48,6 +49,7 @@ class DefaultDecoderTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void decodesJsonArray() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(CharsetUtil.UTF_8));
     JsonArray result = (JsonArray) DECODER.decode(JsonArray.class, encoded);
@@ -55,6 +57,7 @@ class DefaultDecoderTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void decodesJavaMap() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
     Map<String, Object> result = (Map<String, Object>) DECODER.decode(Map.class, encoded);
@@ -62,6 +65,7 @@ class DefaultDecoderTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void decodesJavaList() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(CharsetUtil.UTF_8));
     List<Object> result = (List<Object>) DECODER.decode(List.class, encoded);
@@ -69,12 +73,14 @@ class DefaultDecoderTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void throwsOnInvalidCombination() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
     assertThrows(DecodingFailedException.class, () -> DECODER.decode(JsonArray.class, encoded));
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   void decodesEncodedJson() {
     EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{\"foo\": true}".getBytes(CharsetUtil.UTF_8));
     EncodedJsonContent result = (EncodedJsonContent) DECODER.decode(EncodedJsonContent.class, encoded);
