@@ -18,7 +18,7 @@ package com.couchbase.client.java.codec;
 
 import io.netty.util.CharsetUtil;
 
-public class StringContent extends TypedContent {
+public class StringContent extends TypedContent<byte[]> {
 
   public static StringContent wrap(String content) {
     return wrap(content.getBytes(CharsetUtil.UTF_8));
@@ -30,6 +30,11 @@ public class StringContent extends TypedContent {
 
   private StringContent(byte[] content) {
     super(content);
+  }
+
+  @Override
+  public byte[] encoded() {
+    return content();
   }
 
   @Override

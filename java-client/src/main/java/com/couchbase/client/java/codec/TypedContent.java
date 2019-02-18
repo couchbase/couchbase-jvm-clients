@@ -1,16 +1,18 @@
 package com.couchbase.client.java.codec;
 
-abstract class TypedContent {
+abstract class TypedContent<T> {
 
-  private final byte[] content;
+  private final T content;
 
-  TypedContent(byte[] content) {
+  TypedContent(T content) {
     this.content = content;
   }
 
-  public byte[] content() {
+  public T content() {
     return content;
   }
+
+  public abstract byte[] encoded();
 
   public abstract int flags();
 

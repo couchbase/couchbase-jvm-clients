@@ -16,28 +16,46 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.EncodingFailedException;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-public class SerializableContent extends TypedContent {
+public class SerializableContent<T extends Serializable> extends TypedContent<T> {
 
-
-  public static SerializableContent wrap(final Serializable content) {
-    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-         ObjectOutput out = new ObjectOutputStream(bos)) {
-      out.writeObject(content);
-      return new SerializableContent(bos.toByteArray());
-    } catch (Exception e) {
-      throw new EncodingFailedException(e);
+  static Serializable decode(final byte[] serialized) {
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(serialized);
+         ObjectInput in = new ObjectInputStream(bis)) {
+      return (Serializable) in.readObject();
+    } catch (Exception ex) {
+      throw new DecodingFailedException(ex);
     }
   }
 
-  private SerializableContent(byte[] content) {
+  @SuppressWarnings({"unchecked"})
+  public static <T extends Serializable> SerializableContent wrap(final T content) {
+    return new SerializableContent(content);
+  }
+
+  private SerializableContent(T content) {
     super(content);
+  }
+
+  @Override
+  public byte[] encoded() {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+         ObjectOutput out = new ObjectOutputStream(bos)) {
+      out.writeObject(content());
+      return bos.toByteArray();
+    } catch (Exception e) {
+      throw new EncodingFailedException(e);
+    }
   }
 
   @Override

@@ -18,7 +18,7 @@ package com.couchbase.client.java.codec;
 
 import io.netty.util.CharsetUtil;
 
-public class EncodedJsonContent extends TypedContent {
+public class EncodedJsonContent extends TypedContent<byte[]> {
 
   public static EncodedJsonContent wrap(String content) {
     return wrap(content.getBytes(CharsetUtil.UTF_8));
@@ -33,7 +33,14 @@ public class EncodedJsonContent extends TypedContent {
   }
 
   @Override
+  public byte[] encoded() {
+    return content();
+  }
+
+  @Override
   public int flags() {
     return Encoder.JSON_FLAGS;
   }
+
+
 }

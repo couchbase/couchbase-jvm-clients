@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.kv.EncodedDocument;
 
@@ -29,14 +29,21 @@ public class DefaultDecoder implements Decoder<Object> {
   @Override
   public Object decode(Class<Object> target, EncodedDocument encoded) {
     try {
-      if (target.isAssignableFrom(BinaryContent.class)) {
+      if (target.isAssignableFrom(EncodedJsonContent.class)) {
+        return EncodedJsonContent.wrap(encoded.content());
+      } else if (target.isAssignableFrom(BinaryContent.class)) {
         return BinaryContent.wrap(encoded.content());
+      } else if (target.isAssignableFrom(SerializableContent.class)) {
+        return SerializableContent.decode(encoded.content());
+      } else if (target.isAssignableFrom(StringContent.class)) {
+        return StringContent.wrap(encoded.content());
       } else {
         return JacksonTransformers.MAPPER.readValue(encoded.content(), target);
       }
-    } catch (IOException e) {
-      // TODO
-      throw new CouchbaseException(e);
+    } catch (DecodingFailedException e)  {
+      throw e;
+    } catch (Exception e) {
+      throw new DecodingFailedException(e);
     }
   }
 

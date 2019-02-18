@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-public class BinaryContent extends TypedContent {
+public class BinaryContent extends TypedContent<byte[]> {
 
   public static BinaryContent wrap(byte[] content) {
     return new BinaryContent(content);
@@ -24,6 +24,11 @@ public class BinaryContent extends TypedContent {
 
   private BinaryContent(byte[] content) {
     super(content);
+  }
+
+  @Override
+  public byte[] encoded() {
+    return content();
   }
 
   @Override

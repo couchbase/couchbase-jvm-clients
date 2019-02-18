@@ -46,7 +46,7 @@ public class DefaultEncoder implements Encoder {
       byte[] encoded;
       if (input instanceof TypedContent) {
         flags = ((TypedContent) input).flags();
-        encoded = ((TypedContent) input).content();
+        encoded = ((TypedContent) input).encoded();
       } else {
         encoded = JacksonTransformers.MAPPER.writeValueAsBytes(input);
       }
