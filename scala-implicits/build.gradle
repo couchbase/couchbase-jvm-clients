@@ -11,6 +11,7 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'scala'
 apply plugin: 'nebula.optional-base'
+apply plugin: 'maven-publish'
 
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
