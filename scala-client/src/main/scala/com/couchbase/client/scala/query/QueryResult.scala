@@ -22,14 +22,14 @@ import com.couchbase.client.scala.document._
 
 import scala.util.Try
 
-// TODO MVP
+// TODO BLOCKED MVP
 class N1qlResult[T] {
   def rows(): Iterable[T] = null
   def allRows(): List[T] = null
   def status(): String = null
   def requestId(): String = null
   def clientContextId(): String = null
-  // TODO other params
+  // TODO BLOCKED other params
 }
 
 case class QueryRow(_content: Array[Byte]) {

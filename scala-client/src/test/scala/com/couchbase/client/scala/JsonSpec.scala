@@ -220,6 +220,7 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 
   "inserting case class using circe AST" should "succeed" in {
     import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+    import cats.syntax.show._
 
     val content = User("John Smith", 29, Seq(Address("123 Fake Street")))
     val json: io.circe.Json = content.asJson
@@ -227,7 +228,8 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
     coll.insert(DocId, json) match {
       case Success(v) =>
       case Failure(err) =>
-        println(err)
+        println(err.getCause)
+        println(err.getCause.asInstanceOf[DecodingFailure].show)
         assert(false)
     }
 
@@ -236,8 +238,8 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
       content <- doc.contentAs[io.circe.Json]
 
     } yield content) match {
-      case Success(result: User) =>
-        assert(result.name == "John Smith")
+      case Success(result: io.circe.Json) =>
+        assert(result.hcursor.downField("name").as[String].right.get == "John Smith")
       case Failure(err) =>
         assert(false)
     }

@@ -208,7 +208,7 @@ object Conversions {
 
     implicit object CirceEncode extends Encodable[io.circe.Json] {
       override def encode(content: io.circe.Json) = {
-        content.as[Array[Byte]].toTry.map((_, JsonFlags))
+        Try(content.noSpaces.getBytes(CharsetUtil.UTF_8)).map((_, JsonFlags))
       }
     }
 

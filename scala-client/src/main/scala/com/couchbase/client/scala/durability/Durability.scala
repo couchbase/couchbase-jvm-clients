@@ -52,6 +52,7 @@ object DurabilityLevel extends Enumeration {
   val None, Majority, MajorityAndPersistActive, PersistToMajority = Value
 }
 
+// TODO durability timeouts
 sealed trait Durability {
 
   def toDurabilityLevel: Optional[CoreLevel] = {

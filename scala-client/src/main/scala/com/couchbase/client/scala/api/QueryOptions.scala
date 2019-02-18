@@ -49,7 +49,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val scanCap: Option[Int] = None,
                         private[scala] val scanConsistency: Option[ScanConsistency] = None,
-                       // TODO support
+                       // TODO BLOCKED support
 //                        consistentWith: Option[List[MutationToken]]
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None
@@ -110,7 +110,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 //    copy(consistentWith = Option(consistentWith))
 //  }
 
-  // TODO remove
+  // TODO BLOCKED remove
   def serverSideTimeout(serverSideTimeout: Duration): QueryOptions = {
     copy(serverSideTimeout = Option(serverSideTimeout))
   }
