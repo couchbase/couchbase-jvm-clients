@@ -18,7 +18,7 @@ package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.msg.RequestContext;
 
-public class RequestTimeoutException extends RequestCanceledException {
+public class RequestTimeoutException extends RequestCanceledException implements RetryableOperationException {
 
   public RequestTimeoutException(String name, RequestContext context) {
     super(name, context);

@@ -23,7 +23,7 @@ package com.couchbase.client.core.error;
  * @author Michael Nitschinger
  * @since 2.1.0
  */
-public class TemporaryFailureException extends CouchbaseException {
+public class TemporaryFailureException extends CouchbaseException implements RetryableOperationException {
 
     public TemporaryFailureException() {
         super();

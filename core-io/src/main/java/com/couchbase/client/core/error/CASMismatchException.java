@@ -22,7 +22,7 @@ package com.couchbase.client.core.error;
  * @author Michael Nitschinger
  * @since 2.0
  */
-public class CASMismatchException extends CouchbaseException {
+public class CASMismatchException extends CouchbaseException implements RetryableOperationException {
 
     public CASMismatchException() {
         super();

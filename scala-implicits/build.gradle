@@ -21,8 +21,8 @@ publishing {
       pom {
         name = 'scala-implicits'
         // TODO
-        description = 'A concise description of my library'
-        url = 'http://www.example.com/library'
+        description = 'Part of the Scala '
+        url = 'https://github.com/couchbaselabs/couchbase-jvm-clients'
         licenses {
           // TODO
           license {

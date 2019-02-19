@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.RequestContext;
 
 import java.util.concurrent.CancellationException;
 
-public class RequestCanceledException extends CancellationException {
+public class RequestCanceledException extends CancellationException implements RetryableOperationException {
 
   private final String name;
   private final RequestContext requestContext;

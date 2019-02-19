@@ -15,7 +15,7 @@ object DefaultErrors {
       case ResponseStatus.NOT_FOUND => new DocumentDoesNotExistException()
       case ResponseStatus.SERVER_BUSY => new TemporaryFailureException()
       case ResponseStatus.OUT_OF_MEMORY => new CouchbaseOutOfMemoryException()
-      case ResponseStatus.DURABILITY_INVALID_LEVEL => new DurabilityInvalidLevelException()
+      case ResponseStatus.DURABILITY_INVALID_LEVEL => new DurabilityLevelNotAvailableException()
       case ResponseStatus.DURABILITY_IMPOSSIBLE => new DurabilityImpossibleException()
       case ResponseStatus.SYNC_WRITE_AMBIGUOUS => new DurableWriteInProgressException()
       case ResponseStatus.SYNC_WRITE_IN_PROGRESS => new DurabilityAmbiguous()

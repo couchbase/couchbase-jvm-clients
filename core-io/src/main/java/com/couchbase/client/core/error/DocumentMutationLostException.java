@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.error;
 
-public class DocumentMutationLostException extends CouchbaseException {
+public class DocumentMutationLostException extends CouchbaseException implements RetryableOperationException {
 
     public DocumentMutationLostException() {
         super();

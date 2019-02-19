@@ -32,7 +32,7 @@ package com.couchbase.client.core.error;
  * @author Simon Baslé
  * @since 2.0.0
  */
-public class TemporaryLockFailureException extends CouchbaseException {
+public class TemporaryLockFailureException extends CouchbaseException implements RetryableOperationException {
 
     public TemporaryLockFailureException() {
         super();

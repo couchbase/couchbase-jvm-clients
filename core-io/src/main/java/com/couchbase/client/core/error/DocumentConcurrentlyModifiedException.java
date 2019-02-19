@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.error;
 
-public class DocumentConcurrentlyModifiedException extends CouchbaseException {
+public class DocumentConcurrentlyModifiedException extends CouchbaseException implements RetryableOperationException {
 
     public DocumentConcurrentlyModifiedException() {
         super();
