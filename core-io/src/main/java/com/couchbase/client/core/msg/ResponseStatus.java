@@ -118,7 +118,17 @@ public enum ResponseStatus {
    *
    * <p>it may Succeed or Fail; but the final value is not yet known.</p>
    */
-  SYNC_WRITE_AMBIGUOUS;
+  SYNC_WRITE_AMBIGUOUS,
+
+  SUBDOC_FAILURE,
+
+  INTERNAL_ERROR,
+
+  TOO_MANY_REQUESTS,
+
+  INVALID_ARGS;
+
+
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

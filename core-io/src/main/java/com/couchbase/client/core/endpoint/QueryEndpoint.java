@@ -24,13 +24,18 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import reactor.core.scheduler.Scheduler;
 
 public class QueryEndpoint extends BaseEndpoint {
+
+  private final Scheduler queryResponseScheduler;
 
   public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                        final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY);
+    this.queryResponseScheduler = ctx.environment().scheduler();
   }
 
   @Override
@@ -38,13 +43,13 @@ public class QueryEndpoint extends BaseEndpoint {
     return new QueryPipelineInitializer();
   }
 
-  public static class QueryPipelineInitializer implements PipelineInitializer {
+  public class QueryPipelineInitializer implements PipelineInitializer {
 
     @Override
     public void init(ChannelPipeline pipeline) {
       pipeline.addLast(new LoggingHandler(LogLevel.ERROR));
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new QueryMessageHandler());
+      pipeline.addLast(new QueryMessageHandler(queryResponseScheduler));
     }
   }
 

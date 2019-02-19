@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,56 +16,83 @@
 
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.core.annotation.Stability;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.java.codec.Decoder;
+import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.json.JsonObject;
 
-import java.util.function.Consumer;
+public class AsyncQueryResult {
 
-public class AsyncQueryResult implements QueryResponse.QueryEventSubscriber {
+   private final CompletableFuture<QueryResponse> response;
 
-  private final Consumer<QueryRow> rowConsumer;
-  private volatile boolean complete;
-  private volatile QueryResponse response;
+   public AsyncQueryResult(CompletableFuture<QueryResponse> response) {
+      this.response = response;
+   }
 
-  public AsyncQueryResult(final Consumer<QueryRow> rowConsumer) {
-    this.rowConsumer = rowConsumer;
-    complete = false;
-  }
+   public CompletableFuture<String> requestId() {
+      return this.response.thenCompose(r -> r.requestId().toFuture());
+   }
 
-  @Stability.Internal
-  public void result(final QueryResponse response) {
-    this.response = response;
-  }
+   public CompletableFuture<String> clientContextId() {
+      return this.response.thenCompose(r -> r.clientContextId().toFuture());
+   }
 
-  @Override
-  public void onNext(final QueryResponse.QueryEvent event) {
-    if (event.rowType() == QueryResponse.QueryEventType.ROW) {
-      rowConsumer.accept(new QueryRow(event.data()));
-    }
-  }
+   public CompletableFuture<QueryMetrics> info() {
+      return this.response.thenCompose(r -> r.metrics().map(n -> {
+         try {
+            JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+            return new QueryMetrics(jsonObject);
+         } catch (IOException ex) {
+            throw new CouchbaseException(ex);
+         }
+      }).toFuture());
+   }
 
-  public void request(long num) {
-    response.request(num);
-  }
+   public CompletableFuture<String> queryStatus() {
+      return this.response.thenCompose(r -> r.queryStatus().toFuture());
+   }
 
-  // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
-  // mechanism to be consistent?
-  public void cancel() {
-    response.cancel();
-  }
+   public CompletableFuture<List<JsonObject>> rows() {
+      return this.response.thenCompose(r -> r.rows().map(n -> {
+         try {
+            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+         } catch (IOException ex) {
+            throw new CouchbaseException(ex);
+         }
+      }).collectList().toFuture());
+   }
 
-  /**
-   * Returns true if this result is completed.
-   *
-   * @return true once completed.
-   */
-  public boolean completed() {
-    return complete;
-  }
+   public <T>CompletableFuture<List<T>> rows(Class<T> target, Decoder<T> decoder) {
+      return this.response.thenCompose(r -> r.rows().map(n -> {
+            try {
+               return JacksonTransformers.MAPPER.readValue(n, target);
+            } catch (IOException ex) {
+               throw new CouchbaseException(ex);
+            }
+         }).collectList().toFuture());
+   }
 
-  @Override
-  public void onComplete() {
-    complete = true;
-  }
+   public CompletableFuture<List<JsonObject>> warnings() {
+      return this.response.thenCompose(r -> r.warnings().map(n -> {
+         try {
+            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+         } catch (IOException ex) {
+            throw new CouchbaseException(ex);
+         }
+      }).collectList().toFuture());
+   }
 
+   public CompletableFuture<List<JsonObject>> errors() {
+      return this.response.thenCompose(r -> r.errors().map(n -> {
+         try {
+            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+         } catch (IOException ex) {
+            throw new IllegalStateException(ex);
+         }
+      }).collectList().toFuture());
+   }
 }

@@ -16,10 +16,8 @@
 
 package com.couchbase.client.core.util.yasjl;
 
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
 import io.netty.buffer.ByteBufProcessor;
-
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_MINUS;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_PLUS;
 
 /**
  * Process JSON number

@@ -23,22 +23,15 @@ import java.time.Duration;
 public class QueryRequest extends BaseRequest<QueryResponse> {
 
   private static final String URI = "/query";
-
   private final byte[] query;
-  final QueryResponse.QueryEventSubscriber subscriber;
+
   private final Credentials credentials;
 
   public QueryRequest(final Duration timeout, final CoreContext ctx,
-                      final RetryStrategy retryStrategy, Credentials credentials, final byte[] query,
-                      final QueryResponse.QueryEventSubscriber subscriber) {
+                      final RetryStrategy retryStrategy, Credentials credentials, final byte[] query) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
-    this.subscriber = subscriber;
     this.credentials = credentials;
-  }
-
-  public QueryResponse.QueryEventSubscriber subscriber() {
-    return subscriber;
   }
 
   @Override
@@ -75,5 +68,4 @@ public class QueryRequest extends BaseRequest<QueryResponse> {
     encoded.release();
     raw.release();
   }
-
 }
