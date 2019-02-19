@@ -91,6 +91,7 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
 ////    content.get(name).asInstanceOf[Int]
 //  }
 
+  // TODO handle and return nulls
   def bool(name: String): Boolean = {
     content.get(name).asInstanceOf[Boolean]
   }

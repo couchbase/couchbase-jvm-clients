@@ -13,8 +13,6 @@ import io.opentracing.Span
 import scala.util.{Failure, Success, Try}
 
 
-// TODO enhanced durability testing
-
 class GetFromReplicaHandler(hp: HandlerParams) {
 
   def request[T](id: String,

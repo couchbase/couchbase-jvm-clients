@@ -57,7 +57,7 @@ public enum ResponseStatus {
    */
   NOT_STORED,
   /**
-   * The server could temporarily not fulfill the requrst.
+   * The server could temporarily not fulfill the request.
    */
   TEMPORARY_FAILURE,
   /**
@@ -87,7 +87,38 @@ public enum ResponseStatus {
   /**
    * One or more attempted subdoc operations failed.
    */
-  SUBDOC_FAILURE;
+  SUBDOC_FAILURE,
+
+  // TODO waiting to see in RFC-46 exactly how to surface durability sync rep errors
+
+  /**
+   * Invalid request. Returned if an invalid durability level is specified.
+   */
+  DURABILITY_INVALID_LEVEL,
+
+  /**
+   * Valid request, but given durability requirements are impossible to achieve.
+   *
+   * <p>because insufficient configured replicas are connected. Assuming level=majority and
+   * C=number of configured nodes, durability becomes impossible if floor((C + 1) / 2)
+   * nodes or greater are offline.</p>
+   */
+  DURABILITY_IMPOSSIBLE,
+
+  /**
+   * Returned if an attempt is made to mutate a key which already has a SyncWrite pending.
+   *
+   * <p>Transient, the client would typically retry (possibly with backoff). Similar to
+   * ELOCKED.</p>
+   */
+  SYNC_WRITE_IN_PROGRESS,
+
+  /**
+   * The SyncWrite request has not completed in the specified time and has ambiguous result.
+   *
+   * <p>it may Succeed or Fail; but the final value is not yet known.</p>
+   */
+  SYNC_WRITE_AMBIGUOUS;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

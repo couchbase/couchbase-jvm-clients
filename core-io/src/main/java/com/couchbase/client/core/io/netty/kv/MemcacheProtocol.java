@@ -408,6 +408,14 @@ public enum MemcacheProtocol {
       return ResponseStatus.TOO_BIG;
     } else if (status == Status.NOT_STORED.status) {
       return ResponseStatus.NOT_STORED;
+    } else if (status == Status.DURABILITY_INVALID_LEVEL.status) {
+      return ResponseStatus.DURABILITY_INVALID_LEVEL;
+    } else if (status == Status.DURABILITY_IMPOSSIBLE.status) {
+      return ResponseStatus.DURABILITY_IMPOSSIBLE;
+    } else if (status == Status.SYNC_WRITE_AMBIGUOUS.status) {
+      return ResponseStatus.SYNC_WRITE_AMBIGUOUS;
+    } else if (status == Status.SYNC_WRITE_IN_PROGRESS.status) {
+      return ResponseStatus.SYNC_WRITE_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
             || status == Status.SUBDOC_DOC_NOT_JSON.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
