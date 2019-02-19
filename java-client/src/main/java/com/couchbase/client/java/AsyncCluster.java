@@ -28,9 +28,11 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryRow;
+import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.AsyncSearchResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.util.Try;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.EmitterProcessor;
 
@@ -82,13 +84,13 @@ public class AsyncCluster {
     return core;
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final String statement, final Consumer<QueryRow> consumer) {
+  public AsyncQueryResult query(final String statement, final Consumer<QueryRow> consumer) {
     return query(statement, consumer, QueryOptions.DEFAULT);
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final String statement,
-                                                   final Consumer<QueryRow> consumer,
-                                                   final QueryOptions options) {
+  public AsyncQueryResult query(final String statement,
+                                     final Consumer<QueryRow> consumer,
+                                     final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
     QueryOptions.BuiltQueryOptions opts = options.build();
@@ -102,21 +104,18 @@ public class AsyncCluster {
     // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
     // mechanism to be consistent?
 
-    AsyncQueryResult result = new AsyncQueryResult(consumer);
     QueryRequest request = new QueryRequest(
       timeout,
       core.context(),
       retryStrategy,
       environment.get().credentials(),
-      query,
-      result
+      query
     );
     core.send(request);
-    return request.response().thenApply(r -> {
-      result.result(r);
-      return result;
-    });
+    return new AsyncQueryResult(request.response());
   }
+
+
 
   /*
   public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {

@@ -13,8 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.core.util.yasjl;
+
+import java.nio.charset.Charset;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUMBER_VALUE;
 
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
@@ -23,23 +29,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufProcessor;
 
 import java.io.EOFException;
-import java.nio.charset.Charset;
-import java.util.ArrayDeque;
-import java.util.Deque;
-
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.C_CURLY;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.C_SQUARE;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_COLON;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_COMMA;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_F;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_N;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_ST;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_T;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUMBER_VALUE;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.O_CURLY;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.O_SQUARE;
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.isNumber;
 
 /**
  * The {@link ByteBufJsonParser} allows to query for values identified by {@link JsonPointer} in Netty {@link ByteBuf}.

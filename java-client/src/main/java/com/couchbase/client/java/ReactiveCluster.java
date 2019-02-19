@@ -16,28 +16,19 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.search.ReactiveSearchResult;
-import com.couchbase.client.java.search.SearchOptions;
-import com.couchbase.client.java.search.SearchQuery;
 import io.netty.util.CharsetUtil;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -79,25 +70,24 @@ public class ReactiveCluster {
     return asyncCluster;
   }
 
-  public Mono<ReactiveQueryResult> query(final String statement) {
-    return query(statement, QueryOptions.DEFAULT);
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
   }
 
-  public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "AnalyticsOptions");
+
+    return null;
+  }
+
+  public ReactiveQueryResult query(final String statement, final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
-
-    /*return Mono.defer(new Supplier<Mono<? extends ReactiveQueryResult>>() {
-      @Override
-      public Mono<? extends ReactiveQueryResult> get() {
-        return null;
-      }
-    });*/
-
-
     QueryOptions.BuiltQueryOptions opts = options.build();
-    Duration timeout = opts.timeout().orElse(asyncCluster.environment().get().timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(asyncCluster.environment().get().retryStrategy());
+
+    Duration timeout = opts.timeout().orElse(async().environment().get().timeoutConfig().queryTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(async().environment().get().retryStrategy());
 
     // FIXME: proper jackson encoding with options
     byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);
@@ -105,30 +95,15 @@ public class ReactiveCluster {
     // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
     // mechanism to be consistent?
 
-    EmitterProcessor<QueryResponse.QueryEvent> processor = EmitterProcessor.create();
     QueryRequest request = new QueryRequest(
-      timeout,
-      asyncCluster.core().context(),
-      retryStrategy,
-      asyncCluster.environment().get().credentials(),
-      query,
-      new QueryResponse.QueryEventSubscriber() {
-        @Override
-        public void onNext(QueryResponse.QueryEvent row) {
-          processor.onNext(row);
-        }
-
-        @Override
-        public void onComplete() {
-          processor.onComplete();
-        }
-      }
+            timeout,
+            async().core().context(),
+            retryStrategy,
+            async().environment().get().credentials(),
+            query
     );
-
-    asyncCluster.core().send(request);
-
-    // TODO
-    return null;
+    async().core().send(request);
+    return new ReactiveQueryResult(request.response());
   }
 
   /*

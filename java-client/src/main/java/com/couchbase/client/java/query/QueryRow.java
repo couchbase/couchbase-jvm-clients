@@ -1,10 +1,8 @@
 package com.couchbase.client.java.query;
 
-public class QueryRow {
 
-  private final byte[] encoded;
-
+public class QueryRow extends QueryResultItem {
   public QueryRow(byte[] encoded) {
-    this.encoded = encoded;
+    super(encoded);
   }
 }

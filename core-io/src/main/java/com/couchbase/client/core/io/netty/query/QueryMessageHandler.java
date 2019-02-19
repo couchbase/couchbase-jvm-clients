@@ -15,10 +15,9 @@
  */
 
 package com.couchbase.client.core.io.netty.query;
-
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.util.ResponseStatusConverter;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.util.yasjl.JsonPointer;
@@ -31,10 +30,11 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
+import reactor.core.scheduler.Scheduler;
 import java.io.EOFException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.nio.charset.Charset;
 
 /**
  * This handler is responsible for writing Query requests and completing their associated responses
@@ -43,44 +43,81 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 2.0.0
  */
 public class QueryMessageHandler extends ChannelDuplexHandler {
-
   private QueryRequest currentRequest;
   private QueryResponse currentResponse;
-  private final AtomicLong toRead;
   private ByteBuf responseContent;
+  private final Scheduler scheduler;
+  private ByteBufJsonParser parser;
+  private static final Charset CHARSET = CharsetUtil.UTF_8;
 
-  private ByteBufJsonParser parser = new ByteBufJsonParser(new JsonPointer[] {
-    new JsonPointer("/results/-", new JsonPointerCB1() {
+  public QueryMessageHandler(Scheduler scheduler) {
+    this.scheduler = scheduler;
+    this.parser = new ByteBufJsonParser(new JsonPointer[]{
+      new JsonPointer("/results/-", new JsonPointerCB1() {
+        @Override
+        public void call(final ByteBuf value) {
+          byte[] data = new byte[value.readableBytes()];
+            value.readBytes(data);
+            value.release();
+            currentResponse.rows().onNext(data);
+            currentResponse.rowRequestCompleted();
+        }
+      }), new JsonPointer("/requestID/-", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        String requestID = value.toString(CHARSET);
+        requestID = requestID.substring(1, requestID.length() - 1);
+        value.release();
+        currentResponse.requestId().onNext(requestID);
+      }
+    }), new JsonPointer("/errors/-", new JsonPointerCB1() {
       @Override
       public void call(final ByteBuf value) {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO GP this looks expensive, could we instead just pass up data and ROW without creating an object?
-        currentResponse.subscriber().onNext(new QueryResponse.QueryEvent(QueryResponse.QueryEventType.ROW, data));
+        currentResponse.errors().onNext(data);
       }
-    }),
-
-    new JsonPointer("/errors/-", new JsonPointerCB1() {
-        @Override
-        public void call(final ByteBuf value) {
-            byte[] data = new byte[value.readableBytes()];
-            value.readBytes(data);
-            value.release();
-            currentResponse.subscriber().onNext(new QueryResponse.QueryEvent(QueryResponse.QueryEventType.ERROR, data));
-        }
+    }), new JsonPointer("/warnings/-", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        byte[] data = new byte[value.readableBytes()];
+        value.readBytes(data);
+        value.release();
+        currentResponse.warnings().onNext(data);
+      }
+    }), new JsonPointer("/clientContextID", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        String clientContextID = value.toString(CHARSET);
+        clientContextID = clientContextID.substring(1, clientContextID.length() - 1);
+        value.release();
+        currentResponse.clientContextId().onNext(clientContextID);
+      }
+    }), new JsonPointer("/metrics", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        byte[] data = new byte[value.readableBytes()];
+        value.readBytes(data);
+        value.release();
+        currentResponse.metrics().onNext(data);
+      }
+    }), new JsonPointer("/status", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        String statusStr = value.toString(CHARSET);
+        statusStr = statusStr.substring(1, statusStr.length() - 1);
+        value.release();
+        currentResponse.queryStatus().onNext(statusStr);
+      }
     })
-  });
-
-  public QueryMessageHandler() {
-    toRead = new AtomicLong(0);
+    });
   }
 
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ctx.fireChannelActive();
-    responseContent = ctx.alloc().buffer();
-    parser.initialize(responseContent);
+
   }
 
   @Override
@@ -91,33 +128,20 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       encoded.headers().set(HttpHeaderNames.HOST, "127.0.0.1");
       ctx.write(encoded);
     } else {
-      // todo: terminate this channel and raise an event, this is not supposed to happen
     }
   }
 
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof HttpResponse) {
-      currentResponse = new QueryResponse(ResponseStatus.SUCCESS, currentRequest.subscriber()) {
-        @Override
-        public void request(long rows) {
-          toRead.set(rows + toRead.get());
-          ctx.channel().config().setAutoRead(true);
-        }
-
-        @Override
-        public void cancel() {
-          // TODO:
-          System.err.println("--> cancelled! if not done ensure proper cleanup");
-        }
-      };
-
+      responseContent = ctx.alloc().buffer();
+      parser.initialize(responseContent);
+      currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse)msg).status().code()), ctx.channel());
       currentRequest.succeed(currentResponse);
-      ctx.channel().config().setAutoRead(false);
-    } else if (msg instanceof HttpContent) {
+    }
+    if (msg instanceof HttpContent) {
       boolean last = msg instanceof LastHttpContent;
       responseContent.writeBytes(((HttpContent) msg).content());
-
       try {
         parser.parse();
         //discard only if EOF is not thrown
@@ -125,21 +149,11 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       } catch (EOFException e) {
         // ignore, we are waiting for more data.
       }
-
       if (last) {
-        currentResponse.cancel();
-        currentResponse.subscriber().onComplete();
         responseContent.clear();
-      } else {
-        if (toRead.decrementAndGet() <= 0) {
-          ctx.channel().config().setAutoRead(false);
-        }
+        currentResponse.complete();
       }
-    } else {
-      // todo: error since a type returned that was not expected
     }
-
     ReferenceCountUtil.release(msg);
   }
-
 }

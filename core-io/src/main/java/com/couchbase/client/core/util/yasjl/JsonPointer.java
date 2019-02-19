@@ -15,12 +15,12 @@
  */
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
 
 /**
  * Represents a pointer in the JSON tree structure.
