@@ -13,6 +13,35 @@ apply plugin: 'scala'
 apply plugin: 'nebula.optional-base'
 apply plugin: 'maven-publish'
 
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      artifactId = 'scala-implicits'
+      from components.java
+      pom {
+        name = 'scala-implicits'
+        // TODO
+        description = 'A concise description of my library'
+        url = 'http://www.example.com/library'
+        licenses {
+          // TODO
+          license {
+            name = 'The Apache License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+        developers {
+          developer {
+            id = 'grahamp'
+            name = 'Graham Pople'
+            email = 'graham.pople@couchbase.com'
+          }
+        }
+      }
+    }
+  }
+}
+
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
 

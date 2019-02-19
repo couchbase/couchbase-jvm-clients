@@ -111,32 +111,74 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
     content.get(name).asInstanceOf[JsonArray]
   }
 
-  def strOpt(name: String): Option[String] = {
-    Option(content.get(name)).map(_.asInstanceOf[String])
+//  def strOpt(name: String): Option[String] = {
+//    Option(content.get(name)).map(_.asInstanceOf[String])
+//  }
+//
+//  def intOpt(name: String): Option[Int] = {
+//    Option(content.get(name)).map(_.asInstanceOf[Int])
+//  }
+//
+//  def boolOpt(name: String): Option[Boolean] = {
+//    Option(content.get(name)).map(_.asInstanceOf[Boolean])
+//  }
+//
+//  def longOpt(name: String): Option[Long] = {
+//    Option(content.get(name)).map(_.asInstanceOf[Long])
+//  }
+//
+//  def doubleOpt(name: String): Option[Double] = {
+//    Option(content.get(name)).map(_.asInstanceOf[Double])
+//  }
+//
+//  def objOpt(name: String): Option[JsonObject] = {
+//    Option(content.get(name)).map(_.asInstanceOf[JsonObject])
+//  }
+//
+//  def arrOpt(name: String): Option[JsonArray] = {
+//    Option(content.get(name)).map(_.asInstanceOf[JsonArray])
+//  }
+
+  def strTry(name: String): Try[String] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[String])
   }
 
-  def intOpt(name: String): Option[Int] = {
-    Option(content.get(name)).map(_.asInstanceOf[Int])
+  def intTry(name: String): Try[Int] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[Int])
   }
 
-  def boolOpt(name: String): Option[Boolean] = {
-    Option(content.get(name)).map(_.asInstanceOf[Boolean])
+  def boolTry(name: String): Try[Boolean] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[Boolean])
   }
 
-  def longOpt(name: String): Option[Long] = {
-    Option(content.get(name)).map(_.asInstanceOf[Long])
+  def longTry(name: String): Try[Long] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[Long])
   }
 
-  def doubleOpt(name: String): Option[Double] = {
-    Option(content.get(name)).map(_.asInstanceOf[Double])
+  def doubleTry(name: String): Try[Double] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[Double])
   }
 
-  def objOpt(name: String): Option[JsonObject] = {
-    Option(content.get(name)).map(_.asInstanceOf[JsonObject])
+  def objTry(name: String): Try[JsonObject] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[JsonObject])
   }
 
-  def arrOpt(name: String): Option[JsonArray] = {
-    Option(content.get(name)).map(_.asInstanceOf[JsonArray])
+  def arrTry(name: String): Try[JsonArray] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Try(out.asInstanceOf[JsonArray])
   }
 
   def remove(name: String): JsonObject = {

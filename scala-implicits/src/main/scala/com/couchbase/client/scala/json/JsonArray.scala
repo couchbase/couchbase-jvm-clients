@@ -33,6 +33,7 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
   def obj(idx: Int): JsonObject = values.get(idx).asInstanceOf[JsonObject]
   def arr(idx: Int): JsonArray = values.get(idx).asInstanceOf[JsonArray]
 
+  // TODO convert to Try
   def strOpt(idx: Int): Option[String] = Option(values.get(idx)).map(_.asInstanceOf[String])
   def longOpt(idx: Int): Option[Long] = Option(values.get(idx)).map(_.asInstanceOf[Long])
   def intOpt(idx: Int): Option[Int] = Option(values.get(idx)).map(_.asInstanceOf[Int])

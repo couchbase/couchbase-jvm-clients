@@ -54,8 +54,8 @@ object GetSelecter {
           case PathArray(name, idx) =>
             in match {
               case Left(obj) =>
-                obj.arrOpt(name) match {
-                  case Some(arr) =>
+                obj.arrTry(name) match {
+                  case Success(arr) =>
                     val atIdx: Option[Any] = arr.getOpt(idx)
 
                     atIdx match {
