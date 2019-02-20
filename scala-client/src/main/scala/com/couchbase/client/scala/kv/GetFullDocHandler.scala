@@ -16,6 +16,11 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try}
 
 
+/**
+  * Handles requests and responses for KV regular get operations.
+  *
+  * @author Graham Pople
+  */
 class GetFullDocHandler(hp: HandlerParams) extends RequestHandler[GetResponse, GetResult] {
 
   def request[T](id: String,

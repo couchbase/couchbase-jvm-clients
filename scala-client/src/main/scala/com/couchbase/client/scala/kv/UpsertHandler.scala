@@ -15,6 +15,11 @@ import io.opentracing.Span
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Handles requests and responses for KV upsert operations.
+  *
+  * @author Graham Pople
+  */
 class UpsertHandler(hp: HandlerParams) extends RequestHandler[UpsertResponse, MutationResult] {
 
   def request[T](id: String,

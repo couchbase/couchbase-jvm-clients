@@ -17,6 +17,11 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Handles requests and responses for KV insert operations.
+  *
+  * @author Graham Pople
+  */
 class InsertHandler(hp: HandlerParams) extends RequestHandler[InsertResponse, MutationResult] {
 
   def request[T](id: String,

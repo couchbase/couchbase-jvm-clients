@@ -13,6 +13,11 @@ import io.opentracing.Span
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try}
 
+/**
+  * Handles requests and responses for KV counter decrement operations.
+  *
+  * @author Graham Pople
+  */
 class BinaryDecrementHandler(hp: HandlerParams) extends RequestHandler[DecrementResponse, CounterResult] {
 
   def request[T](id: String,

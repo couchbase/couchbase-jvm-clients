@@ -14,6 +14,11 @@ import io.opentracing.Span
 import scala.util.{Success, Try}
 
 
+/**
+  * Handles requests and responses for KV get-and-lock operations.
+  *
+  * @author Graham Pople
+  */
 class GetAndLockHandler(hp: HandlerParams) extends RequestHandler[GetAndLockResponse, GetResult] {
 
   def request[T](id: String,

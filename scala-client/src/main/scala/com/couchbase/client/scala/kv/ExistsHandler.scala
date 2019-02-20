@@ -17,6 +17,12 @@ import scala.util.{Success, Try}
 
 // TODO how to handle flush - this will create a new collectionId
 // TODO handle span closing
+
+/**
+  * Handles requests and responses for KV exists operations.
+  *
+  * @author Graham Pople
+  */
 class ExistsHandler(hp: HandlerParams) extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
   def request(id: String,
               parentSpan: Option[Span],

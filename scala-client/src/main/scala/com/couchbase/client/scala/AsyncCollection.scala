@@ -159,7 +159,7 @@ class AsyncCollection(name: String,
   private[scala] val upsertHandler = new UpsertHandler(hp)
   private[scala] val removeHandler = new RemoveHandler(hp)
   private[scala] val getFullDocHandler = new GetFullDocHandler(hp)
-  private[scala] val getSubDocHandler = new GetSubDocHandler(hp)
+  private[scala] val getSubDocHandler = new GetSubDocumentHandler(hp)
   private[scala] val getAndTouchHandler = new GetAndTouchHandler(hp)
   private[scala] val getAndLockHandler = new GetAndLockHandler(hp)
   private[scala] val mutateInHandler = new MutateInHandler(hp)

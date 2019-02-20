@@ -11,6 +11,11 @@ import io.opentracing.Span
 import scala.util.{Success, Try}
 
 
+/**
+  * Handles requests and responses for KV unlock operations.
+  *
+  * @author Graham Pople
+  */
 class UnlockHandler(hp: HandlerParams) extends RequestHandler[UnlockResponse, Unit] {
 
   def request[T](id: String,

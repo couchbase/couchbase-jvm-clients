@@ -7,7 +7,7 @@ import java.time.Duration;
 public class RequestUtil {
     private RequestUtil() {}
 
-    // TODO move into env
+    // TODO move PERSISTENCE_TIMEOUT_FLOOR into configurable env
     // TODO surface persistence_timeout_ceiling
     private static final long PERSISTENCE_TIMEOUT_FLOOR = 1500;
 

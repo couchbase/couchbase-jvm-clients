@@ -13,6 +13,11 @@ import io.opentracing.Span
 import scala.util.{Failure, Success, Try}
 
 
+/**
+  * Handles requests and responses for KV get-from-replica operations.
+  *
+  * @author Graham Pople
+  */
 class GetFromReplicaHandler(hp: HandlerParams) {
 
   def request[T](id: String,

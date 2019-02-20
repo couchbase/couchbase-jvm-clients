@@ -20,7 +20,12 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 
-class GetSubDocHandler(hp: HandlerParams) extends RequestHandler[SubdocGetResponse, LookupInResult] {
+/**
+  * Handles requests and responses for KV SubDocument operations.
+  *
+  * @author Graham Pople
+  */
+class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetResponse, LookupInResult] {
   private val ExpTime = "$document.exptime"
 
   // TODO support projections

@@ -6,6 +6,8 @@
 ## Future plans
 See if can detect blocking app-side callbacks, e.g. is the app blocking the thread pool
 
+## Scaladocs
+`gradle ScalaDoc`
 
 ## Material to recycle for 'choosing a json lib' docs later
 

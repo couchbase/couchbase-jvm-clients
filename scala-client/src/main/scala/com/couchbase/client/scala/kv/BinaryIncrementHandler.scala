@@ -14,6 +14,11 @@ import io.opentracing.Span
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Handles requests and responses for KV increment operations.
+  *
+  * @author Graham Pople
+  */
 class BinaryIncrementHandler(hp: HandlerParams) extends RequestHandler[IncrementResponse, CounterResult] {
 
   def request[T](id: String,

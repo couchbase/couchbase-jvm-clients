@@ -16,6 +16,11 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
+/**
+  * Handles requests and responses for KV replace operations.
+  *
+  * @author Graham Pople
+  */
 class ReplaceHandler(hp: HandlerParams) extends RequestHandler[ReplaceResponse, MutationResult] {
 
   def request[T](id: String,

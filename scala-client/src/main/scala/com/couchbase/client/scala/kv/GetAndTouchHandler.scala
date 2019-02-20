@@ -15,6 +15,11 @@ import com.couchbase.client.scala.durability.Durability._
 import scala.util.{Success, Try}
 
 
+/**
+  * Handles requests and responses for KV get-and-touch operations.
+  *
+  * @author Graham Pople
+  */
 class GetAndTouchHandler(hp: HandlerParams) extends RequestHandler[GetAndTouchResponse, GetResult] {
 
   def request[T](id: String,

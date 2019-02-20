@@ -14,6 +14,11 @@ import io.opentracing.Span
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Handles requests and responses for KV prepend operations.
+  *
+  * @author Graham Pople
+  */
 class BinaryPrependHandler(hp: HandlerParams) extends RequestHandler[PrependResponse, MutationResult] {
 
   def request[T](id: String,

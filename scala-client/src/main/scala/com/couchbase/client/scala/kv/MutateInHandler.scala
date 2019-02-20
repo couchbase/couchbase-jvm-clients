@@ -20,6 +20,11 @@ import scala.compat.java8.OptionConverters._
 import collection.JavaConverters._
 
 
+/**
+  * Handles requests and responses for KV SubDocument mutation operations.
+  *
+  * @author Graham Pople
+  */
 class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResponse, MutateInResult] {
 
   def request[T](id: String,

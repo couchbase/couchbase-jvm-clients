@@ -16,6 +16,11 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
+/**
+  * Handles requests and responses for KV remove operations.
+  *
+  * @author Graham Pople
+  */
 class RemoveHandler(hp: HandlerParams) extends RequestHandler[RemoveResponse, MutationResult] {
 
   def request[T](id: String,
