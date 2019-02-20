@@ -10,13 +10,14 @@ import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryConsumer, QueryResult}
+import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
 import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 object DurationConversions {
@@ -35,16 +36,18 @@ class AsyncCluster(environment: => ClusterEnvironment)
   private val core = Core.create(environment)
   private[scala] val env = environment
 
-  // TODO BLOCKED query
+  // Opening resources will not raise errors, instead they will be deferred until later
+  private[scala] var deferredError: Option[RuntimeException] = None
+
 
   import DurationConversions._
-
 
   def bucket(name: String): Future[AsyncBucket] = {
     FutureConversions.javaMonoToScalaFuture(core.openBucket(name))
       .map(v => new AsyncBucket(name, core, environment))
   }
 
+  // TODO BLOCKED query
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
     val validations: Try[QueryRequest] = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")

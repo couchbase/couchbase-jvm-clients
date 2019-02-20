@@ -369,4 +369,5 @@ class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with
     compare(source, sink)
   }
 
+
 }

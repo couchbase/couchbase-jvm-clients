@@ -25,22 +25,89 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
   def getOpt(idx: Int): Option[Any] = {
     Option(values.get(idx))
   }
-  def str(idx: Int): String = values.get(idx).asInstanceOf[String]
-  def long(idx: Int): Long = values.get(idx).asInstanceOf[Long]
-  def int(idx: Int): Int = values.get(idx).asInstanceOf[Int]
-  def double(idx: Int): Double = values.get(idx).asInstanceOf[Double]
-  def float(idx: Int): Float = values.get(idx).asInstanceOf[Float]
-  def obj(idx: Int): JsonObject = values.get(idx).asInstanceOf[JsonObject]
-  def arr(idx: Int): JsonArray = values.get(idx).asInstanceOf[JsonArray]
 
-  // TODO convert to Try
-  def strOpt(idx: Int): Option[String] = Option(values.get(idx)).map(_.asInstanceOf[String])
-  def longOpt(idx: Int): Option[Long] = Option(values.get(idx)).map(_.asInstanceOf[Long])
-  def intOpt(idx: Int): Option[Int] = Option(values.get(idx)).map(_.asInstanceOf[Int])
-  def doubleOpt(idx: Int): Option[Double] = Option(values.get(idx)).map(_.asInstanceOf[Double])
-  def floatOpt(idx: Int): Option[Float] = Option(values.get(idx)).map(_.asInstanceOf[Float])
-  def objOpt(idx: Int): Option[JsonObject] = Option(values.get(idx)).map(_.asInstanceOf[JsonObject])
-  def arrOpt(idx: Int): Option[JsonArray] = Option(values.get(idx)).map(_.asInstanceOf[JsonArray])
+  // Note these methods are some of the few in the Scala SDK that can throw an exception.
+  // They are optimised for performance: use the *t methods instead for functional safety.
+
+  // TODO test using these from Java
+  def str(idx: Int): String = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[String]
+  }
+  def long(idx: Int): Long = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[Long]
+  }
+  def int(idx: Int): Int = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[Int]
+  }
+  def double(idx: Int): Double = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[Double]
+  }
+  def float(idx: Int): Float = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[Float]
+  }
+  def obj(idx: Int): JsonObject = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[JsonObject]
+  }
+  def arr(idx: Int): JsonArray = {
+    val out = values.get(idx)
+    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
+    else out.asInstanceOf[JsonArray]
+  }
+
+  def strt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def longt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def intt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def doublet(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def floatt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def objt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
+  def arrt(idx: Int): Try[String] = {
+    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
+    val out = values.get(idx)
+    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
+    else Try(out.asInstanceOf[String])
+  }
 
   def isEmpty: Boolean = values.isEmpty
   def iterator: Iterator[Any] = values.asScala.iterator

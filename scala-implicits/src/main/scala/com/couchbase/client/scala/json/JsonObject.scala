@@ -41,14 +41,6 @@ import scala.collection.JavaConverters._
   */
 
 case class JsonObject(private val content: java.util.HashMap[String, Any]) {
-  def getOpt(name: String): Option[Any] = {
-    Option(content.get(name))
-  }
-
-  def get(name: String): Any = {
-    content.get(name)
-  }
-
 
   // Instead of making JsonObject itself Dynamic, which lends itself to all kinds of accidental errors, put it in a
   // separate method
@@ -61,122 +53,90 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
     this
   }
 
-//  def put(name: String, value: Int): JsonObject = {
-//    Objects.requireNonNull(name)
-//    //    if (!checkType(value)) throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass)
-//    copy(content + (name -> JsonNumber(value)))
-//  }
-
-//  def str(name: String): String = {
-//    (content.get(name)) match {
-//      case v: com.jsoniter.any.Any => v.toString
-//      case v: String => v
-//    }
-//  }
-
+  def get(name: String): Any = {
+    content.get(name)
+  }
 
   def str(name: String): String = {
-    (content.get(name)) match {
-      case v: String => v
-    }
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[String]
   }
 
+  // TODO test all these fields with e.g. getting an int as a string
   def int(name: String): Int = {
-//    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
-        content.get(name).asInstanceOf[Int]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Int]
   }
 
-//  def int(name: String): Int = {
-//    content.get(name).asInstanceOf[com.jsoniter.any.Any].toInt
-////    content.get(name).asInstanceOf[Int]
-//  }
-
-  // TODO handle and return nulls
   def bool(name: String): Boolean = {
-    content.get(name).asInstanceOf[Boolean]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Boolean]
   }
 
   def long(name: String): Long = {
-    content.get(name).asInstanceOf[Long]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Long]
   }
 
   def double(name: String): Double = {
-    content.get(name).asInstanceOf[Double]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Double]
   }
 
   def obj(name: String): JsonObject = {
-    content.get(name).asInstanceOf[JsonObject]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[JsonObject]
   }
 
   def arr(name: String): JsonArray = {
-    content.get(name).asInstanceOf[JsonArray]
+    val out = content.get(name)
+    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[JsonArray]
   }
 
-//  def strOpt(name: String): Option[String] = {
-//    Option(content.get(name)).map(_.asInstanceOf[String])
-//  }
-//
-//  def intOpt(name: String): Option[Int] = {
-//    Option(content.get(name)).map(_.asInstanceOf[Int])
-//  }
-//
-//  def boolOpt(name: String): Option[Boolean] = {
-//    Option(content.get(name)).map(_.asInstanceOf[Boolean])
-//  }
-//
-//  def longOpt(name: String): Option[Long] = {
-//    Option(content.get(name)).map(_.asInstanceOf[Long])
-//  }
-//
-//  def doubleOpt(name: String): Option[Double] = {
-//    Option(content.get(name)).map(_.asInstanceOf[Double])
-//  }
-//
-//  def objOpt(name: String): Option[JsonObject] = {
-//    Option(content.get(name)).map(_.asInstanceOf[JsonObject])
-//  }
-//
-//  def arrOpt(name: String): Option[JsonArray] = {
-//    Option(content.get(name)).map(_.asInstanceOf[JsonArray])
-//  }
 
-  def strTry(name: String): Try[String] = {
+  def gett(name: String): Try[Any] = {
+    val out = content.get(name)
+    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
+    else Success(out)
+  }
+
+  def strt(name: String): Try[String] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[String])
   }
 
-  def intTry(name: String): Try[Int] = {
+  def intt(name: String): Try[Int] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[Int])
   }
 
-  def boolTry(name: String): Try[Boolean] = {
+  def boolt(name: String): Try[Boolean] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[Boolean])
   }
 
-  def longTry(name: String): Try[Long] = {
+  def longt(name: String): Try[Long] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[Long])
   }
 
-  def doubleTry(name: String): Try[Double] = {
+  def doublet(name: String): Try[Double] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[Double])
   }
 
-  def objTry(name: String): Try[JsonObject] = {
+  def objt(name: String): Try[JsonObject] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[JsonObject])
   }
 
-  def arrTry(name: String): Try[JsonArray] = {
+  def arrt(name: String): Try[JsonArray] = {
     val out = content.get(name)
     if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
     else Try(out.asInstanceOf[JsonArray])

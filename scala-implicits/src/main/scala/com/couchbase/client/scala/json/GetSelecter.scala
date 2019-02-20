@@ -22,8 +22,8 @@ object GetSelecter {
           case PathObjectOrField(name) =>
             in match {
               case Left(obj) =>
-                obj.getOpt(name) match {
-                  case Some(o) => Success(o)
+                obj.gett(name) match {
+                  case Success(o) => Success(o)
                   case _ =>
                     Failure(new DecodingFailedException(s"Could not find key $name"))
                 }
@@ -54,7 +54,7 @@ object GetSelecter {
           case PathArray(name, idx) =>
             in match {
               case Left(obj) =>
-                obj.arrTry(name) match {
+                obj.arrt(name) match {
                   case Success(arr) =>
                     val atIdx: Option[Any] = arr.getOpt(idx)
 
