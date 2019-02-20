@@ -398,6 +398,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         assertEquals("${Mutation.CAS}", updatedContent.getString("foo"));
     }
 
+    // TODO macro sentinel values
     @Test
     public void insertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),

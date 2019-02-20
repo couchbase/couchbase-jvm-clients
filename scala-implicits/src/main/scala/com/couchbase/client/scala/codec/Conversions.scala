@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{CodecFlags, SubdocCommandType, SubdocField}
 import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
+import com.couchbase.client.scala.kv.MutateInMacro
 import io.netty.util.CharsetUtil
 
 import scala.util.{Failure, Success, Try}
@@ -27,7 +28,12 @@ trait CodecParams {
     "}"
 }
 
-case class EncodeParams(flags: Int) extends CodecParams
+/** Returned by [[Conversions.Encodable.encode]] to provide additional context about the encoding. */
+case class EncodeParams(
+                         // Each value is stored on Couchbase along with a flags field indicating the type of the content
+                         // @see DocumentFlags
+                         flags: Int
+                       ) extends CodecParams
 
 
 object DocumentFlags {
@@ -229,6 +235,12 @@ object Conversions {
     implicit object JawnConvert extends Encodable[org.typelevel.jawn.ast.JValue] {
       override def encode(content: org.typelevel.jawn.ast.JValue) = {
         Try(content.render().getBytes(CharsetUtil.UTF_8)).map((_, JsonFlags))
+      }
+    }
+
+    implicit object MutateInMacroConvert extends Encodable[MutateInMacro] {
+      override def encode(content: MutateInMacro) = {
+        Try((content.value.getBytes(CharsetUtil.UTF_8), Conversions.StringFlags))
       }
     }
 

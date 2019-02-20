@@ -2,7 +2,7 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.couchbase.client.scala.codec.EncodeParams
+import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
 import io.netty.util.CharsetUtil
 
 import scala.util.Try
@@ -80,11 +80,10 @@ private case class Increment(path: String, delta: Long,
   }
 }
 
-// TODO change expandMacro to sentinel values
-
 
 /** Methods to allow constructing a sequence of `MutateInSpec`s.
   *
+  * @author Graham Pople
   * @define CreatePath     whether intermediate paths should be created
   * @define Xattr          whether this is an extended attribute (xattr) field
   * @define SupportedTypes This can be of any type for which an implicit Encodable can be found: a list
@@ -102,27 +101,32 @@ object MutateInSpec {
     * @param value      the value to insert.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def insert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def insert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
-    val encoded = ev.encodeSubDocumentField(value)
-    Insert(path, encoded, xattr, createPath, expandMacro)
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
+    Insert(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of replacing an existing value in a JSON object.
     *
     * Will error if the last element of the path does not exist.
     *
-    * @param path       the path identifying where to replace the value.
-    * @param value      the value to replace.  $SupportedTypes
-    * @param xattr      $Xattr
-    * @param expandMacro
-    * @param ev         $Encodable
+    * @param path  the path identifying where to replace the value.
+    * @param value the value to replace.  $SupportedTypes
+    * @param xattr $Xattr
+    * @param ev    $Encodable
     */
-  def replace[T](path: String, value: T, xattr: Boolean = false, expandMacro: Boolean = false)
+  def replace[T](path: String, value: T, xattr: Boolean = false)
                 (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     Replace(path, ev.encodeSubDocumentField(value), xattr, expandMacro)
   }
 
@@ -134,11 +138,14 @@ object MutateInSpec {
     * @param value      the value to upsert.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def upsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def upsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     Upsert(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 
@@ -161,11 +168,14 @@ object MutateInSpec {
     * @param value      the value to append.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def arrayAppend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def arrayAppend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                     (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     ArrayAppend(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 
@@ -177,11 +187,14 @@ object MutateInSpec {
     * @param value      the value to append.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def arrayPrepend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def arrayPrepend[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                      (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     ArrayPrepend(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 
@@ -193,11 +206,14 @@ object MutateInSpec {
     * @param value      the value to insert.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def arrayInsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def arrayInsert[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                     (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     ArrayInsert(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 
@@ -212,11 +228,14 @@ object MutateInSpec {
     * @param value      the value to insert.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
-    * @param expandMacro
     * @param ev         $Encodable
     */
-  def arrayAddUnique[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false, expandMacro: Boolean = false)
+  def arrayAddUnique[T](path: String, value: T, xattr: Boolean = false, createPath: Boolean = false)
                        (implicit ev: Encodable[T]): MutateInSpec = {
+    val expandMacro = value match {
+      case v: MutateInMacro => true
+      case _ => false
+    }
     ArrayAddUnique(path, ev.encodeSubDocumentField(value), xattr, createPath, expandMacro)
   }
 

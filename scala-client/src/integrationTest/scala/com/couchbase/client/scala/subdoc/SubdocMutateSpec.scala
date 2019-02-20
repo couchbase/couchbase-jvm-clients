@@ -10,7 +10,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import com.couchbase.client.scala.kv.MutateInSpec._
 import com.couchbase.client.scala.kv.LookupInSpec._
-import com.couchbase.client.scala.kv.MutateInSpec
+import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec}
 
 class SubdocMutateSpec extends FunSuite {
   val (cluster, bucket, coll) = (for {
@@ -363,7 +363,8 @@ class SubdocMutateSpec extends FunSuite {
   }
 
   test("insert expand macro xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "${Mutation.CAS}", xattr = true, expandMacro = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
+      Array(insert("x.foo", MutateInMacro.MutationCAS, xattr = true)))
     assert(updatedContent("foo").str != "${Mutation.CAS}")
   }
 
