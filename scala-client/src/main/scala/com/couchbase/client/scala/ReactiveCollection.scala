@@ -117,6 +117,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
   def get(id: String,
           withExpiration: Boolean = false,
+          project: Seq[String] = Seq.empty,
           parentSpan: Option[Span] = None,
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())

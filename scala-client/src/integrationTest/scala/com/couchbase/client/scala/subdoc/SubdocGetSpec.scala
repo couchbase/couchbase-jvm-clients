@@ -63,7 +63,7 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-
+  // TODO server actually returns failure here, do we want to surface that?
   test("path does not exist multi") {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -72,6 +72,7 @@ class SubdocGetSpec extends FunSuite {
 
     coll.lookupIn(docId, Array(get("not_exist"), get("hello"))) match {
       case Success(result) =>
+        assert(result.cas != 0)
         result.contentAs[String](0) match {
           case Success(body) => assert(false, s"should not succeed")
           case Failure(err: PathNotFoundException) =>

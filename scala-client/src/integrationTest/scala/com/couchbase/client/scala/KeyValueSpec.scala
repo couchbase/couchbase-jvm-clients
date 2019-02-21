@@ -7,6 +7,8 @@ import org.scalatest.{FunSpec, FunSuite}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
+// TODO sync up query result changes
+
 class KeyValueSpec extends FunSuite {
   // TODO support Jenkins
   val (cluster, bucket, coll) = (for {

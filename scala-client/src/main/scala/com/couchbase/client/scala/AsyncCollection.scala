@@ -242,12 +242,13 @@ class AsyncCollection(name: String,
 
   def get(id: String,
           withExpiration: Boolean = false,
+          project: Seq[String] = Seq.empty,
           parentSpan: Option[Span] = None,
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Future[GetResult] = {
-    if (withExpiration) {
-      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
+    if (withExpiration || project.nonEmpty) {
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, project, parentSpan, timeout, retryStrategy).map(lookupInResult =>
         GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
@@ -267,11 +268,22 @@ class AsyncCollection(name: String,
   private def getSubDoc(id: String,
                         spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
+                        project: Seq[String],
                         parentSpan: Option[Span] = None,
                         timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
     val req = getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, getSubDocHandler)
+    req match {
+      case Success(request) =>
+        core.send(request)
+
+        val out = FutureConverters.toScala(request.response())
+          .map(response => getSubDocHandler.response(id, response, project))
+
+        out
+
+      case Failure(err) => Future.failed(err)
+    }
   }
 
   def mutateIn(id: String,
@@ -326,7 +338,7 @@ class AsyncCollection(name: String,
               ): Future[LookupInResult] = {
     // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app
     // may expect error to be raised and it won't
-    getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiration = false, Seq.empty, parentSpan, timeout, retryStrategy)
   }
 
   def getFromReplica(id: String,

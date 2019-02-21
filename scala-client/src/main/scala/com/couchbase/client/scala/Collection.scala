@@ -162,11 +162,12 @@ class Collection(val async: AsyncCollection,
 
   def get(id: String,
           withExpiration: Boolean = false,
+          project: Seq[String] = Seq.empty,
           parentSpan: Option[Span] = None,
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = async.environment.retryStrategy()
          ): Try[GetResult] = {
-    block(async.get(id, withExpiration, parentSpan, timeout, retryStrategy), timeout)
+    block(async.get(id, withExpiration, project, parentSpan, timeout, retryStrategy), timeout)
   }
 
 
@@ -179,6 +180,7 @@ class Collection(val async: AsyncCollection,
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }
 
+  // TODO sync with latest RFC changes
   def getFromReplica(id: String,
                      replicaMode: ReplicaMode,
                      parentSpan: Option[Span] = None,

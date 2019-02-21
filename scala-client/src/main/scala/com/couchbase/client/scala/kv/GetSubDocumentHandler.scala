@@ -109,4 +109,32 @@ class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetR
       case _ => throw DefaultErrors.throwOnBadResult(response.status())
     }
   }
+
+  def response(id: String, response: SubdocGetResponse, project: Seq[String]): LookupInResult = {
+    response.status() match {
+      case ResponseStatus.SUCCESS =>
+        val values: Seq[SubdocField] = response.values().asScala
+
+        var exptime: Option[Duration] = None
+        val fields = collection.mutable.Map.empty[String, SubdocField]
+
+        values.foreach(value => {
+          if (value.path() == ExpTime) {
+            val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
+            exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
+          }
+        })
+
+        LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
+
+      case ResponseStatus.SUBDOC_FAILURE =>
+
+        response.error().asScala match {
+          case Some(err) => throw err
+          case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+        }
+
+      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+    }
+  }
 }

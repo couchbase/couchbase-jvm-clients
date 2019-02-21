@@ -65,6 +65,7 @@ pipeline {
                     dir("couchbase-jvm-clients") {
                         //archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
                         archiveArtifacts artifacts: 'scala-client/build/libs/*.jar', fingerprint: true
+                        archiveArtifacts artifacts: 'scala-client/build/libs/*.jar', fingerprint: true
                         archiveArtifacts artifacts: 'scala-implicits/build/libs/*.jar', fingerprint: true
                         archiveArtifacts artifacts: 'core-io/build/libs/*.jar', fingerprint: true
                         archiveArtifacts artifacts: 'benchmarks/build/libs/*.jar', fingerprint: true

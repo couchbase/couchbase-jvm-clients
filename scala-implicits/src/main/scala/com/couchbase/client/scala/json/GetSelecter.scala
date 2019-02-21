@@ -5,11 +5,11 @@ import com.couchbase.client.core.error.DecodingFailedException
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 
-sealed trait PathElements
+private[scala] sealed trait PathElements
 
-case class PathObjectOrField(str: String) extends PathElements
+private[scala] case class PathObjectOrField(str: String) extends PathElements
 
-case class PathArray(str: String, idx: Int) extends PathElements
+private[scala] case class PathArray(str: String, idx: Int) extends PathElements
 
 
 object GetSelecter {
