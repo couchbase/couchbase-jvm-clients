@@ -83,6 +83,8 @@ case class GetSelecter(private val in: Either[JsonObject, JsonArray],
 
   def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(in, path :+ PathArray(name, index))
 
+  // TODO make sure these syncup with JsonObject names
+  // TODO add non-try variants
   def str: Try[String] = GetSelecter.eval(in, path).map(_.asInstanceOf[String])
 
   def int: Try[Int] = GetSelecter.eval(in, path).map(_.asInstanceOf[Int])

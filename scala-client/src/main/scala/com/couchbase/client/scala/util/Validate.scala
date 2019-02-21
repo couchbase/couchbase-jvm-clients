@@ -28,4 +28,9 @@ object Validate {
     if (input == null || input.isEmpty) Failure(new IllegalArgumentException(identifier + " cannot be null or empty"))
     else Success(input)
   }
+
+  def notNullOrEmpty(input: Seq[_], identifier: String): Try[Seq[_]] = {
+    if (input == null || input.isEmpty) Failure(new IllegalArgumentException(identifier + " cannot be null or empty"))
+    else Success(input)
+  }
 }

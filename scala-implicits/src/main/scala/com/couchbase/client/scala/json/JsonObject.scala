@@ -59,87 +59,112 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
 
   def str(name: String): String = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[String]
+    out match {
+      case v: String => v
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => out.toString
+    }
   }
 
   // TODO test all these fields with e.g. getting an int as a string
+  // TODO it's valid for these fields to contain null, should only throw if it's not there.  Can we cheaply determine?
   def int(name: String): Int = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Int]
+    out match {
+      case v: Int => v
+      case v: Long => v.toInt
+      case v: Double => v.toInt
+      case v: Short => v.toInt
+      case v: String => v.toInt
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Int")
+    }
   }
 
   def bool(name: String): Boolean = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Boolean]
+    out match {
+      case v: Boolean => v
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Boolean")
+    }
   }
 
   def long(name: String): Long = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Long]
+    out match {
+      case v: Long => v
+      case v: Int => v.toLong
+      case v: Double => v.toInt
+      case v: Short => v.toInt
+      case v: String => v.toInt
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Long")
+    }
   }
 
   def double(name: String): Double = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[Double]
+    out match {
+      case v: Double => v.toInt
+      case v: Long => v
+      case v: Int => v.toLong
+      case v: Short => v.toInt
+      case v: String => v.toInt
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Double")
+    }
   }
 
   def obj(name: String): JsonObject = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[JsonObject]
+    out match {
+      case v: JsonObject => v
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to JsonObject")
+    }
   }
 
   def arr(name: String): JsonArray = {
     val out = content.get(name)
-    if (out == null) throw new IllegalArgumentException(s"Field $name not found") else out.asInstanceOf[JsonArray]
+    out match {
+      case v: JsonArray => v
+      case null => throw new IllegalArgumentException(s"Field $name not found")
+      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to JsonArray")
+    }
   }
 
 
   def gett(name: String): Try[Any] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Success(out)
+    Try(get(name))
   }
 
   def strt(name: String): Try[String] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[String])
+    Try(str(name))
   }
 
   def intt(name: String): Try[Int] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[Int])
+    Try(int(name))
   }
 
   def boolt(name: String): Try[Boolean] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[Boolean])
+    Try(bool(name))
   }
 
   def longt(name: String): Try[Long] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[Long])
+    Try(long(name))
   }
 
   def doublet(name: String): Try[Double] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[Double])
+    Try(double(name))
   }
 
   def objt(name: String): Try[JsonObject] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[JsonObject])
+    Try(obj(name))
   }
 
   def arrt(name: String): Try[JsonArray] = {
-    val out = content.get(name)
-    if (out == null) Failure(new IllegalArgumentException(s"Field $name does not exist"))
-    else Try(out.asInstanceOf[JsonArray])
+    Try(arr(name))
   }
 
   def remove(name: String): JsonObject = {
@@ -175,6 +200,22 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
 
   def size: Int = {
     content.size
+  }
+
+  // TODO make output valid JSON
+  override def toString: String = {
+    val sb = new StringBuilder
+    sb += '{'
+    val it = content.entrySet().iterator()
+    while (it.hasNext) {
+      val next = it.next()
+      sb.append(next.getKey)
+      sb += ':'
+      sb.append(next.getValue.toString)
+      if (it.hasNext) sb.append(',')
+    }
+      sb += '}'
+    sb.toString()
   }
 
 //  private def checkType(value: Any): Boolean = {

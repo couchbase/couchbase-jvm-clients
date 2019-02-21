@@ -122,9 +122,10 @@ class ReactiveCollection(async: AsyncCollection) {
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Mono[GetResult] = {
+    // TODO support project
     if (withExpiration) {
       getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-        GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
+        GetResult(id, Left(lookupInResult.contentAsBytes(0).get), lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -146,8 +147,15 @@ class ReactiveCollection(async: AsyncCollection) {
                         parentSpan: Option[Span] = None,
                         timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[LookupInResult] = {
-    val req = async.getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy)
-    wrap(req, id, async.getSubDocHandler)
+    async.getSubDocHandler.request(id, spec, withExpiration, parentSpan, timeout, retryStrategy) match {
+      case Success(request) =>
+        core.send(request)
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .map(r => async.getSubDocHandler.response(id, r))
+
+      case Failure(err) => Mono.error(err)
+    }
   }
   
   def mutateIn(id: String,

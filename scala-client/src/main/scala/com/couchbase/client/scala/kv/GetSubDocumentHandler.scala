@@ -9,8 +9,9 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.DocumentFlags
-import com.couchbase.client.scala.document.LookupInResult
-import com.couchbase.client.scala.util.Validate
+import com.couchbase.client.scala.document.{GetResult, LookupInResult}
+import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
 import io.netty.util.CharsetUtil
 import io.opentracing.Span
 
@@ -25,11 +26,8 @@ import scala.util.{Failure, Success, Try}
   *
   * @author Graham Pople
   */
-class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetResponse, LookupInResult] {
+class GetSubDocumentHandler(hp: HandlerParams) {
   private val ExpTime = "$document.exptime"
-
-  // TODO support projections
-
 
   def request[T](id: String,
                  spec: Seq[LookupInSpec],
@@ -82,13 +80,35 @@ class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetR
     }
   }
 
+  def requestProject[T](id: String,
+                 project: Seq[String],
+                 parentSpan: Option[Span],
+                 timeout: java.time.Duration,
+                 retryStrategy: RetryStrategy)
+  : Try[SubdocGetRequest] = {
+    val validations: Try[SubdocGetRequest] = for {
+      _ <- Validate.notNullOrEmpty(project, "project")
+    } yield null
+
+    if (validations.isFailure) {
+      validations
+    }
+    else if (project.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+      Failure(new IllegalArgumentException(s"A maximum of ${SubdocMutateRequest.SUBDOC_MAX_FIELDS} projection fields are supported"))
+    }
+    else {
+      val spec = project.map(v => LookupInSpec.get(v))
+
+      request(id, spec, false, parentSpan, timeout, retryStrategy)
+    }
+  }
+
   def response(id: String, response: SubdocGetResponse): LookupInResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
 
         var exptime: Option[Duration] = None
-        val fields = collection.mutable.Map.empty[String, SubdocField]
 
         values.foreach(value => {
           if (value.path() == ExpTime) {
@@ -98,6 +118,7 @@ class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetR
         })
 
         LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
+
 
       case ResponseStatus.SUBDOC_FAILURE =>
 
@@ -110,40 +131,30 @@ class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetR
     }
   }
 
-  def response(id: String, response: SubdocGetResponse, project: Seq[String]): LookupInResult = {
+  def responseProject(id: String, response: SubdocGetResponse): Try[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
 
-        var exptime: Option[Duration] = None
-        val fields = collection.mutable.Map.empty[String, SubdocField]
+        val out = JsonObject.create
 
-        values.foreach(value => {
-          if (value.path() == ExpTime) {
-            val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-            exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
-          }
+        val x: Seq[Try[JsonObject]] = values.map(value => {
+          ProjectionsApplier.parse(out, value.path(), value.value())
         })
 
-//        values.foreach(v => {
-//          val parsed = JsonPathParser.parse(v.path())
-//
-//          parsed.foreach()
-//        })
-//        project.foreach(p => {
-//
-//        })
+        // If any op failed, return the first failure
+        val y: Try[Seq[JsonObject]] = FunctionalUtil.traverse(x.toList)
 
-        LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
+        y.map(_ => GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None))
 
       case ResponseStatus.SUBDOC_FAILURE =>
 
         response.error().asScala match {
-          case Some(err) => throw err
-          case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+          case Some(err) => Failure(err)
+          case _ => Failure(new SubDocumentException("Unknown SubDocument failure occurred") {})
         }
 
-      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+      case _ => Failure(DefaultErrors.throwOnBadResult(response.status()))
     }
   }
 }

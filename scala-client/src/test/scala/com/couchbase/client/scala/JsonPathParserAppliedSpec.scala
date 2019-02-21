@@ -1,68 +1,140 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.scala.json.{JsonObject, PathArray, PathObjectOrField}
-import com.couchbase.client.scala.kv.JsonPathParser
+import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.json.{JsonArray, JsonObject, PathArray, PathObjectOrField}
+import com.couchbase.client.scala.kv.{JsonPathParser, ProjectionsApplier}
+import io.netty.util.CharsetUtil
 import org.scalatest.FunSuite
 
 import scala.util.Success
 
-class JsonPathParserAppliedSpec extends FunSuite {
-//  private def wrap(path: String): JsonObject = {
-//    val parsed = JsonPathParser.parse(path)
-//
-//    val out = JsonObject
-//  }
+class ProjectionsApplierSpec extends FunSuite {
+  private def wrap(path: String, content: String): JsonObject = {
+    ProjectionsApplier.parse(path, content.getBytes(CharsetUtil.UTF_8)).get
+  }
+
+  private def wrap(path: String, content: Int): JsonObject = {
+    ProjectionsApplier.parse(path, content.toString.getBytes(CharsetUtil.UTF_8)).get
+  }
+
+  private def wrap(path: String, content: JsonObject): JsonObject = {
+    val bytes: Array[Byte] = Conversions.encode[JsonObject](content).get._1
+    ProjectionsApplier.parse(path, bytes).get
+  }
+
+  private def wrap(path: String, content: JsonArray): JsonObject = {
+    val bytes: Array[Byte] = Conversions.encode[JsonArray](content).get._1
+    ProjectionsApplier.parse(path, bytes).get
+  }
+
+
+
+  test("parse string") {
+    assert(ProjectionsApplier.parseContent("hello".getBytes(CharsetUtil.UTF_8)).get == "hello")
+  }
+
+  test("parse obj") {
+    val out = ProjectionsApplier.parseContent("""{"hello":"world"}""".getBytes(CharsetUtil.UTF_8)).get.asInstanceOf[JsonObject]
+    assert(out.str("hello") == "world")
+  }
+
+  test("parse arr") {
+    val out = ProjectionsApplier.parseContent("""["hello","world"]""".getBytes(CharsetUtil.UTF_8)).get.asInstanceOf[JsonArray]
+    assert(out.toSeq == Seq("hello","world"))
+  }
 
   test("name") {
-    assert(JsonPathParser.parse("name") == Success(Seq(PathObjectOrField("name"))))
+    val out = wrap("name", "Emmy-lou Dickerson")
+    assert(out.str("name") == "Emmy-lou Dickerson")
   }
 
-  test("foo[2]") {
-    assert(JsonPathParser.parse("foo[2]").get == Seq(
-      PathArray("foo", 2)))
+  val raw = """{
+              |    "name": "Emmy-lou Dickerson",
+              |    "age": 26,
+              |    "animals": ["cat", "dog", "parrot"],
+              |    "addresses": [{"address":"123 Fake Street"}],
+              |    "attributes": {
+              |        "hair": "brown",
+              |        "dimensions": {
+              |            "height": 67,
+              |            "weight": 175
+              |        },
+              |        "hobbies": [{
+              |                "type": "winter sports",
+              |                "name": "curling"
+              |            },
+              |            {
+              |                "type": "summer sports",
+              |                "name": "water skiing",
+              |                "details": {
+              |                    "location": {
+              |                        "lat": 49.282730,
+              |                        "long": -123.120735
+              |                    }
+              |                }
+              |            }
+              |        ]
+              |    }
+              |}
+              |""".stripMargin
+  val obj = JsonObject.fromJson(raw).get
+
+
+  test("age") {
+    val json = wrap("age", obj.int("age"))
+    assert(json.int("age") == 26)
   }
 
-  test("foo.bar") {
-    assert(JsonPathParser.parse("foo.bar").get == Seq(
-      PathObjectOrField("foo"),
-      PathObjectOrField("bar")))
+  test("animals") {
+    val json = wrap("animals", obj.arr("animals"))
+    val arr = json.arr("animals")
+    assert(arr.size == 3)
+    assert(arr.toSeq == Seq("cat", "dog", "parrot"))
   }
 
-  test("foo.bar[2]") {
-    assert(JsonPathParser.parse("foo.bar[2]").get == Seq(
-      PathObjectOrField("foo"),
-      PathArray("bar", 2)))
+  test("animals[0]") {
+    val json = wrap("animals[0]", obj.arr("animals").str(0))
+    val arr = json.arr("animals")
+    assert(arr.toSeq == Seq("cat"))
   }
 
-  test("foo[2].bar") {
-    assert(JsonPathParser.parse("foo[2].bar").get == Seq(
-      PathArray("foo", 2),
-      PathObjectOrField("bar")))
+  test("animals[2]") {
+    val json = wrap("animals[2]", obj.arr("animals").str(2))
+    val arr = json.arr("animals")
+    assert(arr.toSeq == Seq("parrot"))
   }
 
-  test("foo[9999].bar") {
-    assert(JsonPathParser.parse("foo[9999].bar").get == Seq(
-      PathArray("foo", 9999),
-      PathObjectOrField("bar")))
+  test("addresses[0].address") {
+    val json = wrap("addresses[0].address", obj.arr("addresses").obj(0).str("address"))
+    assert(json.arr("addresses").obj(0).str("address") == "123 Fake Street")
   }
 
-  test("foo[2].bar[80].baz") {
-    assert(JsonPathParser.parse("foo[2].bar[80].baz").get == Seq(
-      PathArray("foo", 2),
-      PathArray("bar", 80),
-      PathObjectOrField("baz")))
+  test("attributes") {
+    val json = wrap("attributes", obj.obj("attributes"))
+    val field = json.obj("attributes")
+    assert(field.size == 3)
+    assert(field.arr("hobbies").obj(1).str("type") == "summer sports")
+    assert(field.dyn.hobbies(1).name.str.get == "water skiing")
   }
 
-  test("bad idx") {
-    assert(JsonPathParser.parse("foo[bad]").isFailure)
+  test("attributes.hair") {
+    val json = wrap("attributes.hair", obj.obj("attributes").str("hair"))
+    assert(json.obj("attributes").str("hair") == "brown")
   }
 
-  test("missing idx end") {
-    assert(JsonPathParser.parse("foo[12").isFailure)
+  test("attributes.dimensions") {
+    val json = wrap("attributes.dimensions", obj.obj("attributes").obj("dimensions"))
+    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
+    assert(json.obj("attributes").obj("dimensions").int("weight") == 175)
   }
 
-  test("empty") {
-    assert(JsonPathParser.parse("") == Seq())
+  test("attributes.dimensions.height") {
+    val json = wrap("attributes.dimensions.height", obj.obj("attributes").obj("dimensions").int("height"))
+    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
   }
 
+  test("attributes.hobbies[1].type") {
+    val json = wrap("attributes.hobbies[1].type", obj.obj("attributes").arr("hobbies").obj(1).str("type"))
+    assert(json.obj("attributes").arr("hobbies").obj(0).str("type") == "summer sports")
+  }
 }

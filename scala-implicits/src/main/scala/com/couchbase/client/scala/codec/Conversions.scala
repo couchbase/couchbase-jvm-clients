@@ -175,6 +175,12 @@ object Conversions {
       }
     }
 
+    implicit object JsonArrayConvert extends Encodable[JsonArray] {
+      override def encode(content: JsonArray) = {
+        Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonFlags)
+      }
+    }
+
     implicit object BooleanConvert extends Encodable[Boolean] {
       override def encode(content: Boolean) = {
         val str = if (content) "true" else "false"

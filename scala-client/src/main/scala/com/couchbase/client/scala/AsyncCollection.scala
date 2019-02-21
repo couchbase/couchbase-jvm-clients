@@ -169,17 +169,17 @@ class AsyncCollection(name: String,
   val binary = new AsyncBinaryCollection(this)
 
   private[scala] def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
-                                          id: String,
-                                          handler: RequestHandler[Resp, Res]): Future[Res] = {
+                                                 id: String,
+                                                 handler: RequestHandler[Resp, Res]): Future[Res] = {
     AsyncCollection.wrap(in, id, handler, core)
   }
 
   private[scala] def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
-                                                                               id: String,
-                                                                               handler: RequestHandler[Resp, Res],
-                                                                               durability: Durability,
-                                                                               remove: Boolean,
-                                                                               timeout: java.time.Duration): Future[Res] = {
+                                                                                      id: String,
+                                                                                      handler: RequestHandler[Resp, Res],
+                                                                                      durability: Durability,
+                                                                                      remove: Boolean,
+                                                                                      timeout: java.time.Duration): Future[Res] = {
     AsyncCollection.wrapWithDurability(in, id, handler, durability, remove, timeout, core, bucketName, collectionIdEncoded)
   }
 
@@ -247,9 +247,27 @@ class AsyncCollection(name: String,
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy())
   : Future[GetResult] = {
-    if (withExpiration || project.nonEmpty) {
-      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, project, parentSpan, timeout, retryStrategy).map(lookupInResult =>
-        GetResult(id, lookupInResult.contentAsBytes(0).get, lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
+
+    if (project.nonEmpty) {
+      getSubDocHandler.requestProject(id, project, parentSpan, timeout, retryStrategy) match {
+        case Success(request) =>
+          core.send(request)
+
+          FutureConverters.toScala(request.response())
+            .flatMap(response => getSubDocHandler.responseProject(id, response) match {
+              case Success(v) => Future.successful(v)
+              case Failure(err) => Future.failed(err)
+            })
+
+        case Failure(err) => Future.failed(err)
+      }
+
+    }
+    else if (withExpiration) {
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, parentSpan, timeout, retryStrategy)
+        .map(lookupInResult =>
+          GetResult(id, Left(lookupInResult.contentAsBytes(0).get),
+            lookupInResult.flags, lookupInResult.cas, lookupInResult.expiration))
     }
     else {
       getFullDoc(id, parentSpan, timeout, retryStrategy)
@@ -268,7 +286,6 @@ class AsyncCollection(name: String,
   private def getSubDoc(id: String,
                         spec: Seq[LookupInSpec],
                         withExpiration: Boolean,
-                        project: Seq[String],
                         parentSpan: Option[Span] = None,
                         timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy()): Future[LookupInResult] = {
@@ -278,7 +295,7 @@ class AsyncCollection(name: String,
         core.send(request)
 
         val out = FutureConverters.toScala(request.response())
-          .map(response => getSubDocHandler.response(id, response, project))
+          .map(response => getSubDocHandler.response(id, response))
 
         out
 
@@ -338,7 +355,7 @@ class AsyncCollection(name: String,
               ): Future[LookupInResult] = {
     // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app
     // may expect error to be raised and it won't
-    getSubDoc(id, spec, withExpiration = false, Seq.empty, parentSpan, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
   def getFromReplica(id: String,
@@ -363,7 +380,7 @@ class AsyncCollection(name: String,
         })
 
         replicaMode match {
-            // The main benefit of Any is to avoid blocking for all results when one will do
+          // The main benefit of Any is to avoid blocking for all results when one will do
           case ReplicaMode.Any => out.take(1)
           case _ => out
         }

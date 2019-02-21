@@ -51,7 +51,7 @@ class GetFullDocHandler(hp: HandlerParams) extends RequestHandler[GetResponse, G
   def response(id: String, response: GetResponse): GetResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        new GetResult(id, response.content, response.flags(), response.cas, Option.empty)
+        new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty)
 
       case _ => throw DefaultErrors.throwOnBadResult(response.status())
     }

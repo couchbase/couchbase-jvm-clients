@@ -117,6 +117,21 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
   def toJavaList: java.util.List[Any] = values
 
   def dyn: GetSelecter = GetSelecter(Right(this), Seq())
+
+  // TODO make output valid JSON
+  override def toString: String = {
+    val sb = new StringBuilder
+    sb += '['
+    val it = values.iterator()
+    while (it.hasNext) {
+      val next = it.next()
+      sb.append(next.toString)
+      if (it.hasNext) sb.append(',')
+    }
+    sb += ']'
+    sb.toString()
+  }
+
 }
 
 
