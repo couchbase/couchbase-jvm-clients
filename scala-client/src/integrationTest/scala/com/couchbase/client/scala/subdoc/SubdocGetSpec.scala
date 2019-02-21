@@ -2,6 +2,7 @@ package com.couchbase.client.scala.subdoc
 
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.{DecodingFailedException, DocumentDoesNotExistException, TemporaryLockFailureException}
+import com.couchbase.client.scala.json.JsonArray
 import com.couchbase.client.scala.kv.LookupInSpec
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
@@ -9,6 +10,7 @@ import org.scalatest.FunSuite
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import com.couchbase.client.scala.kv.LookupInSpec._
+import io.netty.util.CharsetUtil
 
 class SubdocGetSpec extends FunSuite {
   val (cluster, bucket, coll) = (for {
@@ -49,6 +51,22 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
+
+  test("get array") {
+    val docId = TestUtils.docId()
+    coll.remove(docId)
+    val content = ujson.Obj("animals" -> ujson.Arr("cat","dog"))
+    val insertResult = coll.insert(docId, content).get
+
+    coll.lookupIn(docId, Array(get("animals"))) match {
+      case Success(result) =>
+        assert(result.contentAsBytes(0).get sameElements """["cat","dog"]""".getBytes(CharsetUtil.UTF_8))
+        assert(result.contentAs[String](0).get == """["cat","dog"]""")
+        assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat","dog"))
+        assert(result.contentAs[JsonArray](0).get == JsonArray("cat","dog"))
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
 
   test("path does not exist single") {
     val docId = TestUtils.docId()

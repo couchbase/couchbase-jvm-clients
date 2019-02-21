@@ -5,15 +5,15 @@ import com.couchbase.client.core.error.DecodingFailedException
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 
-private[scala] sealed trait PathElements
+private[scala] sealed trait PathElement
 
-private[scala] case class PathObjectOrField(str: String) extends PathElements
+private[scala] case class PathObjectOrField(str: String) extends PathElement
 
-private[scala] case class PathArray(str: String, idx: Int) extends PathElements
+private[scala] case class PathArray(str: String, idx: Int) extends PathElement
 
 
 object GetSelecter {
-  def eval(in: Either[JsonObject, JsonArray], path: Seq[PathElements]): Try[Any] = {
+  def eval(in: Either[JsonObject, JsonArray], path: Seq[PathElement]): Try[Any] = {
     path match {
       // x is what we're looking for next, in is what out cursor's on
 
@@ -78,7 +78,7 @@ object GetSelecter {
 }
 
 case class GetSelecter(private val in: Either[JsonObject, JsonArray],
-                       private val path: Seq[PathElements]) extends Dynamic {
+                       private val path: Seq[PathElement]) extends Dynamic {
   def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ PathObjectOrField(name))
 
   def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(in, path :+ PathArray(name, index))

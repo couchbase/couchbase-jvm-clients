@@ -125,6 +125,15 @@ class GetSubDocumentHandler(hp: HandlerParams) extends RequestHandler[SubdocGetR
           }
         })
 
+//        values.foreach(v => {
+//          val parsed = JsonPathParser.parse(v.path())
+//
+//          parsed.foreach()
+//        })
+//        project.foreach(p => {
+//
+//        })
+
         LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
 
       case ResponseStatus.SUBDOC_FAILURE =>

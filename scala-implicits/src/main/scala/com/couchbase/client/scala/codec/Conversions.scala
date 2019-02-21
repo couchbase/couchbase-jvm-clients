@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{CodecFlags, SubdocCommandType, SubdocField}
-import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
+import com.couchbase.client.scala.json.{JacksonTransformers, JsonArray, JsonObject}
 import com.couchbase.client.scala.kv.MutateInMacro
 import io.netty.util.CharsetUtil
 
@@ -258,7 +258,7 @@ object Conversions {
           Try(new String(bytes, CharsetUtil.UTF_8))
         }
         else {
-          Failure(new DecodingFailedException(s"Cannot decode data with flags ${params} as a String"))
+          Failure(new DecodingFailedException(s"Cannot decode data with flags $params as a String"))
         }
       }
 
@@ -267,8 +267,17 @@ object Conversions {
         else {
           Try({
             val str = new String(in.value(), CharsetUtil.UTF_8)
-            // Strip off the " from start and end
-            str.substring(1, str.size - 1)
+            if (str.nonEmpty) {
+              str.charAt(0) match {
+                case '[' =>
+                  // For arrays, do not strip anything
+                  str
+                case _ =>
+                  // Strip off the " from start and end
+                  str.substring(1, str.size - 1)
+              }
+            }
+            else str
           })
         }
       }
@@ -277,6 +286,16 @@ object Conversions {
     implicit object JsonObjectConvert extends Decodable[JsonObject] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
+        out match {
+          case Success(_) => out
+          case Failure(err) => Failure(new DecodingFailedException(err))
+        }
+      }
+    }
+
+    implicit object JsonArrayConvert extends Decodable[JsonArray] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
         out match {
           case Success(_) => out
           case Failure(err) => Failure(new DecodingFailedException(err))

@@ -1,20 +1,24 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.scala.json.{PathArray, PathElements, PathObjectOrField}
+import com.couchbase.client.scala.json.{PathArray, PathElement, PathObjectOrField}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
+/** Parses a JSON projections string into a Seq of `PathElement`s.
+  *
+  * E.g. "foo.bar" or "foo[2].bar"
+  */
 private[scala] object JsonPathParser {
-  def parse(path: String): Try[Seq[PathElements]] = {
+  def parse(path: String): Try[Seq[PathElement]] = {
     def debugPos(idx: Int) = s"position $idx"
 
     try {
       var elemIdx = 0
       var idx = 0
       val len = path.length
-      val ret = ArrayBuffer.empty[PathElements]
+      val ret = ArrayBuffer.empty[PathElement]
 
       // This implementation is imperative for performance
       while (idx < len) {

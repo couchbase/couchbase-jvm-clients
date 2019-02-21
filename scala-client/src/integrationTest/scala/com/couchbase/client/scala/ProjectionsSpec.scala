@@ -46,15 +46,47 @@ class ProjectionsSpec extends FunSuite {
   val docId = "projection-test"
   coll.upsert(docId, raw)
 
-  test("name") {
-    coll.get(docId) match {
+  private def wrap(project: Seq[String]): JsonObject = {
+    coll.get(docId, project = project) match {
       case Success(result) =>
-        result.contentAs[ujson.Obj] match {
-          case Success(body) =>
-            assert(body("hello").str == "world")
-          case Failure(err) => assert(false, s"unexpected error $err")
+        result.contentAs[JsonObject] match {
+          case Success(body) => body
+          case Failure(err) =>
+            assert(false, s"unexpected error $err")
+            throw new IllegalStateException()
         }
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err) =>
+        assert(false, s"unexpected error $err")
+        throw new IllegalStateException()
     }
+  }
+
+  test("name") {
+    val json = wrap(Seq("name"))
+    assert(json.str("name") == "Emmy-lou Dickerson")
+  }
+
+  test("age") {
+    val json = wrap(Seq("age"))
+    assert(json.int("age") == 26)
+  }
+
+  test("animals") {
+    val json = wrap(Seq("animals"))
+    val arr = json.arr("animals")
+    assert(arr.size == 3)
+    assert(arr.toSeq == Seq("cat", "dog", "parrot"))
+  }
+
+  test("animals[0]") {
+    val json = wrap(Seq("animals[0]"))
+    val arr = json.arr("animals")
+    assert(arr.toSeq == Seq("cat"))
+  }
+
+  test("animals[2]") {
+    val json = wrap(Seq("animals[2]"))
+    val arr = json.arr("animals")
+    assert(arr.toSeq == Seq("parrot"))
   }
 }
