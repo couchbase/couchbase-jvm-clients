@@ -114,9 +114,4 @@ class ProjectionsSpec extends FunSuite {
     assert(json.obj("attributes").obj("dimensions").int("height") == 67)
   }
 
-  test("attributes.hobbies[1].type") {
-    val json = wrap(Seq("attributes.hobbies[1].type"))
-    assert(json.obj("attributes").arr("hobbies").obj(0).str("type") == "summer sports")
-  }
-
 }
