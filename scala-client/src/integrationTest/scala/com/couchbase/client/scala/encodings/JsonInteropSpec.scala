@@ -191,7 +191,7 @@ class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with
       def decode(in: GetResult): Unit = {
         val c = in.contentAs[JsonObject].get
         assert(c.str("name") == "John Smith")
-        assert(c.int("age") == 29)
+        assert(c.num("age") == 29)
         assert(c.arr("address").obj(0).str("address") == "123 Fake Street")
       }
     }

@@ -77,12 +77,12 @@ class ProjectionsApplierSpec extends FunSuite {
               |    }
               |}
               |""".stripMargin
-  val obj = JsonObject.fromJson(raw).get
+  val obj = JsonObject.fromJson(raw)
 
 
   test("age") {
-    val json = wrap("age", obj.int("age"))
-    assert(json.int("age") == 26)
+    val json = wrap("age", obj.num("age"))
+    assert(json.num("age") == 26)
   }
 
   test("animals") {
@@ -114,7 +114,7 @@ class ProjectionsApplierSpec extends FunSuite {
     val field = json.obj("attributes")
     assert(field.size == 3)
     assert(field.arr("hobbies").obj(1).str("type") == "summer sports")
-    assert(field.dyn.hobbies(1).name.str.get == "water skiing")
+    assert(field.safe.dyn.hobbies(1).name.str.get == "water skiing")
   }
 
   test("attributes.hair") {
@@ -124,13 +124,13 @@ class ProjectionsApplierSpec extends FunSuite {
 
   test("attributes.dimensions") {
     val json = wrap("attributes.dimensions", obj.obj("attributes").obj("dimensions"))
-    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
-    assert(json.obj("attributes").obj("dimensions").int("weight") == 175)
+    assert(json.obj("attributes").obj("dimensions").num("height") == 67)
+    assert(json.obj("attributes").obj("dimensions").num("weight") == 175)
   }
 
   test("attributes.dimensions.height") {
-    val json = wrap("attributes.dimensions.height", obj.obj("attributes").obj("dimensions").int("height"))
-    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
+    val json = wrap("attributes.dimensions.height", obj.obj("attributes").obj("dimensions").num("height"))
+    assert(json.obj("attributes").obj("dimensions").num("height") == 67)
   }
 
   test("attributes.hobbies[1].type") {

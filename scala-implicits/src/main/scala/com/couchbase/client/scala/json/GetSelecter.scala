@@ -5,15 +5,16 @@ import com.couchbase.client.core.error.DecodingFailedException
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 
-private[scala] sealed trait PathElement
 
-private[scala] case class PathObjectOrField(str: String) extends PathElement
 
-private[scala] case class PathArray(str: String, idx: Int) extends PathElement
 
 
 object GetSelecter {
-  def eval(in: Either[JsonObject, JsonArray], path: Seq[PathElement]): Try[Any] = {
+  private def couldNotFindKey(name: String) = new DecodingFailedException(s"Could not find key $name")
+  private def expectedObjectButFoundArray(name: String) = new DecodingFailedException(s"Expected object or field for '$name' but found an array")
+  private def expectedArrayButFoundObject(name: String) = new DecodingFailedException(s"Expected array for '$name' but found an object")
+
+  def eval(in: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
     path match {
       // x is what we're looking for next, in is what out cursor's on
 
@@ -22,20 +23,20 @@ object GetSelecter {
           case PathObjectOrField(name) =>
             in match {
               case Left(obj) =>
-                obj.gett(name) match {
+                obj.get(name) match {
                   case Success(o) => Success(o)
                   case _ =>
-                    Failure(new DecodingFailedException(s"Could not find key $name"))
+                    Failure(couldNotFindKey(name))
                 }
 
               case Right(arr) =>
-                Failure(new DecodingFailedException(s"Expected object or field for '$name' but found an array"))
+                Failure(expectedObjectButFoundArray(name))
             }
 
           case PathArray(name, idx) =>
             in match {
               case Left(obj) =>
-                Failure(new DecodingFailedException(s"Expected array for '$name' but found an object"))
+                Failure(expectedArrayButFoundObject(name))
               case Right(arr) =>
                 Success(arr.get(idx))
             }
@@ -48,20 +49,20 @@ object GetSelecter {
               case Left(obj) =>
                 eval(Left(obj), xs)
               case Right(arr) =>
-                Failure(new DecodingFailedException(s"Expected object or field for '$name' but found an array"))
+                Failure(expectedObjectButFoundArray(name))
             }
 
           case PathArray(name, idx) =>
             in match {
               case Left(obj) =>
-                obj.arrt(name) match {
+                obj.arr(name) match {
                   case Success(arr) =>
-                    val atIdx: Option[Any] = arr.getOpt(idx)
+                    val atIdx: Try[Any] = arr.get(idx)
 
                     atIdx match {
-                      case Some(o: JsonObject) => eval(Left(o), xs)
-                      case Some(a: JsonArray) => eval(Right(a), xs)
-                      case Some(v: Any) => Failure(new DecodingFailedException(s"Needed object or array at $name[$idx], but found '${v}'"))
+                      case Success(o: JsonObjectSafe) => eval(Left(o), xs)
+                      case Success(a: JsonArraySafe) => eval(Right(a), xs)
+                      case Success(v: Any) => Failure(new DecodingFailedException(s"Needed object or array at $name[$idx], but found '${v}'"))
                       case _ => Failure(new DecodingFailedException(s"Found array $name but nothing at index $idx"))
                     }
 
@@ -69,9 +70,7 @@ object GetSelecter {
                 }
               case Right(arr) =>
                 eval(Right(arr), xs)
-
             }
-
         }
     }
   }
@@ -79,24 +78,28 @@ object GetSelecter {
 
 case class GetSelecter(private val in: Either[JsonObject, JsonArray],
                        private val path: Seq[PathElement]) extends Dynamic {
+  private val mapped = in.left.map(_.safe).right.map(_.safe)
+
   def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ PathObjectOrField(name))
 
   def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(in, path :+ PathArray(name, index))
 
-  // TODO make sure these syncup with JsonObject names
-  // TODO add non-try variants
-  def str: Try[String] = GetSelecter.eval(in, path).map(_.asInstanceOf[String])
+  private def pathStr = path.toString()
 
-  def int: Try[Int] = GetSelecter.eval(in, path).map(_.asInstanceOf[Int])
+  def str: String = GetSelecter.eval(mapped, path).map(v => ValueConvertor.str(v, pathStr)).get
 
-  def double: Try[Double] = GetSelecter.eval(in, path).map(_.asInstanceOf[Double])
+  def num: Int = GetSelecter.eval(mapped, path).map(v => ValueConvertor.num(v, pathStr)).get
 
-  def float: Try[Float] = GetSelecter.eval(in, path).map(_.asInstanceOf[Float])
+  def numDouble: Double = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numDouble(v, pathStr)).get
 
-  def bool: Try[Boolean] = GetSelecter.eval(in, path).map(_.asInstanceOf[Boolean])
+  def numFloat: Float = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numFloat(v, pathStr)).get
 
-  def obj: Try[JsonObject] = GetSelecter.eval(in, path).map(_.asInstanceOf[JsonObject])
+  def numLong: Long = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numLong(v, pathStr)).get
 
-  def arr: Try[JsonArray] = GetSelecter.eval(in, path).map(_.asInstanceOf[JsonArray])
+  def bool: Boolean = GetSelecter.eval(mapped, path).map(v => ValueConvertor.bool(v, pathStr)).get
+
+  def obj: JsonObject = GetSelecter.eval(mapped, path).map(v => ValueConvertor.obj(v, pathStr)).get
+
+  def arr: JsonArray = GetSelecter.eval(mapped, path).map(v => ValueConvertor.arr(v, pathStr)).get
 
 }

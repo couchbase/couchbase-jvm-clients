@@ -68,7 +68,7 @@ class ProjectionsSpec extends FunSuite {
 
   test("age") {
     val json = wrap(Seq("age"))
-    assert(json.int("age") == 26)
+    assert(json.num("age") == 26)
   }
 
   test("animals") {
@@ -95,7 +95,7 @@ class ProjectionsSpec extends FunSuite {
     val field = json.obj("attributes")
     assert(field.size == 3)
     assert(field.arr("hobbies").obj(1).str("type") == "summer sports")
-    assert(field.dyn.hobbies(1).name.str.get == "water skiing")
+    assert(field.dyn.hobbies(1).name.str == "water skiing")
   }
 
   test("attributes.hair") {
@@ -105,13 +105,13 @@ class ProjectionsSpec extends FunSuite {
 
   test("attributes.dimensions") {
     val json = wrap(Seq("attributes.dimensions"))
-    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
-    assert(json.obj("attributes").obj("dimensions").int("weight") == 175)
+    assert(json.obj("attributes").obj("dimensions").num("height") == 67)
+    assert(json.obj("attributes").obj("dimensions").num("weight") == 175)
   }
 
   test("attributes.dimensions.height") {
     val json = wrap(Seq("attributes.dimensions"))
-    assert(json.obj("attributes").obj("dimensions").int("height") == 67)
+    assert(json.obj("attributes").obj("dimensions").num("height") == 67)
   }
 
 }

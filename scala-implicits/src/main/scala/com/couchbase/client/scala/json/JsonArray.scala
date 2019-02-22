@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 // Using Java ArrayList as benchmarking found it 4x faster than ArrayBuffer
-case class JsonArray(private val values: java.util.ArrayList[Any]) {
+case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
   def add(item: Any): JsonArray = {
     values.add(item)
     this
@@ -22,94 +22,40 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
   def get(idx: Int): Any = {
     values.get(idx)
   }
-  def getOpt(idx: Int): Option[Any] = {
-    Option(values.get(idx))
-  }
 
   // Note these methods are some of the few in the Scala SDK that can throw an exception.
   // They are optimised for performance: use the *t methods instead for functional safety.
 
-  // TODO test using these from Java
   def str(idx: Int): String = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[String]
-  }
-  def long(idx: Int): Long = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[Long]
-  }
-  def int(idx: Int): Int = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[Int]
-  }
-  def double(idx: Int): Double = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[Double]
-  }
-  def float(idx: Int): Float = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[Float]
-  }
-  def obj(idx: Int): JsonObject = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[JsonObject]
-  }
-  def arr(idx: Int): JsonArray = {
-    val out = values.get(idx)
-    if (out == null) throw new IllegalArgumentException(s"Array index $idx contans null")
-    else out.asInstanceOf[JsonArray]
+    ValueConvertor.str(values.get(idx), "array index")
   }
 
-  def strt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+  def numLong(idx: Int): Long = {
+    ValueConvertor.numLong(values.get(idx), "array index")
   }
-  def longt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+
+  def num(idx: Int): Int = {
+    ValueConvertor.num(values.get(idx), "array index")
   }
-  def intt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+
+  def numDouble(idx: Int): Double = {
+    ValueConvertor.numDouble(values.get(idx), "array index")
   }
-  def doublet(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+
+  def numFloat(idx: Int): Float = {
+    ValueConvertor.numFloat(values.get(idx), "array index")
   }
-  def floatt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+
+  def obj(idx: Int): JsonObject = {
+    ValueConvertor.obj(values.get(idx), "array index")
   }
-  def objt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
-  }
-  def arrt(idx: Int): Try[String] = {
-    if (idx < 0 || idx >= values.size()) Failure(new IllegalArgumentException(s"Array index $idx out of bounds"))
-    val out = values.get(idx)
-    if (out == null) Failure(new IllegalArgumentException(s"Array index $idx contains a null field does not exist"))
-    else Try(out.asInstanceOf[String])
+
+  def arr(idx: Int): JsonArray = {
+    ValueConvertor.arr(values.get(idx), "array index")
   }
 
   def isEmpty: Boolean = values.isEmpty
+  def nonEmpty: Boolean = !values.isEmpty
   def iterator: Iterator[Any] = values.asScala.iterator
   def size: Int = values.size
 
@@ -118,21 +64,30 @@ case class JsonArray(private val values: java.util.ArrayList[Any]) {
 
   def dyn: GetSelecter = GetSelecter(Right(this), Seq())
 
-  // TODO make output valid JSON
   override def toString: String = {
     val sb = new StringBuilder
     sb += '['
     val it = values.iterator()
     while (it.hasNext) {
       val next = it.next()
-      sb.append(next.toString)
+      next match {
+        case v: String =>
+          sb += '"'
+          sb.append(v)
+          sb += '"'
+        case v =>
+          sb.append(v.toString)
+      }
       if (it.hasNext) sb.append(',')
     }
     sb += ']'
     sb.toString()
   }
 
+  def safe = JsonArraySafe(this)
 }
+
+
 
 
 

@@ -40,7 +40,7 @@ import scala.collection.JavaConverters._
   * - It doesn't use Try as there's overhead there.
   */
 
-case class JsonObject(private val content: java.util.HashMap[String, Any]) {
+case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]) {
 
   // Instead of making JsonObject itself Dynamic, which lends itself to all kinds of accidental errors, put it in a
   // separate method
@@ -54,117 +54,58 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
   }
 
   def get(name: String): Any = {
-    content.get(name)
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    check
   }
 
   def str(name: String): String = {
-    val out = content.get(name)
-    out match {
-      case v: String => v
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => out.toString
-    }
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.str(check, name)
   }
 
   // TODO test all these fields with e.g. getting an int as a string
-  // TODO it's valid for these fields to contain null, should only throw if it's not there.  Can we cheaply determine?
-  def int(name: String): Int = {
-    val out = content.get(name)
-    out match {
-      case v: Int => v
-      case v: Long => v.toInt
-      case v: Double => v.toInt
-      case v: Short => v.toInt
-      case v: String => v.toInt
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Int")
-    }
+  def num(name: String): Int = {
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.num(check, name)
   }
 
   def bool(name: String): Boolean = {
-    val out = content.get(name)
-    out match {
-      case v: Boolean => v
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Boolean")
-    }
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.bool(check, name)
   }
 
-  def long(name: String): Long = {
-    val out = content.get(name)
-    out match {
-      case v: Long => v
-      case v: Int => v.toLong
-      case v: Double => v.toInt
-      case v: Short => v.toInt
-      case v: String => v.toInt
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Long")
-    }
+  def numLong(name: String): Long = {
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.numLong(check, name)
   }
 
-  def double(name: String): Double = {
-    val out = content.get(name)
-    out match {
-      case v: Double => v.toInt
-      case v: Long => v
-      case v: Int => v.toLong
-      case v: Short => v.toInt
-      case v: String => v.toInt
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to Double")
-    }
+  def numDouble(name: String): Double = {
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.numDouble(check, name)
+  }
+
+  def numFloat(name: String): Float = {
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.numFloat(check, name)
   }
 
   def obj(name: String): JsonObject = {
-    val out = content.get(name)
-    out match {
-      case v: JsonObject => v
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to JsonObject")
-    }
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.obj(check, name)
   }
 
   def arr(name: String): JsonArray = {
-    val out = content.get(name)
-    out match {
-      case v: JsonArray => v
-      case null => throw new IllegalArgumentException(s"Field $name not found")
-      case _ => throw new IllegalArgumentException(s"Field $name '$out' cannot be converted to JsonArray")
-    }
-  }
-
-
-  def gett(name: String): Try[Any] = {
-    Try(get(name))
-  }
-
-  def strt(name: String): Try[String] = {
-    Try(str(name))
-  }
-
-  def intt(name: String): Try[Int] = {
-    Try(int(name))
-  }
-
-  def boolt(name: String): Try[Boolean] = {
-    Try(bool(name))
-  }
-
-  def longt(name: String): Try[Long] = {
-    Try(long(name))
-  }
-
-  def doublet(name: String): Try[Double] = {
-    Try(double(name))
-  }
-
-  def objt(name: String): Try[JsonObject] = {
-    Try(obj(name))
-  }
-
-  def arrt(name: String): Try[JsonArray] = {
-    Try(arr(name))
+    val check = content.get(name)
+    if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")
+    ValueConvertor.arr(check, name)
   }
 
   def remove(name: String): JsonObject = {
@@ -182,6 +123,10 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
 
   def isEmpty: Boolean = {
     content.isEmpty
+  }
+
+  def nonEmpty: Boolean = {
+    !content.isEmpty
   }
 
   def toMap: collection.GenMap[String, Any] = {
@@ -202,22 +147,30 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
     content.size
   }
 
-  // TODO make output valid JSON
   override def toString: String = {
     val sb = new StringBuilder
     sb += '{'
     val it = content.entrySet().iterator()
     while (it.hasNext) {
       val next = it.next()
+      sb.append('"')
       sb.append(next.getKey)
-      sb += ':'
-      sb.append(next.getValue.toString)
+      sb.append("\":")
+      next.getValue match {
+        case v: String =>
+          sb += '"'
+          sb.append(v)
+          sb += '"'
+        case v =>
+          sb.append(v.toString)
+      }
       if (it.hasNext) sb.append(',')
     }
       sb += '}'
     sb.toString()
   }
 
+  def safe = JsonObjectSafe(this)
 //  private def checkType(value: Any): Boolean = {
 //    value match {
 //      case x: String => true
@@ -234,12 +187,12 @@ case class JsonObject(private val content: java.util.HashMap[String, Any]) {
 
 
 object JsonObject {
-  def fromJson(json: String): Try[JsonObject] = {
+  def fromJson(json: String): JsonObject = {
     try {
-      Success(JacksonTransformers.stringToJsonObject(json))
+      JacksonTransformers.stringToJsonObject(json)
     }
     catch {
-      case NonFatal(err) => Failure(new DecodingFailedException(err))
+      case NonFatal(err) => throw new DecodingFailedException(err)
     }
   }
 
