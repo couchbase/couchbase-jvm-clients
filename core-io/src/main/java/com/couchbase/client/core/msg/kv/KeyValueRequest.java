@@ -68,4 +68,6 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    */
   byte[] key();
 
+  byte[] collection();
+
 }

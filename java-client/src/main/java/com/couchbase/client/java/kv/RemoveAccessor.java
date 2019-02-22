@@ -32,6 +32,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
+import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
+
 @Stability.Internal
 public enum RemoveAccessor {
   ;
@@ -43,7 +45,7 @@ public enum RemoveAccessor {
                                                          final PersistTo persistTo,
                                                          final ReplicateTo replicateTo) {
     core.send(request);
-    return request.response().thenApply(response -> {
+    final CompletableFuture<MutationResult> mutationResult = request.response().thenApply(response -> {
       switch (response.status()) {
         case SUCCESS:
           return new MutationResult(response.cas(), response.mutationToken());
@@ -60,20 +62,8 @@ public enum RemoveAccessor {
         default:
           throw new CouchbaseException("Unexpected Status Code " + response.status());
       }
-    }).thenCompose(result -> {
-      final ObserveContext ctx = new ObserveContext(
-        core.context(),
-        persistTo.coreHandle(),
-        replicateTo.coreHandle(),
-        result.mutationToken(),
-        result.cas(),
-        request.bucket(),
-        key,
-        request.collection(),
-        true,
-        request.timeout()
-      );
-      return Observe.poll(ctx).toFuture().thenApply(v -> result);
     });
+    return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, true);
+
   }
 }

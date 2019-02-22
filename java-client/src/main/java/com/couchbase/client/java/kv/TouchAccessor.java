@@ -27,6 +27,8 @@ import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
+
 public class TouchAccessor {
 
   public static CompletableFuture<MutationResult> touch(final Core core,
@@ -35,7 +37,7 @@ public class TouchAccessor {
                                                         final PersistTo persistTo,
                                                         final ReplicateTo replicateTo) {
     core.send(request);
-    return request
+    final CompletableFuture<MutationResult> mutationResult = request
       .response()
       .thenApply(response -> {
         switch (response.status()) {
@@ -52,21 +54,9 @@ public class TouchAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
-      }).thenCompose(result -> {
-        final ObserveContext ctx = new ObserveContext(
-          core.context(),
-          persistTo.coreHandle(),
-          replicateTo.coreHandle(),
-          result.mutationToken(),
-          result.cas(),
-          request.bucket(),
-          key,
-          request.collection(),
-          false,
-          request.timeout()
-        );
-        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
+    return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
+
   }
 
 }

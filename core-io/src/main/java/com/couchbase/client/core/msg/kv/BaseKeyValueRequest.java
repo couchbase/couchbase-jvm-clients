@@ -121,6 +121,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     return key;
   }
 
+  @Override
   public byte[] collection() {
     return collection;
   }

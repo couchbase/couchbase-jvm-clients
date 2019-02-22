@@ -22,14 +22,11 @@ import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.core.error.DocumentDoesNotExistException;
 import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
-import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
-import com.couchbase.client.core.service.kv.Observe;
-import com.couchbase.client.core.service.kv.ObserveContext;
-
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class CounterAccessor {
 
@@ -39,7 +36,7 @@ public class CounterAccessor {
                                                            final PersistTo persistTo,
                                                            final ReplicateTo replicateTo) {
     core.send(request);
-    return request
+    final CompletableFuture<CounterResult> mutationResult = request
       .response()
       .thenApply(response -> {
         switch (response.status()) {
@@ -57,21 +54,9 @@ public class CounterAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
-      }).thenCompose(result -> {
-        final ObserveContext ctx = new ObserveContext(
-          core.context(),
-          persistTo.coreHandle(),
-          replicateTo.coreHandle(),
-          result.mutationToken(),
-          result.cas(),
-          request.bucket(),
-          key,
-          request.collection(),
-          false,
-          request.timeout()
-        );
-        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
+    return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
+
   }
 
   public static CompletableFuture<CounterResult> decrement(final Core core,
@@ -80,7 +65,7 @@ public class CounterAccessor {
                                                            final PersistTo persistTo,
                                                            final ReplicateTo replicateTo) {
     core.send(request);
-    return request
+    final CompletableFuture<CounterResult> mutationResult = request
       .response()
       .thenApply(response -> {
         switch (response.status()) {
@@ -98,21 +83,9 @@ public class CounterAccessor {
           default:
             throw new CouchbaseException("Unexpected Status Code " + response.status());
         }
-      }).thenCompose(result -> {
-        final ObserveContext ctx = new ObserveContext(
-          core.context(),
-          persistTo.coreHandle(),
-          replicateTo.coreHandle(),
-          result.mutationToken(),
-          result.cas(),
-          request.bucket(),
-          key,
-          request.collection(),
-          false,
-          request.timeout()
-        );
-        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
+    return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
+
   }
 
 }
