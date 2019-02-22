@@ -86,9 +86,8 @@ publishing {
 //      artifact javadocJar
       pom {
         name = 'scala-client'
-        // TODO
-        description = 'A concise description of my library'
-        url = 'http://www.example.com/library'
+        description = 'The Scala Couchbase SDK'
+        url = 'https://github.com/couchbaselabs/couchbase-jvm-clients'
         licenses {
           // TODO
           license {

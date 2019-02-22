@@ -20,8 +20,7 @@ publishing {
       from components.java
       pom {
         name = 'scala-implicits'
-        // TODO
-        description = 'Part of the Scala '
+        description = 'Part of the Scala Couchbase SDK'
         url = 'https://github.com/couchbaselabs/couchbase-jvm-clients'
         licenses {
           // TODO

@@ -11,6 +11,7 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 class DurabilitySpec extends FunSuite {
+  // TODO get testing against mock working
   val (cluster, bucket, coll) = (for {
     env <- Try(ClusterEnvironment
       .builder("localhost", "Administrator", "password")
