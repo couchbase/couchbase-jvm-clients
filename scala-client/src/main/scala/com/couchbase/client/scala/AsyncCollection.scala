@@ -289,6 +289,7 @@ class AsyncCollection(name: String,
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
+              // TODO add support for MK_DOC
                insertDocument: Boolean = false,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,

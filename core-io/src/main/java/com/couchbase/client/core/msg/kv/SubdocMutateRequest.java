@@ -146,6 +146,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       else {
         values = new ArrayList<>(commands.size());
         for (Command command : commands) {
+          byte index = body.readByte();
           short statusRaw = body.readShort();
           SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
 

@@ -265,7 +265,7 @@ class SubdocMutateSpec extends FunSuite {
 
     coll.mutateIn(docId, Array(increment("foo", 5))) match {
       case Success(result) =>
-        assert(result.contentAs[Long](0).get == 5)
+        assert(result.contentAs[Long](0).get == 15)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

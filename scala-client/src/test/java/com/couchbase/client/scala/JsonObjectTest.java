@@ -9,9 +9,9 @@ public class JsonObjectTest {
     public void testCompatibility() {
         JsonObject json = JsonObject.create();
         json.bool("test");
-//        json.int("test");
-//        json.double("test");
-//        json.long("test");
-//        json.obj("test");
+        json.num("test");
+        json.numDouble("test");
+        json.numLong("test");
+        json.obj("test");
     }
 }

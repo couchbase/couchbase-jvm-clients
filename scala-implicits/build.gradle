@@ -41,6 +41,7 @@ publishing {
   }
 }
 
+// TODO can maybe replace optional with compileOnly
 dependencies {
   compile 'org.scala-lang:scala-library:2.12.8'
 
