@@ -13,86 +13,150 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.query;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import com.couchbase.client.core.error.CouchbaseException;
+import java.util.concurrent.ExecutionException;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
 
+/**
+ * Query Result that fetches the parts of the Query response asynchronously
+ *
+ * @since 3.0.0
+ */
+@Stability.Volatile
 public class AsyncQueryResult {
 
-   private final CompletableFuture<QueryResponse> response;
+	private final QueryResponse response;
 
-   public AsyncQueryResult(CompletableFuture<QueryResponse> response) {
-      this.response = response;
-   }
+	@Stability.Internal
+	public AsyncQueryResult(QueryResponse response) {
+		this.response = response;
+	}
 
-   public CompletableFuture<String> requestId() {
-      return this.response.thenCompose(r -> r.requestId().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the request identifier string of the query request
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<String> requestId() {
+		return this.response.requestId().toFuture();
+	}
 
-   public CompletableFuture<String> clientContextId() {
-      return this.response.thenCompose(r -> r.clientContextId().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the client context identifier string set on the query request
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<String> clientContextId() {
+		return this.response.clientContextId().toFuture();
+	}
 
-   public CompletableFuture<QueryMetrics> info() {
-      return this.response.thenCompose(r -> r.metrics().map(n -> {
-         try {
-            JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-            return new QueryMetrics(jsonObject);
-         } catch (IOException ex) {
-            throw new CouchbaseException(ex);
-         }
-      }).toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the query execution status as returned by the query engine
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<String> queryStatus() {
+		return this.response.queryStatus().toFuture();
+	}
 
-   public CompletableFuture<String> queryStatus() {
-      return this.response.thenCompose(r -> r.queryStatus().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the the {@link QueryMetrics} as returned by the query engine
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException} when the decoding of the part of the response failed
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<QueryMetrics> info() {
+		return this.response.metrics().map(n -> {
+			try {
+				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+				return new QueryMetrics(jsonObject);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).toFuture();
+	}
 
-   public CompletableFuture<List<JsonObject>> rows() {
-      return this.response.thenCompose(r -> r.rows().map(n -> {
-         try {
-            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-         } catch (IOException ex) {
-            throw new CouchbaseException(ex);
-         }
-      }).collectList().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the query execution status as returned by the query engine
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException} when the decoding cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<List<JsonObject>> rows() {
+		return this.response.rows().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).collectList().toFuture();
+	}
 
-   public <T>CompletableFuture<List<T>> rows(Class<T> target, Decoder<T> decoder) {
-      return this.response.thenCompose(r -> r.rows().map(n -> {
-            try {
-               return JacksonTransformers.MAPPER.readValue(n, target);
-            } catch (IOException ex) {
-               throw new CouchbaseException(ex);
-            }
-         }).collectList().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the query execution status as returned by the query engine
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException} when the decoding cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public <T> CompletableFuture<List<T>> rows(Class<T> target) {
+		return this.response.rows().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, target);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).collectList().toFuture();
+	}
 
-   public CompletableFuture<List<JsonObject>> warnings() {
-      return this.response.thenCompose(r -> r.warnings().map(n -> {
-         try {
-            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-         } catch (IOException ex) {
-            throw new CouchbaseException(ex);
-         }
-      }).collectList().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the list of query execution warnings as returned by the query
+	 * engine which are then decoded to {@link JsonObject}
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException} when the decoding cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<List<JsonObject>> warnings() {
+		return this.response.warnings().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).collectList().toFuture();
+	}
 
-   public CompletableFuture<List<JsonObject>> errors() {
-      return this.response.thenCompose(r -> r.errors().map(n -> {
-         try {
-            return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-         } catch (IOException ex) {
-            throw new IllegalStateException(ex);
-         }
-      }).collectList().toFuture());
-   }
+	/**
+	 * A {@link CompletableFuture} which completes with the list of query execution errors as returned by the query
+	 * engine which are then decoded to {@link JsonObject}
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException } when the request cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<List<JsonObject>> errors() {
+		return this.response.errors().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).collectList().toFuture();
+	}
 }

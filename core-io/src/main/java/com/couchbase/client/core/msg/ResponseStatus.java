@@ -120,8 +120,6 @@ public enum ResponseStatus {
    */
   SYNC_WRITE_AMBIGUOUS,
 
-  SUBDOC_FAILURE,
-
   INTERNAL_ERROR,
 
   TOO_MANY_REQUESTS,
