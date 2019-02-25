@@ -16,13 +16,17 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.prepared.LFUCache;
+import com.couchbase.client.java.query.prepared.PreparedQuery;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.SearchResult;
@@ -35,6 +39,8 @@ public class Cluster {
 
   private final AsyncCluster asyncCluster;
   private final ReactiveCluster reactiveCluster;
+  private final int PREPARED_CACHE_SIZE = 3000; //TODO: Allow environment configuration
+  private final LFUCache<String, PreparedQuery> preparedQueryCache;
 
   public static Cluster connect(final String username, final String password) {
     return new Cluster(new OwnedSupplier<>(ClusterEnvironment.create(username, password)));
@@ -57,8 +63,9 @@ public class Cluster {
   }
 
   private Cluster(final Supplier<ClusterEnvironment> environment) {
-    this.asyncCluster = new AsyncCluster(environment);
+    this.asyncCluster = new AsyncCluster(environment, this);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
+    this.preparedQueryCache = new LFUCache<String, PreparedQuery>(PREPARED_CACHE_SIZE);
   }
 
   public AsyncCluster async() {
@@ -69,12 +76,15 @@ public class Cluster {
     return reactiveCluster;
   }
 
-  public QueryResult query(final String statement) {
-    return new QueryResult(block(async().query(statement, null)));
+  @Stability.Internal
+  public LFUCache<String, PreparedQuery> getPreparedQueryCache() { return this.preparedQueryCache; }
+
+  public QueryResult query(final Query query) {
+    return query(query, QueryOptions.DEFAULT);
   }
 
-  public QueryResult query(final String statement, final QueryOptions options) {
-    return new QueryResult(block(async().query(statement, null, options)));
+  public QueryResult query(final Query query, final QueryOptions options) {
+    return new QueryResult(block(async().query(query, options)));
   }
 
   /*
@@ -98,7 +108,6 @@ public class Cluster {
     AsyncBucket b = block(asyncCluster.bucket(name));
     return new Bucket(b);
   }
-
 
   public void shutdown() {
     block(asyncCluster.shutdown());

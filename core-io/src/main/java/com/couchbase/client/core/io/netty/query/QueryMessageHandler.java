@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
  */
 
 package com.couchbase.client.core.io.netty.query;
+
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.util.ResponseStatusConverter;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
@@ -32,7 +35,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import reactor.core.scheduler.Scheduler;
 import java.io.EOFException;
 import java.nio.charset.Charset;
 
@@ -46,12 +48,13 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   private QueryRequest currentRequest;
   private QueryResponse currentResponse;
   private ByteBuf responseContent;
-  private final Scheduler scheduler;
+  private final ServiceContext serviceContext;
   private ByteBufJsonParser parser;
+  private boolean isParserInitialized = false;
   private static final Charset CHARSET = CharsetUtil.UTF_8;
 
-  public QueryMessageHandler(Scheduler scheduler) {
-    this.scheduler = scheduler;
+  public QueryMessageHandler(ServiceContext serviceContext) {
+    this.serviceContext = serviceContext;
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
       new JsonPointer("/results/-", new JsonPointerCB1() {
         @Override
@@ -59,8 +62,16 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
           byte[] data = new byte[value.readableBytes()];
             value.readBytes(data);
             value.release();
-            currentResponse.rows().onNext(data);
-            currentResponse.rowRequestCompleted();
+            if (!currentResponse.isCompleted()) {
+              if (currentResponse.rowRequestSize() != 0 || currentResponse.rows().getPending() == 0) {
+                currentResponse.rows().onNext(data);
+                currentResponse.rowRequestCompleted();
+              } else {
+                currentResponse.rows().onError(new RequestCanceledException(currentResponse.rowRequestSize() == 0 ? "No row requests" :
+                        "Current row responses are not consumed", currentRequest.context()));
+                currentResponse.complete();
+              }
+            }
         }
       }), new JsonPointer("/requestID/-", new JsonPointerCB1() {
       @Override
@@ -115,9 +126,18 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   }
 
   @Override
+  public void channelInactive(final ChannelHandlerContext ctx) {
+    if (currentResponse != null) {
+      currentResponse.complete();
+    } else {
+      currentRequest.fail(new RequestCanceledException("Socket closed", currentRequest.context()));
+    }
+    ctx.fireChannelInactive();
+  }
+
+  @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ctx.fireChannelActive();
-
   }
 
   @Override
@@ -127,33 +147,51 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       FullHttpRequest encoded = ((QueryRequest) msg).encode();
       encoded.headers().set(HttpHeaderNames.HOST, "127.0.0.1");
       ctx.write(encoded);
+      ctx.channel().config().setAutoRead(true);
     } else {
     }
   }
 
   @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    this.currentRequest.fail(new RequestCanceledException("Exception caught in the socket due to" +cause.toString(), currentRequest.context()));
+    ctx.close();
+  }
+
+  @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
-    if (msg instanceof HttpResponse) {
-      responseContent = ctx.alloc().buffer();
-      parser.initialize(responseContent);
-      currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse)msg).status().code()), ctx.channel());
-      currentRequest.succeed(currentResponse);
-    }
-    if (msg instanceof HttpContent) {
-      boolean last = msg instanceof LastHttpContent;
-      responseContent.writeBytes(((HttpContent) msg).content());
-      try {
-        parser.parse();
-        //discard only if EOF is not thrown
-        responseContent.discardReadBytes();
-      } catch (EOFException e) {
-        // ignore, we are waiting for more data.
+    try {
+
+      if (msg instanceof HttpResponse) {
+        this.responseContent = ctx.alloc().buffer();
+        this.currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse) msg).status().code()),
+                ctx.channel(), this.serviceContext.environment());
+        this.currentRequest.succeed(this.currentResponse);
+        this.isParserInitialized = false;
       }
-      if (last) {
-        responseContent.clear();
-        currentResponse.complete();
+      if (msg instanceof HttpContent) {
+        if (!this.currentResponse.isCompleted()) {
+          boolean last = msg instanceof LastHttpContent;
+          this.responseContent.writeBytes(((HttpContent) msg).content());
+          try {
+            if (!this.isParserInitialized) {
+              this.parser.initialize(this.responseContent);
+              this.isParserInitialized = true;
+            }
+            this.parser.parse();
+            //discard only if EOF is not thrown
+            this.responseContent.discardReadBytes();
+          } catch (EOFException e) {
+            // ignore, we are waiting for more data.
+          }
+          if (last) {
+            this.responseContent.clear();
+            this.currentResponse.complete();
+          }
+        }
       }
+    } finally {
+      ReferenceCountUtil.release(msg);
     }
-    ReferenceCountUtil.release(msg);
   }
 }

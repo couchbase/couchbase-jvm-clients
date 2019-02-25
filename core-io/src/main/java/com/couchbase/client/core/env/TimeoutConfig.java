@@ -29,6 +29,7 @@ public class TimeoutConfig {
   public static final Duration DEFAULT_ANALYTICS_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
   public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_STREAM_RELEASE_TIMEOUT = Duration.ofSeconds(5);
 
   private final Duration kvTimeout;
   private final Duration managerTimeout;

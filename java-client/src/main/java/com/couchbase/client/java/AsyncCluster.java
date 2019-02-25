@@ -20,26 +20,20 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AsyncAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.QueryRow;
-import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
 import com.couchbase.client.java.search.AsyncSearchResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.util.Try;
-import io.netty.util.CharsetUtil;
-import reactor.core.publisher.EmitterProcessor;
-
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -49,31 +43,32 @@ public class AsyncCluster {
 
   private final Supplier<ClusterEnvironment> environment;
   private final Core core;
-
+  private final Cluster cluster;
 
   public static AsyncCluster connect(final String username, final String password) {
-    return new AsyncCluster(new OwnedSupplier<>(ClusterEnvironment.create(username, password)));
+    return Cluster.connect(ClusterEnvironment.create(username, password)).async();
   }
 
   public static AsyncCluster connect(final Credentials credentials) {
-    return new AsyncCluster(new OwnedSupplier<>(ClusterEnvironment.create(credentials)));
+    return Cluster.connect(ClusterEnvironment.create(credentials)).async();
   }
 
   public static AsyncCluster connect(final String connectionString, final String username, final String password) {
-    return new AsyncCluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, username, password)));
+    return Cluster.connect(ClusterEnvironment.create(connectionString, username, password)).async();
   }
 
   public static AsyncCluster connect(final String connectionString, final Credentials credentials) {
-    return new AsyncCluster(new OwnedSupplier<>(ClusterEnvironment.create(connectionString, credentials)));
+    return Cluster.connect(ClusterEnvironment.create(connectionString, credentials)).async();
   }
 
   public static AsyncCluster connect(final ClusterEnvironment environment) {
-    return new AsyncCluster(() -> environment);
+    return Cluster.connect(environment).async();
   }
 
-  AsyncCluster(final Supplier<ClusterEnvironment> environment) {
+  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Cluster cluster) {
     this.environment = environment;
     this.core = Core.create(environment.get());
+    this.cluster = cluster;
   }
 
   public Supplier<ClusterEnvironment> environment() {
@@ -84,38 +79,21 @@ public class AsyncCluster {
     return core;
   }
 
-  public AsyncQueryResult query(final String statement, final Consumer<QueryRow> consumer) {
-    return query(statement, consumer, QueryOptions.DEFAULT);
+  public Cluster cluster() {
+    return this.cluster;
   }
 
-  public AsyncQueryResult query(final String statement,
-                                     final Consumer<QueryRow> consumer,
-                                     final QueryOptions options) {
-    notNullOrEmpty(statement, "Statement");
+  public CompletableFuture<AsyncQueryResult> query(final Query query) {
+    return query(query, QueryOptions.DEFAULT);
+  }
+
+  public CompletableFuture<AsyncQueryResult> query(final Query query, final QueryOptions options) {
+    notNull(query, "Query");
     notNull(options, "QueryOptions");
-    QueryOptions.BuiltQueryOptions opts = options.build();
 
-    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-
-    // FIXME: proper jackson encoding with options
-    byte[] query = ("{\"statement\":\""+statement+"\"}").getBytes(CharsetUtil.UTF_8);
-
-    // TODO: I assume cancellation needs to be done THROUGH THE request cancellation
-    // mechanism to be consistent?
-
-    QueryRequest request = new QueryRequest(
-      timeout,
-      core.context(),
-      retryStrategy,
-      environment.get().credentials(),
-      query
-    );
-    core.send(request);
-    return new AsyncQueryResult(request.response());
+    return query.prepared() ? PreparedQueryAccessor.queryAsync(core, query, options, environment, this.cluster().getPreparedQueryCache()) :
+            QueryAccessor.queryAsync(core, query, options, environment);
   }
-
-
 
   /*
   public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
@@ -156,5 +134,4 @@ public class AsyncCluster {
       return cf;
     }
   }
-
 }
