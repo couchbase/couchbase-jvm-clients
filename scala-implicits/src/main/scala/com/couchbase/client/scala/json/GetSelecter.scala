@@ -2,6 +2,7 @@ package com.couchbase.client.scala.json
 
 import com.couchbase.client.core.error.DecodingFailedException
 
+import scala.annotation.tailrec
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 
@@ -14,19 +15,20 @@ object GetSelecter {
   private def expectedObjectButFoundArray(name: String) = new DecodingFailedException(s"Expected object or field for '$name' but found an array")
   private def expectedArrayButFoundObject(name: String) = new DecodingFailedException(s"Expected array for '$name' but found an object")
 
-  def eval(in: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
+  // The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that path.
+  @tailrec
+  def eval(cursor: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
     path match {
-      // x is what we're looking for next, in is what out cursor's on
+      // x is what we're looking for next, cursor is what out cursor's on
 
       case x :: Nil =>
         x match {
           case PathObjectOrField(name) =>
-            in match {
+            cursor match {
               case Left(obj) =>
                 obj.get(name) match {
                   case Success(o) => Success(o)
-                  case _ =>
-                    Failure(couldNotFindKey(name))
+                  case _ => Failure(couldNotFindKey(name))
                 }
 
               case Right(arr) =>
@@ -34,26 +36,45 @@ object GetSelecter {
             }
 
           case PathArray(name, idx) =>
-            in match {
+            cursor match {
               case Left(obj) =>
-                Failure(expectedArrayButFoundObject(name))
+                obj.arr(name) match {
+                  case Success(arr) =>
+                    arr.get(idx) match {
+                      case Success(v) => Success(v)
+                      case Failure(err) => Failure(new DecodingFailedException(s"Could not get idx $idx in array '$name'"))
+                    }
+                  case Failure(err) => Failure(new DecodingFailedException(s"Could not find array '$name'"))
+                }
               case Right(arr) =>
-                Success(arr.get(idx))
+                Failure(expectedObjectButFoundArray(name))
             }
         }
 
       case x :: xs =>
         x match {
           case PathObjectOrField(name) =>
-            in match {
+
+            cursor match {
               case Left(obj) =>
-                eval(Left(obj), xs)
+                val inObj = obj.get(name)
+
+                inObj match {
+                  case Success(o: JsonObjectSafe) => eval(Left(o), xs)
+                  case Success(a: JsonArraySafe) => eval(Right(a), xs)
+                  case Success(o: JsonObject) => eval(Left(JsonObjectSafe(o)), xs)
+                  case Success(a: JsonArray) => eval(Right(JsonArraySafe(a)), xs)
+                  case Success(v: Any) =>
+                    Failure(new DecodingFailedException(s"Needed object or array at $name, but found '${v}'"))
+                  case _ => Failure(new DecodingFailedException(s"Could not find anything matching $name"))
+                }
+
               case Right(arr) =>
                 Failure(expectedObjectButFoundArray(name))
             }
 
           case PathArray(name, idx) =>
-            in match {
+            cursor match {
               case Left(obj) =>
                 obj.arr(name) match {
                   case Success(arr) =>
@@ -62,7 +83,10 @@ object GetSelecter {
                     atIdx match {
                       case Success(o: JsonObjectSafe) => eval(Left(o), xs)
                       case Success(a: JsonArraySafe) => eval(Right(a), xs)
-                      case Success(v: Any) => Failure(new DecodingFailedException(s"Needed object or array at $name[$idx], but found '${v}'"))
+                      case Success(o: JsonObject) => eval(Left(JsonObjectSafe(o)), xs)
+                      case Success(a: JsonArray) => eval(Right(JsonArraySafe(a)), xs)
+                      case Success(v: Any) =>
+                        Failure(new DecodingFailedException(s"Needed object or array at $name[$idx], but found '${v}'"))
                       case _ => Failure(new DecodingFailedException(s"Found array $name but nothing at index $idx"))
                     }
 

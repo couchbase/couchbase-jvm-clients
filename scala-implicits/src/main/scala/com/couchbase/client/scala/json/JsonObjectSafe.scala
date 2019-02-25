@@ -38,7 +38,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   def put(name: String, value: Any): JsonObject = o.put(name, value)
 
   def get(name: String): Try[Any] = {
-    Try(content.get(name))
+    Try(o.get(name))
   }
 
   def str(name: String): Try[String] = {

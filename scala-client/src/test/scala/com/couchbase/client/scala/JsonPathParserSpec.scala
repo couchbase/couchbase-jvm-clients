@@ -56,7 +56,7 @@ class JsonPathParserSpec extends FunSuite {
   }
 
   test("empty") {
-    assert(JsonPathParser.parse("") == Seq())
+    assert(JsonPathParser.parse("") == Success(Seq()))
   }
 
 }

@@ -4,12 +4,14 @@ import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.scala.json.JsonObject
 import org.scalatest.{FlatSpec, FunSuite}
 
+import scala.util.{Failure, Success}
+
 class JsonObjectDynamicSpec extends FunSuite {
 
   val raw =
     """{"name":"John Smith",
       |"age":29,
-      |"address":[{"address":"123 Fake Street","regional":{"county:":"essex"}}]}""".stripMargin
+      |"address":[{"address":"123 Fake Street","regional":{"county":"essex"}}]}""".stripMargin
   val json = JsonObject.fromJson(raw)
   val jsonSafe = json.safe
 
@@ -60,7 +62,10 @@ class JsonObjectDynamicSpec extends FunSuite {
   }
 
   test("safe address(0).obj") {
-    assert(jsonSafe.dyn.address(0).obj.isSuccess)
+    jsonSafe.dyn.address(0).obj match {
+      case Success(v) =>
+      case Failure(err) => fail(err)
+    }
   }
 
   test("safe address(1).obj") {
@@ -96,7 +101,7 @@ class JsonObjectDynamicSpec extends FunSuite {
   }
 
   test("name.int") {
-    assertThrows[DecodingFailedException](
+    assertThrows[NumberFormatException](
     json.dyn.name.num
     )
   }
@@ -115,9 +120,7 @@ class JsonObjectDynamicSpec extends FunSuite {
 
 
   test("address.arr") {
-    assertThrows[DecodingFailedException](
-      json.dyn.address.arr
-    )
+    json.dyn.address.arr
   }
 
   test("name.arr") {
@@ -143,9 +146,7 @@ class JsonObjectDynamicSpec extends FunSuite {
   }
 
   test("address(0).obj") {
-    assertThrows[DecodingFailedException](
       json.dyn.address(0).obj
-      )
   }
 
   test("address(1).obj") {
@@ -159,8 +160,7 @@ class JsonObjectDynamicSpec extends FunSuite {
   }
 
   test("address(0).regional.obj") {
-    assertThrows[DecodingFailedException](
-      json.dyn.address(0).regional.obj)
+      json.dyn.address(0).regional.obj
   }
 
   test("address(0).regional.county.str") {
@@ -168,7 +168,7 @@ class JsonObjectDynamicSpec extends FunSuite {
   }
 
   test("address(0).regional.county.int") {
-    assertThrows[DecodingFailedException](
+    assertThrows[NumberFormatException](
       json.dyn.address(0).regional.county.num)
   }
 }

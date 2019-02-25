@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.json
 
+import com.couchbase.client.core.error.DecodingFailedException
+
 object ValueConvertor {
   def str(out: Any, name: String): String = {
     out match {
@@ -17,14 +19,14 @@ object ValueConvertor {
       case v: Float => v.toInt
       case v: Short => v.toInt
       case v: String => v.toInt
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to Int")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to Int")
     }
   }
 
   def bool(out: Any, name: String): Boolean = {
     out match {
       case v: Boolean => v
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to Boolean")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to Boolean")
     }
   }
 
@@ -36,7 +38,7 @@ object ValueConvertor {
       case v: Float => v.toLong
       case v: Double => v.toLong
       case v: String => v.toLong
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to Long")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to Long")
     }
   }
 
@@ -48,7 +50,7 @@ object ValueConvertor {
       case v: Short => v.toDouble
       case v: Int => v.toDouble
       case v: String => v.toDouble
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to Double")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to Double")
     }
   }
 
@@ -60,7 +62,7 @@ object ValueConvertor {
       case v: Short => v.toFloat
       case v: Int => v.toFloat
       case v: String => v.toFloat
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to Double")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to Double")
     }
   }
 
@@ -68,7 +70,7 @@ object ValueConvertor {
     out match {
       case v: JsonObject => v
       case null => null
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to JsonObject")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to JsonObject")
     }
   }
 
@@ -76,6 +78,6 @@ object ValueConvertor {
     out match {
       case v: JsonArray => v
       case null => null
-      case _ => throw new IllegalArgumentException(s"$name '$out' cannot be converted to JsonArray")
+      case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to JsonArray")
     }
   }}
