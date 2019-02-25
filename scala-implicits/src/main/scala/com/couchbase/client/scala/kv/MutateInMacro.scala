@@ -7,7 +7,7 @@ sealed trait MutateInMacro {
 object MutateInMacro {
 
   case object MutationCAS extends MutateInMacro {
-    private[scala] val value = "${Mutation.CAS}"
+    private[scala] val value = """"${Mutation.CAS}""""
   }
 
 }
