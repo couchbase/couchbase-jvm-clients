@@ -14,7 +14,7 @@ import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec}
 
 class SubdocMutateSpec extends FunSuite {
   val (cluster, bucket, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
+    cluster <- Cluster.connect("http://10.143.180.101:8091", "Administrator", "password")
     bucket <- cluster.bucket("default")
     coll <- bucket.defaultCollection()
   } yield (cluster, bucket, coll)) match {

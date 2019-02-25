@@ -34,7 +34,7 @@ object ClusterEnvironment {
   }
 
   def create(connectionString: String, username: String, password: String) = {
-    new ClusterEnvironment(new Builder(new RoleBasedCredentials(username, password)))
+    new ClusterEnvironment(new Builder(new RoleBasedCredentials(username, password)).load(new ConnectionStringPropertyLoader(connectionString)))
   }
 
   def create(connectionString: String, credentials: Credentials): ClusterEnvironment = {
