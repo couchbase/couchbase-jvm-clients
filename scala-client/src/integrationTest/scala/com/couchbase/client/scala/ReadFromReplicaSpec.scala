@@ -29,16 +29,14 @@ class ReadFromReplicaSpec extends FunSuite {
 
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = async.getFromReplica(docId, ReplicaMode.Any)
+    val future = async.getAnyReplica(docId)
 
-    results.foreach(future => {
       val result = Await.result(future, Duration.Inf)
 
       result.contentAs[ujson.Obj] match {
         case Success(body) => assert(body("hello").str == "world")
         case Failure(err) => assert(false, s"unexpected error $err")
       }
-    })
   }
 
   test("any blocking") {
@@ -46,11 +44,9 @@ class ReadFromReplicaSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = coll.getFromReplica(docId, ReplicaMode.Any)
+    val result = coll.getAnyReplica(docId)
 
-    for (result <- results) {
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")
-    }
   }
 
   test("any reactive") {
@@ -58,12 +54,10 @@ class ReadFromReplicaSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = reactive.getFromReplica(docId, ReplicaMode.Any)
+    val results = reactive.getAnyReplica(docId)
 
-    results.doOnNext(result => {
+    val result = results.block()
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")
-    })
-      .blockLast()
   }
 
 
@@ -73,7 +67,7 @@ class ReadFromReplicaSpec extends FunSuite {
 
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = async.getFromReplica(docId, ReplicaMode.All)
+    val results = async.getAllReplicas(docId)
 
     results.foreach(future => {
       val result = Await.result(future, Duration.Inf)
@@ -90,7 +84,7 @@ class ReadFromReplicaSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = coll.getFromReplica(docId, ReplicaMode.All)
+    val results = coll.getAllReplicas(docId)
 
     for (result <- results) {
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")
@@ -102,7 +96,7 @@ class ReadFromReplicaSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
-    val results = reactive.getFromReplica(docId, ReplicaMode.All)
+    val results = reactive.getAllReplicas(docId)
 
     results.doOnNext(result => {
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")

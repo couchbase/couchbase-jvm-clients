@@ -65,22 +65,6 @@ import collection.JavaConverters._
 case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Array[Byte])
 
 
-sealed trait ReplicaMode
-
-object ReplicaMode {
-
-  case object All extends ReplicaMode
-
-  case object Any extends ReplicaMode
-
-  case object First extends ReplicaMode
-
-  case object Second extends ReplicaMode
-
-  case object Third extends ReplicaMode
-
-}
-
 object AsyncCollection {
   private[scala] val getFullDoc = Array(LookupInSpec.getDoc)
 
@@ -358,13 +342,21 @@ class AsyncCollection(name: String,
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
-  def getFromReplica(id: String,
-                     replicaMode: ReplicaMode,
+  // TODO this needs to return GetFromReplicaResult
+  def getAnyReplica(id: String,
+                    parentSpan: Option[Span] = None,
+                    timeout: Duration = kvTimeout,
+                    retryStrategy: RetryStrategy = environment.retryStrategy()
+                   ): Future[GetResult] = {
+    getAllReplicas(id, parentSpan, timeout, retryStrategy).take(1).head
+  }
+
+  def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = environment.retryStrategy()
                     ): Seq[Future[GetResult]] = {
-    val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.request(id, replicaMode, parentSpan, timeout, retryStrategy)
+    val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.requestAll(id, parentSpan, timeout, retryStrategy)
 
     reqsTry match {
       case Failure(err) => Seq(Future.failed(err))
@@ -379,12 +371,7 @@ class AsyncCollection(name: String,
             })
         })
 
-        replicaMode match {
-          // The main benefit of Any is to avoid blocking for all results when one will do
-          case ReplicaMode.Any => out.take(1)
-          case _ => out
-        }
-
+        out
     }
   }
 }

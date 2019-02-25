@@ -65,7 +65,6 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     ValueConvertor.str(check, name)
   }
 
-  // TODO test all these fields with e.g. getting an int as a string
   def num(name: String): Int = {
     val check = content.get(name)
     if (check == null) if (!content.containsKey(name)) throw new IllegalArgumentException(s"Field $name does not exist")

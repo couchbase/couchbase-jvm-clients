@@ -6,9 +6,6 @@ import com.couchbase.client.scala.json.JsonObject
 
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-//import ujson.Obj
-//import upickle.default.read
-
 import scala.concurrent.duration.Duration
 
 

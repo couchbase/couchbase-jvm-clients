@@ -230,13 +230,20 @@ class ReactiveCollection(async: AsyncCollection) {
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
-  def getFromReplica(id: String,
-                     replicaMode: ReplicaMode,
+  def getAnyReplica(id: String,
+                    parentSpan: Option[Span] = None,
+                    timeout: Duration = kvTimeout,
+                    retryStrategy: RetryStrategy = environment.retryStrategy()
+                   ): Mono[GetResult] = {
+    getAllReplicas(id, parentSpan, timeout, retryStrategy).next()
+  }
+
+  def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = environment.retryStrategy()
                     ): Flux[GetResult] = {
-    val reqsTry: Try[Seq[GetRequest]] = async.getFromReplicaHandler.request(id, replicaMode, parentSpan, timeout, retryStrategy)
+    val reqsTry: Try[Seq[GetRequest]] = async.getFromReplicaHandler.requestAll(id, parentSpan, timeout, retryStrategy)
 
     reqsTry match {
       case Failure(err) => Flux.error(err)
@@ -249,12 +256,7 @@ class ReactiveCollection(async: AsyncCollection) {
             .map(r => async.getFullDocHandler.response(id, r))
         })
 
-        val out = Flux.merge(monos)
-
-        replicaMode match {
-          case ReplicaMode.Any => out.take(1)
-          case _ => out
-        }
+        Flux.merge(monos)
     }
 
   }

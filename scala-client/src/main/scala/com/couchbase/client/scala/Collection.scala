@@ -37,7 +37,7 @@ import scala.util.control.NonFatal
 import scala.reflect.runtime.universe._
 
 object Collection {
-  private val SafetyTimeout = 1.second
+  private[scala] val SafetyTimeout = 1.second
 
   private[scala] def block[T](in: Future[T], timeout: Duration): Try[T] = {
     try {
@@ -180,13 +180,19 @@ class Collection(val async: AsyncCollection,
     block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
   }
 
-  // TODO sync with latest RFC changes
-  def getFromReplica(id: String,
-                     replicaMode: ReplicaMode,
+  def getAnyReplica(id: String,
+                     parentSpan: Option[Span] = None,
+                     timeout: Duration = kvTimeout,
+                     retryStrategy: RetryStrategy = async.environment.retryStrategy()
+                    ): GetResult = {
+    reactive.getAnyReplica(id,parentSpan, timeout, retryStrategy).block(Collection.SafetyTimeout + timeout)
+  }
+
+  def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = async.environment.retryStrategy()
                     ): Iterable[GetResult] = {
-    reactive.getFromReplica(id, replicaMode, parentSpan, timeout, retryStrategy).toIterable()
+    reactive.getAllReplicas(id,parentSpan, timeout, retryStrategy).toIterable()
   }
 }

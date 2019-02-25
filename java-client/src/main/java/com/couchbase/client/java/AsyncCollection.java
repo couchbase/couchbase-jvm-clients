@@ -392,6 +392,7 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
+  // TODO sync with RFC changes
   public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id,
                                                                      final GetFromReplicaOptions options) {
     return getFromReplicaRequests(id, options)
