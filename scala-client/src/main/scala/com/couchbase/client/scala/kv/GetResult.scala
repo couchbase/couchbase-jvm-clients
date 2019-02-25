@@ -1,13 +1,11 @@
-package com.couchbase.client.scala.document
+package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
 import com.couchbase.client.scala.json.JsonObject
 
+import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration.Duration
-
 
 case class GetResult(id: String,
                     // It's Right only in the case where projections were requested
@@ -39,4 +37,3 @@ case class GetResult(id: String,
     }
   }
 }
-

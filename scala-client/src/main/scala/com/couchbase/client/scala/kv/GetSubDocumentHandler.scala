@@ -9,7 +9,6 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.DocumentFlags
-import com.couchbase.client.scala.document.{GetResult, LookupInResult}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
 import io.netty.util.CharsetUtil

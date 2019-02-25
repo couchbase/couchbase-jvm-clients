@@ -8,7 +8,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class ReadFromReplicaSpec extends FunSuite {
+class GetFromReplicaSpec extends FunSuite {
   val (cluster, bucket, coll) = (for {
     cluster <- Cluster.connect("localhost", "Administrator", "password")
     bucket <- cluster.bucket("default")

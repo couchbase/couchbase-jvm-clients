@@ -2,8 +2,6 @@ package com.couchbase.client.scala
 
 import java.lang.reflect.{ParameterizedType, Type}
 import java.nio.charset.Charset
-
-import com.couchbase.client.scala.document.DefaultDecoder
 //import com.couchbase.client.scala.document.DefaultDecoder.mapper
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper

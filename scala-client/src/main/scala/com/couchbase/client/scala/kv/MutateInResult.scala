@@ -1,15 +1,11 @@
-package com.couchbase.client.scala.document
+package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.OperationDoesNotExist
-import com.couchbase.client.core.msg.kv.{MutationToken, SubDocumentOpResponseStatus, SubdocField}
+import com.couchbase.client.core.msg.kv.{MutationToken, SubdocField}
 import com.couchbase.client.scala.api.HasDurabilityTokens
 import com.couchbase.client.scala.codec.Conversions
 
-import scala.collection.GenMap
+import scala.util.{Failure, Try}
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
-
 
 case class MutateInResult(id: String,
                           private val content: Seq[SubdocField],
@@ -30,4 +26,3 @@ case class MutateInResult(id: String,
     }
   }
 }
-

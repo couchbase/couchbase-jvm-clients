@@ -1,4 +1,4 @@
-package com.couchbase.client.scala.document
+package com.couchbase.client.scala.kv
 
 import com.couchbase.client.scala.json.JsonObject
 
@@ -11,8 +11,6 @@ object Replica {
   case object ReplicaTwo extends Replica
   case object ReplicaThree extends Replica
 }
-
-// TODO should all these be under document? check against Java
 
 class GetFromReplicaResult(id: String,
                            // It's Right only in the case where projections were requested

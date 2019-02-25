@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.encodings
 
-import com.couchbase.client.scala.document.GetResult
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.kv.GetResult
 import com.couchbase.client.scala.{Address, Cluster, TestUtils, User}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule

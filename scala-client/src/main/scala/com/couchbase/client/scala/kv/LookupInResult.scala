@@ -1,15 +1,11 @@
-package com.couchbase.client.scala.document
+package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.OperationDoesNotExist
-import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{SubDocumentOpResponseStatus, SubdocCommandType, SubdocField, SubdocGetResponse}
+import com.couchbase.client.core.msg.kv.{SubDocumentOpResponseStatus, SubdocField}
 import com.couchbase.client.scala.codec.Conversions
 
-import scala.collection.GenMap
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 import scala.compat.java8.OptionConverters._
-
 
 case class LookupInResult(id: String,
                           private val content: Seq[SubdocField],
@@ -68,4 +64,3 @@ case class LookupInResult(id: String,
     }
   }
 }
-

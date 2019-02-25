@@ -13,7 +13,6 @@ import scala.util.{Failure, Success, Try}
 // TODO move this into core
 // TODO handle backticks encoded
 // TODO check someArray[0][1]
-// TODO put into Haxe
 private[scala] object JsonPathParser {
   def parse(path: String): Try[Seq[PathElement]] = {
     def debugPos(idx: Int) = s"position $idx"

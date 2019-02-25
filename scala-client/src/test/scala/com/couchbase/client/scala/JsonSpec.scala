@@ -89,7 +89,7 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
   }
 
   before {
-    // TODO MVP bucketManager
+    // TODO bucketManager
 //    bucket.bucketManager().flush()
     coll.remove(DocId)
   }

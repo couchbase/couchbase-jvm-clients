@@ -95,6 +95,7 @@ object Conversions {
     // This is the safe Bytes converter: it parses the input, and sets the flags to Json or String as appropriate.
     implicit object BytesConvert extends Encodable[Array[Byte]] {
       override def encode(content: Array[Byte]) = {
+        // TODO requires upickle
         val upickleAttempt = Try(upickle.default.read[ujson.Value](content))
 
         upickleAttempt match {
@@ -413,5 +414,4 @@ object Conversions {
       }
     }
   }
-
 }
