@@ -1,5 +1,9 @@
 package com.couchbase.client.core.msg.query;
 
+import static java.time.temporal.ChronoUnit.*;
+
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import com.couchbase.client.core.annotation.Stability;
@@ -29,7 +33,7 @@ public class QueryResponse extends BaseResponse {
   private MonoProcessor<String> queryStatusProcessor;
   private MonoProcessor<byte[]> signatureProcessor;
   private MonoProcessor<byte[]> profileProcessor;
-
+  private Instant lastRequestTimeStamp;
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
   private final AtomicBoolean completed = new AtomicBoolean(false);
@@ -53,6 +57,7 @@ public class QueryResponse extends BaseResponse {
     FluxSink<byte[]> rowsSink = this.rowsProcessor.sink();
     rowsSink.onRequest(n -> {
         if(this.rowRequestSize.addAndGet(n) > 0) {
+          this.lastRequestTimeStamp = Instant.now();
           this.channel.config().setAutoRead(true);
         }
     });
@@ -60,7 +65,7 @@ public class QueryResponse extends BaseResponse {
       if (this.rowRequestSize.get() == 0) {
         this.complete();
       }
-    }, TimeoutConfig.DEFAULT_STREAM_RELEASE_TIMEOUT);
+    }, this.environment.timeoutConfig().queryStreamReleaseTimeout());
   }
 
   @Stability.Internal
@@ -68,10 +73,10 @@ public class QueryResponse extends BaseResponse {
     if(this.rowRequestSize.decrementAndGet() == 0) {
       this.channel.config().setAutoRead(false);
       this.environment.timer().schedule(() -> {
-        if (this.rowRequestSize.get() == 0) {
+        if (this.lastRequestTimeStamp.until(Instant.now(),SECONDS) >= 5) {
           this.complete();
         }
-      }, TimeoutConfig.DEFAULT_STREAM_RELEASE_TIMEOUT);
+      }, this.environment.timeoutConfig().queryStreamReleaseTimeout());
     }
   }
 
@@ -85,6 +90,7 @@ public class QueryResponse extends BaseResponse {
     this.errorsProcessor.onComplete();
     this.warningsProcessor.onComplete();
     this.profileProcessor.onComplete();
+    this.signatureProcessor.onComplete();
     this.completed.set(true);
     this.channel.config().setAutoRead(true);
   }

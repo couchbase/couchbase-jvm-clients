@@ -39,21 +39,21 @@ import com.couchbase.client.java.query.ReactiveQueryResult;
  */
 public class PreparedQueryAccessor {
 
-	public static CompletableFuture<AsyncQueryResult> queryAsync(final Core core, final Query query, final QueryOptions options,
-																															 final Supplier<ClusterEnvironment> environment,
-																															 final LFUCache<String, PreparedQuery> preparedCache) {
+	public static CompletableFuture<AsyncQueryResult> queryAsync(final Core core, final Query query,
+																 final QueryOptions options, final Supplier<ClusterEnvironment> environment,
+																 final LFUCache<String, PreparedQuery> preparedCache) {
 		return queryInternal(core, query, options, environment, preparedCache).thenApply(AsyncQueryResult::new);
 	}
 
 	public static CompletableFuture<ReactiveQueryResult> queryReactive(final Core core, final Query query, final QueryOptions options,
-																																		 final Supplier<ClusterEnvironment> environment,
-																																		 final LFUCache<String, PreparedQuery> preparedCache) {
+																	   final Supplier<ClusterEnvironment> environment,
+																	   final LFUCache<String, PreparedQuery> preparedCache) {
 		return queryInternal(core, query, options, environment, preparedCache).thenApply(ReactiveQueryResult::new);
 	}
 
 	private static CompletableFuture<QueryResponse> queryInternal(final Core core, final Query query, final QueryOptions options,
-																																final Supplier<ClusterEnvironment> environment,
-																																final LFUCache<String, PreparedQuery> preparedCache) {
+																  final Supplier<ClusterEnvironment> environment,
+																  final LFUCache<String, PreparedQuery> preparedCache) {
 		QueryOptions.BuiltQueryOptions opts = options.build();
 		Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
 		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
@@ -65,26 +65,27 @@ public class PreparedQueryAccessor {
 			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), prepared.encode());
 			core.send(request);
 			return request
-							.response();
+					.response();
 		} else {
 			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode());
 			core.send(request);
 			return request
-							.response()
-							.thenApply(AsyncQueryResult::new)
-							.thenCompose(r -> r.rows(PreparedQuery.class))
-							.thenApply(l -> {
-								PreparedQuery prepared = l.get(0);
-								preparedCache.put(query.statement(), prepared);
-								return prepared;
-							}).thenCompose(r -> queryInternal(core, query, options, environment, preparedCache));
+					.response()
+					.thenApply(AsyncQueryResult::new)
+					.thenCompose(r -> r.rows(PreparedQuery.class))
+					.thenApply(l -> {
+						PreparedQuery prepared = l.get(0);
+						preparedCache.put(query.statement(), prepared);
+						return prepared;
+					}).thenCompose(r -> queryInternal(core, query, options, environment, preparedCache));
 		}
 	}
 
 	@Stability.Internal
-	public static CompletableFuture<QueryResponse> queryEndpoint(final QueryEndpoint endpoint, final Core core, final Query query, final QueryOptions options,
-																																final Supplier<ClusterEnvironment> environment,
-																																final LFUCache<String, PreparedQuery> preparedCache) {
+	public static CompletableFuture<QueryResponse> queryEndpoint(final QueryEndpoint endpoint, final Core core,
+																 final Query query, final QueryOptions options,
+																 final Supplier<ClusterEnvironment> environment,
+																 final LFUCache<String, PreparedQuery> preparedCache) {
 		QueryOptions.BuiltQueryOptions opts = options.build();
 		Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
 		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
@@ -95,20 +96,19 @@ public class PreparedQueryAccessor {
 			PreparedQuery prepared = preparedCache.get(query.statement());
 			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), prepared.encode());
 			endpoint.send(request);
-			return request
-							.response();
+			return request.response();
 		} else {
 			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode());
 			endpoint.send(request);
 			return request
-							.response()
-							.thenApply(AsyncQueryResult::new)
-							.thenCompose(r -> r.rows())
-							.thenApply(l -> {
-								PreparedQuery prepared = PreparedQuery.fromJsonObject(l.get(0));
-								preparedCache.put(query.statement(), prepared);
-								return prepared;
-							}).thenCompose(r -> queryEndpoint(endpoint, core, query, options, environment, preparedCache));
+					.response()
+					.thenApply(AsyncQueryResult::new)
+					.thenCompose(r -> r.rows())
+					.thenApply(l -> {
+						PreparedQuery prepared = PreparedQuery.fromJsonObject(l.get(0));
+						preparedCache.put(query.statement(), prepared);
+						return prepared;
+					}).thenCompose(r -> queryEndpoint(endpoint, core, query, options, environment, preparedCache));
 		}
 	}
 }

@@ -29,7 +29,7 @@ public class TimeoutConfig {
   public static final Duration DEFAULT_ANALYTICS_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
   public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(5);
-  public static final Duration DEFAULT_STREAM_RELEASE_TIMEOUT = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_QUERY_STREAM_RELEASE_TIMEOUT = Duration.ofSeconds(5);
 
   private final Duration kvTimeout;
   private final Duration managerTimeout;
@@ -39,6 +39,7 @@ public class TimeoutConfig {
   private final Duration analyticsTimeout;
   private final Duration connectTimeout;
   private final Duration disconnectTimeout;
+  private final Duration queryStreamReleaseTimeout;
 
   private TimeoutConfig(final Builder builder) {
     kvTimeout = Optional.ofNullable(builder.kvTimeout).orElse(DEFAULT_KV_TIMEOUT);
@@ -49,6 +50,7 @@ public class TimeoutConfig {
     analyticsTimeout = Optional.ofNullable(builder.analyticsTimeout).orElse(DEFAULT_ANALYTICS_TIMEOUT);
     connectTimeout = Optional.ofNullable(builder.connectTimeout).orElse(DEFAULT_CONNECT_TIMEOUT);
     disconnectTimeout = Optional.ofNullable(builder.disconnectTimeout).orElse(DEFAULT_DISCONNECT_TIMEOUT);
+    queryStreamReleaseTimeout = Optional.ofNullable(builder.queryStreamReleaseTimeout).orElse(DEFAULT_QUERY_STREAM_RELEASE_TIMEOUT);
   }
 
   public static Builder builder() {
@@ -125,6 +127,8 @@ public class TimeoutConfig {
     return analyticsTimeout;
   }
 
+  public Duration queryStreamReleaseTimeout() { return queryStreamReleaseTimeout; }
+
   public static class Builder {
 
     private Duration kvTimeout = null;
@@ -135,6 +139,7 @@ public class TimeoutConfig {
     private Duration analyticsTimeout = null;
     private Duration connectTimeout = null;
     private Duration disconnectTimeout = null;
+    private Duration queryStreamReleaseTimeout = null;
 
     public TimeoutConfig build() {
       return new TimeoutConfig(this);
@@ -177,6 +182,11 @@ public class TimeoutConfig {
 
     public Builder disconnectTimeout(Duration disconnectTimeout) {
       this.disconnectTimeout = disconnectTimeout;
+      return this;
+    }
+
+    public Builder queryStreamReleaseTimeout(Duration queryStreamReleaseTimeout) {
+      this.queryStreamReleaseTimeout = queryStreamReleaseTimeout;
       return this;
     }
   }
