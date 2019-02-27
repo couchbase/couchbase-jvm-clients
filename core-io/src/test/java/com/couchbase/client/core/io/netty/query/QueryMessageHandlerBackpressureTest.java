@@ -19,8 +19,8 @@ package com.couchbase.client.core.io.netty.query;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.env.UserAgent;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
@@ -52,18 +52,13 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Subscription;
-import reactor.core.publisher.BaseSubscriber;
 import reactor.test.StepVerifier;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -115,6 +110,7 @@ class QueryMessageHandlerBackpressureTest {
     when(ctx.environment()).thenReturn(env);
     when(env.userAgent()).thenReturn(agent);
     when(env.timer()).thenReturn(Timer.create());
+    when(env.timeoutConfig()).thenReturn(TimeoutConfig.create());
 
     final List<byte[]> rows = Collections.synchronizedList(new ArrayList<>());
     QueryRequest request = new QueryRequest(Duration.ofSeconds(1), ctx, mock(RetryStrategy.class),
@@ -141,7 +137,6 @@ class QueryMessageHandlerBackpressureTest {
   static class ChunkServer {
 
     private final Channel channel;
-
     ChunkServer(EventLoopGroup eventLoopGroup) {
       ServerBootstrap server = new ServerBootstrap()
         .channel(LocalServerChannel.class)
