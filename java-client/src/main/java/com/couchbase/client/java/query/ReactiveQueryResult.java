@@ -17,7 +17,6 @@
 package com.couchbase.client.java.query;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailedException;
@@ -83,6 +82,36 @@ public class ReactiveQueryResult {
 	 */
 	public Mono<String> queryStatus() {
 		return this.response.queryStatus();
+	}
+
+	/**
+	 * Get a {@link Mono} which publishes the signature as returned by the query engine
+	 *
+	 * @return {@link Mono}
+	 */
+	public Mono<JsonObject> signature() {
+		return this.response.signature().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new CouchbaseException(ex);
+			}
+		});
+	}
+
+	/**
+	 * Get a {@link Mono} which publishes the profile info as returned by the query engine
+	 *
+	 * @return {@link Mono}
+	 */
+	public Mono<JsonObject> profileInfo() {
+		return this.response.profile().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new CouchbaseException(ex);
+			}
+		});
 	}
 
 	/**

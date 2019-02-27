@@ -36,7 +36,11 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import java.io.EOFException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * This handler is responsible for writing Query requests and completing their associated responses
@@ -45,12 +49,40 @@ import java.nio.charset.Charset;
  * @since 2.0.0
  */
 public class QueryMessageHandler extends ChannelDuplexHandler {
+
+  /**
+   * The current query request that is being handled by the query message handler
+   */
   private QueryRequest currentRequest;
+
+  /**
+   * The query response that will be created as received for the current request
+   */
   private QueryResponse currentResponse;
+
+  /**
+   * The response content that is being received as chunks
+   */
   private ByteBuf responseContent;
+
+  /**
+   * The query service context
+   */
   private final ServiceContext serviceContext;
+
+  /**
+   * A Streaming json parser {@link ByteBufJsonParser}
+   */
   private ByteBufJsonParser parser;
+
+  /**
+   * The initialized state of the parser
+   */
   private boolean isParserInitialized = false;
+
+  /**
+   * The character set used for decoding the streaming response received
+   */
   private static final Charset CHARSET = CharsetUtil.UTF_8;
 
   public QueryMessageHandler(ServiceContext serviceContext) {
@@ -121,6 +153,22 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         value.release();
         currentResponse.queryStatus().onNext(statusStr);
       }
+    }), new JsonPointer("/signature", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        byte[] data = new byte[value.readableBytes()];
+        value.readBytes(data);
+        value.release();
+        currentResponse.signature().onNext(data);
+      }
+    }), new JsonPointer("/profile", new JsonPointerCB1() {
+      @Override
+      public void call(final ByteBuf value) {
+        byte[] data = new byte[value.readableBytes()];
+        value.readBytes(data);
+        value.release();
+        currentResponse.profile().onNext(data);
+      }
     })
     });
   }
@@ -130,7 +178,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
     if (currentResponse != null) {
       currentResponse.complete();
     } else {
-      currentRequest.fail(new RequestCanceledException("Socket closed", currentRequest.context()));
+      currentRequest.fail(new RequestCanceledException("Closed channel" + getChannelIdentifier(ctx),
+              currentRequest.context()));
     }
     ctx.fireChannelInactive();
   }
@@ -149,19 +198,22 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       ctx.write(encoded);
       ctx.channel().config().setAutoRead(true);
     } else {
+      this.currentRequest.fail(new RequestCanceledException("Unknown request in channel" + getChannelIdentifier(ctx),
+              currentRequest.context()));
     }
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    this.currentRequest.fail(new RequestCanceledException("Exception caught in the socket due to" +cause.toString(), currentRequest.context()));
+    this.currentRequest.fail(new RequestCanceledException("Exception caught in channel" + getChannelIdentifier(ctx) +
+            Arrays.stream(cause.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")),
+            currentRequest.context()));
     ctx.close();
   }
 
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     try {
-
       if (msg instanceof HttpResponse) {
         this.responseContent = ctx.alloc().buffer();
         this.currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse) msg).status().code()),
@@ -193,5 +245,31 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
     } finally {
       ReferenceCountUtil.release(msg);
     }
+  }
+
+  /**
+   * The IP address and port info for the channel's local and remote socket endpoints used as channel identifier
+   *
+   * @param ctx {@link ChannelHandlerContext}
+   * @return socket address details as string
+   */
+  private String getChannelIdentifier(final ChannelHandlerContext ctx) {
+    return "["+
+            "remote:" + getAddressAsString(ctx.channel().remoteAddress()) + "," +
+            "local:" + getAddressAsString(ctx.channel().localAddress()) + "]";
+  }
+
+  /**
+   * Get the socket address as a string
+   *
+   * @param address {@link SocketAddress}
+   * @return socket address as string
+   */
+  private String getAddressAsString(final SocketAddress address) {
+    String ret = address.toString();
+    if (address instanceof InetSocketAddress) {
+      ret = ((InetSocketAddress)address).getAddress().getHostAddress() + ((InetSocketAddress)address).getPort();
+    }
+    return ret;
   }
 }

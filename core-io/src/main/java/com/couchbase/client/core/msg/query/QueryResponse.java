@@ -27,12 +27,15 @@ public class QueryResponse extends BaseResponse {
   private MonoProcessor<String> requestIdProcessor;
   private MonoProcessor<String> clientContextIdProcessor;
   private MonoProcessor<String> queryStatusProcessor;
+  private MonoProcessor<byte[]> signatureProcessor;
+  private MonoProcessor<byte[]> profileProcessor;
 
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
   private final AtomicBoolean completed = new AtomicBoolean(false);
   private final CoreEnvironment environment;
 
+  @Stability.Internal
   public QueryResponse(ResponseStatus status, Channel channel, CoreEnvironment environment) {
     super(status);
     this.channel = channel;
@@ -44,6 +47,8 @@ public class QueryResponse extends BaseResponse {
     this.clientContextIdProcessor = MonoProcessor.create();
     this.metricsProcessor = MonoProcessor.create();
     this.queryStatusProcessor = MonoProcessor.create();
+    this.signatureProcessor = MonoProcessor.create();
+    this.profileProcessor = MonoProcessor.create();
 
     FluxSink<byte[]> rowsSink = this.rowsProcessor.sink();
     rowsSink.onRequest(n -> {
@@ -79,6 +84,7 @@ public class QueryResponse extends BaseResponse {
     this.rowsProcessor.onComplete();
     this.errorsProcessor.onComplete();
     this.warningsProcessor.onComplete();
+    this.profileProcessor.onComplete();
     this.completed.set(true);
     this.channel.config().setAutoRead(true);
   }
@@ -105,13 +111,13 @@ public class QueryResponse extends BaseResponse {
     return this.metricsProcessor;
   }
 
-  public MonoProcessor<String> queryStatus() {
-    return this.queryStatusProcessor;
-  }
+  public MonoProcessor<String> queryStatus() { return this.queryStatusProcessor; }
 
-  public EmitterProcessor<byte[]> rows() {
-    return this.rowsProcessor;
-  }
+  public MonoProcessor<byte[]> signature() { return this.signatureProcessor; }
+
+  public MonoProcessor<byte[]> profile() { return this.profileProcessor; }
+
+  public EmitterProcessor<byte[]> rows() { return this.rowsProcessor; }
 
   public EmitterProcessor<byte[]> errors() {
     return this.errorsProcessor;

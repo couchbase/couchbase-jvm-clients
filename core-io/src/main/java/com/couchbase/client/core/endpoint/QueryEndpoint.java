@@ -22,9 +22,6 @@ import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import reactor.core.scheduler.Scheduler;
 
 public class QueryEndpoint extends BaseEndpoint {
 
@@ -46,10 +43,8 @@ public class QueryEndpoint extends BaseEndpoint {
 
     @Override
     public void init(ChannelPipeline pipeline) {
-      pipeline.addLast(new LoggingHandler(LogLevel.ERROR));
       pipeline.addLast(new HttpClientCodec());
       pipeline.addLast(new QueryMessageHandler(ctx));
     }
   }
-
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.RoleBasedCredentials;
@@ -24,6 +25,7 @@ import com.couchbase.client.core.env.UserAgent;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceContext;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -50,6 +52,9 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.test.StepVerifier;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -90,6 +95,7 @@ class QueryMessageHandlerBackpressureTest {
    */
   @Test
   void requestRecordsExplicitly() throws Exception {
+    ServiceContext serviceCtx = mock(ServiceContext.class);
     Bootstrap client = new Bootstrap()
       .channel(LocalChannel.class)
       .group(new DefaultEventLoopGroup())
@@ -97,49 +103,40 @@ class QueryMessageHandlerBackpressureTest {
       .handler(new ChannelInitializer<LocalChannel>() {
         @Override
         protected void initChannel(LocalChannel ch) {
-          ch.pipeline().addLast(new HttpClientCodec(), new QueryMessageHandler());
+          ch.pipeline().addLast(new HttpClientCodec(), new QueryMessageHandler(serviceCtx));
         }
       });
-    Channel channel = client.connect().awaitUninterruptibly().channel();
 
+    Channel channel = client.connect().awaitUninterruptibly().channel();
     CoreContext ctx = mock(CoreContext.class);
     CoreEnvironment env = mock(CoreEnvironment.class);
     UserAgent agent = new UserAgent("name", "0.0.0", Optional.empty(), Optional.empty());
+    when(serviceCtx.environment()).thenReturn(env);
     when(ctx.environment()).thenReturn(env);
     when(env.userAgent()).thenReturn(agent);
+    when(env.timer()).thenReturn(Timer.create());
 
-    final List<QueryResponse.QueryEvent> rows = Collections.synchronizedList(new ArrayList<>());
-    QueryRequest request = new QueryRequest(
-      Duration.ofSeconds(1),
-      ctx,
-      mock(RetryStrategy.class),
-      new RoleBasedCredentials("admin", "password"),
-      "myquery".getBytes(CharsetUtil.UTF_8),
-      new QueryResponse.QueryEventSubscriber() {
-        @Override
-        public void onNext(QueryResponse.QueryEvent row) {
-          rows.add(row);
-        }
-
-        @Override
-        public void onComplete() {
-
-        }
-      }
-    );
+    final List<byte[]> rows = Collections.synchronizedList(new ArrayList<>());
+    QueryRequest request = new QueryRequest(Duration.ofSeconds(1), ctx, mock(RetryStrategy.class),
+            new RoleBasedCredentials("admin", "password"), "myquery".getBytes(CharsetUtil.UTF_8));
     channel.writeAndFlush(request);
 
     QueryResponse response = request.response().get();
 
     assertEquals(0, rows.size());
-    Thread.sleep(100);
-    response.request(1);
-    waitUntilCondition(() -> rows.size() == 1);
-    response.request(1);
-    waitUntilCondition(() -> rows.size() == 2);
-
-    assertEquals(2, rows.size());
+    StepVerifier.create(response.rows().map(String::new))
+            .thenRequest(1)
+            .expectNext("{\"foo\"}")
+            .thenRequest(1)
+            .expectNext("{\"bar\"}")
+            .thenRequest(2)
+            .expectNext("{\"faz\"}","{\"baz\"}")
+            .thenRequest(4)
+            .expectNext("{\"fazz\"}","{\"bazz\"}","{\"fizz\"}","{\"bizz\"}")
+            .expectComplete()
+            .verify();
   }
+
 
   static class ChunkServer {
 
@@ -166,13 +163,20 @@ class QueryMessageHandlerBackpressureTest {
                   HttpVersion.HTTP_1_1,
                   HttpResponseStatus.OK
                 );
-                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, "{\"results\": [{},{}]}".length());
+                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}," +
+                        "{\"faz\"},{\"baz\"},{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}").length());
                 ctx.write(response);
                 ctx.write(new DefaultHttpContent(
-                  Unpooled.copiedBuffer("{\"results\": [{},", CharsetUtil.UTF_8)
+                  Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)
+                ));
+                ctx.writeAndFlush(new DefaultHttpContent(
+                        Unpooled.copiedBuffer("{\"bar\"},", CharsetUtil.UTF_8)
+                ));
+                ctx.writeAndFlush(new DefaultHttpContent(
+                        Unpooled.copiedBuffer("{\"faz\"},{\"baz\"},", CharsetUtil.UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultLastHttpContent(
-                  Unpooled.copiedBuffer("{}]}", CharsetUtil.UTF_8)
+                        Unpooled.copiedBuffer("{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}", CharsetUtil.UTF_8)
                 ));
               }
             });
@@ -187,5 +191,4 @@ class QueryMessageHandlerBackpressureTest {
     }
 
   }
-
 }

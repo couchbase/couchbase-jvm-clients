@@ -68,6 +68,44 @@ public class AsyncQueryResult {
 	}
 
 	/**
+	 * A {@link CompletableFuture} which completes with the signature as returned by the query
+	 * engine which are then decoded to {@link JsonObject}
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException } when the request cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<JsonObject> signature() {
+		return this.response.signature().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).toFuture();
+	}
+
+	/**
+	 * A {@link CompletableFuture} which completes with profiling information as returned by the query
+	 * engine which are then decoded to {@link JsonObject}
+	 *
+	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
+	 * - {@link DecodingFailedException } when the request cannot be completed successfully
+	 *
+	 * @return {@link CompletableFuture}
+	 */
+	public CompletableFuture<JsonObject> profileInfo() {
+		return this.response.profile().map(n -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).toFuture();
+	}
+
+	/**
 	 * A {@link CompletableFuture} which completes with the the {@link QueryMetrics} as returned by the query engine
 	 *
 	 * The future can complete successfully or throw an {@link ExecutionException} wrapping

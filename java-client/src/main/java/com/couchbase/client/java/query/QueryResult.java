@@ -28,7 +28,12 @@ import com.couchbase.client.java.json.JsonObject;
  */
 @Stability.Volatile
 public class QueryResult {
+
+	/**
+	 * The {@link AsyncQueryResult} used for fetching the query response
+	 */
 	private final AsyncQueryResult asyncResult;
+
 
 	@Stability.Internal
 	public QueryResult(AsyncQueryResult asyncResult) {
@@ -63,11 +68,29 @@ public class QueryResult {
 	}
 
 	/**
+	 * Get the signature as returned by the query engine
+	 *
+	 * @return query status as string
+	 */
+	public JsonObject signature() {
+		return block(this.asyncResult.signature());
+	}
+
+	/**
+	 * Get the profile info as returned by the query engine
+	 *
+	 * @return query status as string
+	 */
+	public JsonObject profileInfo() {
+		return block(this.asyncResult.profileInfo());
+	}
+
+	/**
 	 * Get the {@link QueryMetrics} as returned by the query engine
 	 *
 	 * @return {@link QueryMetrics}
 	 */
-	QueryMetrics info() {
+	public QueryMetrics info() {
 		return block(this.asyncResult.info());
 	}
 
@@ -79,7 +102,7 @@ public class QueryResult {
 	 * @param <T> generic class
 	 * @return list of entities
 	 */
-	<T>List<T> rows(Class<T> target) {
+	public <T>List<T> rows(Class<T> target) {
 		return block(this.asyncResult.rows(target));
 	}
 
@@ -89,7 +112,7 @@ public class QueryResult {
 	 *
 	 * @return list of {@link JsonObject}
 	 */
-	List<JsonObject> rows() {
+	public List<JsonObject> rows() {
 		return block(this.asyncResult.rows());
 	}
 
@@ -98,7 +121,7 @@ public class QueryResult {
 	 *
 	 * @return list of errors
 	 */
-	List<JsonObject> errors() {
+	public List<JsonObject> errors() {
 		return block(this.asyncResult.errors());
 	}
 
@@ -107,7 +130,7 @@ public class QueryResult {
 	 *
 	 * @return list of warnings
 	 */
-	List<JsonObject> warnings() {
+	public List<JsonObject> warnings() {
 		return block(this.asyncResult.warnings());
 	}
 }
