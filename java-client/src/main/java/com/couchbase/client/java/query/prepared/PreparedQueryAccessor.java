@@ -67,7 +67,7 @@ public class PreparedQueryAccessor {
 			return request
 					.response();
 		} else {
-			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode());
+			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode(opts.parameters()));
 			core.send(request);
 			return request
 					.response()
@@ -98,7 +98,7 @@ public class PreparedQueryAccessor {
 			endpoint.send(request);
 			return request.response();
 		} else {
-			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode());
+			request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(), query.encode(opts.parameters()));
 			endpoint.send(request);
 			return request
 					.response()

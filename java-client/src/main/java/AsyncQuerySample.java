@@ -31,10 +31,9 @@ public class AsyncQuerySample {
 
 		System.err.println(endpoint.state());
 
-
 		Query query = SimpleQuery.create("select * from `travel-sample` limit 32000");
 		QueryRequest request = new QueryRequest(Duration.ofSeconds(10), core.context(),
-						environment.retryStrategy(), environment.credentials(), query.encode());
+						environment.retryStrategy(), environment.credentials(), query.encode(null));
 
 		endpoint.send(request);
 		CompletableFuture<AsyncQueryResult> result = request.response().thenApply(AsyncQueryResult::new);

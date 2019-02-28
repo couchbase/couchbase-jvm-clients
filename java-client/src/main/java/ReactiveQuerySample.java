@@ -35,7 +35,7 @@ public class ReactiveQuerySample {
 
     Query query = SimpleQuery.create("select * from `travel-sample` limit 32000");
     QueryRequest request = new QueryRequest(Duration.ofSeconds(10), core.context(),
-      environment.retryStrategy(), environment.credentials(), query.encode());
+      environment.retryStrategy(), environment.credentials(), query.encode(null));
 
     Mono<ReactiveQueryResult> result = Mono.defer(() -> Mono.fromFuture(() -> {
       endpoint.send(request);

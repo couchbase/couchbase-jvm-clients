@@ -28,7 +28,7 @@ public class QueryAccessor {
 		Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
 		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 		QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy,
-						environment.get().credentials(), query.encode());
+						environment.get().credentials(), query.encode(opts.parameters()));
 		core.send(request);
 		return request.response();
 	}

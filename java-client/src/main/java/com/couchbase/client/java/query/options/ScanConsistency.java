@@ -35,13 +35,7 @@ public enum ScanConsistency {
 	 * The vector is used as a lower bound for the statements in the request.
 	 * If there are DML statements in the request, RYOW is also applied within the request.
 	 */
-	REQUEST_PLUS,
-	/**
-	 * This implements strong consistency per statement.
-	 * Before processing each statement, a current vector is obtained
-	 * and used as a lower bound for that statement.
-	 */
-	STATEMENT_PLUS;
+	REQUEST_PLUS;
 
 	public String n1ql() {
 		return this.name().toLowerCase();

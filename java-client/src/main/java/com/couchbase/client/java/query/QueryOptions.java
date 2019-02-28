@@ -23,6 +23,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValue;
 import com.couchbase.client.java.query.options.QueryProfile;
 import com.couchbase.client.java.query.options.ScanConsistency;
 
@@ -49,8 +50,13 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Integer scanCap;
   private Boolean readonly;
   private Boolean pretty;
+  private JsonValue parameters;
 
   private QueryOptions() {}
+
+  public static QueryOptions queryOptions() {
+    return new QueryOptions();
+  }
 
   /**
    * Raw parameters for the query
@@ -243,6 +249,16 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
+  public QueryOptions parameterized(final JsonObject named) {
+    this.parameters = named;
+    return this;
+  }
+
+  public QueryOptions parameterized(final JsonArray positional) {
+    this.parameters = positional;
+    return this;
+  }
+
 
   private String durationToN1qlFormat(Duration duration) {
     if (duration.getSeconds() > 0) {
@@ -296,6 +312,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
     private boolean pretty() { return pretty; }
 
+
+    public JsonValue parameters() {
+      return parameters;
+    }
+
     @Stability.Internal
     public void getN1qlParams(JsonObject queryJson) {
       if (!credentials.isEmpty()) {
@@ -330,9 +351,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
         queryJson.put("timeout", serverSideTimeout);
       }
 
-      if (scanWait != null
-              && (ScanConsistency.REQUEST_PLUS == scanConsistency
-              || ScanConsistency.STATEMENT_PLUS == scanConsistency)) {
+      if (scanWait != null && (ScanConsistency.REQUEST_PLUS == scanConsistency)) {
         queryJson.put("scan_wait", scanWait);
       }
 

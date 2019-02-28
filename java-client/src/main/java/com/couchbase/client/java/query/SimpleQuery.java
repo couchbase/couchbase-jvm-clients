@@ -70,16 +70,6 @@ public class SimpleQuery implements Query {
 	}
 
 	/**
-	 * Get the parameters set for the query
-	 *
-	 * @return positional or named values
-	 */
-	@Override
-	public JsonValue parameters() {
-		return null;
-	}
-
-	/**
 	 * Get if the query is prepared
 	 *
 	 * @return positional or named values

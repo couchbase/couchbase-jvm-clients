@@ -37,13 +37,6 @@ public interface Query {
 	String statement();
 
 	/**
-	 * Query positional or named parameters
-	 *
-	 * @return {@link JsonArray} for positional or {@link JsonValue} for named
-	 */
-	JsonValue parameters();
-
-	/**
 	 * Get if the query is prepared or not
 	 *
 	 * @return true if prepared else false
@@ -56,9 +49,9 @@ public interface Query {
 	 * @return encoded byte array
 	 */
 	@Stability.Internal
-	default byte[] encode() {
+	default byte[] encode(JsonValue parameters) {
 		JsonObject query = JsonObject.create().put("statement", this.statement());
-		JsonValue params = parameters();
+		JsonValue params = parameters;
 		if (params != null) {
 			if (params instanceof JsonArray && !((JsonArray) params).isEmpty()) {
 				query.put("args", (JsonArray) params);
