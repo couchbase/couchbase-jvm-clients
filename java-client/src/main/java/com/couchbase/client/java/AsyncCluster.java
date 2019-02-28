@@ -28,6 +28,7 @@ import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.SimpleQuery;
 import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
 import com.couchbase.client.java.search.AsyncSearchResult;
 import com.couchbase.client.java.search.SearchOptions;
@@ -83,16 +84,18 @@ public class AsyncCluster {
     return this.cluster;
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final Query query) {
-    return query(query, QueryOptions.DEFAULT);
+  public CompletableFuture<AsyncQueryResult> query(final String statement) {
+    return query(statement, QueryOptions.DEFAULT);
   }
 
-  public CompletableFuture<AsyncQueryResult> query(final Query query, final QueryOptions options) {
-    notNull(query, "Query");
+  public CompletableFuture<AsyncQueryResult> query(final String statement, final QueryOptions options) {
+    notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    return query.prepared() ? PreparedQueryAccessor.queryAsync(core, query, options, environment, this.cluster().getPreparedQueryCache()) :
-            QueryAccessor.queryAsync(core, query, options, environment);
+    Query query = SimpleQuery.create(statement);
+    return query.prepared()
+      ? PreparedQueryAccessor.queryAsync(core, query, options, environment, this.cluster().getPreparedQueryCache())
+      : QueryAccessor.queryAsync(core, query, options, environment);
   }
 
   /*

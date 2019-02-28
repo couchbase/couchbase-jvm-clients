@@ -79,12 +79,12 @@ public class Cluster {
   @Stability.Internal
   public LFUCache<String, PreparedQuery> getPreparedQueryCache() { return this.preparedQueryCache; }
 
-  public QueryResult query(final Query query) {
-    return query(query, QueryOptions.DEFAULT);
+  public QueryResult query(final String statement) {
+    return query(statement, QueryOptions.DEFAULT);
   }
 
-  public QueryResult query(final Query query, final QueryOptions options) {
-    return new QueryResult(block(async().query(query, options)));
+  public QueryResult query(final String statement, final QueryOptions options) {
+    return new QueryResult(block(async().query(statement, options)));
   }
 
   /*
