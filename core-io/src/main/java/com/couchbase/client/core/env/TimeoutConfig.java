@@ -185,8 +185,8 @@ public class TimeoutConfig {
       return this;
     }
 
-    public Builder queryStreamReleaseTimeout(Duration queryStreamReleaseTimeout) {
-      this.queryStreamReleaseTimeout = queryStreamReleaseTimeout;
+    public Builder queryStreamReleaseTimeout(long queryStreamReleaseTimeout) {
+      this.queryStreamReleaseTimeout = Duration.ofSeconds(queryStreamReleaseTimeout);
       return this;
     }
   }
