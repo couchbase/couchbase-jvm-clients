@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
@@ -20,6 +36,8 @@ import io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
+
 public class QueryRequest extends BaseRequest<QueryResponse> {
 
   private static final String URI = "/query";
@@ -28,7 +46,8 @@ public class QueryRequest extends BaseRequest<QueryResponse> {
   private final Credentials credentials;
 
   public QueryRequest(final Duration timeout, final CoreContext ctx,
-                      final RetryStrategy retryStrategy, Credentials credentials, final byte[] query) {
+                      final RetryStrategy retryStrategy, final Credentials credentials,
+                      final byte[] query) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.credentials = credentials;
@@ -43,29 +62,14 @@ public class QueryRequest extends BaseRequest<QueryResponse> {
     ByteBuf content = Unpooled.wrappedBuffer(query);
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
       URI, content);
-    request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-    request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-    request.headers().set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
+    request.headers()
+      .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+    request.headers()
+      .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+    request.headers()
+      .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
     addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
     return request;
   }
 
-  public static void addHttpBasicAuth(final HttpRequest request, final String user,
-                                      final String password) {
-
-    // if both user and password are null or empty, don't add http basic auth
-    // this is usually the case when certificate auth is used.
-    if ((user == null || user.isEmpty()) && (password == null || password.isEmpty())) {
-      return;
-    }
-
-    final String pw = password == null ? "" : password;
-
-    ByteBuf raw = Unpooled.buffer(user.length() + pw.length() + 1);
-    raw.writeBytes((user + ":" + pw).getBytes(CharsetUtil.UTF_8));
-    ByteBuf encoded = Base64.encode(raw, false);
-    request.headers().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
-    encoded.release();
-    raw.release();
-  }
 }

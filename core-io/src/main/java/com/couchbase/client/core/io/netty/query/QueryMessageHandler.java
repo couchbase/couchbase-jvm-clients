@@ -75,6 +75,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
    */
   private ByteBufJsonParser parser;
 
+  private String remoteHost;
+
   /**
    * The initialized state of the parser
    */
@@ -85,7 +87,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
    */
   private static final Charset CHARSET = CharsetUtil.UTF_8;
 
-  public QueryMessageHandler(ServiceContext serviceContext) {
+  public QueryMessageHandler(final ServiceContext serviceContext) {
     this.serviceContext = serviceContext;
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
       new JsonPointer("/results/-", new JsonPointerCB1() {
@@ -186,6 +188,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
+    remoteHost = remoteHttpHost(ctx);
     ctx.fireChannelActive();
   }
 
@@ -194,7 +197,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
     if (msg instanceof QueryRequest) {
       currentRequest = (QueryRequest) msg;
       FullHttpRequest encoded = ((QueryRequest) msg).encode();
-      encoded.headers().set(HttpHeaderNames.HOST, "127.0.0.1");
+      encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
       ctx.write(encoded);
       ctx.channel().config().setAutoRead(true);
     } else {
@@ -271,5 +274,17 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       ret = ((InetSocketAddress)address).getAddress().getHostAddress() + ((InetSocketAddress)address).getPort();
     }
     return ret;
+  }
+
+  private String remoteHttpHost(final ChannelHandlerContext ctx) {
+    final String remoteHost;
+    final SocketAddress addr = ctx.channel().remoteAddress();
+    if (addr instanceof InetSocketAddress) {
+      InetSocketAddress inetAddr = (InetSocketAddress) addr;
+      remoteHost = inetAddr.getAddress().getHostAddress() + ":" + inetAddr.getPort();
+    } else {
+      remoteHost = addr.toString();
+    }
+    return remoteHost;
   }
 }
