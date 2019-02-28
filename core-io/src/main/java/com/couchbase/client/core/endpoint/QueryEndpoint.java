@@ -25,26 +25,28 @@ import io.netty.handler.codec.http.HttpClientCodec;
 
 public class QueryEndpoint extends BaseEndpoint {
 
-  private final ServiceContext ctx;
-
-  public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
-                       final int port) {
+  public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY);
-    this.ctx = ctx;
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new QueryPipelineInitializer();
+    return new QueryPipelineInitializer(endpointContext());
   }
 
   public class QueryPipelineInitializer implements PipelineInitializer {
 
+    private final EndpointContext endpointContext;
+
+    QueryPipelineInitializer(EndpointContext endpointContext) {
+      this.endpointContext = endpointContext;
+    }
+
     @Override
     public void init(ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new QueryMessageHandler(ctx));
+      pipeline.addLast(new QueryMessageHandler(endpointContext));
     }
   }
 }

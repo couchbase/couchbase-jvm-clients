@@ -45,7 +45,10 @@ public enum CancellationReason {
    * The retry strategy decided that no more retries were allowed/possible.
    */
   NO_MORE_RETRIES,
-
+  /**
+   * The request was in-flight on the socket and the socket got closed.
+   */
+  IO_CLOSED_WHILE_IN_FLIGHT,
   /**
    * For a different reason. Make sure to emit an event so that debugging provides
    * further context.

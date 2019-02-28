@@ -16,10 +16,12 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.util.ResponseStatusConverter;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
@@ -51,6 +53,11 @@ import java.util.stream.Collectors;
 public class QueryMessageHandler extends ChannelDuplexHandler {
 
   /**
+   * The query endpoint context.
+   */
+  private final EndpointContext endpointContext;
+
+  /**
    * The current query request that is being handled by the query message handler
    */
   private QueryRequest currentRequest;
@@ -64,18 +71,20 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
    * The response content that is being received as chunks
    */
   private ByteBuf responseContent;
-
-  /**
-   * The query service context
-   */
-  private final ServiceContext serviceContext;
-
   /**
    * A Streaming json parser {@link ByteBufJsonParser}
    */
   private ByteBufJsonParser parser;
 
+  /**
+   * Holds the remote host for caching purposes.
+   */
   private String remoteHost;
+
+  /**
+   * The IO context once connected.
+   */
+  private IoContext ioContext;
 
   /**
    * The initialized state of the parser
@@ -87,91 +96,74 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
    */
   private static final Charset CHARSET = CharsetUtil.UTF_8;
 
-  public QueryMessageHandler(final ServiceContext serviceContext) {
-    this.serviceContext = serviceContext;
+  public QueryMessageHandler(final EndpointContext endpointContext) {
+    this.endpointContext = endpointContext;
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
-      new JsonPointer("/results/-", new JsonPointerCB1() {
-        @Override
-        public void call(final ByteBuf value) {
-          byte[] data = new byte[value.readableBytes()];
-            value.readBytes(data);
-            value.release();
-            if (!currentResponse.isCompleted()) {
-              if (currentResponse.rowRequestSize() != 0 || currentResponse.rows().getPending() == 0) {
-                currentResponse.rows().onNext(data);
-                currentResponse.rowRequestCompleted();
-              } else {
-                currentResponse.rows().onError(new RequestCanceledException(currentResponse.rowRequestSize() == 0 ? "No row requests" :
-                        "Current row responses are not consumed", currentRequest.context()));
-                currentResponse.complete();
-              }
+      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
+        byte[] data = new byte[value.readableBytes()];
+          value.readBytes(data);
+          value.release();
+          if (!currentResponse.isCompleted()) {
+            if (currentResponse.rowRequestSize() != 0 || currentResponse.rows().getPending() == 0) {
+              currentResponse.rows().onNext(data);
+              currentResponse.rowRequestCompleted();
+            } else {
+              currentResponse.rows().onError(
+                new RequestCanceledException(currentResponse.rowRequestSize() == 0
+                  ? "No row requests"
+                  : "Current row responses are not consumed", currentRequest.context()));
+              currentResponse.complete();
             }
-        }
-      }), new JsonPointer("/requestID/-", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+          }
+      }),
+      new JsonPointer("/requestID/-", (JsonPointerCB1) value -> {
         String requestID = value.toString(CHARSET);
         requestID = requestID.substring(1, requestID.length() - 1);
         value.release();
         currentResponse.requestId().onNext(requestID);
-      }
-    }), new JsonPointer("/errors/-", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/errors/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.errors().onNext(data);
-      }
-    }), new JsonPointer("/warnings/-", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.warnings().onNext(data);
-      }
-    }), new JsonPointer("/clientContextID", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
         String clientContextID = value.toString(CHARSET);
         clientContextID = clientContextID.substring(1, clientContextID.length() - 1);
         value.release();
         currentResponse.clientContextId().onNext(clientContextID);
-      }
-    }), new JsonPointer("/metrics", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/metrics", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.metrics().onNext(data);
-      }
-    }), new JsonPointer("/status", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/status", (JsonPointerCB1) value -> {
         String statusStr = value.toString(CHARSET);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
         currentResponse.queryStatus().onNext(statusStr);
-      }
-    }), new JsonPointer("/signature", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/signature", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.signature().onNext(data);
-      }
-    }), new JsonPointer("/profile", new JsonPointerCB1() {
-      @Override
-      public void call(final ByteBuf value) {
+      }),
+      new JsonPointer("/profile", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.profile().onNext(data);
-      }
-    })
+      })
     });
   }
 
@@ -180,8 +172,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
     if (currentResponse != null) {
       currentResponse.complete();
     } else if (currentRequest != null) {
-      currentRequest.fail(new RequestCanceledException("Closed channel" + getChannelIdentifier(ctx),
-              currentRequest.context()));
+      currentRequest.cancel(CancellationReason.IO_CLOSED_WHILE_IN_FLIGHT);
     }
     ctx.fireChannelInactive();
   }
@@ -189,6 +180,12 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     remoteHost = remoteHttpHost(ctx);
+    ioContext = new IoContext(
+      endpointContext,
+      ctx.channel().localAddress(),
+      ctx.channel().remoteAddress(),
+      endpointContext.bucket()
+    );
     ctx.fireChannelActive();
   }
 
@@ -201,16 +198,13 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       ctx.write(encoded);
       ctx.channel().config().setAutoRead(true);
     } else {
-      this.currentRequest.fail(new RequestCanceledException("Unknown request in channel" + getChannelIdentifier(ctx),
-              currentRequest.context()));
+      this.currentRequest.cancel(CancellationReason.OTHER);
     }
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    this.currentRequest.fail(new RequestCanceledException("Exception caught in channel" + getChannelIdentifier(ctx) +
-            Arrays.stream(cause.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")),
-            currentRequest.context()));
+    // todo: log exception caught
     ctx.close();
   }
 
@@ -220,7 +214,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       if (msg instanceof HttpResponse) {
         this.responseContent = ctx.alloc().buffer();
         this.currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse) msg).status().code()),
-                ctx.channel(), this.serviceContext.environment());
+                ctx.channel(), endpointContext.environment());
         this.currentRequest.succeed(this.currentResponse);
         this.isParserInitialized = false;
       }
@@ -251,31 +245,11 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   }
 
   /**
-   * The IP address and port info for the channel's local and remote socket endpoints used as channel identifier
+   * Calculates the remote host for caching so that it is set on each query request.
    *
-   * @param ctx {@link ChannelHandlerContext}
-   * @return socket address details as string
+   * @param ctx the channel handler context.
+   * @return the converted remote http host.
    */
-  private String getChannelIdentifier(final ChannelHandlerContext ctx) {
-    return "["+
-            "remote:" + getAddressAsString(ctx.channel().remoteAddress()) + "," +
-            "local:" + getAddressAsString(ctx.channel().localAddress()) + "]";
-  }
-
-  /**
-   * Get the socket address as a string
-   *
-   * @param address {@link SocketAddress}
-   * @return socket address as string
-   */
-  private String getAddressAsString(final SocketAddress address) {
-    String ret = address.toString();
-    if (address instanceof InetSocketAddress) {
-      ret = ((InetSocketAddress)address).getAddress().getHostAddress() + ((InetSocketAddress)address).getPort();
-    }
-    return ret;
-  }
-
   private String remoteHttpHost(final ChannelHandlerContext ctx) {
     final String remoteHost;
     final SocketAddress addr = ctx.channel().remoteAddress();

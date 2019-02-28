@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.env.TimeoutConfig;
@@ -90,7 +91,7 @@ class QueryMessageHandlerBackpressureTest {
    */
   @Test
   void requestRecordsExplicitly() throws Exception {
-    ServiceContext serviceCtx = mock(ServiceContext.class);
+    EndpointContext endpointCtx = mock(EndpointContext.class);
     Bootstrap client = new Bootstrap()
       .channel(LocalChannel.class)
       .group(new DefaultEventLoopGroup())
@@ -98,7 +99,7 @@ class QueryMessageHandlerBackpressureTest {
       .handler(new ChannelInitializer<LocalChannel>() {
         @Override
         protected void initChannel(LocalChannel ch) {
-          ch.pipeline().addLast(new HttpClientCodec(), new QueryMessageHandler(serviceCtx));
+          ch.pipeline().addLast(new HttpClientCodec(), new QueryMessageHandler(endpointCtx));
         }
       });
 
@@ -106,7 +107,7 @@ class QueryMessageHandlerBackpressureTest {
     CoreContext ctx = mock(CoreContext.class);
     CoreEnvironment env = mock(CoreEnvironment.class);
     UserAgent agent = new UserAgent("name", "0.0.0", Optional.empty(), Optional.empty());
-    when(serviceCtx.environment()).thenReturn(env);
+    when(endpointCtx.environment()).thenReturn(env);
     when(ctx.environment()).thenReturn(env);
     when(env.userAgent()).thenReturn(agent);
     when(env.timer()).thenReturn(Timer.create());
