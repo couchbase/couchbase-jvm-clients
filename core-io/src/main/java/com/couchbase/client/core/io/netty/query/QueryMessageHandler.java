@@ -17,6 +17,8 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -41,8 +43,6 @@ import java.io.EOFException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 /**
  * This handler is responsible for writing Query requests and completing their associated responses
@@ -104,15 +104,13 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
           value.readBytes(data);
           value.release();
           if (!currentResponse.isCompleted()) {
-            if (currentResponse.rowRequestSize() != 0 || currentResponse.rows().getPending() == 0) {
+            if (currentResponse.rowRequestSize() != 0 && currentResponse.rows().getPending() == 0) {
               currentResponse.rows().onNext(data);
               currentResponse.rowRequestCompleted();
             } else {
-              currentResponse.rows().onError(
-                new RequestCanceledException(currentResponse.rowRequestSize() == 0
-                  ? "No row requests"
-                  : "Current row responses are not consumed", currentRequest.context()));
-              currentResponse.complete();
+              currentResponse.completeExceptionally(
+                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
+                  : "Current row responses are not consumed"));
             }
           }
       }),
@@ -235,9 +233,15 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
           }
           if (last) {
             this.responseContent.clear();
-            this.currentResponse.complete();
+            this.currentResponse.completeSuccessfully();
           }
         }
+      }
+    } catch(Exception ex) {
+      if (this.currentResponse != null) {
+        this.currentResponse.completeExceptionally(ex);
+      } else {
+        currentRequest.cancel(CancellationReason.IO_CLOSED_WHILE_IN_FLIGHT);
       }
     } finally {
       ReferenceCountUtil.release(msg);
