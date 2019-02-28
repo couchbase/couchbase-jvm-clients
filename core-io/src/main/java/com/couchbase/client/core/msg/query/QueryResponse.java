@@ -17,14 +17,12 @@
 package com.couchbase.client.core.msg.query;
 
 import static java.time.temporal.ChronoUnit.*;
-
-import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.TimeoutConfig;
+import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 import io.netty.channel.Channel;
@@ -77,8 +75,14 @@ public class QueryResponse extends BaseResponse {
           this.channel.config().setAutoRead(true);
         }
     });
+    scheduleQueryStreamTimeout();
+  }
+
+  private void scheduleQueryStreamTimeout() {
     this.environment.timer().schedule(() -> {
       if (this.rowRequestSize.get() == 0) {
+        this.completeExceptionally(new QueryStreamException("No rows were requested within " +
+                this.environment.timeoutConfig().queryStreamReleaseTimeout().getSeconds() + "s"));
         this.complete();
       }
     }, this.environment.timeoutConfig().queryStreamReleaseTimeout());
@@ -88,16 +92,12 @@ public class QueryResponse extends BaseResponse {
   public void rowRequestCompleted() {
     if(this.rowRequestSize.decrementAndGet() == 0) {
       this.channel.config().setAutoRead(false);
-      this.environment.timer().schedule(() -> {
-        if (this.lastRequestTimeStamp.until(Instant.now(),SECONDS) >= 5) {
-          this.complete();
-        }
-      }, this.environment.timeoutConfig().queryStreamReleaseTimeout());
+      scheduleQueryStreamTimeout();
     }
   }
 
   @Stability.Internal
-  public void complete() {
+  public void completeSuccessfully() {
     this.requestIdProcessor.onComplete();
     this.clientContextIdProcessor.onComplete();
     this.metricsProcessor.onComplete();
@@ -107,6 +107,25 @@ public class QueryResponse extends BaseResponse {
     this.warningsProcessor.onComplete();
     this.profileProcessor.onComplete();
     this.signatureProcessor.onComplete();
+    this.complete();
+  }
+
+  @Stability.Internal
+  public void completeExceptionally(Throwable t) {
+    this.requestIdProcessor.onError(t);
+    this.clientContextIdProcessor.onError(t);
+    this.metricsProcessor.onError(t);
+    this.queryStatusProcessor.onError(t);
+    this.rowsProcessor.onError(t);
+    this.errorsProcessor.onError(t);
+    this.warningsProcessor.onError(t);
+    this.profileProcessor.onError(t);
+    this.signatureProcessor.onError(t);
+    this.complete();
+  }
+
+  @Stability.Internal
+  public void complete() {
     this.completed.set(true);
     this.channel.config().setAutoRead(true);
   }
