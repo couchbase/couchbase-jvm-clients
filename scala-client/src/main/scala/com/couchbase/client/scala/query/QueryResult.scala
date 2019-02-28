@@ -18,7 +18,6 @@ package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.msg.query.QueryResponse
 import com.couchbase.client.scala.codec.Conversions
-import com.couchbase.client.scala.document._
 
 import scala.util.Try
 
@@ -69,28 +68,29 @@ case class QueryRow(_content: Array[Byte]) {
 //  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 }
 
-class QueryResult(_result: QueryConsumer) {
-  def rowsIt: Iterator[QueryRow] = {
-    _result.rows
-      .view // make it lazy so we don't do the entire map in one go
-      .map(row => QueryRow(row.data()))
-      .iterator
-  }
-
-  def errorsIt: Iterator[QueryRow] = {
-    _result.errors
-      .view // make it lazy so we don't do the entire map in one go
-      .map(row => QueryRow(row.data()))
-      .iterator
-  }
-
-  def rows: Seq[QueryRow] = {
-    _result.rows
-      .map(row => QueryRow(row.data()))
-  }
-
-  def errors: Seq[QueryRow] = {
-    _result.errors
-      .map(row => QueryRow(row.data()))
-  }
-}
+class QueryResult() {}
+//class QueryResult(_result: QueryConsumer) {
+//  def rowsIt: Iterator[QueryRow] = {
+//    _result.rows
+//      .view // make it lazy so we don't do the entire map in one go
+//      .map(row => QueryRow(row.data()))
+//      .iterator
+//  }
+//
+//  def errorsIt: Iterator[QueryRow] = {
+//    _result.errors
+//      .view // make it lazy so we don't do the entire map in one go
+//      .map(row => QueryRow(row.data()))
+//      .iterator
+//  }
+//
+//  def rows: Seq[QueryRow] = {
+//    _result.rows
+//      .map(row => QueryRow(row.data()))
+//  }
+//
+//  def errors: Seq[QueryRow] = {
+//    _result.errors
+//      .map(row => QueryRow(row.data()))
+//  }
+//}

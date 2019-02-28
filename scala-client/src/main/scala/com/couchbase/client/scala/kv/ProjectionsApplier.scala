@@ -5,6 +5,7 @@ import com.couchbase.client.scala.json._
 import io.netty.util.CharsetUtil
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 private[scala] object ProjectionsApplier {
@@ -28,7 +29,7 @@ private[scala] object ProjectionsApplier {
         val out = try { if (str.contains('.')) str.toDouble else str.toLong }
         catch {
           // Try it as a number and fallback to a string
-          case err => str
+          case NonFatal(_) => str
         }
         Success(out)
       case _ =>

@@ -9,7 +9,7 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.query.{QueryConsumer, QueryResult}
+import com.couchbase.client.scala.query.{QueryResult}
 import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
@@ -72,7 +72,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
     validations match {
       case Failure(err) => Future.failed(err)
       case Success(_) =>
-        val result = new QueryConsumer()
+//        val result = new QueryConsumer()
 
         // TODO BLOCKED proper jackson encoding with options
         val query = ("{\"statement\":\"" + statement + "\"}").getBytes(CharsetUtil.UTF_8)
@@ -87,18 +87,19 @@ class AsyncCluster(environment: => ClusterEnvironment)
           case _ => environment.retryStrategy()
         }
 
-        val request = new QueryRequest(timeout,
-          core.context(),
-          retryStrategy,
-          environment.credentials(),
-          query,
-          result)
+        val request: QueryRequest = null
+//          = new QueryRequest(timeout,
+//          core.context(),
+//          retryStrategy,
+//          environment.credentials(),
+//          query,
+//          result)
 
         core.send(request)
 
         FutureConverters.toScala(request.response())
           .map(response => {
-            new QueryResult(result)
+            new QueryResult()
           })
     }
   }
