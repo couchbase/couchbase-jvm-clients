@@ -7,14 +7,13 @@ import reactor.core.scala.scheduler.ExecutionContextScheduler
 import reactor.core.scheduler.Scheduler
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 
 
 class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnvironment(builder) {
   override protected def defaultAgentTitle(): String = "scala"
   override protected def agentPackage(): Package = classOf[ClusterEnvironment].getPackage
-
-
 }
 
 object ClusterEnvironment {
@@ -31,6 +30,10 @@ object ClusterEnvironment {
 
   class Builder(credentials: Credentials) extends CoreEnvironment.Builder[Builder](credentials) {
     override def build = new ClusterEnvironment(scheduler(defaultScheduler))
+
+    // None of the builder methods throw currently on invalid config (e.g. a minimum compression size < 0).  If they do,
+    // the exception will instead be stored and raised in this Try.
+    def buildSafe = Try(build)
   }
 
   def create(connectionString: String, username: String, password: String) = {

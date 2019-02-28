@@ -40,7 +40,7 @@
 //    val bucket = cluster.bucket("bucket")
 //
 //    val coll = bucket.scope("scope").collection("users")
-//    val coll2 = bucket.defaultCollection()
+//    val coll2 = bucket.defaultCollection
 //
 //    // (type inference)
 //

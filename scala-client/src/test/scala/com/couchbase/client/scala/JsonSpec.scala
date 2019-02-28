@@ -79,14 +79,11 @@ object User {
 class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   private val DocId = "doc"
-  private val (cluster, bucket, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection()
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+  private
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection
+
 
   before {
     // TODO bucketManager

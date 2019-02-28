@@ -18,14 +18,10 @@ import scala.util.{Failure, Success}
   */
 class JsonInteropSpec extends FunSuite with Matchers with BeforeAndAfterAll with BeforeAndAfter with GeneratorDrivenPropertyChecks {
 
-  private val (_, _, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection()
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection
+
 
   before {
   }

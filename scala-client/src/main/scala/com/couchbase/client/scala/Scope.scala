@@ -29,12 +29,13 @@ class Scope(val async: AsyncScope,
 
   def name = async.name
 
-  def collection(name: String): Try[Collection] = {
+  def collection(name: String): Collection = {
     AsyncUtils.block(async.collection(name))
       .map(asyncCollection => new Collection(asyncCollection, bucketName))
+      .get
   }
 
-  def defaultCollection() = {
+  def defaultCollection = {
     collection(Defaults.DefaultCollection)
   }
 }

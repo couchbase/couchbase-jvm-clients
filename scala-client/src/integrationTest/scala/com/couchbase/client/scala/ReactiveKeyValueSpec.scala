@@ -13,14 +13,10 @@ import scala.util.control.NonFatal
 
 
 class ReactiveKeyValueSpec extends FunSuite {
-  val (cluster, bucket, blocking) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    collBlocking <- bucket.defaultCollection()
-    } yield (cluster, bucket, collBlocking)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val blocking = bucket.defaultCollection
+
   val coll = blocking.reactive
 
   def wrap[T](in: ScalaMono[T]): Try[T] = {
@@ -282,7 +278,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val coll: ReactiveCollection = ReactiveCluster.connect("localhost", "Administrator", "password")
       .flatMap(cluster => cluster.bucket("default"))
       .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
-      .flatMap(scope => scope.defaultCollection())
+      .flatMap(scope => scope.defaultCollection)
       .block()
   }
 
@@ -291,7 +287,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val coll: Future[AsyncCollection] = AsyncCluster.connect("localhost", "Administrator", "password")
       .flatMap(cluster => cluster.bucket("default"))
       .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
-      .flatMap(scope => scope.defaultCollection())
+      .flatMap(scope => scope.defaultCollection)
 
     val c: AsyncCollection = Await.result(coll, Duration.Inf)
   }

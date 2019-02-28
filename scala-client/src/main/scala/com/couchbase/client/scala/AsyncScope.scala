@@ -16,7 +16,7 @@ class AsyncScope(scopeName: String,
                 (implicit ec: ExecutionContext) {
   def name = scopeName
 
-  def defaultCollection(): Future[AsyncCollection] = collection(Defaults.DefaultCollection)
+  def defaultCollection: Future[AsyncCollection] = collection(Defaults.DefaultCollection)
 
   def collection(name: String): Future[AsyncCollection] = {
     if (name == Defaults.DefaultCollection && scopeName == Defaults.DefaultScope) {

@@ -10,18 +10,15 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 class MutationTokensSpec extends FunSuite {
-  val (cluster, bucket, coll) = (for {
-    env <- Try(ClusterEnvironment
+
+    val env = ClusterEnvironment
       .builder("localhost", "Administrator", "password")
       .ioConfig(IoConfig.mutationTokensEnabled(true))
-      .build())
-    cluster <- Cluster.connect(env)
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection()
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+      .build
+    val cluster = Cluster.connect(env)
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection
+
 
   test("insert") {
     val docId = TestUtils.docId()

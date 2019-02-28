@@ -115,23 +115,14 @@ object AsyncCluster {
   private implicit val ec = Cluster.ec
 
   def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
-    Cluster.connect(connectionString, username, password) match {
-      case Success(cluster) => Future { cluster.async }
-      case Failure(err) => Future.failed(err)
-    }
+    Future { Cluster.connect(connectionString, username, password).async }
   }
 
   def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
-    Cluster.connect(connectionString, credentials) match {
-      case Success(cluster) => Future { cluster.async }
-      case Failure(err) => Future.failed(err)
-    }
+    Future { Cluster.connect(connectionString, credentials).async }
   }
 
   def connect(environment: ClusterEnvironment): Future[AsyncCluster] = {
-    Cluster.connect(environment) match {
-      case Success(cluster) => Future { cluster.async }
-      case Failure(err) => Future.failed(err)
-    }
+    Future { Cluster.connect(environment).async }
   }
 }

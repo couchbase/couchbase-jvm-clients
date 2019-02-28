@@ -10,8 +10,8 @@ class ReactiveBucket(val async: AsyncBucket)
     Mono.fromFuture(async.scope(name)).map(v => new ReactiveScope(v, async.name))
   }
 
-  def defaultCollection(): Mono[ReactiveCollection] = {
-    scope(Defaults.DefaultScope).flatMap(v => v.defaultCollection())
+  def defaultCollection: Mono[ReactiveCollection] = {
+    scope(Defaults.DefaultScope).flatMap(v => v.defaultCollection)
   }
 
   def collection(name: String): Mono[ReactiveCollection] = {

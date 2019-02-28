@@ -37,10 +37,10 @@
 //
 //
 //    val (cluster, bucket, scope, coll) = (for {
-//      cluster <- Cluster.connect("localhost", "Administrator", "password")
-//      bucket <- cluster.bucket("default")
-//      scope <- bucket.scope("scope")
-//      coll <- scope.collection("people")
+//      val cluster = Cluster.connect("localhost", "Administrator", "password")
+//      val bucket = cluster.bucket("default")
+//      val scope = bucket.scope("scope")
+//      val coll = scope.collection("people")
 //    } yield (cluster, bucket, scope, coll)) match {
 //      case Success(result) => result
 //      case Failure(err) => throw new RuntimeException()
@@ -173,12 +173,12 @@
 //////    implicit val ec = ExecutionContext.Implicits.global
 ////
 ////    val (cluster, bucket, scope, coll) = (for {
-////      cluster <- Cluster.connect("localhost", "Administrator", "password")
-////      bucket <- cluster.bucket("default")
+////      val cluster = Cluster.connect("localhost", "Administrator", "password")
+////      val bucket = cluster.bucket("default")
 ////      bucketAsync = bucket.async
-////      scope <- bucket.scope("scope")
+////      val scope = bucket.scope("scope")
 ////      scopeAsync = scope.async
-////      coll <- scope.collection("people")
+////      val coll = scope.collection("people")
 ////      collAsync = coll.async
 ////    } yield (cluster, bucketAsync, scopeAsync, collAsync)) match {
 ////      case Success(result) => result

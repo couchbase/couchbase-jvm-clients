@@ -8,14 +8,11 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 class BinarySpec extends FunSuite {
-  val (cluster, bucket, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection().map(_.binary)
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection.binary
+
 
   private val reactive = coll.reactive
   private val async = coll.async

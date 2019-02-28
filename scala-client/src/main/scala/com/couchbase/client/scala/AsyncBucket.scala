@@ -15,8 +15,8 @@ class AsyncBucket(val name: String,
     }
   }
 
-  def defaultCollection(): Future[AsyncCollection] = {
-    scope(Defaults.DefaultScope).flatMap(_.defaultCollection())
+  def defaultCollection: Future[AsyncCollection] = {
+    scope(Defaults.DefaultScope).flatMap(_.defaultCollection)
   }
 
   def collection(collection: String): Future[AsyncCollection] = {

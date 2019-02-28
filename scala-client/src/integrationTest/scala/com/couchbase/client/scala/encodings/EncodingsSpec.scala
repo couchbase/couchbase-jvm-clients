@@ -11,14 +11,11 @@ import org.scalatest.FunSuite
 import scala.util.{Failure, Success}
 
 class EncodingsSpec extends FunSuite {
-  val (cluster, bucket, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection()
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection
+
 
 
   def getContent(docId: String): ujson.Obj = {

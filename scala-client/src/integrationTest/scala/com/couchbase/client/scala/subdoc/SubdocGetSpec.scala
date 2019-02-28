@@ -13,14 +13,11 @@ import com.couchbase.client.scala.kv.LookupInSpec._
 import io.netty.util.CharsetUtil
 
 class SubdocGetSpec extends FunSuite {
-  val (cluster, bucket, coll) = (for {
-    cluster <- Cluster.connect("localhost", "Administrator", "password")
-    bucket <- cluster.bucket("default")
-    coll <- bucket.defaultCollection()
-  } yield (cluster, bucket, coll)) match {
-    case Success(result) => result
-    case Failure(err) => throw err
-  }
+
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
+    val coll = bucket.defaultCollection
+
 
   test("no commands") {
     val docId = TestUtils.docId()

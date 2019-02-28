@@ -34,9 +34,10 @@ class Cluster(env: => ClusterEnvironment)
   val async = new AsyncCluster(env)
   val reactive = new ReactiveCluster(async)
 
-  def bucket(name: String) = {
+  def bucket(name: String): Bucket = {
     AsyncUtils.block(async.bucket(name))
       .map(new Bucket(_))
+      .get
   }
 
   import DurationConversions._
@@ -59,16 +60,16 @@ class Cluster(env: => ClusterEnvironment)
 object Cluster {
   private[scala] implicit val ec = ClusterEnvironment.ec
 
-  def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
+  def connect(connectionString: String, username: String, password: String): Cluster = {
     val env = ClusterEnvironment.create(connectionString, username, password)
-    Try(new Cluster(env))
+    new Cluster(env)
   }
 
-  def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
-    Try(new Cluster(ClusterEnvironment.create(connectionString, credentials)))
+  def connect(connectionString: String, credentials: Credentials): Cluster = {
+    new Cluster(ClusterEnvironment.create(connectionString, credentials))
   }
 
-  def connect(environment: ClusterEnvironment): Try[Cluster] = {
-    Try(new Cluster(environment))
+  def connect(environment: ClusterEnvironment): Cluster = {
+    new Cluster(environment)
   }
 }

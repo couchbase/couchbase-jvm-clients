@@ -6,7 +6,7 @@ import scala.concurrent.ExecutionContext
 
 class ReactiveScope(async: AsyncScope, bucketName: String)
                    (implicit ec: ExecutionContext){
-  def defaultCollection(): Mono[ReactiveCollection] = {
+  def defaultCollection: Mono[ReactiveCollection] = {
     collection(Defaults.DefaultCollection)
   }
 

@@ -24,17 +24,18 @@ import scala.concurrent.ExecutionContext
 
 class Bucket(val async: AsyncBucket)
             (implicit ec: ExecutionContext) {
-  def collection(scopeName: String, collection: String) = {
-    scope(Defaults.DefaultScope).flatMap(_.collection(collection))
+  def collection(scopeName: String, collection: String): Collection = {
+    scope(Defaults.DefaultScope).collection(collection)
   }
 
-  def defaultCollection() = {
-    scope(Defaults.DefaultScope).flatMap(_.defaultCollection())
+  def defaultCollection: Collection = {
+    scope(Defaults.DefaultScope).defaultCollection
   }
 
-  def scope(name: String) = {
+  def scope(name: String): Scope = {
     AsyncUtils.block(async.scope(name))
       .map(asyncScope => new Scope(asyncScope, async.name))
+      .get
   }
 
   // TODO BLOCKED
