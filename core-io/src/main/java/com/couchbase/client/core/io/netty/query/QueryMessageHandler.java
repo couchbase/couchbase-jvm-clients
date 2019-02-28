@@ -177,7 +177,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   public void channelInactive(final ChannelHandlerContext ctx) {
     if (currentResponse != null) {
       currentResponse.complete();
-    } else {
+    } else if (currentRequest != null) {
       currentRequest.fail(new RequestCanceledException("Closed channel" + getChannelIdentifier(ctx),
               currentRequest.context()));
     }
