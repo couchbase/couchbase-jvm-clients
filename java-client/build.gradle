@@ -105,16 +105,10 @@ publishing {
       pom.withXml {
         def dependenciesNode = asNode().appendNode('dependencies')
         configurations.shadow.allDependencies.each {
-          if (it.name == 'reactor-core' ||
-              it.name == 'opentracing-api' ||
-              it.name == 'slf4j-api' ||
-              it.name == 'reactive-streams'
-          ) {
-            def dependencyNode = dependenciesNode.appendNode('dependency')
-            dependencyNode.appendNode('groupId', it.group)
-            dependencyNode.appendNode('artifactId', it.name)
-            dependencyNode.appendNode('version', it.version)
-          }
+          def dependencyNode = dependenciesNode.appendNode('dependency')
+          dependencyNode.appendNode('groupId', it.group)
+          dependencyNode.appendNode('artifactId', it.name)
+          dependencyNode.appendNode('version', it.version)
         }
       }
 
@@ -205,16 +199,4 @@ shadowJar {
   relocate 'org.LatencyUtils', 'com.couchbase.client.core.deps.org.LatencyUtils'
   relocate 'org.jctools', 'com.couchbase.client.core.deps.org.jctools'
   relocate 'org.iq80.snappy', 'com.couchbase.client.core.deps.org.iq80.snappy'
-
-
 }
-
-/*
-import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
-
-task relocateShadowJar(type: ConfigureShadowRelocation) {
-  target = tasks.shadowJar
-  prefix = "com.couchbase.client.java.deps"
-}
-
-tasks.shadowJar.dependsOn tasks.relocateShadowJar*/
