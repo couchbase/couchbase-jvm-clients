@@ -85,9 +85,60 @@ publishing {
   publications {
     maven(MavenPublication) {
       from components.java
-
       artifact sourceJar
       artifact packageJavadoc
+
+      pom {
+        name = 'Couchbase JVM Core IO'
+        description = 'The official Couchbase JVM Core IO Library'
+        url = 'https://couchbase.com'
+        licenses {
+          license {
+            name = 'The Apache Software License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+        organization {
+          name = 'Couchbase, Inc.'
+          url = 'https://couchbase.com'
+        }
+        scm {
+          url = 'https://github.com/couchbase/couchbase-jvm-clients'
+          connection = 'scm:git:git://github.com/couchbase/couchbase-jvm-clients'
+          developerConnection = 'scm:git:git://github.com/couchbase/couchbase-jvm-clients'
+        }
+        issueManagement {
+          system = 'Couchbase JIRA'
+          url = 'https://issues.couchbase.com/projects/JVMCBC'
+        }
+        developers {
+          developer {
+            id = 'daschl'
+            name = 'Michael Nitschinger'
+            email = 'michael.nitschinger@couchbase.com'
+          }
+          developer {
+            id = 'programmatix'
+            name = 'Graham Pople'
+            email = 'graham.pople@couchbase.com'
+          }
+          developer {
+            id = 'subalakr'
+            name = 'Subhashni Balakrishnan'
+            email = 'subhashni@couchbase.com'
+          }
+          developer {
+            id = 'dnault'
+            name = 'David Nault'
+            email = 'david.nault@couchbase.com'
+          }
+          developer {
+            id = 'avsej'
+            name = 'Sergey Avseyev'
+            email = 'sergey@couchbase.com'
+          }
+        }
+      }
     }
   }
 }
