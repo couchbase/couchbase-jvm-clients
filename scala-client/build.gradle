@@ -84,29 +84,43 @@ publishing {
 //      artifact sourcesLearn Git and GitHub without any code!
 
 //      artifact javadocJar
+
+
       pom {
-        name = 'scala-client'
-        description = 'The Scala Couchbase SDK'
-        url = 'https://github.com/couchbaselabs/couchbase-jvm-clients'
+        name = 'Couchbase Scala SDK'
+        description = 'The official Couchbase Scala SDK'
+        url = 'https://couchbase.com'
         licenses {
-          // TODO
           license {
-            name = 'The Apache License, Version 2.0'
+            name = 'The Apache Software License, Version 2.0'
             url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
           }
         }
+        organization {
+          name = 'Couchbase, Inc.'
+          url = 'https://couchbase.com'
+        }
+        scm {
+          url = 'https://github.com/couchbase/couchbase-jvm-clients'
+          connection = 'scm:git:git://github.com/couchbase/couchbase-jvm-clients'
+          developerConnection = 'scm:git:git://github.com/couchbase/couchbase-jvm-clients'
+        }
+        issueManagement {
+          system = 'Couchbase JIRA'
+          url = 'https://issues.couchbase.com/projects/SCBC'
+        }
         developers {
           developer {
-            id = 'grahamp'
+            id = 'programmatix'
             name = 'Graham Pople'
             email = 'graham.pople@couchbase.com'
           }
+          developer {
+            id = 'daschl'
+            name = 'Michael Nitschinger'
+            email = 'michael.nitschinger@couchbase.com'
+          }
         }
-//        scm {
-//          connection = 'scm:git:git://example.com/my-library.git'
-//          developerConnection = 'scm:git:ssh://example.com/my-library.git'
-//          url = 'http://example.com/my-library/'
-//        }
       }
     }
   }
