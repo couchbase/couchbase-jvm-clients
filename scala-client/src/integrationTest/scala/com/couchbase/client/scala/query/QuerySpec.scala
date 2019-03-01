@@ -81,16 +81,15 @@ class QuerySpec extends FunSuite {
     }
   }
 
-//  test("error") {
-//    cluster.query("""select "hello world" as Greeting""") match {
-//      case Success(result) =>
-//        // TODO BLOCKED should any errors result in fail?
-//        assert(result.rows.size == 0)
-//        // TODO BLOCKED expose errors better, e.g. not just the raw JSON
-//        assert(result.errors.size == 1)
-////        assert(rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
-//      case Failure(err) => throw err
-//    }
-//  }
+  test("error due to bad syntax") {
+    cluster.query("""select*from""") match {
+      case Success(result) =>
+        assert(false)
+      case Failure(QueryServiceException(errors)) =>
+        println(errors)
+      case Failure(err) =>
+        throw err
+    }
+  }
 
 }

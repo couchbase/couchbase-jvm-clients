@@ -11,7 +11,7 @@ import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
-import com.couchbase.client.scala.query.{QueryResult, QueryRow}
+import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import io.netty.util.CharsetUtil
@@ -106,18 +106,30 @@ class AsyncCluster(environment: => ClusterEnvironment)
             val out: JavaMono[QueryResult] = javaMono
               .flatMap(response => {
 
-                // Keep things as the Java collections they're returned as, no point converting to Scala collections
-                // until we have to
                 val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
                 val errorsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
 
                 val ret: JavaMono[QueryResult] = response
                   .rows().collectList().doOnNext(r => rowsKeeper.set(r))
-                  .then(response.errors().collectList().doOnNext(e => errorsKeeper))
-                  .map(_ => {
+                  .then(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
+                  .flatMap(_ => {
                     val rows = rowsKeeper.get().asScala.map(QueryRow)
 
-                    QueryResult(rows, null)
+                    val result = QueryResult(rows)
+
+                    val out: JavaMono[QueryResult] = Option(errorsKeeper.get()).map(_.asScala.map(QueryError)) match {
+                      case Some(err) =>
+                        if (err.nonEmpty) {
+                          JavaMono.error(QueryServiceException(err))
+                        }
+                        else {
+                          JavaMono.just(result)
+                        }
+                      case _ =>
+                        JavaMono.just(result)
+                    }
+
+                    out
                   })
 
                 ret
