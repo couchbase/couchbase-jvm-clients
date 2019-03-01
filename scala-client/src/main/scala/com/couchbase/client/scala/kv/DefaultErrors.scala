@@ -17,8 +17,8 @@ object DefaultErrors {
       case ResponseStatus.OUT_OF_MEMORY => new CouchbaseOutOfMemoryException()
       case ResponseStatus.DURABILITY_INVALID_LEVEL => new DurabilityLevelNotAvailableException()
       case ResponseStatus.DURABILITY_IMPOSSIBLE => new DurabilityImpossibleException()
-      case ResponseStatus.SYNC_WRITE_AMBIGUOUS => new DurableWriteInProgressException()
-      case ResponseStatus.SYNC_WRITE_IN_PROGRESS => new DurabilityAmbiguous()
+      case ResponseStatus.SYNC_WRITE_AMBIGUOUS => new DurabilityAmbiguous()
+      case ResponseStatus.SYNC_WRITE_IN_PROGRESS => new DurableWriteInProgressException()
 
       // Any other error should not make it to this generic error handling
         // NOT_MY_VBUCKET - handled at a lower level by retrying the request

@@ -21,15 +21,17 @@ import com.couchbase.client.scala.codec.Conversions
 
 import scala.util.Try
 
-// TODO BLOCKED MVP
-class N1qlResult[T] {
-  def rows(): Iterable[T] = null
-  def allRows(): List[T] = null
-  def status(): String = null
-  def requestId(): String = null
-  def clientContextId(): String = null
-  // TODO BLOCKED other params
+case class QueryResult(
+  rows: Seq[QueryRow],
+  _errors: Seq[Array[Byte]],
+//  status: String,
+//  requestId: String,
+//  clientContextId: String
+  // TODO other params
+                      ) {
+//  def errors: Seq[String]
 }
+
 
 case class QueryRow(_content: Array[Byte]) {
 
@@ -39,58 +41,4 @@ case class QueryRow(_content: Array[Byte]) {
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     ev.decode(_content, Conversions.JsonFlags)
   }
-
-//  def value: JsonObject = ???
-//
-//  def contentAs[T]: T = ???
-//
-//  def selectDynamic(name: String): GetSelecter = ???
-//
-//  def contentAsObject: JsonObject = contentAs[JsonObject]
-//
-//  def contentAsObject(path: String): JsonObject = contentAs[JsonObject](path)
-//
-//  def contentAsArray: JsonArray = contentAs[JsonArray]
-//
-//  def contentAsArray(path: String): JsonArray = contentAs[JsonArray](path)
-//
-//  def content(idx: Int): GetSelecter = ???
-//
-//  def content(path: String): GetSelecter = ???
-//
-//  def contentAs[T]: T = ???
-//
-//  def contentAs[T](path: String): T = ???
-//
-//  def contentAs[T](path: String, decoder: Array[Byte] => T): T = ???
-//
-//  def selectDynamic(name: String): GetSelecter = GetSelecter(this, PathElements(List(PathObjectOrField(name))))
-//  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(this, PathElements(List(PathArray(name, index))))
 }
-
-class QueryResult() {}
-//class QueryResult(_result: QueryConsumer) {
-//  def rowsIt: Iterator[QueryRow] = {
-//    _result.rows
-//      .view // make it lazy so we don't do the entire map in one go
-//      .map(row => QueryRow(row.data()))
-//      .iterator
-//  }
-//
-//  def errorsIt: Iterator[QueryRow] = {
-//    _result.errors
-//      .view // make it lazy so we don't do the entire map in one go
-//      .map(row => QueryRow(row.data()))
-//      .iterator
-//  }
-//
-//  def rows: Seq[QueryRow] = {
-//    _result.rows
-//      .map(row => QueryRow(row.data()))
-//  }
-//
-//  def errors: Seq[QueryRow] = {
-//    _result.errors
-//      .map(row => QueryRow(row.data()))
-//  }
-//}

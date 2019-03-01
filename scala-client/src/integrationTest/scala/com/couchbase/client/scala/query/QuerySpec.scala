@@ -1,6 +1,7 @@
 package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 
@@ -35,36 +36,52 @@ class QuerySpec extends FunSuite {
     (docId, insertResult.mutationToken)
   }
 
-  // fails, fix when have full query support
-//  ignore("hello world") {
-//    cluster.query("""select 'hello world' as Greeting""") match {
-//      case Success(result) =>
-//        assert(result.rows.size == 1)
-//        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
-//      case Failure(err) => throw err
-//    }
-//  }
-//
-//  // times out, fix when have full query support
-//  ignore("read 2 docs use keys") {
-//    val (docId1, _) = prepare(ujson.Obj("name" -> "Andy"))
-//    val (docId2, _) = prepare(ujson.Obj("name" -> "Beth"))
-//
-//    val statement =s"""select name from default use keys ['$docId1', '$docId2'];"""
-////    val statement = s"""SELECT * FROM default USE KEYS '$docId1';"""
-//    cluster.query(statement) match {
-//      case Success(result) =>
-//        val rows = result.rows.toSeq
-//        assert(rows.size == 2)
-//        assert(rows.head.contentAs[ujson.Obj].get("name").str == """Andy""")
-//        assert(rows.last.contentAs[ujson.Obj].get("name").str == """Beth""")
-//      case Failure(err) =>
-//        throw err
-//    }
-//  }
-//
-//  // test when query ready
-//  ignore("error") {
+  test("hello world") {
+    cluster.query("""select 'hello world' as Greeting""") match {
+      case Success(result) =>
+        assert(result.rows.size == 1)
+        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+      case Failure(err) => throw err
+    }
+  }
+
+  test("hello world content as JsonObject") {
+    cluster.query("""select 'hello world' as Greeting""") match {
+      case Success(result) =>
+        assert(result.rows.size == 1)
+        assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world")
+      case Failure(err) => throw err
+    }
+  }
+
+  test("hello world with quotes") {
+    cluster.query("""select "hello world" as Greeting""") match {
+      case Success(result) =>
+        assert(result.rows.size == 1)
+        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+      case Failure(err) => throw err
+    }
+  }
+
+
+  test("read 2 docs use keys") {
+    val (docId1, _) = prepare(ujson.Obj("name" -> "Andy"))
+    val (docId2, _) = prepare(ujson.Obj("name" -> "Beth"))
+
+    val statement =s"""select name from default use keys ['$docId1', '$docId2'];"""
+//    val statement = s"""SELECT * FROM default USE KEYS '$docId1';"""
+    cluster.query(statement) match {
+      case Success(result) =>
+        val rows = result.rows.toSeq
+        assert(rows.size == 2)
+        assert(rows.head.contentAs[ujson.Obj].get("name").str == """Andy""")
+        assert(rows.last.contentAs[ujson.Obj].get("name").str == """Beth""")
+      case Failure(err) =>
+        throw err
+    }
+  }
+
+//  test("error") {
 //    cluster.query("""select "hello world" as Greeting""") match {
 //      case Success(result) =>
 //        // TODO BLOCKED should any errors result in fail?

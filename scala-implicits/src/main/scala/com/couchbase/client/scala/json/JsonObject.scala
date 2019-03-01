@@ -19,6 +19,7 @@ package com.couchbase.client.scala.json
 import java.util
 
 import com.couchbase.client.core.error.DecodingFailedException
+import com.fasterxml.jackson.core.JsonProcessingException
 
 import scala.collection.{GenSet, mutable}
 import scala.language.dynamics
@@ -146,28 +147,33 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     content.size
   }
 
-  override def toString: String = {
-    val sb = new StringBuilder
-    sb += '{'
-    val it = content.entrySet().iterator()
-    while (it.hasNext) {
-      val next = it.next()
-      sb.append('"')
-      sb.append(next.getKey)
-      sb.append("\":")
-      next.getValue match {
-        case v: String =>
-          sb += '"'
-          sb.append(v)
-          sb += '"'
-        case v =>
-          sb.append(v.toString)
-      }
-      if (it.hasNext) sb.append(',')
-    }
-      sb += '}'
-    sb.toString()
+  def asString: Try[String] = {
+    Try(JacksonTransformers.MAPPER.writeValueAsString(this))
   }
+
+  override def toString: String = asString.get
+
+    //    val sb = new StringBuilder
+//    sb += '{'
+//    val it = content.entrySet().iterator()
+//    while (it.hasNext) {
+//      val next = it.next()
+//      sb.append('"')
+//      sb.append(next.getKey)
+//      sb.append("\":")
+//      next.getValue match {
+//        case v: String =>
+//          sb += '"'
+//          sb.append(v)
+//          sb += '"'
+//        case v =>
+//          sb.append(v.toString)
+//      }
+//      if (it.hasNext) sb.append(',')
+//    }
+//      sb += '}'
+//    sb.toString()
+//  }
 
   def safe = JsonObjectSafe(this)
 //  private def checkType(value: Any): Boolean = {

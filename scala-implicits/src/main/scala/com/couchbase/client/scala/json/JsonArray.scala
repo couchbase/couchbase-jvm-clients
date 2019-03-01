@@ -64,25 +64,31 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
 
   def dyn: GetSelecter = GetSelecter(Right(this), Seq())
 
-  override def toString: String = {
-    val sb = new StringBuilder
-    sb += '['
-    val it = values.iterator()
-    while (it.hasNext) {
-      val next = it.next()
-      next match {
-        case v: String =>
-          sb += '"'
-          sb.append(v)
-          sb += '"'
-        case v =>
-          sb.append(v.toString)
-      }
-      if (it.hasNext) sb.append(',')
-    }
-    sb += ']'
-    sb.toString()
+  def asString: Try[String] = {
+    Try(JacksonTransformers.MAPPER.writeValueAsString(this))
   }
+
+  override def toString: String = asString.get
+
+//  override def toString: String = {
+//    val sb = new StringBuilder
+//    sb += '['
+//    val it = values.iterator()
+//    while (it.hasNext) {
+//      val next = it.next()
+//      next match {
+//        case v: String =>
+//          sb += '"'
+//          sb.append(v)
+//          sb += '"'
+//        case v =>
+//          sb.append(v.toString)
+//      }
+//      if (it.hasNext) sb.append(',')
+//    }
+//    sb += ']'
+//    sb.toString()
+//  }
 
   def safe = JsonArraySafe(this)
 }
