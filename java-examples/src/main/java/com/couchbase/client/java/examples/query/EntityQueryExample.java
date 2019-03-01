@@ -18,17 +18,17 @@ public class EntityQueryExample {
     Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
     Bucket bucket = cluster.bucket("travel-sample");
 
-String statement = "SELECT `travel-sample`.* FROM `travel-sample` WHERE type=$type";
-QueryResult result = cluster.query(
-  statement,
-  queryOptions()
-    .timeout(Duration.ofSeconds(75))
-    .parameterized(JsonObject.create().put("type", "person"))
-);
+    String statement = "SELECT `travel-sample`.* FROM `travel-sample` WHERE type=$type";
+    QueryResult result = cluster.query(
+      statement,
+      queryOptions()
+        .timeout(Duration.ofSeconds(75))
+        .parameterized(JsonObject.create().put("type", "person"))
+    );
 
-for (Person person : result.rows(Person.class)) {
-  System.out.println(person.name());
-}
+    for (Person person : result.rows(Person.class)) {
+      System.out.println(person.name());
+    }
 
 
   }

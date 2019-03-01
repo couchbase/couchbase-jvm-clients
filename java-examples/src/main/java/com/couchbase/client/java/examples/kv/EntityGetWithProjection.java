@@ -19,7 +19,6 @@ package com.couchbase.client.java.examples.kv;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 
 import java.util.Optional;

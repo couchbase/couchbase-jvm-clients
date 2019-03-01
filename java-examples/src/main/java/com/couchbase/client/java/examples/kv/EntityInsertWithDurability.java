@@ -37,14 +37,14 @@ public class EntityInsertWithDurability {
     Bucket bucket = cluster.bucket("travel-sample");
     Collection collection = bucket.defaultCollection();
 
-String id = "p02";
-MutationResult result = collection.insert(
-  id,
-  new Person("Jon Henry", 34, null, null),
-  insertOptions()
-    .withDurabilityLevel(DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER)
-    .timeout(Duration.ofSeconds(30))
-);
+    String id = "p02";
+    MutationResult result = collection.insert(
+      id,
+      new Person("Jon Henry", 34, null, null),
+      insertOptions()
+        .withDurabilityLevel(DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+        .timeout(Duration.ofSeconds(30))
+    );
 
   }
 }
