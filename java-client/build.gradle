@@ -3,6 +3,8 @@ plugins {
   id 'maven-publish'
   id 'checkstyle'
   id 'idea'
+  id 'com.github.johnrengelman.shadow' version '5.0.0'
+  id 'nebula.optional-base' version '3.0.3'
 }
 
 version = '3.0.0-SNAPSHOT'
@@ -30,7 +32,14 @@ idea {
 
 
 dependencies {
-  compile project(':core-io')
+  compile project(path: ':core-io')
+
+  // need to include those here as well (SAME AS CORE) for shadow pom file
+  // maybe this can be extracted somehow
+  shadow 'io.opentracing:opentracing-api:0.31.0'
+  shadow 'io.projectreactor:reactor-core:3.2.6.RELEASE'
+  shadow 'org.reactivestreams:reactive-streams:1.0.2'
+  shadow 'org.slf4j:slf4j-api:1.7.25', optional
 
   testCompile 'io.projectreactor:reactor-test:3.2.6.RELEASE'
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
@@ -89,9 +98,25 @@ jar {
 publishing {
   publications {
     maven(MavenPublication) {
-      from components.java
+      artifact project.tasks.shadowJar
       artifact sourceJar
       artifact packageJavadoc
+
+      pom.withXml {
+        def dependenciesNode = asNode().appendNode('dependencies')
+        configurations.shadow.allDependencies.each {
+          if (it.name == 'reactor-core' ||
+              it.name == 'opentracing-api' ||
+              it.name == 'slf4j-api' ||
+              it.name == 'reactive-streams'
+          ) {
+            def dependencyNode = dependenciesNode.appendNode('dependency')
+            dependencyNode.appendNode('groupId', it.group)
+            dependencyNode.appendNode('artifactId', it.name)
+            dependencyNode.appendNode('version', it.version)
+          }
+        }
+      }
 
       pom {
         name = 'Couchbase Java SDK'
@@ -165,3 +190,31 @@ checkstyle {
   toolVersion = "8.12"
   configProperties 'checkstyle.header.file': file('../config/checkstyle/checkstyle-header.txt')
 }
+
+shadowJar {
+  classifier = null
+  dependencies {
+    exclude(dependency('io.projectreactor:reactor-core'))
+    exclude(dependency('io.opentracing:opentracing-api'))
+    exclude(dependency('org.slf4j:slf4j-api'))
+    exclude(dependency('org.reactivestreams:reactive-streams'))
+  }
+  relocate 'io.netty', 'com.couchbase.client.core.deps.io.netty'
+  relocate 'com.fasterxml.jackson', 'com.couchbase.client.core.deps.com.fasterxml.jackson'
+  relocate 'org.HdrHistogram', 'com.couchbase.client.core.deps.org.HdrHistogram'
+  relocate 'org.LatencyUtils', 'com.couchbase.client.core.deps.org.LatencyUtils'
+  relocate 'org.jctools', 'com.couchbase.client.core.deps.org.jctools'
+  relocate 'org.iq80.snappy', 'com.couchbase.client.core.deps.org.iq80.snappy'
+
+
+}
+
+/*
+import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
+
+task relocateShadowJar(type: ConfigureShadowRelocation) {
+  target = tasks.shadowJar
+  prefix = "com.couchbase.client.java.deps"
+}
+
+tasks.shadowJar.dependsOn tasks.relocateShadowJar*/

@@ -28,16 +28,19 @@ idea {
   }
 }
 
+
 dependencies {
+  compile 'io.opentracing:opentracing-api:0.31.0'
+  compile 'io.projectreactor:reactor-core:3.2.6.RELEASE'
+  compile 'org.slf4j:slf4j-api:1.7.25', optional
+
   compile 'io.netty:netty-all:4.1.33.Final'
   compile 'io.netty:netty-tcnative-boringssl-static:2.0.20.Final'
   compile 'org.jctools:jctools-core:2.1.2'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
-  compile 'io.projectreactor:reactor-core:3.2.6.RELEASE'
   compile 'org.iq80.snappy:snappy:0.4'
-  compile 'io.opentracing:opentracing-api:0.31.0'
   compile 'org.latencyutils:LatencyUtils:2.0.3'
-  compile 'org.slf4j:slf4j-api:1.7.25', optional
+
 
   testCompile 'io.projectreactor:reactor-test:3.2.6.RELEASE'
   testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.11.1'
