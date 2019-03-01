@@ -16,7 +16,9 @@
 
 package com.couchbase.client.core.msg.query;
 
+import static com.couchbase.client.core.env.CoreEnvironment.*;
 import static java.time.temporal.ChronoUnit.*;
+
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,9 +60,9 @@ public class QueryResponse extends BaseResponse {
     super(status);
     this.channel = channel;
     this.environment = environment;
-    this.rowsProcessor = EmitterProcessor.create(1);
-    this.errorsProcessor = EmitterProcessor.create(1);
-    this.warningsProcessor = EmitterProcessor.create(1);
+    this.rowsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
+    this.errorsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
+    this.warningsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
     this.requestIdProcessor = MonoProcessor.create();
     this.clientContextIdProcessor = MonoProcessor.create();
     this.metricsProcessor = MonoProcessor.create();
@@ -80,10 +82,11 @@ public class QueryResponse extends BaseResponse {
 
   private void scheduleQueryStreamTimeout() {
     this.environment.timer().schedule(() -> {
-      if (this.rowRequestSize.get() == 0) {
+      long timeoutConfigured = this.environment.timeoutConfig().queryStreamReleaseTimeout().getSeconds();
+      if ((lastRequestTimeStamp == null && this.rowRequestSize.get() == 0) ||
+              (lastRequestTimeStamp != null && lastRequestTimeStamp.until(Instant.now(), SECONDS) >= timeoutConfigured)) {
         this.completeExceptionally(new QueryStreamException("No rows were requested within " +
                 this.environment.timeoutConfig().queryStreamReleaseTimeout().getSeconds() + "s"));
-        this.complete();
       }
     }, this.environment.timeoutConfig().queryStreamReleaseTimeout());
   }

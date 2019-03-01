@@ -20,7 +20,6 @@ import static org.mockito.Mockito.*;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
@@ -82,13 +81,13 @@ public class QueryMessageHandlerTest {
         embeddedChannel.writeAndFlush(queryRequest);
         CompletableFuture.runAsync(() -> {
             HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"1\"},{\"2\"}]").length());
+            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}]").length());
             embeddedChannel.writeInbound(httpResponse);
-            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"1\"},", CharsetUtil.UTF_8)));
+            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"foo\"},{\"", CharsetUtil.UTF_8)));
             try {
                 Thread.sleep(2000); //sleep a bit to simulate that it doesn't fail with Stream
             } catch(InterruptedException ex) {}
-            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("{\"2\"}]", CharsetUtil.UTF_8)));
+            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("bar\"}]", CharsetUtil.UTF_8)));
             embeddedChannel.flushInbound();
         });
 
@@ -112,10 +111,10 @@ public class QueryMessageHandlerTest {
         embeddedChannel.writeAndFlush(queryRequest);
         CompletableFuture.runAsync(() -> {
             HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"3\"},{\"4\"}]").length());
+            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}]").length());
             embeddedChannel.writeInbound(httpResponse);
-            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"3\"},", CharsetUtil.UTF_8)));
-            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("{\"4\"}]", CharsetUtil.UTF_8)));
+            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)));
+            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("{\"bar\"}]", CharsetUtil.UTF_8)));
             embeddedChannel.flushInbound();
         });
 

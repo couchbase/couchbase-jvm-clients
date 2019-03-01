@@ -18,7 +18,7 @@ package com.couchbase.client.core.error;
 
 /**
  * Exception thrown when the Query stream subscribers
- *  - dont have enough initial requests to consume the first chunk in the stream
+ *  - did not send enough requests to consume the entire chunked response in the stream
  *  - do not consume the request response
  *  - do not send a request before the stream times out and releases the response
  *  further on the socket, so the socket can be used for other requests.

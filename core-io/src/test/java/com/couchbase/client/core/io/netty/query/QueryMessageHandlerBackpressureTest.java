@@ -121,7 +121,7 @@ class QueryMessageHandlerBackpressureTest {
     QueryResponse response = request.response().get();
 
     assertEquals(0, rows.size());
-    StepVerifier.create(response.rows().map(String::new))
+    StepVerifier.create(response.rows().map(String::new),0)
             .thenRequest(1)
             .expectNext("{\"foo\"}")
             .thenRequest(1)
