@@ -40,7 +40,7 @@ import java.util.function.Predicate;
  *   retry = Retry.anyOf(IOException.class)
  *                 .randomBackoff(Duration.ofMillis(100), Duration.ofSeconds(60))
  *                 .withApplicationContext(appContext)
- *                 .doOnRetry(context -> context.applicationContext().rollback());
+ *                 .doOnRetry(context -&gt; context.applicationContext().rollback());
  *   flux.retryWhen(retry);
  * </code></pre>
  *
@@ -279,7 +279,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 	 * <pre><code>
 	 *    retry = Retry.anyOf(IOException.class)
 	 *                 .withApplicationContext(appContext)
-	 *                 .doOnRetry(context -> context.applicationContext().rollback())
+	 *                 .doOnRetry(context -&gt; context.applicationContext().rollback())
 	 *                 .exponentialBackoff(Duration.ofMillis(100), Duration.ofSeconds(60));
 	 *    flux.as(retry);
 	 * </code></pre>

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Randomized Jitter with a factor, that works on BackoffDelay with min <= d <= max and
+ * Randomized Jitter with a factor, that works on BackoffDelay with min &lt;= d &lt;= max and
  * maintain that invariant on the randomized {@literal d}.
  *
  * @author Simon Baslé

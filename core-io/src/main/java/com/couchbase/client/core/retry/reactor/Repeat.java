@@ -39,16 +39,9 @@ import java.util.function.Predicate;
  *   repeat = Repeat.times(10)
  *                  .randomBackoff(Duration.ofMillis(100), Duration.ofSeconds(60))
  *                  .withApplicationContext(appContext)
- *                  .doOnRepeat(context -> context.applicationContext().rollback());
+ *                  .doOnRepeat(context -&gt; context.applicationContext().rollback());
  *   flux.repeatWhen(repeat);
  * </code></pre>
- *
- * @apiNote Repeat can be directly created with a maximum number of attempts, yet there
- * is a {@link #repeatMax(long)} method to change that post-construction, for the case
- * where one wants to fine tune that aspect for specific use-cases. For instance, the
- * default configuration could be an unlimited amount of attempts ({@link Long#MAX_VALUE})
- * with a global {@link #timeout(Duration)}, but for some specific cases you might want
- * to change both the timeout and limit the attempts.
  *
  * @param <T> Application context type
  */
