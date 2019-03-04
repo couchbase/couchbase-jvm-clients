@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{CodecFlags, SubdocCommandType, SubdocField}
-import com.couchbase.client.scala.json.{JacksonTransformers, JsonArray, JsonObject}
+import com.couchbase.client.scala.json._
 import com.couchbase.client.scala.kv.MutateInMacro
 import io.netty.util.CharsetUtil
 
@@ -300,11 +300,31 @@ object Conversions {
       }
     }
 
+    implicit object JsonObjectSafeConvert extends Decodable[JsonObjectSafe] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
+        out match {
+          case Success(v) => Success(v.safe)
+          case Failure(err) => Failure(new DecodingFailedException(err))
+        }
+      }
+    }
+
     implicit object JsonArrayConvert extends Decodable[JsonArray] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
         out match {
           case Success(_) => out
+          case Failure(err) => Failure(new DecodingFailedException(err))
+        }
+      }
+    }
+
+    implicit object JsonArraySafeConvert extends Decodable[JsonArraySafe] {
+      override def decode(bytes: Array[Byte], params: EncodeParams) = {
+        val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
+        out match {
+          case Success(v) => Success(v.safe)
           case Failure(err) => Failure(new DecodingFailedException(err))
         }
       }

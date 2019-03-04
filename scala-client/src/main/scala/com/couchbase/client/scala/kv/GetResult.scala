@@ -21,7 +21,6 @@ case class GetResult(id: String,
       Conversions.encode(obj).map(_._1).get
   }
 
-  // TODO support contentAs[JsonObjectSafe]
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T], tag: ClassTag[T]): Try[T] = {
     _content match {
