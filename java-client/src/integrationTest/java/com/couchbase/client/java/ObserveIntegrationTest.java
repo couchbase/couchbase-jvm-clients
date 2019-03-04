@@ -24,7 +24,9 @@ import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,22 +45,22 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @Nested
   @DisplayName("Via CAS")
-  class ObserveViaCas {
+  static class ObserveViaCas {
 
-    private Cluster cluster;
-    private ClusterEnvironment environment;
-    private Collection collection;
+    private static Cluster cluster;
+    private static ClusterEnvironment environment;
+    private static Collection collection;
 
-    @BeforeEach
-    void beforeEach() {
+    @BeforeAll
+    static void seup() {
       environment = environment().build();
       cluster = Cluster.connect(environment);
       Bucket bucket = cluster.bucket(config().bucketname());
       collection = bucket.defaultCollection();
     }
 
-    @AfterEach
-    void afterEach() {
+    @AfterAll
+    static void tearDown() {
       environment.shutdown();
       cluster.shutdown();
     }

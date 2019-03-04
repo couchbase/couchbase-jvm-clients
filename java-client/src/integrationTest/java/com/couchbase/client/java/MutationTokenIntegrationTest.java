@@ -26,7 +26,9 @@ import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,20 +44,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
-  private Cluster cluster;
-  private ClusterEnvironment environment;
-  private Collection collection;
+  private static Cluster cluster;
+  private static ClusterEnvironment environment;
+  private static Collection collection;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void setup() {
     environment = environment().ioConfig(IoConfig.mutationTokensEnabled(true)).build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void tearDown() {
     environment.shutdown();
     cluster.shutdown();
   }

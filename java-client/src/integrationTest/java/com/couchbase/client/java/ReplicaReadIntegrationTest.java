@@ -22,7 +22,9 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,20 +48,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
-  private Cluster cluster;
-  private ClusterEnvironment environment;
-  private Collection collection;
+  private static Cluster cluster;
+  private static ClusterEnvironment environment;
+  private static Collection collection;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void setup() {
     environment = environment().build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void tearDown() {
     environment.shutdown();
     cluster.shutdown();
   }

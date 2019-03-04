@@ -23,7 +23,9 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,20 +42,20 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SubdocMutateTest extends JavaIntegrationTest {
 
-    private Cluster cluster;
-    private ClusterEnvironment environment;
-    private Collection coll;
+    private static Cluster cluster;
+    private static ClusterEnvironment environment;
+    private static Collection coll;
 
-    @BeforeEach
-    void beforeEach() {
+    @BeforeAll
+    static void setup() {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
         coll = bucket.defaultCollection();
     }
 
-    @AfterEach
-    void afterEach() {
+    @AfterAll
+    static void tearDown() {
         environment.shutdown();
         cluster.shutdown();
     }
