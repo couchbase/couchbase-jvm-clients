@@ -14,7 +14,7 @@ import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec}
 
 class SubdocMutateSpec extends FunSuite {
 
-    val cluster = Cluster.connect("http://10.143.180.101:8091", "Administrator", "password")
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
     val bucket = cluster.bucket("default")
     val coll = bucket.defaultCollection
 

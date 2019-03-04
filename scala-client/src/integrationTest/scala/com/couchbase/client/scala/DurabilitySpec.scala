@@ -40,7 +40,6 @@ class DurabilitySpec extends FunSuite {
 //    }
 //  }
 
-  // TODO see if can support Junit5-style test exclusions
 //  test("majority") {
 //    val docId = TestUtils.docId()
 //    val content = ujson.Obj("hello" -> "world")
@@ -60,7 +59,8 @@ class DurabilitySpec extends FunSuite {
     }
   }
 
-  test("Majority, timeout too short") {
+  // TODO see if can support Junit5-style test exclusions
+  ignore("Majority, timeout too short") {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Majority, timeout = Duration.Zero) match {
