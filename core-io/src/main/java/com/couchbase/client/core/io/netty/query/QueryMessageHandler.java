@@ -118,6 +118,9 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         String requestID = value.toString(CHARSET);
         requestID = requestID.substring(1, requestID.length() - 1);
         value.release();
+        // TODO gp everythng up to `rows` should be received near-instantly, and I don't think we need to
+        // expose Publishers for everything - it's quite a hard API to use.  Let's just wait until
+        // everything up to `rows` is received, and then send the initial Mono.
         currentResponse.requestId().onNext(requestID);
       }),
       new JsonPointer("/errors/-", (JsonPointerCB1) value -> {

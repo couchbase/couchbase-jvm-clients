@@ -97,11 +97,12 @@ case class QueryOther(metrics: QueryMetrics,
                       warnings: Seq[QueryError])
 
 case class ReactiveQueryResult(
-                              // TODO
+                              // TODO add
 //                                requestId: String,
 //                               clientContextId: String,
                                rows: Flux[QueryRow],
-                              errors: Flux[QueryError],
+                              errors: Flux[QueryError]
 //                               rows: reactor.core.publisher.Flux[QueryRow],
-                               other: Mono[QueryOther]
+                              // TODO add
+//                               other: Mono[QueryOther]
                               )
