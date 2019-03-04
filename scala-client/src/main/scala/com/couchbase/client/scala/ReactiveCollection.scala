@@ -176,13 +176,13 @@ class ReactiveCollection(async: AsyncCollection) {
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-               insertDocument: Boolean = false,
+               document: Document = Document.DoNothing,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
                expiration: Duration,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutateInResult] = {
-    val req = async.mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
+    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.mutateInHandler)
   }
 

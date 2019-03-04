@@ -1,4 +1,4 @@
-version = 'dp1-SNAPSHOT'
+version = '1.0.0-dp1-SNAPSHOT'
 
 buildscript {
   repositories { jcenter() }

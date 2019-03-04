@@ -60,13 +60,15 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                              final RetryStrategy retryStrategy, final String key,
-                             final byte[] collection, final boolean insertDoc, final List<Command> commands, long expiration,
+                             final byte[] collection, final boolean insertDoc, final boolean upsertDoc, final List<Command> commands, long expiration,
                              final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     byte flags = 0;
-    // TODO May want to add support for MKDOC, waiting on RFC
     if (insertDoc) {
       flags |= SUBDOC_DOC_FLAG_ADD;
+    }
+    else if (upsertDoc) {
+      flags |= SUBDOC_DOC_FLAG_MKDOC;
     }
     this.flags = flags;
     this.commands = commands;

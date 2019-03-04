@@ -33,7 +33,7 @@ class AsyncScope(scopeName: String,
           if (res.status().success()) {
             new AsyncCollection(name, res.collectionId().get(), bucketName, core, environment)
           } else {
-            // TODO fix
+            // TODO BLOCKED collection opening is going to be redone later
             throw new IllegalStateException("Do not raise me.. propagate into collection.. " + "collection error")
           }
         })

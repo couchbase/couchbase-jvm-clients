@@ -290,14 +290,13 @@ class AsyncCollection(name: String,
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-              // TODO add support for MK_DOC
-               insertDocument: Boolean = false,
+               document: Document = Document.DoNothing,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
                expiration: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
-    val req = mutateInHandler.request(id, spec, cas, insertDocument, durability, expiration, parentSpan, timeout, retryStrategy)
+    val req = mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout, retryStrategy)
     wrapWithDurability(req, id, mutateInHandler, durability, false, timeout)
   }
 

@@ -29,7 +29,7 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
   def request[T](id: String,
                  spec: Seq[MutateInSpec],
                  cas: Long,
-                 insertDocument: Boolean,
+                 document: Document,
                  durability: Durability,
                  expiration: java.time.Duration,
                  parentSpan: Option[Span],
@@ -39,7 +39,7 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
-      _ <- Validate.notNull(insertDocument, "insertDocument")
+      _ <- Validate.notNull(document, "document")
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -79,7 +79,8 @@ class MutateInHandler(hp: HandlerParams) extends RequestHandler[SubdocMutateResp
               retryStrategy,
               id,
               hp.collectionIdEncoded,
-              insertDocument,
+              document == Document.Insert,
+              document == Document.Upsert,
               commands,
               expiration.getSeconds,
               durability.toDurabilityLevel))

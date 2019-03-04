@@ -27,6 +27,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   private Duration expiry = Duration.ZERO;
   private long cas = 0;
   private boolean insertDocument = false;
+  private boolean upsertDocument = false;
 
   public static MutateInOptions mutateInOptions() {
     return new MutateInOptions();
@@ -51,6 +52,11 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     return this;
   }
 
+  public MutateInOptions upsertDocument(boolean upsertDocument) {
+    this.upsertDocument = upsertDocument;
+    return this;
+  }
+
   @Stability.Internal
   public BuiltMutateInOptions build() {
     return new BuiltMutateInOptions();
@@ -68,6 +74,10 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
     public boolean insertDocument() {
       return insertDocument;
+    }
+
+    public boolean upsertDocument() {
+      return upsertDocument;
     }
   }
 

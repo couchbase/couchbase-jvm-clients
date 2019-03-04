@@ -119,14 +119,14 @@ class Collection(val async: AsyncCollection,
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-               insertDocument: Boolean = false,
+               document: Document = Document.DoNothing,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
                expiration: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = async.environment.retryStrategy()
               ): Try[MutateInResult] = {
-    block(async.mutateIn(id, spec, cas, insertDocument, durability, parentSpan, expiration, timeout, retryStrategy), timeout)
+    block(async.mutateIn(id, spec, cas, document, durability, parentSpan, expiration, timeout, retryStrategy), timeout)
   }
 
 
