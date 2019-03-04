@@ -19,8 +19,9 @@ package com.couchbase.client.scala.query
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.query.QueryResponse
 import com.couchbase.client.scala.codec.Conversions
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import io.netty.util.CharsetUtil
+import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.util.{Failure, Success, Try}
 
@@ -29,20 +30,8 @@ abstract class QueryException extends CouchbaseException
 case class QueryErrorException() extends QueryException
 case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
 
-//class QueryException() extends CouchbaseException {
-//  def first: QueryError
-//}
-
-case class QueryResult(
-  rows: Seq[QueryRow],
-//  errors: Seq[QueryError],
-//  status: String,
-//  requestId: String,
-//  clientContextId: String
-  // TODO other params
-                      ) {
-}
-
+case class QueryResult(rows: Seq[QueryRow],
+                       other: QueryOther)
 
 case class QueryRow(_content: Array[Byte]) {
 
@@ -65,5 +54,54 @@ case class QueryError(private val content: Array[Byte]) {
     }
   }
 
+  def code: Try[Int] = {
+    json.safe.num("code")
+  }
+
+
   override def toString: String = msg
 }
+
+case class QueryMetrics(elapsedTime: String,
+                        executionTime: String,
+                        resultCount: Int,
+                        resultSize: Int,
+                        mutationCount: Int,
+                        sortCount: Int,
+                        errorCount: Int,
+                        warningCount: Int)
+
+object QueryMetrics {
+  def fromBytes(in: Array[Byte]): QueryMetrics = {
+    JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
+      case Success(jo) =>
+        QueryMetrics(
+          jo.str("elapsedTime").getOrElse(""),
+          jo.str("executionTime").getOrElse(""),
+          jo.num("resultCount").getOrElse(0),
+          jo.num("resultSize").getOrElse(0),
+          jo.num("mutationCount").getOrElse(0),
+          jo.num("sortCount").getOrElse(0),
+          jo.num("errorCount").getOrElse(0),
+          jo.num("warningCount").getOrElse(0)
+        )
+
+      case Failure(err) =>
+        QueryMetrics("", "", 0, 0, 0, 0, 0, 0)
+    }
+
+  }
+}
+
+case class QueryOther(metrics: QueryMetrics,
+                      warnings: Seq[QueryError])
+
+case class ReactiveQueryResult(
+                              // TODO
+//                                requestId: String,
+//                               clientContextId: String,
+                               rows: Flux[QueryRow],
+                              errors: Flux[QueryError],
+//                               rows: reactor.core.publisher.Flux[QueryRow],
+                               other: Mono[QueryOther]
+                              )

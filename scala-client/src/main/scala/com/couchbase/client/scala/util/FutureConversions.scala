@@ -9,8 +9,8 @@ import reactor.core.publisher.SignalType
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Future
 
-import reactor.core.publisher.{Mono => JavaMono}
-import reactor.core.scala.publisher.{Mono => ScalaMono}
+import reactor.core.publisher.{Mono => JavaMono, Flux => JavaFlux}
+import reactor.core.scala.publisher.{Mono => ScalaMono, Flux => ScalaFlux}
 
 /**
   * Note: Scala Monos are different classes to Java Monos
@@ -22,6 +22,10 @@ object FutureConversions {
 
   def javaMonoToScalaMono[T](in: JavaMono[T]): ScalaMono[T] = {
     ScalaMono.from(in)
+  }
+
+  def javaFluxToScalaFlux[T](in: JavaFlux[T]): ScalaFlux[T] = {
+    ScalaFlux.from(in)
   }
 
   def javaCFToScalaMono[T](request: Request[_],
@@ -38,5 +42,20 @@ object FutureConversions {
       })
     }
     else scalaMono
+  }
+
+  def javaCFToJavaMono[T](request: Request[_],
+                           response: CompletableFuture[T],
+                           propagateCancellation: Boolean): JavaMono[T] = {
+    val javaMono = JavaMono.fromFuture(response)
+
+    if (propagateCancellation) {
+      javaMono.doFinally(st => {
+        if (st == SignalType.CANCEL) {
+          request.cancel(CancellationReason.STOPPED_LISTENING)
+        }
+      })
+    }
+    else javaMono
   }
 }

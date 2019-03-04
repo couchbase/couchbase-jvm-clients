@@ -124,6 +124,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+        // TODO gp feel this should raise currentResponse.rows().onError instead
         currentResponse.errors().onNext(data);
       }),
       new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {

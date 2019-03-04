@@ -36,14 +36,14 @@ object DurationConversions {
 
 class AsyncCluster(environment: => ClusterEnvironment)
                   (implicit ec: ExecutionContext) {
-  private val core = Core.create(environment)
+  private[scala] val core = Core.create(environment)
   private[scala] val env = environment
 
   // Opening resources will not raise errors, instead they will be deferred until later
   private[scala] var deferredError: Option[RuntimeException] = None
 
+  private[scala] val queryHandler = new QueryHandler()
 
-  import DurationConversions._
 
   def bucket(name: String): Future[AsyncBucket] = {
     FutureConversions.javaMonoToScalaFuture(core.openBucket(name))
@@ -51,95 +51,67 @@ class AsyncCluster(environment: => ClusterEnvironment)
   }
 
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
-    val validations: Try[QueryRequest] = for {
-      _ <- Validate.notNullOrEmpty(statement, "statement")
-      _ <- Validate.notNull(options, "options")
-      _ <- Validate.optNotNull(options.namedParameters, "namedParameters")
-      _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
-      _ <- Validate.optNotNull(options.contextId, "contextId")
-      _ <- Validate.optNotNull(options.credentials, "credentials")
-      _ <- Validate.optNotNull(options.maxParallelism, "maxParallelism")
-      _ <- Validate.optNotNull(options.disableMetrics, "disableMetrics")
-      _ <- Validate.optNotNull(options.pipelineBatch, "pipelineBatch")
-      _ <- Validate.optNotNull(options.pipelineCap, "pipelineCap")
-      _ <- Validate.optNotNull(options.profile, "profile")
-      _ <- Validate.optNotNull(options.readonly, "readonly")
-      _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
-      _ <- Validate.optNotNull(options.scanCap, "scanCap")
-      _ <- Validate.optNotNull(options.scanConsistency, "scanConsistency")
-      _ <- Validate.optNotNull(options.serverSideTimeout, "serverSideTimeout")
-      _ <- Validate.optNotNull(options.timeout, "timeout")
-    } yield null
 
-    // TODO prepared query
+    queryHandler.request(statement, options, core, environment) match {
+      case Success(request) =>
+        core.send(request)
 
-    validations match {
-      case Failure(err) => Future.failed(err)
-      case Success(_) =>
-        //        val result = new QueryConsumer()
+        import reactor.core.publisher.{Mono => JavaMono}
+        import reactor.core.scala.publisher.{Mono => ScalaMono}
 
-        val query = JsonObject.create
-          .put("statement", statement)
+        val javaMono = JavaMono.fromFuture(request.response())
 
-        // TODO params
+        val out: JavaMono[QueryResult] = javaMono
+          .flatMap(response => {
 
-        Try(JacksonTransformers.MAPPER.writeValueAsString(query)) match {
-          case Success(queryStr) =>
-            val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
+//            val requestIdKeeper = new AtomicReference[String]()
+//            val clientContextIdKeeper = new AtomicReference[String]()
+            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
+            val errorsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
+            val warningsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
+            val metricsKeeper = new AtomicReference[QueryMetrics]()
 
-            val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-            val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
+            val ret: JavaMono[QueryResult] = response.rows.collectList().doOnNext(r => rowsKeeper.set(r))
+//              .requestId().doOnNext(v => requestIdKeeper.set(v))
+//              .`then`(response.clientContextId().doOnNext(v => clientContextIdKeeper.set(v)))
+//              .(response.rows().collectList().doOnNext(r => rowsKeeper.set(r))
+              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
+              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
+              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
 
-            val request: QueryRequest = new QueryRequest(timeout,
-              core.context(),
-              retryStrategy,
-              environment.credentials(),
-              queryBytes)
+              .flatMap(_ => {
+                val rows = rowsKeeper.get().asScala.map(QueryRow)
 
-            core.send(request)
+                val result = QueryResult(
+//                  requestIdKeeper.get(),
+//                  clientContextIdKeeper.get(),
+                  rows,
+                  QueryOther(
+                    metricsKeeper.get(),
+                    warningsKeeper.get().asScala.map(w => QueryError(w))
+                  ))
 
-            import reactor.core.publisher.{Mono => JavaMono}
-            import reactor.core.scala.publisher.{Mono => ScalaMono}
-
-            val javaMono = JavaMono.fromFuture(request.response())
-
-            val out: JavaMono[QueryResult] = javaMono
-              .flatMap(response => {
-
-                val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-                val errorsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-
-                val ret: JavaMono[QueryResult] = response
-                  .rows().collectList().doOnNext(r => rowsKeeper.set(r))
-                  .then(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
-                  .flatMap(_ => {
-                    val rows = rowsKeeper.get().asScala.map(QueryRow)
-
-                    val result = QueryResult(rows)
-
-                    val out: JavaMono[QueryResult] = Option(errorsKeeper.get()).map(_.asScala.map(QueryError)) match {
-                      case Some(err) =>
-                        if (err.nonEmpty) {
-                          JavaMono.error(QueryServiceException(err))
-                        }
-                        else {
-                          JavaMono.just(result)
-                        }
-                      case _ =>
-                        JavaMono.just(result)
+                val out: JavaMono[QueryResult] = Option(errorsKeeper.get()).map(_.asScala.map(QueryError)) match {
+                  case Some(err) =>
+                    if (err.nonEmpty) {
+                      JavaMono.error(QueryServiceException(err))
                     }
+                    else {
+                      JavaMono.just(result)
+                    }
+                  case _ =>
+                    JavaMono.just(result)
+                }
 
-                    out
-                  })
-
-                ret
+                out
               })
 
-            FutureConversions.javaMonoToScalaFuture(out)
+            ret
+          })
 
-          case Failure(err)
-          => Future.failed(err)
-        }
+        FutureConversions.javaMonoToScalaFuture(out)
+
+      case Failure(err) => Future.failed(err)
     }
   }
 
