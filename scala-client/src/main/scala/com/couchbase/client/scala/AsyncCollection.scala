@@ -16,11 +16,12 @@
 
 package com.couchbase.client.scala
 
+import java.math.BigInteger
 import java.nio.charset.Charset
 import java.util.Optional
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.Duration
 
+import scala.concurrent.duration.Duration
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.subdoc.SubDocumentException
@@ -134,7 +135,7 @@ class AsyncCollection(name: String,
   import DurationConversions._
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
-  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
+  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(BigInteger.valueOf(collectionId))
   private[scala] val hp = HandlerParams(core, bucketName, collectionIdEncoded)
   private[scala] val existsHandler = new ExistsHandler(hp)
   private[scala] val insertHandler = new InsertHandler(hp)
