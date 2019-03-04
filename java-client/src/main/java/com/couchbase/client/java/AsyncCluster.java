@@ -92,10 +92,10 @@ public class AsyncCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    Query query = SimpleQuery.create(statement);
-    return query.prepared()
-      ? PreparedQueryAccessor.queryAsync(core, query, options, environment, this.cluster().getPreparedQueryCache())
-      : QueryAccessor.queryAsync(core, query, options, environment);
+    QueryOptions.BuiltQueryOptions builtOptions = options.build();
+    return builtOptions.isPrepared()
+      ? PreparedQueryAccessor.queryAsync(core, SimpleQuery.createPrepared(statement), builtOptions, environment, this.cluster().getPreparedQueryCache())
+      : QueryAccessor.queryAsync(core, SimpleQuery.create(statement), builtOptions, environment);
   }
 
   /*

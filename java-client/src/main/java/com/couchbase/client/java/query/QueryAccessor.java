@@ -25,30 +25,32 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
+import io.netty.util.CharsetUtil;
 
 public class QueryAccessor {
 
 	public static CompletableFuture<AsyncQueryResult> queryAsync(final Core core, final Query query,
-																															 final QueryOptions options,
-																															 final Supplier<ClusterEnvironment> environment) {
+																 final QueryOptions.BuiltQueryOptions options,
+																 final Supplier<ClusterEnvironment> environment) {
 		return queryInternal(core, query, options, environment).thenApply(AsyncQueryResult::new);
 	}
 
-	public static CompletableFuture<ReactiveQueryResult> queryReactive(final Core core,
-																																		 final Query query,
-																																		 final QueryOptions options,
-																																		 final Supplier<ClusterEnvironment> environment) {
+	public static CompletableFuture<ReactiveQueryResult> queryReactive(final Core core, final Query query,
+																	   final QueryOptions.BuiltQueryOptions options,
+																	   final Supplier<ClusterEnvironment> environment) {
 		return queryInternal(core, query, options, environment).thenApply(ReactiveQueryResult::new);
 	}
 
 	private static CompletableFuture<QueryResponse> queryInternal(final Core core, final Query query,
-																																final QueryOptions options,
-																																final Supplier<ClusterEnvironment> environment) {
-		QueryOptions.BuiltQueryOptions opts = options.build();
+																  final QueryOptions.BuiltQueryOptions opts,
+																  final Supplier<ClusterEnvironment> environment) {
 		Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
 		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+		JsonObject queryJson = query.getQueryJson(opts.parameters());
+		opts.getN1qlParams(queryJson);
 		QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy,
-						environment.get().credentials(), query.encode(opts.parameters()));
+				environment.get().credentials(), queryJson.toString().getBytes(CharsetUtil.UTF_8));
 		core.send(request);
 		return request.response();
 	}

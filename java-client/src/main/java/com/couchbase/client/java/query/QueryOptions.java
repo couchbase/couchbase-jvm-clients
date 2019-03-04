@@ -51,6 +51,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Boolean readonly;
   private Boolean pretty;
   private JsonValue parameters;
+  private boolean prepared;
 
   private QueryOptions() {}
 
@@ -249,16 +250,38 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
-  public QueryOptions parameterized(final JsonObject named) {
+  /**
+   * Named parameters if the query is parameterized with custom names
+   *
+   * @param named {@link JsonObject} with name as key
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public QueryOptions withParameters(final JsonObject named) {
     this.parameters = named;
     return this;
   }
 
-  public QueryOptions parameterized(final JsonArray positional) {
+  /**
+   * Positional parameters if the query is parameterized with position numbers
+   *
+   * @param positional {@link JsonArray} in the same order as positions
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public QueryOptions withParameters(final JsonArray positional) {
     this.parameters = positional;
     return this;
   }
 
+  /**
+   * Set to true if the query is already prepared/to be prepared
+   *
+   * @param prepared true if prepared, else false
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public QueryOptions prepared(final boolean prepared) {
+    this.prepared = prepared;
+    return this;
+  }
 
   private String durationToN1qlFormat(Duration duration) {
     if (duration.getSeconds() > 0) {
@@ -312,14 +335,17 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
     private boolean pretty() { return pretty; }
 
-
     public JsonValue parameters() {
       return parameters;
     }
 
+    public boolean isPrepared() {
+      return prepared;
+    }
+
     @Stability.Internal
     public void getN1qlParams(JsonObject queryJson) {
-      if (!credentials.isEmpty()) {
+      if (credentials != null && !credentials.isEmpty()) {
         JsonArray creds = JsonArray.create();
         for (Map.Entry<String, String> c : credentials.entrySet()) {
           if (c.getKey() != null && !c.getKey().isEmpty()) {

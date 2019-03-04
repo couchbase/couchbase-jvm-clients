@@ -20,7 +20,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValue;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -31,14 +33,14 @@ import io.netty.util.CharsetUtil;
 @Stability.Volatile
 public class PreparedQuery {
 
-	private final JsonObject params;
+	private final JsonObject prepared;
 
 	private PreparedQuery() {
-		this.params = JsonObject.create();
+		this.prepared = JsonObject.create();
 	}
 
 	private void put(String name, Object value) {
-		this.params.put(name, value);
+		this.prepared.put(name, value);
 	}
 
 	public static PreparedQuery fromJsonObject(JsonObject jsonObject) {
@@ -83,7 +85,23 @@ public class PreparedQuery {
 	}
 
 	@Stability.Internal
-	public byte[] encode() {
-		return this.params.toString().getBytes(CharsetUtil.UTF_8);
+	public JsonObject getQueryJson(JsonValue params) {
+		JsonObject query = this.prepared;
+		if (params != null) {
+			if (params instanceof JsonArray && !((JsonArray) params).isEmpty()) {
+				query.put("args", (JsonArray) params);
+			} else if (params instanceof JsonObject && !((JsonObject) params).isEmpty()) {
+				JsonObject namedParams = (JsonObject) params;
+				namedParams.getNames().forEach(key -> {
+					Object value = namedParams.get(key);
+					if (key.charAt(0) != '$') {
+						query.put('$' + key, value);
+					} else {
+						query.put(key, value);
+					}
+				});
+			}
+		}
+		return query;
 	}
 }

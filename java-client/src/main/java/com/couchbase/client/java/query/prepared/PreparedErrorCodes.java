@@ -15,6 +15,10 @@
  */
 package com.couchbase.client.java.query.prepared;
 
+/**
+ * Prepared query error codes
+ *
+ */
 public enum PreparedErrorCodes {
 
 	NO_SUCH_PREPARED_STATEMENT(4040, "No such prepared statement"),
@@ -45,5 +49,4 @@ public enum PreparedErrorCodes {
 						"code:" + this.code +
 						"}";
 	}
-
 }

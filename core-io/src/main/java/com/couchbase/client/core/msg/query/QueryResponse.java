@@ -49,7 +49,7 @@ public class QueryResponse extends BaseResponse {
   private MonoProcessor<String> queryStatusProcessor;
   private MonoProcessor<byte[]> signatureProcessor;
   private MonoProcessor<byte[]> profileProcessor;
-  private Instant lastRequestTimeStamp;
+  private volatile Instant lastRequestTimeStamp;
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
   private final AtomicBoolean completed = new AtomicBoolean(false);

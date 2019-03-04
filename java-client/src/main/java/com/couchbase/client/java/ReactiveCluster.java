@@ -71,14 +71,15 @@ public class ReactiveCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    Query query = SimpleQuery.create(statement);
-    if (query.prepared()) {
+    QueryOptions.BuiltQueryOptions builtOpts = options.build();
+
+    if (builtOpts.isPrepared()) {
       return Mono.defer(() -> Mono.fromFuture(() ->
-              PreparedQueryAccessor.queryReactive(async().core(), query, options, async().environment(),
+              PreparedQueryAccessor.queryReactive(async().core(), SimpleQuery.createPrepared(statement), builtOpts, async().environment(),
                       async().cluster().getPreparedQueryCache())));
     } else {
       return Mono.defer(() -> Mono.fromFuture(() ->
-              QueryAccessor.queryReactive(async().core(), query, options, async().environment())));
+              QueryAccessor.queryReactive(async().core(), SimpleQuery.create(statement), builtOpts, async().environment())));
     }
   }
 

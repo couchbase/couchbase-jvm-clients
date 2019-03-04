@@ -44,12 +44,12 @@ public interface Query {
 	default boolean prepared() { return false; }
 
 	/**
-	 * Encode the query, useful for constructing request
+	 * Get the query Json for further encoding and constructing request
 	 *
-	 * @return encoded byte array
+	 * @return {@link} JsonObject
 	 */
 	@Stability.Internal
-	default byte[] encode(JsonValue parameters) {
+	default JsonObject getQueryJson(JsonValue parameters) {
 		JsonObject query = JsonObject.create().put("statement", this.statement());
 		JsonValue params = parameters;
 		if (params != null) {
@@ -67,6 +67,6 @@ public interface Query {
 				});
 			}
 		}
-		return query.toString().getBytes(CharsetUtil.UTF_8);
+		return query;
 	}
 }
