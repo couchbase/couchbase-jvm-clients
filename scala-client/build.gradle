@@ -1,11 +1,14 @@
-
 buildscript {
   repositories { jcenter() }
-
-  dependencies {
-    classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
-  }
 }
+
+plugins {
+  id 'java'
+  id 'scala'
+  id 'maven-publish'
+  id 'com.github.johnrengelman.shadow' version '5.0.0'
+}
+
 
 /*
   The scala and idea plugins appear to be incompatible.  With a minimal build.gradle just pulling
@@ -15,12 +18,7 @@ buildscript {
    with Gradle 4.10 and 5.1.
  */
 
-version = '1.0.1-SNAPSHOT'
-
-apply plugin: 'java'
-apply plugin: 'scala'
-apply plugin: 'nebula.optional-base'
-apply plugin: 'maven-publish'
+version = 'dp1-SNAPSHOT'
 
 sourceSets {
   integrationTest {
@@ -163,12 +161,15 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
 
+// TODO include implicits docs https://guides.gradle.org/creating-multi-project-builds/#include_the_documentation_in_the_distribution_archive
+
+
 dependencies {
   compile "io.projectreactor:reactor-scala-extensions_2.12:0.3.5"
   implementation group: 'io.projectreactor.addons', name: 'reactor-adapter', version: '3.2.0.RELEASE'
   compile 'org.scala-lang.modules:scala-java8-compat_2.12:0.9.0'
   implementation 'io.reactivex:rxjava-reactive-streams:1.2.1'
-  compile project(':scala-implicits')
+  implementation project(':scala-implicits')
 
   testCompile group: 'org.scalacheck', name: 'scalacheck_2.12', version: '1.14.0'
   testCompile 'org.scalatest:scalatest_2.12:3.0.5'
@@ -176,4 +177,20 @@ dependencies {
   testCompile 'org.junit.jupiter:junit-jupiter-api:5.4.0'
   testCompile 'org.junit.jupiter:junit-jupiter-params:5.4.0'
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.4.0'
+}
+
+shadowJar {
+  classifier = null
+  dependencies {
+    exclude(dependency('io.projectreactor:reactor-core'))
+    exclude(dependency('io.opentracing:opentracing-api'))
+    exclude(dependency('org.slf4j:slf4j-api'))
+    exclude(dependency('org.reactivestreams:reactive-streams'))
+  }
+  relocate 'io.netty', 'com.couchbase.client.core.deps.io.netty'
+  relocate 'com.fasterxml.jackson', 'com.couchbase.client.core.deps.com.fasterxml.jackson'
+  relocate 'org.HdrHistogram', 'com.couchbase.client.core.deps.org.HdrHistogram'
+  relocate 'org.LatencyUtils', 'com.couchbase.client.core.deps.org.LatencyUtils'
+  relocate 'org.jctools', 'com.couchbase.client.core.deps.org.jctools'
+  relocate 'org.iq80.snappy', 'com.couchbase.client.core.deps.org.iq80.snappy'
 }
