@@ -28,8 +28,8 @@ import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.query.options.ScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -38,12 +38,12 @@ import reactor.core.publisher.Mono;
  */
 public class QueryIntegrationTest extends JavaIntegrationTest {
 
-    private Cluster cluster;
-    private ClusterEnvironment environment;
-    private Collection collection;
+    private static Cluster cluster;
+    private static ClusterEnvironment environment;
+    private static Collection collection;
 
-    @BeforeEach
-    public void setup() throws Exception {
+    @BeforeAll
+    public static void setup() throws Exception {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
@@ -51,8 +51,8 @@ public class QueryIntegrationTest extends JavaIntegrationTest {
         cluster.query("create primary index on `" + config().bucketname() + "`");
     }
 
-    @AfterEach
-    public void tearDown() {
+    @AfterAll
+    public static void tearDown() {
         environment.shutdown();
         cluster.shutdown();
     }

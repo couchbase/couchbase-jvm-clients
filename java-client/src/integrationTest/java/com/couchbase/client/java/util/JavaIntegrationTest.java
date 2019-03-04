@@ -38,7 +38,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    *
    * @return the builder, ready to be further modified or used directly.
    */
-  protected ClusterEnvironment.Builder environment() {
+  protected static ClusterEnvironment.Builder environment() {
     Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV)),

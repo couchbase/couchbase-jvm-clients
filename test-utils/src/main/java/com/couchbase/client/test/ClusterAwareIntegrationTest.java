@@ -1,5 +1,6 @@
 package com.couchbase.client.test;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -12,18 +13,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ClusterInvocationProvider.class)
 public class ClusterAwareIntegrationTest {
 
-  private TestClusterConfig config;
+  private static TestClusterConfig testClusterConfig;
 
-  @BeforeEach
-  void setup(TestClusterConfig config) {
-    this.config = config;
+  @BeforeAll
+  static void setup(TestClusterConfig config) {
+    testClusterConfig = config;
   }
 
   /**
    * Returns the current config for the integration test cluster.
    */
-  public TestClusterConfig config() {
-    return config;
+  public static TestClusterConfig config() {
+    return testClusterConfig;
   }
 
 }

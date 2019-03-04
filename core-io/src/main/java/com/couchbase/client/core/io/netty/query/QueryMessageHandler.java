@@ -17,9 +17,7 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.QueryStreamException;
-import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.query.QueryRequest;

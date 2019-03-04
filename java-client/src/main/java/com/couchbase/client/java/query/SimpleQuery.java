@@ -72,7 +72,7 @@ public class SimpleQuery implements Query {
 	/**
 	 * Get if the query is prepared
 	 *
-	 * @return positional or named values
+	 * @return true if prepared
 	 */
 	@Override
 	public boolean prepared() {
