@@ -2,7 +2,14 @@ package com.couchbase.client.scala.json
 
 import com.couchbase.client.core.error.DecodingFailedException
 
-object ValueConvertor {
+/** Utility methods to convert between supported types stored in
+  * [[com.couchbase.client.scala.json.JsonObject]] and
+  * [[com.couchbase.client.scala.json.JsonArray]].
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  */
+private[scala] object ValueConvertor {
   def str(out: Any, name: String): String = {
     out match {
       case v: String => v

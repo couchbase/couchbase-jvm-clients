@@ -65,13 +65,14 @@ import scala.collection.JavaConverters._
   * [[JsonArraySafe]], which provide a 'safe' wrapper that performs all operations with Scala `Try`s.
   *
   * @define SupportedType     only certain types are allowed to be put into this.  They are: [[JsonObject]] and
-  * [[JsonObjectSafe]], [[JsonArray]] and [[JsonArraySafe]], Int, Double, Short, Long, Float,
+  * [[JsonObjectSafe]], [[JsonArray]] and [[JsonArraySafe]], Int, Double, Short, Long, Float and null,
   * Boolean.
   * @define SupportedNumTypes the supported number types (Int, Double, Float, Long, Short)
   * @define Name              the field's key
   * @define NotExist          if the field does not exist
+  * @author Graham Pople
+  * @since 1.0.0
   **/
-
 case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]) {
 
   /** Returns a [[GetSelecter]] providing `Dynamic` access to this object's fields. */
@@ -88,6 +89,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     *
     * @param name  $Name
     * @param value $SupportedType
+    *
     * @return a reference to this, to allow chaining operations
     */
   def put(name: String, value: Any): JsonObject = {
@@ -98,6 +100,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
   /** Gets a value from this object.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException $NotExist
     */
   def get(name: String): Any = {
@@ -112,6 +115,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * `null` will be returned.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException $NotExist
     */
   def str(name: String): String = {
@@ -127,6 +131,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
     */
@@ -141,6 +146,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * If that value is actually an Boolean it is returned directly.  Else DecodingFailedException will be thrown.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not a Boolean
     */
@@ -157,6 +163,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
     */
@@ -173,6 +180,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
     */
@@ -189,6 +197,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
     */
@@ -203,6 +212,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * If that value is `null`, then `null` will be returned.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not of type `JsonObject`
     */
@@ -217,6 +227,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * If that value is `null`, then `null` will be returned.
     *
     * @param name  $Name
+    *
     * @throws NoSuchElementException   $NotExist
     * @throws DecodingFailedException  if the value was not of type `JsonArray`
     */
@@ -233,6 +244,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * If the object does not contain the key then this is a no-op.
     *
     * @param name  $Name
+    *
     * @return a reference to this, to allow chaining operations
     */
   def remove(name: String): JsonObject = {
@@ -291,13 +303,13 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
 
   /** Recursively converts this and its contents into String representing the same JSON, e.g. """{"foo":"bar"}""".
     *
-    * Cannot throw as long as only supported types have been put into this.
+    * Will not throw as long as only supported types have been put into this.
     */
   override def toString: String = JacksonTransformers.MAPPER.writeValueAsString(this)
 
   /** This is an 'unsafe', non-functional interface that can throw.  It's provided for convenience.
     *
-    * If you would rather with functional interface that returns `Try` for all operations and does not throw, then
+    * If you would rather use a functional interface that returns `Try` for all operations and does not throw, then
     * use this method to get a [[JsonObjectSafe]] interface.
     */
   def safe = JsonObjectSafe(this)

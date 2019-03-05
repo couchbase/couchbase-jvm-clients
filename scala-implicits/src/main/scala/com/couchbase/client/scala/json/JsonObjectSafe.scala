@@ -29,7 +29,10 @@ import scala.util.{Failure, Success, Try}
 /** A 'safe' alternative interface for [[JsonObject]] that does all operations with Try rather than throwing
   * exceptions.
   *
-  * Note that, though this is a more functional interface than [[JsonObject]], it remains a mutable object.
+  * Note that, though this is a more functional interface than `JsonObject`, it remains a mutable object.
+  *
+  * @author Graham Pople
+  * @since 1.0.0
   */
 case class JsonObjectSafe(private[scala] val o: JsonObject) {
   private val content = o.content
@@ -50,7 +53,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   /** Gets a value from this object.
     *
     * @param name  $Name
-    * @returns `Success(Any)` if the value exists, else Failed(NoSuchElementException)
+    * @return `Success(Any)` if the value exists, else Failed(NoSuchElementException)
     */
   def get(name: String): Try[Any] = {
     Try(o.get(name))
@@ -62,7 +65,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * `null` will be returned.
     *
     * @param name  $Name
-    * @returns `Success(String)` if the value exists, else Failed(NoSuchElementException)
+    * @return `Success(String)` if the value exists, else Failed(NoSuchElementException)
     */
   def str(name: String): Try[String] = {
     Try(o.str(name))
@@ -76,7 +79,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * (DecodingFailedException)` will be returned.
     *
     * @param name  $Name
-    * @returns `Success(Int)` if the value exists and can successfully be converted to an Int.  `FailedFailed
+    * @return `Success(Int)` if the value exists and can successfully be converted to an Int.  `FailedFailed
     *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
     *          exists but could not be converted.
     */
@@ -87,7 +90,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   /** Gets a Boolean value from this object.
     *
     * @param name  $Name
-    * @returns `Success(Boolean)` if the value exists and is a Boolean.  `FailedFailed
+    * @return `Success(Boolean)` if the value exists and is a Boolean.  `FailedFailed
     *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
     *          exists but is not a Boolean.
     */
@@ -103,7 +106,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * (DecodingFailedException)` will be returned.
     *
     * @param name  $Name
-    * @returns `Success(Long)` if the value exists and can successfully be converted to a Long.  `FailedFailed
+    * @return `Success(Long)` if the value exists and can successfully be converted to a Long.  `FailedFailed
     *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
     *          exists but could not be converted.
     */
@@ -119,7 +122,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * (DecodingFailedException)` will be returned.
     *
     * @param name  $Name
-    * @returns `Success(Double)` if the value exists and can successfully be converted to a Double.  `FailedFailed
+    * @return `Success(Double)` if the value exists and can successfully be converted to a Double.  `FailedFailed
     *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
     *          exists but could not be converted.
     */
@@ -135,7 +138,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * (DecodingFailedException)` will be returned.
     *
     * @param name  $Name
-    * @returns `Success(Float)` if the value exists and can successfully be converted to a Float.  `FailedFailed
+    * @return `Success(Float)` if the value exists and can successfully be converted to a Float.  `FailedFailed
     *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
     *          exists but could not be converted.
     */
@@ -146,7 +149,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   /** Gets a `JsonObjectSafe` value from this object.
     *
     * @param name  $Name
-    * @returns `Success(JsonObjectSafe)` if the value exists and is a `JsonObject` or `JsonObjectSafe` (note this
+    * @return `Success(JsonObjectSafe)` if the value exists and is a `JsonObject` or `JsonObjectSafe` (note this
     *         will be null if the
     *          value is null).  `FailedFailed(NoSuchElementException)` if the value did not exist.  `Failure
     *          (DecodingFailedException)` if the value exists but is not a `JsonObject` or `JsonObjectSafe`.
@@ -158,7 +161,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   /** Gets a `JsonArraySafe` value from this object.
     *
     * @param name  $Name
-    * @returns `Success(JsonArraySafe)` if the value exists and is a `JsonArray` or `JsonArraySafe` (note this
+    * @return `Success(JsonArraySafe)` if the value exists and is a `JsonArray` or `JsonArraySafe` (note this
     *         will be null if the
     *          value is null).  `FailedFailed(NoSuchElementException)` if the value did not exist.  `Failure
     *          (DecodingFailedException)` if the value exists but is not a `JsonArray` or `JsonArraySafe`.
@@ -223,7 +226,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
 object JsonObjectSafe {
   /** Constructs a `JsonObjectSafe` from a String representing valid JSON ("""{"foo":"bar"}""").
     *
-    * @returns `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`
+    * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`
     */
   def fromJson(json: String): Try[JsonObjectSafe] = {
     Try(JsonObject.fromJson(json)).map(JsonObjectSafe(_))
