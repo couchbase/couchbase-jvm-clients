@@ -41,7 +41,7 @@ class GetFromReplicaSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
-    val result = coll.getAnyReplica(docId)
+    val result = coll.getAnyReplica(docId).get
 
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")
   }

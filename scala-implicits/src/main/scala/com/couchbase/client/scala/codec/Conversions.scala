@@ -45,7 +45,7 @@ object DocumentFlags {
   val String = CodecFlags.STRING_COMPAT_FLAGS
 }
 
-
+// TODO ScalaDocs
 object Conversions {
   val JsonFlags = EncodeParams(DocumentFlags.Json)
   val StringFlags = EncodeParams(DocumentFlags.String)

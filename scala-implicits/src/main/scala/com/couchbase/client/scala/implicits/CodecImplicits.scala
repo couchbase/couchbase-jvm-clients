@@ -4,7 +4,7 @@ import com.couchbase.client.scala.codec.Conversions.{Codec, Decodable, Encodable
 
 import scala.language.experimental.macros
 
-
+// TODO ScalaDocs
 object Codecs {
   def decoder[T]: Decodable[T] = macro CodecImplicits.makeDecoder[T]
   def encoder[T]: Encodable[T] = macro CodecImplicits.makeEncoder[T]

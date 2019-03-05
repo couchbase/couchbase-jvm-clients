@@ -167,7 +167,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     *          (DecodingFailedException)` if the value exists but is not a `JsonArray` or `JsonArraySafe`.
     */
   def arr(name: String): Try[JsonArraySafe] = {
-    Try(o.arr(name)).map(JsonArraySafe)
+    Try(o.arr(name)).map(v => JsonArraySafe(v))
   }
 
   /** Removes a key from this object.
