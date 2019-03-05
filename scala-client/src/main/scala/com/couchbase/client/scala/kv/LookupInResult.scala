@@ -12,22 +12,20 @@ import scala.compat.java8.OptionConverters._
   * When doing a `lookupIn` the application provides a sequence of [[LookupInSpec]].  The indexes into this sequence
   * are used when retrieving the results.
   *
+  * @param id  the unique identifier of the document
+  * @param cas the document's CAS value at the time of the lookup
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.Conversions.Encodable]] can be found: a list
+  *                        [[com.couchbase.client.scala.codec.Conversions.Decodable]] can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @author Graham Pople
   * @since 1.0.0
   **/
 case class LookupInResult(
-                           /** The unique identifier of the document. */
                            id: String,
                            private val content: Seq[SubdocField],
                            private[scala] val flags: Int,
-
-                           /** The document's CAS value at the time of the lookup. */
                            cas: Long,
-
                            private[scala] val expiration: Option[Duration]) {
 
   /** Retrieve the content returned for a particular `LookupInSpec`, converted into the application's preferred

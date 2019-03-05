@@ -48,7 +48,8 @@ object Collection {
 }
 
 /**
-  * Provides blocking, synchronous access to all collection APIs.
+  * Provides blocking, synchronous access to all collection APIs.  This is the main entry-point for key-value (KV)
+  * operations.
   *
   * <p>If asynchronous access is needed, we recommend looking at the [[AsyncCollection]] which is built around
   * returning `Future`s, or the [[ReactiveCollection]] which provides a reactive programming API.
@@ -145,7 +146,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    **/
   def get(
            id: String,
            withExpiration: Boolean = false,
@@ -172,7 +173,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException]], indicating the document already exists.
     *         $ErrorHandling
-    * */
+    **/
   def insert[T](
                  id: String,
                  content: T,
@@ -208,7 +209,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def replace[T](
                   id: String,
                   content: T,
@@ -279,7 +280,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def remove(
               id: String,
               cas: Long = 0,
@@ -310,7 +311,7 @@ class Collection(
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def mutateIn(
                 id: String,
                 spec: Seq[MutateInSpec],
@@ -350,7 +351,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    **/
   def getAndLock(id: String,
                  lockFor: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
@@ -372,7 +373,7 @@ class Collection(
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    **/
   def unlock(
               id: String,
               cas: Long,
@@ -393,7 +394,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    **/
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
@@ -427,7 +428,7 @@ class Collection(
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def lookupIn(
                 id: String,
                 spec: Seq[LookupInSpec],
@@ -439,11 +440,12 @@ class Collection(
 
   /** Retrieves any available version of the document.
     *
+    * The application should default to using [[Collection.get]] instead.  This method is intended for high-availability
+    * situations where, say, a [[Collection.get]] operation has failed, and the
+    * application wants to return any - even possibly stale - data as soon as possible.
+    *
     * Under the hood this sends a request to all configured replicas for the document, including the master, and
     * whichever returns first is returned.
-    *
-    * This is intended for high-availability situations where, say, a [[Collection.get]] operation has failed, and the
-    * application wants to return any - even possibly stale - data as soon as possible.
     *
     * @param id            $Id
     * @param parentSpan    $ParentSpan
@@ -452,7 +454,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def getAnyReplica(id: String,
                     parentSpan: Option[Span] = None,
                     timeout: Duration = kvTimeout,
@@ -463,10 +465,11 @@ class Collection(
 
   /** Retrieves all available versions of the document.
     *
-    * The returned `Iterable` will block on each call to `next` until the next replica has responded.
+    * The application should default to using [[Collection.get]] instead.  This method is intended for advanced scenarios,
+    * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
+    * application wants to attempt manual verification and resolution.
     *
-    * This is intended for high-availability situations where, say, a [[Collection.get]] operation has failed, and the
-    * application wants to return any - even possibly stale - data as soon as possible.
+    * The returned `Iterable` will block on each call to `next` until the next replica has responded.
     *
     * @param id            $Id
     * @param parentSpan    $ParentSpan
@@ -475,7 +478,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    * */
+    **/
   def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
@@ -483,7 +486,7 @@ class Collection(
   // TODO make this skip failed replicas
     reactive.getAllReplicas(id, parentSpan, timeout, retryStrategy).toIterable()
 
-  /** Checks if the document exists.
+  /** Checks if a document exists.
     *
     * This doesn't fetch the document so if the appplication simply needs to know if the document exists, this is the
     * most efficient method.
@@ -495,7 +498,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    **/
   def exists[T](
                  id: String,
                  parentSpan: Option[Span] = None,

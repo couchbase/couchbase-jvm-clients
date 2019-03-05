@@ -65,66 +65,17 @@ import collection.JavaConverters._
 case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Array[Byte])
 
 
-object AsyncCollection {
-  private[scala] val getFullDoc = Array(LookupInSpec.getDoc)
-
-  private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
-                                          id: String,
-                                          handler: RequestHandler[Resp, Res],
-                                          core: Core)
-                                         (implicit ec: ExecutionContext): Future[Res] = {
-    in match {
-      case Success(request) =>
-        core.send[Resp](request)
-
-        val out = FutureConverters.toScala(request.response())
-          .map(response => handler.response(id, response))
-
-        out
-
-      case Failure(err) => Future.failed(err)
-    }
-  }
-
-  private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
-                                                                               id: String,
-                                                                               handler: RequestHandler[Resp, Res],
-                                                                               durability: Durability,
-                                                                               remove: Boolean,
-                                                                               timeout: java.time.Duration,
-                                                                               core: Core,
-                                                                               bucketName: String,
-                                                                               collectionIdEncoded: Array[Byte])
-                                                                              (implicit ec: ExecutionContext): Future[Res] = {
-    val initial: Future[Res] = wrap(in, id, handler, core)
-
-    durability match {
-      case ClientVerified(replicateTo, persistTo) =>
-        initial.flatMap(response => {
-
-          val observeCtx = new ObserveContext(core.context(),
-            PersistTo.asCore(persistTo),
-            ReplicateTo.asCore(replicateTo),
-            response.mutationToken.asJava,
-            response.cas,
-            bucketName,
-            id,
-            collectionIdEncoded,
-            remove,
-            timeout
-          )
-
-          FutureConversions.javaMonoToScalaFuture(Observe.poll(observeCtx))
-
-            // After the observe return the original response
-            .map(_ => response)
-        })
-
-      case _ => initial
-    }
-  }
-}
-
+/** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point
+  * for key-value (KV) operations.
+  *
+  * <p>If synchronous, blocking access is needed, we recommend looking at the [[Collection]].  If a more advanced
+  * async API based around reactive programming is desired, then check out the [[ReactiveCollection]].
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  * @define Same             This asynchronous version performs the same functionality and takes the same parameters,
+  *                          but returns the same result object asynchronously in a `Future`.
+  **/
 class AsyncCollection(name: String,
                       collectionId: Long,
                       bucketName: String,
@@ -161,21 +112,19 @@ class AsyncCollection(name: String,
 
   private[scala] def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
                                                                                       id: String,
-                                                                                      handler: RequestHandler[Resp, Res],
+                                                                                      handler: RequestHandler[Resp,
+                                                                                        Res],
                                                                                       durability: Durability,
                                                                                       remove: Boolean,
-                                                                                      timeout: java.time.Duration): Future[Res] = {
-    AsyncCollection.wrapWithDurability(in, id, handler, durability, remove, timeout, core, bucketName, collectionIdEncoded)
+                                                                                      timeout: java.time.Duration)
+  : Future[Res] = {
+    AsyncCollection.wrapWithDurability(in, id, handler, durability, remove, timeout, core, bucketName,
+      collectionIdEncoded)
   }
 
-  def exists(id: String,
-             parentSpan: Option[Span] = None,
-             timeout: Duration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
-    val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
-    wrap(req, id, existsHandler)
-  }
-
+  /** Inserts a full document into this collection, if it does not exist already.
+    *
+    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
@@ -189,6 +138,9 @@ class AsyncCollection(name: String,
     wrapWithDurability(req, id, insertHandler, durability, false, timeout)
   }
 
+  /** Replaces the contents of a full document in this collection, if it already exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
   def replace[T](id: String,
                  content: T,
                  cas: Long = 0,
@@ -202,6 +154,9 @@ class AsyncCollection(name: String,
     wrapWithDurability(req, id, replaceHandler, durability, false, timeout)
   }
 
+  /** Upserts the contents of a full document in this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
@@ -214,7 +169,9 @@ class AsyncCollection(name: String,
     wrapWithDurability(req, id, upsertHandler, durability, false, timeout)
   }
 
-
+  /** Removes a document from this collection, if it exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
   def remove(id: String,
              cas: Long = 0,
              durability: Durability = Disabled,
@@ -225,6 +182,9 @@ class AsyncCollection(name: String,
     wrapWithDurability(req, id, removeHandler, durability, true, timeout)
   }
 
+  /** Fetches a full document from this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
   def get(id: String,
           withExpiration: Boolean = false,
           project: Seq[String] = Seq.empty,
@@ -288,6 +248,10 @@ class AsyncCollection(name: String,
     }
   }
 
+  /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+    * fetching and modifying the full document.
+    *
+    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
@@ -297,10 +261,14 @@ class AsyncCollection(name: String,
                expiration: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
-    val req = mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout, retryStrategy)
+    val req = mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout,
+      retryStrategy)
     wrapWithDurability(req, id, mutateInHandler, durability, false, timeout)
   }
 
+  /** Fetches a full document from this collection, and simultaneously lock the document from writes.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(id: String,
                  expiration: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
@@ -311,6 +279,9 @@ class AsyncCollection(name: String,
     wrap(req, id, getAndLockHandler)
   }
 
+  /** Unlock a locked document.
+    *
+    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
   def unlock(id: String,
              cas: Long,
              parentSpan: Option[Span] = None,
@@ -321,6 +292,9 @@ class AsyncCollection(name: String,
     wrap(req, id, unlockHandler)
   }
 
+  /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
@@ -332,6 +306,10 @@ class AsyncCollection(name: String,
     wrap(req, id, getAndTouchHandler)
   }
 
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
@@ -344,6 +322,10 @@ class AsyncCollection(name: String,
   }
 
   // TODO this needs to return GetFromReplicaResult
+
+  /** Retrieves any available version of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(id: String,
                     parentSpan: Option[Span] = None,
                     timeout: Duration = kvTimeout,
@@ -352,6 +334,9 @@ class AsyncCollection(name: String,
     getAllReplicas(id, parentSpan, timeout, retryStrategy).take(1).head
   }
 
+  /** Retrieves all available versions of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
@@ -375,5 +360,76 @@ class AsyncCollection(name: String,
         out
     }
   }
+
+  /** Checks if a document exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+  def exists(id: String,
+             parentSpan: Option[Span] = None,
+             timeout: Duration = kvTimeout,
+             retryStrategy: RetryStrategy = environment.retryStrategy()): Future[ExistsResult] = {
+    val req = existsHandler.request(id, parentSpan, timeout, retryStrategy)
+    wrap(req, id, existsHandler)
+  }
 }
 
+object AsyncCollection {
+  private[scala] val getFullDoc = Array(LookupInSpec.getDoc)
+
+  private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
+                                          id: String,
+                                          handler: RequestHandler[Resp, Res],
+                                          core: Core)
+                                         (implicit ec: ExecutionContext): Future[Res] = {
+    in match {
+      case Success(request) =>
+        core.send[Resp](request)
+
+        val out = FutureConverters.toScala(request.response())
+          .map(response => handler.response(id, response))
+
+        out
+
+      case Failure(err) => Future.failed(err)
+    }
+  }
+
+  private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](in: Try[Request[Resp]],
+                                                                               id: String,
+                                                                               handler: RequestHandler[Resp, Res],
+                                                                               durability: Durability,
+                                                                               remove: Boolean,
+                                                                               timeout: java.time.Duration,
+                                                                               core: Core,
+                                                                               bucketName: String,
+                                                                               collectionIdEncoded: Array[Byte])
+                                                                              (implicit ec: ExecutionContext)
+  : Future[Res] = {
+    val initial: Future[Res] = wrap(in, id, handler, core)
+
+    durability match {
+      case ClientVerified(replicateTo, persistTo) =>
+        initial.flatMap(response => {
+
+          val observeCtx = new ObserveContext(core.context(),
+            PersistTo.asCore(persistTo),
+            ReplicateTo.asCore(replicateTo),
+            response.mutationToken.asJava,
+            response.cas,
+            bucketName,
+            id,
+            collectionIdEncoded,
+            remove,
+            timeout
+          )
+
+          FutureConversions.javaMonoToScalaFuture(Observe.poll(observeCtx))
+
+            // After the observe return the original response
+            .map(_ => response)
+        })
+
+      case _ => initial
+    }
+  }
+}

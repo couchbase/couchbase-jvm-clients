@@ -38,6 +38,18 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import com.couchbase.client.scala.durability.Durability._
 
+/** Provides asynchronous access to all collection APIs, based around reactive programming using the
+  * [[https://projectreactor.io/ Project Reactor]] library.  This is the main entry-point
+  * for key-value (KV) operations.
+  *
+  * <p>If synchronous, blocking access is needed, we recommend looking at the [[Collection]].  If a simpler
+  * async API based around Scala `Future`s is desired, then check out the [[AsyncCollection]].
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  * @define Same             This reactive programming version performs the same functionality and takes the same parameters,
+  *                          but returns the same result object asynchronously in a Project Reactor `Mono`.
+  * */
 class ReactiveCollection(async: AsyncCollection) {
   private val kvTimeout = async.kvTimeout
   private val environment = async.environment
@@ -45,26 +57,9 @@ class ReactiveCollection(async: AsyncCollection) {
 
   import DurationConversions._
 
-  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): Mono[Res] = {
-    in match {
-      case Success(request) =>
-        core.send[Resp](request)
-
-        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(id, r))
-
-      case Failure(err) => Mono.error(err)
-    }
-  }
-
-  def exists[T](id: String,
-                parentSpan: Option[Span] = None,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[ExistsResult] = {
-    val req = async.existsHandler.request(id, parentSpan, timeout, retryStrategy)
-    wrap(req, id, async.existsHandler)
-  }
-
+  /** Inserts a full document into this collection, if it does not exist already.
+    *
+    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
@@ -77,7 +72,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.insertHandler)
   }
 
-
+  /** Replaces the contents of a full document in this collection, if it already exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
   def replace[T](id: String,
                  content: T,
                  cas: Long = 0,
@@ -91,6 +88,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.replaceHandler)
   }
 
+  /** Upserts the contents of a full document in this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
@@ -103,7 +103,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.upsertHandler)
   }
 
-
+  /** Removes a document from this collection, if it exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
   def remove(id: String,
              cas: Long = 0,
              durability: Durability = Disabled,
@@ -114,6 +116,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.removeHandler)
   }
 
+  /** Fetches a full document from this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
   def get(id: String,
           withExpiration: Boolean = false,
           project: Seq[String] = Seq.empty,
@@ -172,7 +177,11 @@ class ReactiveCollection(async: AsyncCollection) {
       case Failure(err) => Mono.error(err)
     }
   }
-  
+
+  /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+    * fetching and modifying the full document.
+    *
+    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
@@ -182,10 +191,14 @@ class ReactiveCollection(async: AsyncCollection) {
                expiration: Duration,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutateInResult] = {
-    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout, retryStrategy)
+    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout,
+      retryStrategy)
     wrap(req, id, async.mutateInHandler)
   }
 
+  /** Fetches a full document from this collection, and simultaneously lock the document from writes.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(id: String,
                  expiration: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
@@ -196,6 +209,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.getAndLockHandler)
   }
 
+  /** Unlock a locked document.
+    *
+    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
   def unlock(id: String,
              cas: Long,
              parentSpan: Option[Span] = None,
@@ -206,6 +222,9 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.unlockHandler)
   }
 
+  /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
@@ -217,7 +236,10 @@ class ReactiveCollection(async: AsyncCollection) {
     wrap(req, id, async.getAndTouchHandler)
   }
 
-
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
                parentSpan: Option[Span] = None,
@@ -229,6 +251,9 @@ class ReactiveCollection(async: AsyncCollection) {
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
+  /** Retrieves any available version of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(id: String,
                     parentSpan: Option[Span] = None,
                     timeout: Duration = kvTimeout,
@@ -237,6 +262,9 @@ class ReactiveCollection(async: AsyncCollection) {
     getAllReplicas(id, parentSpan, timeout, retryStrategy).next()
   }
 
+  /** Retrieves all available versions of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
@@ -259,4 +287,29 @@ class ReactiveCollection(async: AsyncCollection) {
     }
 
   }
+
+  private def wrap[Resp <: Response, Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp, Res])
+  : Mono[Res] = {
+    in match {
+      case Success(request) =>
+        core.send[Resp](request)
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .map(r => handler.response(id, r))
+
+      case Failure(err) => Mono.error(err)
+    }
+  }
+
+  /** Checks if a document exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+  def exists[T](id: String,
+                parentSpan: Option[Span] = None,
+                timeout: Duration = kvTimeout,
+                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[ExistsResult] = {
+    val req = async.existsHandler.request(id, parentSpan, timeout, retryStrategy)
+    wrap(req, id, async.existsHandler)
+  }
+
 }
