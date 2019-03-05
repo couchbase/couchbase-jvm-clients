@@ -145,7 +145,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    * */
   def get(
            id: String,
            withExpiration: Boolean = false,
@@ -172,7 +172,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException]], indicating the document already exists.
     *         $ErrorHandling
-    **/
+    * */
   def insert[T](
                  id: String,
                  content: T,
@@ -208,7 +208,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def replace[T](
                   id: String,
                   content: T,
@@ -279,7 +279,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def remove(
               id: String,
               cas: Long = 0,
@@ -310,7 +310,7 @@ class Collection(
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def mutateIn(
                 id: String,
                 spec: Seq[MutateInSpec],
@@ -350,7 +350,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    * */
   def getAndLock(id: String,
                  lockFor: Duration = 30.seconds,
                  parentSpan: Option[Span] = None,
@@ -372,7 +372,7 @@ class Collection(
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    * */
   def unlock(
               id: String,
               cas: Long,
@@ -393,7 +393,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    * */
   def getAndTouch(id: String,
                   expiration: Duration,
                   durability: Durability = Disabled,
@@ -415,7 +415,8 @@ class Collection(
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * Individual operations can succeed or fail.  See [[LookupInResult]] for details on how to process the results.
+    * Individual operations can succeed or fail without affecting the others.  See [[LookupInResult]] for details on
+    * how to process the results.
     *
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
@@ -426,7 +427,7 @@ class Collection(
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def lookupIn(
                 id: String,
                 spec: Seq[LookupInSpec],
@@ -451,7 +452,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def getAnyReplica(id: String,
                     parentSpan: Option[Span] = None,
                     timeout: Duration = kvTimeout,
@@ -474,7 +475,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    * */
   def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
@@ -494,7 +495,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    * */
   def exists[T](
                  id: String,
                  parentSpan: Option[Span] = None,
