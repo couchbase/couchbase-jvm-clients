@@ -54,30 +54,35 @@ import scala.collection.JavaConverters._
   * 2. Ease-of-use.  The objects are mutable, which may raise an eyebrow for functional Scala programmers but does
   * allow a very simple API with no zippers, lenses, prisms or optics.
   *
-  * In general the Couchbase Scala SDK returns `Try` rather than throwing exceptions.  This interface is one of the
+  * And to stress, if you would prefer to use a functional and immutable JSON interface, then please look at some of the
+  * those others supported by the Scala SDK, including the popular [[https://circe.github.io/circe/ Circe]].  Using
+  * `JsonObject` is 100% optional and the Scala SDK makes every effort to not tie you into any one JSON library.
+  *
+  * In general the Couchbase Scala SDK returns Try` rather than throwing exceptions.  This interface is one of the
   * rare exceptions to this rule, and many methods will throw exceptions, for instance if a field is requested that
   * does
   * not exist.  If you would rather use a more functional interface then please see [[JsonObjectSafe]] and
   * [[JsonArraySafe]], which provide a 'safe' wrapper that performs all operations with Scala `Try`s.
   *
   * @define SupportedType     only certain types are allowed to be put into this.  They are: [[JsonObject]] and
-  *                           [[JsonObjectSafe]], [[JsonArray]] and [[JsonArraySafe]], Int, Double, Short, Long, Float,
-  *                           Boolean.
+  * [[JsonObjectSafe]], [[JsonArray]] and [[JsonArraySafe]], Int, Double, Short, Long, Float,
+  * Boolean.
   * @define SupportedNumTypes the supported number types (Int, Double, Float, Long, Short)
   * @define Name              the field's key
   * @define NotExist          if the field does not exist
-  */
+  **/
 
 case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]) {
 
-  /** Returns a [[GetSelecter]] providing `Dynamic` access to this objects fields. */
+  /** Returns a [[GetSelecter]] providing `Dynamic` access to this object's fields. */
   def dyn: GetSelecter = {
     // Implementation note: Instead of making JsonObject itself Dynamic, which lends itself to all kinds of
     // accidental errors, put it in a separate method
     GetSelecter(Left(this), Seq())
   }
 
-  /** Puts a value into this object.
+  /** Puts a value into this object, which should be of one of the supported types (though, for performance, this is
+    * not checked).
     *
     * This mutates this object.  The returned `JsonObject` is a reference to this, not a copy.
     *
@@ -148,7 +153,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
   /** Gets an Long value from this object.
     *
     * If that value is actually an Long it is returned directly.  Else if it is one of $SupportedNumTypes or
-    * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
+    * String it will be converted with `toLong` (which may throw if it cannot be converted).  Else if it is of a
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
@@ -164,7 +169,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
   /** Gets a Double value from this object.
     *
     * If that value is actually a Double it is returned directly.  Else if it is one of $SupportedNumTypes or
-    * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
+    * String it will be converted with `toDouble` (which may throw if it cannot be converted).  Else if it is of a
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
@@ -180,7 +185,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
   /** Gets a Float value from this object.
     *
     * If that value is actually an Float it is returned directly.  Else if it is one of $SupportedNumTypes or
-    * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
+    * String it will be converted with `toFloat` (which may throw if it cannot be converted).  Else if it is of a
     * different type then DecodingFailedException will be thrown.
     *
     * @param name  $Name
@@ -224,6 +229,8 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
   /** Removes a key from this object.
     *
     * This mutates this object.  The returned `JsonObject` is a reference to this, not a copy.
+    *
+    * If the object does not contain the key then this is a no-op.
     *
     * @param name  $Name
     * @return a reference to this, to allow chaining operations
@@ -301,14 +308,14 @@ object JsonObject {
 
   /** Constructs a `JsonObject` from a String representing valid JSON ("""{"foo":"bar"}""").
     *
-    * @throws DecodingFailedException if the String contains invalid JSON
+    * @throws IllegalArgumentException if the String contains invalid JSON
     */
   def fromJson(json: String): JsonObject = {
     try {
       JacksonTransformers.stringToJsonObject(json)
     }
     catch {
-      case NonFatal(err) => throw new DecodingFailedException(err)
+      case NonFatal(err) => throw new IllegalArgumentException(err)
     }
   }
 
