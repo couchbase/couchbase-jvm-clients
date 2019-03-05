@@ -83,6 +83,10 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
 
   def size: Int = o.size
 
+  def asString: Try[String] = {
+    Try(o.toString)
+  }
+
   override def toString: String = o.toString
 
 }
