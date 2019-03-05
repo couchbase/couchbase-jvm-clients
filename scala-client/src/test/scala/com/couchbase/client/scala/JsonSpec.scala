@@ -86,7 +86,7 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 
 
   before {
-    // TODO bucketManager
+    // TODO BLOCKED (core) bucketManager
 //    bucket.bucketManager().flush()
     coll.remove(DocId)
   }

@@ -18,7 +18,7 @@ object Validate {
   /**
     * Check if the given string is not null or empty.
     *
-    * <p>If it is null or empty, a {@link IllegalArgumentException} is raised with a
+    * <p>If it is null or empty, a `Failure(IllegalArgumentException)` is raised with a
     * proper message.</p>
     *
     * @param input      the string to check.

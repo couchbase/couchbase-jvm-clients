@@ -7,86 +7,12 @@ import io.netty.util.CharsetUtil
 
 import scala.util.Try
 
-/** Represents an intent to perform a single SubDocument mutation. */
-sealed trait MutateInSpec {
-  private[scala] def convert: SubdocMutateRequest.Command
-
-  private[scala] val typ: SubdocCommandType
-}
-
-/** Most SubDocument mutations are pretty similar, encapsulate the similarities here. */
-private trait MutateInSpecStandard extends MutateInSpec {
-  val path: String
-  val fragment: Try[(Array[Byte], EncodeParams)]
-  val xattr: Boolean
-  val createParent: Boolean
-  val expandMacro: Boolean
-
-  def convert = new SubdocMutateRequest.Command(typ, path, value, createParent, xattr, expandMacro)
-
-  def value = fragment.get._1
-}
-
-private case class Insert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                          xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.DICT_ADD
-}
-
-private case class Replace(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                           xattr: Boolean, expandMacro: Boolean) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.REPLACE
-
-  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get._1, false, xattr, expandMacro)
-}
-
-private case class Upsert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                          xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
-}
-
-private case class Remove(path: String, xattr: Boolean = false) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.DELETE
-
-  def convert = new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, xattr, false)
-}
-
-private case class ArrayAppend(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                               xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_LAST
-}
-
-private case class ArrayPrepend(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                                xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_FIRST
-}
-
-private case class ArrayInsert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                               xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_INSERT
-}
-
-private case class ArrayAddUnique(path: String, fragment: Try[(Array[Byte], EncodeParams)],
-                                  xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
-  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
-}
-
-private case class Increment(path: String, delta: Long,
-                             xattr: Boolean, createParent: Boolean) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.COUNTER
-
-  def convert = {
-    val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
-    new SubdocMutateRequest.Command(typ, path, bytes, false, xattr, false)
-  }
-}
-
-
 /** Methods to allow constructing a sequence of `MutateInSpec`s.
   *
   * @author Graham Pople
   * @define CreatePath     whether intermediate paths should be created
   * @define Xattr          whether this is an extended attribute (xattr) field
-  * @define SupportedTypes This can be of any type for which an implicit Encodable can be found: a list
+  * @define SupportedTypes this can be of any type for which an implicit Encodable can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @define Encodable      an implicit Encodable.  For any supported type T this will be found automatically.
   */
@@ -268,3 +194,78 @@ object MutateInSpec {
     Increment(path, delta * -1, xattr, createPath)
   }
 }
+
+
+/** Represents an intent to perform a single SubDocument mutation. */
+sealed trait MutateInSpec {
+  private[scala] def convert: SubdocMutateRequest.Command
+
+  private[scala] val typ: SubdocCommandType
+}
+
+/** Most SubDocument mutations are pretty similar, encapsulate the similarities here. */
+private trait MutateInSpecStandard extends MutateInSpec {
+  val path: String
+  val fragment: Try[(Array[Byte], EncodeParams)]
+  val xattr: Boolean
+  val createParent: Boolean
+  val expandMacro: Boolean
+
+  def convert = new SubdocMutateRequest.Command(typ, path, value, createParent, xattr, expandMacro)
+
+  def value = fragment.get._1
+}
+
+private case class Insert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                          xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.DICT_ADD
+}
+
+private case class Replace(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                           xattr: Boolean, expandMacro: Boolean) extends MutateInSpec {
+  override val typ: SubdocCommandType = SubdocCommandType.REPLACE
+
+  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get._1, false, xattr, expandMacro)
+}
+
+private case class Upsert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                          xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
+}
+
+private case class Remove(path: String, xattr: Boolean = false) extends MutateInSpec {
+  override val typ: SubdocCommandType = SubdocCommandType.DELETE
+
+  def convert = new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, xattr, false)
+}
+
+private case class ArrayAppend(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                               xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_LAST
+}
+
+private case class ArrayPrepend(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                                xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_FIRST
+}
+
+private case class ArrayInsert(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                               xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_INSERT
+}
+
+private case class ArrayAddUnique(path: String, fragment: Try[(Array[Byte], EncodeParams)],
+                                  xattr: Boolean, createParent: Boolean, expandMacro: Boolean) extends MutateInSpecStandard {
+  override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
+}
+
+private case class Increment(path: String, delta: Long,
+                             xattr: Boolean, createParent: Boolean) extends MutateInSpec {
+  override val typ: SubdocCommandType = SubdocCommandType.COUNTER
+
+  def convert = {
+    val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
+    new SubdocMutateRequest.Command(typ, path, bytes, false, xattr, false)
+  }
+}
+

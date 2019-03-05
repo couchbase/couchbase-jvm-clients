@@ -28,6 +28,7 @@ import scala.util.{Failure, Success, Try}
 abstract class QueryException extends CouchbaseException
 
 case class QueryErrorException() extends QueryException
+
 case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
 
 case class QueryResult(rows: Seq[QueryRow],
@@ -96,6 +97,7 @@ object QueryMetrics {
 case class QueryOther(metrics: QueryMetrics,
                       warnings: Seq[QueryError])
 
+
 case class ReactiveQueryResult(
                               // TODO add
 //                                requestId: String,
@@ -106,3 +108,5 @@ case class ReactiveQueryResult(
                               // TODO add
 //                               other: Mono[QueryOther]
                               )
+
+

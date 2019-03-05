@@ -135,6 +135,7 @@ class AsyncCollection(name: String,
   import DurationConversions._
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
+  private[scala] val retryStrategy = environment.retryStrategy()
   private[scala] val collectionIdEncoded = UnsignedLEB128.encode(BigInteger.valueOf(collectionId))
   private[scala] val hp = HandlerParams(core, bucketName, collectionIdEncoded)
   private[scala] val existsHandler = new ExistsHandler(hp)

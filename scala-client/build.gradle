@@ -194,3 +194,7 @@ shadowJar {
   relocate 'org.jctools', 'com.couchbase.client.core.deps.org.jctools'
   relocate 'org.iq80.snappy', 'com.couchbase.client.core.deps.org.iq80.snappy'
 }
+
+task sd(type: ScalaDoc) {
+  include("../scala-implicits/src/main/scala/com/couchbase/scala/json")
+}
