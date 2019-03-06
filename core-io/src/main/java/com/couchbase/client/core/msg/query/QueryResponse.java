@@ -30,6 +30,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
 /**
@@ -41,14 +42,10 @@ import reactor.core.publisher.MonoProcessor;
 public class QueryResponse extends BaseResponse {
 
   private EmitterProcessor<byte[]> rowsProcessor;
-  private EmitterProcessor<byte[]> errorsProcessor;
-  private EmitterProcessor<byte[]> warningsProcessor;
-  private MonoProcessor<byte[]> metricsProcessor;
-  private MonoProcessor<String> requestIdProcessor;
-  private MonoProcessor<String> clientContextIdProcessor;
-  private MonoProcessor<String> queryStatusProcessor;
-  private MonoProcessor<byte[]> signatureProcessor;
-  private MonoProcessor<byte[]> profileProcessor;
+  private MonoProcessor<QueryAdditional> additional;
+  private byte[] signature;
+  private String requestId;
+  private String clientContextId;
   private volatile Instant lastRequestTimeStamp;
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
@@ -62,13 +59,7 @@ public class QueryResponse extends BaseResponse {
     this.environment = environment;
     this.rowsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
     this.errorsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
-    this.warningsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
-    this.requestIdProcessor = MonoProcessor.create();
-    this.clientContextIdProcessor = MonoProcessor.create();
-    this.metricsProcessor = MonoProcessor.create();
-    this.queryStatusProcessor = MonoProcessor.create();
-    this.signatureProcessor = MonoProcessor.create();
-    this.profileProcessor = MonoProcessor.create();
+    this.additional = MonoProcessor.create();
 
     FluxSink<byte[]> rowsSink = this.rowsProcessor.sink();
     rowsSink.onRequest(n -> {
@@ -101,29 +92,15 @@ public class QueryResponse extends BaseResponse {
 
   @Stability.Internal
   public void completeSuccessfully() {
-    this.requestIdProcessor.onComplete();
-    this.clientContextIdProcessor.onComplete();
-    this.metricsProcessor.onComplete();
-    this.queryStatusProcessor.onComplete();
     this.rowsProcessor.onComplete();
-    this.errorsProcessor.onComplete();
-    this.warningsProcessor.onComplete();
-    this.profileProcessor.onComplete();
-    this.signatureProcessor.onComplete();
+    this.additional.onComplete();
     this.complete();
   }
 
   @Stability.Internal
   public void completeExceptionally(Throwable t) {
-    this.requestIdProcessor.onError(t);
-    this.clientContextIdProcessor.onError(t);
-    this.metricsProcessor.onError(t);
-    this.queryStatusProcessor.onError(t);
     this.rowsProcessor.onError(t);
-    this.errorsProcessor.onError(t);
-    this.warningsProcessor.onError(t);
-    this.profileProcessor.onError(t);
-    this.signatureProcessor.onError(t);
+    this.additional.onError(t);
     this.complete();
   }
 
@@ -143,31 +120,18 @@ public class QueryResponse extends BaseResponse {
     return this.rowRequestSize.get();
   }
 
-  public MonoProcessor<String> requestId() {
-    return this.requestIdProcessor;
+  public String requestId() {
+    return this.requestId;
   }
 
-  public MonoProcessor<String> clientContextId() {
-    return this.clientContextIdProcessor;
+  public String clientContextId() {
+    return this.clientContextId;
   }
 
-  public MonoProcessor<byte[]> metrics() {
-    return this.metricsProcessor;
-  }
+  public byte[] signature() { return this.signature; }
 
-  public MonoProcessor<String> queryStatus() { return this.queryStatusProcessor; }
-
-  public MonoProcessor<byte[]> signature() { return this.signatureProcessor; }
-
-  public MonoProcessor<byte[]> profile() { return this.profileProcessor; }
+  public Mono<QueryAdditional> additional() { return this.additional; }
 
   public EmitterProcessor<byte[]> rows() { return this.rowsProcessor; }
-
-  public EmitterProcessor<byte[]> errors() {
-    return this.errorsProcessor;
-  }
-
-  public EmitterProcessor<byte[]> warnings() {
-    return this.warningsProcessor;
-  }
 }
+
