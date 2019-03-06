@@ -184,7 +184,6 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     */
   def toSeq: Seq[Any] = {
     val copy = ArrayBuffer.empty[Any]
-    import scala.collection.JavaConverters._
     val it = iterator
     while (it.hasNext) {
       val value = it.next()

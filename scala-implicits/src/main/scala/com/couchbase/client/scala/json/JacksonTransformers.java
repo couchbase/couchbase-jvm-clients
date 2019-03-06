@@ -25,6 +25,7 @@ import scala.collection.Iterator;
 
 import java.io.IOException;
 
+/** Tells Jackson how to produce [[JsonObject]] and [[JsonArray]]. */
 public class JacksonTransformers {
 
     public static final ObjectMapper MAPPER = new ObjectMapper();

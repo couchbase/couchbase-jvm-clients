@@ -9,7 +9,7 @@ import scala.util.{Failure, Success, Try}
 
 
 
-
+// TODO ScalaDocs
 object GetSelecter {
   private def couldNotFindKey(name: String) = new DecodingFailedException(s"Could not find key $name")
   private def expectedObjectButFoundArray(name: String) = new DecodingFailedException(s"Expected object or field for '$name' but found an array")
