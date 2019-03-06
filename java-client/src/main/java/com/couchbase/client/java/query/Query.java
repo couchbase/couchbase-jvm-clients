@@ -44,6 +44,8 @@ public interface Query {
 
 	/**
 	 * Get the query Json for further encoding and constructing request
+	 *
+	 * @return {@link} JsonObject
 	 */
 	@Stability.Internal
 	default JsonObject getQueryJson(JsonValue parameters) {
