@@ -1,5 +1,11 @@
 **/build/*
+**/target/*
 **/out/*
 .idea
 .gradle
 *.iml
+dependency-reduced-pom.xml
+*.log
+*.local.properties
+node_modules
+package-lock.json
