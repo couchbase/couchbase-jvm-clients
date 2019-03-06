@@ -15,6 +15,7 @@ import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.QueryServiceException
 import reactor.core.scala.publisher.{Flux, Mono}
 
