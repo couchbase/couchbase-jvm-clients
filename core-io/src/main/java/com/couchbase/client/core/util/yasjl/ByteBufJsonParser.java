@@ -25,8 +25,8 @@ import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUM
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB2;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
 
 import java.io.EOFException;
 

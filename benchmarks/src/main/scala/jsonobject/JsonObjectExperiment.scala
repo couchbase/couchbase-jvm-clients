@@ -24,7 +24,7 @@ import java.util.{HashMap, Map, Objects}
 import scala.collection.{GenMap, GenSet, mutable}
 import scala.collection.mutable.ArrayBuffer
 
-//import com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}

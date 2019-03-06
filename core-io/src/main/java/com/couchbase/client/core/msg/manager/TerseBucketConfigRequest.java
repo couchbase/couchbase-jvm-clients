@@ -22,11 +22,11 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
-import io.netty.handler.codec.http.*;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 

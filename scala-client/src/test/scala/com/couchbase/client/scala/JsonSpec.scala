@@ -6,11 +6,11 @@ import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.codec.EncodeParams
 import com.couchbase.client.scala.implicits.Codecs
 import com.couchbase.client.scala.implicits.Codecs.{decoder, encoder}
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
 import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.scalatest.{FlatSpec, Matchers, _}
 import upickle.implicits.MacroImplicits.dieIfNothing
 
@@ -189,10 +189,6 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
 
 
   "inserting case class with jackson" should "succeed" in {
-    import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
-    import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-    import com.fasterxml.jackson.module.scala.DefaultScalaModule
-
     val mapper = new ObjectMapper()
     mapper.registerModule(DefaultScalaModule)
 

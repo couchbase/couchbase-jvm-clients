@@ -25,7 +25,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

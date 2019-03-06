@@ -17,11 +17,11 @@
 package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.env.SecurityConfig;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslProvider;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.OpenSsl;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslHandler;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
 
 /**
  * This factory creates {@link SslHandler} based on a given configuration.

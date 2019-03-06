@@ -20,10 +20,10 @@ import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDu
 import static com.couchbase.client.util.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 

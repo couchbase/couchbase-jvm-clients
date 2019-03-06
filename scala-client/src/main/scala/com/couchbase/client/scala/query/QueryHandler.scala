@@ -11,10 +11,11 @@ import com.couchbase.client.scala.api.{MutationResult, QueryOptions}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.{DefaultErrors, RequestHandler}
 import com.couchbase.client.scala.util.Validate
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.scala.transformers.JacksonTransformers
 import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._

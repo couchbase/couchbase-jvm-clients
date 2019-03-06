@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>core-io-deps</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Couchbase JVM Core IO Dependencies</name>
+    <description>Shadowing dependencies for sanity's sake</description>
+
+
+    <dependencies>
+        <!-- Internal Dependencies -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.33.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>2.0.20.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jctools</groupId>
+            <artifactId>jctools-core</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.iq80.snappy</groupId>
+            <artifactId>snappy</artifactId>
+            <version>0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.latencyutils</groupId>
+            <artifactId>LatencyUtils</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <relocations>
+                        <relocation>
+                            <pattern>io.netty</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.io.netty</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.com.fasterxml.jackson</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.couchbase.client.core.com.couchbase.client.core.deps.io.netty</pattern>
+                            <shadedPattern>com.couchbase.client.core.io.netty</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.iq80.snappy</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.org.iq80.snappy</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.LatencyUtils</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.org.LatencyUtils</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.HdrHistogram</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.org.HdrHistogram</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.jctools</pattern>
+                            <shadedPattern>com.couchbase.client.core.deps.org.jctools</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

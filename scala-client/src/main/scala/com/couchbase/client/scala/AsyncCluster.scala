@@ -10,11 +10,11 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.json.{JacksonTransformers, JsonObject}
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.compat.java8.FutureConverters

@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import io.netty.channel.Channel;
-import io.netty.util.Attribute;
+import com.couchbase.client.core.deps.io.netty.channel.Channel;
+import com.couchbase.client.core.deps.io.netty.util.Attribute;
 
 /**
  * Provides various helper utilities for forking with a KV channel.

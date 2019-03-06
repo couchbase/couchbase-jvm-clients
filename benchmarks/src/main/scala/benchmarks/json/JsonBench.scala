@@ -30,13 +30,13 @@ import com.couchbase.client.java.codec.{Decoder, DefaultDecoder, DefaultEncoder}
 import com.couchbase.client.java.kv.EncodedDocument
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.codec.Conversions.Encodable
-//import com.fasterxml.jackson.databind.ObjectMapper
-//import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.module.scala.DefaultScalaModule
 //import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 //import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
 //import experiments.{JsoniterArray, JsoniterObject}
 //import io.circe.Encoder
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 //import jsonobject.JsonObjectExperiment
 import org.scalameter
 import org.scalameter.CurveData

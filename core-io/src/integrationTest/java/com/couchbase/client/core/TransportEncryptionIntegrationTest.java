@@ -28,8 +28,8 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;

@@ -23,7 +23,7 @@ import com.couchbase.client.scala.json.JsonArray
 import scala.collection.GenSet
 import scala.language.dynamics
 
-//import com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.collection.JavaConverters._
 

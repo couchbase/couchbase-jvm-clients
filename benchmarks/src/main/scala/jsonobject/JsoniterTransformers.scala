@@ -4,7 +4,7 @@ import java.util
 
 import com.couchbase.client.scala.json.JsonObject
 import com.jsoniter.output.JsonStream
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.jsoniter.{JsonIterator, ValueType}
 import experiments.JsoniterObject
 //

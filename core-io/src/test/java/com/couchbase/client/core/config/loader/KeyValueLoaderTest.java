@@ -28,7 +28,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;

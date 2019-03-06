@@ -28,7 +28,7 @@ import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 
 import java.util.Arrays;
 import java.util.HashSet;

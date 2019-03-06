@@ -17,7 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.io.NetworkAddress;
-import io.netty.util.internal.ObjectUtil;
+import com.couchbase.client.core.deps.io.netty.util.internal.ObjectUtil;
 
 /**
  * This context keeps together a bunch of related information needed to turn a raw

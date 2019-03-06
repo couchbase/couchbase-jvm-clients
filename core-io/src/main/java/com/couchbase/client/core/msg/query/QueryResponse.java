@@ -27,7 +27,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import io.netty.channel.Channel;
+import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.MonoProcessor;

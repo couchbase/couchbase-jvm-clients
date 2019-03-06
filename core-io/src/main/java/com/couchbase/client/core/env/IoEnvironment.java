@@ -16,15 +16,15 @@
 
 package com.couchbase.client.core.env;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
+import com.couchbase.client.core.deps.io.netty.util.concurrent.Future;
+import com.couchbase.client.core.deps.io.netty.util.concurrent.GenericFutureListener;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;

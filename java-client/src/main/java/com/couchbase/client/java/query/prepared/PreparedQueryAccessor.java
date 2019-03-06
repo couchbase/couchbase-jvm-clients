@@ -30,7 +30,7 @@ import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 /**
  * Prepared queries helper for sending the requests to core

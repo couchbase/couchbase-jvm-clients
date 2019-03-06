@@ -25,7 +25,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;

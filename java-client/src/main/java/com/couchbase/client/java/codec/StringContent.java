@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 public class StringContent extends TypedContent<byte[]> {
 

@@ -27,8 +27,8 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 

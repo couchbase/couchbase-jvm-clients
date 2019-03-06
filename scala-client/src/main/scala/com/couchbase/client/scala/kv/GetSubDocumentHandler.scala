@@ -11,7 +11,7 @@ import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.DocumentFlags
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import io.opentracing.Span
 
 import scala.collection.JavaConverters._

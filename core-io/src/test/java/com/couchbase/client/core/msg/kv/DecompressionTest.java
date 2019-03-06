@@ -18,8 +18,8 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
-import io.netty.buffer.ByteBuf;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

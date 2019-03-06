@@ -21,7 +21,6 @@ import java.util.Objects
 import com.couchbase.client.core.env.{Credentials, RoleBasedCredentials}
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
-import ujson.Value
 
 import scala.collection.{GenMap, mutable}
 import scala.concurrent.duration.Duration

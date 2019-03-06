@@ -19,14 +19,15 @@ package com.couchbase.client.scala.json
 import java.util
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.fasterxml.jackson.core.JsonProcessingException
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException
+import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.collection.{GenSet, mutable}
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
-//import com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
 
 import scala.collection.JavaConverters._
 

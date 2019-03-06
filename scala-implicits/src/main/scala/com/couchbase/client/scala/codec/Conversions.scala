@@ -6,7 +6,8 @@ import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{CodecFlags, SubdocCommandType, SubdocField}
 import com.couchbase.client.scala.json._
 import com.couchbase.client.scala.kv.MutateInMacro
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.util.{Failure, Success, Try}
 

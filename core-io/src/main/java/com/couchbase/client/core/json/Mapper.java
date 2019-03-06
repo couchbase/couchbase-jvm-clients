@@ -17,8 +17,8 @@
 package com.couchbase.client.core.json;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Provides utilities for encoding and decoding JSON data.

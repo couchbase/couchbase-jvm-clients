@@ -1,7 +1,5 @@
-## Tracking RFC on these areas and may need to make changes
-- Decision may be made to defer errors until the operation level, e.g. opening resources would always succeed
-- Projections IMO need some design iteration before implementing.
-- Query also IMO needs some love.  Error handling may change, at least.  Plus unclear if async/blocking needs to stream rows.
+## Building
+`mvn `
 
 ## Future plans
 See if can detect blocking app-side callbacks, e.g. is the app blocking the thread pool

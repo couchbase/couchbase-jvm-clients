@@ -31,10 +31,8 @@ import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import io.netty.util.CharsetUtil;
-import org.junit.jupiter.api.AfterAll;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,20 +63,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class KeyValueIntegrationTest extends JavaIntegrationTest {
 
-  private static Cluster cluster;
-  private static ClusterEnvironment environment;
-  private static Collection collection;
+  private Cluster cluster;
+  private ClusterEnvironment environment;
+  private Collection collection;
 
-  @BeforeAll
-  static void setup() {
+  @BeforeEach
+  void beforeEach() {
     environment = environment().build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
 
-  @AfterAll
-  static void tearDown() {
+  @AfterEach
+  void afterEach() {
     environment.shutdown();
     cluster.shutdown();
   }

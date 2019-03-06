@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.cnc;
 
-import org.jctools.queues.QueueFactory;
-import org.jctools.queues.spec.ConcurrentQueueSpec;
+import com.couchbase.client.core.deps.org.jctools.queues.QueueFactory;
+import com.couchbase.client.core.deps.org.jctools.queues.spec.ConcurrentQueueSpec;
 import reactor.core.publisher.Mono;
 
 import java.io.PrintStream;

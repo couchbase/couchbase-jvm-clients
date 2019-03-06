@@ -48,7 +48,11 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     * @param value $SupportedType
     * @return a reference to this, to allow chaining operations
     */
-  def put(name: String, value: Any): JsonObject = o.put(name, value)
+  def put(name: String, value: Any): Try[JsonObjectSafe] = {
+    // Cannot fail, returning a Try simply because it's easier to work with in a for-comprehension
+    o.put(name, value)
+    Success(this)
+  }
 
   /** Gets a value from this object.
     *

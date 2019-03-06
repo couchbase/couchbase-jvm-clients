@@ -15,12 +15,12 @@
  */
 package jsonobject;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonGenerator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.Version;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.*;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.IOException;
 

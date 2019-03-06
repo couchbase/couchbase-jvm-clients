@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 
 public interface ManagerRequest<R extends Response> extends Request<R> {
 

@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.scala.json;
+package com.couchbase.client.scala.transformers;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonGenerator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.Version;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.*;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.SimpleModule;
+import com.couchbase.client.scala.json.JsonArray;
+import com.couchbase.client.scala.json.JsonObject;
 import scala.collection.Iterator;
 
 import java.io.IOException;

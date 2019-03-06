@@ -21,8 +21,8 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionsDetectedEvent;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
-import org.HdrHistogram.Histogram;
-import org.HdrHistogram.Recorder;
+import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
+import com.couchbase.client.core.deps.org.HdrHistogram.Recorder;
 import reactor.core.publisher.Mono;
 
 import javax.management.ListenerNotFoundException;

@@ -27,7 +27,7 @@ import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.*;
 
 import java.time.Duration;

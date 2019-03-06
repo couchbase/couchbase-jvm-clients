@@ -19,11 +19,11 @@ package com.couchbase.client.core.cnc.diagnostics;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.diagnostics.PausesDetectedEvent;
-import org.HdrHistogram.Histogram;
-import org.HdrHistogram.Recorder;
-import org.LatencyUtils.PauseDetector;
-import org.LatencyUtils.PauseDetectorListener;
-import org.LatencyUtils.SimplePauseDetector;
+import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
+import com.couchbase.client.core.deps.org.HdrHistogram.Recorder;
+import com.couchbase.client.core.deps.org.LatencyUtils.PauseDetector;
+import com.couchbase.client.core.deps.org.LatencyUtils.PauseDetectorListener;
+import com.couchbase.client.core.deps.org.LatencyUtils.SimplePauseDetector;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;

@@ -17,9 +17,9 @@
 package com.couchbase.client.core.util.yasjl;
 
 import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import org.junit.jupiter.api.Test;
 
 import java.io.EOFException;

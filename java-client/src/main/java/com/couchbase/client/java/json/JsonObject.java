@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.json;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.io.Serializable;
 import java.math.BigDecimal;

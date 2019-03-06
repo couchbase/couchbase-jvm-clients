@@ -3,6 +3,7 @@ package com.couchbase.client.scala.json
 import java.util
 
 import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

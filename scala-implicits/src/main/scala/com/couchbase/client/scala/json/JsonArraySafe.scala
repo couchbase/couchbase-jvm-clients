@@ -150,9 +150,10 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     *
     * @return a reference to this, to allow chaining operations
     */
-  def add(item: Any): JsonArraySafe = {
+  def add(item: Any): Try[JsonArraySafe] = {
     a.add(item)
-    this
+    // Cannot fail, returning a Try simply because it's easier to work with in a for-comprehension
+    Success(this)
   }
 
   /** Gets a value from this array.

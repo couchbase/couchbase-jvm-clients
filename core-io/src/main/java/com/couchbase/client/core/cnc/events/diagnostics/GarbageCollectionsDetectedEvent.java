@@ -19,7 +19,7 @@ package com.couchbase.client.core.cnc.events.diagnostics;
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.diagnostics.GcAnalyzer;
-import org.HdrHistogram.Histogram;
+import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
 
 import java.time.Duration;
 import java.util.HashMap;

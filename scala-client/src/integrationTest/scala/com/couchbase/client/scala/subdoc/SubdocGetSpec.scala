@@ -10,7 +10,7 @@ import org.scalatest.FunSuite
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import com.couchbase.client.scala.kv.LookupInSpec._
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 
 class SubdocGetSpec extends FunSuite {
 

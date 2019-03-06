@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import io.netty.buffer.ByteBufProcessor;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
 
 /**
  * Processes JSON false value

@@ -30,10 +30,6 @@ import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
 import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
-import io.circe._
-import io.circe.generic.auto._
-import io.circe.parser._
-import io.circe.syntax._
 
 import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
@@ -42,19 +38,17 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.FutureConversions
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.netty.buffer.ByteBuf
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
-import rx.RxReactiveStreams
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future, JavaConversions}
 import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
-import ujson._
 import com.couchbase.client.scala.durability.Durability._
 
 import scala.collection.mutable.ArrayBuffer

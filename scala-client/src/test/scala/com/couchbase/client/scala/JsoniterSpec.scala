@@ -1,8 +1,8 @@
 //package com.couchbase.client.scala
 //
 //import com.couchbase.client.scala.json.JsonObject
-//import com.fasterxml.jackson.databind.ObjectMapper
-//import com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.module.scala.DefaultScalaModule
 //import com.jsoniter.JsonIterator
 //import com.jsoniter.output.JsonStream
 //import org.scalatest.FunSuite

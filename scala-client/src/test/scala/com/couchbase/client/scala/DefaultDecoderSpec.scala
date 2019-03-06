@@ -3,10 +3,10 @@ package com.couchbase.client.scala
 import java.lang.reflect.{ParameterizedType, Type}
 import java.nio.charset.Charset
 //import com.couchbase.client.scala.document.DefaultDecoder.mapper
-import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
-//import com.fasterxml.jackson.module.scala.DefaultScalaModule
-//import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.`type`.TypeReference
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.module.scala.DefaultScalaModule
+//import com.couchbase.client.core.deps.com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import org.scalatest.FunSuite
 import upickle.default._
 import upickle._

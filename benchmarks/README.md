@@ -1,3 +1,5 @@
+// TODO! convert this over to Maven build
+
 # Benchmarks
 Holds any benchmarks relevant to the clients or core.  
 

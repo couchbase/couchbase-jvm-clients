@@ -18,8 +18,8 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.fasterxml.jackson.core.type.TypeReference;
-import io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 
 import java.util.HashMap;
 import java.util.Objects;

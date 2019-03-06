@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
 

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import com.couchbase.client.core.deps.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
  * The {@link MemcacheProtocolDecodeHandler} is a lightweight decoder that understands the

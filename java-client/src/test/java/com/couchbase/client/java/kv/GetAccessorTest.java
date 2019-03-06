@@ -22,7 +22,7 @@ import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

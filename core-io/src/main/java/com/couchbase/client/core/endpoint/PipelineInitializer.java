@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
-import io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 
 /**
  * Interface which provides a common API to initialize endpoint-specific pipelines.

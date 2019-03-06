@@ -3,7 +3,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, PathArray, PathObjectOrField}
 import com.couchbase.client.scala.kv.{JsonPathParser, ProjectionsApplier}
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import org.scalatest.FunSuite
 
 import scala.util.Success

@@ -17,7 +17,7 @@
 package com.couchbase.client.core.util.yasjl.Callbacks;
 
 import com.couchbase.client.core.util.yasjl.JsonPointer;
-import io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 
 /**
  * @author Subhashni Balakrishnan

@@ -16,12 +16,12 @@
 
 package com.couchbase.client.core.io.netty;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 public class HttpProtocol {
 

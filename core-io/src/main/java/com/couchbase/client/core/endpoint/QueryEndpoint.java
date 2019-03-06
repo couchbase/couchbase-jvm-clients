@@ -20,8 +20,8 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpClientCodec;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
 
 public class QueryEndpoint extends BaseEndpoint {
 

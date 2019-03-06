@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.couchbase.client</groupId>
+        <artifactId>couchbase-jvm-clients</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <!--Can override this with mvn -Dscala.compat.version=2.11-->
+    <properties>
+        <scala.compat.version>2.12</scala.compat.version>
+    </properties>
+
+    <artifactId>scala-implicits_${scala.compat.version}</artifactId>
+    <version>1.0.0-dp1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Couchbase Scala SDK Implicits</name>
+    <description>The official Couchbase Scala SDK (Implicits)</description>
+
+    <dependencies>
+        <!-- External, Required Dependencies -->
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>core-io</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
+            <!--Jump through some hoops to get core-io not shared in scala-client-->
+            <scope>provided</scope>
+        </dependency>
+
+        <!--There's a discussion here https://www.scala-lang.org/old/node/6737.html on whether
+        scala-library should be provided scope, and the feeling seems to be no, to detect
+        incompatibilities with the app's version-->
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.12.8</version>
+        </dependency>
+
+        <!--Jsoniter offers very fast conversion of case classes to/from Array[Byte]-->
+        <dependency>
+            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+            <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
+            <version>0.39.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+            <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
+            <version>0.39.0</version>
+        </dependency>
+
+        <!--Jackson has a parser that can convert Scala's JsonObject to/from String]-->
+        <!--TODO replace with core-io-deps-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
+            <version>2.9.7</version>
+        </dependency>
+
+        <!--Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support-->
+        <dependency>
+            <groupId>com.jsoniter</groupId>
+            <artifactId>jsoniter</artifactId>
+            <version>0.9.19</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!--Dependencies that are optional.  If app has them in classpath and uses them, then we support them.-->
+
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>upickle_${scala.compat.version}</artifactId>
+            <version>0.7.1</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-core_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-generic_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-parser_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!--Only used for circe-->
+        <dependency>
+            <groupId>org.scalamacros</groupId>
+            <!--A 2.11 build does not exist-->
+            <artifactId>paradise_2.12.7</artifactId>
+            <version>2.1.1</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-json_${scala.compat.version}</artifactId>
+            <version>2.6.7</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_${scala.compat.version}</artifactId>
+            <version>3.6.4</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+            <version>3.6.4</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.typelevel</groupId>
+            <artifactId>jawn-ast_${scala.compat.version}</artifactId>
+            <version>0.14.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>test-utils</artifactId>
+            <version>0.1.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+
+        <plugins>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>4.0.1</version>
+
+                <!--This is a solution for mixed Scala/Java projects-->
+                <executions>
+                    <execution>
+                        <id>scala-compile</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>scala-test-compile</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--Add src/main/java to source-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

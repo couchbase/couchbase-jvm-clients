@@ -15,30 +15,34 @@ This repository contains the following projects:
  - `scala-client`: the scala language binding
  - `kotlin-client`: the kotlin language binding
  
-Regular Couchbase users will note that both the scala and the kotling binding are new! Yes they are, and we are trying to develop them as first-class citizens similar to the java client going forward.
+Regular Couchbase users will note that both the scala and the kotlin binding are new! Yes they are, and we are trying to develop them as first-class citizens similar to the java client going forward.
  
 ## Usage
 
 Since we are not publishing builds yet, you need to do a local checkout and build.
 
 ```
-$ git clone https://github.com/daschl/couchbase-jvm-clients.git
+$ git clone https://github.com/couchbaselabs/couchbase-jvm-clients.git
 $ cd couchbase-jvm-clients
-$ ./gradlew publishToMavenLocal
+$ mvn -Dscala.compat.version=2.11 install
+$ mvn -Dscala.compat.version=2.12 install
 ```
+
+(The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11 and 2.12.)
 
 ### Building and Testing
 
 You can test pretty easily:
 
 ```
-$ ./gradlew test
+$ mvn test
 ```
 
 And building:
 
 ```
-$ ./gradlew build
+$ mvn -Dscala.compat.version=2.11 install
+$ mvn -Dscala.compat.version=2.12 install
 ```
 
 (You can always go into one of the sub-directories like `core-io` to only build or test an individual project.)

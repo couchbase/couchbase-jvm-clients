@@ -23,7 +23,7 @@ import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;

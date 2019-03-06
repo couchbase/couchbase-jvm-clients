@@ -3,7 +3,7 @@ package com.couchbase.client.scala.kv
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.Conversions.Encodable
 import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
-import io.netty.util.CharsetUtil
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 
 import scala.util.Try
 

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.couchbase.client</groupId>
+        <artifactId>couchbase-jvm-clients</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <!--Can override this with mvn -Dscala.compat.version=2.11-->
+    <properties>
+        <scala.compat.version>2.12</scala.compat.version>
+    </properties>
+
+    <artifactId>scala-client_${scala.compat.version}</artifactId>
+    <version>1.0.0-dp1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Couchbase Scala SDK</name>
+    <description>The official Couchbase Scala SDK</description>
+
+    <dependencies>
+        <!-- External, Required Dependencies -->
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>core-io</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>scala-implicits_${scala.compat.version}</artifactId>
+            <version>1.0.0-dp1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-scala-extensions_${scala.compat.version}</artifactId>
+            <version>0.3.5</version>
+        </dependency>
+
+        <!--// TODO check and shade-->
+        <!--<dependency>-->
+            <!--<groupId>io.projectreactor.addons</groupId>-->
+            <!--<artifactId>reactor-adapter</artifactId>-->
+            <!--<version>3.2.0.RELEASE</version>-->
+        <!--</dependency>-->
+
+        <!--// TODO SHADE-->
+        <dependency>
+            <groupId>org.scala-lang.modules</groupId>
+            <artifactId>scala-java8-compat_${scala.compat.version}</artifactId>
+            <version>0.9.0</version>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.scalacheck</groupId>
+            <artifactId>scalacheck_${scala.compat.version}</artifactId>
+            <version>1.14.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.compat.version}</artifactId>
+            <version>3.0.5</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--testCompile 'org.junit.jupiter:junit-jupiter-api:5.4.0'-->
+        <!--testCompile 'org.junit.jupiter:junit-jupiter-params:5.4.0'-->
+        <!--testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.4.0'-->
+
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>test-utils</artifactId>
+            <version>0.1.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>upickle_${scala.compat.version}</artifactId>
+            <version>0.7.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-core_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-generic_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-parser_${scala.compat.version}</artifactId>
+            <version>0.10.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--Only used for circe-->
+        <dependency>
+            <groupId>org.scalamacros</groupId>
+            <!--A 2.11 build does not exist-->
+            <artifactId>paradise_2.12.7</artifactId>
+            <version>2.1.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-json_${scala.compat.version}</artifactId>
+            <version>2.6.7</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_${scala.compat.version}</artifactId>
+            <version>3.6.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+            <version>3.6.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.typelevel</groupId>
+            <artifactId>jawn-ast_${scala.compat.version}</artifactId>
+            <version>0.14.0</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+        <!--<testSourceDirectory>src/test/scala</testSourceDirectory>-->
+
+        <plugins>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>4.0.1</version>
+                <!--Seem to need this to get any Scala compiled-->
+                <executions>
+                    <execution>
+                        <id>scala-compile</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>scala-test-compile</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                    <relocations>
+                        <relocation>
+                            <pattern>com.github.plokhotnyuk</pattern>
+                            <shadedPattern>com.couchbase.client.scala.deps.plokhotnyuk</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.scala-lang.modules</pattern>
+                            <shadedPattern>com.couchbase.client.scala.deps.org.scala-lang.modules</shadedPattern>
+                        </relocation>
+                    </relocations>
+
+                    <artifactSet>
+                        <includes>
+                            <include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_${scala.compat.version}</include>
+                            <include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-macros_${scala.compat.version}</include>
+                            <!--TODO shade or reuse core's-->
+                            <include>com.fasterxml.jackson.core:jackson-databind</include>
+                            <include>com.fasterxml.jackson.core:jackson-core</include>
+                            <include>com.fasterxml.jackson.core:jackson-annotations</include>
+
+                            <include>com.couchbase.client:scala-implicits_${scala.compat.version}</include>
+                            <!--TODO SHADE-->
+                            <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
+                            <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
+                            <!--TODO reflect-->
+                            <!--TODO xml-->
+                            <!--TODO findbugs-->
+                            <!--TODO replace with core-io-deps-->
+                            <include>com.fasterxml.jackson.module:jackson-module-scala_${scala.compat.version}</include>
+                        </includes>
+                        <excludes>
+                            <!--<exclude>io.projectreactor:reactor-scala-extensions_${scala.compat.version}</exclude>-->
+                            <exclude>com.couchbase.client:core-io</exclude>
+                        </excludes>
+                    </artifactSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

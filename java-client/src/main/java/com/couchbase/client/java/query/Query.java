@@ -19,7 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValue;
-import io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 /**
  * Query interface for constructing a N1QL Query
