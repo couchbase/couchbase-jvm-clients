@@ -15,7 +15,6 @@ object CodecImplicits {
   def makeDecoder[T](c: scala.reflect.macros.blackbox.Context)
                     (implicit e: c.WeakTypeTag[T]) = {
     import c.universe._
-    // Note we use a shadowed version of plokhotnyuk.jsoniter_scala
     q"""
     new Decodable[${e}] {
       import com.github.plokhotnyuk.jsoniter_scala.core._

@@ -75,9 +75,10 @@ class AsyncCluster(environment: => ClusterEnvironment)
 //              .requestId().doOnNext(v => requestIdKeeper.set(v))
 //              .`then`(response.clientContextId().doOnNext(v => clientContextIdKeeper.set(v)))
 //              .(response.rows().collectList().doOnNext(r => rowsKeeper.set(r))
-              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
-              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
-              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
+
+//              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
+//              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
+//              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
 
               .flatMap(_ => {
                 val rows = rowsKeeper.get().asScala.map(QueryRow)
@@ -87,8 +88,9 @@ class AsyncCluster(environment: => ClusterEnvironment)
 //                  clientContextIdKeeper.get(),
                   rows,
                   QueryOther(
-                    metricsKeeper.get(),
-                    warningsKeeper.get().asScala.map(w => QueryError(w))
+                    null, null
+//                    metricsKeeper.get(),
+//                    warningsKeeper.get().asScala.map(w => QueryError(w))
                   ))
 
                 val out: JavaMono[QueryResult] = Option(errorsKeeper.get()).map(_.asScala.map(QueryError)) match {

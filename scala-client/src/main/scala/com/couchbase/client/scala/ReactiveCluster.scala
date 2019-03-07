@@ -75,7 +75,7 @@ class ReactiveCluster(val async: AsyncCluster)
 //              .doOnComplete(() => println("rows completed"))
 //              .doOnTerminate(() => println("rows terminate"))
 
-            val justErrs: JavaFlux[QueryError] = response.errors().map(bytes => QueryError(bytes))
+//            val justErrs: JavaFlux[QueryError] = response.errors().map(bytes => QueryError(bytes))
 
 //            FutureConversions.javaFluxToScalaFlux(justRows).zipWith[Array[Byte], QueryRow](errs, (a, b) => {
 //              a
@@ -116,7 +116,8 @@ class ReactiveCluster(val async: AsyncCluster)
               //                clientContextIdKeeper.get(),
 //              FutureConversions.javaFluxToScalaFlux(rowsWithErrors),
               FutureConversions.javaFluxToScalaFlux(justRows),
-              FutureConversions.javaFluxToScalaFlux(justErrs)
+              null
+//              FutureConversions.javaFluxToScalaFlux(justErrs)
             )
             //            })
             //                .doOnSubscribe(_ => {

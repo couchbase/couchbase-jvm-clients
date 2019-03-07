@@ -116,53 +116,49 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         String requestID = value.toString(CHARSET);
         requestID = requestID.substring(1, requestID.length() - 1);
         value.release();
-        // TODO gp everythng up to `rows` should be received near-instantly, and I don't think we need to
-        // expose Publishers for everything - it's quite a hard API to use.  Let's just wait until
-        // everything up to `rows` is received, and then send the initial Mono.
-        currentResponse.requestId().onNext(requestID);
+//        currentResponse.requestId().onNext(requestID);
       }),
       new JsonPointer("/errors/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO gp feel this should raise currentResponse.rows().onError instead
-        currentResponse.errors().onNext(data);
+        currentResponse.rows().onNext(data);
       }),
       new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.warnings().onNext(data);
+//        currentResponse.warnings().onNext(data);
       }),
       new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
         String clientContextID = value.toString(CHARSET);
         clientContextID = clientContextID.substring(1, clientContextID.length() - 1);
         value.release();
-        currentResponse.clientContextId().onNext(clientContextID);
+//        currentResponse.clientContextId().onNext(clientContextID);
       }),
       new JsonPointer("/metrics", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.metrics().onNext(data);
+//        currentResponse.metrics().onNext(data);
       }),
       new JsonPointer("/status", (JsonPointerCB1) value -> {
         String statusStr = value.toString(CHARSET);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
-        currentResponse.queryStatus().onNext(statusStr);
+//        currentResponse.queryStatus().onNext(statusStr);
       }),
       new JsonPointer("/signature", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.signature().onNext(data);
+//        currentResponse.signature().onNext(data);
       }),
       new JsonPointer("/profile", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.profile().onNext(data);
+//        currentResponse.profile().onNext(data);
       })
     });
   }

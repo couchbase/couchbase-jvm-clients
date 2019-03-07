@@ -58,7 +58,6 @@ public class QueryResponse extends BaseResponse {
     this.channel = channel;
     this.environment = environment;
     this.rowsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
-    this.errorsProcessor = EmitterProcessor.create(DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE);
     this.additional = MonoProcessor.create();
 
     FluxSink<byte[]> rowsSink = this.rowsProcessor.sink();

@@ -158,7 +158,7 @@
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
-        <!--<testSourceDirectory>src/test/scala</testSourceDirectory>-->
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
 
         <plugins>
             <plugin>
@@ -250,6 +250,25 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/integrationTest/scala</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 
