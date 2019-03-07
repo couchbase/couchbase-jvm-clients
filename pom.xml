@@ -63,6 +63,7 @@
 
     <modules>
         <module>java-client</module>
+        <module>java-examples</module>
         <module>core-io</module>
         <module>scala-implicits</module>
         <module>scala-client</module>

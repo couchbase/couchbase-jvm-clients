@@ -33,13 +33,13 @@ public class ParameterizedQueryExample {
 
     QueryResult result = cluster.query(
       "select * from `travel-sample` where type = ? limit 5",
-      queryOptions().parameterized(JsonArray.from("airport"))
+      queryOptions().withParameters(JsonArray.from("airport"))
     );
     System.out.println(result.rows());
 
     result = cluster.query(
       "select * from `travel-sample` where type = $type limit 5",
-      queryOptions().parameterized(JsonObject.empty().put("type", "airport"))
+      queryOptions().withParameters(JsonObject.empty().put("type", "airport"))
     );
     System.out.println(result.rows());
 

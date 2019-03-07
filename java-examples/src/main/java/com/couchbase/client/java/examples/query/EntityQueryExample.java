@@ -23,7 +23,7 @@ public class EntityQueryExample {
       statement,
       queryOptions()
         .timeout(Duration.ofSeconds(75))
-        .parameterized(JsonObject.create().put("type", "person"))
+        .withParameters(JsonObject.create().put("type", "person"))
     );
 
     for (Person person : result.rows(Person.class)) {
