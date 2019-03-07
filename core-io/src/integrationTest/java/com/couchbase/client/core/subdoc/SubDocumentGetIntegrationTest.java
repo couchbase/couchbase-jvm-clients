@@ -200,8 +200,9 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
             new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false));
 
-    checkExpectedFailure("{\"foo\":\"bar\"}", commands, PathNotFoundException.class);
-  }
+    SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
+    assertFalse(response.values().get(0).status().success());
+    assertEquals(SubdocCommandType.EXISTS, response.values().get(0).type());  }
 
 
   @Test
@@ -212,7 +213,6 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
             );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
-
     assertFalse(response.values().get(0).status().success());
     assertEquals(SubdocCommandType.EXISTS, response.values().get(0).type());
   }

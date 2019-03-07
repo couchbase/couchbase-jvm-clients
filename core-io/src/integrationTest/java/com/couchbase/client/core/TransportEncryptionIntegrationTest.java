@@ -17,7 +17,6 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -143,11 +142,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfNoTrustPresent() {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.tlsEnabled(true)));
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfMoreThanOneTrustPresent() {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
       .tlsEnabled(true)
