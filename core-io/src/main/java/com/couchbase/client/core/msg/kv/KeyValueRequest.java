@@ -57,7 +57,7 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    * Decode the encoded response into its message representation.
    *
    * @param response the response to decode.
-   * @return the decoded response as {@link R}.
+   * @return the decoded response as the generic type R.
    */
   R decode(ByteBuf response, ChannelContext ctx);
 

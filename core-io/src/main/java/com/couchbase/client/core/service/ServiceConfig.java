@@ -18,33 +18,14 @@ package com.couchbase.client.core.service;
 
 import java.time.Duration;
 
-/**
- *
- */
 public interface ServiceConfig {
 
-  /**
-   *
-   * @return
-   */
   int minEndpoints();
 
-  /**
-   *
-   * @return
-   */
   int maxEndpoints();
 
-  /**
-   *
-   * @return
-   */
   Duration idleTime();
 
-  /**
-   *
-   * @return
-   */
   boolean pipelined();
 
 }
