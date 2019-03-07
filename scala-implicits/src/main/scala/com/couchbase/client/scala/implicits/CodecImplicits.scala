@@ -15,14 +15,17 @@ object CodecImplicits {
   def makeDecoder[T](c: scala.reflect.macros.blackbox.Context)
                     (implicit e: c.WeakTypeTag[T]) = {
     import c.universe._
-    // TODO use the shadowed version of plokhotnyuk
+    // Note we use a shadowed version of plokhotnyuk.jsoniter_scala
     q"""
     new Decodable[${e}] {
-      implicit val jsonIterDecodeCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$e] =
-        com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$e](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig())
+      import com.github.plokhotnyuk.jsoniter_scala.core._
+      import com.github.plokhotnyuk.jsoniter_scala.macros._
+
+      implicit val jsonIterDecodeCodec: JsonValueCodec[$e] =
+        JsonCodecMaker.make[$e](CodecMakerConfig())
 
       override def decode(bytes: Array[Byte], params: codec.EncodeParams): scala.util.Try[$e] = {
-        scala.util.Try(com.github.plokhotnyuk.jsoniter_scala.core.readFromArray(bytes))
+        scala.util.Try(readFromArray(bytes))
       }
     }
     """
@@ -33,11 +36,14 @@ object CodecImplicits {
     import c.universe._
     q"""
     new Encodable[$e] {
-      implicit val jsonIterEncodeCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$e] =
-       com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$e](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig())
+      import com.github.plokhotnyuk.jsoniter_scala.core._
+      import com.github.plokhotnyuk.jsoniter_scala.macros._
+
+      implicit val jsonIterEncodeCodec: JsonValueCodec[$e] =
+       JsonCodecMaker.make[$e](CodecMakerConfig())
 
       override def encode(content: $e): scala.util.Try[(Array[Byte], com.couchbase.client.scala.codec.EncodeParams)] = {
-        scala.util.Try((com.github.plokhotnyuk.jsoniter_scala.core.writeToArray(content), com.couchbase.client.scala.codec.Conversions.JsonFlags))
+        scala.util.Try((writeToArray(content), com.couchbase.client.scala.codec.Conversions.JsonFlags))
       }
     }
     """
@@ -49,15 +55,18 @@ object CodecImplicits {
     import c.universe._
     q"""
     new Codec[$e] {
-      val jsonIterCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$e] =
-       com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$e](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig())
+      import com.github.plokhotnyuk.jsoniter_scala.core._
+      import com.github.plokhotnyuk.jsoniter_scala.macros._
+
+      val jsonIterCodec: JsonValueCodec[$e] =
+       JsonCodecMaker.make[$e](CodecMakerConfig())
 
       override def decode(bytes: Array[Byte], params: com.couchbase.client.scala.codec.EncodeParams): scala.util.Try[$e] = {
-        scala.util.Try(com.github.plokhotnyuk.jsoniter_scala.core.readFromArray(bytes)(jsonIterCodec))
+        scala.util.Try(readFromArray(bytes)(jsonIterCodec))
       }
 
       override def encode(content: $e): scala.util.Try[(Array[Byte], com.couchbase.client.scala.codec.EncodeParams)] = {
-        scala.util.Try((com.github.plokhotnyuk.jsoniter_scala.core.writeToArray(content)(jsonIterCodec), com.couchbase.client.scala.codec.Conversions.JsonFlags))
+        scala.util.Try((writeToArray(content)(jsonIterCodec), com.couchbase.client.scala.codec.Conversions.JsonFlags))
       }
     }
     """

@@ -41,12 +41,17 @@
             <version>0.3.5</version>
         </dependency>
 
-        <!--// TODO check and shade-->
-        <!--<dependency>-->
-            <!--<groupId>io.projectreactor.addons</groupId>-->
-            <!--<artifactId>reactor-adapter</artifactId>-->
-            <!--<version>3.2.0.RELEASE</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+            <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
+            <version>0.39.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+            <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
+            <version>0.39.0</version>
+        </dependency>
 
         <!--// TODO SHADE-->
         <dependency>
@@ -185,10 +190,10 @@
                     <createSourcesJar>true</createSourcesJar>
                     <shadeSourcesContent>true</shadeSourcesContent>
                     <relocations>
-                        <relocation>
-                            <pattern>com.github.plokhotnyuk</pattern>
-                            <shadedPattern>com.couchbase.client.scala.deps.plokhotnyuk</shadedPattern>
-                        </relocation>
+                        <!--<relocation>-->
+                            <!--<pattern>com.github.plokhotnyuk</pattern>-->
+                            <!--<shadedPattern>com.couchbase.client.scala.deps.plokhotnyuk</shadedPattern>-->
+                        <!--</relocation>-->
                         <relocation>
                             <pattern>org.scala-lang.modules</pattern>
                             <shadedPattern>com.couchbase.client.scala.deps.org.scala-lang.modules</shadedPattern>
@@ -197,8 +202,6 @@
 
                     <artifactSet>
                         <includes>
-                            <include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_${scala.compat.version}</include>
-                            <include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-macros_${scala.compat.version}</include>
                             <!--TODO shade or reuse core's-->
                             <include>com.fasterxml.jackson.core:jackson-databind</include>
                             <include>com.fasterxml.jackson.core:jackson-core</include>
@@ -208,15 +211,16 @@
                             <!--TODO SHADE-->
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
-                            <!--TODO reflect-->
-                            <!--TODO xml-->
                             <!--TODO findbugs-->
-                            <!--TODO replace with core-io-deps-->
+                            <!--TODO do we need?-->
                             <include>com.fasterxml.jackson.module:jackson-module-scala_${scala.compat.version}</include>
                         </includes>
                         <excludes>
                             <!--<exclude>io.projectreactor:reactor-scala-extensions_${scala.compat.version}</exclude>-->
                             <exclude>com.couchbase.client:core-io</exclude>
+                            <!--Ideally we would shade and relocate this, but hit issues with that approach-->
+                            <exclude>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_${scala.compat.version}</exclude>
+                            <exclude>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-macros_${scala.compat.version}</exclude>
                         </excludes>
                     </artifactSet>
                 </configuration>

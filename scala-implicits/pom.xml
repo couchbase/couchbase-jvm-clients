@@ -189,6 +189,42 @@
                 </executions>
             </plugin>
 
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-shade-plugin</artifactId>-->
+                <!--<version>3.2.1</version>-->
+                <!--<configuration>-->
+                    <!--<createSourcesJar>true</createSourcesJar>-->
+                    <!--<shadeSourcesContent>true</shadeSourcesContent>-->
+                    <!--<relocations>-->
+                        <!--&lt;!&ndash;<relocation>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<pattern>com.github.plokhotnyuk</pattern>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<shadedPattern>com.couchbase.client.scala.deps.plokhotnyuk</shadedPattern>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</relocation>&ndash;&gt;-->
+                        <!--&lt;!&ndash;<relocation>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<pattern>org.scala-lang.modules</pattern>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<shadedPattern>com.couchbase.client.scala.deps.org.scala-lang.modules</shadedPattern>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</relocation>&ndash;&gt;-->
+                    <!--</relocations>-->
+
+                    <!--&lt;!&ndash;<artifactSet>&ndash;&gt;-->
+                        <!--&lt;!&ndash;<includes>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_${scala.compat.version}</include>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<include>com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-macros_${scala.compat.version}</include>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</includes>&ndash;&gt;-->
+                    <!--&lt;!&ndash;</artifactSet>&ndash;&gt;-->
+                <!--</configuration>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<phase>package</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>shade</goal>-->
+                        <!--</goals>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
+
+
             <!--Add src/main/java to source-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

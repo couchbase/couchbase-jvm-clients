@@ -177,9 +177,21 @@ object Conversions {
       }
     }
 
+    implicit object JsonObjectSafeConvert extends Encodable[JsonObjectSafe] {
+      override def encode(content: JsonObjectSafe) = {
+        Try(JacksonTransformers.MAPPER.writeValueAsBytes(content.o), JsonFlags)
+      }
+    }
+
     implicit object JsonArrayConvert extends Encodable[JsonArray] {
       override def encode(content: JsonArray) = {
         Try(JacksonTransformers.MAPPER.writeValueAsBytes(content), JsonFlags)
+      }
+    }
+
+    implicit object JsonArraySafeConvert extends Encodable[JsonArraySafe] {
+      override def encode(content: JsonArraySafe) = {
+        Try(JacksonTransformers.MAPPER.writeValueAsBytes(content.a), JsonFlags)
       }
     }
 

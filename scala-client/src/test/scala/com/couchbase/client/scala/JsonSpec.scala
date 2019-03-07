@@ -6,8 +6,8 @@ import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.codec.EncodeParams
 import com.couchbase.client.scala.implicits.Codecs
 import com.couchbase.client.scala.implicits.Codecs.{decoder, encoder}
-import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
-import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+//import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
+//import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -57,7 +57,7 @@ object Address {
 case class User(name: String, age: Int, address: Seq[Address])
 object User {
   implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
-  implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
+//  implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
   implicit val cbCodec: Codec[User] = Codecs.codec[User]
 
   implicit val decoder: io.circe.Decoder[User] = deriveDecoder[User]
@@ -187,7 +187,7 @@ class JsonSpec extends FlatSpec with Matchers with BeforeAndAfterAll with Before
     }
   }
 
-
+  // TODO fails with Missing class: com/fasterxml/jackson/annotation/JsonMerge
   "inserting case class with jackson" should "succeed" in {
     val mapper = new ObjectMapper()
     mapper.registerModule(DefaultScalaModule)
