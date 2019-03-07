@@ -17,16 +17,14 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
-import com.couchbase.client.core.env.TimeoutConfig;
-import com.couchbase.client.core.env.UserAgent;
+import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
 import com.couchbase.client.core.deps.io.netty.bootstrap.ServerBootstrap;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -50,9 +48,9 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCode
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 import java.time.Duration;
@@ -62,8 +60,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * These tests make sure that explicit backpressure is handled from the {@link QueryMessageHandler},
@@ -73,17 +69,23 @@ class QueryMessageHandlerBackpressureTest {
 
   private ChunkServer chunkServer;
   private EventLoopGroup eventLoopGroup;
+  private CoreEnvironment environment;
+  private Core core;
 
   @BeforeEach
   void beforeEach() {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
+    environment = CoreEnvironment.create(new RoleBasedCredentials("admin", "password"));
+    core = Core.create(environment);
   }
 
   @AfterEach
   void afterEach() {
     chunkServer.shutdown();
     eventLoopGroup.shutdownGracefully(0, 1, TimeUnit.SECONDS);
+    core.shutdown().block();
+    environment.shutdown();
   }
 
   /**
@@ -91,9 +93,17 @@ class QueryMessageHandlerBackpressureTest {
    * chunk is requested by the caller explicitly.
    */
   @Test
-  @Disabled
   void requestRecordsExplicitly() throws Exception {
-    EndpointContext endpointCtx = mock(EndpointContext.class);
+    EndpointContext endpointContext = new EndpointContext(
+      core.context(),
+      NetworkAddress.localhost(),
+      1234,
+      NoopCircuitBreaker.INSTANCE,
+      ServiceType.QUERY,
+      Optional.empty(),
+      Optional.empty(),
+      Optional.empty()
+    );
     Bootstrap client = new Bootstrap()
       .channel(LocalChannel.class)
       .group(new DefaultEventLoopGroup())
@@ -101,45 +111,46 @@ class QueryMessageHandlerBackpressureTest {
       .handler(new ChannelInitializer<LocalChannel>() {
         @Override
         protected void initChannel(LocalChannel ch) {
-          ch.pipeline().addLast(new HttpClientCodec(), new QueryMessageHandler(endpointCtx));
+          ch.pipeline()
+            .addLast(new HttpClientCodec())
+            .addLast(new QueryMessageHandler(endpointContext));
         }
       });
 
     Channel channel = client.connect().awaitUninterruptibly().channel();
-    CoreEnvironment env = mock(CoreEnvironment.class);
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, env);
-    UserAgent agent = new UserAgent("name", "0.0.0", Optional.empty(), Optional.empty());
-    when(endpointCtx.environment()).thenReturn(env);
-    when(env.userAgent()).thenReturn(agent);
-    when(env.timer()).thenReturn(Timer.create());
-    when(env.timeoutConfig()).thenReturn(TimeoutConfig.create());
 
     final List<byte[]> rows = Collections.synchronizedList(new ArrayList<>());
-    QueryRequest request = new QueryRequest(Duration.ofSeconds(1), ctx, mock(RetryStrategy.class),
-            new RoleBasedCredentials("admin", "password"), "myquery".getBytes(CharsetUtil.UTF_8));
+    QueryRequest request = new QueryRequest(
+      Duration.ofSeconds(1),
+      endpointContext,
+      BestEffortRetryStrategy.INSTANCE,
+      environment.credentials(),
+      "myquery".getBytes(CharsetUtil.UTF_8)
+    );
     channel.writeAndFlush(request);
 
-    QueryResponse response = request.response().get();
+    final QueryResponse response = request.response().get();
 
     assertEquals(0, rows.size());
     StepVerifier.create(response.rows().map(String::new),0)
-            .thenRequest(1)
-            .expectNext("{\"foo\"}")
-            .thenRequest(1)
-            .expectNext("{\"bar\"}")
-            .thenRequest(2)
-            .expectNext("{\"faz\"}","{\"baz\"}")
-            .thenRequest(4)
-            .expectNext("{\"fazz\"}","{\"bazz\"}","{\"fizz\"}","{\"bizz\"}")
-            .expectComplete()
-            .verify();
+      .thenRequest(1)
+      .expectNext("{\"foo\"}")
+      .thenRequest(1)
+      .expectNext("{\"bar\"}")
+      .thenRequest(2)
+      .expectNext("{\"faz\"}","{\"baz\"}")
+      .thenRequest(4)
+      .expectNext("{\"fazz\"}","{\"bazz\"}","{\"fizz\"}","{\"bizz\"}")
+      .expectComplete()
+      .verify();
   }
 
 
   static class ChunkServer {
 
     private final Channel channel;
-    ChunkServer(EventLoopGroup eventLoopGroup) {
+
+    ChunkServer(final EventLoopGroup eventLoopGroup) {
       ServerBootstrap server = new ServerBootstrap()
         .channel(LocalServerChannel.class)
         .group(eventLoopGroup)
