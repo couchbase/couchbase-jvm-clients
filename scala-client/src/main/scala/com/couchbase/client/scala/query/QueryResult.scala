@@ -26,10 +26,10 @@ import reactor.core.scala.publisher.{Flux, Mono}
 import scala.util.{Failure, Success, Try}
 
 abstract class QueryException extends CouchbaseException
+//
+//case class QueryErrorException() extends QueryException
 
-case class QueryErrorException() extends QueryException
-
-case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
+//case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
 
 case class QueryResult(rows: Seq[QueryRow],
                        requestId: String,
@@ -48,7 +48,7 @@ case class QueryRow(_content: Array[Byte]) {
   override def toString: String = contentAs[JsonObject].toString
 }
 
-case class QueryError(private val content: Array[Byte]) {
+case class QueryError(private val content: Array[Byte]) extends CouchbaseException {
   private lazy val str = new String(content, CharsetUtil.UTF_8)
   private lazy val json = JsonObject.fromJson(str)
 

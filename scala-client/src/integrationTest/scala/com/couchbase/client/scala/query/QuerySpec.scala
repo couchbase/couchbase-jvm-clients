@@ -87,7 +87,7 @@ class QuerySpec extends FunSuite {
     cluster.query("""select*from""") match {
       case Success(result) =>
         assert(false)
-      case Failure(err: QueryStreamException) =>
+      case Failure(err: QueryError) =>
         println(err)
       case Failure(err) =>
         throw err
@@ -159,7 +159,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("reactive error due to bad syntax") {
-    assertThrows[QueryStreamException](
+    assertThrows[QueryError](
     cluster.reactive.query("""sselect*from""")
       .flatMapMany(result => {
         result.rows

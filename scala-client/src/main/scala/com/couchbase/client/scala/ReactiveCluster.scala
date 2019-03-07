@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.core.error.QueryServiceException
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
@@ -30,9 +31,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
-
-import reactor.core.publisher.{Mono => JavaMono, Flux => JavaFlux}
-import reactor.core.scala.publisher.{Mono => ScalaMono, Flux => ScalaFlux}
+import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
+import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
 class ReactiveCluster(val async: AsyncCluster)
                      (implicit ec: ExecutionContext) {
@@ -70,6 +70,12 @@ class ReactiveCluster(val async: AsyncCluster)
               .map[QueryRow](bytes => {
               QueryRow(bytes)
             })
+              .onErrorResume(err => {
+                err match {
+                  case e: QueryServiceException => JavaMono.error(QueryError(e.content))
+                  case _ => JavaMono.error(err)
+                }
+              })
 //              .doOnSubscribe(_ => println("rows subscribed"))
 //              .doOnNext(v => println(s"rows next ${v.contentAs[String]}"))
 //              .doOnComplete(() => println("rows completed"))

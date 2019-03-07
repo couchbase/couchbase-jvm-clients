@@ -15,6 +15,7 @@ import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.AsyncUtils.DefaultTimeout
 import com.couchbase.client.scala.util.{FutureConversions, Validate}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.error.QueryServiceException
 import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.compat.java8.FutureConverters
@@ -77,10 +78,10 @@ class AsyncCluster(environment: => ClusterEnvironment)
             val metricsKeeper = new AtomicReference[QueryMetrics]()
 
             val ret: JavaMono[QueryResult] = response.rows
-              .doOnError(err => {
-                println("got error " + err)
-                errorsKeeper.set(err)
-              })
+//              .doOnError(err => {
+//                println("got error " + err)
+//                errorsKeeper.set(err)
+//              })
               .collectList()
               //              .doOnNext(r => rowsKeeper.set(r))
               //              .requestId().doOnNext(v => requestIdKeeper.set(v))
@@ -114,6 +115,12 @@ class AsyncCluster(environment: => ClusterEnvironment)
             })
 
             ret
+          })
+          .onErrorResume(err => {
+            err match {
+              case e: QueryServiceException => JavaMono.error(QueryError(e.content))
+              case _ => JavaMono.error(err)
+            }
           })
 
         val future: CompletableFuture[QueryResult] = out.toFuture

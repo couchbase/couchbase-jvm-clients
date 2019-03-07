@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -118,8 +119,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        String msg = new String(data, CharsetUtil.UTF_8);
-        currentResponse.rows().onError(new QueryStreamException(msg));
+        currentResponse.rows().onError(new QueryServiceException(data));
       }),
       new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
