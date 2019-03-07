@@ -69,6 +69,8 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
 
     assertNotNull(loaded);
     assertEquals(config().bucketname(), loaded.name());
+
+    core.shutdown().block();
   }
 
 }

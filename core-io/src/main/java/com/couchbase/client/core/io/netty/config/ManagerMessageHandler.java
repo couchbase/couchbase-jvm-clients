@@ -118,4 +118,9 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     ReferenceCountUtil.release(msg);
   }
 
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    ReferenceCountUtil.release(currentContent);
+    ctx.fireChannelInactive();
+  }
 }

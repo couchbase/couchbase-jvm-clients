@@ -95,5 +95,8 @@ class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
       assertEquals(config().bucketname(), config.bucketName());
       assertNotNull(config.config());
     }
+
+    refresher.shutdown().block();
+    provider.shutdown().block();
   }
 }

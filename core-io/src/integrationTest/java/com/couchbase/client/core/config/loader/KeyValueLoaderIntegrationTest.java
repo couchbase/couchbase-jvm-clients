@@ -67,6 +67,8 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
 
     assertNotNull(loaded);
     assertEquals(config().bucketname(), loaded.name());
+
+    core.shutdown().block();
   }
 
 }

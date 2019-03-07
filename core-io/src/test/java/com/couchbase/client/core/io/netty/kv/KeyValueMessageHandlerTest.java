@@ -28,11 +28,13 @@ import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.shaded.io.netty.util.ReferenceCountUtil;
 
 import java.time.Duration;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 
 class KeyValueMessageHandlerTest {
@@ -76,9 +78,11 @@ class KeyValueMessageHandlerTest {
 
       request = channel.readOutbound();
       assertEquals(2, MemcacheProtocol.opaque(request));
+      ReferenceCountUtil.release(request);
     } finally {
       channel.finishAndReleaseAll();
     }
+
   }
 
   /**
@@ -104,6 +108,7 @@ class KeyValueMessageHandlerTest {
 
       request = channel2.readOutbound();
       assertEquals(1, MemcacheProtocol.opaque(request));
+      ReferenceCountUtil.release(request);
     } finally {
       channel1.finishAndReleaseAll();
       channel2.finishAndReleaseAll();
