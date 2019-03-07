@@ -23,6 +23,8 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -261,6 +263,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void arrayInsertUniqueDoesNotExist() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
                 mutateInOps().arrayAddUnique("foo", "cruel"));
@@ -365,6 +368,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void arrayInsertUniqueDoesNotExistXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
                 mutateInOps().arrayAddUnique(true, "x.foo", "cruel"));
@@ -402,6 +406,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
     // TODO macro sentinel values
     @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void insertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 mutateInOps().insert(true, "x.foo", "${Mutation.CAS}", false, true));
@@ -554,6 +559,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
 
     @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void expiration() {
         JsonObject content = JsonObject.create().put("hello", "world");
         String docId = prepare(content);

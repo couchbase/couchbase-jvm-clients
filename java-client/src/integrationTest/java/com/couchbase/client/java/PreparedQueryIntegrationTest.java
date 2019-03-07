@@ -28,6 +28,8 @@ import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.query.options.ScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,14 +38,14 @@ import reactor.core.publisher.Mono;
 /**
  * Integration tests for testing prepared query
  */
-public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
+class PreparedQueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
     private static ClusterEnvironment environment;
     private static Collection collection;
 
     @BeforeAll
-    public static void setup() throws Exception {
+    static void setup() {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
@@ -52,13 +54,14 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @AfterAll
-    public static void tearDown() {
+    static void tearDown() {
         environment.shutdown();
         cluster.shutdown();
     }
 
     @Test
-    public void testSimplePreparedSelect() {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testSimplePreparedSelect() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedSelect", content);
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).prepared(true);
@@ -69,7 +72,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testSimplePreparedNamedParameterizedSelectQuery() {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testSimplePreparedNamedParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedNamedParameterizedSelectQuery", content);
         JsonObject parameters = JsonObject.create().put("id", "testSimplePreparedNamedParameterizedSelectQuery");
@@ -83,7 +87,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testSimplePreparedPositionalParameterizedSelectQuery() {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testSimplePreparedPositionalParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedPositionalParameterizedSelectQuery", content);
         JsonArray parameters = JsonArray.create().add("testSimplePreparedPositionalParameterizedSelectQuery");
@@ -97,7 +102,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testAsyncPreparedSelect() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testAsyncPreparedSelect() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedSelect", content);
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS)
@@ -109,7 +115,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testAsyncPreparedNamedParameterizedSelectQuery() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testAsyncPreparedNamedParameterizedSelectQuery() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedNamedParameterizedSelectQuery", content);
         JsonObject parameters = JsonObject.create().put("id", "testAsyncPreparedNamedParameterizedSelectQuery");
@@ -122,7 +129,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testAsyncPreparedPositionalParameterizedSelectQuery() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testAsyncPreparedPositionalParameterizedSelectQuery() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedPositionalParameterizedSelectQuery", content);
         JsonArray parameters = JsonArray.create().add("testAsyncPreparedPositionalParameterizedSelectQuery");
@@ -135,7 +143,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testReactivePreparedSelect() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testReactivePreparedSelect() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedSelect", content);
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).prepared(true);
@@ -146,7 +155,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testReactivePreparedNamedParameterizedSelectQuery() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testReactivePreparedNamedParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedNamedParameterizedSelectQuery", content);
         JsonObject parameters = JsonObject.create().put("id", "testReactivePreparedNamedParameterizedSelectQuery");
@@ -160,7 +170,8 @@ public class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    public void testReactivePreparedPositionalParameterizedSelectQuery() throws Exception {
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testReactivePreparedPositionalParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedPositionalParameterizedSelectQuery", content);
         JsonArray parameters = JsonArray.create().add("testReactivePreparedPositionalParameterizedSelectQuery");
