@@ -99,21 +99,21 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         value.release();
         currentResponse.requestId(requestID);
       }),
-//      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
-//        byte[] data = new byte[value.readableBytes()];
-//          value.readBytes(data);
-//          value.release();
-//          if (!currentResponse.isCompleted()) {
-//            if (currentResponse.rowRequestSize() != 0 && currentResponse.rows().getPending() == 0) {
-//              currentResponse.rows().onNext(data);
-//              currentResponse.rowRequestCompleted();
-//            } else {
-//              currentResponse.completeExceptionally(
-//                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
-//                  : "Current row responses are not consumed"));
-//            }
-//          }
-//      }),
+      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
+        byte[] data = new byte[value.readableBytes()];
+          value.readBytes(data);
+          value.release();
+          if (!currentResponse.isCompleted()) {
+            if (currentResponse.rowRequestSize() != 0 && currentResponse.rows().getPending() == 0) {
+              currentResponse.rows().onNext(data);
+              currentResponse.rowRequestCompleted();
+            } else {
+              currentResponse.completeExceptionally(
+                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
+                  : "Current row responses are not consumed"));
+            }
+          }
+      }),
       new JsonPointer("/errors/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);

@@ -4,18 +4,23 @@ package com.couchbase.client.scala.util
 import java.util.concurrent.CompletableFuture
 
 import com.couchbase.client.core.msg.{CancellationReason, Request}
+import com.couchbase.client.scala.query.QueryResult
 import reactor.core.publisher.SignalType
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Future
-
-import reactor.core.publisher.{Mono => JavaMono, Flux => JavaFlux}
-import reactor.core.scala.publisher.{Mono => ScalaMono, Flux => ScalaFlux}
+import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
+import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
+import scala.compat.java8.FutureConverters._
 
 /**
   * Note: Scala Monos are different classes to Java Monos
   */
 object FutureConversions {
+  def javaCFToScalaFuture(future: CompletableFuture[QueryResult]): Future[QueryResult] = {
+    future.toScala
+  }
+
   def javaMonoToScalaFuture[T](in: JavaMono[T]): Future[T] = {
     FutureConverters.toScala(in.toFuture)
   }

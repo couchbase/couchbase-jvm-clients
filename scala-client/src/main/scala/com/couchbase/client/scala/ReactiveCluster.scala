@@ -115,8 +115,7 @@ class ReactiveCluster(val async: AsyncCluster)
               //                requestIdKeeper.get(),
               //                clientContextIdKeeper.get(),
 //              FutureConversions.javaFluxToScalaFlux(rowsWithErrors),
-              FutureConversions.javaFluxToScalaFlux(justRows),
-              null
+              FutureConversions.javaFluxToScalaFlux(justRows)
 //              FutureConversions.javaFluxToScalaFlux(justErrs)
             )
             //            })

@@ -1,7 +1,7 @@
 package com.couchbase.client.scala
 
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{CompletableFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.Core
@@ -62,57 +62,70 @@ class AsyncCluster(environment: => ClusterEnvironment)
 
         val javaMono = JavaMono.fromFuture(request.response())
 
+        // Wait until rows and others are done
+        // If rows failed with an error, return Future.failed
+        // Else return Future(QueryResult)
+
         val out: JavaMono[QueryResult] = javaMono
           .flatMap(response => {
 
-//            val requestIdKeeper = new AtomicReference[String]()
-//            val clientContextIdKeeper = new AtomicReference[String]()
-            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-            val errorsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
+            //            val requestIdKeeper = new AtomicReference[String]()
+            //            val clientContextIdKeeper = new AtomicReference[String]()
+            //            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
+            val errorsKeeper = new AtomicReference[Throwable]()
             val warningsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
             val metricsKeeper = new AtomicReference[QueryMetrics]()
 
-            val ret: JavaMono[QueryResult] = response.rows.collectList().doOnNext(r => rowsKeeper.set(r))
-//              .requestId().doOnNext(v => requestIdKeeper.set(v))
-//              .`then`(response.clientContextId().doOnNext(v => clientContextIdKeeper.set(v)))
-//              .(response.rows().collectList().doOnNext(r => rowsKeeper.set(r))
-
-//              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
-//              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
-//              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
-
-              .flatMap(_ => {
-                val rows = rowsKeeper.get().asScala.map(QueryRow)
-
-                val result = QueryResult(
-                  rows,
-                  response.requestId(),
-                  response.clientContextId().asScala,
-                  QueryOther(
-                    null, null
-//                    metricsKeeper.get(),
-//                    warningsKeeper.get().asScala.map(w => QueryError(w))
-                  ))
-
-                val out: JavaMono[QueryResult] = Option(errorsKeeper.get()).map(_.asScala.map(QueryError)) match {
-                  case Some(err) =>
-                    if (err.nonEmpty) {
-                      JavaMono.error(QueryServiceException(err))
-                    }
-                    else {
-                      JavaMono.just(result)
-                    }
-                  case _ =>
-                    JavaMono.just(result)
-                }
-
-                out
+            val ret: JavaMono[QueryResult] = response.rows
+              .doOnError(err => {
+                println("got error " + err)
+                errorsKeeper.set(err)
               })
+              .collectList()
+              //              .doOnNext(r => rowsKeeper.set(r))
+              //              .requestId().doOnNext(v => requestIdKeeper.set(v))
+              //              .`then`(response.clientContextId().doOnNext(v => clientContextIdKeeper.set(v)))
+              //              .(response.rows().collectList().doOnNext(r => rowsKeeper.set(r))
+
+              //              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
+              //              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
+              //              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
+              .map(rowsRaw => {
+              val rows = rowsRaw.asScala.map(QueryRow)
+
+              val result = QueryResult(
+                rows,
+                response.requestId(),
+                response.clientContextId().asScala,
+                QueryOther(
+                  null, null
+                  //                    metricsKeeper.get(),
+                  //                    warningsKeeper.get().asScala.map(w => QueryError(w))
+                ))
+
+              //                val out: JavaMono[QueryResult] = Option(errorsKeeper.get()) match {
+              //                  case Some(err) =>
+              //                      JavaMono.error(err)
+              //                  case _ =>
+              //                    JavaMono.just(result)
+              //                }
+
+              result
+            })
 
             ret
           })
 
-        FutureConversions.javaMonoToScalaFuture(out)
+        val future: CompletableFuture[QueryResult] = out.toFuture
+
+        val ret = FutureConversions.javaCFToScalaFuture(future)
+
+        ret.failed.foreach(err => {
+          println(s"scala future error ${err}")
+        })
+
+        ret
+
 
       case Failure(err) => Future.failed(err)
     }

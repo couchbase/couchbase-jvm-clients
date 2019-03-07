@@ -106,8 +106,8 @@ case class ReactiveQueryResult(
                               // TODO add
 //                                requestId: String,
 //                               clientContextId: String,
-                               rows: Flux[QueryRow],
-                              errors: Flux[QueryError]
+                               rows: Flux[QueryRow]
+//                              errors: Flux[QueryError]
 //                               rows: reactor.core.publisher.Flux[QueryRow],
                               // TODO add
 //                               other: Mono[QueryOther]
