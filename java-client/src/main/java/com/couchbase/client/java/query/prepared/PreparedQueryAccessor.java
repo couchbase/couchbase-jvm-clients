@@ -66,22 +66,23 @@ public class PreparedQueryAccessor {
             QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
                     queryJson.toString().getBytes(CharsetUtil.UTF_8));
             core.send(request);
-            return request.response()
-                    .thenApply((r) -> {
-                        if (r.status() != ResponseStatus.SUCCESS) {
-                            AsyncQueryResult result = new AsyncQueryResult(r);
-                            result.errors().thenApply(errors -> {
-                                if (errors.size() != 0) {
-                                    if (canRetryPrepared(errors.get(0).getInt("code"))) {
-                                        preparedCache.remove(query.statement());
-                                        return queryInternal(core, query, opts, environment, preparedCache);
-                                    }
-                                }
-                                return errors;
-                            });
-                        }
-                        return r;
-                    });
+            return request.response();
+            // TODO understand this logic
+//                    .thenApply((r) -> {
+//                        if (r.status() != ResponseStatus.SUCCESS) {
+//                            AsyncQueryResult result = new AsyncQueryResult(r);
+//                            result.errors().thenApply(errors -> {
+//                                if (errors.size() != 0) {
+//                                    if (canRetryPrepared(errors.get(0).getInt("code"))) {
+//                                        preparedCache.remove(query.statement());
+//                                        return queryInternal(core, query, opts, environment, preparedCache);
+//                                    }
+//                                }
+//                                return errors;
+//                            });
+//                        }
+//                        return r;
+//                    });
         } else {
             JsonObject queryJson = query.getQueryJson(null);
             opts.getN1qlParams(queryJson);

@@ -3,8 +3,6 @@ package com.couchbase.client.scala.encodings
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.kv.GetResult
 import com.couchbase.client.scala.{Address, Cluster, TestUtils, User}
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
-import com.couchbase.client.core.deps.com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{Matchers, _}

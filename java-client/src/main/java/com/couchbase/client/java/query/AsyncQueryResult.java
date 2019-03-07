@@ -17,6 +17,7 @@ package com.couchbase.client.java.query;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import com.couchbase.client.core.annotation.Stability;
@@ -41,21 +42,17 @@ public class AsyncQueryResult {
 	}
 
 	/**
-	 * A {@link CompletableFuture} which completes with the request identifier string of the query request
-	 *
-	 * @return {@link CompletableFuture}
+	 * Returns the request identifier string of the query request
 	 */
-	public CompletableFuture<String> requestId() {
-		return this.response.requestId().toFuture();
+	public String requestId() {
+		return this.response.requestId();
 	}
 
 	/**
-	 * A {@link CompletableFuture} which completes with the client context identifier string set on the query request
-	 *
-	 * @return {@link CompletableFuture}
+	 * Returns the client context identifier string set on the query request, if it's available
 	 */
-	public CompletableFuture<String> clientContextId() {
-		return this.response.clientContextId().toFuture();
+	public Optional<String> clientContextId() {
+		return this.response.clientContextId();
 	}
 
 	/**
@@ -64,7 +61,8 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<String> queryStatus() {
-		return this.response.queryStatus().toFuture();
+		return null; // TODO
+//		return this.response.queryStatus().toFuture();
 	}
 
 	/**
@@ -77,13 +75,14 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<JsonObject> signature() {
-		return this.response.signature().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).toFuture();
+		return null; // TODO
+//		return this.response.signature().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new DecodingFailedException(ex);
+//			}
+//		}).toFuture();
 	}
 
 	/**
@@ -96,13 +95,14 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<JsonObject> profileInfo() {
-		return this.response.profile().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).toFuture();
+//		return this.response.profile().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new DecodingFailedException(ex);
+//			}
+//		}).toFuture();
+		return null; // TODO
 	}
 
 	/**
@@ -114,14 +114,15 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<QueryMetrics> info() {
-		return this.response.metrics().map(n -> {
-			try {
-				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-				return new QueryMetrics(jsonObject);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).toFuture();
+//		return this.response.metrics().map(n -> {
+//			try {
+//				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//				return new QueryMetrics(jsonObject);
+//			} catch (IOException ex) {
+//				throw new DecodingFailedException(ex);
+//			}
+//		}).toFuture();
+		return null; // TODO
 	}
 
 	/**
@@ -133,13 +134,7 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<List<JsonObject>> rows() {
-		return this.response.rows().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).collectList().toFuture();
+		return rows(JsonObject.class);
 	}
 
 	/**
@@ -170,31 +165,13 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<List<JsonObject>> warnings() {
-		return this.response.warnings().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).collectList().toFuture();
-	}
-
-	/**
-	 * A {@link CompletableFuture} which completes with the list of query execution errors as returned by the query
-	 * engine which are then decoded to {@link JsonObject}
-	 *
-	 * The future can complete successfully or throw an {@link ExecutionException} wrapping
-	 * - {@link DecodingFailedException } when the request cannot be completed successfully
-	 *
-	 * @return {@link CompletableFuture}
-	 */
-	public CompletableFuture<List<JsonObject>> errors() {
-		return this.response.errors().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
-			}
-		}).collectList().toFuture();
+//		return this.response.warnings().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new DecodingFailedException(ex);
+//			}
+//		}).collectList().toFuture();
+		return null; // TODO
 	}
 }

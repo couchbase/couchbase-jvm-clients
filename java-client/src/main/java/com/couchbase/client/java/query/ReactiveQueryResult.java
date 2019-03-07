@@ -17,6 +17,8 @@
 package com.couchbase.client.java.query;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailedException;
@@ -42,20 +44,16 @@ public class ReactiveQueryResult {
 	}
 
 	/**
-	 * Get a {@link Mono} which publishes the request identifier string of the query request
-	 *
-	 * @return {@link Mono}
+	 * Returns the request identifier string of the query request
 	 */
-	public Mono<String> requestId() {
+	public String requestId() {
 		return this.response.requestId();
 	}
 
 	/**
-	 * Gets a {@link Mono} which publishes the client context identifier string set on the query request
-	 *
-	 * @return {@link Mono}
+	 * Returns the client context identifier string set on the query request, if available
 	 */
-	public Mono<String> clientContextId() {
+	public Optional<String> clientContextId() {
 		return this.response.clientContextId();
 	}
 
@@ -64,55 +62,56 @@ public class ReactiveQueryResult {
 	 *
 	 * @return {@link Mono}
 	 */
-	public Mono<QueryMetrics> info() {
-		return this.response.metrics().map(n -> {
-			try {
-				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-				return new QueryMetrics(jsonObject);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
-	}
+//	public Mono<QueryMetrics> info() {
+//		return this.response.metrics().map(n -> {
+//			try {
+//				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//				return new QueryMetrics(jsonObject);
+//			} catch (IOException ex) {
+//				throw new CouchbaseException(ex);
+//			}
+//		});
+//	}
+	// TODO
 
 	/**
 	 * Get a {@link Mono} which publishes the query execution status as returned by the query engine
 	 *
 	 * @return {@link Mono}
 	 */
-	public Mono<String> queryStatus() {
-		return this.response.queryStatus();
-	}
+//	public Mono<String> queryStatus() {
+//		return this.response.queryStatus();
+//	}
 
 	/**
 	 * Get a {@link Mono} which publishes the signature as returned by the query engine
 	 *
 	 * @return {@link Mono}
 	 */
-	public Mono<JsonObject> signature() {
-		return this.response.signature().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
-	}
+//	public Mono<JsonObject> signature() {
+//		return this.response.signature().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new CouchbaseException(ex);
+//			}
+//		});
+//	}
 
 	/**
 	 * Get a {@link Mono} which publishes the profile info as returned by the query engine
 	 *
 	 * @return {@link Mono}
 	 */
-	public Mono<JsonObject> profileInfo() {
-		return this.response.profile().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
-	}
+//	public Mono<JsonObject> profileInfo() {
+//		return this.response.profile().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new CouchbaseException(ex);
+//			}
+//		});
+//	}
 
 	/**
 	 * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to
@@ -121,13 +120,7 @@ public class ReactiveQueryResult {
 	 * @return {@link Flux}
 	 */
 	public Flux<JsonObject> rows() {
-		return this.response.rows().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
+		return rows(JsonObject.class);
 	}
 
 	/**
@@ -160,15 +153,15 @@ public class ReactiveQueryResult {
 	 *
 	 * @return {@link Flux}
 	 */
-	public Flux<JsonObject> warnings() {
-		return this.response.warnings().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
-	}
+//	public Flux<JsonObject> warnings() {
+//		return this.response.warnings().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new CouchbaseException(ex);
+//			}
+//		});
+//	}
 
 	/**
 	 * Get a {@link Flux} which publishes query execution errors as returned by the query engine which are then decoded
@@ -179,13 +172,13 @@ public class ReactiveQueryResult {
 	 *
 	 * @return {@link Flux}
 	 */
-	public Flux<JsonObject> errors() {
-		return this.response.errors().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-			} catch (IOException ex) {
-				throw new IllegalStateException(ex);
-			}
-		});
-	}
+//	public Flux<JsonObject> errors() {
+//		return this.response.errors().map(n -> {
+//			try {
+//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
+//			} catch (IOException ex) {
+//				throw new IllegalStateException(ex);
+//			}
+//		});
+//	}
 }

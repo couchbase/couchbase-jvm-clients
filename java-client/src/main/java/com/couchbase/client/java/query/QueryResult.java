@@ -17,6 +17,8 @@ package com.couchbase.client.java.query;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import java.util.List;
+import java.util.Optional;
+
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -46,7 +48,7 @@ public class QueryResult {
 	 * @return request identifier
 	 */
 	public String requestId() {
-		return block(this.asyncResult.requestId());
+		return this.asyncResult.requestId();
 	}
 
 	/**
@@ -54,8 +56,8 @@ public class QueryResult {
 	 *
 	 * @return client context identifier
 	 */
-	public String clientContextId() {
-		return block(this.asyncResult.clientContextId());
+	public Optional<String> clientContextId() {
+		return this.asyncResult.clientContextId();
 	}
 
 	/**
@@ -63,36 +65,37 @@ public class QueryResult {
 	 *
 	 * @return query status as string
 	 */
-	public String queryStatus() {
-		return block(this.asyncResult.queryStatus());
-	}
+//	public String queryStatus() {
+//		return block(this.asyncResult.queryStatus());
+//	}
+	// TODO
 
 	/**
 	 * Get the signature as returned by the query engine
 	 *
 	 * @return query status as string
 	 */
-	public JsonObject signature() {
-		return block(this.asyncResult.signature());
-	}
+//	public JsonObject signature() {
+//		return block(this.asyncResult.signature());
+//	}
 
 	/**
 	 * Get the profile info as returned by the query engine
 	 *
 	 * @return query status as string
 	 */
-	public JsonObject profileInfo() {
-		return block(this.asyncResult.profileInfo());
-	}
+//	public JsonObject profileInfo() {
+//		return block(this.asyncResult.profileInfo());
+//	}
 
 	/**
 	 * Get the {@link QueryMetrics} as returned by the query engine
 	 *
 	 * @return {@link QueryMetrics}
 	 */
-	public QueryMetrics info() {
-		return block(this.asyncResult.info());
-	}
+//	public QueryMetrics info() {
+//		return block(this.asyncResult.info());
+//	}
 
 	/**
 	 * Get the list of rows that were fetched by the query which are then
@@ -121,16 +124,16 @@ public class QueryResult {
 	 *
 	 * @return list of errors
 	 */
-	public List<JsonObject> errors() {
-		return block(this.asyncResult.errors());
-	}
+//	public List<JsonObject> errors() {
+//		return block(this.asyncResult.errors());
+//	}
 
 	/**
 	 * Get the list of warnings as returned by the query engine
 	 *
 	 * @return list of warnings
 	 */
-	public List<JsonObject> warnings() {
-		return block(this.asyncResult.warnings());
-	}
+//	public List<JsonObject> warnings() {
+//		return block(this.asyncResult.warnings());
+//	}
 }
