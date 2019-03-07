@@ -20,6 +20,7 @@ import static com.couchbase.client.core.env.CoreEnvironment.*;
 import static java.time.temporal.ChronoUnit.*;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import com.couchbase.client.core.annotation.Stability;
@@ -45,7 +46,7 @@ public class QueryResponse extends BaseResponse {
   private MonoProcessor<QueryAdditional> additional;
   private byte[] signature;
   private String requestId;
-  private String clientContextId;
+  private Optional<String> clientContextId = Optional.empty();
   private volatile Instant lastRequestTimeStamp;
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
@@ -123,7 +124,7 @@ public class QueryResponse extends BaseResponse {
     return this.requestId;
   }
 
-  public String clientContextId() {
+  public Optional<String> clientContextId() {
     return this.clientContextId;
   }
 
@@ -132,5 +133,13 @@ public class QueryResponse extends BaseResponse {
   public Mono<QueryAdditional> additional() { return this.additional; }
 
   public EmitterProcessor<byte[]> rows() { return this.rowsProcessor; }
+
+  public void requestId(String requestID) {
+    this.requestId = requestID;
+  }
+
+  public void clientContextId(String clientContextID) {
+    this.clientContextId = Optional.of(clientContextID);
+  }
 }
 

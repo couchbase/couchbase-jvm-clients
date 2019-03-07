@@ -32,6 +32,8 @@ case class QueryErrorException() extends QueryException
 case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
 
 case class QueryResult(rows: Seq[QueryRow],
+                       requestId: String,
+                       clientContextId: Option[String],
                        other: QueryOther)
 
 case class QueryRow(_content: Array[Byte]) {
@@ -42,6 +44,8 @@ case class QueryRow(_content: Array[Byte]) {
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     ev.decode(_content, Conversions.JsonFlags)
   }
+
+  override def toString: String = contentAs[JsonObject].toString
 }
 
 case class QueryError(private val content: Array[Byte]) {

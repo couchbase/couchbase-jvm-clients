@@ -22,6 +22,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 
 object DurationConversions {
   implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
@@ -84,9 +85,9 @@ class AsyncCluster(environment: => ClusterEnvironment)
                 val rows = rowsKeeper.get().asScala.map(QueryRow)
 
                 val result = QueryResult(
-//                  requestIdKeeper.get(),
-//                  clientContextIdKeeper.get(),
                   rows,
+                  response.requestId(),
+                  response.clientContextId().asScala,
                   QueryOther(
                     null, null
 //                    metricsKeeper.get(),

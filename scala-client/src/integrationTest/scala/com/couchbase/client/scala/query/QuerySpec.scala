@@ -49,6 +49,8 @@ class QuerySpec extends FunSuite {
   test("hello world content as JsonObject") {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
+        assert(result.clientContextId.isEmpty)
+        assert(result.requestId != null)
         assert(result.rows.size == 1)
         assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world")
       case Failure(err) => throw err

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.io.IoContext;
@@ -30,11 +31,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import java.io.EOFException;
@@ -97,67 +93,74 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
   public QueryMessageHandler(final EndpointContext endpointContext) {
     this.endpointContext = endpointContext;
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
-      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
-        byte[] data = new byte[value.readableBytes()];
-          value.readBytes(data);
-          value.release();
-          if (!currentResponse.isCompleted()) {
-            if (currentResponse.rowRequestSize() != 0 && currentResponse.rows().getPending() == 0) {
-              currentResponse.rows().onNext(data);
-              currentResponse.rowRequestCompleted();
-            } else {
-              currentResponse.completeExceptionally(
-                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
-                  : "Current row responses are not consumed"));
-            }
-          }
-      }),
-      new JsonPointer("/requestID/-", (JsonPointerCB1) value -> {
+      new JsonPointer("/requestID", (JsonPointerCB1) value -> {
         String requestID = value.toString(CHARSET);
         requestID = requestID.substring(1, requestID.length() - 1);
         value.release();
-//        currentResponse.requestId().onNext(requestID);
+        currentResponse.requestId(requestID);
       }),
+//      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
+//        byte[] data = new byte[value.readableBytes()];
+//          value.readBytes(data);
+//          value.release();
+//          if (!currentResponse.isCompleted()) {
+//            if (currentResponse.rowRequestSize() != 0 && currentResponse.rows().getPending() == 0) {
+//              currentResponse.rows().onNext(data);
+//              currentResponse.rowRequestCompleted();
+//            } else {
+//              currentResponse.completeExceptionally(
+//                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
+//                  : "Current row responses are not consumed"));
+//            }
+//          }
+//      }),
       new JsonPointer("/errors/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        currentResponse.rows().onNext(data);
+        String msg = new String(data, CharsetUtil.UTF_8);
+        currentResponse.rows().onError(new QueryStreamException(msg));
       }),
       new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+        // TODO
 //        currentResponse.warnings().onNext(data);
       }),
       new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
+        // It's not actually stated in the N1QL spec, but turns out this is optional
         String clientContextID = value.toString(CHARSET);
         clientContextID = clientContextID.substring(1, clientContextID.length() - 1);
         value.release();
-//        currentResponse.clientContextId().onNext(clientContextID);
+        currentResponse.clientContextId(clientContextID);
       }),
       new JsonPointer("/metrics", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+        // TODO
 //        currentResponse.metrics().onNext(data);
       }),
       new JsonPointer("/status", (JsonPointerCB1) value -> {
         String statusStr = value.toString(CHARSET);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
+        // TODO
 //        currentResponse.queryStatus().onNext(statusStr);
       }),
       new JsonPointer("/signature", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+        // TODO
 //        currentResponse.signature().onNext(data);
       }),
       new JsonPointer("/profile", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+        // TODO
 //        currentResponse.profile().onNext(data);
       })
     });
@@ -219,6 +222,14 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         if (!this.currentResponse.isCompleted()) {
           boolean last = msg instanceof LastHttpContent;
           this.responseContent.writeBytes(((HttpContent) msg).content());
+
+
+          byte[] bytes = new byte[50000];
+          for (int i = 0; i < this.responseContent.capacity(); i ++) {
+            bytes[i] = this.responseContent.getByte(i);
+          }
+          String dbg = new String(bytes);
+
           try {
             if (!this.isParserInitialized) {
               this.parser.initialize(this.responseContent);
