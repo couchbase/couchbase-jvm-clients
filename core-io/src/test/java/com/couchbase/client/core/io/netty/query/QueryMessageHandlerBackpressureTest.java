@@ -27,7 +27,6 @@ import com.couchbase.client.core.env.UserAgent;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
 import com.couchbase.client.core.deps.io.netty.bootstrap.ServerBootstrap;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -51,10 +50,9 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCode
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.test.IgnoreWhen;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 import java.time.Duration;
@@ -93,7 +91,7 @@ class QueryMessageHandlerBackpressureTest {
    * chunk is requested by the caller explicitly.
    */
   @Test
-  @Ignore
+  @Disabled
   void requestRecordsExplicitly() throws Exception {
     EndpointContext endpointCtx = mock(EndpointContext.class);
     Bootstrap client = new Bootstrap()
