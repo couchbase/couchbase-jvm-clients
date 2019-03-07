@@ -75,10 +75,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!--testCompile 'org.junit.jupiter:junit-jupiter-api:5.4.0'-->
-        <!--testCompile 'org.junit.jupiter:junit-jupiter-params:5.4.0'-->
-        <!--testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.4.0'-->
-
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
@@ -151,6 +147,14 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
+            <version>2.9.7</version>
+            <scope>test</scope>
+        </dependency>
+
+
     </dependencies>
 
     <build>
@@ -211,7 +215,7 @@
                             <!--TODO SHADE-->
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
-                            <!--TODO findbugs-->
+                            <!--TODO remove findbugs-->
                             <!--TODO do we need?-->
                             <include>com.fasterxml.jackson.module:jackson-module-scala_${scala.compat.version}</include>
                         </includes>

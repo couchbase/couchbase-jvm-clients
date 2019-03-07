@@ -6,8 +6,8 @@ import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.codec.EncodeParams
 import com.couchbase.client.scala.implicits.Codecs
 import com.couchbase.client.scala.implicits.Codecs.{decoder, encoder}
-//import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
-//import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
+import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -29,50 +29,16 @@ object Address {
   implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
   implicit val decoder: io.circe.Decoder[Address] = deriveDecoder[Address]
   implicit val encoder: io.circe.Encoder[Address] = deriveEncoder[Address]
-
-  //  implicit val codec: JsonValueCodec[Address] = JsonCodecMaker.make[Address](CodecMakerConfig())
-//  Codecs.decoder[Address]
-//  implicit val decoder: Decodable[Address] = Codecs.decoder[Address]
-//  implicit val encoder: Encodable[Address] = Codecs.encoder[Address]
-//  implicit val cbCodec: Codec[Address] = Codecs.codec[Address]
-//  implicit val (dec: Decodable[Address], enc: Encodable[Address]) = Codecs2.codec[Address]
-
-  //  implicit val decoder: Decodable[Address] = new Decodable[Address] {
-//  override def decode(bytes: Array[Byte], params: EncodeParams): Try[Address] = {
-//    Try(readFromArray(bytes))
-//  }
-//}
-//  implicit object Decode extends Decodable[Address] {
-//    override def decode(bytes: Array[Byte], params: EncodeParams) = {
-//      Try(readFromArray(bytes))
-//    }
-//  }
-//  implicit val encoder: Encodable[Address] = new Encodable[Address] {
-//    override def encode(content: Address): Try[(Array[Byte], EncodeParams)] = {
-//     Try(writeToArray(content), JsonFlags)
-//    }
-//  }
 }
 
 case class User(name: String, age: Int, address: Seq[Address])
 object User {
   implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
-//  implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
+  implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
   implicit val cbCodec: Codec[User] = Codecs.codec[User]
 
   implicit val decoder: io.circe.Decoder[User] = deriveDecoder[User]
   implicit val encoder: io.circe.Encoder[User] = deriveEncoder[User]
-
-  //  implicit object Decode extends Decodable[User] {
-//    override def decode(bytes: Array[Byte], params: EncodeParams) = {
-//      Try(readFromArray(bytes))
-//    }
-//  }
-//  implicit object Encode extends Encodable[User] {
-//    override def encode(content: User) = {
-//      Try(writeToArray(content), JsonFlags)
-//    }
-//  }
 }
 
 

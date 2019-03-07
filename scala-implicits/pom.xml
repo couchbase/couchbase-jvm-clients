@@ -54,14 +54,6 @@
             <version>0.39.0</version>
         </dependency>
 
-        <!--Jackson has a parser that can convert Scala's JsonObject to/from String]-->
-        <!--TODO replace with core-io-deps-->
-        <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
-            <version>2.9.7</version>
-        </dependency>
-
         <!--Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support-->
         <dependency>
             <groupId>com.jsoniter</groupId>
