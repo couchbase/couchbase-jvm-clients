@@ -71,6 +71,7 @@ class KeyValueMessageHandlerTest {
 
       ByteBuf request = channel.readOutbound();
       assertEquals(1, MemcacheProtocol.opaque(request));
+      ReferenceCountUtil.release(request);
 
       channel.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
         CTX, BUCKET, null));
@@ -101,6 +102,7 @@ class KeyValueMessageHandlerTest {
 
       ByteBuf request = channel1.readOutbound();
       assertEquals(1, MemcacheProtocol.opaque(request));
+      ReferenceCountUtil.release(request);
 
       channel2.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
         CTX, BUCKET, null));

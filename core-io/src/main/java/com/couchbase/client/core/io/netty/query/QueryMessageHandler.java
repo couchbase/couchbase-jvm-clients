@@ -174,6 +174,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
     } else if (currentRequest != null) {
       currentRequest.cancel(CancellationReason.IO_CLOSED_WHILE_IN_FLIGHT);
     }
+    ReferenceCountUtil.release(responseContent);
     ctx.fireChannelInactive();
   }
 

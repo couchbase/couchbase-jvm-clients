@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
@@ -50,7 +51,7 @@ import reactor.test.StepVerifier;
 /**
  * Tests for query message handler
  */
-public class QueryMessageHandlerTest {
+class QueryMessageHandlerTest {
 
     private static CoreEnvironment environment;
     private static EndpointContext endpointContext;
@@ -58,68 +59,97 @@ public class QueryMessageHandlerTest {
     private static Credentials credentials;
 
     @BeforeAll
-    public static void setup() {
+    static void setup() {
         environment = mock(CoreEnvironment.class);
         endpointContext = mock(EndpointContext.class);
         coreContext = mock(CoreContext.class);
         credentials = new RoleBasedCredentials("Administrator", "password");
         when(endpointContext.environment()).thenReturn(environment);
         when(coreContext.environment()).thenReturn(environment);
-        when(environment.userAgent()).thenReturn(new UserAgent("sdk", "0", Optional.empty(), Optional.empty()));
+        when(environment.userAgent()).thenReturn(
+          new UserAgent("sdk", "0", Optional.empty(), Optional.empty())
+        );
         when(environment.timer()).thenReturn(Timer.create());
-        when(environment.timeoutConfig()).thenReturn(TimeoutConfig.builder().queryStreamReleaseTimeout(1).build());
+        when(environment.timeoutConfig()).thenReturn(
+          TimeoutConfig.builder().queryStreamReleaseTimeout(1).build()
+        );
         when(coreContext.core()).thenReturn(mock(Core.class));
         when(coreContext.id()).thenReturn(0L);
     }
 
     @Test
-    public void testChannelStreamTimeout() throws Exception {
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new QueryMessageHandler(endpointContext));
+    void testChannelStreamTimeout() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new QueryMessageHandler(endpointContext));
         String query = "select 1=1";
-        QueryRequest queryRequest = new QueryRequest(Duration.ofSeconds(75), coreContext, BestEffortRetryStrategy.INSTANCE,
-                credentials, query.getBytes());
-        embeddedChannel.writeAndFlush(queryRequest);
+        QueryRequest queryRequest = new QueryRequest(Duration.ofSeconds(75), coreContext,
+          BestEffortRetryStrategy.INSTANCE, credentials, query.getBytes());
+        channel.writeAndFlush(queryRequest);
+        ReferenceCountUtil.release(channel.readOutbound());
+
         CompletableFuture.runAsync(() -> {
-            HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}]").length());
-            embeddedChannel.writeInbound(httpResponse);
-            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"foo\"},{\"", CharsetUtil.UTF_8)));
+            HttpResponse httpResponse =
+              new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            httpResponse.headers().set(
+              HttpHeaderNames.CONTENT_LENGTH,
+              "{\"results\": [{\"foo\"},{\"bar\"}]".length()
+            );
+            channel.writeInbound(httpResponse);
+            channel.writeInbound(new DefaultHttpContent(
+              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},{\"", CharsetUtil.UTF_8)
+            ));
             try {
-                Thread.sleep(2000); //sleep a bit to simulate that it doesn't fail with Stream
+                // sleep a bit to simulate that it doesn't fail with stream
+                Thread.sleep(2000);
             } catch(InterruptedException ex) {}
-            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("bar\"}]", CharsetUtil.UTF_8)));
-            embeddedChannel.flushInbound();
+            channel.writeInbound(new DefaultLastHttpContent(
+              Unpooled.copiedBuffer("bar\"}]", CharsetUtil.UTF_8)
+            ));
+            channel.flushInbound();
         });
 
         QueryResponse response = queryRequest.response().get();
         StepVerifier.create(response.rows().map(String::new))
-                .thenRequest(1)
-                .consumeNextWith(n -> {
-                    try {
-                        Thread.sleep(1500);
-                    } catch(Exception ex) {}
-                })
-                .verifyError(QueryStreamException.class);
+            .thenRequest(1)
+            .consumeNextWith(n -> {
+                try {
+                    Thread.sleep(1500);
+                } catch(Exception ex) {}
+            })
+            .verifyError(QueryStreamException.class);
     }
 
     @Test
-    public void testChannelNoRequestException() throws Exception {
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(new QueryMessageHandler(endpointContext));
+    void testChannelNoRequestException() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(
+          new QueryMessageHandler(endpointContext)
+        );
+
         String query = "select 1=1";
-        QueryRequest queryRequest = new QueryRequest(Duration.ofSeconds(75), coreContext, BestEffortRetryStrategy.INSTANCE,
-                credentials, query.getBytes());
-        embeddedChannel.writeAndFlush(queryRequest);
+        QueryRequest queryRequest = new QueryRequest(Duration.ofSeconds(75), coreContext,
+          BestEffortRetryStrategy.INSTANCE, credentials, query.getBytes());
+        channel.writeAndFlush(queryRequest);
+        ReferenceCountUtil.release(channel.readOutbound());
+
         CompletableFuture.runAsync(() -> {
-            HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}]").length());
-            embeddedChannel.writeInbound(httpResponse);
-            embeddedChannel.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)));
-            embeddedChannel.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer("{\"bar\"}]", CharsetUtil.UTF_8)));
-            embeddedChannel.flushInbound();
+            HttpResponse httpResponse =
+              new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            httpResponse.headers().set(
+              HttpHeaderNames.CONTENT_LENGTH,
+              "{\"results\": [{\"foo\"},{\"bar\"}]".length()
+            );
+            channel.writeInbound(httpResponse);
+            channel.writeInbound(new DefaultHttpContent(
+              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)
+            ));
+            channel.writeInbound(new DefaultLastHttpContent(
+              Unpooled.copiedBuffer("{\"bar\"}]", CharsetUtil.UTF_8)
+            ));
+            channel.flushInbound();
         });
 
         QueryResponse response = queryRequest.response().get();
-        StepVerifier.create(response.rows().map(String::new), 0)
-                .verifyError(QueryStreamException.class);
+        StepVerifier
+          .create(response.rows().map(String::new), 0)
+          .verifyError(QueryStreamException.class);
     }
 }

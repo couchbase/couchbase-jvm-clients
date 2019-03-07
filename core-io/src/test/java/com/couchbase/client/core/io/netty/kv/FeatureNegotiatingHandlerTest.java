@@ -272,6 +272,8 @@ class FeatureNegotiatingHandlerTest {
     List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     assertEquals(toNegotiate, new HashSet<>(serverFeatures));
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ReferenceCountUtil.release(writtenRequest);
   }
 
   /**
@@ -324,6 +326,8 @@ class FeatureNegotiatingHandlerTest {
     List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     assertTrue(serverFeatures.isEmpty());
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ReferenceCountUtil.release(writtenRequest);
   }
 
   /**
@@ -377,6 +381,8 @@ class FeatureNegotiatingHandlerTest {
     List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     assertEquals(toNegotiate, new HashSet<>(serverFeatures));
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
+
+    ReferenceCountUtil.release(writtenRequest);
   }
 
 }
