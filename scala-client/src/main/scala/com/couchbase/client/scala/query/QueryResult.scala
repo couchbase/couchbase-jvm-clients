@@ -49,6 +49,18 @@ case class QueryRow(_content: Array[Byte]) {
     ev.decode(_content, Conversions.JsonFlags)
   }
 
+  override def toString: String = contentAs[JsonObject].get.toString
+}
+
+case class QueryProfile(_content: Array[Byte]) {
+
+  def contentAsBytes: Array[Byte] = _content
+
+  def contentAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    ev.decode(_content, Conversions.JsonFlags)
+  }
+
   override def toString: String = contentAs[JsonObject].toString
 }
 
@@ -119,6 +131,8 @@ object QueryMetrics {
 }
 
 case class QueryAdditional(metrics: QueryMetrics,
-                           warnings: Seq[QueryError])
+                           warnings: Seq[QueryError],
+                           status: String,
+                           profile: Option[QueryProfile])
 
 

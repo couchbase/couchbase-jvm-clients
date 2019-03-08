@@ -93,6 +93,25 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
 
   public QueryMessageHandler(final EndpointContext endpointContext) {
     this.endpointContext = endpointContext;
+
+    /*
+     * The N1QL spec (https://docs.google.com/document/d/1Uyv4t06DNGq7TxJjGI_T_MbbEYf8Er-imC7yzTY0uZw/edit#) defines
+     * this ordering for the response body:
+     *
+     * requestID
+     * clientContextID
+     * signature
+     * results
+     * errors
+     * warnings
+     * success
+     * metrics
+     * And optionally profile.  It's unclear exactly where this goes but we can assume after results.
+     *
+     * The code below takes advantage of this guaranteed order to only complete the initial request once all fields
+     * up to but not including results is available.  We don't assume the presence of any field, so complete
+     * `currentRequest` in all fields after and including signature.
+     */
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
       new JsonPointer("/requestID", (JsonPointerCB1) value -> {
         String requestID = value.toString(CHARSET);
@@ -101,6 +120,9 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         currentResponse.requestId(requestID);
       }),
       new JsonPointer("/results/-", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         byte[] data = new byte[value.readableBytes()];
           value.readBytes(data);
           value.release();
@@ -110,18 +132,25 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
               currentResponse.rowRequestCompleted();
             } else {
               currentResponse.completeExceptionally(
-                new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
-                  : "Current row responses are not consumed"));
+                      new QueryStreamException(currentResponse.rowRequestSize() == 0 ? "No row requests"
+                              : "Current row responses are not consumed"));
             }
           }
       }),
       new JsonPointer("/errors/-", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
+
         currentResponse.rows().onError(new QueryServiceException(data));
       }),
       new JsonPointer("/warnings/-", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
@@ -135,12 +164,18 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         currentResponse.clientContextId(clientContextID);
       }),
       new JsonPointer("/metrics", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         currentResponse.metrics(data);
       }),
       new JsonPointer("/status", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         String statusStr = value.toString(CHARSET);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
@@ -151,8 +186,14 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         value.readBytes(data);
         value.release();
         currentResponse.signature(data);
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
       }),
       new JsonPointer("/profile", (JsonPointerCB1) value -> {
+        if (!currentRequest.completed()) {
+          this.currentRequest.succeed(this.currentResponse);
+        }
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
@@ -210,7 +251,8 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         this.responseContent = ctx.alloc().buffer();
         this.currentResponse = new QueryResponse(ResponseStatusConverter.fromHttp(((HttpResponse) msg).status().code()),
                 ctx.channel(), endpointContext.environment());
-        this.currentRequest.succeed(this.currentResponse);
+
+        // Reset state for this request
         this.isParserInitialized = false;
       }
       if (msg instanceof HttpContent) {

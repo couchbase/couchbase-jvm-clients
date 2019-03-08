@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -46,7 +44,7 @@ import reactor.core.publisher.MonoProcessor;
 public class QueryResponse extends BaseResponse {
 
   private EmitterProcessor<byte[]> rowsProcessor;
-  private MonoProcessor<QueryAdditional> additional;
+  private MonoProcessor<QueryAdditionalBasic> additional;
   private String requestId;
   private Optional<String> clientContextId = Optional.empty();
   private Optional<byte[]> profile = Optional.empty();
@@ -61,7 +59,11 @@ public class QueryResponse extends BaseResponse {
   private final ArrayList<byte[]> warnings = new ArrayList<>();
 
   public static RuntimeException errorSignatureNotPresent() {
-    return new DecodingFailedException("Field 'signature' was not present in response");
+    return new IllegalStateException("Field 'signature' was not present in response");
+  }
+
+  public static RuntimeException errorIncompleteResponse() {
+    return new IllegalStateException("Not all expected fields were returned in response");
   }
 
   @Stability.Internal
@@ -104,7 +106,18 @@ public class QueryResponse extends BaseResponse {
   @Stability.Internal
   public void completeSuccessfully() {
     this.rowsProcessor.onComplete();
-    this.additional.onComplete();
+
+    Optional<QueryAdditionalBasic> addl = metrics.flatMap(m ->
+                    queryStatus.map(qs ->
+                            new QueryAdditionalBasic(warnings, profile, m, qs)));
+
+    if (addl.isPresent()) {
+      this.additional.onNext(addl.get());
+    }
+    else {
+      this.additional.onError(errorIncompleteResponse());
+    }
+
     this.complete();
   }
 
@@ -139,7 +152,7 @@ public class QueryResponse extends BaseResponse {
     return this.clientContextId;
   }
 
-  public Mono<QueryAdditional> additional() { return this.additional; }
+  public Mono<QueryAdditionalBasic> additional() { return this.additional; }
 
   public EmitterProcessor<byte[]> rows() { return this.rowsProcessor; }
 

@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
-import com.couchbase.client.core.msg.query.{QueryRequest, QueryResponse}
+import com.couchbase.client.core.msg.query.{QueryAdditionalBasic, QueryRequest, QueryResponse}
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
@@ -71,50 +71,28 @@ class AsyncCluster(environment: => ClusterEnvironment)
         val out: JavaMono[QueryResult] = javaMono
           .flatMap(response => {
 
-            //            val requestIdKeeper = new AtomicReference[String]()
-            //            val clientContextIdKeeper = new AtomicReference[String]()
-            //            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-            val errorsKeeper = new AtomicReference[Throwable]()
-            val warningsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-            val metricsKeeper = new AtomicReference[QueryMetrics]()
+            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
 
             val ret: JavaMono[QueryResult] = response.rows
-//              .doOnError(err => {
-//                println("got error " + err)
-//                errorsKeeper.set(err)
-//              })
               .collectList()
-              //              .doOnNext(r => rowsKeeper.set(r))
-              //              .requestId().doOnNext(v => requestIdKeeper.set(v))
-              //              .`then`(response.clientContextId().doOnNext(v => clientContextIdKeeper.set(v)))
-              //              .(response.rows().collectList().doOnNext(r => rowsKeeper.set(r))
+              .flatMap(rows => {
+                rowsKeeper.set(rows)
 
-              //              .`then`(response.errors().collectList().doOnNext(e => errorsKeeper.set(e)))
-              //              .`then`(response.warnings().collectList().doOnNext(v => warningsKeeper.set(v)))
-              //              .`then`(response.metrics().doOnNext(v => metricsKeeper.set(QueryMetrics.fromBytes(v))))
-              .map(rowsRaw => {
-              val rows = rowsRaw.asScala.map(QueryRow)
+                response.additional()
+              })
+              .map(addl => {
+                val rows = rowsKeeper.get().asScala.map(QueryRow)
 
-              val result = QueryResult(
-                rows,
-                response.requestId(),
-                response.clientContextId().asScala,
-                QuerySignature(response.signature().asScala),
-                QueryAdditional(
-                  null, null
-                  //                    metricsKeeper.get(),
-                  //                    warningsKeeper.get().asScala.map(w => QueryError(w))
-                ))
+                val result = QueryResult(
+                  rows,
+                  response.requestId(),
+                  response.clientContextId().asScala,
+                  QuerySignature(response.signature().asScala),
+                  QueryAdditional(null, null, null, null)
+                )
 
-              //                val out: JavaMono[QueryResult] = Option(errorsKeeper.get()) match {
-              //                  case Some(err) =>
-              //                      JavaMono.error(err)
-              //                  case _ =>
-              //                    JavaMono.just(result)
-              //                }
-
-              result
-            })
+                result
+              })
 
             ret
           })

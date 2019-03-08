@@ -49,22 +49,32 @@ class ReactiveCluster(val async: AsyncCluster)
 
         val ret: JavaMono[ReactiveQueryResult] = FutureConversions.javaCFToJavaMono(request, request.response(), false)
           .map(response => {
-            val justRows: JavaFlux[QueryRow] = response.rows()
+            val rows: ScalaFlux[QueryRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
               .map[QueryRow](bytes => {
               QueryRow(bytes)
             }).onErrorResume(err => {
               err match {
-                case e: QueryServiceException => JavaMono.error(QueryError(e.content))
-                case _ => JavaMono.error(err)
+                case e: QueryServiceException => ScalaMono.error(QueryError(e.content))
+                case _ => ScalaMono.error(err)
               }
             })
 
+            val additional: ScalaMono[QueryAdditional] = FutureConversions.javaMonoToScalaMono(response.additional())
+                .map(addl => {
+                  QueryAdditional(QueryMetrics.fromBytes(addl.metrics),
+                    addl.warnings.asScala.map(QueryError),
+                    addl.status,
+                    addl.profile.asScala.map(v => QueryProfile(v))
+                  )
+                })
+
             ReactiveQueryResult(
-              FutureConversions.javaFluxToScalaFlux(justRows),
+              rows,
               response.requestId(),
               response.clientContextId().asScala,
               QuerySignature(response.signature().asScala),
-              null)
+              additional
+              )
           })
 
         ret

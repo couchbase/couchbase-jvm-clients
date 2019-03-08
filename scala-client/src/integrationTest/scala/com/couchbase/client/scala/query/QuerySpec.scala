@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.query
 
+import java.util.concurrent.atomic.AtomicReference
+
 import com.couchbase.client.core.error.{DecodingFailedException, QueryStreamException}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, TestUtils}
@@ -47,14 +49,16 @@ class QuerySpec extends FunSuite {
   }
 
   test("hello world content as JsonObject") {
-    cluster.query("""select 'hello world' as Greeting""") match {
+    System.out.println("hello world 2")
+    cluster.query("""select 'hello world 2' as Greeting""") match {
       case Success(result) =>
         assert(result.clientContextId.isEmpty)
         assert(result.requestId != null)
         assert(result.rows.size == 1)
-        assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world")
+        assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world 2")
         val signature = result.signature.contentAs[JsonObject].get
         assert (signature.size > 0)
+
       case Failure(err) => throw err
     }
   }
@@ -69,6 +73,8 @@ class QuerySpec extends FunSuite {
   }
 
   test("read 2 docs use keys") {
+    println("read 2 docs use keys")
+
     val (docId1, _) = prepare(ujson.Obj("name" -> "Andy"))
     val (docId2, _) = prepare(ujson.Obj("name" -> "Beth"))
 
@@ -86,6 +92,8 @@ class QuerySpec extends FunSuite {
   }
 
   test("error due to bad syntax") {
+    println("error due to bad syntax")
+
     cluster.query("""select*from""") match {
       case Success(result) =>
         assert(false)
@@ -97,22 +105,46 @@ class QuerySpec extends FunSuite {
   }
 
   test("reactive hello world") {
+
     val rows: Seq[QueryRow] = cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMapMany(result => {
+        assert(result.requestId != null)
         assert(result.clientContextId.isEmpty)
         assert(result.signature.contentAsBytes.isSuccess)
 
         result.rows.doOnNext(v => {
           println("GOT A ROW!!" + v)
         }).collectSeq()
-
-        //          .doOnError(err => {
-        //          assert(false)
-        //        })
       })
       .blockLast()
 
     assert(rows.size == 1)
+  }
+
+  test("reactive additional") {
+
+    val rowsKeeper = new AtomicReference[Seq[QueryRow]]()
+
+    val out: QueryAdditional = cluster.reactive.query("""select 'hello world' as Greeting""")
+      .flatMapMany(result => {
+        result.rows
+          .collectSeq()
+          .flatMap(rows => {
+            rowsKeeper.set(rows)
+
+            result.additional
+          })
+
+      })
+      .blockLast()
+
+    assert(rowsKeeper.get.size == 1)
+    assert(out.metrics.errorCount == 0)
+    assert(out.metrics.warningCount == 0)
+    assert(out.metrics.mutationCount == 0)
+    assert(out.warnings.size == 0)
+    assert(out.status == "success")
+    assert(out.profile.isEmpty)
   }
 
   test("reactive error due to bad syntax") {
