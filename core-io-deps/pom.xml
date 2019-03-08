@@ -5,11 +5,13 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>core-io-deps</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>alpha.0</version>
     <packaging>jar</packaging>
 
     <name>Couchbase JVM Core IO Dependencies</name>
     <description>Shadowing dependencies for sanity's sake</description>
+
+    <!--TODO has to be manually installed on each release and before first build-->
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>

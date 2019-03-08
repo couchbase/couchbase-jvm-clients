@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>test-utils</artifactId>
-    <version>0.1.0</version>
+    <version>alpha.0</version>
 
     <dependencies>
         <dependency>

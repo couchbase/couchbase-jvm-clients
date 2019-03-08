@@ -15,7 +15,7 @@
     </properties>
 
     <artifactId>scala-client_${scala.compat.version}</artifactId>
-    <version>1.0.0-dp1-SNAPSHOT</version>
+    <version>alpha.0</version>
     <packaging>jar</packaging>
 
     <name>Couchbase Scala SDK</name>
@@ -26,13 +26,13 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>alpha.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>scala-implicits_${scala.compat.version}</artifactId>
-            <version>1.0.0-dp1-SNAPSHOT</version>
+            <version>alpha.0</version>
         </dependency>
 
         <dependency>
@@ -77,7 +77,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
-            <version>0.1.0</version>
+            <version>alpha.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -167,6 +167,12 @@
                 <version>4.0.1</version>
                 <!--Seem to need this to get any Scala compiled-->
                 <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>doc-jar</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>scala-compile</id>
                         <phase>process-resources</phase>

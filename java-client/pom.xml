@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>java-client</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>alpha.0</version>
 
     <name>Couchbase Java SDK</name>
     <description>The official Couchbase Java SDK</description>
@@ -20,14 +20,14 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>alpha.0</version>
         </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
-            <version>0.1.0</version>
+            <version>alpha.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
