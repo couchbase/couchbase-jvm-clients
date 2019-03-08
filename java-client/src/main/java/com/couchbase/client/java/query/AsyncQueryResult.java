@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
+import reactor.core.publisher.Flux;
 
 /**
  * Query Result that fetches the parts of the Query response asynchronously
@@ -61,8 +62,9 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<String> queryStatus() {
-		return null; // TODO
-//		return this.response.queryStatus().toFuture();
+		return this.response.additional()
+				.map(v -> v.status)
+				.toFuture();
 	}
 
 	/**
@@ -94,14 +96,18 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<JsonObject> profileInfo() {
-//		return this.response.profile().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new DecodingFailedException(ex);
-//			}
-//		}).toFuture();
-		return null; // TODO
+		return this.response.additional().map(addl -> {
+			if (addl.profile.isPresent()) {
+				try {
+					return JacksonTransformers.MAPPER.readValue(addl.profile.get(), JsonObject.class);
+				} catch (IOException ex) {
+					throw new DecodingFailedException(ex);
+				}
+			}
+			else {
+				throw QueryResponse.errorProfileNotPresent();
+			}
+		}).toFuture();
 	}
 
 	/**
@@ -112,16 +118,15 @@ public class AsyncQueryResult {
 	 *
 	 * @return {@link CompletableFuture}
 	 */
-	public CompletableFuture<QueryMetrics> info() {
-//		return this.response.metrics().map(n -> {
-//			try {
-//				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//				return new QueryMetrics(jsonObject);
-//			} catch (IOException ex) {
-//				throw new DecodingFailedException(ex);
-//			}
-//		}).toFuture();
-		return null; // TODO
+	public CompletableFuture<QueryMetrics> metrics() {
+		return this.response.additional().map(addl -> {
+			try {
+				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(addl.metrics, JsonObject.class);
+				return new QueryMetrics(jsonObject);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).toFuture();
 	}
 
 	/**
@@ -164,13 +169,14 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<List<JsonObject>> warnings() {
-//		return this.response.warnings().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new DecodingFailedException(ex);
-//			}
-//		}).collectList().toFuture();
-		return null; // TODO
+		return this.response.additional().flatMapMany(addl -> {
+			return Flux.fromIterable(addl.warnings).map(w -> {
+				try {
+					return JacksonTransformers.MAPPER.readValue(w, JsonObject.class);
+				} catch (IOException ex) {
+					throw new DecodingFailedException(ex);
+				}
+			});
+		}).collectList().toFuture();
 	}
 }

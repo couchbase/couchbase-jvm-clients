@@ -62,6 +62,10 @@ public class QueryResponse extends BaseResponse {
     return new IllegalStateException("Field 'signature' was not present in response");
   }
 
+  public static RuntimeException errorProfileNotPresent() {
+    return new IllegalStateException("Field 'profile' was not present in response");
+  }
+
   public static RuntimeException errorIncompleteResponse() {
     return new IllegalStateException("Not all expected fields were returned in response");
   }

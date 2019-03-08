@@ -19,6 +19,8 @@ package com.couchbase.client.java;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -26,10 +28,12 @@ import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.query.options.QueryProfile;
 import com.couchbase.client.java.query.options.ScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -72,6 +76,43 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertFalse(result.clientContextId().isPresent());
         JsonObject signature = result.signature();
         assertTrue(signature.size() > 0);
+        assertEquals("success", result.queryStatus());
+        assertEquals(0, result.metrics().errorCount());
+        assertEquals(0, result.metrics().warningCount());
+        assertEquals(1, result.metrics().resultCount());
+        assertEquals(0, result.warnings().size());
+    }
+
+    // TODO this should return IllegalStateException
+    @Ignore
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testNoProfileRequestedReturnsNoProfile() {
+        JsonObject content = JsonObject.create().put("foo", "bar");
+        collection.insert("testNoProfileRequestedReturnsNoProfile", content);
+        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testNoProfileRequestedReturnsNoProfile\"", options);
+        assertThrows(IllegalStateException.class, result::profileInfo);
+    }
+
+
+    @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testGettingProfile() {
+        JsonObject content = JsonObject.create().put("foo", "bar");
+        collection.insert("testGettingProfile", content);
+        QueryOptions options = QueryOptions.queryOptions().withProfile(QueryProfile.TIMINGS);
+        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testGettingProfile\"", options);
+        JsonObject profile = result.profileInfo();
+        assertTrue(profile.size() > 0);
+    }
+
+    @Test
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    void testSyntaxError() {
+        QueryResult result = cluster.query("invalid n1ql");
+        assertThrows(QueryServiceException.class, () -> {
+            result.rows();
+        });
     }
 
     @Test

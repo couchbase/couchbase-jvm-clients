@@ -39,7 +39,7 @@ class QueryHandler() {
       _ <- Validate.notNull(options, "options")
       _ <- Validate.optNotNull(options.namedParameters, "namedParameters")
       _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
-      _ <- Validate.optNotNull(options.contextId, "contextId")
+      _ <- Validate.optNotNull(options.clientContextId, "clientContextId")
       _ <- Validate.optNotNull(options.credentials, "credentials")
       _ <- Validate.optNotNull(options.maxParallelism, "maxParallelism")
       _ <- Validate.optNotNull(options.disableMetrics, "disableMetrics")
@@ -58,12 +58,10 @@ class QueryHandler() {
       validations
     }
     else {
-      val query = JsonObject.create
-        .put("statement", statement)
+      val params = options.encode()
+      params.put("statement", statement)
 
-      // TODO params
-
-      Try(JacksonTransformers.MAPPER.writeValueAsString(query)).map(queryStr => {
+      Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
         val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())

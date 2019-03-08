@@ -65,10 +65,9 @@ public class QueryResult {
 	 *
 	 * @return query status as string
 	 */
-//	public String queryStatus() {
-//		return block(this.asyncResult.queryStatus());
-//	}
-	// TODO
+	public String queryStatus() {
+		return block(this.asyncResult.queryStatus());
+	}
 
 	/**
 	 * Get the signature as returned by the query engine
@@ -84,18 +83,18 @@ public class QueryResult {
 	 *
 	 * @return query status as string
 	 */
-//	public JsonObject profileInfo() {
-//		return block(this.asyncResult.profileInfo());
-//	}
+	public JsonObject profileInfo() {
+		return block(this.asyncResult.profileInfo());
+	}
 
 	/**
 	 * Get the {@link QueryMetrics} as returned by the query engine
 	 *
 	 * @return {@link QueryMetrics}
 	 */
-//	public QueryMetrics info() {
-//		return block(this.asyncResult.info());
-//	}
+	public QueryMetrics metrics() {
+		return block(this.asyncResult.metrics());
+	}
 
 	/**
 	 * Get the list of rows that were fetched by the query which are then
@@ -120,20 +119,11 @@ public class QueryResult {
 	}
 
 	/**
-	 * Get the list of query execution errors as returned by the query engine
-	 *
-	 * @return list of errors
-	 */
-//	public List<JsonObject> errors() {
-//		return block(this.asyncResult.errors());
-//	}
-
-	/**
 	 * Get the list of warnings as returned by the query engine
 	 *
 	 * @return list of warnings
 	 */
-//	public List<JsonObject> warnings() {
-//		return block(this.asyncResult.warnings());
-//	}
+	public List<JsonObject> warnings() {
+		return block(this.asyncResult.warnings());
+	}
 }
