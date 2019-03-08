@@ -100,7 +100,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
                 response.requestId(),
                 response.clientContextId().asScala,
                 QuerySignature(response.signature().asScala),
-                QueryOther(
+                QueryAdditional(
                   null, null
                   //                    metricsKeeper.get(),
                   //                    warningsKeeper.get().asScala.map(w => QueryError(w))

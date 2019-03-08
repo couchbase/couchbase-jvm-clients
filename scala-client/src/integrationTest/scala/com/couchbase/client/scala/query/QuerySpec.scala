@@ -95,31 +95,13 @@ class QuerySpec extends FunSuite {
         throw err
     }
   }
-  //
-  //  test("reactive hello world demo") {
-  //    cluster.reactive.query("""select 'hello world' as Greeting""")
-  //      .flatMapMany(result => {
-  //        result.rows
-  //          .doOnNext(row =>
-  //            // Do something with each row
-  //            println(row.contentAs[JsonObject]))
-  //
-  //          // Errors are raised on the rows flux
-  //          .doOnError(err => println(err))
-  //
-  //          // Make sure to handle metrics & warnings *after* rows, so rows don't buffer
-  //          .thenMany(result.other.doOnNext(other => {
-  //            // Optionally: do something with metrics & warnings
-  //            println(other.metrics)
-  //            println(other.warnings)
-  //          }))
-  //      })
-  //      .subscribe()
-  //  }
 
   test("reactive hello world") {
     val rows: Seq[QueryRow] = cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMapMany(result => {
+        assert(result.clientContextId.isEmpty)
+        assert(result.signature.contentAsBytes.isSuccess)
+
         result.rows.doOnNext(v => {
           println("GOT A ROW!!" + v)
         }).collectSeq()
@@ -131,33 +113,6 @@ class QuerySpec extends FunSuite {
       .blockLast()
 
     assert(rows.size == 1)
-
-    //    val x = cluster.reactive.query("""select 'hello world' as Greeting""")
-    //      .flatMapMany(result => result.rows)
-    //      .collectList()
-    //      .block()
-    //
-    //
-    //        val rows: java.util.List[QueryRow] = cluster.reactive.query("""select 'hello world' as Greeting""")
-    //      .flatMap(result => {
-    //        val x = result.rows.doOnNext(v => {
-    //          println("GOT A ROW!!" + v)
-    //        }).collectList()
-    //
-    //        x
-    //
-    //        //          .doOnError(err => {
-    //        //          assert(false)
-    //        //        })
-    //      })
-    //      .block()
-    //
-    //    print(x.size)
-    //    print(rows.size)
-    //    assert(x.size() == 1)
-    //    assert(rows.size() == 1)
-    //    asse
-    //    rt(rows.size == 1)
   }
 
   test("reactive error due to bad syntax") {

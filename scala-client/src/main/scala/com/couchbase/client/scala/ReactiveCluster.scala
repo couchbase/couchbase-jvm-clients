@@ -33,6 +33,7 @@ import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
+import scala.compat.java8.OptionConverters._
 
 class ReactiveCluster(val async: AsyncCluster)
                      (implicit ec: ExecutionContext) {
@@ -48,93 +49,25 @@ class ReactiveCluster(val async: AsyncCluster)
 
         val ret: JavaMono[ReactiveQueryResult] = FutureConversions.javaCFToJavaMono(request, request.response(), false)
           .map(response => {
-
-            //            val requestIdKeeper = new AtomicReference[String]()
-            //            val clientContextIdKeeper = new AtomicReference[String]()
-
-            //            val requestIdStore: JavaMono[String] = response.clientContextId().doOnNext(v => {
-            //              clientContextIdKeeper.set(v)
-            //            }).doOnSubscribe(_ => {
-            //              println("sub")
-            //            })
-            //            val clientContextIdStore: JavaMono[String] = response.requestId().doOnNext(v => {
-            //              requestIdKeeper.set(v)
-            //            })
-
-            //            val x: JavaMono[ReactiveQueryResult] =
-            //              requestIdStore
-            //              .`then`(clientContextIdStore)
-            //              .map[ReactiveQueryResult](_ => {
-
             val justRows: JavaFlux[QueryRow] = response.rows()
               .map[QueryRow](bytes => {
               QueryRow(bytes)
+            }).onErrorResume(err => {
+              err match {
+                case e: QueryServiceException => JavaMono.error(QueryError(e.content))
+                case _ => JavaMono.error(err)
+              }
             })
-              .onErrorResume(err => {
-                err match {
-                  case e: QueryServiceException => JavaMono.error(QueryError(e.content))
-                  case _ => JavaMono.error(err)
-                }
-              })
-//              .doOnSubscribe(_ => println("rows subscribed"))
-//              .doOnNext(v => println(s"rows next ${v.contentAs[String]}"))
-//              .doOnComplete(() => println("rows completed"))
-//              .doOnTerminate(() => println("rows terminate"))
-
-//            val justErrs: JavaFlux[QueryError] = response.errors().map(bytes => QueryError(bytes))
-
-//            FutureConversions.javaFluxToScalaFlux(justRows).zipWith[Array[Byte], QueryRow](errs, (a, b) => {
-//              a
-//            })
-
-//            justRows.zipWith(response.errors(), (a, b) => {
-//
-//            })
-
-            // At the end, see if there are any errors, and raise if so
-//            val rowsWithErrors: JavaFlux[QueryRow] = justRows.flatMap(_ => {
-//              response.errors()
-//
-//                .doOnSubscribe(_ => println("err subscribed"))
-//                .doOnNext(_ => println("err next"))
-//                .doOnComplete(() => println("err completed"))
-//                .doOnTerminate(() => println("err terminate"))
-//
-//                .collectList()
-//                .flatMap[QueryRow](errs => {
-//                if (!errs.isEmpty) {
-//                  JavaMono.error(QueryServiceException(errs.asScala.map(QueryError)))
-//                }
-//                else {
-//                  JavaMono.empty[QueryRow]()
-//                }
-//              })
-//            })
-
-//            val rowsOut = rowsWithErrors.flux()
-//              .doOnComplete(() => println("out done2"))
-//              .doOnSubscribe(_ => println("out sub"))
-//              .doOnNext(_ => println("out next"))
-//              .doOnTerminate(() => println("out tet"))
 
             ReactiveQueryResult(
-              //                requestIdKeeper.get(),
-              //                clientContextIdKeeper.get(),
-//              FutureConversions.javaFluxToScalaFlux(rowsWithErrors),
-              FutureConversions.javaFluxToScalaFlux(justRows)
-//              FutureConversions.javaFluxToScalaFlux(justErrs)
-            )
-            //            })
-            //                .doOnSubscribe(_ => {
-            //                  println("sub")
-            //                })
-            //
-            //            x
+              FutureConversions.javaFluxToScalaFlux(justRows),
+              response.requestId(),
+              response.clientContextId().asScala,
+              QuerySignature(response.signature().asScala),
+              null)
           })
 
         ret
-//        FutureConversions.javaMonoToScalaMono(ret)
-
 
       case Failure(err) =>
         JavaMono.error(err)

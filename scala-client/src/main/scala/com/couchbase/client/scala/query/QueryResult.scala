@@ -26,16 +26,19 @@ import reactor.core.scala.publisher.{Flux, Mono}
 import scala.util.{Failure, Success, Try}
 
 abstract class QueryException extends CouchbaseException
-//
-//case class QueryErrorException() extends QueryException
-
-//case class QueryServiceException(errors: Seq[QueryError]) extends QueryException
 
 case class QueryResult(rows: Seq[QueryRow],
                        requestId: String,
                        clientContextId: Option[String],
                        signature: QuerySignature,
-                       other: QueryOther)
+                       additional: QueryAdditional)
+
+case class ReactiveQueryResult(rows: Flux[QueryRow],
+                               requestId: String,
+                               clientContextId: Option[String],
+                               signature: QuerySignature,
+                               additional: Mono[QueryAdditional])
+
 
 case class QueryRow(_content: Array[Byte]) {
 
@@ -115,19 +118,7 @@ object QueryMetrics {
   }
 }
 
-case class QueryOther(metrics: QueryMetrics,
-                      warnings: Seq[QueryError])
-
-
-case class ReactiveQueryResult(
-                              // TODO add
-//                                requestId: String,
-//                               clientContextId: String,
-                               rows: Flux[QueryRow]
-//                              errors: Flux[QueryError]
-//                               rows: reactor.core.publisher.Flux[QueryRow],
-                              // TODO add
-//                               other: Mono[QueryOther]
-                              )
+case class QueryAdditional(metrics: QueryMetrics,
+                           warnings: Seq[QueryError])
 
 
