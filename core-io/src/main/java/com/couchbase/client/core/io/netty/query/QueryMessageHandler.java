@@ -125,8 +125,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO
-//        currentResponse.warnings().onNext(data);
+        currentResponse.addWarning(data);
       }),
       new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
         // It's not actually stated in the N1QL spec, but turns out this is optional
@@ -139,29 +138,25 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO
-//        currentResponse.metrics().onNext(data);
+        currentResponse.metrics(data);
       }),
       new JsonPointer("/status", (JsonPointerCB1) value -> {
         String statusStr = value.toString(CHARSET);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
-        // TODO
-//        currentResponse.queryStatus().onNext(statusStr);
+        currentResponse.queryStatus(statusStr);
       }),
       new JsonPointer("/signature", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO
-//        currentResponse.signature().onNext(data);
+        currentResponse.signature(data);
       }),
       new JsonPointer("/profile", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        // TODO
-//        currentResponse.profile().onNext(data);
+        currentResponse.profile(data);
       })
     });
   }
@@ -222,14 +217,6 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         if (!this.currentResponse.isCompleted()) {
           boolean last = msg instanceof LastHttpContent;
           this.responseContent.writeBytes(((HttpContent) msg).content());
-
-
-          byte[] bytes = new byte[50000];
-          for (int i = 0; i < this.responseContent.capacity(); i ++) {
-            bytes[i] = this.responseContent.getByte(i);
-          }
-          String dbg = new String(bytes);
-
           try {
             if (!this.isParserInitialized) {
               this.parser.initialize(this.responseContent);

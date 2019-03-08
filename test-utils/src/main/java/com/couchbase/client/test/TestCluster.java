@@ -18,9 +18,13 @@ package com.couchbase.client.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +34,7 @@ import java.util.Optional;
 import java.util.Properties;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
+  private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
 
   protected static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -130,14 +135,18 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     try {
       try {
         // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
-        defaults.load(
-                TestCluster.class.getResourceAsStream("/integration.local.properties")
-        );
+        URL url = TestCluster.class.getResource("/integration.local.properties");
+        if (url != null) {
+          LOGGER.info("Found test config file {}", url.getPath());
+        }
+        defaults.load(url.openStream());
       }
       catch (Exception ex) {
-        defaults.load(
-                TestCluster.class.getResourceAsStream("/integration.properties")
-        );
+        URL url = TestCluster.class.getResource("/integration.properties");
+        if (url != null) {
+          LOGGER.info("Found test config file {}", url.getPath());
+        }
+        defaults.load(url.openStream());
       }
     } catch (Exception ex) {
       throw new RuntimeException("Could not load properties", ex);

@@ -74,15 +74,14 @@ public class AsyncQueryResult {
 	 *
 	 * @return {@link CompletableFuture}
 	 */
-	public CompletableFuture<JsonObject> signature() {
-		return null; // TODO
-//		return this.response.signature().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new DecodingFailedException(ex);
-//			}
-//		}).toFuture();
+	public JsonObject signature() {
+		return response.signature().map(v -> {
+			try {
+				return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
+			} catch (IOException ex) {
+				throw new DecodingFailedException(ex);
+			}
+		}).orElseThrow(QueryResponse::errorSignatureNotPresent);
 	}
 
 	/**

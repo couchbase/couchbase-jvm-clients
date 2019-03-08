@@ -20,11 +20,14 @@ import static com.couchbase.client.core.env.CoreEnvironment.*;
 import static java.time.temporal.ChronoUnit.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.QueryStreamException;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -44,14 +47,22 @@ public class QueryResponse extends BaseResponse {
 
   private EmitterProcessor<byte[]> rowsProcessor;
   private MonoProcessor<QueryAdditional> additional;
-  private byte[] signature;
   private String requestId;
   private Optional<String> clientContextId = Optional.empty();
+  private Optional<byte[]> profile = Optional.empty();
+  private Optional<byte[]> signature = Optional.empty();
+  private Optional<byte[]> metrics = Optional.empty();
+  private Optional<String> queryStatus = Optional.empty();
   private volatile Instant lastRequestTimeStamp;
   private final Channel channel;
   private final AtomicLong rowRequestSize = new AtomicLong(0);
   private final AtomicBoolean completed = new AtomicBoolean(false);
   private final CoreEnvironment environment;
+  private final ArrayList<byte[]> warnings = new ArrayList<>();
+
+  public static RuntimeException errorSignatureNotPresent() {
+    return new DecodingFailedException("Field 'signature' was not present in response");
+  }
 
   @Stability.Internal
   public QueryResponse(ResponseStatus status, Channel channel, CoreEnvironment environment) {
@@ -128,8 +139,6 @@ public class QueryResponse extends BaseResponse {
     return this.clientContextId;
   }
 
-  public byte[] signature() { return this.signature; }
-
   public Mono<QueryAdditional> additional() { return this.additional; }
 
   public EmitterProcessor<byte[]> rows() { return this.rowsProcessor; }
@@ -138,8 +147,44 @@ public class QueryResponse extends BaseResponse {
     this.requestId = requestID;
   }
 
+  public Optional<byte[]> signature() {
+    return signature;
+  }
+
+  public Optional<byte[]> metrics() {
+    return metrics;
+  }
+
+  public Optional<String> queryStatus() {
+    return queryStatus;
+  }
+
+  public Optional<byte[]> profile() {
+    return profile;
+  }
+
   public void clientContextId(String clientContextID) {
     this.clientContextId = Optional.of(clientContextID);
+  }
+
+  public void addWarning(byte[] data) {
+    warnings.add(data);
+  }
+
+  public void profile(byte[] data) {
+    this.profile = Optional.of(data);
+  }
+
+  public void signature(byte[] data) {
+    this.signature = Optional.of(data);
+  }
+
+  public void queryStatus(String statusStr) {
+    this.queryStatus = Optional.of(statusStr);
+  }
+
+  public void metrics(byte[] data) {
+    this.metrics = Optional.of(data);
   }
 }
 

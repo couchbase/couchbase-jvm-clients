@@ -68,6 +68,7 @@ public class PreparedQueryAccessor {
             core.send(request);
             return request.response();
             // TODO understand this logic
+
 //                    .thenApply((r) -> {
 //                        if (r.status() != ResponseStatus.SUCCESS) {
 //                            AsyncQueryResult result = new AsyncQueryResult(r);

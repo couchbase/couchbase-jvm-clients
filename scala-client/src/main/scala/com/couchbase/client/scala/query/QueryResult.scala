@@ -34,6 +34,7 @@ abstract class QueryException extends CouchbaseException
 case class QueryResult(rows: Seq[QueryRow],
                        requestId: String,
                        clientContextId: Option[String],
+                       signature: QuerySignature,
                        other: QueryOther)
 
 case class QueryRow(_content: Array[Byte]) {
@@ -65,6 +66,22 @@ case class QueryError(private val content: Array[Byte]) extends CouchbaseExcepti
 
 
   override def toString: String = msg
+}
+
+case class QuerySignature(private val _content: Option[Array[Byte]]) {
+  def contentAsBytes: Try[Array[Byte]] = {
+    _content match {
+      case Some(v) => Success(v)
+      case _ => Failure(QueryResponse.errorSignatureNotPresent())
+    }
+  }
+
+  def contentAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    contentAsBytes.flatMap(v => ev.decode(v, Conversions.JsonFlags))
+  }
+
+  override def toString: String = contentAs[JsonObject].get.toString
 }
 
 case class QueryMetrics(elapsedTime: String,

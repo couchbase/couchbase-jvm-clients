@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
-import com.couchbase.client.core.msg.query.QueryRequest
+import com.couchbase.client.core.msg.query.{QueryRequest, QueryResponse}
 import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
@@ -99,6 +99,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
                 rows,
                 response.requestId(),
                 response.clientContextId().asScala,
+                QuerySignature(response.signature().asScala),
                 QueryOther(
                   null, null
                   //                    metricsKeeper.get(),

@@ -75,9 +75,9 @@ public class QueryResult {
 	 *
 	 * @return query status as string
 	 */
-//	public JsonObject signature() {
-//		return block(this.asyncResult.signature());
-//	}
+	public JsonObject signature() {
+		return asyncResult.signature();
+	}
 
 	/**
 	 * Get the profile info as returned by the query engine

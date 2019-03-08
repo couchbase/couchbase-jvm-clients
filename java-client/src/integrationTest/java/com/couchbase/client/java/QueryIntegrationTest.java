@@ -68,6 +68,10 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testSimpleSelect\"", options);
         List<JsonObject> rows = result.rows();
         assertEquals(1, rows.size());
+        assertNotNull(result.requestId());
+        assertFalse(result.clientContextId().isPresent());
+        JsonObject signature = result.signature();
+        assertTrue(signature.size() > 0);
     }
 
     @Test
@@ -80,7 +84,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=$id", options);
         List<JsonObject> rows = result.rows();
         assertEquals(1, rows.size());
-
     }
 
     @Test

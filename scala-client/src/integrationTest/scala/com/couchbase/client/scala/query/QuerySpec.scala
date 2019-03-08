@@ -53,6 +53,8 @@ class QuerySpec extends FunSuite {
         assert(result.requestId != null)
         assert(result.rows.size == 1)
         assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world")
+        val signature = result.signature.contentAs[JsonObject].get
+        assert (signature.size > 0)
       case Failure(err) => throw err
     }
   }
