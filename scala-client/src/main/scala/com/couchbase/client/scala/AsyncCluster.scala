@@ -59,53 +59,35 @@ class AsyncCluster(environment: => ClusterEnvironment)
       case Success(request) =>
         core.send(request)
 
-        import reactor.core.publisher.{Mono => JavaMono}
         import reactor.core.scala.publisher.{Mono => ScalaMono}
+        val rowsKeeper = new AtomicReference[Seq[QueryRow]]()
 
-        val javaMono = JavaMono.fromFuture(request.response())
+        val ret: Future[QueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
+          propagateCancellation = true)
+          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+            .collectSeq()
+            .flatMap(rows => {
+              rowsKeeper.set(rows.map(QueryRow))
 
-        // Wait until rows and others are done
-        // If rows failed with an error, return Future.failed
-        // Else return Future(QueryResult)
-
-        val out: JavaMono[QueryResult] = javaMono
-          .flatMap(response => {
-
-            val rowsKeeper = new AtomicReference[java.util.List[Array[Byte]]]()
-
-            val ret: JavaMono[QueryResult] = response.rows
-              .collectList()
-              .flatMap(rows => {
-                rowsKeeper.set(rows)
-
-                response.additional()
-              })
-              .map(addl => {
-                val rows = rowsKeeper.get().asScala.map(QueryRow)
-
-                val result = QueryResult(
-                  rows,
-                  response.requestId(),
-                  response.clientContextId().asScala,
-                  QuerySignature(response.signature().asScala),
-                  QueryAdditional(null, null, null, null)
-                )
-
-                result
-              })
-
-            ret
-          })
+              FutureConversions.javaMonoToScalaMono(response.additional())
+            })
+            .map(addl => QueryResult(
+              rowsKeeper.get(),
+              response.requestId(),
+              response.clientContextId().asScala,
+              QuerySignature(response.signature().asScala),
+              QueryAdditional(QueryMetrics.fromBytes(addl.metrics),
+                addl.warnings.asScala.map(QueryError),
+                addl.status,
+                addl.profile.asScala.map(QueryProfile))
+            ))
+          )
           .onErrorResume(err => {
             err match {
-              case e: QueryServiceException => JavaMono.error(QueryError(e.content))
-              case _ => JavaMono.error(err)
+              case e: QueryServiceException => ScalaMono.error(QueryError(e.content))
+              case _ => ScalaMono.error(err)
             }
-          })
-
-        val future: CompletableFuture[QueryResult] = out.toFuture
-
-        val ret = FutureConversions.javaCFToScalaFuture(future)
+          }).toFuture
 
         ret.failed.foreach(err => {
           println(s"scala future error ${err}")

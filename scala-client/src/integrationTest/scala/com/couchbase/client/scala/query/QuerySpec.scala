@@ -59,6 +59,14 @@ class QuerySpec extends FunSuite {
         val signature = result.signature.contentAs[JsonObject].get
         assert (signature.size > 0)
 
+        val out = result.additional
+        assert(out.metrics.errorCount == 0)
+        assert(out.metrics.warningCount == 0)
+        assert(out.metrics.mutationCount == 0)
+        assert(out.warnings.size == 0)
+        assert(out.status == "success")
+        assert(out.profile.isEmpty)
+
       case Failure(err) => throw err
     }
   }
