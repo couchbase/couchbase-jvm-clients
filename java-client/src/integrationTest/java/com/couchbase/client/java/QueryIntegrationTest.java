@@ -54,7 +54,8 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
-        cluster.query("create primary index on `" + config().bucketname() + "`");
+        // TODO support running this only when not mocked
+        //cluster.query("create primary index on `" + config().bucketname() + "`");
     }
 
     @AfterAll
