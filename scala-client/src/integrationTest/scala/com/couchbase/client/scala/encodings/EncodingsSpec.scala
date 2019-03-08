@@ -44,16 +44,6 @@ class EncodingsSpec extends FunSuite {
     assert(doc.flags == DocumentFlags.Json)
   }
 
-  test("encode encoded-json-string directly as json") {
-    val content = """{"hello":"world"}"""
-    val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsJson.StringConvert).get
-
-    val doc = coll.get(docId).get
-
-    assert(doc.flags == DocumentFlags.Json)
-  }
-
   test("encode encoded-json-string directly as string") {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
@@ -112,16 +102,6 @@ class EncodingsSpec extends FunSuite {
   }
 
 
-  test("encode raw-string directly as json") {
-    val content = """hello, world!"""
-    val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsJson.StringConvert).get
-
-    val doc = coll.get(docId).get
-
-    assert(doc.flags == DocumentFlags.Json)
-  }
-
   test("decode raw-string as json should fail") {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
@@ -137,7 +117,7 @@ class EncodingsSpec extends FunSuite {
   test("decode raw-string written directly as json, into json, should fail") {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsJson.StringConvert).get
+    coll.insert(docId, content).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) => assert(false, "should not succeed")
@@ -213,7 +193,7 @@ class EncodingsSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, encoded)(Encodable.AsJson.BytesConvert).get
+    coll.insert(docId, encoded).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
@@ -226,7 +206,7 @@ class EncodingsSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, encoded)(Encodable.AsJson.BytesConvert).get
+    coll.insert(docId, encoded)(Encodable.AsValue.BytesConvert).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
