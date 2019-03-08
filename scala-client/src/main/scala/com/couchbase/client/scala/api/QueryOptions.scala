@@ -55,7 +55,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val scanCap: Option[Int] = None,
                         private[scala] val scanConsistency: Option[ScanConsistency] = None,
-                        // TODO BLOCKED support
+                        // TODO support
                         //                        consistentWith: Option[List[MutationToken]]
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None

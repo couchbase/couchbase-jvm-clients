@@ -93,16 +93,11 @@ object Conversions {
 
   object Encodable {
 
-    // This is the safe Bytes converter: it parses the input, and sets the flags to Json or String as appropriate.
+    /** Assumes that the content is JSON.  Use AsValue.BytesConvert if it's really non-JSON
+      */
     implicit object BytesConvert extends Encodable[Array[Byte]] {
       override def encode(content: Array[Byte]) = {
-        // TODO requires upickle
-        val upickleAttempt = Try(upickle.default.read[ujson.Value](content))
-
-        upickleAttempt match {
-          case Success(json) => Try((content, JsonFlags))
-          case Failure(_) => Try((content, BinaryFlags))
-        }
+        Try((content, JsonFlags))
       }
     }
 
@@ -113,43 +108,16 @@ object Conversions {
     // foobar             written with flags=Json (note that a single string is perfectly valid json)
     // foobar             written with flags=String
 
-    // This is the safe String converter: it parses the input, and sets the flags to Json or String as appropriate.
+    /** Assumes that the content is JSON.  Use AsValue.StringConvert if it's really a non-JSON String
+      */
     implicit object StringConvert extends Encodable[String] {
-      // TODO default StringConvert perhaps shouldn't be safe - talk with Matt
       override def encode(content: String) = {
-        // TODO this requires upickle, exchange for jsoniter
-        val upickleAttempt = Try(upickle.default.read[ujson.Value](content))
-
-        upickleAttempt match {
-          case Success(json) =>
-            Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
-          case Failure(_) =>
-            Try(((content).getBytes(CharsetUtil.UTF_8), StringFlags))
-        }
+        Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
 
       override def encodeSubDocumentField(content: String): Try[(Array[Byte], EncodeParams)] = {
         Try((('"' + content + '"').getBytes(CharsetUtil.UTF_8), JsonFlags))
       }
-    }
-
-    // These encoders treat the provided values as encoded Json
-    object AsJson {
-
-      // This is a high-performance Array[Bytes] converter that trusts that the input is indeed Json and sets the appropriate flag
-      implicit object BytesConvert extends Encodable[Array[Byte]] {
-        override def encode(content: Array[Byte]) = {
-          Try((content, JsonFlags))
-        }
-      }
-
-      // This is a high-performance String converter that trusts that the input is indeed Json and sets the appropriate flag
-      implicit object StringConvert extends Encodable[String] {
-        override def encode(content: String) = {
-          Try((content.getBytes(CharsetUtil.UTF_8), JsonFlags))
-        }
-      }
-
     }
 
     // These encoders treat the provided values as raw binary or strings
