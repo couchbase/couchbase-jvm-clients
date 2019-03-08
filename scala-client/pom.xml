@@ -215,8 +215,6 @@
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
                             <!--TODO remove findbugs-->
-                            <!--TODO do we need?-->
-                            <include>com.fasterxml.jackson.module:jackson-module-scala_${scala.compat.version}</include>
                         </includes>
                         <excludes>
                             <!--<exclude>io.projectreactor:reactor-scala-extensions_${scala.compat.version}</exclude>-->
