@@ -58,6 +58,8 @@ private[scala] object ProjectionsApplier {
   @tailrec
   private def parseRec(in: Either[JsonObject, JsonArray], path: List[PathElement], content: Any): Try[Unit] = {
     path match {
+      case Nil => Success()
+
       case x :: Nil =>
         x match {
           case PathArray(str, idx) =>
@@ -95,6 +97,9 @@ private[scala] object ProjectionsApplier {
             in match {
               case Left(obj) =>
                 obj.put(str, toCreate)
+                parseRec(Left(toCreate), xs, content)
+              case Right(arr) =>
+                arr.add(toCreate)
                 parseRec(Left(toCreate), xs, content)
             }
         }

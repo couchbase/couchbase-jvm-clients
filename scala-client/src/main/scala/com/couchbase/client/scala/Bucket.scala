@@ -16,8 +16,6 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.scala.api.QueryOptions
-//import com.couchbase.client.scala.query.{N1qlQueryResult, N1qlResult}
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext

@@ -7,7 +7,6 @@ import com.couchbase.client.core.msg.kv.{UpsertRequest, UpsertResponse}
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.{DurationConversions, HandlerParams}
-import com.couchbase.client.scala.api.{MutationResult, QueryOptions}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment

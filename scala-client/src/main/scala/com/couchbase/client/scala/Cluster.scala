@@ -20,12 +20,11 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.couchbase.client.core.env.Credentials
-import com.couchbase.client.scala.api.QueryOptions
-import com.couchbase.client.scala.query.QueryResult
+import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration}
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 class Cluster(env: => ClusterEnvironment)

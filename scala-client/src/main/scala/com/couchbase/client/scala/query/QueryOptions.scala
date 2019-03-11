@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala.api
+package com.couchbase.client.scala.query
 
 import java.util.Objects
 
@@ -30,17 +30,6 @@ object N1qlProfile extends Enumeration {
   val Off, Phases, Timings = Value
 }
 
-sealed trait ScanConsistency {
-  private[scala] def encoded: String
-}
-case class NotBounded() extends ScanConsistency {
-  private[scala] def encoded = "not_bounded"
-}
-//case class AtPlus(consistentWith: List[MutationToken], scanWait: Option[Duration] = None) extends ScanConsistency
-case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency {
-  private[scala] def encoded = "request_plus"
-}
-//case class StatementPlus(scanWait: Option[Duration] = None) extends ScanConsistency
 
 case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
                         private[scala] val positionalParameters: Option[List[Any]] = None,

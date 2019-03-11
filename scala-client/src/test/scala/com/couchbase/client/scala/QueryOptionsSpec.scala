@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.scala.api.QueryOptions
+import com.couchbase.client.scala.query.QueryOptions
 import org.scalatest.FunSuite
 
 class QueryOptionsSpec extends FunSuite {

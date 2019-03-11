@@ -8,7 +8,6 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest
 import com.couchbase.client.core.msg.query.{QueryAdditionalBasic, QueryRequest, QueryResponse}
-import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.query._
@@ -53,7 +52,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
       .map(v => new AsyncBucket(name, core, environment))
   }
 
-  def query(statement: String, options: QueryOptions): Future[QueryResult] = {
+  def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
 
     queryHandler.request(statement, options, core, environment) match {
       case Success(request) =>

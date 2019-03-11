@@ -3,7 +3,6 @@ package com.couchbase.client.scala.query
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.{DecodingFailedException, QueryStreamException}
-import com.couchbase.client.scala.api.{N1qlProfile, QueryOptions}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite

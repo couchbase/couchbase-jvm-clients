@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.error.QueryServiceException
-import com.couchbase.client.scala.api.QueryOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
@@ -38,8 +37,6 @@ import scala.compat.java8.OptionConverters._
 class ReactiveCluster(val async: AsyncCluster)
                      (implicit ec: ExecutionContext) {
   private val env = async.env
-
-  import DurationConversions._
 
   def query(statement: String, options: QueryOptions = QueryOptions()): JavaMono[ReactiveQueryResult] = {
     async.queryHandler.request(statement, options, async.core, async.env) match {
