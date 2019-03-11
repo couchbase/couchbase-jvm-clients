@@ -20,33 +20,30 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class LookupInOp {
+public class LookupInSpec {
 
   private final String path;
   private final SubdocCommandType type;
   private boolean xattr = false;
 
-  private LookupInOp(SubdocCommandType type, String path) {
+  private LookupInSpec(SubdocCommandType type, String path) {
     this.path = path;
     this.type = type;
   }
 
-  public static LookupInOp get(final String path) {
-    return new LookupInOp(SubdocCommandType.GET, path);
+  public static LookupInSpec get(final String path) {
+    return new LookupInSpec(SubdocCommandType.GET, path);
   }
 
-  public static LookupInOp exists(final String path) {
-    return new LookupInOp(SubdocCommandType.EXISTS, path);
+  public static LookupInSpec exists(final String path) {
+    return new LookupInSpec(SubdocCommandType.EXISTS, path);
   }
 
-  public static LookupInOp count(final String path) {
-    return new LookupInOp(SubdocCommandType.COUNT, path);
+  public static LookupInSpec count(final String path) {
+    return new LookupInSpec(SubdocCommandType.COUNT, path);
   }
 
-  public LookupInOp xattr() {
+  public LookupInSpec xattr() {
     xattr = true;
     return this;
   }

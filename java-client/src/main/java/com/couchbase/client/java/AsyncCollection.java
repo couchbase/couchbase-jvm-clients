@@ -726,16 +726,16 @@ public class AsyncCollection {
     return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInOp> ops) {
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInSpec> ops) {
     return lookupIn(id, ops, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInOp> ops,
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInSpec> ops,
                                                               final LookupInOptions options) {
     return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, ops, options));
   }
 
-  SubdocGetRequest lookupInRequest(final String id, final List<LookupInOp> ops,
+  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> ops,
                                     final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
     notNullOrEmpty(ops, "LookupInOps");
@@ -744,7 +744,7 @@ public class AsyncCollection {
 
     List<SubdocGetRequest.Command> commands = ops
       .stream()
-      .map(LookupInOp::export)
+      .map(LookupInSpec::export)
       .collect(Collectors.toList());
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());

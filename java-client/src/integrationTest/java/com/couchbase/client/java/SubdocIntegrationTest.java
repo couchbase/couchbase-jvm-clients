@@ -21,7 +21,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.LookupInOp;
+import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
@@ -58,7 +58,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void emptyIfNotFound() {
-    assertFalse(collection.lookupIn("does_not_exist", Arrays.asList(LookupInOp.get("foo"))).isPresent());
+    assertFalse(collection.lookupIn("does_not_exist", Arrays.asList(LookupInSpec.get("foo"))).isPresent());
   }
 
   @Test
@@ -69,7 +69,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       id, JsonObject.create().put("foo", "bar").put("num", 1234)
     );
 
-    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInOp.get("foo"), LookupInOp.get("num")));
+    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("foo"), LookupInSpec.get("num")));
     assertTrue(result.isPresent());
     result.ifPresent(r -> {
       assertEquals("bar", r.contentAs(0, String.class));
@@ -90,7 +90,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       .put("arr", JsonArray.create())
     );
 
-    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInOp.get("obj"), LookupInOp.get("arr")));
+    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("obj"), LookupInSpec.get("arr")));
     assertTrue(result.isPresent());
     result.ifPresent(r -> {
       assertEquals(JsonObject.empty(), r.contentAsObject(0));
@@ -123,7 +123,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, JsonObject.empty());
 
     assertThrows(PathNotFoundException.class, () ->
-            collection.lookupIn(id, Arrays.asList(LookupInOp.get("not_exist")))
+            collection.lookupIn(id, Arrays.asList(LookupInSpec.get("not_exist")))
     );
   }
 
@@ -133,7 +133,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInOp.get("not_exist"), LookupInOp.get("foo"))).get();
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("not_exist"), LookupInSpec.get("foo"))).get();
 
     assertFalse(result.exists(0));
     assertTrue(result.exists(1));
@@ -166,7 +166,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInOp.exists("not_exist"), LookupInOp.get("foo"))).get();
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"))).get();
 
     assertFalse(result.exists(0));
     assertThrows(PathNotFoundException.class, () ->
@@ -183,7 +183,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", JsonArray.from("hello", "world")));
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInOp.count("foo"))).get();
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.count("foo"))).get();
 
     assertTrue(result.exists(0));
     assertEquals(2, (int) result.contentAs(0, Integer.class));

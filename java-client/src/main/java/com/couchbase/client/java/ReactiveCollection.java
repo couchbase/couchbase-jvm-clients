@@ -411,11 +411,11 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, List<LookupInOp> ops) {
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops) {
     return lookupIn(id, ops, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, List<LookupInOp> ops,
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops,
                                        final LookupInOptions options) {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, ops, options);

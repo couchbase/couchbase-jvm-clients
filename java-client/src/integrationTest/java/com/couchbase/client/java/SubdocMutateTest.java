@@ -137,7 +137,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         coll.mutateIn(docId, ops);
 
-        return coll.lookupIn(docId, Arrays.asList(LookupInOp.get("x").xattr())).get().contentAsObject(0);
+        return coll.lookupIn(docId, Arrays.asList(LookupInSpec.get("x").xattr())).get().contentAsObject(0);
     }
 
     private void checkSingleOpFailure(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus expected) {

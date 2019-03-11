@@ -24,7 +24,7 @@ import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.LookupInOp;
+import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
@@ -335,11 +335,11 @@ public class Collection {
     block(async().unlock(id, cas, options));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInOp> ops) {
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops) {
     return block(async().lookupIn(id, ops));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInOp> ops,
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops,
                                            final LookupInOptions options) {
     return block(async().lookupIn(id, ops, options));
   }
