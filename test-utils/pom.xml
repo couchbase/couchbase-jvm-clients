@@ -61,6 +61,7 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
+                            <source>8</source>
                             <doclint>none</doclint>
                             <quiet>true</quiet>
                         </configuration>
