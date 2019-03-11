@@ -17,12 +17,14 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION;
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION_ID;
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
@@ -75,11 +77,33 @@ public class AsyncScope {
 
   /**
    * The name of the scope.
-   *
-   * @return the name of the scope.
    */
   public String name() {
     return scopeName;
+  }
+
+  /**
+   * The name of the bucket this scope is attached to.
+   */
+  public String bucketName() {
+    return bucketName;
+  }
+
+  /**
+   * Provides access to the underlying {@link Core}.
+   *
+   * <p>This is advanced API, use with care!</p>
+   */
+  @Stability.Uncommitted
+  public Core core() {
+    return core;
+  }
+
+  /**
+   * Provides access to the configured {@link ClusterEnvironment} for this scope.
+   */
+  public ClusterEnvironment environment() {
+    return environment;
   }
 
   /**
@@ -98,10 +122,11 @@ public class AsyncScope {
    * @return the requested collection if successful.
    */
   public CompletableFuture<AsyncCollection> collection(final String name) {
+    notNullOrEmpty(name, "Name");
     if (DEFAULT_COLLECTION.equals(name) && DEFAULT_SCOPE.equals(scopeName)) {
-      CompletableFuture<AsyncCollection> future = new CompletableFuture<>();
-      future.complete(new AsyncCollection(name, DEFAULT_COLLECTION_ID, bucketName, core, environment));
-      return future;
+      return CompletableFuture.completedFuture(
+        new AsyncCollection(name, DEFAULT_COLLECTION_ID, bucketName, core, environment)
+      );
     } else {
       GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1),
         core.context(), bucketName, environment.retryStrategy(), scopeName, name);
@@ -109,12 +134,18 @@ public class AsyncScope {
       return request
         .response()
         .thenApply(res -> {
-          if (res.status().success()) {
-            return new AsyncCollection(name, res.collectionId().get(), bucketName, core, environment);
+          if (res.status().success() && res.collectionId().isPresent()) {
+            return new AsyncCollection(
+              name,
+              res.collectionId().get(),
+              bucketName,
+              core,
+              environment
+            );
           } else {
             // TODO: delay into collection!
-            throw new IllegalStateException("Do not raise me.. propagate into collection.. " +
-              "collection error");
+            throw new IllegalStateException("Could not open collection "
+              + "(either not successful or id not present)");
           }
         });
     }

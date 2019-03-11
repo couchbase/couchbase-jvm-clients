@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import reactor.core.publisher.Mono;
 
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION;
@@ -46,7 +49,7 @@ public class ReactiveScope {
    * @param asyncScope the underlying async scope.
    * @param bucketName the name of the bucket this scope belongs to.
    */
-  ReactiveScope(AsyncScope asyncScope, String bucketName) {
+  ReactiveScope(final AsyncScope asyncScope, final String bucketName) {
     this.asyncScope = asyncScope;
     this.bucketName = bucketName;
   }
@@ -58,6 +61,37 @@ public class ReactiveScope {
    */
   public String name() {
     return asyncScope.name();
+  }
+
+  /**
+   * The name of the bucket this scope is attached to.
+   */
+  public String bucketName() {
+    return bucketName;
+  }
+
+  /**
+   * Returns the underlying async scope.
+   */
+  public AsyncScope async() {
+    return asyncScope;
+  }
+
+  /**
+   * Provides access to the underlying {@link Core}.
+   *
+   * <p>This is advanced API, use with care!</p>
+   */
+  @Stability.Uncommitted
+  public Core core() {
+    return asyncScope.core();
+  }
+
+  /**
+   * Provides access to the configured {@link ClusterEnvironment} for this scope.
+   */
+  public ClusterEnvironment environment() {
+    return asyncScope.environment();
   }
 
   /**
