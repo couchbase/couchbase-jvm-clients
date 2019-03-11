@@ -27,10 +27,7 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -430,6 +427,11 @@ public class CoreEnvironment {
 
     public SELF seedNodes(final Set<SeedNode> seedNodes) {
       this.seedNodes = seedNodes;
+      return self();
+    }
+
+    public SELF seedNodes(SeedNode... seedNodes) {
+      this.seedNodes = new HashSet<>(Arrays.asList(seedNodes));
       return self();
     }
 
