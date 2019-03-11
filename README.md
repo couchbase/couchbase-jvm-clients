@@ -30,7 +30,7 @@ mvn -Dscala.compat.version=2.11 clean install
 
 (The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11 and 2.12.)
 
-### Building and Testing
+### Building and Testing 
 
 You can test like this:
 

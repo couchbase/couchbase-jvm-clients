@@ -120,7 +120,7 @@ class QuerySpec extends FunSuite {
           println("GOT A ROW!!" + v)
         }).collectSeq()
       })
-      .blockLast()
+      .blockLast().get
 
     assert(rows.size == 1)
   }
@@ -140,7 +140,7 @@ class QuerySpec extends FunSuite {
           })
 
       })
-      .blockLast()
+      .blockLast().get
 
     assert(rowsKeeper.get.size == 1)
     assert(out.metrics.errorCount == 0)

@@ -38,7 +38,7 @@ class ReactiveCluster(val async: AsyncCluster)
                      (implicit ec: ExecutionContext) {
   private val env = async.env
 
-  def query(statement: String, options: QueryOptions = QueryOptions()): JavaMono[ReactiveQueryResult] = {
+  def query(statement: String, options: QueryOptions = QueryOptions()): ScalaMono[ReactiveQueryResult] = {
     async.queryHandler.request(statement, options, async.core, async.env) match {
       case Success(request) =>
 
@@ -74,10 +74,10 @@ class ReactiveCluster(val async: AsyncCluster)
               )
           })
 
-        ret
+        FutureConversions.javaMonoToScalaMono(ret)
 
       case Failure(err) =>
-        JavaMono.error(err)
+        ScalaMono.error(err)
     }
   }
 
