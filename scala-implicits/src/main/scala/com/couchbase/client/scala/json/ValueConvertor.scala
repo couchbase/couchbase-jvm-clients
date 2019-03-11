@@ -76,6 +76,7 @@ private[scala] object ValueConvertor {
   def obj(out: Any, name: String): JsonObject = {
     out match {
       case v: JsonObject => v
+      case v: JsonObjectSafe => v.o
       case null => null
       case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to JsonObject")
     }
@@ -84,6 +85,7 @@ private[scala] object ValueConvertor {
   def arr(out: Any, name: String): JsonArray = {
     out match {
       case v: JsonArray => v
+      case v: JsonArraySafe => v.a
       case null => null
       case _ => throw new DecodingFailedException(s"$name '$out' cannot be converted to JsonArray")
     }

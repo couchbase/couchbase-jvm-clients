@@ -112,7 +112,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
 
   /** Gets a String value from this object.
     *
-    * If that value is not itself a String, it's `toString` value will be returned.  If the value is `null`, then
+    * If that value is not itself a String, its `toString` value will be returned.  If the value is `null`, then
     * `null` will be returned.
     *
     * @param name  $Name
@@ -144,7 +144,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
 
   /** Gets a Boolean value from this object.
     *
-    * If that value is actually an Boolean it is returned directly.  Else DecodingFailedException will be thrown.
+    * If that value is actually a Boolean it is returned directly.  Else DecodingFailedException will be thrown.
     *
     * @param name  $Name
     *

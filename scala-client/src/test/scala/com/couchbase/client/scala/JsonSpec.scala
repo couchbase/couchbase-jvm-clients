@@ -5,7 +5,6 @@ import java.util.UUID
 import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.codec.EncodeParams
 import com.couchbase.client.scala.implicits.Codecs
-import com.couchbase.client.scala.implicits.Codecs.{decoder, encoder}
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
 import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil

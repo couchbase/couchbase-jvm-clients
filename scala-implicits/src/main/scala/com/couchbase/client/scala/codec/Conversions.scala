@@ -61,6 +61,9 @@ object DocumentFlags {
   *   {"hello":"world"}  written with flags=Json
   *   foobar             written with flags=Json (note that a single string is perfectly valid json)
   *   foobar             written with flags=String
+  *
+  * @author Graham Pople
+  * @since 1.0.0
   */
 object Conversions {
 
