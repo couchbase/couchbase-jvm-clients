@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>java-examples</artifactId>
-    <version>alpha.0</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <name>Couchbase Java SDK Examples</name>
     <description>Examples for the Couchbase Java SDK</description>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>java-client</artifactId>
-            <version>alpha.0</version>
+            <version>3.0.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>

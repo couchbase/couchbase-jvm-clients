@@ -58,7 +58,7 @@ To cover all tests, the suite needs to be run against the following topologies:
  - 2 nodes, 2 replicas
  
 ### Snapshot packaging
-After building:
+After building (i.e. for alpha.0):
 
 ```
 tar -czf java-client-alpha.0.tar.gz java-client/target/java-client-alpha.0.jar java-client/target/java-client-alpha.0-javadoc.jar java-client/target/java-client-alpha.0-sources.jar java-client/pom.xml
