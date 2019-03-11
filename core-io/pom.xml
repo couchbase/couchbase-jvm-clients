@@ -122,14 +122,13 @@
                             <source>8</source>
                             <doclint>none</doclint>
                             <quiet>true</quiet>
+                            <stylesheetfile>../config/javadoc/style.css</stylesheetfile>
                         </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <links>
-                        <!--<link>http://reactivex.io/RxJava/javadoc/</link>
-                        <link>http://fasterxml.github.io/jackson-databind/javadoc/2.9/</link>
-                        <link>https://netty.io/4.0/api/</link>-->
+                        <link>https://projectreactor.io/docs/core/release/api/</link>
                     </links>
                 </configuration>
             </plugin>

@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * The {@link SaslClientFactory} supporting varioues SCRAM-SHA modes.
+ * The {@link SaslClientFactory} supporting various SCRAM-SHA modes.
  *
- * <p>See {@link Mode} for information which are supported and how they map to their
+ * <p>See Mode for information which are supported and how they map to their
  * network representation.</p>
  *
  * @since 1.2.5
