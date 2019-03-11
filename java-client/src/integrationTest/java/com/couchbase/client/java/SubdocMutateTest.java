@@ -591,23 +591,23 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 coll.mutateIn(docId,
-                        Arrays.asList(MutateInSpec.insert("foo0", "bar0")
-                                .insert("foo1", "bar1")
-                                .insert("foo2", "bar2")
-                                .insert("foo3", "bar3")
-                                .insert("foo4", "bar4")
-                                .insert("foo5", "bar5")
-                                .insert("foo6", "bar6")
-                                .insert("foo7", "bar7")
-                                .insert("foo8", "bar8")
-                                .insert("foo9", "bar9")
-                                .insert("foo10", "bar10")
-                                .insert("foo11", "bar11")
-                                .insert("foo12", "bar12")
-                                .insert("foo13", "bar13")
-                                .insert("foo14", "bar14")
-                                .insert("foo15", "bar15")
-                                .insert("foo16", "bar16"))));
+                        Arrays.asList(MutateInSpec.insert("foo0", "bar0"),
+                                MutateInSpec.insert("foo1", "bar1"),
+                                MutateInSpec.insert("foo2", "bar2"),
+                                MutateInSpec.insert("foo3", "bar3"),
+                                MutateInSpec.insert("foo4", "bar4"),
+                                MutateInSpec.insert("foo5", "bar5"),
+                                MutateInSpec.insert("foo6", "bar6"),
+                                MutateInSpec.insert("foo7", "bar7"),
+                                MutateInSpec.insert("foo8", "bar8"),
+                                MutateInSpec.insert("foo9", "bar9"),
+                                MutateInSpec.insert("foo10", "bar10"),
+                                MutateInSpec.insert("foo11", "bar11"),
+                                MutateInSpec.insert("foo12", "bar12"),
+                                MutateInSpec.insert("foo13", "bar13"),
+                                MutateInSpec.insert("foo14", "bar14"),
+                                MutateInSpec.insert("foo15", "bar15"),
+                                MutateInSpec.insert("foo16", "bar16"))));
     }
 
     @Test
@@ -616,9 +616,9 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                Arrays.asList(MutateInSpec.insert("foo0", "bar0")
-                        .insert("foo1", "bar1")
-                        .insert("foo2", "bar2")));
+                Arrays.asList(MutateInSpec.insert("foo0", "bar0"),
+                        MutateInSpec.insert("foo1", "bar1"),
+                        MutateInSpec.insert("foo2", "bar2")));
 
         JsonObject updated = getContent(docId);
         assertEquals("bar1", updated.getString("foo1"));
@@ -633,9 +633,9 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         assertThrows(MultiMutationException.class, () ->
                 coll.mutateIn(docId,
-                        Arrays.asList(MutateInSpec.insert("foo0", "bar0")
-                                .insert("foo1", "bar1")
-                                .remove("foo3"))));
+                        Arrays.asList(MutateInSpec.insert("foo0", "bar0"),
+                                MutateInSpec.insert("foo1", "bar1"),
+                                MutateInSpec.remove("foo3"))));
 
         JsonObject updated = getContent(docId);
         assertEquals("bar_orig_1", updated.getString("foo1"));
