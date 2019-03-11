@@ -13,20 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.scala.util
 
-import scala.util.{Success, Try}
+package com.couchbase.client.scala.kv.handlers
 
-// Who needs Cats?
-private[scala] object FunctionalUtil {
-  def traverse[T](in: Seq[Try[T]]): Try[Seq[T]] = {
-    in match {
-      case x :: Nil => x.map(Seq(_))
-      case x :: xs => x.flatMap(v => {
-        val rest: Try[Seq[T]] = traverse(xs)
-        val y: Seq[T] = Seq(v)
-        rest.map(z => y ++ z)
-      })
-    }
-  }
+private[scala] trait RequestHandler[Resp,Res] {
+  def response(id: String, response: Resp): Res
 }

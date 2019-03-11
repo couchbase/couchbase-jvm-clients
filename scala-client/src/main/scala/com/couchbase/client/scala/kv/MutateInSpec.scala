@@ -15,6 +15,8 @@ import scala.util.Try
   * @define SupportedTypes this can be of any type for which an implicit Encodable can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @define Encodable      an implicit Encodable.  For any supported type T this will be found automatically.
+  * @author Graham Pople
+  * @since 1.0.0
   */
 object MutateInSpec {
   // TODO fix ***CHANGEME*** when docs are available

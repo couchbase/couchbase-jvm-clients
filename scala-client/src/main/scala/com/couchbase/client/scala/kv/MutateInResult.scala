@@ -7,6 +7,7 @@ import com.couchbase.client.scala.codec.Conversions
 import scala.util.{Failure, Try}
 import scala.compat.java8.OptionConverters._
 
+// TODO ScalaDocs
 case class MutateInResult(id: String,
                           private val content: Seq[SubdocField],
                           cas: Long,

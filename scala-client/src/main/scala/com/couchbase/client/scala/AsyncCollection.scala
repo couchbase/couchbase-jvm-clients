@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.scala
 
 import java.math.BigInteger
@@ -50,6 +49,7 @@ import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 import com.couchbase.client.scala.durability.Durability._
+import com.couchbase.client.scala.kv.handlers._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions

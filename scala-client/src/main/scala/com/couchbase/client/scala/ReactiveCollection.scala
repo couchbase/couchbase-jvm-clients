@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import com.couchbase.client.scala.durability.Durability._
+import com.couchbase.client.scala.kv.handlers.RequestHandler
 
 /** Provides asynchronous access to all collection APIs, based around reactive programming using the
   * [[https://projectreactor.io/ Project Reactor]] library.  This is the main entry-point

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import scala.collection.{GenMap, mutable}
 import scala.concurrent.duration.Duration
 
+// TODO ScalaDocs
 object N1qlProfile extends Enumeration {
   val Off, Phases, Timings = Value
 }
