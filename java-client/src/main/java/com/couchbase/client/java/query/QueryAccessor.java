@@ -32,25 +32,25 @@ public class QueryAccessor {
 
 	public static CompletableFuture<AsyncQueryResult> queryAsync(final Core core, final Query query,
 																 final QueryOptions.BuiltQueryOptions options,
-																 final Supplier<ClusterEnvironment> environment) {
+																 final ClusterEnvironment environment) {
 		return queryInternal(core, query, options, environment).thenApply(AsyncQueryResult::new);
 	}
 
 	public static CompletableFuture<ReactiveQueryResult> queryReactive(final Core core, final Query query,
 																	   final QueryOptions.BuiltQueryOptions options,
-																	   final Supplier<ClusterEnvironment> environment) {
+																	   final ClusterEnvironment environment) {
 		return queryInternal(core, query, options, environment).thenApply(ReactiveQueryResult::new);
 	}
 
 	private static CompletableFuture<QueryResponse> queryInternal(final Core core, final Query query,
 																  final QueryOptions.BuiltQueryOptions opts,
-																  final Supplier<ClusterEnvironment> environment) {
-		Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
-		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+																  final ClusterEnvironment environment) {
+		Duration timeout = opts.timeout().orElse(environment.timeoutConfig().queryTimeout());
+		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 		JsonObject queryJson = query.getQueryJson(opts.parameters());
 		opts.getN1qlParams(queryJson);
 		QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy,
-				environment.get().credentials(), queryJson.toString().getBytes(CharsetUtil.UTF_8));
+				environment.credentials(), queryJson.toString().getBytes(CharsetUtil.UTF_8));
 		core.send(request);
 		return request.response();
 	}

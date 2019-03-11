@@ -40,30 +40,30 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 public class PreparedQueryAccessor {
 
     public static CompletableFuture<AsyncQueryResult> queryAsync(final Core core, final Query query,
-                                                                 final QueryOptions.BuiltQueryOptions options, final Supplier<ClusterEnvironment> environment,
+                                                                 final QueryOptions.BuiltQueryOptions options, final ClusterEnvironment environment,
                                                                  final LFUCache<String, PreparedQuery> preparedCache) {
         return queryInternal(core, query, options, environment, preparedCache).thenApply(AsyncQueryResult::new);
     }
 
     public static CompletableFuture<ReactiveQueryResult> queryReactive(final Core core, final Query query,
                                                                        final QueryOptions.BuiltQueryOptions options,
-                                                                       final Supplier<ClusterEnvironment> environment,
+                                                                       final ClusterEnvironment environment,
                                                                        final LFUCache<String, PreparedQuery> preparedCache) {
         return queryInternal(core, query, options, environment, preparedCache).thenApply(ReactiveQueryResult::new);
     }
 
     public static CompletableFuture<QueryResponse> queryInternal(final Core core, final Query query,
                                                                  final QueryOptions.BuiltQueryOptions opts,
-                                                                 final Supplier<ClusterEnvironment> environment,
+                                                                 final ClusterEnvironment environment,
                                                                  final LFUCache<String, PreparedQuery> preparedCache) {
-        Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
-        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+        Duration timeout = opts.timeout().orElse(environment.timeoutConfig().queryTimeout());
+        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
         if (preparedCache.contains(query.statement())) {
             PreparedQuery prepared = preparedCache.get(query.statement());
             JsonObject queryJson = prepared.getQueryJson(opts.parameters());
             opts.getN1qlParams(queryJson);
-            QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+            QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.credentials(),
                     queryJson.toString().getBytes(CharsetUtil.UTF_8));
             core.send(request);
             return request.response();
@@ -87,7 +87,7 @@ public class PreparedQueryAccessor {
         } else {
             JsonObject queryJson = query.getQueryJson(null);
             opts.getN1qlParams(queryJson);
-            QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+            QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.credentials(),
                     queryJson.toString().getBytes(CharsetUtil.UTF_8));
             core.send(request);
             return request
