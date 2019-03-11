@@ -23,6 +23,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.MutateInResult;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
@@ -30,13 +31,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
-import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -94,7 +94,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     MutationResult result = collection.upsert(id, JsonObject.empty());
     assertMutationToken(result.mutationToken());
 
-    MutateInResult mutateResult = collection.mutateIn(id, mutateInOps().insert("foo", true));
+    MutateInResult mutateResult = collection.mutateIn(id, Arrays.asList(MutateInSpec.insert("foo", true)));
     assertMutationToken(mutateResult.mutationToken());
   }
 

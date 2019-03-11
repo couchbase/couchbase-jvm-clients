@@ -24,19 +24,16 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.LookupInOp;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.MutateInResult;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
@@ -110,7 +107,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.empty());
 
-    MutateInResult result = collection.mutateIn(id, mutateInOps().insert("foo", "bar"));
+    MutateInResult result = collection.mutateIn(id, Arrays.asList(MutateInSpec.insert("foo", "bar")));
     assertTrue(result.cas() != 0);
 
     assertEquals(

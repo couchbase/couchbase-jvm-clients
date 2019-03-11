@@ -432,7 +432,7 @@ public class ReactiveCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec) {
+  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -444,7 +444,7 @@ public class ReactiveCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final MutateInOps spec,
+  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec,
                                        final MutateInOptions options) {
     return Mono.defer(() -> {
       MutateInOptions.BuiltMutateInOptions opts = options.build();

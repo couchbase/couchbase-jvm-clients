@@ -17,7 +17,7 @@ object GetSelecter {
 
   // The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that path.
   @tailrec
-  def eval(cursor: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
+  private[scala] def eval(cursor: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
     path match {
       // x is what we're looking for next, cursor is what out cursor's on
 

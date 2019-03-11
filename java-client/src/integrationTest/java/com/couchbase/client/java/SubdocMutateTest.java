@@ -26,16 +26,14 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
-import static com.couchbase.client.java.kv.MutateInOps.mutateInOps;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -77,7 +75,8 @@ class SubdocMutateTest extends JavaIntegrationTest {
     private String prepareXattr(JsonObject content) {
         String docId = docId();
         coll.mutateIn(docId,
-                mutateInOps().insert(true, "x", content), mutateInOptions().insertDocument(true));
+                Arrays.asList(MutateInSpec.insert(true, "x", content)),
+                mutateInOptions().insertDocument(true));
         return docId;
     }
 
@@ -90,7 +89,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = docId();
         assertThrows(IllegalArgumentException.class, () ->
                 coll.mutateIn(docId,
-                        mutateInOps()));
+                        Arrays.asList()));
     }
 
 
@@ -100,7 +99,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                mutateInOps().insert("foo2", "bar2"));
+                Arrays.asList(MutateInSpec.insert("foo2", "bar2")));
 
         assertEquals("bar2", getContent(docId).getString("foo2"));
     }
@@ -111,13 +110,17 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                mutateInOps().remove("foo"));
+                Arrays.asList(MutateInSpec.remove("foo")));
 
         assertFalse(getContent(docId).containsKey("foo"));
     }
 
 
-    private JsonObject checkSingleOpSuccess(JsonObject content, MutateInOps ops) {
+    private JsonObject checkSingleOpSuccess(JsonObject content, MutateInSpec ops) {
+        return checkSingleOpSuccess(content, Arrays.asList(ops));
+    }
+
+    private JsonObject checkSingleOpSuccess(JsonObject content, List<MutateInSpec> ops) {
         String docId = prepare(content);
 
         coll.mutateIn(docId, ops);
@@ -125,7 +128,11 @@ class SubdocMutateTest extends JavaIntegrationTest {
         return coll.get(docId).get().contentAsObject();
     }
 
-    private JsonObject checkSingleOpSuccessXattr(JsonObject content, MutateInOps ops) {
+    private JsonObject checkSingleOpSuccessXattr(JsonObject content, MutateInSpec ops) {
+        return checkSingleOpSuccessXattr(content, Arrays.asList(ops));
+    }
+
+    private JsonObject checkSingleOpSuccessXattr(JsonObject content, List<MutateInSpec> ops) {
         String docId = prepareXattr(content);
 
         coll.mutateIn(docId, ops);
@@ -133,18 +140,22 @@ class SubdocMutateTest extends JavaIntegrationTest {
         return coll.lookupIn(docId, Arrays.asList(LookupInOp.get("x").xattr())).get().contentAsObject(0);
     }
 
-    private void checkSingleOpFailure(JsonObject content, MutateInOps ops, SubDocumentOpResponseStatus expected) {
+    private void checkSingleOpFailure(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus expected) {
         String docId = prepare(content);
 
         try {
-            coll.mutateIn(docId, ops);
+            coll.mutateIn(docId, Arrays.asList(ops));
             fail();
         } catch (MultiMutationException err) {
             assertEquals(expected, err.firstFailureStatus());
         }
     }
 
-    private void checkSingleOpFailureXattr(JsonObject content, MutateInOps ops, SubDocumentOpResponseStatus expected) {
+    private void checkSingleOpFailureXattr(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus expected) {
+        checkSingleOpFailureXattr(content, Arrays.asList(ops), expected);
+    }
+
+    private void checkSingleOpFailureXattr(JsonObject content, List<MutateInSpec> ops, SubDocumentOpResponseStatus expected) {
         String docId = prepareXattr(content);
 
         try {
@@ -158,7 +169,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void insertStringAlreadyThere() {
         checkSingleOpFailure(JsonObject.create().put("foo", "bar"),
-                mutateInOps().insert("foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS);
+                MutateInSpec.insert("foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS);
     }
 
 
@@ -170,7 +181,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     //    String docId = prepare(content);
     //
     //    coll.mutateIn(docId,
-//mutateInOps().insert("foo2", false)) match {
+//Arrays.asList(MutateInSpec.insert("foo2", false)) match {
     //      case Success(result) => assert(result.cas != cas);
     //      case Failure(err) =>
     //        assert(false, s"unexpected error $err"));
@@ -185,7 +196,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     //    String docId = prepare(content);
     //
     //    coll.mutateIn(docId,
-//mutateInOps().insert("foo2", 42)) match {
+//Arrays.asList(MutateInSpec.insert("foo2", 42)) match {
     //      case Success(result) => assert(result.cas != cas);
     //      case Failure(err) =>
     //        assert(false, s"unexpected error $err"));
@@ -201,7 +212,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     //    String docId = prepare(content);
     //
     //    coll.mutateIn(docId,
-//mutateInOps().insert("foo2", 42.3)) match {
+//Arrays.asList(MutateInSpec.insert("foo2", 42.3)) match {
     //      case Success(result) => assert(result.cas != cas);
     //      case Failure(err) =>
     //        assert(false, s"unexpected error $err"));
@@ -216,7 +227,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                mutateInOps().replace("foo", "bar2"));
+                Arrays.asList(MutateInSpec.replace("foo", "bar2")));
 
         assertEquals("bar2", getContent(docId).getString("foo"));
     }
@@ -224,41 +235,41 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void replaceStringDoesNotExist() {
         checkSingleOpFailure(JsonObject.create(),
-                mutateInOps().replace("foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
+                MutateInSpec.replace("foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
     }
 
     @Test
     public void upsertString() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", "bar"),
-                mutateInOps().upsert("foo", "bar2"));
+                Arrays.asList(MutateInSpec.upsert("foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void upsertStringDoesNotExist() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().upsert("foo", "bar2"));
+                Arrays.asList(MutateInSpec.upsert("foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void arrayAppend() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
-                mutateInOps().arrayAppend("foo", "world"));
+                Arrays.asList(MutateInSpec.arrayAppend("foo", "world")));
         assertEquals(JsonArray.from("hello", "world"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayPrepend() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
-                mutateInOps().arrayPrepend("foo", "world"));
+                Arrays.asList(MutateInSpec.arrayPrepend("foo", "world")));
         assertEquals(JsonArray.from("world", "hello"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayInsert() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                mutateInOps().arrayInsert("foo[1]", "cruel"));
+                Arrays.asList(MutateInSpec.arrayInsert("foo[1]", "cruel")));
         assertEquals(JsonArray.from("hello", "cruel", "world"), updatedContent.getArray("foo"));
     }
 
@@ -266,7 +277,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void arrayInsertUniqueDoesNotExist() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                mutateInOps().arrayAddUnique("foo", "cruel"));
+                Arrays.asList(MutateInSpec.arrayAddUnique("foo", "cruel")));
         assertEquals(JsonArray.from("hello", "world", "cruel"), updatedContent.getArray("foo"));
     }
 
@@ -274,21 +285,21 @@ class SubdocMutateTest extends JavaIntegrationTest {
     public void arrayInsertUniqueDoesExist() {
         checkSingleOpFailure(
                 JsonObject.create().put("foo", JsonArray.from("hello", "cruel", "world")),
-                mutateInOps().arrayAddUnique("foo", "cruel"),
+                MutateInSpec.arrayAddUnique("foo", "cruel"),
                 SubDocumentOpResponseStatus.PATH_EXISTS);
     }
 
     @Test
     public void counterAdd() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", 10),
-                mutateInOps().increment("foo", 5));
+                Arrays.asList(MutateInSpec.increment("foo", 5)));
         assertEquals(15, (int) updatedContent.getInt("foo"));
     }
 
     @Test
     public void counterMinus() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", 10),
-                mutateInOps().decrement("foo", 3));
+                Arrays.asList(MutateInSpec.decrement("foo", 3)));
         assertEquals(7, (int) updatedContent.getInt("foo"));
     }
 
@@ -296,74 +307,74 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void insertXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().insert(true, "x.foo", "bar2"));
+                Arrays.asList(MutateInSpec.insert(true, "x.foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void removeXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
-                mutateInOps().remove(true, "x.foo"));
+                Arrays.asList(MutateInSpec.remove(true, "x.foo")));
         assertFalse(updatedContent.containsKey("foo"));
     }
 
     @Test
     public void removeXattrDoesNotExist() {
         checkSingleOpFailureXattr(JsonObject.create(),
-                mutateInOps().remove(true, "x.foo"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
+                Arrays.asList(MutateInSpec.remove(true, "x.foo")), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
     }
 
     @Test
     public void insertStringAlreadyThereXattr() {
         checkSingleOpFailureXattr(JsonObject.create().put("foo", "bar"),
-                mutateInOps().insert(true, "x.foo", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS);
+                Arrays.asList(MutateInSpec.insert(true, "x.foo", "bar2")), SubDocumentOpResponseStatus.PATH_EXISTS);
     }
 
     @Test
     public void replaceStringXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
-                mutateInOps().replace(true, "x.foo", "bar2"));
+                Arrays.asList(MutateInSpec.replace(true, "x.foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void replaceStringDoesNotExistXattr() {
         checkSingleOpFailure(JsonObject.create(),
-                mutateInOps().replace(true, "x.foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
+                MutateInSpec.replace(true, "x.foo", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
     }
 
     @Test
     public void upsertStringXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
-                mutateInOps().upsert(true, "x.foo", "bar2"));
+                Arrays.asList(MutateInSpec.upsert(true, "x.foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void upsertStringDoesNotExistXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().upsert(true, "x.foo", "bar2"));
+                Arrays.asList(MutateInSpec.upsert(true, "x.foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void arrayAppendXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello")),
-                mutateInOps().arrayAppend(true, "x.foo", "world"));
+                Arrays.asList(MutateInSpec.arrayAppend(true, "x.foo", "world")));
         assertEquals(JsonArray.from("hello", "world"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayPrependXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello")),
-                mutateInOps().arrayPrepend(true, "x.foo", "world"));
+                Arrays.asList(MutateInSpec.arrayPrepend(true, "x.foo", "world")));
         assertEquals(JsonArray.from("world", "hello"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayInsertXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                mutateInOps().arrayInsert(true, "x.foo[1]", "cruel"));
+                Arrays.asList(MutateInSpec.arrayInsert(true, "x.foo[1]", "cruel")));
         assertEquals(JsonArray.from("hello", "cruel", "world"), updatedContent.getArray("foo"));
     }
 
@@ -371,28 +382,28 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void arrayInsertUniqueDoesNotExistXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                mutateInOps().arrayAddUnique(true, "x.foo", "cruel"));
+                Arrays.asList(MutateInSpec.arrayAddUnique(true, "x.foo", "cruel")));
         assertEquals(JsonArray.from("hello", "world", "cruel"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayInsertUniqueDoesExistXattr() {
         checkSingleOpFailureXattr(JsonObject.create().put("foo", JsonArray.from("hello", "cruel", "world")),
-                mutateInOps().arrayAddUnique(true, "x.foo", "cruel"),
+                Arrays.asList(MutateInSpec.arrayAddUnique(true, "x.foo", "cruel")),
                 SubDocumentOpResponseStatus.PATH_EXISTS);
     }
 
     @Test
     public void counterAddXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", 10),
-                mutateInOps().increment(true, "x.foo", 5));
+                Arrays.asList(MutateInSpec.increment(true, "x.foo", 5)));
         assertEquals(15, (int) updatedContent.getInt("foo"));
     }
 
     @Test
     public void counterMinusXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", 10),
-                mutateInOps().decrement(true, "x.foo", 3));
+                Arrays.asList(MutateInSpec.decrement(true, "x.foo", 3)));
         assertEquals(7, (int) updatedContent.getInt("foo"));
     }
 
@@ -400,7 +411,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void insertExpandMacroXattrDoNotFlag() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().insert(true, "x.foo", "${Mutation.CAS}"));
+                Arrays.asList(MutateInSpec.insert(true, "x.foo", "${Mutation.CAS}")));
         assertEquals("${Mutation.CAS}", updatedContent.getString("foo"));
     }
 
@@ -409,7 +420,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     public void insertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().insert(true, "x.foo", "${Mutation.CAS}", false, true));
+                Arrays.asList(MutateInSpec.insert(true, "x.foo", "${Mutation.CAS}", false, true)));
         assertNotEquals("${Mutation.CAS}", updatedContent.getString("foo"));
     }
 
@@ -417,41 +428,41 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void insertXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().insert(true, "x.foo.baz", "bar2", true, false));
+                Arrays.asList(MutateInSpec.insert(true, "x.foo.baz", "bar2", true, false)));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
     @Test
     public void insertStringAlreadyThereXattrCreatePath() {
         checkSingleOpFailureXattr(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                mutateInOps().insert("x.foo.baz", "bar2"), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
+                Arrays.asList(MutateInSpec.insert("x.foo.baz", "bar2")), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
     }
 
     @Test
     public void upsertStringXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                mutateInOps().upsert(true, "x.foo", "bar2", true, false));
+                Arrays.asList(MutateInSpec.upsert(true, "x.foo", "bar2", true, false)));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void upsertStringDoesNotExistXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().upsert(true, "x.foo.baz", "bar2", true, false));
+                Arrays.asList(MutateInSpec.upsert(true, "x.foo.baz", "bar2", true, false)));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
     @Test
     public void arrayAppendXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().arrayAppend(true, "x.foo", "world", true, false));
+                Arrays.asList(MutateInSpec.arrayAppend(true, "x.foo", "world", true, false)));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayPrependXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().arrayPrepend(true, "x.foo", "world", true, false));
+                Arrays.asList(MutateInSpec.arrayPrepend(true, "x.foo", "world", true, false)));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
@@ -459,14 +470,14 @@ class SubdocMutateTest extends JavaIntegrationTest {
     //  @Test
 //public void arrayInsertXattrCreatePath() {
 //    JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-//      mutateInOps().arrayInsert(true, "x.foo[0]", "cruel", true));
+//      Arrays.asList(MutateInSpec.arrayInsert(true, "x.foo[0]", "cruel", true));
 //    assertEquals(JsonArray.from("cruel"), updatedContent.getArray("foo"));
 //  }
 //
 //  @Test
 //public void arrayInsertUniqueDoesNotExistXattrCreatePath() {
 //    JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-//      mutateInOps().arrayAddUnique(true, "x.foo", "cruel", true));
+//      Arrays.asList(MutateInSpec.arrayAddUnique(true, "x.foo", "cruel", true));
 //    assertEquals(JsonArray.from("hello", "world", "cruel"), updatedContent.getArray("foo"));
 //  }
 
@@ -474,14 +485,14 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void counterAddXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().increment(true, "x.foo", 5, true));
+                Arrays.asList(MutateInSpec.increment(true, "x.foo", 5, true)));
         assertEquals(5, (int) updatedContent.getInt("foo"));
     }
 
     @Test
     public void counterMinusXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                mutateInOps().decrement(true, "x.foo", 3, true));
+                Arrays.asList(MutateInSpec.decrement(true, "x.foo", 3, true)));
         assertEquals(-3, (int) updatedContent.getInt("foo"));
     }
 
@@ -489,41 +500,41 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void insertCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().insert("foo.baz", "bar2", true));
+                Arrays.asList(MutateInSpec.insert("foo.baz", "bar2", true)));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
     @Test
     public void insertStringAlreadyThereCreatePath() {
         checkSingleOpFailure(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                mutateInOps().insert("foo.baz", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS);
+                MutateInSpec.insert("foo.baz", "bar2"), SubDocumentOpResponseStatus.PATH_EXISTS);
     }
 
     @Test
     public void upsertStringCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                mutateInOps().upsert("foo", "bar2", true));
+                Arrays.asList(MutateInSpec.upsert("foo", "bar2", true)));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     public void upsertStringDoesNotExistCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().upsert("foo.baz", "bar2", true));
+                Arrays.asList(MutateInSpec.upsert("foo.baz", "bar2", true)));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
     @Test
     public void arrayAppendCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().arrayAppend("foo", "world", true));
+                Arrays.asList(MutateInSpec.arrayAppend("foo", "world", true)));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
     @Test
     public void arrayPrependCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().arrayPrepend("foo", "world", true));
+                Arrays.asList(MutateInSpec.arrayPrepend("foo", "world", true)));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
@@ -531,14 +542,14 @@ class SubdocMutateTest extends JavaIntegrationTest {
     //  @Test
 //public void arrayInsertCreatePath() {
     //    JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-    //      mutateInOps().arrayInsert("foo[0]", "cruel", true));
+    //      Arrays.asList(MutateInSpec.arrayInsert("foo[0]", "cruel", true));
     //    assertEquals(JsonArray.from("cruel"), updatedContent.getArray("foo"));
     //  }
     //
     //  @Test
 //public void arrayInsertUniqueDoesNotExistCreatePath() {
     //    JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-    //      mutateInOps().arrayAddUnique("foo", "cruel", true));
+    //      Arrays.asList(MutateInSpec.arrayAddUnique("foo", "cruel", true));
     //    assertEquals(JsonArray.from("hello", "world", "cruel"), updatedContent.getArray("foo"));
     //  }
 
@@ -546,14 +557,14 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void counterAddCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().increment("foo", 5, true));
+                Arrays.asList(MutateInSpec.increment("foo", 5, true)));
         assertEquals(5, (int) updatedContent.getInt("foo"));
     }
 
     @Test
     public void counterMinusCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                mutateInOps().decrement("foo", 3, true));
+                Arrays.asList(MutateInSpec.decrement("foo", 3, true)));
         assertEquals(-3, (int) updatedContent.getInt("foo"));
     }
 
@@ -565,7 +576,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                mutateInOps().insert("foo2", "bar2"), MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
+                Arrays.asList(MutateInSpec.insert("foo2", "bar2")), MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
 
         GetResult result = coll.get(docId, GetOptions.getOptions().withExpiration(true)).get();
         assertTrue(result.expiration().isPresent());
@@ -580,7 +591,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 coll.mutateIn(docId,
-                        mutateInOps().insert("foo0", "bar0")
+                        Arrays.asList(MutateInSpec.insert("foo0", "bar0")
                                 .insert("foo1", "bar1")
                                 .insert("foo2", "bar2")
                                 .insert("foo3", "bar3")
@@ -596,7 +607,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
                                 .insert("foo13", "bar13")
                                 .insert("foo14", "bar14")
                                 .insert("foo15", "bar15")
-                                .insert("foo16", "bar16")));
+                                .insert("foo16", "bar16"))));
     }
 
     @Test
@@ -605,9 +616,9 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                mutateInOps().insert("foo0", "bar0")
+                Arrays.asList(MutateInSpec.insert("foo0", "bar0")
                         .insert("foo1", "bar1")
-                        .insert("foo2", "bar2"));
+                        .insert("foo2", "bar2")));
 
         JsonObject updated = getContent(docId);
         assertEquals("bar1", updated.getString("foo1"));
@@ -622,9 +633,9 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         assertThrows(MultiMutationException.class, () ->
                 coll.mutateIn(docId,
-                        mutateInOps().insert("foo0", "bar0")
+                        Arrays.asList(MutateInSpec.insert("foo0", "bar0")
                                 .insert("foo1", "bar1")
-                                .remove("foo3")));
+                                .remove("foo3"))));
 
         JsonObject updated = getContent(docId);
         assertEquals("bar_orig_1", updated.getString("foo1"));

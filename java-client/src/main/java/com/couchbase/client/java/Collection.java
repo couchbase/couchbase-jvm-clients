@@ -30,7 +30,7 @@ import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutateInOps;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -351,7 +351,7 @@ public class Collection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final MutateInOps spec) {
+  public MutateInResult mutateIn(final String id, final List<MutateInSpec> spec) {
     return block(async().mutateIn(id, spec));
   }
 
@@ -363,7 +363,7 @@ public class Collection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final MutateInOps spec,
+  public MutateInResult mutateIn(final String id, final List<MutateInSpec> spec,
                                  final MutateInOptions options) {
     return block(async().mutateIn(id, spec, options));
   }

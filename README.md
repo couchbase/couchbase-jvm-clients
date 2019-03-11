@@ -61,6 +61,6 @@ To cover all tests, the suite needs to be run against the following topologies:
 After building (i.e. for alpha.0):
 
 ```
-tar -czf java-client-alpha.0.tar.gz java-client/target/java-client-alpha.0.jar java-client/target/java-client-alpha.0-javadoc.jar java-client/target/java-client-alpha.0-sources.jar java-client/pom.xml
-tar -czf scala-client-alpha.0.tar.gz scala-client/target/scala-client_2.12-alpha.0.jar scala-client/target/scala-client_2.12-alpha.0-sources.jar scala-client/target/scala-client_2.12-alpha.0-javadoc.jar scala-client/pom.xml
+tar --transform 's/.*\///g' -czf java-client-alpha.0.tar.gz java-client/target/java-client-alpha.0.jar java-client/target/java-client-alpha.0-javadoc.jar java-client/target/java-client-alpha.0-sources.jar java-client/pom.xml
+tar --transform 's/.*\///g' -czf scala-client-alpha.0.tar.gz scala-client/target/scala-client_2.12-alpha.0.jar scala-client/target/scala-client_2.12-alpha.0-sources.jar scala-client/target/scala-client_2.12-alpha.0-javadoc.jar scala-client/pom.xml
 ```

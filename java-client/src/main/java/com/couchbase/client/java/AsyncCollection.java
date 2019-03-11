@@ -29,7 +29,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.*;
-import io.opentracing.Scope;
 
 import java.math.BigInteger;
 import java.time.Duration;
@@ -761,7 +760,7 @@ public class AsyncCollection {
    * @param spec the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec) {
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec) {
     return mutateIn(id, spec, MutateInOptions.DEFAULT);
   }
 
@@ -773,7 +772,7 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final MutateInOps spec,
+  public CompletableFuture<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec,
                                                     final MutateInOptions options) {
     MutateInOptions.BuiltMutateInOptions opts = options.build();
     return MutateInAccessor.mutateIn(
@@ -785,12 +784,12 @@ public class AsyncCollection {
     );
   }
 
-  SubdocMutateRequest mutateInRequest(final String id, final MutateInOps spec,
+  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> spec,
                                       final MutateInOptions options) {
-    if (spec.commands().isEmpty()) {
+    if (spec.isEmpty()) {
       throw SubdocMutateRequest.errIfNoCommands();
     }
-    else if (spec.commands().size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+    else if (spec.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
       throw SubdocMutateRequest.errIfTooManyCommands();
     }
     else {
@@ -801,8 +800,11 @@ public class AsyncCollection {
 
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+      List<SubdocMutateRequest.Command> commands = spec.stream().map(v -> v.command()).collect(Collectors.toList());
+
       return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-              opts.insertDocument(), opts.upsertDocument(), spec.commands(), opts.expiry().getSeconds(), opts.durabilityLevel());
+              opts.insertDocument(), opts.upsertDocument(), commands, opts.expiry().getSeconds(), opts.durabilityLevel());
     }
   }
 
