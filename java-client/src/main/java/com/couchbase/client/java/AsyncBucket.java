@@ -17,83 +17,115 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.util.Validators;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.query.AsyncQueryResult;
-import com.couchbase.client.java.view.AsyncViewResult;
-import com.couchbase.client.java.view.SpatialViewOptions;
-import com.couchbase.client.java.view.ViewOptions;
 
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Provides access to a Couchbase bucket in an async fashion.
+ */
 public class AsyncBucket {
 
+  /**
+   * Holds the name of the default scope, hardcoded.
+   */
   static final String DEFAULT_SCOPE = "_default";
+
+  /**
+   * Holds the name of the default collection, hardcoded.
+   */
   static final String DEFAULT_COLLECTION = "_default";
+
+  /**
+   * Holds the default collection ID, hardcoded.
+   */
   static final long DEFAULT_COLLECTION_ID = 0;
 
+  /**
+   * The name of the bucket.
+   */
   private final String name;
+
+  /**
+   * The underlying attached environment.
+   */
   private final ClusterEnvironment environment;
+
+  /**
+   * The core reference used.
+   */
   private final Core core;
 
-  AsyncBucket(String name, Core core, ClusterEnvironment environment) {
+  /**
+   * Creates a new {@link AsyncBucket}.
+   *
+   * @param name the name of the bucket.
+   * @param core the underlying core.
+   * @param environment the attached environment.
+   */
+  AsyncBucket(final String name, final Core core, final ClusterEnvironment environment) {
     this.core = core;
     this.environment = environment;
     this.name = name;
   }
 
+  /**
+   * Returns the name of the {@link AsyncBucket}.
+   */
   public String name() {
     return name;
   }
 
-  public CompletableFuture<AsyncScope> scope(final String scope) {
-    CompletableFuture<AsyncScope> s = new CompletableFuture<>();
-    s.complete(new AsyncScope(scope, name, core, environment));
-    return s;
+  /**
+   * Returns the attached {@link ClusterEnvironment}.
+   */
+  public ClusterEnvironment environment() {
+    return environment;
   }
 
+  /**
+   * Provides access to the underlying {@link Core}.
+   *
+   * <p>This is advanced API, use with care!</p>
+   */
+  @Stability.Uncommitted
+  public Core core() {
+    return core;
+  }
+
+  /**
+   * Opens the {@link AsyncScope} with the given name.
+   *
+   * @param name the name of the scope.
+   * @return the {@link AsyncScope} once opened.
+   */
+  public CompletableFuture<AsyncScope> scope(final String name) {
+    notNullOrEmpty(name, "Scope");
+    return CompletableFuture.completedFuture(
+      new AsyncScope(name, this.name, core, environment)
+    );
+  }
+
+  /**
+   * Opens the default collection for this {@link AsyncBucket}.
+   *
+   * @return the {@link AsyncCollection} once opened.
+   */
   public CompletableFuture<AsyncCollection> defaultCollection() {
     return new AsyncScope(DEFAULT_SCOPE, name, core, environment).defaultCollection();
   }
 
+  /**
+   * Opens the collection with the given name for this {@link AsyncBucket}.
+   *
+   * @return the {@link AsyncCollection} once opened.
+   */
   public CompletableFuture<AsyncCollection> collection(final String collection) {
+    notNullOrEmpty(collection, "Collection");
     return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
   }
 
-  /*
-  public CompletableFuture<AsyncViewResult> viewQuery(final String designDoc, final String viewName) {
-    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
-  }
-
-  public CompletableFuture<AsyncViewResult> viewQuery(final String designDoc, final String viewName,
-                                                      final ViewOptions options) {
-    Validators.notNullOrEmpty(designDoc, "Design Doc");
-    Validators.notNullOrEmpty(viewName, "View Name");
-    notNull(options, "ViewOptions");
-
-    return null;
-  }
-
-  public CompletableFuture<AsyncViewResult> spatialViewQuery(final String designDoc, final String viewName) {
-    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
-  }
-
-  public CompletableFuture<AsyncViewResult> spatialViewQuery(final String designDoc, final String viewName,
-                                                      final SpatialViewOptions options) {
-    Validators.notNullOrEmpty(designDoc, "DesignDoc");
-    Validators.notNullOrEmpty(viewName, "ViewName");
-    notNull(options, "SpatialViewOptions");
-
-    return null;
-  }*/
-
-  ClusterEnvironment environment() {
-    return environment;
-  }
-
-  Core core() {
-    return core;
-  }
 }
