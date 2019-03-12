@@ -36,7 +36,7 @@ class Scope(val async: AsyncScope,
   }
 
   def defaultCollection = {
-    collection(Defaults.DefaultCollection)
+    collection(DefaultResources.DefaultCollection)
   }
 }
 

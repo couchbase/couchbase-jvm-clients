@@ -19,14 +19,13 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers.{BinaryAppendHandler, BinaryDecrementHandler, BinaryIncrementHandler, BinaryPrependHandler}
 import io.opentracing.Span
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
 import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{ExecutionContext, Future}
 
+// TODO ScalaDocs
 class AsyncBinaryCollection(private[scala] val async: AsyncCollection)
                            (implicit ec: ExecutionContext) {
   import DurationConversions._

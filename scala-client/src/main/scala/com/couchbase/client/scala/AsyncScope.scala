@@ -31,12 +31,12 @@ class AsyncScope(scopeName: String,
                 (implicit ec: ExecutionContext) {
   def name = scopeName
 
-  def defaultCollection: Future[AsyncCollection] = collection(Defaults.DefaultCollection)
+  def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
 
   def collection(name: String): Future[AsyncCollection] = {
-    if (name == Defaults.DefaultCollection && scopeName == Defaults.DefaultScope) {
+    if (name == DefaultResources.DefaultCollection && scopeName == DefaultResources.DefaultScope) {
       Future {
-        new AsyncCollection(name, Defaults.DefaultCollectionId, bucketName, core, environment)
+        new AsyncCollection(name, DefaultResources.DefaultCollectionId, bucketName, core, environment)
       }
     }
     else {

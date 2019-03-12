@@ -277,7 +277,7 @@ class ReactiveKeyValueSpec extends FunSuite {
   test("initialise reactively") {
     val coll: ReactiveCollection = ReactiveCluster.connect("localhost", "Administrator", "password")
       .flatMap(cluster => cluster.bucket("default"))
-      .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
+      .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
       .flatMap(scope => scope.defaultCollection)
       .block()
   }
@@ -286,7 +286,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     import Cluster.ec
     val coll: Future[AsyncCollection] = AsyncCluster.connect("localhost", "Administrator", "password")
       .flatMap(cluster => cluster.bucket("default"))
-      .flatMap(bucket => bucket.scope(Defaults.DefaultScope))
+      .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
       .flatMap(scope => scope.defaultCollection)
 
     val c: AsyncCollection = Await.result(coll, Duration.Inf)
