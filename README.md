@@ -26,7 +26,7 @@ and we are trying to develop them as first-class citizens similar to the java cl
 
 We've started to publish artifacts to our own maven repository:
 
-```
+```xml
 <repositories>
     <repository>
       <id>couchbase</id>
@@ -38,7 +38,7 @@ We've started to publish artifacts to our own maven repository:
 
 For Java:
 
-```
+```xml
 <dependencies>
     <dependency>
         <groupId>com.couchbase.client</groupId>
@@ -50,7 +50,7 @@ For Java:
 
 For Scala:
 
-```
+```xml
 <dependencies>
     <dependency>
         <groupId>com.couchbase.client</groupId>
