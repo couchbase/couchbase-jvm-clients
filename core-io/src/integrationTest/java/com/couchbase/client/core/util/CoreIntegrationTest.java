@@ -21,6 +21,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 
+import java.math.BigInteger;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,6 +32,11 @@ import java.util.stream.Collectors;
  * @since 2.0.0
  */
 public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
+
+  /**
+   * Calculates the default collection id.
+   */
+  public static byte[] DEFAULT_COLLECTION_ID = UnsignedLEB128.encode(BigInteger.valueOf(0));
 
   /**
    * Creates an environment builder that already has all the needed properties to bootstrap

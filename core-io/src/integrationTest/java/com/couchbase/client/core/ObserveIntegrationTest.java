@@ -67,7 +67,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
       Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-      id, null, false, env.timeoutConfig().kvTimeout());
+      id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
     Observe.poll(ctx).timeout(MAX_WAIT).block();
   }
@@ -83,7 +83,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       Observe.poll(ctx).timeout(MAX_WAIT).block();
     }
@@ -95,13 +95,13 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
       InsertResponse insertResponse = performInsert(id);
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
       Observe.poll(ctx).timeout(MAX_WAIT).block();
 
       RemoveResponse removeResponse = performRemove(id);
       ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, Optional.empty(), removeResponse.cas(), config().bucketname(),
-        id, null, true, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, true, env.timeoutConfig().kvTimeout());
       Observe.poll(ctx2).timeout(MAX_WAIT).block();
     }
 
@@ -113,19 +113,19 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
         Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
 
       final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
         Observe.ObserveReplicateTo.TWO, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
 
       final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
         Observe.ObserveReplicateTo.THREE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
     }
@@ -134,7 +134,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
     void observesRemoveOnNotExistentDoc() {
       ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, Optional.empty(), 12345, config().bucketname(),
-        "someNotExistentDoc", null, true, env.timeoutConfig().kvTimeout());
+        "someNotExistentDoc", DEFAULT_COLLECTION_ID, true, env.timeoutConfig().kvTimeout());
       Observe.poll(ctx2).timeout(MAX_WAIT).block();
     }
 
@@ -147,7 +147,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
       Duration timeout = Duration.ofSeconds(1);
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
         Observe.ObserveReplicateTo.ONE, Optional.empty(), insertResponse.cas(), config().bucketname(),
-        id, null, false, timeout);
+        id, DEFAULT_COLLECTION_ID, false, timeout);
 
       try {
         Observe.poll(ctx).timeout(MAX_WAIT).block();
@@ -170,7 +170,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       Observe.poll(ctx).timeout(MAX_WAIT).block();
     }
@@ -184,7 +184,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
       Observe.poll(ctx).timeout(MAX_WAIT).block();
 
       RemoveResponse removeResponse = performRemove(id);
@@ -192,7 +192,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
         Observe.ObserveReplicateTo.NONE, removeResponse.mutationToken(), 0, config().bucketname(),
-        id, null, true, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, true, env.timeoutConfig().kvTimeout());
       Observe.poll(ctx2).timeout(MAX_WAIT).block();
     }
 
@@ -205,19 +205,19 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
       final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
         Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
 
       final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
         Observe.ObserveReplicateTo.TWO, insertResponse.mutationToken(), 0, config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
 
       final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
         Observe.ObserveReplicateTo.THREE, insertResponse.mutationToken(), 0, config().bucketname(),
-        id, null, false, env.timeoutConfig().kvTimeout());
+        id, DEFAULT_COLLECTION_ID, false, env.timeoutConfig().kvTimeout());
 
       assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
     }
@@ -233,7 +233,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
   private InsertResponse performInsert(final String id) {
     byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
+    InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       env.timeoutConfig().kvTimeout(), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(insertRequest);
 
@@ -255,7 +255,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
    * @return returns the response to use for observe.
    */
   private RemoveResponse performRemove(final String id) {
-    RemoveRequest removeRequest = new RemoveRequest(id, null, 0, env.timeoutConfig().kvTimeout(),
+    RemoveRequest removeRequest = new RemoveRequest(id, DEFAULT_COLLECTION_ID, 0, env.timeoutConfig().kvTimeout(),
       core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
     core.send(removeRequest);
 

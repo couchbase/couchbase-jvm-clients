@@ -58,7 +58,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   private byte[] insertContent(String id, String in) {
     byte[] content = in.getBytes(CharsetUtil.UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
+    InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),
       Optional.empty());
     core.send(insertRequest);
@@ -82,7 +82,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     byte[] content = insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-            config().bucketname(), env.retryStrategy(), id, null, (byte) 0, commands);
+            config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID, (byte) 0, commands);
     core.send(request);
 
     SubdocGetResponse response = null;
@@ -106,7 +106,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     byte[] content = insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-            config().bucketname(), env.retryStrategy(), id, null, (byte) 0, commands);
+            config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID, (byte) 0, commands);
     core.send(request);
 
     SubdocGetResponse response = null;

@@ -86,14 +86,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       String id = UUID.randomUUID().toString();
       byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
-      InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
+      InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
         Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();
       assertTrue(insertResponse.status().success());
 
-      GetRequest getRequest = new GetRequest(id, null, Duration.ofSeconds(1),
+      GetRequest getRequest = new GetRequest(id, DEFAULT_COLLECTION_ID, Duration.ofSeconds(1),
         core.context(), config().bucketname(), env.retryStrategy());
       core.send(getRequest);
 
@@ -120,14 +120,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       String id = UUID.randomUUID().toString();
       byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
 
-      InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
+      InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
         Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();
       assertTrue(insertResponse.status().success());
 
-      GetRequest getRequest = new GetRequest(id, null, Duration.ofSeconds(1),
+      GetRequest getRequest = new GetRequest(id, DEFAULT_COLLECTION_ID, Duration.ofSeconds(1),
         core.context(), config().bucketname(), env.retryStrategy());
       core.send(getRequest);
 

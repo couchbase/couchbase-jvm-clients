@@ -95,8 +95,8 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.XATTR,
         ServerFeature.XERROR,
         ServerFeature.ALT_REQUEST,
-        ServerFeature.SYNC_REPLICATION
-        // ServerFeature.COLLECTIONS
+        ServerFeature.SYNC_REPLICATION,
+        ServerFeature.COLLECTIONS
       ));
 
       if (ctx.environment().ioConfig().mutationTokensEnabled()) {
