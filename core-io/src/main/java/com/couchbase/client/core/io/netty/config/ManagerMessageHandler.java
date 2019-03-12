@@ -20,33 +20,29 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.Future;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.Optional;
 
 /**
  * This handler dispatches requests and responses against the cluster manager service.
  *
- * <p>Note that since one of the messages is a long streaming connection to get continuous updates on configs,
- * the channel might be occupied for a long time. As a result, the upper layers (service pooling) need to be
- * responsible for opening another handler if all the current ones are occupied.</p>
+ * <p>Note that since one of the messages is a long streaming connection to get continuous
+ * updates on configs, the channel might be occupied for a long time. As a result, the upper
+ * layers (service pooling) need to be responsible for opening another handler if all the
+ * current ones are occupied.</p>
  *
  * @since 1.0.0
  */
@@ -55,7 +51,6 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   private final CoreContext coreContext;
   private IoContext ioContext;
   private ManagerRequest<Response> currentRequest;
-  private HttpResponseStatus lastStatus;
   private ByteBuf currentContent;
   private final EventBus eventBus;
 
@@ -101,7 +96,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
     if (msg instanceof HttpResponse) {
-      lastStatus = ((HttpResponse) msg).status();
+      // lastStatus = ((HttpResponse) msg).status();
     } else if (msg instanceof HttpContent) {
       currentContent.writeBytes(((HttpContent) msg).content());
       if (msg instanceof LastHttpContent) {
@@ -119,7 +114,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   }
 
   @Override
-  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+  public void channelInactive(ChannelHandlerContext ctx) {
     ReferenceCountUtil.release(currentContent);
     ctx.fireChannelInactive();
   }
