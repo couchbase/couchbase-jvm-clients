@@ -27,11 +27,14 @@ import java.io.InputStream;
 import java.net.URL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
@@ -110,6 +113,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       ports.put(Services.MANAGER, services.get("mgmt"));
       ports.put(Services.KV_TLS, services.get("kvSSL"));
       ports.put(Services.MANAGER_TLS, services.get("mgmtSSL"));
+      ports.put(Services.QUERY, services.get("n1ql"));
+      ports.put(Services.QUERY_TLS, services.get("n1qlSSL"));
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
@@ -125,6 +130,27 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     }
     Map<String, Object> serverMap = (Map<String, Object>) decoded.get("vBucketServerMap");
     return (int) serverMap.get("numReplicas");
+  }
+
+  protected Set<Capabilities> capabilitiesFromRaw(final String config) {
+    Set<Capabilities> capabilities = new HashSet<>();
+    Map<String, Object> decoded;
+    try {
+      decoded = (Map<String, Object>)
+        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+    } catch (IOException e) {
+      throw new RuntimeException("Error decoding, raw: " + config, e);
+    }
+    List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
+    for (Map<String, Object> node : ext) {
+      Map<String, Integer> services = (Map<String, Integer>) node.get("services");
+      for (String name : services.keySet()) {
+        if (name.equals("n1ql") || name.equals("n1qlSSL")) {
+          capabilities.add(Capabilities.QUERY);
+        }
+      }
+    }
+    return capabilities;
   }
 
   /**

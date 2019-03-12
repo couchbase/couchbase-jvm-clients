@@ -99,7 +99,7 @@ public class UnmanagedTestCluster extends TestCluster {
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
       cert,
-      Collections.emptySet() // no supported capabilities right now
+      capabilitiesFromRaw(raw)
     );
   }
 

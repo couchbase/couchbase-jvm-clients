@@ -31,7 +31,8 @@ import java.util.Optional;
  *
  * @since 2.0.0
  */
-public class ClusterInvocationProvider implements BeforeAllCallback, ParameterResolver, ExecutionCondition {
+public class ClusterInvocationProvider
+  implements BeforeAllCallback, ParameterResolver, ExecutionCondition {
 
   /**
    * Identifier for the container in the root store.
@@ -81,7 +82,8 @@ public class ClusterInvocationProvider implements BeforeAllCallback, ParameterRe
   public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
     TestCluster testCluster = accessAndMaybeInitTestCluster(context);
 
-    Optional<IgnoreWhen> annotation = AnnotationSupport.findAnnotation(context.getElement(), IgnoreWhen.class);
+    Optional<IgnoreWhen> annotation = AnnotationSupport
+      .findAnnotation(context.getElement(), IgnoreWhen.class);
     if (annotation.isPresent()) {
       IgnoreWhen found = annotation.get();
       for (ClusterType type : found.clusterTypes()) {

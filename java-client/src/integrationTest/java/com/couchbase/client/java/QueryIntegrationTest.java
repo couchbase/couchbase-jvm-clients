@@ -16,37 +16,53 @@
 
 package com.couchbase.client.java;
 
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.query.options.QueryProfile;
 import com.couchbase.client.java.query.options.ScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
- * Integration tests for testing query
+ * Verifies the end-to-end functionality of the Query service.
  */
+@IgnoreWhen( missesCapabilities = { Capabilities.QUERY })
 class QueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
     private static ClusterEnvironment environment;
     private static Collection collection;
+    private static String bucketName;
+
+    /**
+     * Holds sample content for simple assertions.
+     */
+    private static final JsonObject FOO_CONTENT = JsonObject
+      .create()
+      .put("foo", "bar");
 
     @BeforeAll
     static void setup() {
@@ -54,161 +70,219 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
-        // TODO support running this only when not mocked
-        //cluster.query("create primary index on `" + config().bucketname() + "`");
+
+        QueryResult result = cluster.query(
+          "create primary index on `" + config().bucketname() + "`"
+        );
+        if (!result.queryStatus().equals("success")) {
+            throw new IllegalStateException("Could not create primary index for " +
+              "query integration test!");
+        }
+        bucketName = "`" + config().bucketname() + "`";
     }
 
     @AfterAll
     static void tearDown() {
-        environment.shutdown();
         cluster.shutdown();
+        environment.shutdown();
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testSimpleSelect() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testSimpleSelect", content);
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
-        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testSimpleSelect\"", options);
-        List<JsonObject> rows = result.rows();
-        assertEquals(1, rows.size());
+    void blockingSelect() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryResult result = cluster.query(
+          "select * from " + bucketName + " where meta().id=\"" + id + "\"",
+          options
+        );
+
         assertNotNull(result.requestId());
         assertFalse(result.clientContextId().isPresent());
-        JsonObject signature = result.signature();
-        assertTrue(signature.size() > 0);
         assertEquals("success", result.queryStatus());
-        assertEquals(0, result.metrics().errorCount());
-        assertEquals(0, result.metrics().warningCount());
-        assertEquals(1, result.metrics().resultCount());
-        assertEquals(0, result.warnings().size());
+        assertTrue(result.warnings().isEmpty());
+        assertEquals(1, result.rows().size());
+        assertFalse(result.signature().isEmpty());
+
+        QueryMetrics metrics = result.metrics();
+        assertEquals(0, metrics.errorCount());
+        assertEquals(0, metrics.warningCount());
+        assertEquals(1, metrics.resultCount());
     }
 
-    // TODO this should return IllegalStateException
-    @Ignore
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testNoProfileRequestedReturnsNoProfile() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testNoProfileRequestedReturnsNoProfile", content);
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
-        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testNoProfileRequestedReturnsNoProfile\"", options);
+    @Test
+    void asyncSelect() throws Exception {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
+        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+          "select * from " + bucketName + " where meta().id=\"" + id + "\"",
+          options
+        );
+        List<JsonObject> rows = result.get().rows().get();
+        assertEquals(1, rows.size());
+    }
+
+    @Test
+    void reactiveSelect() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
+        Mono<ReactiveQueryResult> result = cluster.reactive().query(
+          "select * from " + bucketName + " where meta().id=\"" + id + "\"",
+          options
+        );
+        List<JsonObject> rows = result
+          .flux()
+          .flatMap(ReactiveQueryResult::rows)
+          .collectList()
+          .block();
+        assertNotNull(rows);
+        assertEquals(1, rows.size());
+    }
+
+    @Test
+    void noProfileRequestedThrowsIllegalStateException() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryResult result = cluster.query(
+          "select * from " + bucketName + " where meta().id=\"" + id + "\"",
+          options
+        );
         assertThrows(IllegalStateException.class, result::profileInfo);
     }
 
-
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testGettingProfile() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testGettingProfile", content);
-        QueryOptions options = QueryOptions.queryOptions().withProfile(QueryProfile.TIMINGS);
-        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=\"testGettingProfile\"", options);
+    void getProfileWhenRequested() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions().withProfile(QueryProfile.TIMINGS);
+        QueryResult result = cluster.query(
+          "select * from " + bucketName + " where meta().id=\"" + id +"\"",
+          options
+        );
         JsonObject profile = result.profileInfo();
         assertTrue(profile.size() > 0);
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testSyntaxError() {
+    void failOnSyntaxError() {
         QueryResult result = cluster.query("invalid n1ql");
-        assertThrows(QueryServiceException.class, () -> {
-            result.rows();
-        });
+        assertThrows(QueryServiceException.class, result::rows);
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testSimpleNamedParameterizedSelectQuery() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testSimpleParameterizedSelectQuery", content);
-        JsonObject parameters = JsonObject.create().put("id", "testSimpleParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=$id", options);
+    void blockingNamedParameterizedSelectQuery() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonObject.create().put("id", id));
+        QueryResult result = cluster.query(
+          "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
+          options
+        );
         List<JsonObject> rows = result.rows();
         assertEquals(1, rows.size());
+        assertEquals(FOO_CONTENT, rows.get(0));
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testSimplePositionalParameterizedSelectQuery() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testSimplePositionalParameterizedSelectQuery", content);
-        JsonArray parameters = JsonArray.create().add("testSimplePositionalParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        QueryResult result = cluster.query("select * from `" + config().bucketname() + "` where meta().id=$1", options);
+    void asyncNamedParameterizedSelectQuery() throws Exception {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonObject.create().put("id", id));
+        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+          "select * from " + bucketName + " where meta().id=$id",
+          options
+        );
+        List<JsonObject> rows = result.get().rows().get();
+        assertEquals(1, rows.size());
+    }
+
+    @Test
+    void reactiveNamedParameterizedSelectQuery() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonObject.create().put("id", id));
+        Mono<ReactiveQueryResult> result = cluster.reactive().query(
+          "select * from " + bucketName + " where meta().id=$id",
+          options
+        );
+        List<JsonObject> rows = result
+          .flux()
+          .flatMap(ReactiveQueryResult::rows)
+          .collectList()
+          .block();
+        assertNotNull(rows);
+        assertEquals(1, rows.size());
+    }
+
+    @Test
+    void blockingPositionalParameterizedSelectQuery() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonArray.from(id));
+        QueryResult result = cluster.query(
+          "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
+          options
+        );
         List<JsonObject> rows = result.rows();
         assertEquals(1, rows.size());
-
+        assertEquals(FOO_CONTENT, rows.get(0));
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testAsyncSelect() throws Exception {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testAsyncSelect", content);
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "` where meta().id=\"testAsyncSelect\"", options);
+    void asyncPositionalParameterizedSelectQuery() throws Exception {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonArray.from(id));
+        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+          "select * from " + bucketName+ " where meta().id=$1",
+          options
+        );
         List<JsonObject> rows = result.get().rows().get();
         assertEquals(1, rows.size());
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testAsyncNamedParameterizedSelectQuery() throws Exception {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testAsyncNamedParameterizedSelectQuery", content);
-        JsonObject parameters = JsonObject.create().put("id", "testAsyncNamedParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "` where meta().id=$id", options);
-        List<JsonObject> rows = result.get().rows().get();
+    void reactivePositionalParameterizedSelectQuery() {
+        String id = insertDoc();
+
+        QueryOptions options = queryOptions()
+          .withScanConsistency(ScanConsistency.REQUEST_PLUS)
+          .withParameters(JsonArray.from(id));
+        Mono<ReactiveQueryResult> result =  cluster.reactive().query(
+          "select * from " + bucketName + " where meta().id=$1",
+          options
+        );
+        List<JsonObject> rows = result
+          .flux()
+          .flatMap(ReactiveQueryResult::rows)
+          .collectList()
+          .block();
+        assertNotNull(rows);
         assertEquals(1, rows.size());
     }
 
-    @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testAsyncPositionalParameterizedSelectQuery() throws Exception {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testAsyncPositionalParameterizedSelectQuery", content);
-        JsonArray parameters = JsonArray.create().add("testSimplePositionalParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "` where meta().id=$1", options);
-        List<JsonObject> rows = result.get().rows().get();
-        assertEquals(1, rows.size());
+    /**
+     * Inserts a document into the collection and returns the ID of it.
+     *
+     * It inserts {@link #FOO_CONTENT}.
+     */
+    private String insertDoc() {
+        String id = UUID.randomUUID().toString();
+        collection.insert(id, FOO_CONTENT);
+        return id;
     }
 
-    @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testReactiveSelect() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testReactiveSelect", content);
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
-        Mono<ReactiveQueryResult> result = cluster.reactive().query("select * from `" + config().bucketname() + "` where meta().id=\"testReactiveSelect\"", options);
-        List<JsonObject> rows = result.flux().flatMap(ReactiveQueryResult::rows).collectList().block();
-        assertEquals(1, rows.size());
-    }
-
-    @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testReactiveNamedParameterizedSelectQuery() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testReactiveNamedParameterizedSelectQuery", content);
-        JsonObject parameters = JsonObject.create().put("id", "testReactiveNamedParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        Mono<ReactiveQueryResult> result = cluster.reactive().query("select * from `" + config().bucketname() + "` where meta().id=$id", options);
-        List<JsonObject> rows = result.flux().flatMap(ReactiveQueryResult::rows).collectList().block();
-        assertEquals(1, rows.size());
-
-    }
-
-    @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-    void testReactivePositionalParameterizedSelectQuery() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        collection.insert("testReactivePositionalParameterizedSelectQuery", content);
-        JsonArray parameters = JsonArray.create().add("testReactivePositionalParameterizedSelectQuery");
-        QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).withParameters(parameters);
-        Mono<ReactiveQueryResult> result =  cluster.reactive().query("select * from `" + config().bucketname() + "` where meta().id=$1", options);
-        List<JsonObject> rows = result.flux().flatMap(ReactiveQueryResult::rows).collectList().block();
-        assertEquals(1, rows.size());
-    }
 }

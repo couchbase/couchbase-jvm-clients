@@ -117,14 +117,16 @@ public class ContainerizedTestCluster extends TestCluster {
       .build())
       .execute();
 
+    String raw = getResponse.body().string();
+
     return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
-      nodesFromRaw(seedHost, getResponse.body().string()),
-      0, // TODO: Implement me,
+      nodesFromRaw(seedHost, raw),
+      replicasFromRaw(raw),
       loadClusterCertificate(seedHost, seedPort),
-      Collections.emptySet() // no supported capabilities right now
+      capabilitiesFromRaw(raw)
     );
   }
 

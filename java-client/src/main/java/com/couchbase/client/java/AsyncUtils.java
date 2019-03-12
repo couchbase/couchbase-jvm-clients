@@ -39,8 +39,8 @@ public enum AsyncUtils {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } catch (ExecutionException e) {
-      if (e.getCause() != null && e.getCause() instanceof CouchbaseException) {
-        throw (CouchbaseException) e.getCause();
+      if (e.getCause() != null && e.getCause() instanceof RuntimeException) {
+        throw (RuntimeException) e.getCause();
       } else if (e.getCause() != null && e.getCause() instanceof TimeoutException) {
         throw new RuntimeException(e.getCause());
       } else {

@@ -4,5 +4,7 @@ public enum Services {
   KV,
   KV_TLS,
   MANAGER,
-  MANAGER_TLS
+  MANAGER_TLS,
+  QUERY,
+  QUERY_TLS
 }

@@ -24,4 +24,8 @@ public enum Capabilities {
    * This cluster is able to perform sync replications.
    */
   SYNC_REPLICATION,
+  /**
+   * This cluster is able to perform N1QL queries.
+   */
+  QUERY,
 }
