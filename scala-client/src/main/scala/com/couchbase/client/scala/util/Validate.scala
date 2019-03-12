@@ -17,6 +17,11 @@ package com.couchbase.client.scala.util
 
 import scala.util.{Failure, Success, Try}
 
+/** Utility functions to validate arguments.
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 private[scala] object Validate {
   def optNotNull(input: Option[Any], identifier: String): Try[Any] = {
     if (input == null) Failure(new IllegalArgumentException(identifier + " cannot be null"))

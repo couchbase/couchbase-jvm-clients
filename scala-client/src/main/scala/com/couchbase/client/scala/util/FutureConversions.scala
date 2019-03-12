@@ -28,8 +28,12 @@ import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 import scala.compat.java8.FutureConverters._
 
-/**
+/** Convert between Java and Scala async and reactive APIs.
+  *
   * Note: Scala Monos are different classes to Java Monos
+  *
+  * @author Graham Pople
+  * @since 1.0.0
   */
 private[scala] object FutureConversions {
   def javaCFToScalaFuture(future: CompletableFuture[QueryResult]): Future[QueryResult] = {

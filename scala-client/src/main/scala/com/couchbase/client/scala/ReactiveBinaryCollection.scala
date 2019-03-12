@@ -19,17 +19,28 @@ import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.durability.Durability._
+import com.couchbase.client.scala.kv.handlers.RequestHandler
 import com.couchbase.client.scala.util.FutureConversions
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
-import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv.handlers.RequestHandler
 
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+/** Operations on non-JSON Couchbase documents.
+  *
+  * This is a reactive version of the [[BinaryCollection]] API.  See also [[AsyncBinaryCollection]].
+  *
+  * @param ec    an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *              opened in the normal way, starting from functions in [[Cluster]]
+  *
+  * @define Same             This reactive version performs the same functionality and takes the same parameters,
+  *                          but returns the same result object asynchronously in a `Mono`.
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
                               (implicit ec: ExecutionContext) {
 
@@ -50,6 +61,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
     }
   }
 
+  /** Add bytes to the end of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.append]] for details.  $Same
+    */
   def append(id: String,
              content: Array[Byte],
              cas: Long = 0,
@@ -61,6 +76,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
     async.async.wrapWithDurability(req, id, async.binaryAppendHandler, durability, false, timeout)
   }
 
+  /** Add bytes to the beginning of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.prepend]] for details.  $Same
+    * */
   def prepend(id: String,
               content: Array[Byte],
               cas: Long = 0,
@@ -72,6 +91,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
     async.async.wrapWithDurability(req, id, async.binaryPrependHandler, durability, false, timeout)
   }
 
+  /** Increment a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
   def increment(id: String,
                 delta: Long,
                 initial: Option[Long] = None,
@@ -85,6 +108,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
     async.async.wrapWithDurability(req, id, async.binaryIncrementHandler, durability, false, timeout)
   }
 
+  /** Decrement a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
   def decrement(id: String,
                 delta: Long,
                 initial: Option[Long] = None,

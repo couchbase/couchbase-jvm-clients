@@ -15,9 +15,15 @@
  */
 package com.couchbase.client.scala.util
 
-import scala.util.{Success, Try}
+import scala.util.Try
 
-// Who needs Cats?
+/** Useful functional bits.
+  *
+  * Who needs Cats?
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 private[scala] object FunctionalUtil {
   def traverse[T](in: Seq[Try[T]]): Try[Seq[T]] = {
     in match {

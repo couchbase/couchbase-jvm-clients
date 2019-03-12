@@ -17,21 +17,93 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
-import com.couchbase.client.scala.durability.{Durability}
-import io.opentracing.Span
+import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
+import io.opentracing.Span
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, _}
 import scala.util.Try
 
+/** Operations on non-JSON Couchbase documents.
+  *
+  * @param async an asynchronous version of this API
+  * @param ec    an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *              opened in the normal way, starting from functions in [[Cluster]]
+  *
+  * @define CounterDoc      though it is common to use Couchbase to store exclusively JSON, Couchbase is actually
+  *                         agnostic to what is stored.  It is possible to use a document as a 'counter' - e.g. it
+  *                         stores an integer.  This is useful for use-cases such as implementing
+  *                         AUTO_INCREMENT-style functionality, where each new document can be given a unique
+  *                         monotonically increasing id.
+  * @define OnlyBinary      this method should not be used with JSON documents.  This operates
+  *                         at the byte level and is unsuitable for dealing with JSON documents. Use this method only
+  *                         when explicitly dealing with binary or UTF-8 documents. It may invalidate an existing JSON
+  *                         document.
+  * @define OnlyCounter     this method should not be used with JSON documents.  Use this method only
+  *                         when explicitly dealing with counter documents. It may invalidate an existing JSON
+  *                         document.
+  * @define Id              the unique identifier of the document
+  * @define CAS             Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
+  *                         optimistic concurrency - e.g. it can detect if another agent has modified a document
+  *                         in-between this agent getting and modifying the document.  See **CHANGEME** for a full
+  *                        description.  The default is 0, which disables CAS checking.
+  * @define ParentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a way of
+  *                         tracing complex distributed systems.  This field allows an OpenTracing parent span to be
+  *                         provided, which will become the parent of any spans created by the SDK as a result of this
+  *                        operation.  Note that if a span is not provided then the SDK will try to access any
+  *                         thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
+  *                         recommended to provide the parentSpan explicitly if possible, as thread-local is not a
+  *                         100% reliable way of passing parameters.
+  * @define Timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
+  *                         provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+  * @define RetryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
+  *                         in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+  * @define ErrorHandling   any [[scala.util.control.NonFatal]] error returned will derive ultimately from
+  *                         [[com.couchbase.client.core.error.CouchbaseException]].  If the exception also derives from
+  *                         [[com.couchbase.client.core.error.RetryableOperationException]]
+  *                         then the failure was most likely temporary and may succeed if the application tries it
+  *                        again.  (Though note that, in some cases, the operation may have in fact succeeded, and
+  *                         the server was unable to report this to the SDK.  So the application should consider
+  *                         carefully the result of reapplying the operation, and perhaps consider some more complex
+  *                         error handling logic, possibly including the use of
+  *                         [[Collection.getAllReplicas]]).  If the exception
+  *                         does not derive from
+  *                         [[com.couchbase.client.core.error.RetryableOperationException]]
+  *                         then this is indicative of a more
+  *                         permanent error or an application bug, that probably needs human review.
+  * @define Durability      writes in Couchbase are written to a single node, and from there the Couchbase Server will
+  *                         take care of sending that mutation to any configured replicas.  This parameter provides
+  *                         some control over ensuring the success of the mutation's replication.  See
+  *                         [[com.couchbase.client.scala.durability.Durability]]
+  *                         for a detailed discussion.
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 class BinaryCollection(val async: AsyncBinaryCollection)
                       (implicit ec: ExecutionContext) {
   private val kvTimeout = async.kvTimeout
   private val environment = async.environment
-  val reactive = new ReactiveBinaryCollection(async)
 
+  /** A reactive version of this API. */
+  lazy val reactive = new ReactiveBinaryCollection(async)
+
+  /** Add bytes to the end of a Couchbase binary document.
+    *
+    * $OnlyBinary
+    *
+    * @param id            $Id
+    * @param content       the bytes to append
+    * @param cas           $CAS
+    * @param durability    $Durability
+    * @param parentSpan    $ParentSpan
+    * @param timeout       $Timeout
+    * @param retryStrategy $RetryStrategy
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
   def append(id: String,
              content: Array[Byte],
              cas: Long = 0,
@@ -43,6 +115,22 @@ class BinaryCollection(val async: AsyncBinaryCollection)
 
   }
 
+  /** Add bytes to the beginning of a Couchbase binary document.
+    *
+    * $OnlyBinary
+    *
+    * @param id            $Id
+    * @param content       the bytes to append
+    * @param cas           $CAS
+    * @param durability    $Durability
+    * @param parentSpan    $ParentSpan
+    * @param timeout       $Timeout
+    * @param retryStrategy $RetryStrategy
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
   def prepend(id: String,
               content: Array[Byte],
               cas: Long = 0,
@@ -53,6 +141,25 @@ class BinaryCollection(val async: AsyncBinaryCollection)
     Collection.block(async.prepend(id, content, cas, durability, parentSpan, timeout, retryStrategy), timeout)
   }
 
+  /** Increment a Couchbase 'counter' document.  $CounterDoc
+    *
+    * $OnlyCounter
+    *
+    * @param id            $Id
+    * @param delta         the amount to increment by
+    * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
+    *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
+    *                      returned
+    * @param cas           $CAS
+    * @param durability    $Durability
+    * @param parentSpan    $ParentSpan
+    * @param timeout       $Timeout
+    * @param retryStrategy $RetryStrategy
+    *
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
   def increment(id: String,
                 delta: Long,
                 initial: Option[Long] = None,
@@ -62,9 +169,29 @@ class BinaryCollection(val async: AsyncBinaryCollection)
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy()): Try[CounterResult] = {
-    Collection.block(async.increment(id, delta, initial, cas, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
+    Collection.block(async.increment(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
+      retryStrategy), timeout)
   }
 
+  /** Decrement a Couchbase 'counter' document.  $CounterDoc
+    *
+    * $OnlyCounter
+    *
+    * @param id            $Id
+    * @param delta         the amount to decrement by, which should be a positive amount
+    * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
+    *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
+    *                      returned
+    * @param cas           $CAS
+    * @param durability    $Durability
+    * @param parentSpan    $ParentSpan
+    * @param timeout       $Timeout
+    * @param retryStrategy $RetryStrategy
+    *
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
   def decrement(id: String,
                 delta: Long,
                 initial: Option[Long] = None,
@@ -74,7 +201,8 @@ class BinaryCollection(val async: AsyncBinaryCollection)
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy()): Try[CounterResult] = {
-    Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, parentSpan, timeout, retryStrategy), timeout)
+    Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
+      retryStrategy), timeout)
   }
 
 }

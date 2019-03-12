@@ -16,11 +16,15 @@
 
 package com.couchbase.client.scala.util
 
-import scala.concurrent.{Await, Future}
-import scala.util.control.NonFatal
-import scala.util.{Failure, Try}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.util.Try
 
+/** Utility functions to deal with asynchronous API.
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 private[scala] object AsyncUtils {
   // TODO what should this be?
   private val DefaultTimeout = 10.seconds
