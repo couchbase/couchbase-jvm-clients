@@ -24,15 +24,34 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future}
 
-class AsyncScope(scopeName: String,
+// TODO get ScalaDocs using JavaDoc's CSS style
+
+/** Represents a Couchbase scope resource.
+  *
+  * This is an asynchronous version of the [[Scope]] interface.
+  *
+  * Applications should not create these manually, but instead first open a [[Cluster]] and through that a
+  * [[Bucket]].
+  *
+  * @param bucketName the name of the bucket this scope is on
+  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
+  */
+class AsyncScope private[scala] (scopeName: String,
                  bucketName: String,
-                 core: Core,
-                 environment: ClusterEnvironment)
+                 private core: Core,
+                 private environment: ClusterEnvironment)
                 (implicit ec: ExecutionContext) {
+
+  /** The name of this scope. */
   def name = scopeName
 
+  /** Opens and returns the default collection on this scope. */
   def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
 
+  /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Future[AsyncCollection] = {
     if (name == DefaultResources.DefaultCollection && scopeName == DefaultResources.DefaultScope) {
       Future {

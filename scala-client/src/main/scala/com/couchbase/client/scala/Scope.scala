@@ -16,25 +16,37 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.Core
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext
-import scala.util.Try
 
-// For now, use SDK 2 Cluster & Bucket objects as our base layer for SDK 3 prototyping
-class Scope(val async: AsyncScope,
+/** Represents a Couchbase scope resource.
+  *
+  * Applications should not create these manually, but instead first open a [[Cluster]] and through that a
+  * [[Bucket]].
+  *
+  * @param async an asynchronous version of this API
+  * @param bucketName the name of the bucket this scope is on
+  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
+  */
+class Scope private[scala] (val async: AsyncScope,
             bucketName: String)
            (implicit ec: ExecutionContext) {
 
+  /** The name of this scope. */
   def name = async.name
 
+  /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Collection = {
     AsyncUtils.block(async.collection(name))
       .map(asyncCollection => new Collection(asyncCollection, bucketName))
       .get
   }
 
+  /** Opens and returns the default collection on this scope. */
   def defaultCollection = {
     collection(DefaultResources.DefaultCollection)
   }

@@ -28,8 +28,10 @@ import scala.concurrent.ExecutionContext
   * @param name the name of this bucket
   * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
   *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
   */
-class ReactiveBucket(val async: AsyncBucket)
+class ReactiveBucket private[scala] (val async: AsyncBucket)
                     (implicit ec: ExecutionContext) {
   /** Opens and returns a Couchbase scope resource.
     *

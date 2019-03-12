@@ -19,12 +19,32 @@ import reactor.core.scala.publisher.Mono
 
 import scala.concurrent.ExecutionContext
 
-class ReactiveScope(async: AsyncScope, bucketName: String)
+/** Represents a Couchbase scope resource.
+  *
+  * This is a reactive version of the [[Scope]] interface.
+  *
+  * Applications should not create these manually, but instead first open a [[Cluster]] and through that a
+  * [[Bucket]].
+  *
+  * @param scopeName the name of the scope
+  * @param bucketName the name of the bucket this scope is on
+  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
+  */
+class ReactiveScope(async: AsyncScope,
+                    bucketName: String)
                    (implicit ec: ExecutionContext){
+  /** The name of this scope. */
+  def name = async.name
+
+  /** Opens and returns the default collection on this scope. */
   def defaultCollection: Mono[ReactiveCollection] = {
     collection(DefaultResources.DefaultCollection)
   }
 
+  /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Mono[ReactiveCollection] = {
     Mono.fromFuture(async.collection(name)).map(v => new ReactiveCollection(v))
   }

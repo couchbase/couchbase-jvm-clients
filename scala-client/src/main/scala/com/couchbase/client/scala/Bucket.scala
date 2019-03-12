@@ -27,8 +27,10 @@ import scala.concurrent.ExecutionContext
   * @param async provides an asynchronous version of this interface
   * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
   *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
   */
-class Bucket private(val async: AsyncBucket)
+class Bucket private[scala] (val async: AsyncBucket)
             (implicit ec: ExecutionContext) {
   /** Returns the name of this bucket. */
   def name: String = async.name

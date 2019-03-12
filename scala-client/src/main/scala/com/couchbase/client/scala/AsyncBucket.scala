@@ -29,8 +29,10 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param name the name of this bucket
   * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
   *           opened in the normal way, starting from functions in [[Cluster]]
+  * @author Graham Pople
+  * @since 1.0.0
   */
-class AsyncBucket(val name: String,
+class AsyncBucket private[scala] (val name: String,
                   private[scala] val core: Core,
                   private[scala] val environment: ClusterEnvironment)
                  (implicit ec: ExecutionContext) {
