@@ -32,12 +32,14 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 /**
  * Integration tests for testing prepared query
  */
+@Disabled
 class PreparedQueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
@@ -61,7 +63,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testSimplePreparedSelect() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedSelect", content);
@@ -73,7 +74,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testSimplePreparedNamedParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedNamedParameterizedSelectQuery", content);
@@ -88,7 +88,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testSimplePreparedPositionalParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testSimplePreparedPositionalParameterizedSelectQuery", content);
@@ -103,7 +102,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testAsyncPreparedSelect() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedSelect", content);
@@ -116,7 +114,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testAsyncPreparedNamedParameterizedSelectQuery() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedNamedParameterizedSelectQuery", content);
@@ -130,7 +127,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testAsyncPreparedPositionalParameterizedSelectQuery() throws Exception {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testAsyncPreparedPositionalParameterizedSelectQuery", content);
@@ -144,7 +140,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testReactivePreparedSelect() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedSelect", content);
@@ -156,7 +151,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testReactivePreparedNamedParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedNamedParameterizedSelectQuery", content);
@@ -171,7 +165,6 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
     void testReactivePreparedPositionalParameterizedSelectQuery() {
         JsonObject content = JsonObject.create().put("foo", "bar");
         collection.insert("testReactivePreparedPositionalParameterizedSelectQuery", content);

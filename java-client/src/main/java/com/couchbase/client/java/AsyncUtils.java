@@ -16,8 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.CouchbaseException;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
