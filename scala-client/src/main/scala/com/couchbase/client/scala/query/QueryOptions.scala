@@ -16,21 +16,17 @@
 
 package com.couchbase.client.scala.query
 
-import java.util.Objects
-
-import com.couchbase.client.core.env.{Credentials, RoleBasedCredentials}
-import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 
-import scala.collection.{GenMap, mutable}
 import scala.concurrent.duration.Duration
 
-object N1qlProfile extends Enumeration {
-  val Off, Phases, Timings = Value
-}
 
-/** Customize the execution of a N1QL query. */
+/** Customize the execution of a N1QL query.
+  *
+  * @author Graham Pople
+  * @since 1.0.0
+  */
 case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
                         private[scala] val positionalParameters: Option[List[Any]] = None,
                         private[scala] val clientContextId: Option[String] = None,
@@ -259,4 +255,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 
 object QueryOptions {
   def apply() = new QueryOptions()
+}
+
+object N1qlProfile extends Enumeration {
+  val Off, Phases, Timings = Value
 }

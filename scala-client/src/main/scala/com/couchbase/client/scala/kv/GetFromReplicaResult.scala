@@ -31,7 +31,7 @@ object Replica {
 
 class GetFromReplicaResult(id: String,
                            // It's Right only in the case where projections were requested
-                           _content: Either[Array[Byte], JsonObject],
+                           private val _content: Either[Array[Byte], JsonObject],
                            flags: Int,
                            cas: Long,
                            expiration: Option[Duration],

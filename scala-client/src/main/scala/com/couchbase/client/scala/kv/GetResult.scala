@@ -77,4 +77,6 @@ case class GetResult(id: String,
       // A JsonObject can always be converted to Array[Byte], so the get is safe
       Conversions.encode(obj).map(_._1).get
   }
+
+  override def toString: String = contentAs[JsonObject].get.toString
 }
