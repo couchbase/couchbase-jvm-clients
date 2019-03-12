@@ -86,6 +86,11 @@ public class AsyncCollection {
   private final String bucket;
 
   /**
+   * The name of the associated scope.
+   */
+  private final String scopeName;
+
+  /**
    * Holds the collection id in an encoded format.
    */
   private final byte[] collectionId;
@@ -99,13 +104,15 @@ public class AsyncCollection {
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
+   * @param scopeName the name of the scope associated.
    * @param id the id
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  public AsyncCollection(final String name, final long id, final String bucket,
-                         final Core core, final ClusterEnvironment environment) {
+  AsyncCollection(final String name, final String scopeName, final long id, final String bucket,
+                  final Core core, final ClusterEnvironment environment) {
     this.name = name;
+    this.scopeName = scopeName;
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
@@ -130,20 +137,26 @@ public class AsyncCollection {
   }
 
   /**
-   * Returns the encoded collection id used for KV operations.
-   */
-  @Stability.Internal
-  byte[] collectionId() {
-    return collectionId;
-  }
-
-  /**
    * The name of the collection in use.
    *
    * @return the name of the collection.
    */
   public String name() {
     return name;
+  }
+
+  /**
+   * Returns the name of the bucket associated with this collection.
+   */
+  public String bucketName() {
+    return bucket;
+  }
+
+  /**
+   * Returns the name of the scope associated with this collection.
+   */
+  public String scopeName() {
+    return scopeName;
   }
 
   /**
@@ -204,7 +217,13 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetRequest request = new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy);
+    GetRequest request = new GetRequest(id,
+      collectionId,
+      timeout,
+      coreContext,
+      bucket,
+      retryStrategy
+    );
     attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
   }
@@ -667,7 +686,8 @@ public class AsyncCollection {
    * @param options custom options to customize the replace behavior.
    * @return the replace request.
    */
-  ReplaceRequest replaceRequest(final String id, final Object content, final ReplaceOptions options) {
+  ReplaceRequest replaceRequest(final String id, final Object content,
+                                final ReplaceOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "ReplaceOptions");
@@ -678,13 +698,30 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     return new ReplaceRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, opts.cas(), coreContext, bucket, retryStrategy, opts.durabilityLevel());
+      encoded.flags(), timeout, opts.cas(), coreContext, bucket, retryStrategy,
+      opts.durabilityLevel()
+    );
   }
 
+  /**
+   * Updates the expiry of the document with the given id with default options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @return a {@link MutationResult} once the operation completes.
+   */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry) {
     return touch(id, expiry, TouchOptions.DEFAULT);
   }
 
+  /**
+   * Updates the expiry of the document with the given id with custom options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return a {@link MutationResult} once the operation completes.
+   */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry,
                                                  final TouchOptions options) {
     TouchOptions.BuiltTouchOptions opts = options.build();
@@ -697,6 +734,14 @@ public class AsyncCollection {
     );
   }
 
+  /**
+   * Helper method to create the touch request.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return the touch request.
+   */
   TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "TouchOptions");
@@ -708,14 +753,38 @@ public class AsyncCollection {
       expiry.getSeconds(), opts.durabilityLevel());
   }
 
+  /**
+   * Unlocks a document if it has been locked previously, with default options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @return the future which completes once a response has been received.
+   */
   public CompletableFuture<Void> unlock(final String id, final long cas) {
     return unlock(id, cas, UnlockOptions.DEFAULT);
   }
 
-  public CompletableFuture<Void> unlock(final String id, final long cas, final UnlockOptions options) {
+  /**
+   * Unlocks a document if it has been locked previously, with custom options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @param options the options to customize.
+   * @return the future which completes once a response has been received.
+   */
+  public CompletableFuture<Void> unlock(final String id, final long cas,
+                                        final UnlockOptions options) {
     return UnlockAccessor.unlock(core, unlockRequest(id, cas, options));
   }
 
+  /**
+   * Helper method to create the unlock request.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @param options the options to customize.
+   * @return the unlock request.
+   */
   UnlockRequest unlockRequest(final String id, final long cas, final UnlockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "UnlockOptions");
@@ -726,23 +795,48 @@ public class AsyncCollection {
     return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInSpec> ops) {
-    return lookupIn(id, ops, LookupInOptions.DEFAULT);
+  /**
+   * Performs lookups to document fragments with default options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
+                                                              final List<LookupInSpec> specs) {
+    return lookupIn(id, specs, LookupInOptions.DEFAULT);
   }
 
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id, final List<LookupInSpec> ops,
+  /**
+   * Performs lookups to document fragments with custom options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @param options custom options to modify the lookup options.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
+                                                              final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, ops, options));
+    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, specs, options));
   }
 
-  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> ops,
-                                    final LookupInOptions options) {
+  /**
+   * Helper method to create the underlying lookup subdoc request.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @param options custom options to modify the lookup options.
+   * @return the subdoc lookup request.
+   */
+  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs,
+                                   final LookupInOptions options) {
     notNullOrEmpty(id, "Id");
-    notNullOrEmpty(ops, "LookupInOps");
+    notNullOrEmpty(specs, "LookupInSpecs");
     notNull(options, "LookupInOptions");
     LookupInOptions.BuiltLookupInOptions opts = options.build();
 
-    List<SubdocGetRequest.Command> commands = ops
+    List<SubdocGetRequest.Command> commands = specs
       .stream()
       .map(LookupInSpec::export)
       .collect(Collectors.toList());
@@ -757,54 +851,67 @@ public class AsyncCollection {
    * Performs mutations to document fragments with default options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec) {
-    return mutateIn(id, spec, MutateInOptions.DEFAULT);
+  public CompletableFuture<MutateInResult> mutateIn(final String id,
+                                                    final List<MutateInSpec> specs) {
+    return mutateIn(id, specs, MutateInOptions.DEFAULT);
   }
 
   /**
    * Performs mutations to document fragments with custom options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public CompletableFuture<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec,
+  public CompletableFuture<MutateInResult> mutateIn(final String id,
+                                                    final List<MutateInSpec> specs,
                                                     final MutateInOptions options) {
     MutateInOptions.BuiltMutateInOptions opts = options.build();
     return MutateInAccessor.mutateIn(
       core,
-      mutateInRequest(id, spec, options),
+      mutateInRequest(id, specs, options),
       id,
       opts.persistTo(),
       opts.replicateTo()
     );
   }
 
-  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> spec,
+  /**
+   * Helper method to create the underlying subdoc mutate request.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of mutations to perform.
+   * @param options custom options to modify the mutation options.
+   * @return the subdoc mutate request.
+   */
+  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs,
                                       final MutateInOptions options) {
-    if (spec.isEmpty()) {
+    if (specs.isEmpty()) {
       throw SubdocMutateRequest.errIfNoCommands();
-    }
-    else if (spec.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+    } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
       throw SubdocMutateRequest.errIfTooManyCommands();
-    }
-    else {
+    } else {
       notNullOrEmpty(id, "Id");
-      notNull(spec, "MutateInSpec");
+      notNull(specs, "MutateInSpecs");
       notNull(options, "MutateInOptions");
       MutateInOptions.BuiltMutateInOptions opts = options.build();
 
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-      List<SubdocMutateRequest.Command> commands = spec.stream().map(v -> v.command()).collect(Collectors.toList());
+      List<SubdocMutateRequest.Command> commands = specs
+        .stream()
+        .map(MutateInSpec::command)
+        .collect(Collectors.toList());
 
       return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-              opts.insertDocument(), opts.upsertDocument(), commands, opts.expiry().getSeconds(), opts.durabilityLevel());
+        opts.insertDocument(), opts.upsertDocument(), commands, opts.expiry().getSeconds(),
+        opts.durabilityLevel()
+      );
     }
   }
 

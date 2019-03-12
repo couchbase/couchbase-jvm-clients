@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -62,16 +65,24 @@ public class Collection {
   private final AsyncCollection asyncCollection;
 
   /**
-   * Holds the underlying reactive collection.
+   * Holds the related reactive collection.
    */
   private final ReactiveCollection reactiveCollection;
 
+  /**
+   * Holds the associated binary collection.
+   */
   private final BinaryCollection binaryCollection;
 
-  public Collection(final AsyncCollection asyncCollection) {
+  /**
+   * Creates a new {@link Collection}.
+   *
+   * @param asyncCollection the underlying async collection.
+   */
+  Collection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
     reactiveCollection = new ReactiveCollection(asyncCollection);
-    this.binaryCollection = new BinaryCollection(asyncCollection.binary());
+    binaryCollection = new BinaryCollection(asyncCollection.binary());
   }
 
   /**
@@ -90,6 +101,42 @@ public class Collection {
    */
   public ReactiveCollection reactive() {
     return reactiveCollection;
+  }
+
+  /**
+   * Returns the name of this collection.
+   */
+  public String name() {
+    return asyncCollection.name();
+  }
+
+  /**
+   * Returns the name of the bucket associated with this collection.
+   */
+  public String bucketName() {
+    return asyncCollection.bucketName();
+  }
+
+  /**
+   * Returns the name of the scope associated with this collection.
+   */
+  public String scopeName() {
+    return asyncCollection.scopeName();
+  }
+
+  /**
+   * Provides access to the underlying {@link Core}.
+   */
+  @Stability.Internal
+  public Core core() {
+    return asyncCollection.core();
+  }
+
+  /**
+   * Provides access to the underlying {@link ClusterEnvironment}.
+   */
+  public ClusterEnvironment environment() {
+    return asyncCollection.environment();
   }
 
   /**
@@ -319,53 +366,97 @@ public class Collection {
     return block(async().replace(id, content, options));
   }
 
+  /**
+   * Updates the expiry of the document with the given id with default options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @return a {@link MutationResult} once the operation completes.
+   */
   public MutationResult touch(final String id, Duration expiry) {
     return block(async().touch(id, expiry));
   }
 
+  /**
+   * Updates the expiry of the document with the given id with custom options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return a {@link MutationResult} once the operation completes.
+   */
   public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
     return block(async().touch(id, expiry, options));
   }
 
+  /**
+   * Unlocks a document if it has been locked previously, with default options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   */
   public void unlock(final String id, long cas) {
     block(async().unlock(id, cas));
   }
 
+
+  /**
+   * Unlocks a document if it has been locked previously, with custom options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @param options the options to customize.
+   */
   public void unlock(final String id, long cas, final UnlockOptions options) {
     block(async().unlock(id, cas, options));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops) {
-    return block(async().lookupIn(id, ops));
+  /**
+   * Performs lookups to document fragments with default options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs) {
+    return block(async().lookupIn(id, specs));
   }
 
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops,
+  /**
+   * Performs lookups to document fragments with custom options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @param options custom options to modify the lookup options.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs,
                                            final LookupInOptions options) {
-    return block(async().lookupIn(id, ops, options));
+    return block(async().lookupIn(id, specs, options));
   }
 
   /**
    * Performs mutations to document fragments with default options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final List<MutateInSpec> spec) {
-    return block(async().mutateIn(id, spec));
+  public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs) {
+    return block(async().mutateIn(id, specs));
   }
 
   /**
    * Performs mutations to document fragments with custom options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public MutateInResult mutateIn(final String id, final List<MutateInSpec> spec,
+  public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs,
                                  final MutateInOptions options) {
-    return block(async().mutateIn(id, spec, options));
+    return block(async().mutateIn(id, specs, options));
   }
 
 }

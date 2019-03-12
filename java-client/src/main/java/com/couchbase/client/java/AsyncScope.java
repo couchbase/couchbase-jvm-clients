@@ -124,9 +124,14 @@ public class AsyncScope {
   public CompletableFuture<AsyncCollection> collection(final String name) {
     notNullOrEmpty(name, "Name");
     if (DEFAULT_COLLECTION.equals(name) && DEFAULT_SCOPE.equals(scopeName)) {
-      return CompletableFuture.completedFuture(
-        new AsyncCollection(name, DEFAULT_COLLECTION_ID, bucketName, core, environment)
-      );
+      return CompletableFuture.completedFuture(new AsyncCollection(
+        name,
+        this.scopeName,
+        DEFAULT_COLLECTION_ID,
+        bucketName,
+        core,
+        environment
+      ));
     } else {
       GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1),
         core.context(), bucketName, environment.retryStrategy(), scopeName, name);
@@ -137,6 +142,7 @@ public class AsyncScope {
           if (res.status().success() && res.collectionId().isPresent()) {
             return new AsyncCollection(
               name,
+              this.scopeName,
               res.collectionId().get(),
               bucketName,
               core,

@@ -19,8 +19,10 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -57,6 +59,9 @@ public class ReactiveCollection {
    */
   private final Core core;
 
+  /**
+   * Holds the related binary collection.
+   */
   private final ReactiveBinaryCollection reactiveBinaryCollection;
 
   ReactiveCollection(final AsyncCollection asyncCollection) {
@@ -75,6 +80,41 @@ public class ReactiveCollection {
     return asyncCollection;
   }
 
+  /**
+   * Returns the name of this collection.
+   */
+  public String name() {
+    return asyncCollection.name();
+  }
+
+  /**
+   * Returns the name of the bucket associated with this collection.
+   */
+  public String bucketName() {
+    return asyncCollection.bucketName();
+  }
+
+  /**
+   * Returns the name of the scope associated with this collection.
+   */
+  public String scopeName() {
+    return asyncCollection.scopeName();
+  }
+
+  /**
+   * Provides access to the underlying {@link Core}.
+   */
+  @Stability.Internal
+  public Core core() {
+    return asyncCollection.core();
+  }
+
+  /**
+   * Provides access to the underlying {@link ClusterEnvironment}.
+   */
+  public ClusterEnvironment environment() {
+    return asyncCollection.environment();
+  }
   /**
    * Provides access to the binary APIs, not used for JSON documents.
    *
@@ -384,11 +424,27 @@ public class ReactiveCollection {
     });
   }
 
+  /**
+   * Updates the expiry of the document with the given id with default options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @return a {@link MutationResult} once the operation completes.
+   */
   public Mono<MutationResult> touch(final String id, final Duration expiry) {
     return touch(id, expiry, TouchOptions.DEFAULT);
   }
 
-  public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
+  /**
+   * Updates the expiry of the document with the given id with custom options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return a {@link MutationResult} once the operation completes.
+   */
+  public Mono<MutationResult> touch(final String id, final Duration expiry,
+                                    final TouchOptions options) {
     return Mono.defer(() -> {
       TouchOptions.BuiltTouchOptions opts = options.build();
       TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
@@ -400,10 +456,25 @@ public class ReactiveCollection {
     });
   }
 
+  /**
+   * Unlocks a document if it has been locked previously, with default options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @return the mono which completes once a response has been received.
+   */
   public Mono<Void> unlock(final String id, final long cas) {
     return unlock(id, cas, UnlockOptions.DEFAULT);
   }
 
+  /**
+   * Unlocks a document if it has been locked previously, with custom options.
+   *
+   * @param id the id of the document.
+   * @param cas the CAS value which is needed to unlock it.
+   * @param options the options to customize.
+   * @return the mono which completes once a response has been received.
+   */
   public Mono<Void> unlock(final String id, final long cas, final UnlockOptions options) {
     return Mono.defer(() -> {
       UnlockRequest request = asyncCollection.unlockRequest(id, cas, options);
@@ -411,14 +482,29 @@ public class ReactiveCollection {
     });
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops) {
-    return lookupIn(id, ops, LookupInOptions.DEFAULT);
+  /**
+   * Performs lookups to document fragments with default options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs) {
+    return lookupIn(id, specs, LookupInOptions.DEFAULT);
   }
 
-  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> ops,
+  /**
+   * Performs lookups to document fragments with custom options.
+   *
+   * @param id the outer document ID.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @param options custom options to modify the lookup options.
+   * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   */
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs,
                                        final LookupInOptions options) {
     return Mono.defer(() -> {
-      SubdocGetRequest request = asyncCollection.lookupInRequest(id, ops, options);
+      SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
       return Reactor
         .wrap(request, LookupInAccessor.lookupInAccessor(core, id, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
@@ -429,26 +515,26 @@ public class ReactiveCollection {
    * Performs mutations to document fragments with default options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec) {
-    return mutateIn(id, spec, MutateInOptions.DEFAULT);
+  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs) {
+    return mutateIn(id, specs, MutateInOptions.DEFAULT);
   }
 
   /**
    * Performs mutations to document fragments with custom options.
    *
    * @param id the outer document ID.
-   * @param spec the spec which specifies the type of mutations to perform.
+   * @param specs the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
-  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> spec,
+  public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs,
                                        final MutateInOptions options) {
     return Mono.defer(() -> {
       MutateInOptions.BuiltMutateInOptions opts = options.build();
-      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, spec, options);
+      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, options);
       return Reactor.wrap(
         request,
         MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo()),
