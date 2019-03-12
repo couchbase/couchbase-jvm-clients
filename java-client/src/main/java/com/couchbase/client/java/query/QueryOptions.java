@@ -136,7 +136,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
   /**
    * If set to true (false being the default), the metrics object will not be returned from N1QL and
-   * as a result be more efficient. Note that if metrics are disabled you are loosing information
+   * as a result be more efficient. Note that if metrics are disabled you are losing information
    * to diagnose problems - so use with care!
    *
    * @param metricsDisabled true if disabled, false otherwise (false = default).

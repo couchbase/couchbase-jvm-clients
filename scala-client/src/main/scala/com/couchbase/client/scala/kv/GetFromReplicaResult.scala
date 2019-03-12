@@ -19,8 +19,9 @@ import com.couchbase.client.scala.json.JsonObject
 
 import scala.concurrent.duration.Duration
 
-// TODO ScalaDocs
+/** The replica that this result is being returned from. */
 sealed trait Replica
+
 object Replica {
   case object Master extends Replica
   case object ReplicaOne extends Replica

@@ -17,19 +17,21 @@ package com.couchbase.client.scala.query
 
 import scala.concurrent.duration.Duration
 
-// TODO ScalaDocs
+/** Provides some control over what consistency is required for a given query. */
 sealed trait ScanConsistency {
   private[scala] def encoded: String
 }
 
 object ScanConsistency {
 
+  /** The default.  Any indexes used by the query reflect their current content. */
   case object NotBounded extends ScanConsistency {
     private[scala] def encoded = "not_bounded"
   }
 
   //case class AtPlus(consistentWith: List[MutationToken], scanWait: Option[Duration] = None) extends ScanConsistency
 
+  /** The query blocks until any indexes used by the query are updated to reflect any pending mutations. */
   case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency {
     private[scala] def encoded = "request_plus"
   }

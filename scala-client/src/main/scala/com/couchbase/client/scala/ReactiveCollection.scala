@@ -186,7 +186,7 @@ class ReactiveCollection(async: AsyncCollection) {
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-               document: Document = Document.DoNothing,
+               document: DocumentCreation = DocumentCreation.DoNothing,
                durability: Durability = Disabled,
                parentSpan: Option[Span] = None,
                expiration: Duration,

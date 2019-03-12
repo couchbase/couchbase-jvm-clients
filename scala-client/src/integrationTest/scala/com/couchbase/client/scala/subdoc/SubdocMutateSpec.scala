@@ -11,7 +11,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import com.couchbase.client.scala.kv.MutateInSpec._
 import com.couchbase.client.scala.kv.LookupInSpec._
-import com.couchbase.client.scala.kv.{Document, MutateInMacro, MutateInSpec}
+import com.couchbase.client.scala.kv.{DocumentCreation, MutateInMacro, MutateInSpec}
 
 class SubdocMutateSpec extends FunSuite {
 
@@ -48,7 +48,7 @@ class SubdocMutateSpec extends FunSuite {
   def prepareXattr(content: ujson.Value): (String, Long) = {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val insertResult = coll.mutateIn(docId, Array(insert("x", content, xattr = true)), document = Document.Insert).get
+    val insertResult = coll.mutateIn(docId, Array(insert("x", content, xattr = true)), document = DocumentCreation.Insert).get
     (docId, insertResult.cas)
   }
 
@@ -84,7 +84,7 @@ class SubdocMutateSpec extends FunSuite {
       "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = Document.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Upsert) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) =>
         assert(false, s"unexpected error $err")
@@ -97,7 +97,7 @@ class SubdocMutateSpec extends FunSuite {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = Document.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
       case Success(result) => assert(false)
       case Failure(err: DocumentAlreadyExistsException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -107,7 +107,7 @@ class SubdocMutateSpec extends FunSuite {
   test("insert not-existing doc") {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = Document.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
       case Success(result) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -118,7 +118,7 @@ class SubdocMutateSpec extends FunSuite {
   test("upsert not-existing doc") {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = Document.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Upsert) match {
       case Success(result) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -612,7 +612,7 @@ class SubdocMutateSpec extends FunSuite {
 
   test("write and read primitive boolean") {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", true)), document = Document.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", true)), document = DocumentCreation.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -626,7 +626,7 @@ class SubdocMutateSpec extends FunSuite {
 
   test("write and read primitive int") {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", 42)), document = Document.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", 42)), document = DocumentCreation.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -639,7 +639,7 @@ class SubdocMutateSpec extends FunSuite {
 
   test("write and read primitive double") {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = Document.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = DocumentCreation.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -652,7 +652,7 @@ class SubdocMutateSpec extends FunSuite {
 
   test("write and read primitive long") {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = Document.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = DocumentCreation.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -665,7 +665,7 @@ class SubdocMutateSpec extends FunSuite {
 
   test("write and read primitive short") {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = Document.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = DocumentCreation.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
