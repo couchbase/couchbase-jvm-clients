@@ -19,11 +19,10 @@ package com.couchbase.client.scala.query.handlers
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.query.QueryRequest
-import com.couchbase.client.scala.DurationConversions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.transformers.JacksonTransformers
-import com.couchbase.client.scala.util.Validate
+import com.couchbase.client.scala.util.{DurationConversions, Validate}
 
 import scala.concurrent.duration.Duration
 import scala.util.Try

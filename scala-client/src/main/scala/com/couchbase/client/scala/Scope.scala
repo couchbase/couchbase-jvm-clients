@@ -36,6 +36,9 @@ class Scope private[scala] (val async: AsyncScope,
             bucketName: String)
            (implicit ec: ExecutionContext) {
 
+  /** Access a Reactive version of this API. */
+  lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)
+
   /** The name of this scope. */
   def name = async.name
 

@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 // TODO ScalaDocs
 class AsyncBinaryCollection(private[scala] val async: AsyncCollection)
                            (implicit ec: ExecutionContext) {
-  import DurationConversions._
+  import com.couchbase.client.scala.util.DurationConversions._
 
   private[scala] val environment = async.environment
   private[scala] val kvTimeout = async.kvTimeout

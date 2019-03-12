@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
                               (implicit ec: ExecutionContext) {
 
-  import DurationConversions._
+  import com.couchbase.client.scala.util.DurationConversions._
 
   private[scala] val kvTimeout = async.kvTimeout
   private[scala] val environment = async.environment

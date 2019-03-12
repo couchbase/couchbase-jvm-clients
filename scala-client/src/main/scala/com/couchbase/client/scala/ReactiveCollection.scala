@@ -56,7 +56,7 @@ class ReactiveCollection(async: AsyncCollection) {
   private val environment = async.environment
   private val core = async.core
 
-  import DurationConversions._
+  import com.couchbase.client.scala.util.DurationConversions._
 
   /** Inserts a full document into this collection, if it does not exist already.
     *

@@ -41,8 +41,8 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class AsyncScope private[scala] (scopeName: String,
                  bucketName: String,
-                 private core: Core,
-                 private environment: ClusterEnvironment)
+                 private val core: Core,
+                 private val environment: ClusterEnvironment)
                 (implicit ec: ExecutionContext) {
 
   /** The name of this scope. */

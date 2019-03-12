@@ -7,9 +7,8 @@ import scala.util.{Failure, Success, Try}
 
 /** A 'safe' version of [[GetSelecter]] whose methods return `Try` rather than throw exceptions.
   *
-  * In all other respects it is identical to `GetSelecter`.
+  * In all other respects it is identical to `GetSelecter`.  Please see that for documentation.
   */
-// TODO ScalaDocs
 case class GetSelecterSafe(private val in: Either[JsonObjectSafe, JsonArraySafe],
                        private val path: Seq[PathElement]) extends Dynamic {
   def selectDynamic(name: String): GetSelecterSafe = GetSelecterSafe(in, path :+ PathObjectOrField(name))

@@ -77,7 +77,7 @@ class AsyncCollection(name: String,
                       val environment: ClusterEnvironment)
                      (implicit ec: ExecutionContext) {
 
-  import DurationConversions._
+  import com.couchbase.client.scala.util.DurationConversions._
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig().kvTimeout())
   private[scala] val retryStrategy = environment.retryStrategy()

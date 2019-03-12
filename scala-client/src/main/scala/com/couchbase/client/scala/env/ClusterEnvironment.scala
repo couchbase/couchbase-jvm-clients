@@ -26,13 +26,14 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 
-
+// TODO ScalaDocs
 class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnvironment(builder) {
   override protected def defaultAgentTitle(): String = "scala"
   override protected def agentPackage(): Package = classOf[ClusterEnvironment].getPackage
 }
 
 object ClusterEnvironment {
+  // Create the thread pool that will be used for all Future throughout the SDK.
   private val numCores = Runtime.getRuntime.availableProcessors
   private val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {
