@@ -5,6 +5,7 @@
 .gradle
 *.iml
 dependency-reduced-pom.xml
+.flattened-pom.xml
 *.log
 *.local.properties
 node_modules

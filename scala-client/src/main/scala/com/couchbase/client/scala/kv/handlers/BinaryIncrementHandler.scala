@@ -16,6 +16,8 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import java.util.Optional
+
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{IncrementRequest, IncrementResponse}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -64,6 +66,11 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
       validations
     }
     else {
+      val i: Optional[java.lang.Long] = initial match {
+        case Some(x) => Optional.of(x.asInstanceOf[java.lang.Long])
+        case _ => Optional.empty()
+      }
+
       Success(new IncrementRequest(
         timeout,
         hp.core.context(),
@@ -73,7 +80,7 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
         cas,
         hp.collectionIdEncoded,
         delta,
-        initial.asJava.map(_.asInstanceOf[java.lang.Long]),
+        i,
         expiration.getSeconds.toInt,
         durability.toDurabilityLevel
       ))

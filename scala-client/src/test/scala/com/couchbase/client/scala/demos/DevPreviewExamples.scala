@@ -12,6 +12,19 @@ import org.scalatest.FunSuite
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+case class Person(name: String, age: Int, animals: Seq[String], attributes: Attributes)
+case class Attributes(dimensions: Dimensions, hair: String, hobbies: Seq[Hobby])
+case class Dimensions(height: Int, weight: Int)
+case class Hobby(name: String, typ: String, details: Details)
+case class Details(location: Location)
+case class Location(long: Double, lat: Double)
+
+object Person {
+  // Add a codec to Person's companion class so Couchbase knows how to convert Person to/from JSON.  This conversion
+  // is generated at compile-time so it can be very fast.  Note only a Codec for the top-level case class Person is needed.
+  implicit val codec: Codec[Person] = Codecs.codec[Person]
+}
+
 class DevPreviewExamples extends FunSuite {
 
   test("1") {
@@ -93,18 +106,6 @@ class DevPreviewExamples extends FunSuite {
       case Failure(err) => // error handling
     }
 
-    case class Person(name: String, age: Int, animals: Seq[String], attributes: Attributes)
-    case class Attributes(dimensions: Dimensions, hair: String, hobbies: Seq[Hobby])
-    case class Dimensions(height: Int, weight: Int)
-    case class Hobby(name: String, typ: String, details: Details)
-    case class Details(location: Location)
-    case class Location(long: Double, lat: Double)
-
-    object Person {
-      // Add a codec to Person's companion class so Couchbase knows how to convert Person to/from JSON.  This conversion
-      // is generated at compile-time so it can be very fast.  Note only a Codec for the top-level case class Person is needed.
-      implicit val codec: Codec[Person] = Codecs.codec[Person]
-    }
 
     val joan = Person(
       name = "Joan Deere",

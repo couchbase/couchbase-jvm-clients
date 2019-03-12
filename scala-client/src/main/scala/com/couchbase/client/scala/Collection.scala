@@ -181,7 +181,7 @@ class Collection(
                  expiration: Duration = 0.seconds,
                  parentSpan: Option[Span] = None,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy,
+                 retryStrategy: RetryStrategy = retryStrategy
                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
     block(
       async.insert(

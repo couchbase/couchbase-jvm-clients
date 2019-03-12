@@ -12,7 +12,8 @@
 
     <!--Can override this with mvn -Dscala.compat.version=2.11-->
     <properties>
-        <scala.compat.version>2.12</scala.compat.version>
+        <scala.compat.version>2.11</scala.compat.version>
+        <scala.compat.library.version>2.11.12</scala.compat.library.version>
     </properties>
 
     <artifactId>scala-implicits_${scala.compat.version}</artifactId>
@@ -38,7 +39,7 @@
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.12.8</version>
+            <version>${scala.compat.library.version}</version>
         </dependency>
 
         <!--Jsoniter offers very fast conversion of case classes to/from Array[Byte]-->
@@ -162,6 +163,32 @@
                         <phase>process-test-resources</phase>
                         <goals>
                             <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <!--<version>1.1.0</version>-->
+                <configuration>
+                </configuration>
+                <executions>
+                    <!-- enable flattening -->
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <!-- ensure proper cleanup -->
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
                         </goals>
                     </execution>
                 </executions>

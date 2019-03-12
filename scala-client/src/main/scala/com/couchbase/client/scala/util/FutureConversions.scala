@@ -17,6 +17,7 @@ package com.couchbase.client.scala.util
 
 
 import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 import com.couchbase.client.core.msg.{CancellationReason, Request}
 import com.couchbase.client.scala.query.QueryResult
@@ -26,6 +27,7 @@ import scala.compat.java8.FutureConverters
 import scala.concurrent.Future
 import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
+
 import scala.compat.java8.FutureConverters._
 
 /** Convert between Java and Scala async and reactive APIs.
@@ -74,9 +76,11 @@ private[scala] object FutureConversions {
     val javaMono = JavaMono.fromFuture(response)
 
     if (propagateCancellation) {
-      javaMono.doFinally(st => {
-        if (st == SignalType.CANCEL) {
-          request.cancel(CancellationReason.STOPPED_LISTENING)
+      javaMono.doFinally(new Consumer[SignalType] {
+        override def accept(t: SignalType): Unit = {
+          if (t == SignalType.CANCEL) {
+            request.cancel(CancellationReason.STOPPED_LISTENING)
+          }
         }
       })
     }

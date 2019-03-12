@@ -63,17 +63,20 @@ class ReactiveCluster(val async: AsyncCluster)
 
         async.core.send(request)
 
-        val ret: JavaMono[ReactiveQueryResult] = FutureConversions.javaCFToJavaMono(request, request.response(), false)
+        val ret: ScalaMono[ReactiveQueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
+//            response.rows().map[QueryRow]((bytes: Array[Byte]) => QueryRow(bytes))
+
             val rows: ScalaFlux[QueryRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
               .map[QueryRow](bytes => {
               QueryRow(bytes)
-            }).onErrorResume(err => {
-              err match {
-                case e: QueryServiceException => ScalaMono.error(QueryError(e.content))
-                case _ => ScalaMono.error(err)
-              }
-            })
+            }).onErrorMap((err: Throwable) => {
+                val x: Throwable = err match {
+                  case e: QueryServiceException => QueryError(e.content)
+                  case _ => err
+                }
+                x
+              })
 
             val additional: ScalaMono[QueryAdditional] = FutureConversions.javaMonoToScalaMono(response.additional())
               .map(addl => {
@@ -93,7 +96,7 @@ class ReactiveCluster(val async: AsyncCluster)
             )
           })
 
-        FutureConversions.javaMonoToScalaMono(ret)
+        ret
 
       case Failure(err) =>
         ScalaMono.error(err)

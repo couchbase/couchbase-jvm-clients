@@ -506,10 +506,10 @@ object Conversions {
     implicit object CirceConvert extends Decodable[io.circe.Json] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         val str = new String(bytes, CharsetUtil.UTF_8)
-        val out = io.circe.parser.decode[io.circe.Json](str).toTry
+        val out = io.circe.parser.decode[io.circe.Json](str)
         out match {
-          case Success(_) => out
-          case Failure(err) => Failure(new DecodingFailedException(err))
+          case Right(result) => Success(result)
+          case Left(err) => Failure(new DecodingFailedException(err))
         }
       }
     }
