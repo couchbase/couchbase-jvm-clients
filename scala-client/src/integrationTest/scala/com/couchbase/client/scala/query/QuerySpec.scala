@@ -59,7 +59,7 @@ class QuerySpec extends FunSuite {
         val signature = result.signature.contentAs[JsonObject].get
         assert(signature.size > 0)
 
-        val out = result.additional
+        val out = result
         assert(out.metrics.errorCount == 0)
         assert(out.metrics.warningCount == 0)
         assert(out.metrics.mutationCount == 0)
@@ -165,8 +165,8 @@ class QuerySpec extends FunSuite {
   test("options - profile") {
     cluster.query("""select 'hello world' as Greeting""", QueryOptions().profile(N1qlProfile.Timings)) match {
       case Success(result) =>
-        assert(result.additional.profile.nonEmpty)
-        val profile = result.additional.profile.get.contentAs[JsonObject].get
+        assert(result.profile.nonEmpty)
+        val profile = result.profile.get.contentAs[JsonObject].get
         assert(profile.size > 0)
         assert(result.clientContextId.isEmpty)
         assert(result.requestId != null)
@@ -213,7 +213,7 @@ class QuerySpec extends FunSuite {
       """select 'hello world' as Greeting""",
       QueryOptions().disableMetrics(true)) match {
       case Success(result) =>
-        assert(result.additional.metrics.errorCount == 0)
+        assert(result.metrics.errorCount == 0)
       case Failure(err) => throw err
     }
   }

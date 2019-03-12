@@ -22,7 +22,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.publisher.{Mono => JavaMono}
-import reactor.core.scala.publisher.{Mono, Flux => ScalaFlux, Mono => ScalaMono}
+import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -104,16 +104,16 @@ class ReactiveCluster(val async: AsyncCluster)
     *
     * @param name the name of the bucket to open
     */
-  def bucket(name: String): Mono[ReactiveBucket] = {
-    Mono.fromFuture(async.bucket(name)).map(v => new ReactiveBucket(v))
+  def bucket(name: String): ScalaMono[ReactiveBucket] = {
+    ScalaMono.fromFuture(async.bucket(name)).map(v => new ReactiveBucket(v))
   }
 
   /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
     */
-  def shutdown(): Mono[Unit] = {
-    Mono.fromFuture(async.shutdown())
+  def shutdown(): ScalaMono[Unit] = {
+    ScalaMono.fromFuture(async.shutdown())
   }
 }
 
@@ -135,8 +135,8 @@ object ReactiveCluster {
     * @param password         the password of a user with appropriate permissions on the cluster.
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, username: String, password: String): Mono[ReactiveCluster] = {
-    Mono.fromFuture(AsyncCluster.connect(connectionString, username, password)
+  def connect(connectionString: String, username: String, password: String): ScalaMono[ReactiveCluster] = {
+    ScalaMono.fromFuture(AsyncCluster.connect(connectionString, username, password)
       .map(cluster => new ReactiveCluster(cluster)))
   }
 
@@ -149,8 +149,8 @@ object ReactiveCluster {
     * @param credentials      custom credentials used when connecting to the cluster.
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Credentials): Mono[ReactiveCluster] = {
-    Mono.fromFuture(AsyncCluster.connect(connectionString, credentials)
+  def connect(connectionString: String, credentials: Credentials): ScalaMono[ReactiveCluster] = {
+    ScalaMono.fromFuture(AsyncCluster.connect(connectionString, credentials)
       .map(cluster => new ReactiveCluster(cluster)))
   }
 
@@ -163,8 +163,8 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(environment: ClusterEnvironment): Mono[ReactiveCluster] = {
-    Mono.fromFuture(AsyncCluster.connect(environment)
+  def connect(environment: ClusterEnvironment): ScalaMono[ReactiveCluster] = {
+    ScalaMono.fromFuture(AsyncCluster.connect(environment)
       .map(cluster => new ReactiveCluster(cluster)))
   }
 }

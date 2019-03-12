@@ -39,8 +39,9 @@ import scala.util.{Failure, Success}
   * These can be created through the functions in the companion object, or through [[Cluster.async]].
   *
   * @param environment the environment used to create this
-  * @param ec  an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *            opened in the normal way, starting from functions in [[Cluster]]
+  * @param ec          an ExecutionContext to use for any Future.  Will be supplied automatically as long as
+  *                    resources are
+  *                    opened in the normal way, starting from functions in [[Cluster]]
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -95,11 +96,11 @@ class AsyncCluster(environment: => ClusterEnvironment)
               response.requestId(),
               response.clientContextId().asScala,
               QuerySignature(response.signature().asScala),
-              QueryAdditional(QueryMetrics.fromBytes(addl.metrics),
-                addl.warnings.asScala.map(QueryError),
-                addl.status,
-                addl.profile.asScala.map(QueryProfile))
-            ))
+              QueryMetrics.fromBytes(addl.metrics),
+              addl.warnings.asScala.map(QueryError),
+              addl.status,
+              addl.profile.asScala.map(QueryProfile))
+            )
           )
           .onErrorResume(err => {
             err match {
@@ -146,6 +147,7 @@ object AsyncCluster {
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param username         the name of a user with appropriate permissions on the cluster.
     * @param password         the password of a user with appropriate permissions on the cluster.
+    *
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
@@ -161,6 +163,7 @@ object AsyncCluster {
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param credentials      custom credentials used when connecting to the cluster.
+    *
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
