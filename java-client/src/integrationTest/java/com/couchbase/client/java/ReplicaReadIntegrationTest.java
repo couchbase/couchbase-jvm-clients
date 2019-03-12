@@ -81,7 +81,6 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     List<GetResult> results = collection.getFromReplica(id).collect(Collectors.toList());
     assertFalse(results.isEmpty());
     for (GetResult result : results) {
-      assertEquals(id, result.id());
       assertEquals("Hello, World!", result.contentAs(String.class));
       assertFalse(result.expiration().isPresent());
     }

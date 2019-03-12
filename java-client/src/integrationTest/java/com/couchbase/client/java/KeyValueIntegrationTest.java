@@ -92,7 +92,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     Optional<GetResult> getResult = collection.get(id);
     assertTrue(getResult.isPresent());
     getResult.ifPresent(r -> {
-      assertEquals(id, r.id());
       assertEquals("Hello, World", r.contentAs(String.class));
       assertTrue(r.cas() != 0);
       assertFalse(r.expiration().isPresent());
@@ -112,7 +111,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     existsResult = collection.exists(id);
     assertTrue(existsResult.isPresent());
 
-    assertEquals(id, existsResult.get().id());
     assertEquals(insertResult.cas(), existsResult.get().cas());
 
     assertFalse(collection.exists("some_id").isPresent());
@@ -139,7 +137,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(getResult.isPresent());
     getResult.ifPresent(r -> {
       assertTrue(r.cas() != 0);
-      assertEquals(id, r.id());
       assertFalse(r.expiration().isPresent());
 
       JsonObject decoded = r.contentAsObject();
@@ -213,7 +210,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(getResult.isPresent());
     getResult.ifPresent(r -> {
       assertTrue(r.cas() != 0);
-      assertEquals(id, r.id());
       assertTrue(r.expiration().isPresent());
       assertTrue(r.expiration().get().toMillis() > 0);
 

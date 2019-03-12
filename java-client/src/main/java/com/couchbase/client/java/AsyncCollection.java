@@ -482,7 +482,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Optional<ExistsResult>> exists(final String id,
                                                           final ExistsOptions options) {
-    return ExistsAccessor.exists(core, id, existsRequest(id, options));
+    return ExistsAccessor.exists(core, existsRequest(id, options));
   }
 
   /**
@@ -818,7 +818,7 @@ public class AsyncCollection {
   public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(core, id, lookupInRequest(id, specs, options));
+    return LookupInAccessor.lookupInAccessor(core, lookupInRequest(id, specs, options));
   }
 
   /**

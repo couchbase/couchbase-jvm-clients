@@ -19,16 +19,18 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
+import java.util.Arrays;
+
 /**
  * The {@link EncodedDocument} has everything which is important for a document on the wire
  * and is needed for properly decoding it after reading it.
  *
  * <p>While the surface area is pretty small, we consider this advanced API and therefore it
- * is not marked as commited at this point.</p>
+ * is not marked as committed at this point.</p>
  *
  * @since 3.0.0
  */
-@Stability.Uncommitted
+@Stability.Volatile
 public class EncodedDocument {
 
   private final int flags;
@@ -57,5 +59,23 @@ public class EncodedDocument {
       "flags=" + flags +
       ", content=" + new String(content, CharsetUtil.UTF_8) +
       '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    EncodedDocument that = (EncodedDocument) o;
+
+    if (flags != that.flags) return false;
+    return Arrays.equals(content, that.content);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = flags;
+    result = 31 * result + Arrays.hashCode(content);
+    return result;
   }
 }

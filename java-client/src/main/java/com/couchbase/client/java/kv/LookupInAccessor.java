@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class LookupInAccessor {
 
-  public static CompletableFuture<Optional<LookupInResult>> lookupInAccessor(final Core core, String id,
+  public static CompletableFuture<Optional<LookupInResult>> lookupInAccessor(final Core core,
                                                                              final SubdocGetRequest request) {
     core.send(request);
     return request
@@ -34,7 +34,7 @@ public class LookupInAccessor {
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return Optional.of(LookupInResult.create(id, response.values(), response.cas()));
+            return Optional.of(new LookupInResult(response.values(), response.cas()));
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});
           case NOT_FOUND:

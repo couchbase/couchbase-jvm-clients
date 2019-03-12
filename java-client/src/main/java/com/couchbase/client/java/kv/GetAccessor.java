@@ -65,8 +65,7 @@ public enum GetAccessor {
       .thenApply(getResponse -> {
         switch (getResponse.status()) {
           case SUCCESS:
-            return Optional.of(GetResult.create(
-              id,
+            return Optional.of(new GetResult(
               EncodedDocument.of(getResponse.flags(), getResponse.content()),
               getResponse.cas(),
               Optional.empty()
@@ -93,8 +92,7 @@ public enum GetAccessor {
       .thenApply(getResponse -> {
         switch (getResponse.status()) {
           case SUCCESS:
-            return Optional.of(GetResult.create(
-              id,
+            return Optional.of(new GetResult(
               EncodedDocument.of(getResponse.flags(), getResponse.content()),
               getResponse.cas(),
               Optional.empty()
@@ -126,8 +124,7 @@ public enum GetAccessor {
       .thenApply(getResponse -> {
         switch (getResponse.status()) {
           case SUCCESS:
-            return Optional.of(GetResult.create(
-              id,
+            return Optional.of(new GetResult(
               EncodedDocument.of(getResponse.flags(), getResponse.content()),
               getResponse.cas(),
               Optional.empty()
@@ -213,7 +210,7 @@ public enum GetAccessor {
       : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, CharsetUtil.UTF_8))));
 
     // TODO: optimize the subdoc holder
-    return GetResult.create(id, EncodedDocument.of(0, content), cas, expiration);
+    return new GetResult(EncodedDocument.of(0, content), cas, expiration);
   }
 
   /**

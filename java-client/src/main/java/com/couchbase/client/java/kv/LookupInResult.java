@@ -25,40 +25,60 @@ import com.couchbase.client.java.json.JsonObject;
 import java.util.List;
 
 /**
- * Experimental prototype for a different result type on fetch.
+ * This result is returned from successful KeyValue subdocument lookup responses.
+ *
+ * @since 3.0.0
  */
 public class LookupInResult {
 
-  private final String id;
+  /**
+   * Holds the encoded subdoc responses.
+   */
   private final List<SubdocField> encoded;
+
+  /**
+   * Holds the cas of the response.
+   */
   private final long cas;
 
-  static LookupInResult create(final String id, final List<SubdocField> encoded,
-                               final long cas) {
-    return new LookupInResult(id, encoded, cas);
-  }
-
-  private LookupInResult(final String id, final List<SubdocField> encoded,
-                         final long cas) {
-    this.id = id;
+  /**
+   * Creates a new {@link LookupInResult}.
+   *
+   * @param encoded the encoded subdoc fields.
+   * @param cas the cas of the outer doc.
+   */
+  LookupInResult(final List<SubdocField> encoded, final long cas) {
     this.cas = cas;
     this.encoded = encoded;
   }
 
-  public String id() {
-    return id;
-  }
-
+  /**
+   * Returns the CAS value of the document.
+   */
   public long cas() {
     return cas;
   }
 
-
+  /**
+   * Decodes the content at the given index into the target class with the default decoder.
+   *
+   * @param index the index of the subdoc value to decode.
+   * @param target the target type to decode into.
+   * @return the decoded content into the generic type requested.
+   */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
     return contentAs(index, target, (Decoder<T>) DefaultDecoder.INSTANCE);
   }
 
+  /**
+   * Decodes the content at the given index into the target class with a custom decoder.
+   *
+   * @param index the index of the subdoc value to decode.
+   * @param target the target type to decode into.
+   * @param decoder the custom decoder that will be used.
+   * @return the decoded content into the generic type requested.
+   */
   public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
@@ -66,38 +86,67 @@ public class LookupInResult {
         throw err;
       });
       return decoder.decode(target, EncodedDocument.of(0, value.value()));
-    }
-    else {
+    } else {
       throw new IllegalArgumentException("Index " + index + " is invalid");
     }
   }
 
+  /**
+   * Decodes the encoded content at the given index into a {@link JsonObject}.
+   *
+   * @param index the index at which to decode.
+   */
   public JsonObject contentAsObject(int index) {
     return contentAs(index, JsonObject.class);
   }
 
+  /**
+   * Decodes the encoded content at the given index into a {@link JsonArray}.
+   *
+   * @param index the index at which to decode.
+   */
   public JsonArray contentAsArray(int index) {
     return contentAs(index, JsonArray.class);
   }
 
-
+  /**
+   * Allows to check if a value at the given index exists.
+   *
+   * @param index the index at which to check.
+   * @return true if a value is present at the index, false otherwise.
+   */
   public boolean exists(int index) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
       return value.status().success();
-    }
-    else {
+    } else {
       return false;
     }
   }
 
   @Override
   public String toString() {
-    return "LookupResult{" +
-      "id='" + id + '\'' +
-      ", encoded=" + encoded +
+    return "LookupInResult{" +
+      "encoded=" + encoded +
       ", cas=" + cas +
       '}';
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    LookupInResult that = (LookupInResult) o;
+
+    if (cas != that.cas) return false;
+    return encoded != null ? encoded.equals(that.encoded) : that.encoded == null;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = encoded != null ? encoded.hashCode() : 0;
+    result = 31 * result + (int) (cas ^ (cas >>> 32));
+    return result;
+  }
 }

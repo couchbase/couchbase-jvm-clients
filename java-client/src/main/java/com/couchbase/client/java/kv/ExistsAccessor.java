@@ -29,7 +29,7 @@ import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
 
 public class ExistsAccessor {
 
-  public static CompletableFuture<Optional<ExistsResult>> exists(final Core core, final String id,
+  public static CompletableFuture<Optional<ExistsResult>> exists(final Core core,
                                                                  final ObserveViaCasRequest request) {
     core.send(request);
     return request
@@ -38,7 +38,7 @@ public class ExistsAccessor {
         if (response.status().success()) {
           if (response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
             || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED) {
-            return Optional.of(new ExistsResult(id, response.cas()));
+            return Optional.of(new ExistsResult(response.cas()));
           } else {
             return Optional.<ExistsResult>empty();
           }

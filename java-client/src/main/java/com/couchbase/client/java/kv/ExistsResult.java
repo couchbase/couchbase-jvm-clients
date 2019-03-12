@@ -16,22 +16,54 @@
 
 package com.couchbase.client.java.kv;
 
+/**
+ * Result returned from an exists KeyValue operation.
+ *
+ * @since 3.0.0
+ */
 public class ExistsResult {
 
-  private final String id;
+  /**
+   * Holds the CAS value of the doc if it exists.
+   */
   private final long cas;
 
-  public ExistsResult(String id, long cas) {
-    this.id = id;
+  /**
+   * Creates a new {@link ExistsResult}.
+   *
+   * @param cas the CAS of the document.
+   */
+  ExistsResult(long cas) {
     this.cas = cas;
   }
 
-  public String id() {
-    return id;
-  }
-
+  /**
+   * If the document is present, returns its current CAS value at the time of the exists operation.
+   */
   public long cas() {
     return cas;
+  }
+
+  @Override
+  public String toString() {
+    return "ExistsResult{" +
+      "cas=" + cas +
+      '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    ExistsResult that = (ExistsResult) o;
+
+    return cas == that.cas;
+  }
+
+  @Override
+  public int hashCode() {
+    return (int) (cas ^ (cas >>> 32));
   }
 
 }

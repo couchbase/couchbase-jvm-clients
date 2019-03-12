@@ -20,21 +20,47 @@ import com.couchbase.client.core.msg.kv.MutationToken;
 
 import java.util.Optional;
 
+/**
+ * Result returned from all kinds of Key-Value mutation operations.
+ *
+ * @since 3.0.0
+ */
 public class MutationResult {
 
+  /**
+   * Holds the CAS value of the document after the mutation.
+   */
   private final long cas;
 
+  /**
+   * If returned, holds the mutation token of the document after the mutation.
+   */
   private final Optional<MutationToken> mutationToken;
 
-  public MutationResult(long cas, Optional<MutationToken> mutationToken) {
+  /**
+   * Creates a new {@link MutationResult}.
+   *
+   * @param cas the CAS value of the document after the mutation.
+   * @param mutationToken the mutation token of the document after the mutation.
+   */
+  MutationResult(final long cas, final Optional<MutationToken> mutationToken) {
     this.cas = cas;
     this.mutationToken = mutationToken;
   }
 
+  /**
+   * Returns the CAS value of the document after the performed mutation.
+   */
   public long cas() {
     return cas;
   }
 
+  /**
+   * Returns the {@link MutationToken} of the document after the performed mutation.
+   *
+   * <p>Note that this value is only present if mutation tokens have been enabled on the
+   * environment configuration.</p>
+   */
   public Optional<MutationToken> mutationToken() {
     return mutationToken;
   }
@@ -46,4 +72,23 @@ public class MutationResult {
       ", mutationToken=" + mutationToken +
       '}';
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    MutationResult that = (MutationResult) o;
+
+    if (cas != that.cas) return false;
+    return mutationToken != null ? mutationToken.equals(that.mutationToken) : that.mutationToken == null;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (int) (cas ^ (cas >>> 32));
+    result = 31 * result + (mutationToken != null ? mutationToken.hashCode() : 0);
+    return result;
+  }
+
 }

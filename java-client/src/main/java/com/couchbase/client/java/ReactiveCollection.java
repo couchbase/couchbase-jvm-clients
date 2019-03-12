@@ -297,7 +297,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       ObserveViaCasRequest request = asyncCollection.existsRequest(id, options);
       return Reactor
-        .wrap(request, ExistsAccessor.exists(core, id, request), true)
+        .wrap(request, ExistsAccessor.exists(core, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }
@@ -506,7 +506,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
       return Reactor
-        .wrap(request, LookupInAccessor.lookupInAccessor(core, id, request), true)
+        .wrap(request, LookupInAccessor.lookupInAccessor(core, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }

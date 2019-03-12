@@ -23,7 +23,7 @@ public class MutateInAccessor {
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return new MutateInResult(response.cas(), response.mutationToken());
+            return new MutateInResult(response.values(), response.cas(), response.mutationToken());
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
           default:
