@@ -53,7 +53,7 @@ object MutateInSpec {
       case v: MutateInMacro => true
       case _ => false
     }
-    val out = Replace(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    Replace(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of upserting a value into a JSON object.

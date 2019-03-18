@@ -35,6 +35,10 @@ public class LookupInSpec {
     return new LookupInSpec(SubdocCommandType.GET, path);
   }
 
+  public static LookupInSpec getFullDocument() {
+    return new LookupInSpec(SubdocCommandType.GET_DOC, "");
+  }
+
   public static LookupInSpec exists(final String path) {
     return new LookupInSpec(SubdocCommandType.EXISTS, path);
   }
@@ -52,5 +56,4 @@ public class LookupInSpec {
   public SubdocGetRequest.Command export() {
     return new SubdocGetRequest.Command(type, path, xattr);
   }
-
 }
