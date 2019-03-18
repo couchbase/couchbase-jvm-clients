@@ -88,6 +88,23 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    void simpleBlockingSelect() {
+        QueryResult result = cluster.query("select 'hello world' as Greeting");
+
+        assertNotNull(result.requestId());
+        assertFalse(result.clientContextId().isPresent());
+        assertEquals("success", result.queryStatus());
+        assertTrue(result.warnings().isEmpty());
+        assertEquals(1, result.rows().size());
+        assertFalse(result.signature().isEmpty());
+
+        QueryMetrics metrics = result.metrics();
+        assertEquals(0, metrics.errorCount());
+        assertEquals(0, metrics.warningCount());
+        assertEquals(1, metrics.resultCount());
+    }
+
+    @Test
     void blockingSelect() {
         String id = insertDoc();
 

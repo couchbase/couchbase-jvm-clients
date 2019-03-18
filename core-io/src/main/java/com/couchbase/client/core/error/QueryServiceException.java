@@ -24,6 +24,7 @@ package com.couchbase.client.core.error;
  * @author Graham Pople
  * @since 2.0.0
  */
+// TODO this should derive from QueryException according to spec
 public class QueryServiceException extends CouchbaseException {
     private final byte[] content;
 

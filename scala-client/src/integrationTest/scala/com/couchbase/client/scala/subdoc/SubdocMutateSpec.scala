@@ -48,7 +48,7 @@ class SubdocMutateSpec extends FunSuite {
   def prepareXattr(content: ujson.Value): (String, Long) = {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val insertResult = coll.mutateIn(docId, Array(insert("x", content, xattr = true)), document = DocumentCreation.Insert).get
+    val insertResult = coll.mutateIn(docId, Array(insert("x", content).xattr), document = DocumentCreation.Insert).get
     (docId, insertResult.cas)
   }
 
@@ -163,7 +163,7 @@ class SubdocMutateSpec extends FunSuite {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.lookupIn(docId, Array(get("x", xattr = true))).get.contentAs[ujson.Obj](0).get
+    coll.lookupIn(docId, Array(get("x").xattr)).get.contentAs[ujson.Obj](0).get
   }
 
   private def checkSingleOpFailure(content: ujson.Obj, ops: Seq[MutateInSpec], expected: SubDocumentOpResponseStatus) = {
@@ -325,99 +325,99 @@ class SubdocMutateSpec extends FunSuite {
 
 
   test("insert xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "bar2", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("remove xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(remove("x.foo", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(remove("x.foo").xattr))
     assertThrows[NoSuchElementException](updatedContent("foo"))
   }
 
   test("remove xattr does not exist") {
-    checkSingleOpFailureXattr(ujson.Obj(), Array(remove("x.foo", xattr = true)), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+    checkSingleOpFailureXattr(ujson.Obj(), Array(remove("x.foo").xattr), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
   test("insert string already there xattr") {
-    checkSingleOpFailureXattr(ujson.Obj("foo" -> "bar"), Array(insert("x.foo", "bar2", xattr = true)), SubDocumentOpResponseStatus.PATH_EXISTS)
+    checkSingleOpFailureXattr(ujson.Obj("foo" -> "bar"), Array(insert("x.foo", "bar2").xattr), SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
   test("replace string xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(replace("x.foo", "bar2", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(replace("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("replace string does not exist xattr") {
-    checkSingleOpFailure(ujson.Obj(), Array(replace("x.foo", "bar2", xattr = true)), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+    checkSingleOpFailure(ujson.Obj(), Array(replace("x.foo", "bar2").xattr), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
   test("upsert string xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(upsert("x.foo", "bar2", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(upsert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("upsert string does not exist xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo", "bar2", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("array append xattr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello")),
-      Array(arrayAppend("x.foo", "world", xattr = true)))
+      Array(arrayAppend("x.foo", "world").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world"))
   }
 
   test("array prepend xattr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello")),
-      Array(arrayPrepend("x.foo", "world", xattr = true)))
+      Array(arrayPrepend("x.foo", "world").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world", "hello"))
   }
 
   test("array insert xattr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
-      Array(arrayInsert("x.foo[1]", "cruel", xattr = true)))
+      Array(arrayInsert("x.foo[1]", "cruel").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
   }
 
   test("array insert unique does not exist xattr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
-      Array(arrayAddUnique("x.foo", "cruel", xattr = true)))
+      Array(arrayAddUnique("x.foo", "cruel").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   }
 
   test("array insert unique does exist xattr") {
     checkSingleOpFailureXattr(ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
-      Array(arrayAddUnique("x.foo", "cruel", xattr = true)),
+      Array(arrayAddUnique("x.foo", "cruel").xattr),
       SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
   test("counter +5 xatr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10),
-      Array(increment("x.foo", 5, xattr = true)))
+      Array(increment("x.foo", 5).xattr))
     assert(updatedContent("foo").num == 15)
   }
 
   test("counter -5 xatr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10),
-      Array(decrement("x.foo", 3, xattr = true)))
+      Array(decrement("x.foo", 3).xattr))
     assert(updatedContent("foo").num == 7)
   }
 
 
   test("insert expand macro xattr do not flag") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "${Mutation.CAS}", xattr = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "${Mutation.CAS}").xattr))
     assert(updatedContent("foo").str == "${Mutation.CAS}")
   }
 
   test("insert expand macro xattr") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-      Array(insert("x.foo", MutateInMacro.MutationCAS, xattr = true)))
+      Array(insert("x.foo", MutateInMacro.MutationCAS).xattr))
     assert(updatedContent("foo").str != "${Mutation.CAS}")
   }
 
 
   test("insert xattr createPath") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo.baz", "bar2", xattr = true, createPath = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo.baz", "bar2").xattr.createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
@@ -427,56 +427,56 @@ class SubdocMutateSpec extends FunSuite {
   }
 
   test("upsert string xattr createPath") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("x.foo", "bar2", xattr = true, createPath = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("x.foo", "bar2").xattr.createPath))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("upsert string does not exist xattr createPath") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo.baz", "bar2", xattr = true, createPath = true)))
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo.baz", "bar2").xattr.createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
   test("array append xattr createPath") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-      Array(arrayAppend("x.foo", "world", xattr = true, createPath = true)))
+      Array(arrayAppend("x.foo", "world").xattr.createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   test("array prepend xattr createPath") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-      Array(arrayPrepend("x.foo", "world", xattr = true, createPath = true)))
+      Array(arrayPrepend("x.foo", "world").xattr.createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   // TODO failing with bad input server error
   //  test("array insert xattr createPath") {
   //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-  //      Array(arrayInsert("x.foo[0]", "cruel", xattr = true, createPath = true))
+  //      Array(arrayInsert("x.foo[0]", "cruel").xattr.createPath)
   //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
   //  }
   //
   //  test("array insert unique does not exist xattr createPath") {
   //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-  //      Array(arrayAddUnique("x.foo", "cruel", xattr = true, createPath = true))
+  //      Array(arrayAddUnique("x.foo", "cruel").xattr.createPath)
   //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   //  }
 
 
   test("counter +5 xattr createPath") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-      Array(increment("x.foo", 5, xattr = true, createPath = true)))
+      Array(increment("x.foo", 5).xattr.createPath))
     assert(updatedContent("foo").num == 5)
   }
 
   test("counter -5 xattr createPath") {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-      Array(decrement("x.foo", 3, xattr = true, createPath = true)))
+      Array(decrement("x.foo", 3).xattr.createPath))
     assert(updatedContent("foo").num == -3)
   }
 
 
   test("insert createPath") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(insert("foo.baz", "bar2", createPath = true)))
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(insert("foo.baz", "bar2").createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
@@ -485,50 +485,50 @@ class SubdocMutateSpec extends FunSuite {
   }
 
   test("upsert string createPath") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("foo", "bar2", createPath = true)))
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("foo", "bar2").createPath))
     assert(updatedContent("foo").str == "bar2")
   }
 
   test("upsert string does not exist createPath") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(upsert("foo.baz", "bar2", createPath = true)))
+    val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(upsert("foo.baz", "bar2").createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
   test("array append createPath") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-      Array(arrayAppend("foo", "world", createPath = true)))
+      Array(arrayAppend("foo", "world").createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   test("array prepend createPath") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-      Array(arrayPrepend("foo", "world", createPath = true)))
+      Array(arrayPrepend("foo", "world").createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   // TODO failing with bad input server error
   //  test("array insert createPath") {
   //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-  //      Array(arrayInsert("foo[0]", "cruel", createPath = true))
+  //      Array(arrayInsert("foo[0]", "cruel").createPath)
   //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
   //  }
   //
   //  test("array insert unique does not exist createPath") {
   //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-  //      Array(arrayAddUnique("foo", "cruel", createPath = true))
+  //      Array(arrayAddUnique("foo", "cruel").createPath)
   //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   //  }
 
 
   test("counter +5 createPath") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-      Array(increment("foo", 5, createPath = true)))
+      Array(increment("foo", 5).createPath))
     assert(updatedContent("foo").num == 5)
   }
 
   test("counter -5 createPath") {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-      Array(decrement("foo", 3, createPath = true)))
+      Array(decrement("foo", 3).createPath))
     assert(updatedContent("foo").num == -3)
   }
 
