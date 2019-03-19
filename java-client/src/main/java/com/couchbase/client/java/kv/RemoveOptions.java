@@ -29,18 +29,12 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
 
   public static RemoveOptions DEFAULT = new RemoveOptions();
 
-  private Duration expiry;
   private long cas;
 
   private RemoveOptions() { }
 
   public static RemoveOptions removeOptions() {
     return new RemoveOptions();
-  }
-
-  public RemoveOptions expiry(final Duration expiry) {
-    this.expiry = expiry;
-    return this;
   }
 
   public RemoveOptions cas(long cas) {
@@ -60,8 +54,5 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
       return cas;
     }
 
-    public Duration expiry() {
-      return expiry;
-    }
   }
 }
