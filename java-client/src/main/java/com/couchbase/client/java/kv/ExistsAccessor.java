@@ -17,8 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 
@@ -43,7 +42,7 @@ public class ExistsAccessor {
             return Optional.<ExistsResult>empty();
           }
         } else {
-          throw new CouchbaseException("Unexpected Status Code " + response.status());
+          throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
       })
       .whenComplete((r, t) -> completeSpan(request));

@@ -18,25 +18,18 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
-import com.couchbase.client.core.error.TemporaryFailureException;
-import com.couchbase.client.core.error.TemporaryLockFailureException;
+import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
-import io.opentracing.Span;
-import io.opentracing.Tracer;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
 
 import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
 
@@ -72,13 +65,8 @@ public enum GetAccessor {
             ));
           case NOT_FOUND:
             return Optional.<GetResult>empty();
-          case TEMPORARY_FAILURE:
-          case SERVER_BUSY:
-            throw new TemporaryFailureException();
-          case OUT_OF_MEMORY:
-            throw new CouchbaseOutOfMemoryException();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
         }
     })
     .whenComplete((r, t) -> completeSpan(request));
@@ -99,15 +87,8 @@ public enum GetAccessor {
             ));
           case NOT_FOUND:
             return Optional.<GetResult>empty();
-          case TEMPORARY_FAILURE:
-          case LOCKED:
-            throw new TemporaryLockFailureException();
-          case SERVER_BUSY:
-            throw new TemporaryFailureException();
-          case OUT_OF_MEMORY:
-            throw new CouchbaseOutOfMemoryException();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
         }
       })
       .whenComplete((r, t) -> completeSpan(request));
@@ -131,14 +112,8 @@ public enum GetAccessor {
             ));
           case NOT_FOUND:
             return Optional.<GetResult>empty();
-          case TEMPORARY_FAILURE:
-          case LOCKED:
-          case SERVER_BUSY:
-            throw new TemporaryFailureException();
-          case OUT_OF_MEMORY:
-            throw new CouchbaseOutOfMemoryException();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
         }
       }).thenCompose(result -> {
         if (!result.isPresent()) {
@@ -174,7 +149,7 @@ public enum GetAccessor {
           case NOT_FOUND:
             return Optional.empty();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
       });
   }

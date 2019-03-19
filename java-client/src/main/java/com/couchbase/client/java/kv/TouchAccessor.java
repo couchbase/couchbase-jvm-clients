@@ -17,13 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
-import com.couchbase.client.core.error.DocumentDoesNotExistException;
-import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.msg.kv.TouchRequest;
-import com.couchbase.client.core.service.kv.Observe;
-import com.couchbase.client.core.service.kv.ObserveContext;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -43,16 +38,8 @@ public class TouchAccessor {
         switch (response.status()) {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
-          case NOT_FOUND:
-            throw new DocumentDoesNotExistException();
-          case TEMPORARY_FAILURE:
-          case SERVER_BUSY:
-          case LOCKED:
-            throw new TemporaryFailureException();
-          case OUT_OF_MEMORY:
-            throw new CouchbaseOutOfMemoryException();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);

@@ -1,7 +1,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.service.kv.Observe;
@@ -27,7 +27,7 @@ public class MutateInAccessor {
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
           default:
-            throw new CouchbaseException("Unexpected Status Code " + response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
       }).thenCompose(result -> {
         final ObserveContext ctx = new ObserveContext(

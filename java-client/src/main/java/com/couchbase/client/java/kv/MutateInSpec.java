@@ -129,7 +129,20 @@ public class MutateInSpec {
     ));
   }
 
-  public static <T> MutateInSpec arrayAppend(final boolean xattr, final String path, final T fragment) {
+
+    public static <T> MutateInSpec upsertFullDocument(final T fragment) {
+        return new MutateInSpec(new SubdocMutateRequest.Command(
+                SubdocCommandType.UPSERTDOC,
+                "",
+                ENCODER.encode(fragment).content(),
+                false,
+                false,
+                false
+        ));
+    }
+
+
+    public static <T> MutateInSpec arrayAppend(final boolean xattr, final String path, final T fragment) {
     return arrayAppend(xattr, path, fragment, false, false);
   }
 

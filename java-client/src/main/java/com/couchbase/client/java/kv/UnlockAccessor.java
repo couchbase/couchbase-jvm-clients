@@ -17,11 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.CouchbaseOutOfMemoryException;
-import com.couchbase.client.core.error.DocumentDoesNotExistException;
-import com.couchbase.client.core.error.TemporaryFailureException;
-import com.couchbase.client.core.error.TemporaryLockFailureException;
+import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 
 import java.util.concurrent.CompletableFuture;
@@ -36,17 +32,8 @@ public class UnlockAccessor {
         switch (response.status()) {
           case SUCCESS:
             return null;
-          case NOT_FOUND:
-            throw new DocumentDoesNotExistException();
-          case TEMPORARY_FAILURE:
-          case LOCKED:
-            throw new TemporaryLockFailureException();
-          case SERVER_BUSY:
-            throw new TemporaryFailureException();
-          case OUT_OF_MEMORY:
-            throw new CouchbaseOutOfMemoryException();
           default:
-            throw new CouchbaseException("Unexpected Status Code " + response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
       });
   }
