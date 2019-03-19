@@ -22,6 +22,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /**
  * This class provides utility methods when working with reactor.
@@ -50,7 +51,14 @@ public enum Reactor {
         }
       });
     }
-    return mono;
+    return mono.onErrorResume(err -> {
+      if (err instanceof CompletionException) {
+        return Mono.error(err.getCause());
+      }
+      else {
+        return Mono.error(err);
+      }
+    });
   }
 
 }

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
@@ -456,6 +457,66 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertArrayEquals(
       helloWorldBytes,
       collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+  }
+
+  @Test
+  void appendReactive() {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
+    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+
+    assertThrows(
+            DocumentDoesNotExistException.class,
+            () -> collection.reactive().binary().append(id, helloBytes).block()
+    );
+
+    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+            helloBytes,
+            collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+
+    MutationResult append = collection.reactive().binary().append(id, worldBytes).block();
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+            helloWorldBytes,
+            collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+  }
+
+  @Test
+  void appendAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
+    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+
+    assertThrows(
+            ExecutionException.class,
+            () -> collection.async().binary().append(id, helloBytes).get()
+    );
+
+    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+            helloBytes,
+            collection.get(id).get().contentAs(BinaryContent.class).content()
+    );
+
+    MutationResult append = collection.async().binary().append(id, worldBytes).get();
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+            helloWorldBytes,
+            collection.get(id).get().contentAs(BinaryContent.class).content()
     );
   }
 
