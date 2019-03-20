@@ -12,8 +12,8 @@
 
     <!--Can override this with mvn -Dscala.compat.version=2.11-->
     <properties>
-        <scala.compat.version>2.11</scala.compat.version>
-        <scala.compat.library.version>2.11.12</scala.compat.library.version>
+        <scala.compat.version>2.12</scala.compat.version>
+        <scala.compat.library.version>2.12.8</scala.compat.library.version>
     </properties>
 
     <artifactId>scala-implicits_${scala.compat.version}</artifactId>
