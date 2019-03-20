@@ -209,7 +209,7 @@ public class IoEnvironment {
    * @return the created group.
    */
   private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final int numThreads, final String poolName) {
-    ThreadFactory threadFactory = new DefaultThreadFactory(poolName);
+    ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
 
     if (Epoll.isAvailable()) {
       return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
