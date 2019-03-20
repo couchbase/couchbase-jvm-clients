@@ -85,6 +85,9 @@ public enum GetAccessor {
               getResponse.cas(),
               Optional.empty()
             ));
+          // This is a special case on getAndLock for backwards compatibility
+          case TEMPORARY_FAILURE:
+            throw new TemporaryLockFailureException();
           case NOT_FOUND:
             return Optional.<GetResult>empty();
           default:

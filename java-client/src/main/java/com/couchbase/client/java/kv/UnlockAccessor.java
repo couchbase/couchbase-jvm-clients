@@ -32,6 +32,9 @@ public class UnlockAccessor {
         switch (response.status()) {
           case SUCCESS:
             return null;
+          // Special Case for backwards compatibility
+          case TEMPORARY_FAILURE:
+            throw new TemporaryLockFailureException();
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(response.status());
         }
