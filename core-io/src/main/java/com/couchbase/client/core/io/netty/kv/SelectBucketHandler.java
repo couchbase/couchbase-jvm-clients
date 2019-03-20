@@ -30,7 +30,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 
 import java.net.SocketAddress;
@@ -47,6 +46,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link SelectBucketHandler} is responsible for, selecting the right
@@ -193,7 +193,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
    * @return the created request as a {@link ByteBuf}.
    */
   private ByteBuf buildSelectBucketRequest(final ChannelHandlerContext ctx) {
-    ByteBuf key = Unpooled.copiedBuffer(bucketName, CharsetUtil.UTF_8);
+    ByteBuf key = Unpooled.copiedBuffer(bucketName, UTF_8);
     ByteBuf request = request(
       ctx.alloc(),
       MemcacheProtocol.Opcode.SELECT_BUCKET,

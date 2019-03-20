@@ -23,11 +23,12 @@ import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 import java.util.function.Function;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link BaseLoader} contains all common functionality needed for the actual loader
@@ -91,7 +92,7 @@ public abstract class BaseLoader implements Loader {
     return core
       .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
       .then(discoverConfig(seed, bucket))
-      .map(config -> new String(config, CharsetUtil.UTF_8))
+      .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))
       .map(config -> BucketConfigParser.parse(config, core.context().environment(), seed))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException

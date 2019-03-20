@@ -28,7 +28,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
@@ -36,6 +35,7 @@ import reactor.core.Disposable;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,7 +70,7 @@ class KeyValueLoaderTest {
 
   @Test
   void loadsConfigSuccessfully() {
-    byte[] expectedConfig = "config".getBytes(CharsetUtil.UTF_8);
+    byte[] expectedConfig = "config".getBytes(UTF_8);
 
     CarrierBucketConfigResponse response = mock(CarrierBucketConfigResponse.class);
     when(response.status()).thenReturn(ResponseStatus.SUCCESS);

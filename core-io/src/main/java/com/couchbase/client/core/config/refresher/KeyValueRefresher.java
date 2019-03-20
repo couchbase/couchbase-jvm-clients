@@ -27,7 +27,6 @@ import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -43,6 +42,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link KeyValueRefresher} keeps configs up-to-date through the KV service.
@@ -207,7 +208,7 @@ public class KeyValueRefresher implements Refresher {
           return response.status().success();
         })
         .map(response -> {
-          String raw = new String(response.content(), CharsetUtil.UTF_8);
+          String raw = new String(response.content(), UTF_8);
           raw = raw.replace("$HOST", nodeInfo.hostname().address());
           return new ProposedBucketConfigContext(name, raw, nodeInfo.hostname());
         }).onErrorResume(t -> {

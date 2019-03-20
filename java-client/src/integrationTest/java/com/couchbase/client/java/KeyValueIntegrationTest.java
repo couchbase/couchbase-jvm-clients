@@ -31,7 +31,6 @@ import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +46,7 @@ import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -434,9 +434,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void append() {
     String id = UUID.randomUUID().toString();
 
-    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
-    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
-    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
       DocumentDoesNotExistException.class,
@@ -464,9 +464,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void appendReactive() {
     String id = UUID.randomUUID().toString();
 
-    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
-    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
-    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
             DocumentDoesNotExistException.class,
@@ -494,9 +494,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void appendAsync() throws ExecutionException, InterruptedException {
     String id = UUID.randomUUID().toString();
 
-    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
-    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
-    byte[] helloWorldBytes = "Hello, World!".getBytes(CharsetUtil.UTF_8);
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
             ExecutionException.class,
@@ -524,9 +524,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void prepend() {
     String id = UUID.randomUUID().toString();
 
-    byte[] helloBytes = "Hello, ".getBytes(CharsetUtil.UTF_8);
-    byte[] worldBytes = "World!".getBytes(CharsetUtil.UTF_8);
-    byte[] worldHelloBytes = "World!Hello, ".getBytes(CharsetUtil.UTF_8);
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] worldHelloBytes = "World!Hello, ".getBytes(UTF_8);
 
     assertThrows(
       DocumentDoesNotExistException.class,

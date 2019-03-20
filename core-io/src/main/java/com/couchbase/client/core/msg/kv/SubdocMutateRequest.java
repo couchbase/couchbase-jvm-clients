@@ -30,7 +30,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> {
 
@@ -219,7 +219,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     }
 
     public ByteBuf encode(final ByteBufAllocator alloc) {
-      byte[] path = this.path.getBytes(CharsetUtil.UTF_8);
+      byte[] path = this.path.getBytes(UTF_8);
       int pathLength = path.length;
 
       ByteBuf buffer = alloc.buffer(4 + pathLength + fragment.length);

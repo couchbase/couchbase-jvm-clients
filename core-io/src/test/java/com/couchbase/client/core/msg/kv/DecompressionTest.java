@@ -19,7 +19,6 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -27,6 +26,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.util.Utils.readResource;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -49,7 +49,7 @@ class DecompressionTest {
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), CharsetUtil.UTF_8)
+      new String(decoded.content(), UTF_8)
     );
   }
 
@@ -66,7 +66,7 @@ class DecompressionTest {
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), CharsetUtil.UTF_8)
+      new String(decoded.content(), UTF_8)
     );
   }
 
@@ -84,7 +84,7 @@ class DecompressionTest {
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), CharsetUtil.UTF_8)
+      new String(decoded.content(), UTF_8)
     );
   }
 
@@ -102,7 +102,7 @@ class DecompressionTest {
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), CharsetUtil.UTF_8)
+      new String(decoded.content(), UTF_8)
     );
   }
 

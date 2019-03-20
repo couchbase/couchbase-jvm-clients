@@ -29,7 +29,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -37,6 +36,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -59,11 +59,11 @@ class CompressionTest {
   private final int flags = 0;
   private final Optional<DurabilityLevel> durability = Optional.empty();
 
-  private final byte[] shortContent = "short".getBytes(CharsetUtil.UTF_8);
+  private final byte[] shortContent = "short".getBytes(UTF_8);
   private final byte[] longContent = Utils.readResource(
     "dummy.json",
     CompressionTest.class
-  ).getBytes(CharsetUtil.UTF_8);
+  ).getBytes(UTF_8);
 
   @Test
   void doesNotCompressIfDisabledAppend() {

@@ -18,9 +18,10 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CarrierBucketConfigResponse extends BaseResponse {
 
@@ -39,7 +40,7 @@ public class CarrierBucketConfigResponse extends BaseResponse {
   public String toString() {
     return "CarrierBucketConfigResponse{" +
       "status=" + status() +
-      "content=" + new String(content, CharsetUtil.UTF_8) +
+      "content=" + new String(content, UTF_8) +
       '}';
   }
 }

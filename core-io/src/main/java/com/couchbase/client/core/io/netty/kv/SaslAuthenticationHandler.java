@@ -29,7 +29,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 
 import javax.security.auth.callback.Callback;
@@ -60,6 +59,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This handler is responsible for perform SASL authentication against the KV engine.
@@ -239,7 +239,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private void handleListMechsResponse(final ChannelHandlerContext ctx, final ByteBuf response) {
     String[] serverMechanisms = body(response)
       .orElse(Unpooled.EMPTY_BUFFER)
-      .toString(CharsetUtil.UTF_8)
+      .toString(UTF_8)
       .split(" ");
 
     Set<SaslMechanism> usedMechs = allowedMechanisms
@@ -282,7 +282,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     ByteBuf body = payload != null
       ? ctx.alloc().buffer().writeBytes(payload)
       : Unpooled.EMPTY_BUFFER;
-    ByteBuf key = Unpooled.copiedBuffer(saslClient.getMechanismName(), CharsetUtil.UTF_8);
+    ByteBuf key = Unpooled.copiedBuffer(saslClient.getMechanismName(), UTF_8);
     ByteBuf request = request(
       ctx.alloc(),
       MemcacheProtocol.Opcode.SASL_AUTH,
@@ -358,13 +358,13 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     ByteBuf body;
     if (mech.equalsIgnoreCase(SaslMechanism.CRAM_MD5.mech())
       || mech.equalsIgnoreCase(SaslMechanism.PLAIN.mech())) {
-      String[] evaluated = new String(evaluatedBytes, CharsetUtil.UTF_8).split(" ");
-      body = Unpooled.copiedBuffer(username + "\0" + evaluated[1], CharsetUtil.UTF_8);
+      String[] evaluated = new String(evaluatedBytes, UTF_8).split(" ");
+      body = Unpooled.copiedBuffer(username + "\0" + evaluated[1], UTF_8);
     } else {
       body = Unpooled.wrappedBuffer(evaluatedBytes);
     }
 
-    ByteBuf key = Unpooled.copiedBuffer(mech, CharsetUtil.UTF_8);
+    ByteBuf key = Unpooled.copiedBuffer(mech, UTF_8);
     ByteBuf request =request(
       ctx.alloc(),
       MemcacheProtocol.Opcode.SASL_STEP,

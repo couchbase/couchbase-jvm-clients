@@ -29,11 +29,12 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link BaseKeyValueRequest} should be subclassed by all KeyValue requests since it
@@ -80,7 +81,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * @return the encoded key.
    */
   static byte[] encodeKey(final String key) {
-    return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(CharsetUtil.UTF_8);
+    return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(UTF_8);
   }
 
   protected byte[] keyWithCollection() {
@@ -103,7 +104,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ctx.put("bucket", bucket);
     }
     if (key != null) {
-      ctx.put("key", new String(key, CharsetUtil.UTF_8));
+      ctx.put("key", new String(key, UTF_8));
     }
     if (collection != null) {
       ctx.put("cid", UnsignedLEB128.decode(collection));

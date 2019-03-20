@@ -22,7 +22,6 @@ import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 
 class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
@@ -55,7 +55,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
   }
 
   private byte[] insertContent(String id, String in) {
-    byte[] content = in.getBytes(CharsetUtil.UTF_8);
+    byte[] content = in.getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
             Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),

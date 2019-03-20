@@ -26,7 +26,8 @@ import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class QueryAccessor {
 
@@ -50,7 +51,7 @@ public class QueryAccessor {
 		JsonObject queryJson = query.getQueryJson(opts.parameters());
 		opts.getN1qlParams(queryJson);
 		QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy,
-				environment.credentials(), queryJson.toString().getBytes(CharsetUtil.UTF_8));
+				environment.credentials(), queryJson.toString().getBytes(UTF_8));
 		core.send(request);
 		return request.response();
 	}

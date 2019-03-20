@@ -46,7 +46,6 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCodec;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterEach;
@@ -59,6 +58,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -125,7 +126,7 @@ class QueryMessageHandlerBackpressureTest {
       endpointContext,
       BestEffortRetryStrategy.INSTANCE,
       environment.credentials(),
-      "myquery".getBytes(CharsetUtil.UTF_8)
+      "myquery".getBytes(UTF_8)
     );
     channel.writeAndFlush(request);
 
@@ -175,16 +176,16 @@ class QueryMessageHandlerBackpressureTest {
                         "{\"faz\"},{\"baz\"},{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}").length());
                 ctx.write(response);
                 ctx.write(new DefaultHttpContent(
-                  Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)
+                  Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultHttpContent(
-                        Unpooled.copiedBuffer("{\"bar\"},", CharsetUtil.UTF_8)
+                        Unpooled.copiedBuffer("{\"bar\"},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultHttpContent(
-                        Unpooled.copiedBuffer("{\"faz\"},{\"baz\"},", CharsetUtil.UTF_8)
+                        Unpooled.copiedBuffer("{\"faz\"},{\"baz\"},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultLastHttpContent(
-                        Unpooled.copiedBuffer("{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}", CharsetUtil.UTF_8)
+                        Unpooled.copiedBuffer("{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}", UTF_8)
                 ));
               }
             });

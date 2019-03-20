@@ -8,7 +8,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -20,6 +19,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
 
@@ -36,7 +36,7 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.copiedBuffer(scopeName + "." + collectionName, CharsetUtil.UTF_8);
+    ByteBuf key = Unpooled.copiedBuffer(scopeName + "." + collectionName, UTF_8);
     ByteBuf request = request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

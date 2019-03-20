@@ -17,7 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link EncodedFragment} represents a fragment returned from a subdocument lookup.
@@ -50,7 +51,7 @@ public class EncodedFragment {
   public String toString() {
     return "EncodedFragment{" +
       "path=" + path +
-      ", content=" + new String(content, CharsetUtil.UTF_8) +
+      ", content=" + new String(content, UTF_8) +
       '}';
   }
 }

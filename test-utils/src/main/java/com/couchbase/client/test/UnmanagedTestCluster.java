@@ -16,7 +16,6 @@
 
 package com.couchbase.client.test;
 
-import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
@@ -34,6 +33,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UnmanagedTestCluster extends TestCluster {
 
@@ -114,7 +115,7 @@ public class UnmanagedTestCluster extends TestCluster {
       String raw = getResponse.body().string();
 
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
-      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
+      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
       return Optional.of((X509Certificate) cert);
     } catch (Exception ex) {
       // could not load certificate, maybe add logging? could be CE instance.

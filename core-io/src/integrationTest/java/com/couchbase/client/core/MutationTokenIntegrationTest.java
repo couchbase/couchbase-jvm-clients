@@ -20,7 +20,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -55,7 +55,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnAppend() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -67,7 +67,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
     AppendRequest appendRequest = new AppendRequest(Duration.ofSeconds(1), core.context(),
       config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID,
-      ", world".getBytes(CharsetUtil.UTF_8), upsertResponse.cas(), Optional.empty());
+      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
     core.send(appendRequest);
 
     AppendResponse appendResponse = appendRequest.response().get();
@@ -78,7 +78,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnPrepend() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -90,7 +90,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
     PrependRequest prependRequest = new PrependRequest(Duration.ofSeconds(1), core.context(),
       config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID,
-      ", world".getBytes(CharsetUtil.UTF_8), upsertResponse.cas(), Optional.empty());
+      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
     core.send(prependRequest);
 
     PrependResponse prependResponse = prependRequest.response().get();
@@ -101,7 +101,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnSubdocMutate() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "{}".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "{}".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -115,7 +115,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     commands.add(new SubdocMutateRequest.Command(
       SubdocCommandType.DICT_ADD,
       "foo",
-      "\"bar\"".getBytes(CharsetUtil.UTF_8),
+      "\"bar\"".getBytes(UTF_8),
       true,
       false,
             false)
@@ -133,7 +133,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnUpsert() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -148,7 +148,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnReplace() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -171,7 +171,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnRemove() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
       0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
@@ -193,7 +193,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnInsert() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
@@ -207,7 +207,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnIncrement() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "1".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "1".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
@@ -229,7 +229,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   @Test
   void tokenOnDecrement() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "10".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "10".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());

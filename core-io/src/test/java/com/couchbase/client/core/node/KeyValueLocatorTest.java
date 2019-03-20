@@ -25,7 +25,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -33,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -62,7 +62,7 @@ class KeyValueLocatorTest {
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
     CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
     when(getRequestMock.bucket()).thenReturn("bucket");
-    when(getRequestMock.key()).thenReturn("key".getBytes(CharsetUtil.UTF_8));
+    when(getRequestMock.key()).thenReturn("key".getBytes(UTF_8));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class));
     when(getRequestMock.context()).thenReturn(new RequestContext(coreContext, getRequestMock));
     when(configMock.bucketConfig("bucket")).thenReturn(bucketMock);
@@ -109,7 +109,7 @@ class KeyValueLocatorTest {
     // Create Request
     GetRequest getRequest = mock(GetRequest.class);
     when(getRequest.bucket()).thenReturn("bucket");
-    when(getRequest.key()).thenReturn("key".getBytes(CharsetUtil.UTF_8));
+    when(getRequest.key()).thenReturn("key".getBytes(UTF_8));
     RequestContext requestCtx = mock(RequestContext.class);
     when(getRequest.context()).thenReturn(requestCtx);
 
@@ -165,7 +165,7 @@ class KeyValueLocatorTest {
     // Create Request
     GetRequest getRequest = mock(GetRequest.class);
     when(getRequest.bucket()).thenReturn("bucket");
-    when(getRequest.key()).thenReturn("key".getBytes(CharsetUtil.UTF_8));
+    when(getRequest.key()).thenReturn("key".getBytes(UTF_8));
     RequestContext requestCtx = mock(RequestContext.class);
     when(getRequest.context()).thenReturn(requestCtx);
 

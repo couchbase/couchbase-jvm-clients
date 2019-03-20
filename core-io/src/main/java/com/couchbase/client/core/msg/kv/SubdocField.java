@@ -1,9 +1,10 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.util.Optional;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 // TODO rename SubDocumentField as part of public interface now
 public class SubdocField {
@@ -49,7 +50,7 @@ public class SubdocField {
   public String toString() {
     return "SubdocField{" +
       "status=" + status +
-      ", value=" + new String(value, CharsetUtil.UTF_8) +
+      ", value=" + new String(value, UTF_8) +
       ", path='" + path + '\'' +
       '}';
   }

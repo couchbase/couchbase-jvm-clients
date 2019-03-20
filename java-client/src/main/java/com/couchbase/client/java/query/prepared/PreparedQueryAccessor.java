@@ -30,7 +30,8 @@ import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Prepared queries helper for sending the requests to core
@@ -64,7 +65,7 @@ public class PreparedQueryAccessor {
             JsonObject queryJson = prepared.getQueryJson(opts.parameters());
             opts.getN1qlParams(queryJson);
             QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.credentials(),
-                    queryJson.toString().getBytes(CharsetUtil.UTF_8));
+                    queryJson.toString().getBytes(UTF_8));
             core.send(request);
             return request.response();
             // TODO understand this logic
@@ -88,7 +89,7 @@ public class PreparedQueryAccessor {
             JsonObject queryJson = query.getQueryJson(null);
             opts.getN1qlParams(queryJson);
             QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.credentials(),
-                    queryJson.toString().getBytes(CharsetUtil.UTF_8));
+                    queryJson.toString().getBytes(UTF_8));
             core.send(request);
             return request
                     .response()

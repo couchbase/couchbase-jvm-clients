@@ -22,13 +22,13 @@ import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GetAccessorTest {
@@ -82,10 +82,10 @@ class GetAccessorTest {
   void ignoresNonSuccessField() throws Exception {
     List<SubdocField> values = Arrays.asList(
       new SubdocField(SubDocumentOpResponseStatus.SUCCESS, Optional.empty(),
-              "42".getBytes(CharsetUtil.UTF_8), "a", SubdocCommandType.GET),
+              "42".getBytes(UTF_8), "a", SubdocCommandType.GET),
       new SubdocField(SubDocumentOpResponseStatus.PATH_NOT_FOUND,
               Optional.of(mapSubDocumentError(SubDocumentOpResponseStatus.PATH_NOT_FOUND, "", "")),
-              "99".getBytes(CharsetUtil.UTF_8), "b" , SubdocCommandType.GET)
+              "99".getBytes(UTF_8), "b" , SubdocCommandType.GET)
     );
 
     SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
@@ -132,7 +132,7 @@ class GetAccessorTest {
                     new SubdocField(
                             SubDocumentOpResponseStatus.SUCCESS,
                             Optional.empty(),
-                            e.getValue().getBytes(CharsetUtil.UTF_8),
+                            e.getValue().getBytes(UTF_8),
                             e.getKey(),
                             SubdocCommandType.GET
                     )

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.*;
 import java.time.Duration;
 import java.util.Optional;
@@ -43,7 +44,6 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
@@ -95,14 +95,14 @@ class QueryMessageHandlerTest {
             );
             channel.writeInbound(httpResponse);
             channel.writeInbound(new DefaultHttpContent(
-              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},{\"", CharsetUtil.UTF_8)
+              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},{\"", UTF_8)
             ));
             try {
                 // sleep a bit to simulate that it doesn't fail with stream
                 Thread.sleep(2000);
             } catch(InterruptedException ex) {}
             channel.writeInbound(new DefaultLastHttpContent(
-              Unpooled.copiedBuffer("bar\"}]", CharsetUtil.UTF_8)
+              Unpooled.copiedBuffer("bar\"}]", UTF_8)
             ));
             channel.flushInbound();
         });
@@ -139,10 +139,10 @@ class QueryMessageHandlerTest {
             );
             channel.writeInbound(httpResponse);
             channel.writeInbound(new DefaultHttpContent(
-              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", CharsetUtil.UTF_8)
+              Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", UTF_8)
             ));
             channel.writeInbound(new DefaultLastHttpContent(
-              Unpooled.copiedBuffer("{\"bar\"}]", CharsetUtil.UTF_8)
+              Unpooled.copiedBuffer("{\"bar\"}]", UTF_8)
             ));
             channel.flushInbound();
         });

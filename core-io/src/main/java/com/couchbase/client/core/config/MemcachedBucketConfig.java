@@ -25,13 +25,14 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonIn
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemcachedBucketConfig extends AbstractBucketConfig {
@@ -99,7 +100,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
                 MessageDigest md5;
                 try {
                     md5 = MessageDigest.getInstance("MD5");
-                    md5.update(hashingStrategy.hash(node, i).getBytes(CharsetUtil.UTF_8));
+                    md5.update(hashingStrategy.hash(node, i).getBytes(UTF_8));
                     byte[] digest = md5.digest();
                     for (int j = 0; j < 4; j++) {
                         Long key = ((long) (digest[3 + j * 4] & 0xFF) << 24)

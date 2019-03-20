@@ -20,13 +20,13 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.util.Utils.readResource;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -56,7 +56,7 @@ class GetRequestTest {
     byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
       + "\"iata\":\"SB\",\"icao\":\"ACI\",\"id\":139,"
       + "\"name\":\"Air Caledonie International\",\"type\":\"airline\"}"
-    ).getBytes(CharsetUtil.UTF_8);
+    ).getBytes(UTF_8);
 
     assertEquals(ResponseStatus.SUCCESS, decoded.status());
     assertArrayEquals(expected, decoded.content());

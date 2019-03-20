@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.EncodedDocument;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -43,7 +43,7 @@ class DefaultDecoderTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void decodesJsonObject() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(UTF_8));
     JsonObject result = (JsonObject) DECODER.decode(JsonObject.class, encoded);
     assertEquals(JsonObject.empty(), result);
   }
@@ -51,7 +51,7 @@ class DefaultDecoderTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void decodesJsonArray() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(UTF_8));
     JsonArray result = (JsonArray) DECODER.decode(JsonArray.class, encoded);
     assertEquals(JsonArray.empty(), result);
   }
@@ -59,7 +59,7 @@ class DefaultDecoderTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void decodesJavaMap() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(UTF_8));
     Map<String, Object> result = (Map<String, Object>) DECODER.decode(Map.class, encoded);
     assertEquals(new HashMap<>(), result);
   }
@@ -67,7 +67,7 @@ class DefaultDecoderTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void decodesJavaList() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "[]".getBytes(UTF_8));
     List<Object> result = (List<Object>) DECODER.decode(List.class, encoded);
     assertEquals(new ArrayList<>(), result);
   }
@@ -75,16 +75,16 @@ class DefaultDecoderTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void throwsOnInvalidCombination() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{}".getBytes(UTF_8));
     assertThrows(DecodingFailedException.class, () -> DECODER.decode(JsonArray.class, encoded));
   }
 
   @Test
   @SuppressWarnings({"unchecked"})
   void decodesEncodedJson() {
-    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{\"foo\": true}".getBytes(CharsetUtil.UTF_8));
+    EncodedDocument encoded = EncodedDocument.of(Encoder.JSON_FLAGS, "{\"foo\": true}".getBytes(UTF_8));
     EncodedJsonContent result = (EncodedJsonContent) DECODER.decode(EncodedJsonContent.class, encoded);
-    assertEquals("{\"foo\": true}", new String(result.encoded(), CharsetUtil.UTF_8));
+    assertEquals("{\"foo\": true}", new String(result.encoded(), UTF_8));
   }
 
 }

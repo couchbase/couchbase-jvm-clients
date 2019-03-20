@@ -24,7 +24,6 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +33,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -72,7 +72,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
   )
   void upsertSuccessfullyToMajority() throws Exception {
     String id = UUID.randomUUID().toString();
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
       Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),

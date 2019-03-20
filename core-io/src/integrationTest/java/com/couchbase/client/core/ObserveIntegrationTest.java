@@ -27,7 +27,6 @@ import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.*;
 
 import java.time.Duration;
@@ -35,6 +34,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -231,7 +231,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
    * @return returns the response to use for observe.
    */
   private InsertResponse performInsert(final String id) {
-    byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+    byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
       env.timeoutConfig().kvTimeout(), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());

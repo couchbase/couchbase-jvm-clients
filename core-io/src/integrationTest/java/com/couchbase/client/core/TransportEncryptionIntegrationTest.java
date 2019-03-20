@@ -28,7 +28,6 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -39,6 +38,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -84,7 +84,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
     try {
       String id = UUID.randomUUID().toString();
-      byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+      byte[] content = "hello, world".getBytes(UTF_8);
 
       InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
         Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
@@ -118,7 +118,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
     try {
       String id = UUID.randomUUID().toString();
-      byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+      byte[] content = "hello, world".getBytes(UTF_8);
 
       InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
         Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
@@ -171,7 +171,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
     try {
       /*String id = UUID.randomUUID().toString();
-      byte[] content = "hello, world".getBytes(CharsetUtil.UTF_8);
+      byte[] content = "hello, world".getBytes(UTF_8);
 
       InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
         Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy());

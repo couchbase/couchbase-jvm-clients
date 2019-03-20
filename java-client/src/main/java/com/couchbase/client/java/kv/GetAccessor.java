@@ -24,7 +24,6 @@ import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -32,6 +31,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Stability.Internal
 public enum GetAccessor {
@@ -185,7 +185,7 @@ public enum GetAccessor {
 
     Optional<Duration> expiration = exptime == null
       ? Optional.empty()
-      : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, CharsetUtil.UTF_8))));
+      : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
 
     // TODO: optimize the subdoc holder
     return new GetResult(EncodedDocument.of(0, content), cas, expiration);

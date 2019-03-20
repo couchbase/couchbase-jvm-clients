@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +34,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
@@ -97,7 +98,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     Map<String, Object> decoded;
     try {
       decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
     } catch (IOException e) {
       throw new RuntimeException("Error decoding, raw: " + config, e);
     }
@@ -124,7 +125,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     Map<String, Object> decoded;
     try {
       decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -137,7 +138,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     Map<String, Object> decoded;
     try {
       decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(CharsetUtil.UTF_8), Map.class);
+        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
     } catch (IOException e) {
       throw new RuntimeException("Error decoding, raw: " + config, e);
     }

@@ -32,12 +32,13 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import java.io.EOFException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This handler is responsible for writing Query requests and completing their associated responses
@@ -86,11 +87,6 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
    */
   private boolean isParserInitialized = false;
 
-  /**
-   * The character set used for decoding the streaming response received
-   */
-  private static final Charset CHARSET = CharsetUtil.UTF_8;
-
   public QueryMessageHandler(final EndpointContext endpointContext) {
     this.endpointContext = endpointContext;
 
@@ -114,7 +110,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
      */
     this.parser = new ByteBufJsonParser(new JsonPointer[]{
       new JsonPointer("/requestID", (JsonPointerCB1) value -> {
-        String requestID = value.toString(CHARSET);
+        String requestID = value.toString(UTF_8);
         requestID = requestID.substring(1, requestID.length() - 1);
         value.release();
         currentResponse.requestId(requestID);
@@ -158,7 +154,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
       }),
       new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
         // It's not actually stated in the N1QL spec, but turns out this is optional
-        String clientContextID = value.toString(CHARSET);
+        String clientContextID = value.toString(UTF_8);
         clientContextID = clientContextID.substring(1, clientContextID.length() - 1);
         value.release();
         currentResponse.clientContextId(clientContextID);
@@ -176,7 +172,7 @@ public class QueryMessageHandler extends ChannelDuplexHandler {
         if (!currentRequest.completed()) {
           this.currentRequest.succeed(this.currentResponse);
         }
-        String statusStr = value.toString(CHARSET);
+        String statusStr = value.toString(UTF_8);
         statusStr = statusStr.substring(1, statusStr.length() - 1);
         value.release();
         currentResponse.queryStatus(statusStr);

@@ -16,12 +16,12 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class StringContent extends TypedContent<byte[]> {
 
   public static StringContent wrap(String content) {
-    return wrap(content.getBytes(CharsetUtil.UTF_8));
+    return wrap(content.getBytes(UTF_8));
   }
 
   public static StringContent wrap(byte[] content) {

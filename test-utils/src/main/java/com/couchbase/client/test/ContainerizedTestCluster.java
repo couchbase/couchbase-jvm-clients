@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.shaded.io.netty.util.CharsetUtil;
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
@@ -42,6 +41,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Uses containers to manage the test cluster (by using testcontainers).
@@ -140,7 +140,7 @@ public class ContainerizedTestCluster extends TestCluster {
     String raw = getResponse.body().string();
 
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
-    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(CharsetUtil.UTF_8)));
+    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
     return Optional.of((X509Certificate) cert);
   }
 
@@ -187,7 +187,7 @@ public class ContainerizedTestCluster extends TestCluster {
       .forResponsePredicate(response -> {
           try {
             return Optional.of(
-              MAPPER.readTree(response.getBytes(CharsetUtil.UTF_8)))
+              MAPPER.readTree(response.getBytes(UTF_8)))
                 .map(n -> n.at("/nodes/0/status"))
                 .map(JsonNode::asText)
                 .map("healthy"::equals)

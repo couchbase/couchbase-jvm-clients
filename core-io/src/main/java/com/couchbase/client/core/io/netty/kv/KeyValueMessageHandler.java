@@ -36,7 +36,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectHashMap;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
@@ -44,6 +43,7 @@ import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
 import java.util.List;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This handler is responsible for writing KV requests and completing their associated responses
@@ -240,7 +240,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
     RetryOrchestrator.retryImmediately(ioContext, request);
     body(response)
-      .map(b -> b.toString(CharsetUtil.UTF_8).trim())
+      .map(b -> b.toString(UTF_8).trim())
       .filter(c -> c.startsWith("{"))
       .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
         new ProposedBucketConfigContext(

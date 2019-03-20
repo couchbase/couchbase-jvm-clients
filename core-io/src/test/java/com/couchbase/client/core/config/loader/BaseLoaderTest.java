@@ -25,13 +25,13 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
@@ -68,7 +68,7 @@ class BaseLoaderTest {
         return Mono.just(Utils.readResource(
           "../config_with_external.json",
           BaseLoaderTest.class
-        ).getBytes(CharsetUtil.UTF_8));
+        ).getBytes(UTF_8));
       }
     };
 
@@ -85,7 +85,7 @@ class BaseLoaderTest {
     Loader loader = new BaseLoader(core, SERVICE) {
       @Override
       protected Mono<byte[]> discoverConfig(NetworkAddress seed, String bucket) {
-        return Mono.just("invalid".getBytes(CharsetUtil.UTF_8));
+        return Mono.just("invalid".getBytes(UTF_8));
       }
     };
 

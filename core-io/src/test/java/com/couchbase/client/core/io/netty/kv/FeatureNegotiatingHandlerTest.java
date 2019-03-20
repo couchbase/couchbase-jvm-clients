@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.verifyRequest;
 import static com.couchbase.client.util.Utils.readResource;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -44,7 +45,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import org.junit.jupiter.api.AfterEach;
@@ -199,7 +199,7 @@ class FeatureNegotiatingHandlerTest {
 
     // sanity check json block
     assertTrue(ProtocolVerifier.key(writtenRequest).isPresent());
-    String json = ProtocolVerifier.key(writtenRequest).get().toString(CharsetUtil.UTF_8);
+    String json = ProtocolVerifier.key(writtenRequest).get().toString(UTF_8);
     assertEquals(
       "{\"a\":\"some/0.0.0\",\"i\":\"0000000000000001/0000000000000001\"}",
       json

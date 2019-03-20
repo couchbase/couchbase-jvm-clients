@@ -21,7 +21,8 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class HttpProtocol {
 
@@ -36,10 +37,10 @@ public class HttpProtocol {
     final String pw = password == null ? "" : password;
 
     ByteBuf raw = Unpooled.buffer(user.length() + pw.length() + 1);
-    raw.writeBytes((user + ":" + pw).getBytes(CharsetUtil.UTF_8));
+    raw.writeBytes((user + ":" + pw).getBytes(UTF_8));
     ByteBuf encoded = Base64.encode(raw, false);
     request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic "
-      + encoded.toString(CharsetUtil.UTF_8));
+      + encoded.toString(UTF_8));
     encoded.release();
     raw.release();
   }

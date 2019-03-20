@@ -17,9 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link EncodedDocument} has everything which is important for a document on the wire
@@ -57,7 +58,7 @@ public class EncodedDocument {
   public String toString() {
     return "EncodedDocument{" +
       "flags=" + flags +
-      ", content=" + new String(content, CharsetUtil.UTF_8) +
+      ", content=" + new String(content, UTF_8) +
       '}';
   }
 

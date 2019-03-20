@@ -29,7 +29,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 
 import java.net.SocketAddress;
@@ -47,6 +46,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 import static com.couchbase.client.core.json.Mapper.decodeInto;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This handler tries to load the KV Error Map in a best effort manner.
@@ -190,7 +190,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
         return Optional.of(decodeInto(input, ErrorMap.class));
       } catch (MapperException e) {
         endpointContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
-          ioContext, e.getMessage(), new String(input, CharsetUtil.UTF_8)
+          ioContext, e.getMessage(), new String(input, UTF_8)
         ));
         return Optional.empty();
       }
