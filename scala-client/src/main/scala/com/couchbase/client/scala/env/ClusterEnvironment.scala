@@ -38,15 +38,18 @@ import scala.util.Try
 object ClusterEnvironment {
   // Create the thread pool that will be used for all Future throughout the SDK.
   private val numCores = Runtime.getRuntime.availableProcessors
-  private val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
+  // TODO move thread pool into local cluster env
+  private[scala] val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {
       val thread = new Thread(runnable)
+      // Make it a daemon thread so it doesn't block app exit
+      thread.setDaemon(true)
       thread.setName("cb-comps-" + thread.getId)
       thread
     }
   })
   private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
-  private val defaultScheduler = ExecutionContextScheduler(ec)
+  private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
 
   // TODO want to re-implement CoreEnvironment.Builder in Scala
   class Builder(credentials: Credentials) extends CoreEnvironment.Builder[Builder](credentials) {

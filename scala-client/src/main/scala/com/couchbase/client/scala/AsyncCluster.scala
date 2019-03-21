@@ -125,9 +125,9 @@ class AsyncCluster(environment: => ClusterEnvironment)
     * This should be called before application exit.
     */
   def shutdown(): Future[Unit] = {
-    Future {
-      environment.shutdown(environment.timeoutConfig().disconnectTimeout())
-    }
+    FutureConversions.javaCFToScalaFuture(
+      environment.shutdownAsync(environment.timeoutConfig().disconnectTimeout())
+    ).map(_ => Unit)
   }
 }
 

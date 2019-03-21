@@ -38,7 +38,7 @@ import scala.compat.java8.FutureConverters._
   * @since 1.0.0
   */
 private[scala] object FutureConversions {
-  def javaCFToScalaFuture(future: CompletableFuture[QueryResult]): Future[QueryResult] = {
+  def javaCFToScalaFuture[T](future: CompletableFuture[T]): Future[T] = {
     future.toScala
   }
 
