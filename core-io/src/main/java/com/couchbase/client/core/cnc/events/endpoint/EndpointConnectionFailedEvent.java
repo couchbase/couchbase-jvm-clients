@@ -48,7 +48,7 @@ public class EndpointConnectionFailedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    String msg = cause == null ? "" : " because of " + cause.getClass().getSimpleName();
+    String msg = cause == null ? "" : " because of " + cause.getClass().getSimpleName() + ": " + cause.getMessage();
     return "Connect attempt " + attempt + " failed" + msg;
   }
 
