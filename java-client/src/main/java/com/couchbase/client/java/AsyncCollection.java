@@ -905,11 +905,12 @@ public class AsyncCollection {
 
       List<SubdocMutateRequest.Command> commands = specs
         .stream()
-        .map(MutateInSpec::command)
+        .map(v -> v.encode())
         .collect(Collectors.toList());
 
       return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
-        opts.insertDocument(), opts.upsertDocument(), commands, opts.expiry().getSeconds(),
+        opts.insertDocument(), opts.upsertDocument(),
+        commands, opts.expiry().getSeconds(),
         opts.durabilityLevel()
       );
     }

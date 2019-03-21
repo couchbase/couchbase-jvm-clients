@@ -4,6 +4,7 @@ import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.Conversions.Encodable
 import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.scala.json.JsonObject
 
 import scala.util.Try
 
@@ -186,6 +187,21 @@ object MutateInSpec {
   def decrement(path: String, delta: Long): Increment = {
     Increment(path, delta * -1)
   }
+
+  /** Returns a `MutateInSpec` with the intent of upserting the entire content of the document.
+    *
+    * That is, the document will be inserted with the specified content if it does not exist, or replace with the
+    * specified content if it does.
+    *
+    * This is provided for advanced workflows that need to upsert a document along with xattrs.
+    *
+    * @param value      the value to upsert.  $SupportedTypes
+    * @param ev         $Encodable
+    */
+  def fullDocument[T](value: T)
+                     (implicit ev: Encodable[T]): FullDocument = {
+    FullDocument(ev.encodeSubDocumentField(value))
+  }
 }
 
 
@@ -260,6 +276,12 @@ case class Upsert(path: String,
   def createPath: Upsert = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
+}
+
+case class FullDocument(fragment: Try[(Array[Byte], EncodeParams)]) extends MutateInSpec {
+  override val typ: SubdocCommandType = SubdocCommandType.SET_DOC
+
+  def convert = new SubdocMutateRequest.Command(typ, "", fragment.get._1, false, false, false)
 }
 
 case class Remove(path: String,

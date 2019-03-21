@@ -192,8 +192,7 @@ class ReactiveCollection(async: AsyncCollection) {
                expiration: Duration,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutateInResult] = {
-    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout,
-      retryStrategy)
+    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.mutateInHandler)
   }
 

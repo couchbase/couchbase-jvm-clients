@@ -31,6 +31,9 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
+// TODO add cluster.shutdown() notice to docswell
+// TODO try for-comps with async API
+
 /**
   * Handles requests and responses for KV SubDocument mutation operations.
   *
@@ -43,7 +46,7 @@ private[scala] class MutateInHandler(hp: HandlerParams)
   def request[T](id: String,
                  spec: Seq[MutateInSpec],
                  cas: Long,
-                 document: DocumentCreation,
+                 document: DocumentCreation = DocumentCreation.DoNothing,
                  durability: Durability,
                  expiration: java.time.Duration,
                  parentSpan: Option[Span],
@@ -53,7 +56,6 @@ private[scala] class MutateInHandler(hp: HandlerParams)
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
-      _ <- Validate.notNull(document, "document")
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -87,7 +89,7 @@ private[scala] class MutateInHandler(hp: HandlerParams)
             Failure(SubdocMutateRequest.errIfNoCommands())
           }
           else {
-            Success(new SubdocMutateRequest(timeout,
+            Try(new SubdocMutateRequest(timeout,
               hp.core.context(),
               hp.bucketName,
               retryStrategy,

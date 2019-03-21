@@ -21,10 +21,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.LookupInSpec;
-import com.couchbase.client.java.kv.LookupInResult;
-import com.couchbase.client.java.kv.MutateInResult;
-import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -190,7 +187,62 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
 
+  @Test
+  void getFullDocument() {
+    String id = UUID.randomUUID().toString();
 
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.getFullDocument()));
+
+    assertEquals(
+            content,
+            result.get().contentAsObject(0)
+    );
+  }
+
+  @Test
+  void upsertFullDocument() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+
+    MutateInResult result = collection.mutateIn(id,
+            Arrays.asList(
+                    // Server doesn't allow fulLDocument to be only op here, get "key not found"
+                    MutateInSpec.upsert("qix", "qux"),
+                    MutateInSpec.fullDocument(content)),
+            MutateInOptions.mutateInOptions().upsertDocument(true));
+
+    Optional<GetResult> doc = collection.get(id);
+
+    assertEquals(
+            content,
+            doc.get().contentAsObject()
+    );
+  }
+
+  @Test
+  void insertFullDocument() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+
+    MutateInResult result = collection.mutateIn(id,
+            Arrays.asList(
+                    // Server doesn't allow fulLDocument to be only op here, get "key not found"
+                    MutateInSpec.upsert("qix", "qux"),
+                    MutateInSpec.fullDocument(content)),
+            MutateInOptions.mutateInOptions().insertDocument(true));
+
+    Optional<GetResult> doc = collection.get(id);
+
+    assertEquals(
+            content,
+            doc.get().contentAsObject()
+    );
+  }
 
 
 }

@@ -2,7 +2,7 @@ package com.couchbase.client.core.msg.kv;
 
 public enum SubdocCommandType {
   // mutateIn
-  UPSERTDOC((byte) 0x01),
+  SET_DOC((byte) 0x01),
   COUNTER((byte) 0xcf),
   REPLACE((byte) 0xca),
   DICT_ADD((byte) 0xc7),

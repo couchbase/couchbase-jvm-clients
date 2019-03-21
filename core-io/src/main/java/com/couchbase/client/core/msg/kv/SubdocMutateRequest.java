@@ -60,16 +60,25 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, final String bucket,
                              final RetryStrategy retryStrategy, final String key,
-                             final byte[] collection, final boolean insertDoc, final boolean upsertDoc, final List<Command> commands, long expiration,
+                             final byte[] collection,
+                             final boolean insertDocument, final boolean upsertDocument,
+                             final List<Command> commands, long expiration,
                              final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     byte flags = 0;
-    if (insertDoc) {
-      flags |= SUBDOC_DOC_FLAG_ADD;
+
+    if (insertDocument && upsertDocument) {
+      throw new IllegalArgumentException("Cannot both insert and upsert full document");
     }
-    else if (upsertDoc) {
+
+    if (upsertDocument) {
       flags |= SUBDOC_DOC_FLAG_MKDOC;
     }
+
+    if (insertDocument) {
+      flags |= SUBDOC_DOC_FLAG_ADD;
+    }
+
     this.flags = flags;
     this.commands = commands;
     this.expiration = expiration;
@@ -208,7 +217,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     private final boolean xattr;
     private final boolean expandMacro;
 
-    public Command(SubdocCommandType type, String path, byte[] fragment,
+      public Command(SubdocCommandType type, String path, byte[] fragment,
                    boolean createParent, boolean xattr, boolean expandMacro) {
       this.type = type;
       this.path = path;

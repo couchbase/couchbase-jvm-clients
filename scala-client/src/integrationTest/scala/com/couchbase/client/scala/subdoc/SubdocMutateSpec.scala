@@ -3,6 +3,7 @@ package com.couchbase.client.scala.subdoc
 import com.couchbase.client.core.error.DocumentAlreadyExistsException
 import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException, SubDocumentException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 
@@ -37,6 +38,22 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
+  def getContent2(docId: String): JsonObject = {
+    coll.get(docId) match {
+      case Success(result) =>
+        result.contentAs[JsonObject] match {
+          case Success(content) =>
+            content
+          case Failure(err) =>
+            assert(false, s"unexpected error $err")
+            null
+        }
+      case Failure(err) =>
+        assert(false, s"unexpected error $err")
+        null
+    }
+  }
+
   def prepare(content: ujson.Value): (String, Long) = {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -48,7 +65,9 @@ class SubdocMutateSpec extends FunSuite {
   def prepareXattr(content: ujson.Value): (String, Long) = {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val insertResult = coll.mutateIn(docId, Array(insert("x", content).xattr), document = DocumentCreation.Insert).get
+    val insertResult = coll.mutateIn(docId, Array(
+      insert("x", content).xattr
+    ), document = DocumentCreation.Insert).get
     (docId, insertResult.cas)
   }
 

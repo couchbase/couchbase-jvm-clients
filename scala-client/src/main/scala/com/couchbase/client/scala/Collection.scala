@@ -303,6 +303,8 @@ class Collection(
     * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
     *                      [[MutateInSpec]] for more details.
     * @param cas           $CAS
+    * @param document      controls whether the document should be inserted, upserted, or not touched.  See
+    *                      [[DocumentCreation]] for details.
     * @param durability    $Durability
     * @param expiration    $Expiration
     * @param parentSpan    $ParentSpan
