@@ -33,6 +33,11 @@ public class StringContent extends TypedContent<byte[]> {
   }
 
   @Override
+  public String toString() {
+    return new String(content(), UTF_8);
+  }
+
+  @Override
   public byte[] encoded() {
     return content();
   }
