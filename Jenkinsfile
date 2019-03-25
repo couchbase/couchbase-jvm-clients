@@ -169,18 +169,14 @@ def buildsAndTests(PLATFORMS) {
                         if (platform == "windows") {
                             batWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
-                                batWithEcho("gradlew.bat -version")
                                 batWithEcho("java -version")
-//                                batWithEcho("mvn package -Dmaven.test.skip")
-                                batWithEcho("gradle assemble")
+                                batWithEcho("mvn package -Dmaven.test.skip")
                             }
                         } else {
                             shWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
-                                shWithEcho("./gradlew -version")
                                 shWithEcho("java -version")
-//                                shWithEcho("mvn package -Dmaven.test.skip")
-                                shWithEcho("gradle assemble")
+                                shWithEcho("mvn package -Dmaven.test.skip")
                             }
                         }
                         stash includes: 'couchbase-jvm-clients/', name: "couchbase-jvm-clients-build-${platform}", useDefaultExcludes: false
@@ -193,9 +189,9 @@ def buildsAndTests(PLATFORMS) {
                             }
                         } else {
                             dir('couchbase-jvm-clients') {
-//                                shWithEcho("mvn test -DuseMock=true -Dci=true")
-                                // TODO: get it using mock
-                                shWithEcho("./gradlew test")
+                                // By default Java uses mock for testing
+                                // Scala uses localhost, which will fail currently
+                                shWithEcho("mvn --fail-at-end test")
                             }
                         }
                         // TODO: IF YOU HAVE INTEGRATION TESTS THAT RUN AGAINST THE MOCK DO THAT HERE

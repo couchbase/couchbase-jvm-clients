@@ -59,6 +59,8 @@ public class LookupInResult {
     return cas;
   }
 
+  // TODO these should return null if exists is false
+
   /**
    * Decodes the content at the given index into the target class with the default decoder.
    *
