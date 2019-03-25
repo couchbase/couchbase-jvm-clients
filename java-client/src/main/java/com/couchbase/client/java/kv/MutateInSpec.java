@@ -81,7 +81,7 @@ public abstract class MutateInSpec {
      *
      * @param value the value to upsert to the document's body
      */
-    public static <T> MutateInSpec fullDocument(final Object value) {
+    public static <T> FullDocument fullDocument(final Object value) {
         return new FullDocument(value);
     }
 
