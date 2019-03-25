@@ -11,5 +11,5 @@ package com.couchbase.client.core.error;
  * a more sophisticated approach, possibly including using getFromReplica to ascertain the current
  * document content.
  */
-interface RetryableOperationException {
+public interface RetryableOperationException {
 }
