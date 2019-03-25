@@ -21,21 +21,21 @@ package com.couchbase.client.core.error;
  * The synchronous replication durability work can return an ambiguous error (or we timeout waiting for the response,
  * which is effectively the same).  Here we know the change is on a majority of replicas, or it's on none.
  */
-public class DurabilityAmbiguous extends CouchbaseException implements RetryableOperationException {
+public class DurabilityAmbiguousException extends CouchbaseException implements RetryableOperationException {
 
-    public DurabilityAmbiguous() {
+    public DurabilityAmbiguousException() {
         super();
     }
 
-    public DurabilityAmbiguous(String message) {
+    public DurabilityAmbiguousException(String message) {
         super(message);
     }
 
-    public DurabilityAmbiguous(String message, Throwable cause) {
+    public DurabilityAmbiguousException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public DurabilityAmbiguous(Throwable cause) {
+    public DurabilityAmbiguousException(Throwable cause) {
         super(cause);
     }
 }

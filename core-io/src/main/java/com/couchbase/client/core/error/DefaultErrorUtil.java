@@ -35,7 +35,7 @@ public class DefaultErrorUtil {
             case OUT_OF_MEMORY: return new CouchbaseOutOfMemoryException();
             case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException();
             case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException();
-            case SYNC_WRITE_AMBIGUOUS: return new DurabilityAmbiguous();
+            case SYNC_WRITE_AMBIGUOUS: return new DurabilityAmbiguousException();
             case SYNC_WRITE_IN_PROGRESS: return new DurableWriteInProgressException();
 
                 // Any other error should not make it to this generic error handling
