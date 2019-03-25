@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,46 +17,44 @@
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.msg.BaseRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaders;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.HttpRequest;
+import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 
-public class QueryRequest extends BaseRequest<QueryResponse> {
+public class QueryRequest
+  extends BaseRequest<QueryResponse>
+  implements HttpRequest<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse> {
 
   private static final String URI = "/query";
   private final byte[] query;
 
   private final Credentials credentials;
 
-  public QueryRequest(final Duration timeout, final CoreContext ctx,
-                      final RetryStrategy retryStrategy, final Credentials credentials,
-                      final byte[] query) {
+  public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
+                      final Credentials credentials, final byte[] query) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.credentials = credentials;
   }
 
   @Override
-  public ServiceType serviceType() {
-    return ServiceType.QUERY;
-  }
-
   public FullHttpRequest encode() {
     ByteBuf content = Unpooled.wrappedBuffer(query);
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
@@ -69,6 +67,18 @@ public class QueryRequest extends BaseRequest<QueryResponse> {
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
     addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
     return request;
+  }
+
+  @Override
+  public QueryResponse decode(final ResponseStatus status, final QueryChunkHeader header,
+                              final Flux<QueryChunkRow> rows,
+                              final Mono<QueryChunkTrailer> trailer) {
+    return new QueryResponse(status, header, rows, trailer);
+  }
+
+  @Override
+  public ServiceType serviceType() {
+    return ServiceType.QUERY;
   }
 
 }

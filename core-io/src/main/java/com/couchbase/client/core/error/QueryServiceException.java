@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * There was a problem fulfilling the query request.
  *
@@ -33,22 +35,12 @@ public class QueryServiceException extends CouchbaseException {
         this.content = content;
     }
 
-    public QueryServiceException(String message, byte[] content) {
-        super(message);
-        this.content = content;
-    }
-
-    public QueryServiceException(String message, Throwable cause, byte[] content) {
-        super(message, cause);
-        this.content = content;
-    }
-
-    public QueryServiceException(Throwable cause, byte[] content) {
-        super(cause);
-        this.content = content;
-    }
-
     public byte[] content() {
         return content;
+    }
+
+    @Override
+    public String getMessage() {
+        return "Query Failed: " + new String(content, StandardCharsets.UTF_8);
     }
 }

@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
@@ -123,7 +124,7 @@ public class QueryResult {
 	 *
 	 * @return list of warnings
 	 */
-	public List<JsonObject> warnings() {
+	public JsonArray warnings() {
 		return block(this.asyncResult.warnings());
 	}
 }

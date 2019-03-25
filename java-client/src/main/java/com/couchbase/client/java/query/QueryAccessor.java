@@ -18,7 +18,6 @@ package com.couchbase.client.java.query;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -44,8 +43,8 @@ public class QueryAccessor {
 	}
 
 	private static CompletableFuture<QueryResponse> queryInternal(final Core core, final Query query,
-																  final QueryOptions.BuiltQueryOptions opts,
-																  final ClusterEnvironment environment) {
+																																final QueryOptions.BuiltQueryOptions opts,
+																																final ClusterEnvironment environment) {
 		Duration timeout = opts.timeout().orElse(environment.timeoutConfig().queryTimeout());
 		RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 		JsonObject queryJson = query.getQueryJson(opts.parameters());

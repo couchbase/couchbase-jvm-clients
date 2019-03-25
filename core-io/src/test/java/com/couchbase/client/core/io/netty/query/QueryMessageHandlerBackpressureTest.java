@@ -52,6 +52,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -133,7 +134,7 @@ class QueryMessageHandlerBackpressureTest {
     final QueryResponse response = request.response().get();
 
     assertEquals(0, rows.size());
-    StepVerifier.create(response.rows().map(String::new),0)
+    StepVerifier.create(response.rows().map(v -> new String(v.data(), UTF_8)),0)
       .thenRequest(1)
       .expectNext("{\"foo\"}")
       .thenRequest(1)
@@ -168,15 +169,16 @@ class QueryMessageHandlerBackpressureTest {
 
               @Override
               public void channelReadComplete(ChannelHandlerContext ctx) {
+                String content = "{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\"},{\"bar\"},{\"faz\"},{\"baz\"},{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}";
+
                 HttpResponse response = new DefaultHttpResponse(
                   HttpVersion.HTTP_1_1,
                   HttpResponseStatus.OK
                 );
-                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, ("{\"results\": [{\"foo\"},{\"bar\"}," +
-                        "{\"faz\"},{\"baz\"},{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}").length());
+                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length());
                 ctx.write(response);
                 ctx.write(new DefaultHttpContent(
-                  Unpooled.copiedBuffer("{\"results\": [{\"foo\"},", UTF_8)
+                  Unpooled.copiedBuffer("{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\"},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultHttpContent(
                         Unpooled.copiedBuffer("{\"bar\"},", UTF_8)

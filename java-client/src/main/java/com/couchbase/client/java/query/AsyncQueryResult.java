@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.java.query;
 
 import java.io.IOException;
@@ -23,9 +24,10 @@ import java.util.concurrent.ExecutionException;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import reactor.core.publisher.Flux;
 
 /**
  * Query Result that fetches the parts of the Query response asynchronously
@@ -46,14 +48,14 @@ public class AsyncQueryResult {
 	 * Returns the request identifier string of the query request
 	 */
 	public String requestId() {
-		return this.response.requestId();
+		return this.response.header().requestId();
 	}
 
 	/**
 	 * Returns the client context identifier string set on the query request, if it's available
 	 */
 	public Optional<String> clientContextId() {
-		return this.response.clientContextId();
+		return this.response.header().clientContextId();
 	}
 
 	/**
@@ -62,8 +64,8 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<String> queryStatus() {
-		return this.response.additional()
-				.map(v -> v.status)
+		return this.response.trailer()
+				.map(QueryChunkTrailer::status)
 				.toFuture();
 	}
 
@@ -77,7 +79,7 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public JsonObject signature() {
-		return response.signature().map(v -> {
+		return response.header().signature().map(v -> {
 			try {
 				return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
 			} catch (IOException ex) {
@@ -96,10 +98,10 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<JsonObject> profileInfo() {
-		return this.response.additional().map(addl -> {
-			if (addl.profile.isPresent()) {
+		return this.response.trailer().map(addl -> {
+			if (addl.profile().isPresent()) {
 				try {
-					return JacksonTransformers.MAPPER.readValue(addl.profile.get(), JsonObject.class);
+					return JacksonTransformers.MAPPER.readValue(addl.profile().get(), JsonObject.class);
 				} catch (IOException ex) {
 					throw new DecodingFailedException(ex);
 				}
@@ -119,12 +121,16 @@ public class AsyncQueryResult {
 	 * @return {@link CompletableFuture}
 	 */
 	public CompletableFuture<QueryMetrics> metrics() {
-		return this.response.additional().map(addl -> {
-			try {
-				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(addl.metrics, JsonObject.class);
-				return new QueryMetrics(jsonObject);
-			} catch (IOException ex) {
-				throw new DecodingFailedException(ex);
+		return this.response.trailer().map(v -> {
+			if (v.metrics().isPresent()) {
+				try {
+					JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(v.metrics().get(), JsonObject.class);
+					return new QueryMetrics(jsonObject);
+				} catch (IOException ex) {
+					throw new DecodingFailedException(ex);
+				}
+			} else {
+				return QueryMetrics.EMPTY_METRICS;
 			}
 		}).toFuture();
 	}
@@ -152,7 +158,7 @@ public class AsyncQueryResult {
 	public <T> CompletableFuture<List<T>> rows(Class<T> target) {
 		return this.response.rows().map(n -> {
 			try {
-				return JacksonTransformers.MAPPER.readValue(n, target);
+				return JacksonTransformers.MAPPER.readValue(n.data(), target);
 			} catch (IOException ex) {
 				throw new DecodingFailedException(ex);
 			}
@@ -168,15 +174,17 @@ public class AsyncQueryResult {
 	 *
 	 * @return {@link CompletableFuture}
 	 */
-	public CompletableFuture<List<JsonObject>> warnings() {
-		return this.response.additional().flatMapMany(addl -> {
-			return Flux.fromIterable(addl.warnings).map(w -> {
+	public CompletableFuture<JsonArray> warnings() {
+		return this.response.trailer().map(addl -> {
+			if (addl.warnings().isPresent()) {
 				try {
-					return JacksonTransformers.MAPPER.readValue(w, JsonObject.class);
+					return JacksonTransformers.MAPPER.readValue(addl.warnings().get(), JsonArray.class);
 				} catch (IOException ex) {
 					throw new DecodingFailedException(ex);
 				}
-			});
-		}).collectList().toFuture();
+			} else {
+				return JsonArray.empty();
+			}
+		}).toFuture();
 	}
 }

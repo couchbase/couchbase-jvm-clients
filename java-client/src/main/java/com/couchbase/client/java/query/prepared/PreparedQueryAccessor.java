@@ -18,9 +18,8 @@ package com.couchbase.client.java.query.prepared;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
+
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryStrategy;

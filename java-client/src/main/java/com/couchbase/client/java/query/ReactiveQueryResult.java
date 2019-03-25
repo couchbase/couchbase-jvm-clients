@@ -47,14 +47,14 @@ public class ReactiveQueryResult {
 	 * Returns the request identifier string of the query request
 	 */
 	public String requestId() {
-		return this.response.requestId();
+		return this.response.header().requestId();
 	}
 
 	/**
 	 * Returns the client context identifier string set on the query request, if available
 	 */
 	public Optional<String> clientContextId() {
-		return this.response.clientContextId();
+		return this.response.header().clientContextId();
 	}
 
 	/**
@@ -137,7 +137,7 @@ public class ReactiveQueryResult {
 	public <T>Flux<T> rows(Class<T> target) {
 		return this.response.rows().map(n -> {
 			try {
-				return JacksonTransformers.MAPPER.readValue(n, target);
+				return JacksonTransformers.MAPPER.readValue(n.data(), target);
 			} catch (IOException ex) {
 				throw new CouchbaseException(ex);
 			}
