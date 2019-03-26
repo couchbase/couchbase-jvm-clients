@@ -32,8 +32,8 @@ import scala.util.{Failure, Success, Try}
   * @param rows            all rows returned from the query
   * @param clientContextId if a clientContextId was provided in [[QueryOptions]] it will be returned here.  This
   *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the query
-  * @param metrics         metrics related to the query request
+  * @param signature       details of the signature of the query, if any were present
+  * @param metrics         metrics related to the query request, if they were not disabled in [[QueryOptions]]
   * @param warnings        any warnings returned from the query service
   * @param status          the raw status string returned from the query service
   * @param profile         if a profile was requested in [[QueryOptions]] it will be returned here
@@ -44,9 +44,9 @@ import scala.util.{Failure, Success, Try}
 case class QueryResult(rows: Seq[QueryRow],
                        private[scala] val requestId: String,
                        clientContextId: Option[String],
-                       signature: QuerySignature,
-                       metrics: QueryMetrics,
-                       warnings: Seq[QueryError],
+                       signature: Option[QuerySignature],
+                       metrics: Option[QueryMetrics],
+                       warnings: Option[QueryWarnings],
                        status: String,
                        profile: Option[QueryProfile])
 
@@ -57,14 +57,14 @@ case class QueryResult(rows: Seq[QueryRow],
   *                        be raised on this Flux
   * @param clientContextId if a clientContextId was provided in [[QueryOptions]] it will be returned here.  This
   *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the query
+  * @param signature       details of the signature of the query, if any were present
   * @param additional      a Mono containing additional information related to the query, that is received from the
   *                        query service after any rows and errors
   */
 case class ReactiveQueryResult(rows: Flux[QueryRow],
                                private[scala] val requestId: String,
                                clientContextId: Option[String],
-                               signature: QuerySignature,
+                               signature: Option[QuerySignature],
                                additional: Mono[QueryAdditional])
 
 /** An individual query result row.
@@ -131,22 +131,43 @@ case class QueryError(private val content: Array[Byte]) extends CouchbaseExcepti
 }
 
 /** Returns the signature information of a query request, in JSON form. */
-case class QuerySignature(private val _content: Option[Array[Byte]]) {
+case class QuerySignature(private val _content: Array[Byte]) {
   /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Try[Array[Byte]] = {
-    _content match {
-      case Some(v) => Success(v)
-      case _ => Failure(QueryResponse.errorSignatureNotPresent())
-    }
+  def contentAsBytes: Array[Byte] = {
+    _content
   }
 
   /** Return the content, converted into the application's preferred representation.
+    *
+    * The content is a JSON object, so a suitable representation would be [[JsonObject]].
     *
     * @tparam T $SupportedTypes
     */
   def contentAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    contentAsBytes.flatMap(v => ev.decode(v, Conversions.JsonFlags))
+    ev.decode(_content, Conversions.JsonFlags)
+  }
+
+  override def toString: String = contentAs[JsonObject].get.toString
+}
+
+/** Returns any warnings of a query request, in JSON form. */
+case class QueryWarnings(private val _content: Array[Byte]) {
+  /** Return the content as an `Array[Byte]` */
+  def contentAsBytes: Array[Byte] = {
+    _content
+  }
+
+  /** Return the content, converted into the application's preferred representation.
+    *
+    * The content is a JSON array, so a suitable representation would be
+    * [[com.couchbase.client.scala.json.JsonArray]].
+    *
+    * @tparam T $SupportedTypes
+    */
+  def contentAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    ev.decode(_content, Conversions.JsonFlags)
   }
 
   override def toString: String = contentAs[JsonObject].get.toString
@@ -202,13 +223,13 @@ private[scala] object QueryMetrics {
 
 /** Additional information returned by the query service after any rows and errors.
   *
-  * @param metrics         metrics related to the query request
+  * @param metrics         metrics related to the query request, if they were not disabled in [[QueryOptions]]
   * @param warnings        any warnings returned from the query service
   * @param status          the raw status string returned from the query service
   * @param profile         if a profile was requested in [[QueryOptions]] it will be returned here
   */
-case class QueryAdditional(metrics: QueryMetrics,
-                           warnings: Seq[QueryError],
+case class QueryAdditional(metrics: Option[QueryMetrics],
+                           warnings: Option[QueryWarnings],
                            status: String,
                            profile: Option[QueryProfile])
 

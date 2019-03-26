@@ -2,13 +2,13 @@ package com.couchbase.client.scala.query
 
 import java.util.concurrent.atomic.AtomicReference
 
-import com.couchbase.client.core.error.{DecodingFailedException, QueryStreamException}
+import com.couchbase.client.core.error.{DecodingFailedException, QueryServiceException, QueryStreamException}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import org.scalatest.FunSuite
 import reactor.core.scala.publisher.Flux
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 class QuerySpec extends FunSuite {
@@ -56,13 +56,13 @@ class QuerySpec extends FunSuite {
         assert(result.requestId != null)
         assert(result.rows.size == 1)
         assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world 2")
-        val signature = result.signature.contentAs[JsonObject].get
+        val signature = result.signature.get.contentAs[JsonObject].get
         assert(signature.size > 0)
 
         val out = result
-        assert(out.metrics.errorCount == 0)
-        assert(out.metrics.warningCount == 0)
-        assert(out.metrics.mutationCount == 0)
+        assert(out.metrics.get.errorCount == 0)
+        assert(out.metrics.get.warningCount == 0)
+        assert(out.metrics.get.mutationCount == 0)
         assert(out.warnings.size == 0)
         assert(out.status == "success")
         assert(out.profile.isEmpty)
@@ -114,7 +114,6 @@ class QuerySpec extends FunSuite {
       .flatMapMany(result => {
         assert(result.requestId != null)
         assert(result.clientContextId.isEmpty)
-        assert(result.signature.contentAsBytes.isSuccess)
 
         result.rows.doOnNext(v => {
           println("GOT A ROW!!" + v)
@@ -143,16 +142,16 @@ class QuerySpec extends FunSuite {
       .blockLast().get
 
     assert(rowsKeeper.get.size == 1)
-    assert(out.metrics.errorCount == 0)
-    assert(out.metrics.warningCount == 0)
-    assert(out.metrics.mutationCount == 0)
+    assert(out.metrics.get.errorCount == 0)
+    assert(out.metrics.get.warningCount == 0)
+    assert(out.metrics.get.mutationCount == 0)
     assert(out.warnings.size == 0)
     assert(out.status == "success")
     assert(out.profile.isEmpty)
   }
 
   test("reactive error due to bad syntax") {
-    assertThrows[QueryError](
+    assertThrows[QueryServiceException](
       cluster.reactive.query("""sselect*from""")
         .flatMapMany(result => {
           result.rows
@@ -182,7 +181,8 @@ class QuerySpec extends FunSuite {
 
     cluster.query(
       """select * from default where name=$nval""",
-      QueryOptions().namedParameter("nval", "Eric Wimp")) match {
+      QueryOptions().namedParameter("nval", "Eric Wimp")
+    .scanConsistency(ScanConsistency.RequestPlus())) match {
       case Success(result) => assert(result.rows.size > 0)
       case Failure(err) => throw err
     }
@@ -213,7 +213,7 @@ class QuerySpec extends FunSuite {
       """select 'hello world' as Greeting""",
       QueryOptions().disableMetrics(true)) match {
       case Success(result) =>
-        assert(result.metrics.errorCount == 0)
+        assert(result.metrics.get.errorCount == 0)
       case Failure(err) => throw err
     }
   }

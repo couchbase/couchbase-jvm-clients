@@ -68,9 +68,8 @@ class ReactiveCluster(val async: AsyncCluster)
 //            response.rows().map[QueryRow]((bytes: Array[Byte]) => QueryRow(bytes))
 
             val rows: ScalaFlux[QueryRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
-              .map[QueryRow](bytes => {
-              QueryRow(bytes)
-            }).onErrorMap((err: Throwable) => {
+              .map[QueryRow](bytes => QueryRow(bytes.data()))
+              .onErrorMap((err: Throwable) => {
                 val x: Throwable = err match {
                   case e: QueryServiceException => QueryError(e.content)
                   case _ => err
@@ -78,10 +77,10 @@ class ReactiveCluster(val async: AsyncCluster)
                 x
               })
 
-            val additional: ScalaMono[QueryAdditional] = FutureConversions.javaMonoToScalaMono(response.additional())
+            val additional: ScalaMono[QueryAdditional] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(addl => {
-                QueryAdditional(QueryMetrics.fromBytes(addl.metrics),
-                  addl.warnings.asScala.map(QueryError),
+                QueryAdditional(addl.metrics().asScala.map(QueryMetrics.fromBytes),
+                  addl.warnings.asScala.map(QueryWarnings),
                   addl.status,
                   addl.profile.asScala.map(v => QueryProfile(v))
                 )
@@ -89,9 +88,9 @@ class ReactiveCluster(val async: AsyncCluster)
 
             ReactiveQueryResult(
               rows,
-              response.requestId(),
-              response.clientContextId().asScala,
-              QuerySignature(response.signature().asScala),
+              response.header().requestId(),
+              response.header().clientContextId().asScala,
+              response.header().signature().asScala.map(QuerySignature),
               additional
             )
           })

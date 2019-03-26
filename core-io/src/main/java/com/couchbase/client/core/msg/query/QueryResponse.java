@@ -42,6 +42,10 @@ public class QueryResponse
     return new IllegalStateException("Field 'signature' was not present in response");
   }
 
+  public static RuntimeException errorWarningsNotPresent() {
+    return new IllegalStateException("Field 'warnings' was not present in response");
+  }
+
   public static RuntimeException errorProfileNotPresent() {
     return new IllegalStateException("Field 'profile' was not present in response");
   }

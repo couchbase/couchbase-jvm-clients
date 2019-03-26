@@ -87,17 +87,17 @@ class AsyncCluster(environment: => ClusterEnvironment)
           .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
             .collectSeq()
             .flatMap(rows => {
-              rowsKeeper.set(rows.map(QueryRow))
+              rowsKeeper.set(rows.map(v => QueryRow(v.data())))
 
-              FutureConversions.javaMonoToScalaMono(response.additional())
+              FutureConversions.javaMonoToScalaMono(response.trailer())
             })
             .map(addl => QueryResult(
               rowsKeeper.get(),
-              response.requestId(),
-              response.clientContextId().asScala,
-              QuerySignature(response.signature().asScala),
-              QueryMetrics.fromBytes(addl.metrics),
-              addl.warnings.asScala.map(QueryError),
+              response.header().requestId(),
+              response.header().clientContextId().asScala,
+              response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
+              addl.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
+              addl.warnings.asScala.map(bytes => QueryWarnings(bytes)),
               addl.status,
               addl.profile.asScala.map(QueryProfile))
             )
