@@ -69,7 +69,7 @@ case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Ar
   * @since 1.0.0
   * @define Same             This asynchronous version performs the same functionality and takes the same parameters,
   *                          but returns the same result object asynchronously in a `Future`.
-  **/
+  * */
 class AsyncCollection(name: String,
                       collectionId: Long,
                       bucketName: String,
@@ -192,11 +192,22 @@ class AsyncCollection(name: String,
         case Success(request) =>
           core.send(request)
 
-          FutureConverters.toScala(request.response())
-            .flatMap(response => getSubDocHandler.responseProject(id, response) match {
-              case Success(v) => Future.successful(v)
-              case Failure(err) => Future.failed(err)
+          val out: Future[GetResult] = FutureConverters.toScala(request.response())
+            .flatMap(response => {
+              val ret = getSubDocHandler.responseProject(id, response) match {
+                case Success(v: Option[GetResult]) =>
+                  v match {
+                    case Some(x) => Future.successful(x)
+                    case _ => Future.failed(new DocumentDoesNotExistException(s"Document $id not found"))
+                  }
+
+                case Failure(err) => Future.failed(err)
+              }
+
+              ret
             })
+
+          out
 
         case Failure(err) => Future.failed(err)
       }
@@ -219,6 +230,10 @@ class AsyncCollection(name: String,
                          retryStrategy: RetryStrategy = environment.retryStrategy()): Future[GetResult] = {
     val req = getFullDocHandler.request(id, parentSpan, timeout, retryStrategy)
     wrap(req, id, getFullDocHandler)
+      .map {
+        case Some(x) => x
+        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+      }
   }
 
 
@@ -233,10 +248,12 @@ class AsyncCollection(name: String,
       case Success(request) =>
         core.send(request)
 
-        val out = FutureConverters.toScala(request.response())
+        FutureConverters.toScala(request.response())
           .map(response => getSubDocHandler.response(id, response))
-
-        out
+          .map {
+            case Some(x) => x
+            case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+          }
 
       case Failure(err) => Future.failed(err)
     }
@@ -271,6 +288,10 @@ class AsyncCollection(name: String,
                 ): Future[GetResult] = {
     val req = getAndLockHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, getAndLockHandler)
+      .map {
+        case Some(x) => x
+        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+      }
   }
 
   /** Unlock a locked document.
@@ -298,6 +319,10 @@ class AsyncCollection(name: String,
                  ): Future[GetResult] = {
     val req = getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
     wrap(req, id, getAndTouchHandler)
+      .map {
+        case Some(x) => x
+        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+      }
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -349,6 +374,10 @@ class AsyncCollection(name: String,
             .map(response => {
               getFullDocHandler.response(id, response)
             })
+            .map {
+              case Some(x) => x
+              case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+            }
         })
 
         out

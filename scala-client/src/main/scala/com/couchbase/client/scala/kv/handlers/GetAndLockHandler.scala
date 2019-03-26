@@ -33,7 +33,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndLockHandler(hp: HandlerParams)
-  extends RequestHandler[GetAndLockResponse, GetResult] {
+  extends RequestHandler[GetAndLockResponse, Option[GetResult]] {
 
   def request[T](id: String,
                  expiration: java.time.Duration,
@@ -63,10 +63,12 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: GetAndLockResponse): GetResult = {
+  def response(id: String, response: GetAndLockResponse): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty)
+        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty))
+
+      case ResponseStatus.NOT_FOUND => None
 
       case _ => throw DefaultErrors.throwOnBadResult(response.status())
     }

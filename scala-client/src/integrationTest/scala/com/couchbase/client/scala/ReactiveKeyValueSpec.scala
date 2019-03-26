@@ -35,12 +35,13 @@ class ReactiveKeyValueSpec extends FunSuite {
     assert(wrap(coll.insert(docId, content)).isSuccess)
 
     wrap(coll.get(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         result.contentAs[ujson.Obj] match {
           case Success(body) =>
             assert(body("hello").str == "world")
           case Failure(err) => assert(false, s"unexpected error $err")
         }
+      case Success(None) => assert(false, s"unexpected error doc not found")
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -85,7 +86,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     assert(wrap(coll.insert(docId, content, expiration = 5.seconds)).isSuccess)
 
     wrap(coll.get(docId)) match {
-      case Success(result) => assert(result.expiration.isEmpty)
+      case Success(Some(result)) => assert(result.expiration.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -97,7 +98,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     assert(wrap(coll.insert(docId, content, expiration = 5.seconds)).isSuccess)
 
     wrap(coll.get(docId, withExpiration = true)) match {
-      case Success(result) => assert(result.expiration.isDefined)
+      case Success(Some(result)) => assert(result.expiration.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -109,7 +110,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     val insertResult = wrap(coll.insert(docId, content)).get
 
     wrap(coll.getAndLock(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.cas)
         assert(result.contentAs[ujson.Obj].get == content)
@@ -117,7 +118,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
 
     wrap(coll.getAndLock(docId)) match {
-      case Success(result) => assert(false, "should not have been able to relock locked doc")
+      case Success(Some(result)) => assert(false, "should not have been able to relock locked doc")
       case Failure(err: TemporaryLockFailureException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -132,7 +133,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     assert (insertResult.cas != 0)
 
     wrap(coll.getAndTouch(docId, 1.second)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.cas)
         assert(result.contentAs[ujson.Obj].get == content)
@@ -149,7 +150,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     assert(wrap(coll.remove(docId)).isSuccess)
 
     wrap(coll.get(docId)) match {
-      case Success(result) => assert(false, s"doc $docId exists and should not")
+      case Success(Some(result)) => assert(false, s"doc $docId exists and should not")
       case Failure(err: DocumentDoesNotExistException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -169,7 +170,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
 
     wrap(coll.get(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas == upsertResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -197,7 +198,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
 
     wrap(coll.get(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas == upsertResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -239,7 +240,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
 
     wrap(coll.get(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas == replaceResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -267,7 +268,7 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
 
     wrap(coll.get(docId)) match {
-      case Success(result) =>
+      case Success(Some(result)) =>
         assert(result.cas == replaceResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")

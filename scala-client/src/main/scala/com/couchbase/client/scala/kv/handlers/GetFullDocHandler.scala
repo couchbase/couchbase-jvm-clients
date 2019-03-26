@@ -34,7 +34,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetFullDocHandler(hp: HandlerParams)
-  extends RequestHandler[GetResponse, GetResult] {
+  extends RequestHandler[GetResponse, Option[GetResult]] {
 
   def request[T](id: String,
                  parentSpan: Option[Span],
@@ -61,10 +61,12 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: GetResponse): GetResult = {
+  def response(id: String, response: GetResponse): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty)
+        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty))
+
+      case ResponseStatus.NOT_FOUND => None
 
       case _ => throw DefaultErrors.throwOnBadResult(response.status())
     }

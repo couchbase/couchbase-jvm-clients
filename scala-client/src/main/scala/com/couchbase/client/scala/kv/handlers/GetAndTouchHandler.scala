@@ -36,7 +36,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndTouchHandler(hp: HandlerParams)
-  extends RequestHandler[GetAndTouchResponse, GetResult] {
+  extends RequestHandler[GetAndTouchResponse, Option[GetResult]] {
 
   def request[T](id: String,
                  expiration: java.time.Duration,
@@ -70,10 +70,12 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: GetAndTouchResponse): GetResult = {
+  def response(id: String, response: GetAndTouchResponse): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty)
+        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty))
+
+      case ResponseStatus.NOT_FOUND => None
 
       case _ => throw DefaultErrors.throwOnBadResult(response.status())
     }

@@ -118,7 +118,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: SubdocGetResponse): LookupInResult = {
+  def response(id: String, response: SubdocGetResponse): Option[LookupInResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
@@ -132,8 +132,10 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
           }
         })
 
-        LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime)
+        Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime))
 
+
+      case ResponseStatus.NOT_FOUND => None
 
       case ResponseStatus.SUBDOC_FAILURE =>
 
@@ -146,7 +148,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     }
   }
 
-  def responseProject(id: String, response: SubdocGetResponse): Try[GetResult] = {
+  def responseProject(id: String, response: SubdocGetResponse): Try[Option[GetResult]] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
@@ -160,7 +162,9 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         // If any op failed, return the first failure
         val y: Try[Seq[JsonObject]] = FunctionalUtil.traverse(x.toList)
 
-        y.map(_ => GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None))
+        y.map(_ => Some(GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None)))
+
+      case ResponseStatus.NOT_FOUND => Success(None)
 
       case ResponseStatus.SUBDOC_FAILURE =>
 
