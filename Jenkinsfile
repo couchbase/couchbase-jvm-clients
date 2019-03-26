@@ -164,7 +164,7 @@ def buildsAndTests(PLATFORMS) {
                     stage("build-${platform}") {
                         cleanWs()
                         unstash 'couchbase-jvm-clients'
-                        installJDK(platform, JAVA_VERSION)
+                        installJDK(platform, JDK_VERSION)
 
                         if (platform == "windows") {
                             batWithEcho("dir deps")
@@ -205,7 +205,7 @@ def buildsAndTests(PLATFORMS) {
     parallel tests
 }
 
-def installJDK(PLATFORM, JAVA_VERSION) {
+def installJDK(PLATFORM, JDK_VERSION) {
     def install = false
 
     if (!fileExists("deps")) {

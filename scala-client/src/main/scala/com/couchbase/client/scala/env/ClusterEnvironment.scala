@@ -37,9 +37,11 @@ import scala.util.Try
   */
 object ClusterEnvironment {
   // Create the thread pool that will be used for all Future throughout the SDK.
-  private val numCores = Runtime.getRuntime.availableProcessors
   // TODO move thread pool into local cluster env
-  private[scala] val threadPool = Executors.newFixedThreadPool(numCores, new ThreadFactory {
+
+  // Implementation note: there are some potentially long-running operations that will need to go on this pool.  E.g.
+  // buffering a query result.  So, make it unlimited.
+  private[scala] val threadPool = Executors.newCachedThreadPool(new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {
       val thread = new Thread(runnable)
       // Make it a daemon thread so it doesn't block app exit
