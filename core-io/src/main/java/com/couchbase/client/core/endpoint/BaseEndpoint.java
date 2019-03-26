@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -104,6 +105,8 @@ public abstract class BaseEndpoint implements Endpoint {
    * The event loop group used for this endpoint, passed to netty.
    */
   private final EventLoopGroup eventLoopGroup;
+
+  private final RequestCompletionConsumer requestCompletionConsumer = new RequestCompletionConsumer();
 
   /**
    * Once connected, contains the channel to work with.
@@ -341,15 +344,7 @@ public abstract class BaseEndpoint implements Endpoint {
     if (canWrite()) {
         circuitBreaker.track();
         outstandingRequests.incrementAndGet();
-        request.response().whenComplete((r, t) -> {
-          if (r != null) {
-            circuitBreaker.markSuccess();
-          } else {
-            circuitBreaker.markFailure();
-          }
-          outstandingRequests.decrementAndGet();
-          lastResponseTimestamp = System.nanoTime();
-        });
+        request.response().whenComplete(requestCompletionConsumer);
         channel.writeAndFlush(request);
     } else {
       RetryOrchestrator.maybeRetry(endpointContext.get(), request);
@@ -407,4 +402,26 @@ public abstract class BaseEndpoint implements Endpoint {
   public EndpointContext endpointContext() {
     return endpointContext.get();
   }
+
+
+  /**
+   * This request completion consumer is cached in the parent class to reuse it
+   * across each request and not create garbage each and every time.
+   *
+   * <p>It gets called when a request is completed and updates the endpoints associated
+   * state i.e. circuit breakers, outstanding requests and last response timestamp.</p>
+   */
+  class RequestCompletionConsumer implements BiConsumer<Response, Throwable> {
+    @Override
+    public void accept(final Response r, final Throwable t) {
+      if (r != null) {
+        circuitBreaker.markSuccess();
+      } else {
+        circuitBreaker.markFailure();
+      }
+      outstandingRequests.decrementAndGet();
+      lastResponseTimestamp = System.nanoTime();
+    }
+  }
+
 }
