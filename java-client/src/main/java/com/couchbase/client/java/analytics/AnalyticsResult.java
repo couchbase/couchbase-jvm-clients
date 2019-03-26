@@ -16,11 +16,59 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.java.json.JsonObject;
+
+import java.util.List;
+import java.util.Optional;
+
+import static com.couchbase.client.java.AsyncUtils.block;
+
 public class AnalyticsResult {
 
-  private final AsyncAnalyticsResult asyncAnalyticsResult;
+  private final AsyncAnalyticsResult asyncResult;
 
-  public AnalyticsResult(AsyncAnalyticsResult asyncAnalyticsResult) {
-    this.asyncAnalyticsResult = asyncAnalyticsResult;
+  public AnalyticsResult(AsyncAnalyticsResult asyncResult) {
+    this.asyncResult = asyncResult;
   }
+
+  /**
+   * Get the request identifier of the query request
+   *
+   * @return request identifier
+   */
+  public String requestId() {
+    return this.asyncResult.requestId();
+  }
+
+  /**
+   * Get the client context identifier as set by the client
+   *
+   * @return client context identifier
+   */
+  public Optional<String> clientContextId() {
+    return this.asyncResult.clientContextId();
+  }
+
+  /**
+   * Get the list of rows that were fetched by the query which are then
+   * decoded to the requested entity class
+   *
+   * @param target target class for converting the query row
+   * @param <T> generic class
+   * @return list of entities
+   */
+  public <T> List<T> rows(Class<T> target) {
+    return block(this.asyncResult.rows(target));
+  }
+
+  /**
+   * Get the list of rows that were fetched by the query which are then
+   * decoded to {@link JsonObject}
+   *
+   * @return list of {@link JsonObject}
+   */
+  public List<JsonObject> rows() {
+    return block(this.asyncResult.rows());
+  }
+
 }

@@ -18,6 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -151,6 +153,34 @@ public class ReactiveCluster {
         )
       ));
     }
+  }
+
+  /**
+   * Performs an Analytics query with default {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
+   */
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+  }
+
+
+  /**
+   * Performs an Analytics query with custom {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @param options the custom options for this analytics query.
+   * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
+   */
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement,
+                                                      final AnalyticsOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "AnalyticsOptions");
+
+    AnalyticsOptions.BuiltQueryOptions builtOptions = options.build();
+
+    return null;
   }
 
   /**

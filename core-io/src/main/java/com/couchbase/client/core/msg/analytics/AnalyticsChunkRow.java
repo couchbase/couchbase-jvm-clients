@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,28 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.analytics;
+package com.couchbase.client.core.msg.analytics;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.msg.chunk.ChunkRow;
 
-import java.util.concurrent.CompletableFuture;
+import java.nio.charset.StandardCharsets;
 
-public class AnalyticsAccessor {
+public class AnalyticsChunkRow implements ChunkRow {
 
-  public static CompletableFuture<AsyncAnalyticsResult> analyticsQueryAsync(final Core core,
-                                                             final AnalyticsRequest request) {
-    core.send(request);
-    return request
-      .response()
-      .thenApply(AsyncAnalyticsResult::new);
+  private final byte[] data;
+
+  public AnalyticsChunkRow(byte[] data) {
+    this.data = data;
+  }
+
+  public byte[] data() {
+    return data;
+  }
+
+  @Override
+  public String toString() {
+    return "AnalyticsChunkRow{" +
+      "data=" + new String(data, StandardCharsets.UTF_8) +
+      '}';
   }
 }

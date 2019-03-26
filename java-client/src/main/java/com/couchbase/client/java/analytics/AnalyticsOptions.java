@@ -16,12 +16,33 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   public static AnalyticsOptions DEFAULT = new AnalyticsOptions();
 
+  private int priority;
+
   private AnalyticsOptions() {}
+
+  public AnalyticsOptions priority(int priority) {
+    this.priority = priority;
+    return this;
+  }
+
+  @Stability.Internal
+  public AnalyticsOptions.BuiltQueryOptions build() {
+    return new AnalyticsOptions.BuiltQueryOptions();
+  }
+
+  public class BuiltQueryOptions extends BuiltCommonOptions {
+
+    public int priority() {
+      return priority;
+    }
+
+  }
 
 }

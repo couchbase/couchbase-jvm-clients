@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.query;
+package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -22,16 +22,16 @@ import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class QueryResponse
+public class AnalyticsResponse
   extends BaseResponse
-  implements ChunkedResponse<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer> {
+  implements ChunkedResponse<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer> {
 
-  private final QueryChunkHeader header;
-  private final Flux<QueryChunkRow> rows;
-  private final Mono<QueryChunkTrailer> trailer;
+  private final AnalyticsChunkHeader header;
+  private final Flux<AnalyticsChunkRow> rows;
+  private final Mono<AnalyticsChunkTrailer> trailer;
 
-  QueryResponse(final ResponseStatus status, final QueryChunkHeader header,
-                final Flux<QueryChunkRow> rows, final Mono<QueryChunkTrailer> trailer) {
+  AnalyticsResponse(final ResponseStatus status, final AnalyticsChunkHeader header,
+                    final Flux<AnalyticsChunkRow> rows, final Mono<AnalyticsChunkTrailer> trailer) {
     super(status);
     this.header = header;
     this.rows = rows;
@@ -40,10 +40,6 @@ public class QueryResponse
 
   public static RuntimeException errorSignatureNotPresent() {
     return new IllegalStateException("Field 'signature' was not present in response");
-  }
-
-  public static RuntimeException errorWarningsNotPresent() {
-    return new IllegalStateException("Field 'warnings' was not present in response");
   }
 
   public static RuntimeException errorProfileNotPresent() {
@@ -56,23 +52,23 @@ public class QueryResponse
 
 
   @Override
-  public QueryChunkHeader header() {
+  public AnalyticsChunkHeader header() {
     return header;
   }
 
   @Override
-  public Flux<QueryChunkRow> rows() {
+  public Flux<AnalyticsChunkRow> rows() {
     return rows;
   }
 
   @Override
-  public Mono<QueryChunkTrailer> trailer() {
+  public Mono<AnalyticsChunkTrailer> trailer() {
     return trailer;
   }
 
   @Override
   public String toString() {
-    return "QueryResponse{" +
+    return "AnalyticsResponse{" +
       "header=" + header +
       ", rows=" + rows +
       ", trailer=" + trailer +

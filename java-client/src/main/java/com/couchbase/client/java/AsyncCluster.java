@@ -20,7 +20,13 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.analytics.AnalyticsAccessor;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AsyncAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -29,6 +35,8 @@ import com.couchbase.client.java.query.prepared.LFUCache;
 import com.couchbase.client.java.query.prepared.PreparedQuery;
 import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -171,6 +179,42 @@ public class AsyncCluster {
         environment()
       );
     }
+  }
+
+  /**
+   * Performs an Analytics query with default {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @return the {@link AsyncAnalyticsResult} once the response arrives successfully.
+   */
+  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+  }
+
+
+  /**
+   * Performs an Analytics query with custom {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @param options the custom options for this analytics query.
+   * @return the {@link AsyncAnalyticsResult} once the response arrives successfully.
+   */
+  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement,
+                                                                final AnalyticsOptions options) {
+    notNullOrEmpty(statement, "Statement");
+    notNull(options, "AnalyticsOptions");
+
+    AnalyticsOptions.BuiltQueryOptions opts = options.build();
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+
+    // TODO: improve with options
+    JsonObject query = JsonObject.empty();
+    query.put("statement", statement);
+
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy,
+      environment.get().credentials(), query.toString().getBytes(StandardCharsets.UTF_8), opts.priority());
+    return AnalyticsAccessor.analyticsQueryAsync(core, request);
   }
 
   /**

@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.io.netty.query;
+package com.couchbase.client.core.io.netty.analytics;
 
+import com.couchbase.client.core.error.AnalyticsServiceException;
 import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
@@ -29,8 +33,8 @@ import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class QueryChunkResponseParser
-  extends BaseChunkResponseParser<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer> {
+public class AnalyticsChunkResponseParser
+  extends BaseChunkResponseParser<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer> {
 
   private String requestId;
   private Optional<byte[]> signature;
@@ -41,7 +45,7 @@ public class QueryChunkResponseParser
   private byte[] errors;
   private byte[] profile;
 
-  QueryChunkResponseParser() {
+  AnalyticsChunkResponseParser() {
   }
 
   @Override
@@ -88,7 +92,7 @@ public class QueryChunkResponseParser
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
-        emitRow(new QueryChunkRow(data));
+        emitRow(new AnalyticsChunkRow(data));
       }),
       new JsonPointer("/status", (JsonPointerCB1) value -> {
         if (clientContextId == null) {
@@ -120,7 +124,7 @@ public class QueryChunkResponseParser
         value.readBytes(data);
         value.release();
         errors = data;
-        failRows(new QueryServiceException(errors));
+        failRows(new AnalyticsServiceException(errors));
       }),
       new JsonPointer("/warnings", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
@@ -132,9 +136,9 @@ public class QueryChunkResponseParser
   }
 
   @Override
-  public Optional<QueryChunkHeader> header() {
+  public Optional<AnalyticsChunkHeader> header() {
     if (requestId != null && signature != null && clientContextId != null) {
-      return Optional.of(new QueryChunkHeader(requestId, clientContextId, signature));
+      return Optional.of(new AnalyticsChunkHeader(requestId, clientContextId, signature));
     }
     return Optional.empty();
   }
@@ -144,14 +148,14 @@ public class QueryChunkResponseParser
     if (errors == null) {
       return Optional.empty();
     } else {
-      return Optional.of(new QueryServiceException(errors));
+      return Optional.of(new AnalyticsServiceException(errors));
     }
   }
 
   @Override
   public void signalComplete() {
     completeRows();
-    completeTrailer(new QueryChunkTrailer(
+    completeTrailer(new AnalyticsChunkTrailer(
       status,
       Optional.ofNullable(metrics),
       Optional.ofNullable(warnings),

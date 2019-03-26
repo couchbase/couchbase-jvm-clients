@@ -20,6 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -141,6 +143,27 @@ public class Cluster {
    */
   public QueryResult query(final String statement, final QueryOptions options) {
     return new QueryResult(block(async().query(statement, options)));
+  }
+
+  /**
+   * Performs an analytics query with default {@link AnalyticsOptions}.
+   *
+   * @param statement the query statement as a raw string.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   */
+  public AnalyticsResult analyticsQuery(final String statement) {
+    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+  }
+
+  /**
+   * Performs an analytics query with custom {@link AnalyticsOptions}.
+   *
+   * @param statement the query statement as a raw string.
+   * @param options the custom options for this query.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   */
+  public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
+    return new AnalyticsResult(block(async().analyticsQuery(statement, options)));
   }
 
   /**
