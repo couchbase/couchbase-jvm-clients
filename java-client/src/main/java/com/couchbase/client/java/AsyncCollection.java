@@ -482,7 +482,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Optional<ExistsResult>> exists(final String id,
                                                           final ExistsOptions options) {
-    return ExistsAccessor.exists(core, existsRequest(id, options));
+    return ExistsAccessor.exists(id, core, existsRequest(id, options));
   }
 
   /**
@@ -774,7 +774,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Void> unlock(final String id, final long cas,
                                         final UnlockOptions options) {
-    return UnlockAccessor.unlock(core, unlockRequest(id, cas, options));
+    return UnlockAccessor.unlock(id, core, unlockRequest(id, cas, options));
   }
 
   /**
@@ -818,7 +818,7 @@ public class AsyncCollection {
   public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(core, lookupInRequest(id, specs, options));
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options));
   }
 
   /**
@@ -876,7 +876,8 @@ public class AsyncCollection {
       mutateInRequest(id, specs, options),
       id,
       opts.persistTo(),
-      opts.replicateTo()
+      opts.replicateTo(),
+      opts.insertDocument()
     );
   }
 
@@ -910,7 +911,7 @@ public class AsyncCollection {
 
       return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
         opts.insertDocument(), opts.upsertDocument(),
-        commands, opts.expiry().getSeconds(),
+        commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );
     }

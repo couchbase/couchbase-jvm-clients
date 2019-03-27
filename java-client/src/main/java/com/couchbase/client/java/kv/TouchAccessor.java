@@ -39,7 +39,7 @@ public class TouchAccessor {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);

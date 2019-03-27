@@ -92,7 +92,7 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
       case ResponseStatus.SUCCESS =>
         CounterResult(response.cas(), response.mutationToken().asScala, response.value())
 
-      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
   }
 }

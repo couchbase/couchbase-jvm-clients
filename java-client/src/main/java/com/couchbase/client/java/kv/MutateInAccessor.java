@@ -15,8 +15,8 @@ public class MutateInAccessor {
                                                            final SubdocMutateRequest request,
                                                            final String key,
                                                            final PersistTo persistTo,
-                                                           final ReplicateTo replicateTo
-  ) {
+                                                           final ReplicateTo replicateTo,
+                                                           final Boolean insertDocument) {
     core.send(request);
     return request
       .response()
@@ -26,8 +26,11 @@ public class MutateInAccessor {
             return new MutateInResult(response.values(), response.cas(), response.mutationToken());
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
+          case EXISTS:
+            if (insertDocument) throw DefaultErrorUtil.docExists(key);
+            else throw DefaultErrorUtil.casMismatch(key);
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       }).thenCompose(result -> {
         final ObserveContext ctx = new ObserveContext(

@@ -26,7 +26,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class LookupInAccessor {
 
-  public static CompletableFuture<Optional<LookupInResult>> lookupInAccessor(final Core core,
+  public static CompletableFuture<Optional<LookupInResult>> lookupInAccessor(final String id,
+                                                                             final Core core,
                                                                              final SubdocGetRequest request) {
     core.send(request);
     return request
@@ -40,7 +41,7 @@ public class LookupInAccessor {
           case NOT_FOUND:
             return Optional.empty();
             default:
-                throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+                throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
         }
       });
   }

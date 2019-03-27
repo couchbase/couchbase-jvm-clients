@@ -68,7 +68,7 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
 
       case ResponseStatus.NOT_FOUND => None
 
-      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
   }
 }

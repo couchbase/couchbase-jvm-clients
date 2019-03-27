@@ -23,10 +23,18 @@ import com.couchbase.client.core.msg.ResponseStatus;
 public class DefaultErrorUtil {
     private DefaultErrorUtil() { }
 
-    public static RuntimeException defaultErrorForStatus(ResponseStatus status) {
+    public static RuntimeException casMismatch(String id) {
+        return new CASMismatchException("Document " + id + " has been concurrently modified");
+    }
+
+    public static RuntimeException docExists(String id) {
+        return new CASMismatchException("Document " + id + " already exists");
+    }
+
+    public static RuntimeException defaultErrorForStatus(String id, ResponseStatus status) {
         switch(status) {
             case TOO_BIG: return new RequestTooBigException();
-            case EXISTS: return new DocumentAlreadyExistsException();
+            case EXISTS: return DefaultErrorUtil.casMismatch(id);
             case LOCKED: return new TemporaryLockFailureException();
             case TEMPORARY_FAILURE: return new TemporaryFailureException();
             case NOT_STORED: return new DocumentMutationLostException();

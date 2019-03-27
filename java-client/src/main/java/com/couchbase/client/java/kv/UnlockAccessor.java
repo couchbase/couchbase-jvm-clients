@@ -24,7 +24,9 @@ import java.util.concurrent.CompletableFuture;
 
 public class UnlockAccessor {
 
-  public static CompletableFuture<Void> unlock(final Core core, final UnlockRequest request) {
+  public static CompletableFuture<Void> unlock(final String key,
+                                               final Core core,
+                                               final UnlockRequest request) {
     core.send(request);
     return request
       .response()
@@ -36,7 +38,7 @@ public class UnlockAccessor {
           case TEMPORARY_FAILURE:
             throw new TemporaryLockFailureException();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
   }

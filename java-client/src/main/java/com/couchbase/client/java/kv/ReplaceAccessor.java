@@ -44,7 +44,7 @@ public enum ReplaceAccessor {
           case EXISTS:
             throw new CASMismatchException();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);

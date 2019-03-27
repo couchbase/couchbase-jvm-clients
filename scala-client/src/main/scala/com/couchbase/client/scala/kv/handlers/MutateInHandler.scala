@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
@@ -40,8 +41,7 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class MutateInHandler(hp: HandlerParams)
-  extends RequestHandler[SubdocMutateResponse, MutateInResult] {
+private[scala] class MutateInHandler(hp: HandlerParams) {
 
   def request[T](id: String,
                  spec: Seq[MutateInSpec],
@@ -99,13 +99,16 @@ private[scala] class MutateInHandler(hp: HandlerParams)
               document == DocumentCreation.Upsert,
               commands,
               expiration.getSeconds,
+              cas,
               durability.toDurabilityLevel))
           }
       }
     }
   }
 
-  def response(id: String, response: SubdocMutateResponse): MutateInResult = {
+  def response(id: String,
+               document: DocumentCreation = DocumentCreation.DoNothing,
+               response: SubdocMutateResponse): MutateInResult = {
     response.status() match {
 
       case ResponseStatus.SUCCESS =>
@@ -120,7 +123,13 @@ private[scala] class MutateInHandler(hp: HandlerParams)
           case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
         }
 
-      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+      case ResponseStatus.EXISTS =>
+        document match {
+          case DocumentCreation.Insert => throw DefaultErrorUtil.casMismatch(id)
+          case _ => throw DefaultErrorUtil.casMismatch(id)
+        }
+
+      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
   }
 }

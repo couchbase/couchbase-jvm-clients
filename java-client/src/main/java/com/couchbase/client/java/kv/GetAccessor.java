@@ -66,7 +66,7 @@ public enum GetAccessor {
           case NOT_FOUND:
             return Optional.<GetResult>empty();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
     })
     .whenComplete((r, t) -> completeSpan(request));
@@ -91,7 +91,7 @@ public enum GetAccessor {
           case NOT_FOUND:
             return Optional.<GetResult>empty();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
       })
       .whenComplete((r, t) -> completeSpan(request));
@@ -116,7 +116,7 @@ public enum GetAccessor {
           case NOT_FOUND:
             return Optional.<GetResult>empty();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(getResponse.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
       }).thenCompose(result -> {
         if (!result.isPresent()) {
@@ -152,7 +152,7 @@ public enum GetAccessor {
           case NOT_FOUND:
             return Optional.empty();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
         }
       });
   }

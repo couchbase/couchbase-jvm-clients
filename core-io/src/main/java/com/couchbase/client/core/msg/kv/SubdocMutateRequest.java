@@ -53,6 +53,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   private final byte flags;
   private final long expiration;
+  private final long cas;
   private final List<Command> commands;
   private final String origKey;
   private final Optional<DurabilityLevel> syncReplicationType;
@@ -62,7 +63,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
                              final RetryStrategy retryStrategy, final String key,
                              final byte[] collection,
                              final boolean insertDocument, final boolean upsertDocument,
-                             final List<Command> commands, long expiration,
+                             final List<Command> commands, long expiration, long cas,
                              final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, bucket, retryStrategy, key, collection);
     byte flags = 0;
@@ -82,6 +83,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.flags = flags;
     this.commands = commands;
     this.expiration = expiration;
+    this.cas = cas;
     this.origKey = key;
     this.syncReplicationType = syncReplicationType;
   }
@@ -124,7 +126,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       }
     } else {
       request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-        noCas(), extras, key, body);
+        cas, extras, key, body);
     }
 
     extras.release();

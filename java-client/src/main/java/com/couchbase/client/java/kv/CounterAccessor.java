@@ -39,7 +39,7 @@ public class CounterAccessor {
           case SUCCESS:
             return new CounterResult(response.cas(), response.value(), response.mutationToken());
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
@@ -59,7 +59,7 @@ public class CounterAccessor {
           case SUCCESS:
             return new CounterResult(response.cas(), response.value(), response.mutationToken());
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);

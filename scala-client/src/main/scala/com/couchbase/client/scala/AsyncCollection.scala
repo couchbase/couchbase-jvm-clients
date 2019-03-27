@@ -40,6 +40,7 @@ import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.scala.AsyncCollection.wrap
 import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
 
@@ -274,7 +275,44 @@ class AsyncCollection(name: String,
                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout,
       retryStrategy)
-    wrapWithDurability(req, id, mutateInHandler, durability, false, timeout)
+
+    req match {
+      case Success(request) =>
+        core.send(request)
+
+        val out = FutureConverters.toScala(request.response())
+          .map(response => mutateInHandler.response(id, document, response))
+
+        durability match {
+          case ClientVerified(replicateTo, persistTo) =>
+            out.flatMap(response => {
+
+              val observeCtx = new ObserveContext(core.context(),
+                PersistTo.asCore(persistTo),
+                ReplicateTo.asCore(replicateTo),
+                response.mutationToken.asJava,
+                response.cas,
+                bucketName,
+                id,
+                collectionIdEncoded,
+                false,
+                timeout
+              )
+
+              FutureConversions.javaMonoToScalaFuture(Observe.poll(observeCtx))
+
+                // After the observe return the original response
+                .map(_ => response)
+            })
+
+          case _ => out
+        }
+
+        out
+
+      case Failure(err) => Future.failed(err)
+    }
+
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.

@@ -144,7 +144,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
           case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
         }
 
-      case _ => throw DefaultErrors.throwOnBadResult(response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
   }
 
@@ -173,7 +173,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
           case _ => Failure(new SubDocumentException("Unknown SubDocument failure occurred") {})
         }
 
-      case _ => Failure(DefaultErrors.throwOnBadResult(response.status()))
+      case _ => Failure(DefaultErrors.throwOnBadResult(id, response.status()))
     }
   }
 }

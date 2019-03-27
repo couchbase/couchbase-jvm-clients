@@ -20,7 +20,7 @@ import com.couchbase.client.core.error._
 import com.couchbase.client.core.msg.ResponseStatus
 
 private[scala] object DefaultErrors {
-  def throwOnBadResult(status: ResponseStatus): RuntimeException = {
-    DefaultErrorUtil.defaultErrorForStatus(status)
+  def throwOnBadResult(id: String, status: ResponseStatus): RuntimeException = {
+    DefaultErrorUtil.defaultErrorForStatus(id, status)
   }
 }

@@ -198,7 +198,15 @@ class ReactiveCollection(async: AsyncCollection) {
                retryStrategy: RetryStrategy = environment.retryStrategy()): Mono[MutateInResult] = {
     val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, parentSpan, timeout,
       retryStrategy)
-    wrap(req, id, async.mutateInHandler)
+    req match {
+      case Success(request) =>
+        core.send(request)
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .map(r => async.mutateInHandler.response(id, document, r))
+
+      case Failure(err) => Mono.error(err)
+    }
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.

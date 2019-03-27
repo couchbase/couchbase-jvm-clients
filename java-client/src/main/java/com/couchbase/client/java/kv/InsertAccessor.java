@@ -41,8 +41,10 @@ public enum InsertAccessor {
         switch (response.status()) {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
+          case EXISTS:
+            throw DefaultErrorUtil.docExists(key);
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);

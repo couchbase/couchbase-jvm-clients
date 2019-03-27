@@ -293,7 +293,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       ObserveViaCasRequest request = asyncCollection.existsRequest(id, options);
       return Reactor
-        .wrap(request, ExistsAccessor.exists(core, request), true)
+        .wrap(request, ExistsAccessor.exists(id, core, request), true)
         .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
     });
   }
@@ -474,7 +474,7 @@ public class ReactiveCollection {
   public Mono<Void> unlock(final String id, final long cas, final UnlockOptions options) {
     return Mono.defer(() -> {
       UnlockRequest request = asyncCollection.unlockRequest(id, cas, options);
-      return Reactor.wrap(request, UnlockAccessor.unlock(core, request), true);
+      return Reactor.wrap(request, UnlockAccessor.unlock(id, core, request), true);
     });
   }
 
@@ -506,7 +506,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
       return Reactor
-        .wrap(request, LookupInAccessor.lookupInAccessor(core, request), true);
+        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request), true);
     });
   }
 
@@ -536,7 +536,7 @@ public class ReactiveCollection {
       SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, options);
       return Reactor.wrap(
         request,
-        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo()),
+        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.insertDocument()),
         true
       );
     });

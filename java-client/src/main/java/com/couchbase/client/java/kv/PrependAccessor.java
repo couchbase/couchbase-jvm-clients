@@ -43,7 +43,7 @@ public class PrependAccessor {
           case NOT_STORED:
             throw new DocumentDoesNotExistException();
           default:
-            throw DefaultErrorUtil.defaultErrorForStatus(response.status());
+            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
