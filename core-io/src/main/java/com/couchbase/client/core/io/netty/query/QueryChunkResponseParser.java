@@ -41,9 +41,6 @@ public class QueryChunkResponseParser
   private byte[] errors;
   private byte[] profile;
 
-  QueryChunkResponseParser() {
-  }
-
   @Override
   protected void resetState() {
     requestId = null;

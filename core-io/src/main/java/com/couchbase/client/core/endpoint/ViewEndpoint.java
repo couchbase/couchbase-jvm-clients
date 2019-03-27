@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.view.ViewMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
@@ -34,16 +35,21 @@ public class ViewEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new ViewPipelineInitializer();
+    return new ViewPipelineInitializer(endpointContext());
   }
 
   public static class ViewPipelineInitializer implements PipelineInitializer {
 
+    private final EndpointContext endpointContext;
+
+    ViewPipelineInitializer(EndpointContext endpointContext) {
+      this.endpointContext = endpointContext;
+    }
+
     @Override
     public void init(ChannelPipeline pipeline) {
-      pipeline.addLast(new LoggingHandler(LogLevel.ERROR));
       pipeline.addLast(new HttpClientCodec());
-      //pipeline.addLast(new QueryMessageHandler());
+      pipeline.addLast(new ViewMessageHandler(endpointContext));
     }
   }
 
