@@ -50,6 +50,10 @@ public enum CancellationReason {
    */
   IO_CLOSED_WHILE_IN_FLIGHT,
   /**
+   * The SDK has been shut down already when this request is dispatched.
+   */
+  SHUTDOWN,
+  /**
    * For a different reason. Make sure to emit an event so that debugging provides
    * further context.
    */

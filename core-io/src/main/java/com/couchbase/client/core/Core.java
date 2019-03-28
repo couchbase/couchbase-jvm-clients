@@ -27,6 +27,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.node.KeyValueLocator;
@@ -137,9 +138,15 @@ public class Core {
   @Stability.Internal
   @SuppressWarnings({"unchecked"})
   public <R extends Response> void send(final Request<R> request, final boolean registerForTimeout) {
+    if (shutdown.get()) {
+      request.cancel(CancellationReason.SHUTDOWN);
+      return;
+    }
+
     if (registerForTimeout) {
       context().environment().timer().register((Request<Response>) request);
     }
+
     locator(request.serviceType()).dispatch(request, nodes, currentConfig, context());
   }
 

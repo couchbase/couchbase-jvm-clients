@@ -88,6 +88,7 @@ public class Timer {
   @Stability.Internal
   public void register(final Request<Response> request) {
     if (stoppped) {
+      request.cancel(CancellationReason.SHUTDOWN);
       return;
     }
 

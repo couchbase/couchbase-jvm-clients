@@ -34,10 +34,12 @@ import com.couchbase.client.java.query.SimpleQuery;
 import com.couchbase.client.java.query.prepared.LFUCache;
 import com.couchbase.client.java.query.prepared.PreparedQuery;
 import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -235,15 +237,15 @@ public class AsyncCluster {
    * Performs a non-reversible shutdown of this {@link AsyncCluster}.
    */
   public CompletableFuture<Void> shutdown() {
-    if (environment instanceof OwnedSupplier) {
-      return environment
-        .get()
-        .shutdownAsync(environment.get().timeoutConfig().disconnectTimeout());
-    } else {
-      CompletableFuture<Void> cf = new CompletableFuture<>();
-      cf.complete(null);
-      return cf;
-    }
+    return core.shutdown().then(Mono.defer(() -> {
+      if (environment instanceof OwnedSupplier) {
+        return environment
+          .get()
+          .shutdownReactive(environment.get().timeoutConfig().disconnectTimeout());
+      } else {
+        return Mono.empty();
+      }
+    })).toFuture();
   }
 
   @Stability.Internal
