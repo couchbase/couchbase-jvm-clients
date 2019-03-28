@@ -58,8 +58,8 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
 
     @AfterAll
     static void tearDown() {
-        environment.shutdown();
         cluster.shutdown();
+        environment.shutdown();
     }
 
     @Test

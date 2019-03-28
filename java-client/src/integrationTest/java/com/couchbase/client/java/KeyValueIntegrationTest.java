@@ -78,8 +78,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    environment.shutdown();
     cluster.shutdown();
+    environment.shutdown();
   }
 
   @Test
