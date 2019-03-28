@@ -116,8 +116,10 @@ public class Core {
     currentConfig = configurationProvider.config();
     configurationProvider
       .configs()
-      .doOnNext(c -> currentConfig = c)
-      .subscribe(c -> reconfigure());
+      .subscribe(c -> {
+        currentConfig = c;
+        reconfigure();
+      });
   }
 
   /**
@@ -270,7 +272,7 @@ public class Core {
    * it works very similar.</p>
    */
   private void reconfigure() {
-    if (reconfigureInProgress.compareAndSet(false, true) && !shutdown.get()) {
+    if (reconfigureInProgress.compareAndSet(false, true)) {
       long start = System.nanoTime();
 
       if (currentConfig.bucketConfigs().isEmpty()) {

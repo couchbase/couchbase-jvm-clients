@@ -25,8 +25,8 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -174,8 +174,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
   /**
    * Error should be propagated when the seed node is good but the port is not.
    */
-  @Ignore
-  // TODO times out too quickly
+  @Disabled
   void propagateErrorFromInvalidSeedPort() {
     TestNodeConfig cfg = config().firstNodeWith(Services.KV).get();
     Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create(
@@ -248,7 +247,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(AlreadyShutdownException.class, () -> provider.closeBucket("foo").block());
 
     configsComplete.await(1, TimeUnit.SECONDS);
-    assertEquals(2, configEvents.get());
+    assertEquals(3, configEvents.get());
   }
 
   /**

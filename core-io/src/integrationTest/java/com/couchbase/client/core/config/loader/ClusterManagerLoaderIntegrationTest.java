@@ -21,15 +21,12 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,7 +53,8 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
    * {@link ClusterManagerLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
-  void loadConfigViaClusterManagerHttp() {
+  //@Disabled
+  void loadConfigViaClusterManagerHttp() throws Exception{
     TestNodeConfig config = config().firstNodeWith(Services.MANAGER).get();
 
     Core core = Core.create(env);

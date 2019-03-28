@@ -201,7 +201,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Flux
           .fromIterable(currentConfig.bucketConfigs().values())
           .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name()))
-          .doOnComplete(configsSink::complete)
+          .doOnComplete(() -> {
+            // make sure to push a final, empty config before complete to give downstream
+            // consumers a chance to clean up
+            pushConfig();
+            configsSink.complete();
+          })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
           .then();

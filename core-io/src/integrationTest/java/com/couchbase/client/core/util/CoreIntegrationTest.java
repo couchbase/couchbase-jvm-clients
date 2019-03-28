@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
@@ -32,6 +33,13 @@ import java.util.stream.Collectors;
  * @since 2.0.0
  */
 public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
+
+  /**
+   * Make sure that every core integration test records and spits out buffer leaks.
+   */
+  static {
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+  }
 
   /**
    * Calculates the default collection id.

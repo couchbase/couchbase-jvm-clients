@@ -39,11 +39,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Verifies the various functionality of the {@link Core}.
@@ -83,6 +79,8 @@ class CoreTest {
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock101.disconnect()).thenReturn(Mono.empty());
+
 
     Node mock102 = mock(Node.class);
     when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
@@ -91,6 +89,7 @@ class CoreTest {
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock102.disconnect()).thenReturn(Mono.empty());
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -174,6 +173,8 @@ class CoreTest {
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock101.disconnect()).thenReturn(Mono.empty());
+
 
     Node mock102 = mock(Node.class);
     when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
@@ -182,6 +183,8 @@ class CoreTest {
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock102.disconnect()).thenReturn(Mono.empty());
+
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -270,6 +273,7 @@ class CoreTest {
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
     when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
@@ -278,6 +282,8 @@ class CoreTest {
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock102.disconnect()).thenReturn(Mono.empty());
+
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -350,6 +356,7 @@ class CoreTest {
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
     when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
@@ -358,6 +365,7 @@ class CoreTest {
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock102.disconnect()).thenReturn(Mono.empty());
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
