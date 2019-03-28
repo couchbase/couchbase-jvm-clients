@@ -28,7 +28,7 @@ public class DefaultErrorUtil {
     }
 
     public static RuntimeException docExists(String id) {
-        return new CASMismatchException("Document " + id + " already exists");
+        return new DocumentAlreadyExistsException("Document " + id + " already exists");
     }
 
     public static RuntimeException defaultErrorForStatus(String id, ResponseStatus status) {
