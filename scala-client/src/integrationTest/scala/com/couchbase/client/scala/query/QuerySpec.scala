@@ -110,34 +110,35 @@ class QuerySpec extends FunSuite {
 
   test("reactive hello world") {
 
-    val rows: Seq[QueryRow] = cluster.reactive.query("""select 'hello world' as Greeting""")
-      .flatMapMany(result => {
-        assert(result.requestId != null)
-        assert(result.clientContextId.isEmpty)
-
+    cluster.reactive.query("""select 'hello world' as Greeting""")
+      .flatMap(result => {
         result.rows.doOnNext(v => {
           println("GOT A ROW!!" + v)
         }).collectSeq()
-      })
-      .blockLast().get
 
-    assert(rows.size == 1)
+          .doOnNext(rows => assert(rows.size == 1))
+
+          .flatMap(_ => result.meta)
+
+          .doOnNext(meta => {
+            assert (meta.clientContextId.isEmpty)
+          })
+      })
+      .block()
   }
 
   test("reactive additional") {
 
     val rowsKeeper = new AtomicReference[Seq[QueryRow]]()
 
-    val out: QueryAdditional = cluster.reactive.query("""select 'hello world' as Greeting""")
+    val out: QueryMeta = cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMapMany(result => {
         result.rows
           .collectSeq()
-          .flatMap(rows => {
+          .doOnNext(rows => {
             rowsKeeper.set(rows)
-
-            result.additional
           })
-
+          .flatMap(_ => result.meta)
       })
       .blockLast().get
 

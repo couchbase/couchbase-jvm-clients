@@ -77,9 +77,13 @@ class ReactiveCluster(val async: AsyncCluster)
                 x
               })
 
-            val additional: ScalaMono[QueryAdditional] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: ScalaMono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(addl => {
-                QueryAdditional(addl.metrics().asScala.map(QueryMetrics.fromBytes),
+                QueryMeta(
+                  response.header().requestId(),
+                  response.header().clientContextId().asScala,
+                  response.header().signature().asScala.map(QuerySignature),
+                  addl.metrics().asScala.map(QueryMetrics.fromBytes),
                   addl.warnings.asScala.map(QueryWarnings),
                   addl.status,
                   addl.profile.asScala.map(v => QueryProfile(v))
@@ -88,10 +92,7 @@ class ReactiveCluster(val async: AsyncCluster)
 
             ReactiveQueryResult(
               rows,
-              response.header().requestId(),
-              response.header().clientContextId().asScala,
-              response.header().signature().asScala.map(QuerySignature),
-              additional
+              meta
             )
           })
 

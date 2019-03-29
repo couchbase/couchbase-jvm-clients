@@ -28,11 +28,18 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,7 +83,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         String docId = docId();
         coll.mutateIn(docId,
                 Arrays.asList(MutateInSpec.insert("x", content).xattr()),
-        mutateInOptions().insertDocument(true));
+                mutateInOptions().insertDocument(true));
         return docId;
     }
 
@@ -91,7 +98,6 @@ class SubdocMutateTest extends JavaIntegrationTest {
                 coll.mutateIn(docId,
                         Arrays.asList()));
     }
-
 
     @Test
     public void insertString() {
@@ -151,11 +157,13 @@ class SubdocMutateTest extends JavaIntegrationTest {
         }
     }
 
-    private void checkSingleOpFailureXattr(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus expected) {
+    private void checkSingleOpFailureXattr(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus
+            expected) {
         checkSingleOpFailureXattr(content, Arrays.asList(ops), expected);
     }
 
-    private void checkSingleOpFailureXattr(JsonObject content, List<MutateInSpec> ops, SubDocumentOpResponseStatus expected) {
+    private void checkSingleOpFailureXattr(JsonObject
+                                                   content, List<MutateInSpec> ops, SubDocumentOpResponseStatus expected) {
         String docId = prepareXattr(content);
 
         try {
@@ -274,7 +282,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     public void arrayInsertUniqueDoesNotExist() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
                 Arrays.asList(MutateInSpec.arrayAddUnique("foo", "cruel")));
@@ -321,7 +329,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void removeXattrDoesNotExist() {
         checkSingleOpFailureXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.remove( "x.foo").xattr()), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
+                Arrays.asList(MutateInSpec.remove("x.foo").xattr()), SubDocumentOpResponseStatus.PATH_NOT_FOUND);
     }
 
     @Test
@@ -379,7 +387,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     public void arrayInsertUniqueDoesNotExistXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
                 Arrays.asList(MutateInSpec.arrayAddUnique("x.foo", "cruel").xattr()));
@@ -417,7 +425,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
     // TODO macro sentinel values
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     public void insertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", "${Mutation.CAS}").xattr().expandMacro()));
@@ -492,7 +500,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @Test
     public void counterMinusXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.decrement( "x.foo", 3).xattr().createPath()));
+                Arrays.asList(MutateInSpec.decrement("x.foo", 3).xattr().createPath()));
         assertEquals(-3, (int) updatedContent.getInt("foo"));
     }
 
@@ -570,7 +578,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     public void expiration() {
         JsonObject content = JsonObject.create().put("hello", "world");
         String docId = prepare(content);

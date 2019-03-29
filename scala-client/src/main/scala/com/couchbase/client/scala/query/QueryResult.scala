@@ -58,14 +58,11 @@ case class QueryResult(rows: Seq[QueryRow],
   * @param clientContextId if a clientContextId was provided in [[QueryOptions]] it will be returned here.  This
   *                        allows the application to tie requests and responses together.
   * @param signature       details of the signature of the query, if any were present
-  * @param additional      a Mono containing additional information related to the query, that is received from the
+  * @param meta      a Mono containing additional information related to the query, that is received from the
   *                        query service after any rows and errors
   */
 case class ReactiveQueryResult(rows: Flux[QueryRow],
-                               private[scala] val requestId: String,
-                               clientContextId: Option[String],
-                               signature: Option[QuerySignature],
-                               additional: Mono[QueryAdditional])
+                               meta: Mono[QueryMeta])
 
 /** An individual query result row.
   *
@@ -228,9 +225,12 @@ private[scala] object QueryMetrics {
   * @param status          the raw status string returned from the query service
   * @param profile         if a profile was requested in [[QueryOptions]] it will be returned here
   */
-case class QueryAdditional(metrics: Option[QueryMetrics],
-                           warnings: Option[QueryWarnings],
-                           status: String,
-                           profile: Option[QueryProfile])
+case class QueryMeta(private[scala] val requestId: String,
+                     clientContextId: Option[String],
+                     signature: Option[QuerySignature],
+                     metrics: Option[QueryMetrics],
+                     warnings: Option[QueryWarnings],
+                     status: String,
+                     profile: Option[QueryProfile])
 
 
