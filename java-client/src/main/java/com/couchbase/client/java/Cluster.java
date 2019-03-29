@@ -142,7 +142,7 @@ public class Cluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public QueryResult query(final String statement, final QueryOptions options) {
-    return new QueryResult(block(async().query(statement, options)));
+    return block(async().query(statement, options));
   }
 
   /**

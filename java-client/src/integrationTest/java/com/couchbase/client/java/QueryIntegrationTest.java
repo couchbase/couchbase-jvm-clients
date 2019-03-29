@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -38,6 +37,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +74,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query(
           "create primary index on `" + config().bucketname() + "`"
         );
-        if (!result.queryStatus().equals("success")) {
+        if (!result.meta().queryStatus().equals("success")) {
             throw new IllegalStateException("Could not create primary index for " +
               "query integration test!");
         }
@@ -91,14 +91,14 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void simpleBlockingSelect() {
         QueryResult result = cluster.query("select 'hello world' as Greeting");
 
-        assertNotNull(result.requestId());
-        assertFalse(result.clientContextId().isPresent());
-        assertEquals("success", result.queryStatus());
-        assertTrue(result.warnings().isEmpty());
-        assertEquals(1, result.rows().size());
-        assertFalse(result.signature().isEmpty());
+        assertNotNull(result.meta().requestId());
+        assertFalse(result.meta().clientContextId().isPresent());
+        assertEquals("success", result.meta().queryStatus());
+        assertFalse(result.meta().warnings().isPresent());
+        assertEquals(1, result.rows().collect(Collectors.toList()).size());
+        assertTrue(result.meta().signature().isPresent());
 
-        QueryMetrics metrics = result.metrics();
+        QueryMetrics metrics = result.meta().metrics().get();
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
@@ -114,14 +114,14 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           options
         );
 
-        assertNotNull(result.requestId());
-        assertFalse(result.clientContextId().isPresent());
-        assertEquals("success", result.queryStatus());
-        assertTrue(result.warnings().isEmpty());
-        assertEquals(1, result.rows().size());
-        assertFalse(result.signature().isEmpty());
+        assertNotNull(result.meta().requestId());
+        assertFalse(result.meta().clientContextId().isPresent());
+        assertEquals("success", result.meta().queryStatus());
+        assertFalse(result.meta().warnings().isPresent());
+        assertEquals(1, result.rows().collect(Collectors.toList()).size());
+        assertTrue(result.meta().signature().isPresent());
 
-        QueryMetrics metrics = result.metrics();
+        QueryMetrics metrics = result.meta().metrics().get();
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
@@ -132,11 +132,11 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+        CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 
@@ -159,7 +159,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    void noProfileRequestedThrowsIllegalStateException() {
+    void noProfileRequestedGivesEmptyProfile() {
         String id = insertDoc();
 
         QueryOptions options = queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
@@ -167,7 +167,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        assertThrows(IllegalStateException.class, result::profileInfo);
+        assertFalse(result.meta().profileInfo().isPresent());
     }
 
     @Test
@@ -179,7 +179,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id +"\"",
           options
         );
-        JsonObject profile = result.profileInfo();
+        JsonObject profile = result.meta().profileInfo().get();
         assertTrue(profile.size() > 0);
     }
 
@@ -201,7 +201,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.rows();
+        List<JsonObject> rows = result.rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -213,11 +213,11 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryOptions options = queryOptions()
           .withScanConsistency(ScanConsistency.REQUEST_PLUS)
           .withParameters(JsonObject.create().put("id", id));
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+        CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 
@@ -252,7 +252,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.rows();
+        List<JsonObject> rows = result.rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -264,11 +264,11 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryOptions options = queryOptions()
           .withScanConsistency(ScanConsistency.REQUEST_PLUS)
           .withParameters(JsonArray.from(id));
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query(
+        CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName+ " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 

@@ -9,6 +9,7 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 
 import java.time.Duration;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
@@ -26,7 +27,7 @@ public class EntityQueryExample {
         .withParameters(JsonObject.create().put("type", "person"))
     );
 
-    for (Person person : result.rows(Person.class)) {
+    for (Person person : result.rows(Person.class).collect(Collectors.toList())) {
       System.out.println(person.name());
     }
 

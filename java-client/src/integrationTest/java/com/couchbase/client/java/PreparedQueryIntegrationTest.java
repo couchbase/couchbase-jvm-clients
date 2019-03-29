@@ -19,10 +19,11 @@ package com.couchbase.client.java;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
@@ -69,7 +70,7 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS).prepared(true);
         QueryResult result = cluster.query("select * from `" + config().bucketname() + "` " +
                 "where meta().id=\"testSimplePreparedSelect\"", options);
-        List<JsonObject> rows = result.rows();
+        List<JsonObject> rows = result.rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 
@@ -82,7 +83,7 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
                 .withParameters(parameters).prepared(true);;
         QueryResult result = cluster.query("select * from `" + config().bucketname() + "`" +
                 " where meta().id=$id", options);
-        List<JsonObject> rows = result.rows();
+        List<JsonObject> rows = result.rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
 
     }
@@ -96,7 +97,7 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
                 .withParameters(parameters).prepared(true);
         QueryResult result = cluster.query("select * from `" + config().bucketname() + "` " +
                 "where meta().id=$1", options);
-        List<JsonObject> rows = result.rows();
+        List<JsonObject> rows = result.rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
 
     }
@@ -107,9 +108,9 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
         collection.insert("testAsyncPreparedSelect", content);
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS)
                 .prepared(true);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "` " +
+        CompletableFuture<QueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "` " +
                 "where meta().id=\"testAsyncPreparedSelect\"", options);
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 
@@ -120,9 +121,9 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
         JsonObject parameters = JsonObject.create().put("id", "testAsyncPreparedNamedParameterizedSelectQuery");
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS)
                 .withParameters(parameters).prepared(true);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "`" +
+        CompletableFuture<QueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "`" +
                 " where meta().id=$id", options);
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 
@@ -133,9 +134,9 @@ class PreparedQueryIntegrationTest extends JavaIntegrationTest {
         JsonArray parameters = JsonArray.create().add("testAsyncPreparedPositionalParameterizedSelectQuery");
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS)
                 .withParameters(parameters).prepared(true);
-        CompletableFuture<AsyncQueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "`" +
+        CompletableFuture<QueryResult> result = cluster.async().query("select * from `" + config().bucketname() + "`" +
                 " where meta().id=$1", options);
-        List<JsonObject> rows = result.get().rows().get();
+        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
         assertEquals(1, rows.size());
     }
 

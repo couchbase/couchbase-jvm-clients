@@ -27,13 +27,9 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.AsyncQueryResult;
-import com.couchbase.client.java.query.QueryAccessor;
-import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.SimpleQuery;
+import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.query.prepared.LFUCache;
 import com.couchbase.client.java.query.prepared.PreparedQuery;
-import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -146,9 +142,9 @@ public class AsyncCluster {
    * Performs a N1QL query with default {@link QueryOptions}.
    *
    * @param statement the N1QL query statement as a raw string.
-   * @return the {@link AsyncQueryResult} once the response arrives successfully.
+   * @return the {@link QueryResult} once the response arrives successfully.
    */
-  public CompletableFuture<AsyncQueryResult> query(final String statement) {
+  public CompletableFuture<QueryResult> query(final String statement) {
     return query(statement, QueryOptions.DEFAULT);
   }
 
@@ -157,22 +153,16 @@ public class AsyncCluster {
    *
    * @param statement the N1QL query statement as a raw string.
    * @param options the custom options for this query.
-   * @return the {@link AsyncQueryResult} once the response arrives successfully.
+   * @return the {@link QueryResult} once the response arrives successfully.
    */
-  public CompletableFuture<AsyncQueryResult> query(final String statement,
-                                                   final QueryOptions options) {
+  public CompletableFuture<QueryResult> query(final String statement,
+                                              final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
     QueryOptions.BuiltQueryOptions builtOptions = options.build();
     if (builtOptions.isPrepared()) {
-      return PreparedQueryAccessor.queryAsync(
-        core,
-        SimpleQuery.createPrepared(statement),
-        builtOptions,
-        environment(),
-        preparedQueryCache
-      );
+      throw new IllegalArgumentException("Prepared query statements are not currently supported");
     } else {
       return QueryAccessor.queryAsync(
         core,

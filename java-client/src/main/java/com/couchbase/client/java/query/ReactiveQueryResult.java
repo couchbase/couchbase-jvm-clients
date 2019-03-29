@@ -22,6 +22,7 @@ import java.util.Optional;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
@@ -36,82 +37,15 @@ import reactor.core.publisher.Mono;
 @Stability.Volatile
 public class ReactiveQueryResult {
 
-	private final QueryResponse response;
+	private final Flux<QueryChunkRow> rows;
+	private final Mono<QueryMeta> meta;
 
 	@Stability.Internal
-	public ReactiveQueryResult(QueryResponse response) {
-		this.response = response;
+	public ReactiveQueryResult(Flux<QueryChunkRow> rows,
+							   Mono<QueryMeta> meta) {
+		this.rows = rows;
+		this.meta = meta;
 	}
-
-	/**
-	 * Returns the request identifier string of the query request
-	 */
-	public String requestId() {
-		return this.response.header().requestId();
-	}
-
-	/**
-	 * Returns the client context identifier string set on the query request, if available
-	 */
-	public Optional<String> clientContextId() {
-		return this.response.header().clientContextId();
-	}
-
-	/**
-	 * Gets a {@link Mono} which publishes the {@link QueryMetrics} as returned by the query engine
-	 *
-	 * @return {@link Mono}
-	 */
-//	public Mono<QueryMetrics> info() {
-//		return this.response.metrics().map(n -> {
-//			try {
-//				JsonObject jsonObject = JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//				return new QueryMetrics(jsonObject);
-//			} catch (IOException ex) {
-//				throw new CouchbaseException(ex);
-//			}
-//		});
-//	}
-	// TODO
-
-	/**
-	 * Get a {@link Mono} which publishes the query execution status as returned by the query engine
-	 *
-	 * @return {@link Mono}
-	 */
-//	public Mono<String> queryStatus() {
-//		return this.response.queryStatus();
-//	}
-
-	/**
-	 * Get a {@link Mono} which publishes the signature as returned by the query engine
-	 *
-	 * @return {@link Mono}
-	 */
-//	public Mono<JsonObject> signature() {
-//		return this.response.signature().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new CouchbaseException(ex);
-//			}
-//		});
-//	}
-
-	/**
-	 * Get a {@link Mono} which publishes the profile info as returned by the query engine
-	 *
-	 * @return {@link Mono}
-	 */
-//	public Mono<JsonObject> profileInfo() {
-//		return this.response.profile().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new CouchbaseException(ex);
-//			}
-//		});
-//	}
 
 	/**
 	 * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to
@@ -134,8 +68,8 @@ public class ReactiveQueryResult {
 	 * @param target target class for converting the query row
 	 * @return {@link Flux}
 	 */
-	public <T>Flux<T> rows(Class<T> target) {
-		return this.response.rows().map(n -> {
+	public <T> Flux<T> rows(Class<T> target) {
+		return this.rows.map(n -> {
 			try {
 				return JacksonTransformers.MAPPER.readValue(n.data(), target);
 			} catch (IOException ex) {
@@ -145,40 +79,14 @@ public class ReactiveQueryResult {
 	}
 
 	/**
-	 * Get a {@link Flux} which publishes the query execution warnings as returned by the query engine which are then
-	 * decoded to {@link JsonObject}
+	 * Returns a {@link Mono} containing a {@link QueryMeta},  giving access to the additional metadata associated with
+	 * this query.
 	 *
-	 * The flux can complete successfully or throw
-	 * - {@link DecodingFailedException } when the decoding cannot be completed successfully
-	 *
-	 * @return {@link Flux}
+	 * Note that the metadata will only be available once all rows have been received, so it is recommended that you
+	 * first handle the rows in your code, and then the metadata.  This will avoid buffering all the rows in-memory.
 	 */
-//	public Flux<JsonObject> warnings() {
-//		return this.response.warnings().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new CouchbaseException(ex);
-//			}
-//		});
-//	}
+	public Mono<QueryMeta> meta() {
+		return meta;
+	}
 
-	/**
-	 * Get a {@link Flux} which publishes query execution errors as returned by the query engine which are then decoded
-	 * to {@link JsonObject}
-	 *
-	 * The flux can complete successfully or throw
-	 * - {@link DecodingFailedException } when the decoding cannot be completed successfully
-	 *
-	 * @return {@link Flux}
-	 */
-//	public Flux<JsonObject> errors() {
-//		return this.response.errors().map(n -> {
-//			try {
-//				return JacksonTransformers.MAPPER.readValue(n, JsonObject.class);
-//			} catch (IOException ex) {
-//				throw new IllegalStateException(ex);
-//			}
-//		});
-//	}
 }

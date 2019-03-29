@@ -26,7 +26,6 @@ import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.query.SimpleQuery;
-import com.couchbase.client.java.query.prepared.PreparedQueryAccessor;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
@@ -135,15 +134,7 @@ public class ReactiveCluster {
 
     QueryOptions.BuiltQueryOptions builtOpts = options.build();
     if (builtOpts.isPrepared()) {
-      return Mono.defer(() -> Mono.fromFuture(() ->
-        PreparedQueryAccessor.queryReactive(
-          async().core(),
-          SimpleQuery.createPrepared(statement),
-          builtOpts,
-          async().environment(),
-          async().preparedQueryCache()
-        )
-      ));
+      throw new IllegalArgumentException("Prepared query statements are not currently supported");
     } else {
       return Mono.defer(() -> Mono.fromFuture(() ->
         QueryAccessor.queryReactive(

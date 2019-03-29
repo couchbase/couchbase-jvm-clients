@@ -13,118 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.java.query;
 
-import static com.couchbase.client.java.AsyncUtils.block;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
+import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.msg.query.QueryChunkTrailer;
+import com.couchbase.client.java.codec.Decoder;
+import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.EncodedDocument;
 
 /**
- * Query result containing the response from the query executing engine
- * with methods to fetch the individual properties
+ * Query Result that fetches the parts of the Query response asynchronously
  *
  * @since 3.0.0
  */
 @Stability.Volatile
 public class QueryResult {
 
-	/**
-	 * The {@link AsyncQueryResult} used for fetching the query response
-	 */
-	private final AsyncQueryResult asyncResult;
+    private final Stream<QueryChunkRow> rows;
+    private final QueryMeta meta;
 
+    @Stability.Internal
+    public QueryResult(Stream<QueryChunkRow> rows,
+                            QueryMeta meta) {
+        this.rows = rows;
+        this.meta = meta;
+    }
 
-	@Stability.Internal
-	public QueryResult(AsyncQueryResult asyncResult) {
-		this.asyncResult = asyncResult;
-	}
+    /**
+     * Returns all rows, converted into {@link JsonObject}s.
+     * <p>
+     * @throws DecodingFailedException if any row could not be successfully decoded
+     */
+    public Stream<JsonObject> rows() {
+        return rows(JsonObject.class);
+    }
 
-	/**
-	 * Get the request identifier of the query request
-	 *
-	 * @return request identifier
-	 */
-	public String requestId() {
-		return this.asyncResult.requestId();
-	}
+    /**
+     * Returns all rows, converted into the target class, and using the default decoder.
+     * <p>
+     * @param target the target class to decode into
+     * @throws DecodingFailedException if any row could not be successfully decoded
+     */
+    public <T> Stream<T> rows(Class<T> target) {
+        return this.rows.map(n -> {
+            try {
+                return JacksonTransformers.MAPPER.readValue(n.data(), target);
+            } catch (IOException ex) {
+                throw new DecodingFailedException(ex);
+            }
+        });
+    }
 
-	/**
-	 * Get the client context identifier as set by the client
-	 *
-	 * @return client context identifier
-	 */
-	public Optional<String> clientContextId() {
-		return this.asyncResult.clientContextId();
-	}
+    /**
+     * Returns all rows, converted into the target class, using a custom decoder.
+     * <p>
+     * @param target the target class to decode into
+     * @param decoder the customer {@link Decoder} to use
+     * @throws DecodingFailedException if any row could not be successfully decoded
+     */
+    public <T> Stream<T> rows(Class<T> target, Decoder<T> decoder) {
+        return this.rows.map(n -> decoder.decode(target, EncodedDocument.of(0, n.data())));
+    }
 
-	/**
-	 * Get the query execution status as returned by the query engine
-	 *
-	 * @return query status as string
-	 */
-	public String queryStatus() {
-		return block(this.asyncResult.queryStatus());
-	}
-
-	/**
-	 * Get the signature as returned by the query engine
-	 *
-	 * @return query status as string
-	 */
-	public JsonObject signature() {
-		return asyncResult.signature();
-	}
-
-	/**
-	 * Get the profile info as returned by the query engine
-	 *
-	 * @return query status as string
-	 */
-	public JsonObject profileInfo() {
-		return block(this.asyncResult.profileInfo());
-	}
-
-	/**
-	 * Get the {@link QueryMetrics} as returned by the query engine
-	 *
-	 * @return {@link QueryMetrics}
-	 */
-	public QueryMetrics metrics() {
-		return block(this.asyncResult.metrics());
-	}
-
-	/**
-	 * Get the list of rows that were fetched by the query which are then
-	 * decoded to the requested entity class
-	 *
-	 * @param target target class for converting the query row
-	 * @param <T> generic class
-	 * @return list of entities
-	 */
-	public <T>List<T> rows(Class<T> target) {
-		return block(this.asyncResult.rows(target));
-	}
-
-	/**
-	 * Get the list of rows that were fetched by the query which are then
-	 * decoded to {@link JsonObject}
-	 *
-	 * @return list of {@link JsonObject}
-	 */
-	public List<JsonObject> rows() {
-		return block(this.asyncResult.rows());
-	}
-
-	/**
-	 * Get the list of warnings as returned by the query engine
-	 *
-	 * @return list of warnings
-	 */
-	public JsonArray warnings() {
-		return block(this.asyncResult.warnings());
-	}
+    /**
+     * Returns a {@link QueryMeta} giving access to the additional metadata associated with this query.
+     */
+    public QueryMeta meta() {
+        return meta;
+    }
 }
