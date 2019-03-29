@@ -19,7 +19,10 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.view.*;
 import reactor.core.publisher.Mono;
+
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 
@@ -101,6 +104,30 @@ public class ReactiveBucket {
    */
   public Mono<ReactiveCollection> collection(final String name) {
     return scope(DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
+  }
+
+  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {
+    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName,
+                                            final ViewOptions options) {
+    return ViewAccessor.viewQueryReactive(
+      asyncBucket.core(),
+      asyncBucket.viewRequest(designDoc, viewName, options)
+    );
+  }
+
+  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName) {
+    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
+  }
+
+  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName,
+                                                   final SpatialViewOptions options) {
+    return ViewAccessor.viewQueryReactive(
+      asyncBucket.core(),
+      asyncBucket.spatialViewRequest(designDoc, viewName, options)
+    );
   }
 
 }

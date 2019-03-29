@@ -35,7 +35,7 @@ class ViewOptionsTest {
   @Test
   void shouldSetDefaults() {
     ViewOptions options = viewOptions();
-    assertFalse(options.development());
+    assertFalse(options.build().development());
     assertEquals("", options.export());
     assertEquals("ViewQuery{params=\"\"}", options.toString());
   }
@@ -150,7 +150,7 @@ class ViewOptionsTest {
     JsonArray keysArray = JsonArray.from("foo", 3, true);
     ViewOptions options = viewOptions().keys(keysArray);
     assertEquals("", options.export());
-    assertEquals(keysArray.toString(), options.keys());
+    assertEquals(keysArray.toString(), options.build().keys());
   }
 
   @Test
@@ -233,10 +233,10 @@ class ViewOptionsTest {
   @Test
   void shouldRespectDevelopmentParam() {
     ViewOptions options = viewOptions().development(true);
-    assertTrue(options.development());
+    assertTrue(options.build().development());
 
     options = viewOptions().development(false);
-    assertFalse(options.development());
+    assertFalse(options.build().development());
   }
 
   @Test
@@ -265,10 +265,10 @@ class ViewOptionsTest {
   @Test
   void shouldToggleDevelopment() {
     ViewOptions options = viewOptions().development(true);
-    assertTrue(options.development());
+    assertTrue(options.build().development());
 
     options = viewOptions().development(false);
-    assertFalse(options.development());
+    assertFalse(options.build().development());
   }
 
   @Test
@@ -276,10 +276,10 @@ class ViewOptionsTest {
     JsonArray keys = JsonArray.create().add("1").add("2").add("3");
     String keysJson = keys.toString();
     ViewOptions options = viewOptions();
-    assertNull(options.keys());
+    assertNull(options.build().keys());
 
     options.keys(keys);
-    assertEquals(keysJson, options.keys());
+    assertEquals(keysJson, options.build().keys());
     assertFalse(options.export().contains("keys="));
     assertFalse(options.export().contains("3"));
   }

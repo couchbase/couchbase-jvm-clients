@@ -16,29 +16,33 @@
 
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.view.ViewResponse;
 import com.couchbase.client.java.json.JsonObject;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-public class ReactiveViewResult {
+import java.util.Optional;
 
-    private final ViewResponse response;
+public class ViewMeta {
 
-    public ReactiveViewResult(final ViewResponse response) {
-        this.response = response;
+    private final Optional<JsonObject> debug;
+    private final long totalRows;
+
+    public ViewMeta(Optional<JsonObject> debug, long totalRows) {
+        this.debug = debug;
+        this.totalRows = totalRows;
     }
 
-    public Flux<ViewRow> rows() {
-        return response.rows().map(r -> new ViewRow(r.data()));
+    public Optional<JsonObject> debug() {
+        return debug;
     }
 
-    public Mono<ViewMeta> meta() {
-        return Mono.just(new ViewMeta(
-            response.header().debug().map(bytes -> Mapper.decodeInto(bytes, JsonObject.class)),
-            response.header().totalRows()
-        ));
+    public long totalRows() {
+        return totalRows;
     }
 
+    @Override
+    public String toString() {
+        return "ViewMeta{" +
+            "debug=" + debug +
+            ", totalRows=" + totalRows +
+            '}';
+    }
 }

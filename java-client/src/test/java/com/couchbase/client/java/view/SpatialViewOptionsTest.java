@@ -30,7 +30,7 @@ class SpatialViewOptionsTest {
   @Test
   void shouldSetDefaults() {
     SpatialViewOptions options = spatialViewOptions();
-    assertFalse(options.development());
+    assertFalse(options.build().development());
     assertTrue(options.export().isEmpty());
   }
 
@@ -109,10 +109,10 @@ class SpatialViewOptionsTest {
   @Test
   void shouldToggleDevelopment() {
     SpatialViewOptions options = spatialViewOptions().development(true);
-    assertTrue(options.development());
+    assertTrue(options.build().development());
 
     options = spatialViewOptions().development(false);
-    assertFalse(options.development());
+    assertFalse(options.build().development());
   }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryOptions;
 
 import java.net.URLEncoder;
 
@@ -372,34 +374,6 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   /**
-   * Returns the query string for this ViewQuery, containing all the key/value pairs
-   * for parameters that will be part of this ViewQuery's execution URL for the view service.
-   */
-  public String export() {
-    StringBuilder sb = new StringBuilder();
-    boolean firstParam = true;
-    for (int i = 0; i < params.length; i++) {
-      if (params[i] == null) {
-        i++;
-        continue;
-      }
-
-      boolean even = i % 2 == 0;
-      if (even) {
-        if (!firstParam) {
-          sb.append("&");
-        }
-      }
-      sb.append(params[i]);
-      firstParam = false;
-      if (even) {
-        sb.append('=');
-      }
-    }
-    return sb.toString();
-  }
-
-  /**
    * A string representation of this ViewQuery, suitable for logging and other human consumption.
    * If the {@link #keys(JsonArray)} parameter is too large, it is truncated in this dump.
    *
@@ -429,13 +403,53 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   /**
-   * @return the String JSON representation of the {@link #keys(JsonArray) keys} parameter.
+   * Returns the query string for this ViewQuery, containing all the key/value pairs
+   * for parameters that will be part of this ViewQuery's execution URL for the view service.
    */
-  String keys() {
-    return this.keysJson;
+  String export() {
+    StringBuilder sb = new StringBuilder();
+    boolean firstParam = true;
+    for (int i = 0; i < params.length; i++) {
+      if (params[i] == null) {
+        i++;
+        continue;
+      }
+
+      boolean even = i % 2 == 0;
+      if (even) {
+        if (!firstParam) {
+          sb.append("&");
+        }
+      }
+      sb.append(params[i]);
+      firstParam = false;
+      if (even) {
+        sb.append('=');
+      }
+    }
+    return sb.toString();
   }
 
-  boolean development() {
-    return development;
+  @Stability.Internal
+  public ViewOptions.BuiltViewOptions build() {
+    return new ViewOptions.BuiltViewOptions();
   }
+
+  public class BuiltViewOptions extends BuiltCommonOptions {
+
+
+    public String keys() {
+      return keysJson;
+    }
+
+    public boolean development() {
+      return development;
+    }
+
+    public String query() {
+      return export();
+    }
+
+  }
+
 }

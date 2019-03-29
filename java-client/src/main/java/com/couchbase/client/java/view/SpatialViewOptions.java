@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
 
@@ -162,7 +163,20 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
     }
   }
 
-  public String export() {
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("ViewQuery{");
+    sb.append("params=\"").append(export()).append('"');
+    if (development) {
+      sb.append(", dev");
+    }
+    sb.append('}');
+    return sb.toString();
+  }
+
+
+  String export() {
     StringBuilder sb = new StringBuilder();
     boolean firstParam = true;
     for (int i = 0; i < params.length; i++) {
@@ -186,20 +200,21 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
     return sb.toString();
   }
 
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("ViewQuery{");
-    sb.append("params=\"").append(export()).append('"');
-    if (development) {
-      sb.append(", dev");
-    }
-    sb.append('}');
-    return sb.toString();
+  @Stability.Internal
+  public SpatialViewOptions.BuiltSpatialViewOptions build() {
+    return new BuiltSpatialViewOptions();
   }
 
-  boolean development() {
-    return development;
+  public class BuiltSpatialViewOptions extends BuiltCommonOptions {
+
+    public boolean development() {
+      return development;
+    }
+
+    public String query() {
+      return export();
+    }
+
   }
 
 }

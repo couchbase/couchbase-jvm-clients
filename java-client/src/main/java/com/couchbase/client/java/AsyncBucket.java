@@ -18,10 +18,21 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.view.ViewRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.view.SpatialViewOptions;
+import com.couchbase.client.java.view.ViewAccessor;
+import com.couchbase.client.java.view.ViewOptions;
+import com.couchbase.client.java.view.ViewResult;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
@@ -126,6 +137,59 @@ public class AsyncBucket {
   public CompletableFuture<AsyncCollection> collection(final String collection) {
     notNullOrEmpty(collection, "Collection");
     return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
+  }
+
+  public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName) {
+    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
+  }
+
+  public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName,
+                                                 final ViewOptions options) {
+    return ViewAccessor.viewQueryAsync(core, viewRequest(designDoc, viewName, options));
+  }
+
+  ViewRequest viewRequest(final String designDoc, final String viewName, final ViewOptions options) {
+    notNullOrEmpty(designDoc, "DesignDoc");
+    notNullOrEmpty(viewName, "ViewName");
+    notNull(options, "ViewOptions");
+
+    ViewOptions.BuiltViewOptions opts = options.build();
+
+    String query = opts.query();
+    Optional<byte[]> keysJson = Optional.ofNullable(opts.keys()).map(s -> s.getBytes(StandardCharsets.UTF_8));
+    boolean development = opts.development();
+
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+    return new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
+      viewName, query, keysJson, development, false);
+  }
+
+  public CompletableFuture<ViewResult> spatialViewQuery(final String designDoc, final String viewName) {
+    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
+  }
+
+  public CompletableFuture<ViewResult> spatialViewQuery(final String designDoc, final String viewName,
+                                                        final SpatialViewOptions options) {
+    return ViewAccessor.viewQueryAsync(core, spatialViewRequest(designDoc, viewName, options));
+  }
+
+  ViewRequest spatialViewRequest(final String designDoc, final String viewName, final SpatialViewOptions options) {
+    notNullOrEmpty(designDoc, "DesignDoc");
+    notNullOrEmpty(viewName, "ViewName");
+    notNull(options, "ViewOptions");
+
+    SpatialViewOptions.BuiltSpatialViewOptions opts = options.build();
+
+    String query = opts.query();
+    boolean development = opts.development();
+
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+    return new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
+            viewName, query, Optional.empty(), development, true);
   }
 
 }

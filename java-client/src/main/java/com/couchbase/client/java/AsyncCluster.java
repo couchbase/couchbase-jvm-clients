@@ -203,20 +203,25 @@ public class AsyncCluster {
    */
   public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement,
                                                                 final AnalyticsOptions options) {
+    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, options));
+  }
+
+  AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
 
     AnalyticsOptions.BuiltQueryOptions opts = options.build();
-    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
+
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
     // TODO: improve with options
     JsonObject query = JsonObject.empty();
     query.put("statement", statement);
 
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy,
-      environment.get().credentials(), query.toString().getBytes(StandardCharsets.UTF_8), opts.priority());
-    return AnalyticsAccessor.analyticsQueryAsync(core, request);
+    return new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+        query.toString().getBytes(StandardCharsets.UTF_8), opts.priority()
+    );
   }
 
   /**

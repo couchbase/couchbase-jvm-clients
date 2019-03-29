@@ -178,8 +178,6 @@ public class ReactiveCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
 
-    AnalyticsOptions.BuiltQueryOptions builtOptions = options.build();
-
     return null;
   }
 

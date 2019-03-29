@@ -27,19 +27,24 @@ import java.nio.charset.StandardCharsets;
  * @since 2.0.0
  */
 public class ViewServiceException extends CouchbaseException {
-    private final byte[] content;
+    private final String message;
 
-    public ViewServiceException(byte[] content) {
+    public ViewServiceException(byte[] message) {
         super();
-        this.content = content;
+        this.message = new String(message, StandardCharsets.UTF_8);
     }
 
-    public byte[] content() {
-        return content;
+    public ViewServiceException(String message) {
+        super();
+        this.message = message;
+    }
+
+    public String content() {
+        return message;
     }
 
     @Override
     public String getMessage() {
-        return "View Query Failed: " + new String(content, StandardCharsets.UTF_8);
+        return "View Query Failed: " + message;
     }
 }
