@@ -17,6 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.util.AsyncUtils
@@ -76,6 +77,27 @@ class Cluster private[scala](env: => ClusterEnvironment)
 
     AsyncUtils.block(async.query(statement, options), timeout)
   }
+
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[AnalyticsOptions]] for documentation
+    *
+    * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Try[AnalyticsResult] = {
+    val timeout: java.time.Duration = options.timeout match {
+      case Some(v) => v
+      case _ => env.timeoutConfig.queryTimeout()
+    }
+
+    AsyncUtils.block(async.analyticsQuery(statement, options), timeout)
+  }
+
 
   /** Shutdown all cluster resources.
     *

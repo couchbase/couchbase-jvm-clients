@@ -21,10 +21,11 @@ import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Credentials
-import com.couchbase.client.core.error.QueryServiceException
+import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.handlers.QueryHandler
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
 import com.couchbase.client.scala.util.FutureConversions
 
 import scala.collection.JavaConverters._
@@ -52,6 +53,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
   private[scala] val env = environment
 
   private[scala] val queryHandler = new QueryHandler()
+  private[scala] val analyticsHandler = new AnalyticsHandler()
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
@@ -109,14 +111,63 @@ class AsyncCluster(environment: => ClusterEnvironment)
             }
           }).toFuture
 
-        ret.failed.foreach(err => {
-          println(s"scala future error ${err}")
-        })
-
         ret
 
 
       case Failure(err) => Future.failed(err)
+    }
+  }
+
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[AnalyticsOptions]] for documentation
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Future[AnalyticsResult] = {
+
+    analyticsHandler.request(statement, options, core, environment) match {
+      case Success(request) =>
+        core.send(request)
+
+        import reactor.core.scala.publisher.{Mono => ScalaMono}
+
+        val ret: Future[AnalyticsResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
+          propagateCancellation = true)
+          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+            .collectSeq()
+            .flatMap(rows =>
+
+              FutureConversions.javaMonoToScalaMono(response.trailer())
+                .map(addl => AnalyticsResult(
+                  rows,
+                  response.header().requestId(),
+                  response.header().clientContextId().asScala,
+                  response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
+                  addl.metrics.asScala.map(bytes => AnalyticsMetrics.fromBytes(bytes)),
+                  addl.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
+                  addl.status,
+                  addl.profile.asScala.map(AnalyticsProfile))
+                )
+            )
+          )
+          .onErrorResume(err => {
+            err match {
+              case e: AnalyticsServiceException => ScalaMono.error(AnalyticsError(e.content))
+              case _ => ScalaMono.error(err)
+            }
+          }).toFuture
+
+        ret
+
+
+      case Failure(err)
+      => Future.failed(err)
     }
   }
 

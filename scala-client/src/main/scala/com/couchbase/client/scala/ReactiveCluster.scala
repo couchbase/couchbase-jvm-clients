@@ -17,14 +17,13 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.Credentials
-import com.couchbase.client.core.error.QueryServiceException
+import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.publisher.{Mono => JavaMono}
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -97,6 +96,51 @@ class ReactiveCluster(val async: AsyncCluster)
           })
 
         ret
+
+      case Failure(err) =>
+        ScalaMono.error(err)
+    }
+  }
+
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[AnalyticsOptions]] for documentation
+    *
+    * @return a `Mono` containing a [[ReactiveAnalyticsResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    * */
+  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): ScalaMono[ReactiveAnalyticsResult] = {
+    async.analyticsHandler.request(statement, options, async.core, async.env) match {
+      case Success(request) =>
+
+        async.core.send(request)
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), false)
+          .map(response => {
+            val meta: ScalaMono[AnalyticsMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+              .map(trailer => {
+                AnalyticsMeta(
+                  response.header().requestId(),
+                  response.header().clientContextId().asScala,
+                  response.header().signature().asScala.map(AnalyticsSignature),
+                  trailer.metrics().asScala.map(AnalyticsMetrics.fromBytes),
+                  trailer.warnings.asScala.map(AnalyticsWarnings),
+                  trailer.status,
+                  trailer.profile.asScala.map(v => AnalyticsProfile(v))
+                )
+              })
+
+            val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
+
+            ReactiveAnalyticsResult(
+              rows,
+              meta
+            )
+          })
 
       case Failure(err) =>
         ScalaMono.error(err)
