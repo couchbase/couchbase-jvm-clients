@@ -3,9 +3,7 @@
 This repository contains the next generation of Couchbase SDKs ("3.0") as well as a brand-new 
 `core-io` library.
 
-It is currently under development and not ready for prime-time, although we are slowly getting there.
-
-**THERE BE DRAGONS**
+It is currently under development and not ready for prime-time, although we are getting there.
 
 ## Overview
 
@@ -64,7 +62,7 @@ For Scala:
 You can always also just build it from source:
 
 ```
-$ git clone https://github.com/couchbaselabs/couchbase-jvm-clients.git
+$ git clone https://github.com/couchbase/couchbase-jvm-clients.git
 $ cd couchbase-jvm-clients
 $ make
 ```
