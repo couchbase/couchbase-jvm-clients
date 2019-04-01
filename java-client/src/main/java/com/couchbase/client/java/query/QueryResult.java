@@ -18,19 +18,14 @@ package com.couchbase.client.java.query;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.codec.Decoder;
 import com.couchbase.client.java.json.JacksonTransformers;
-import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.EncodedDocument;
 
@@ -42,14 +37,10 @@ import com.couchbase.client.java.kv.EncodedDocument;
 @Stability.Volatile
 public class QueryResult {
 
-    private final Stream<QueryChunkRow> rows;
-    private final QueryMeta meta;
+    private final QueryResponse response;
 
-    @Stability.Internal
-    public QueryResult(Stream<QueryChunkRow> rows,
-                            QueryMeta meta) {
-        this.rows = rows;
-        this.meta = meta;
+    QueryResult(final QueryResponse response) {
+        this.response = response;
     }
 
     /**
@@ -57,8 +48,8 @@ public class QueryResult {
      * <p>
      * @throws DecodingFailedException if any row could not be successfully decoded
      */
-    public Stream<JsonObject> rows() {
-        return rows(JsonObject.class);
+    public Stream<JsonObject> rowsAsObject() {
+        return rowsAs(JsonObject.class);
     }
 
     /**
@@ -67,14 +58,14 @@ public class QueryResult {
      * @param target the target class to decode into
      * @throws DecodingFailedException if any row could not be successfully decoded
      */
-    public <T> Stream<T> rows(Class<T> target) {
-        return this.rows.map(n -> {
+    public <T> Stream<T> rowsAs(Class<T> target) {
+        return response.rows().map(n -> {
             try {
                 return JacksonTransformers.MAPPER.readValue(n.data(), target);
             } catch (IOException ex) {
                 throw new DecodingFailedException(ex);
             }
-        });
+        }).toStream();
     }
 
     /**
@@ -84,14 +75,27 @@ public class QueryResult {
      * @param decoder the customer {@link Decoder} to use
      * @throws DecodingFailedException if any row could not be successfully decoded
      */
-    public <T> Stream<T> rows(Class<T> target, Decoder<T> decoder) {
-        return this.rows.map(n -> decoder.decode(target, EncodedDocument.of(0, n.data())));
+    public <T> Stream<T> rowsAs(Class<T> target, Decoder<T> decoder) {
+        return response.rows().map(n -> decoder.decode(target, EncodedDocument.of(0, n.data()))).toStream();
+    }
+
+    public <T> List<T> allRowsAs(final Class<T> target) {
+        return rowsAs(target).collect(Collectors.toList());
+    }
+
+    /**
+     * Returns all rows, converted into {@link JsonObject}s.
+     * <p>
+     * @throws DecodingFailedException if any row could not be successfully decoded
+     */
+    public List<JsonObject> allRowsAsObject() {
+        return allRowsAs(JsonObject.class);
     }
 
     /**
      * Returns a {@link QueryMeta} giving access to the additional metadata associated with this query.
      */
     public QueryMeta meta() {
-        return meta;
+        return QueryMeta.from(response.header(), response.trailer().block());
     }
 }

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query.options;
+
+package com.couchbase.client.java.query;
 
 /**
  * The possible values for scan_consistency in a N1QL request.

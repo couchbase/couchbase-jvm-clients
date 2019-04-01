@@ -20,12 +20,7 @@ import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryMetrics;
-import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.query.options.QueryProfile;
-import com.couchbase.client.java.query.options.ScanConsistency;
+import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -37,7 +32,6 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +68,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query(
           "create primary index on `" + config().bucketname() + "`"
         );
-        if (!result.meta().queryStatus().equals("success")) {
+        if (result.meta().status() != QueryStatus.SUCCESS) {
             throw new IllegalStateException("Could not create primary index for " +
               "query integration test!");
         }
@@ -93,9 +87,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         assertNotNull(result.meta().requestId());
         assertFalse(result.meta().clientContextId().isPresent());
-        assertEquals("success", result.meta().queryStatus());
+        assertEquals(QueryStatus.SUCCESS, result.meta().status());
         assertFalse(result.meta().warnings().isPresent());
-        assertEquals(1, result.rows().collect(Collectors.toList()).size());
+        assertEquals(1, result.allRowsAs(JsonObject.class).size());
         assertTrue(result.meta().signature().isPresent());
 
         QueryMetrics metrics = result.meta().metrics().get();
@@ -116,9 +110,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         assertNotNull(result.meta().requestId());
         assertFalse(result.meta().clientContextId().isPresent());
-        assertEquals("success", result.meta().queryStatus());
+        assertEquals(QueryStatus.SUCCESS, result.meta().status());
         assertFalse(result.meta().warnings().isPresent());
-        assertEquals(1, result.rows().collect(Collectors.toList()).size());
+        assertEquals(1, result.allRowsAs(JsonObject.class).size());
         assertTrue(result.meta().signature().isPresent());
 
         QueryMetrics metrics = result.meta().metrics().get();
@@ -136,7 +130,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
+        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -151,7 +145,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         );
         List<JsonObject> rows = result
           .flux()
-          .flatMap(ReactiveQueryResult::rows)
+          .flatMap(ReactiveQueryResult::rowsAsObject)
           .collectList()
           .block();
         assertNotNull(rows);
@@ -201,7 +195,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.rows().collect(Collectors.toList());
+        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -217,7 +211,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
+        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -234,7 +228,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         );
         List<JsonObject> rows = result
           .flux()
-          .flatMap(ReactiveQueryResult::rows)
+          .flatMap(ReactiveQueryResult::rowsAsObject)
           .collectList()
           .block();
         assertNotNull(rows);
@@ -252,7 +246,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.rows().collect(Collectors.toList());
+        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -268,7 +262,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName+ " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.get().rows().collect(Collectors.toList());
+        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -285,7 +279,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         );
         List<JsonObject> rows = result
           .flux()
-          .flatMap(ReactiveQueryResult::rows)
+          .flatMap(ReactiveQueryResult::rowsAsObject)
           .collectList()
           .block();
         assertNotNull(rows);

@@ -19,6 +19,7 @@ package com.couchbase.client.java.analytics;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -30,6 +31,16 @@ public class ReactiveAnalyticsResult {
 
     ReactiveAnalyticsResult(final AnalyticsResponse response) {
         this.response = response;
+    }
+
+    /**
+     * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to
+     * {@link JsonObject}
+     *
+     * @return {@link Flux}
+     */
+    public Flux<JsonObject> rowsAsObject() {
+        return rowsAs(JsonObject.class);
     }
 
     public <T> Flux<T> rowsAs(final Class<T> target) {

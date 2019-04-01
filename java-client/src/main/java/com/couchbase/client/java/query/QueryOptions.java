@@ -20,15 +20,14 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValue;
-import com.couchbase.client.java.query.options.QueryProfile;
-import com.couchbase.client.java.query.options.ScanConsistency;
 
 /**
- * Options builder for constructing {@link Query}
+ * N1QL query rrequest options.
  *
  * @since 3.0.0
  */
@@ -40,7 +39,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Map<String, String> credentials;
   private ScanConsistency scanConsistency;
   private QueryProfile queryProfile;
-  private String serverSideTimeout;
   private String clientContextId;
   private Boolean metricsDisabled;
   private String scanWait;
@@ -112,17 +110,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   }
 
   /**
-   * Sets a maximum timeout for processing on the server side.
-   *
-   * @param timeout the duration of the timeout.
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public QueryOptions withServerSideTimeout(Duration timeout) {
-    this.serverSideTimeout = durationToN1qlFormat(timeout);
-    return this;
-  }
-
-  /**
    * Adds a client context ID to the request, that will be sent back in the response, allowing clients
    * to meaningfully trace requests/responses when many are exchanged.
    *
@@ -160,7 +147,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     if (this.scanConsistency == ScanConsistency.NOT_BOUNDED) {
       this.scanWait = null;
     } else {
-      this.scanWait = durationToN1qlFormat(wait);
+      this.scanWait = Golang.encodeDurationToMs(wait);
     }
     return this;
   }
@@ -283,17 +270,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
-  private String durationToN1qlFormat(Duration duration) {
-    if (duration.getSeconds() > 0) {
-      return duration.getSeconds() + "s";
-    } else if (duration.getSeconds() == 0) {
-      return duration.getNano() + "ns";
-    } else {
-      //negative
-      return "0s";
-    }
-  }
-
   @Stability.Internal
   public BuiltQueryOptions build() {
     return new BuiltQueryOptions();
@@ -316,8 +292,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     public QueryProfile profile() {
       return queryProfile;
     }
-
-    public String serverSideTimeout() { return serverSideTimeout; }
 
     private String clientContextId() { return clientContextId; }
 
@@ -344,7 +318,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     }
 
     @Stability.Internal
-    public void getN1qlParams(JsonObject queryJson) {
+    public void injectParams(JsonObject queryJson) {
       if (credentials != null && !credentials.isEmpty()) {
         JsonArray creds = JsonArray.create();
         for (Map.Entry<String, String> c : credentials.entrySet()) {
@@ -356,6 +330,22 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
         }
         if (!creds.isEmpty()) {
           queryJson.put("creds", creds);
+        }
+      }
+
+      if (parameters != null) {
+        if (parameters instanceof JsonArray && !((JsonArray) parameters).isEmpty()) {
+          queryJson.put("args", (JsonArray) parameters);
+        } else if (parameters instanceof JsonObject && !((JsonObject) parameters).isEmpty()) {
+          JsonObject namedParams = (JsonObject) parameters;
+          namedParams.getNames().forEach(key -> {
+            Object value = namedParams.get(key);
+            if (key.charAt(0) != '$') {
+              queryJson.put('$' + key, value);
+            } else {
+              queryJson.put(key, value);
+            }
+          });
         }
       }
 
@@ -371,10 +361,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
       if (queryProfile != null) {
         queryJson.put("profile", queryProfile.toString());
-      }
-
-      if (serverSideTimeout != null) {
-        queryJson.put("timeout", serverSideTimeout);
       }
 
       if (scanWait != null && (ScanConsistency.REQUEST_PLUS == scanConsistency)) {

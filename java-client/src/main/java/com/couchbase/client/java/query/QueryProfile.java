@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query.options;
+package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
 

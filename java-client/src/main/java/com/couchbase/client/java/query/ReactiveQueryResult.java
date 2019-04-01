@@ -37,14 +37,10 @@ import reactor.core.publisher.Mono;
 @Stability.Volatile
 public class ReactiveQueryResult {
 
-	private final Flux<QueryChunkRow> rows;
-	private final Mono<QueryMeta> meta;
+	private final QueryResponse response;
 
-	@Stability.Internal
-	public ReactiveQueryResult(Flux<QueryChunkRow> rows,
-							   Mono<QueryMeta> meta) {
-		this.rows = rows;
-		this.meta = meta;
+	ReactiveQueryResult(final QueryResponse response) {
+		this.response = response;
 	}
 
 	/**
@@ -53,8 +49,8 @@ public class ReactiveQueryResult {
 	 *
 	 * @return {@link Flux}
 	 */
-	public Flux<JsonObject> rows() {
-		return rows(JsonObject.class);
+	public Flux<JsonObject> rowsAsObject() {
+		return rowsAs(JsonObject.class);
 	}
 
 	/**
@@ -68,8 +64,8 @@ public class ReactiveQueryResult {
 	 * @param target target class for converting the query row
 	 * @return {@link Flux}
 	 */
-	public <T> Flux<T> rows(Class<T> target) {
-		return this.rows.map(n -> {
+	public <T> Flux<T> rowsAs(Class<T> target) {
+		return response.rows().map(n -> {
 			try {
 				return JacksonTransformers.MAPPER.readValue(n.data(), target);
 			} catch (IOException ex) {
@@ -86,7 +82,7 @@ public class ReactiveQueryResult {
 	 * first handle the rows in your code, and then the metadata.  This will avoid buffering all the rows in-memory.
 	 */
 	public Mono<QueryMeta> meta() {
-		return meta;
+		return response.trailer().map(t -> QueryMeta.from(response.header(), t));
 	}
 
 }

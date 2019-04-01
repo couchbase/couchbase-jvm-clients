@@ -57,7 +57,7 @@ public class QueryMetrics implements Serializable {
 		this(JsonObject.empty());
 	}
 
-	public QueryMetrics(JsonObject rawMetrics) {
+	QueryMetrics(JsonObject rawMetrics) {
 		this.rawMetrics = rawMetrics;
 
 		if (rawMetrics.getString("elapsedTime") == null) {

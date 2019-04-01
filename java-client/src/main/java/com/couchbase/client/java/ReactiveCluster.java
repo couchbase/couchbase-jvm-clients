@@ -25,7 +25,6 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.query.SimpleQuery;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
@@ -129,22 +128,10 @@ public class ReactiveCluster {
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
-    notNullOrEmpty(statement, "Statement");
-    notNull(options, "QueryOptions");
-
-    QueryOptions.BuiltQueryOptions builtOpts = options.build();
-    if (builtOpts.isPrepared()) {
-      throw new IllegalArgumentException("Prepared query statements are not currently supported");
-    } else {
-      return Mono.defer(() -> Mono.fromFuture(() ->
-        QueryAccessor.queryReactive(
-          async().core(),
-          SimpleQuery.create(statement),
-          builtOpts,
-          async().environment()
-        )
-      ));
-    }
+    return QueryAccessor.queryReactive(
+      asyncCluster.core(),
+      asyncCluster.queryRequest(statement, options)
+    );
   }
 
   /**
@@ -167,9 +154,6 @@ public class ReactiveCluster {
    */
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement,
                                                       final AnalyticsOptions options) {
-    notNullOrEmpty(statement, "Statement");
-    notNull(options, "AnalyticsOptions");
-
     return AnalyticsAccessor.analyticsQueryReactive(
       asyncCluster.core(),
       asyncCluster.analyticsRequest(statement, options)

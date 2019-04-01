@@ -20,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.Duration;
 import java.util.UUID;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.options.QueryProfile;
-import com.couchbase.client.java.query.options.ScanConsistency;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +32,7 @@ public class QueryOptionsSmokeTest {
         QueryOptions options = QueryOptions.queryOptions().withCredentials("johndoe", "secret");
         QueryOptions.BuiltQueryOptions opts = options.build();
         JsonObject queryJson = JsonObject.create();
-        opts.getN1qlParams(queryJson);
+        opts.injectParams(queryJson);
         assertEquals(queryJson.getArray("creds").getObject(0).get("user"), "johndoe");
         assertEquals(queryJson.getArray("creds").getObject(0).get("pass"), "secret");
     }
@@ -44,7 +42,7 @@ public class QueryOptionsSmokeTest {
         QueryOptions options = QueryOptions.queryOptions().withScanConsistency(ScanConsistency.REQUEST_PLUS);
         QueryOptions.BuiltQueryOptions opts = options.build();
         JsonObject queryJson = JsonObject.create();
-        opts.getN1qlParams(queryJson);
+        opts.injectParams(queryJson);
         assertEquals(queryJson.get("scan_consistency"), "request_plus");
     }
 
@@ -53,17 +51,8 @@ public class QueryOptionsSmokeTest {
         QueryOptions options = QueryOptions.queryOptions().withProfile(QueryProfile.TIMINGS);
         QueryOptions.BuiltQueryOptions opts = options.build();
         JsonObject queryJson = JsonObject.create();
-        opts.getN1qlParams(queryJson);
+        opts.injectParams(queryJson);
         assertEquals(queryJson.get("profile"), "timings");
-    }
-
-    @Test
-    public void testServerSideTimeout() {
-        QueryOptions options = QueryOptions.queryOptions().withServerSideTimeout(Duration.ofSeconds(100));
-        QueryOptions.BuiltQueryOptions opts = options.build();
-        JsonObject queryJson = JsonObject.create();
-        opts.getN1qlParams(queryJson);
-        assertEquals(queryJson.get("timeout"), "100s");
     }
 
     @Test
@@ -72,7 +61,7 @@ public class QueryOptionsSmokeTest {
         QueryOptions options = QueryOptions.queryOptions().withClientContextId(randomId);
         QueryOptions.BuiltQueryOptions opts = options.build();
         JsonObject queryJson = JsonObject.create();
-        opts.getN1qlParams(queryJson);
+        opts.injectParams(queryJson);
         assertEquals(queryJson.get("client_context_id"), randomId);
     }
 }

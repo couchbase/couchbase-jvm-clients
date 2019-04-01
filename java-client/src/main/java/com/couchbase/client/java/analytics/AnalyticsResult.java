@@ -51,6 +51,24 @@ public class AnalyticsResult {
     return rowsAs(target).collect(Collectors.toList());
   }
 
+  /**
+   * Returns all rows, converted into {@link JsonObject}s.
+   * <p>
+   * @throws DecodingFailedException if any row could not be successfully decoded
+   */
+  public Stream<JsonObject> rowsAsObject() {
+    return rowsAs(JsonObject.class);
+  }
+
+  /**
+   * Returns all rows, converted into {@link JsonObject}s.
+   * <p>
+   * @throws DecodingFailedException if any row could not be successfully decoded
+   */
+  public List<JsonObject> allRowsAsObject() {
+    return allRowsAs(JsonObject.class);
+  }
+
   public AnalyticsMeta meta() {
     return AnalyticsMeta.from(response.header(), response.trailer().block());
   }

@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -28,8 +29,6 @@ import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.*;
-import com.couchbase.client.java.query.prepared.LFUCache;
-import com.couchbase.client.java.query.prepared.PreparedQuery;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -59,19 +58,6 @@ public class AsyncCluster {
    * Holds the internal core reference.
    */
   private final Core core;
-
-  /**
-   * The size of the prepared statement cache.
-   *
-   * TODO: Allow environment configuration
-   */
-  private final int PREPARED_CACHE_SIZE = 3000;
-
-  /**
-   * The prepared query cache itself.
-   */
-  private final LFUCache<String, PreparedQuery> preparedQueryCache =
-    new LFUCache<>(PREPARED_CACHE_SIZE);
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -155,22 +141,33 @@ public class AsyncCluster {
    * @param options the custom options for this query.
    * @return the {@link QueryResult} once the response arrives successfully.
    */
-  public CompletableFuture<QueryResult> query(final String statement,
-                                              final QueryOptions options) {
+  public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
+    return QueryAccessor.queryAsync(core, queryRequest(statement, options));
+  }
+
+  /**
+   * Helper method to construct the query request.
+   *
+   * @param statement the statement of the query.
+   * @param options the options.
+   * @return the constructed query request.
+   */
+  QueryRequest queryRequest(final String statement, final QueryOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    QueryOptions.BuiltQueryOptions builtOptions = options.build();
-    if (builtOptions.isPrepared()) {
-      throw new IllegalArgumentException("Prepared query statements are not currently supported");
-    } else {
-      return QueryAccessor.queryAsync(
-        core,
-        SimpleQuery.create(statement),
-        builtOptions,
-        environment()
-      );
-    }
+    QueryOptions.BuiltQueryOptions opts = options.build();
+
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+
+    JsonObject query = JsonObject.create();
+    query.put("statement", statement);
+    query.put("timeout", encodeDurationToMs(timeout));
+    opts.injectParams(query);
+
+    return new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+      query.toString().getBytes(StandardCharsets.UTF_8));
   }
 
   /**
@@ -251,8 +248,4 @@ public class AsyncCluster {
     })).toFuture();
   }
 
-  @Stability.Internal
-  LFUCache<String, PreparedQuery> preparedQueryCache() {
-    return preparedQueryCache;
-  }
 }

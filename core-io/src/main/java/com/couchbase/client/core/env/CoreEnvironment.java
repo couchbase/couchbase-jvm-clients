@@ -54,11 +54,6 @@ public class CoreEnvironment {
   public static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   /**
-   * Backpressure queue size for the reactive query stream
-   */
-  public static final int DEFAULT_QUERY_BACKPRESSURE_QUEUE_SIZE = 1;
-
-  /**
    * Holds the user agent for this client instance.
    */
   private final UserAgent userAgent;

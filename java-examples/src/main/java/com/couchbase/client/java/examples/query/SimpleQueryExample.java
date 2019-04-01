@@ -29,7 +29,7 @@ public class SimpleQueryExample {
     QueryResult result = cluster.query(
       "select * from `travel-sample` where type = 'airline' limit 5"
     );
-    System.out.println(result.rows());
+    System.out.println(result.rowsAsObject());
   }
 
 }

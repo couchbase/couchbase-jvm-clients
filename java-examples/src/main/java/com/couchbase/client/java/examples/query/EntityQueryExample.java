@@ -27,7 +27,7 @@ public class EntityQueryExample {
         .withParameters(JsonObject.create().put("type", "person"))
     );
 
-    for (Person person : result.rows(Person.class).collect(Collectors.toList())) {
+    for (Person person : result.rowsAs(Person.class).collect(Collectors.toList())) {
       System.out.println(person.name());
     }
 
