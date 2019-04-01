@@ -144,15 +144,14 @@ class AsyncCluster(environment: => ClusterEnvironment)
             .flatMap(rows =>
 
               FutureConversions.javaMonoToScalaMono(response.trailer())
-                .map(addl => AnalyticsResult(
+                .map(trailer => AnalyticsResult(
                   rows,
                   response.header().requestId(),
                   response.header().clientContextId().asScala,
                   response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
-                  addl.metrics.asScala.map(bytes => AnalyticsMetrics.fromBytes(bytes)),
-                  addl.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
-                  addl.status,
-                  addl.profile.asScala.map(AnalyticsProfile))
+                  Some(AnalyticsMetrics.fromBytes(trailer.metrics)),
+                  trailer.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
+                  trailer.status)
                 )
             )
           )

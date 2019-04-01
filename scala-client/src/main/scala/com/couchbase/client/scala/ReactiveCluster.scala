@@ -127,10 +127,9 @@ class ReactiveCluster(val async: AsyncCluster)
                   response.header().requestId(),
                   response.header().clientContextId().asScala,
                   response.header().signature().asScala.map(AnalyticsSignature),
-                  trailer.metrics().asScala.map(AnalyticsMetrics.fromBytes),
+                  Some(AnalyticsMetrics.fromBytes(trailer.metrics())),
                   trailer.warnings.asScala.map(AnalyticsWarnings),
-                  trailer.status,
-                  trailer.profile.asScala.map(v => AnalyticsProfile(v))
+                  trailer.status
                 )
               })
 

@@ -35,7 +35,6 @@ import scala.util.{Failure, Success, Try}
   * @param metrics         metrics related to the analytics request, if they are available
   * @param warnings        any warnings returned from the analytics service
   * @param status          the raw status string returned from the analytics service
-  * @param profile         if a profile was requested in [[AnalyticsOptions]] it will be returned here
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -46,8 +45,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
                            signature: Option[AnalyticsSignature],
                            metrics: Option[AnalyticsMetrics],
                            warnings: Option[AnalyticsWarnings],
-                           status: String,
-                           profile: Option[AnalyticsProfile]) {
+                           status: String) {
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
@@ -84,24 +82,6 @@ case class ReactiveAnalyticsResult(private[scala] val rows: Flux[AnalyticsChunkR
       case Failure(err) => throw err
     })
   }
-}
-
-/** Returns the profile information of a Analytics request, in JSON form. */
-case class AnalyticsProfile(private val _content: Array[Byte]) {
-
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = _content
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-
-  override def toString: String = contentAs[JsonObject].toString
 }
 
 /** An error returned by the Analytics service. */
@@ -222,15 +202,13 @@ private[scala] object AnalyticsMetrics {
 
 /** Additional information returned by the Analytics service after any rows and errors.
   *
-  * @param metrics         metrics related to the Analytics request, if they were not disabled in [[AnalyticsOptions]]
+  * @param metrics         metrics related to the Analytics request, if they are available
   * @param warnings        any warnings returned from the Analytics service
   * @param status          the raw status string returned from the Analytics service
-  * @param profile         if a profile was requested in [[AnalyticsOptions]] it will be returned here
   */
 case class AnalyticsMeta(private[scala] val requestId: String,
                          clientContextId: Option[String],
                          signature: Option[AnalyticsSignature],
                          metrics: Option[AnalyticsMetrics],
                          warnings: Option[AnalyticsWarnings],
-                         status: String,
-                         profile: Option[AnalyticsProfile])
+                         status: String)
