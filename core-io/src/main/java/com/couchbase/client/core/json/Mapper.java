@@ -17,20 +17,35 @@
 package com.couchbase.client.core.json;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectReader;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectWriter;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.util.Arrays;
 
 /**
  * Provides utilities for encoding and decoding JSON data.
  *
  * @since 2.0.0
  */
+@Stability.Internal
 public class Mapper {
 
   private Mapper() {
+    throw new AssertionError("not instantiable");
   }
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  // ObjectMapper is mutable. To prevent it from being accidentally (or maliciously) reconfigured,
+  // don't expose the ObjectMapper outside this class.
+  private static final ObjectMapper mapper = new ObjectMapper();
+
+  // Instead, expose immutable reader and writer for advanced use cases.
+  private static final ObjectReader reader = mapper.reader();
+  private static final ObjectWriter writer = mapper.writer();
 
   /**
    * Encodes the given input into a byte array, formatted non-pretty.
@@ -40,7 +55,7 @@ public class Mapper {
    */
   public static byte[] encodeAsBytes(final Object input) {
     try {
-      return MAPPER.writeValueAsBytes(input);
+      return mapper.writeValueAsBytes(input);
     } catch (Exception ex) {
       throw new MapperException("Could not encode into JSON: " + input, ex);
     }
@@ -54,7 +69,7 @@ public class Mapper {
    */
   public static byte[] encodeAsBytesPretty(final Object input) {
     try {
-      return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(input);
+      return mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(input);
     } catch (Exception ex) {
       throw new MapperException("Could not encode into JSON: " + input, ex);
     }
@@ -68,7 +83,7 @@ public class Mapper {
    */
   public static String encodeAsString(final Object input) {
     try {
-      return MAPPER.writeValueAsString(input);
+      return mapper.writeValueAsString(input);
     } catch (Exception ex) {
       throw new MapperException("Could not encode into JSON: " + input, ex);
     }
@@ -82,7 +97,7 @@ public class Mapper {
    */
   public static String encodeAsStringPretty(final Object input) {
     try {
-      return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(input);
+      return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(input);
     } catch (Exception ex) {
       throw new MapperException("Could not encode into JSON: " + input, ex);
     }
@@ -98,37 +113,68 @@ public class Mapper {
    */
   public static <T> T decodeInto(byte[] input, Class<T> clazz) {
     try {
-      return MAPPER.readValue(input, clazz);
+      return mapper.readValue(input, clazz);
     } catch (Exception ex) {
-      throw new MapperException("Could not decode from JSON: " + input, ex);
+      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
     }
   }
 
   /**
-   * Decodes a byte array into a json node token tree.
+   * Decodes a byte array into the given type.
+   *
+   * @param input the input byte array.
+   * @param type the type which should be decoded into.
+   * @param <T> generic type used for inference.
+   * @return the created instance.
+   */
+
+  public static <T> T decodeInto(byte[] input, TypeReference<T> type) {
+    try {
+      return mapper.readValue(input, type);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
+    }
+  }
+
+  /**
+   * Decodes a byte array into a tree of JSON nodes.
    *
    * @param input the input byte array.
    * @return the created node.
    */
   public static JsonNode decodeIntoTree(byte[] input) {
     try {
-      return MAPPER.readTree(input);
+      return mapper.readTree(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not decode from JSON: " + input, ex);
+      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
     }
   }
 
   /**
-   * Returns the jackson mapper.
-   *
-   * <p>This call should only be used if the other available methods do not provide
-   * what's needed.</p>
-   *
-   * @return the jackson object mapper.
+   * Returns an ObjectReader for advanced use cases.
    */
-  @Stability.Internal
-  public static ObjectMapper mapper() {
-    return MAPPER;
+  public static ObjectReader reader() {
+    return reader;
   }
 
+  /**
+   * Returns an ObjectWriter for advanced use cases.
+   */
+  public static ObjectWriter writer() {
+    return writer;
+  }
+
+  /**
+   * Returns a new empty ObjectNode.
+   */
+  public static ObjectNode createObjectNode() {
+    return mapper.createObjectNode();
+  }
+
+  /**
+   * Returns a new empty ArrayNode.
+   */
+  public static ArrayNode createArrayNode() {
+    return mapper.createArrayNode();
+  }
 }

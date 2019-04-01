@@ -199,7 +199,7 @@ public enum GetAccessor {
    * @throws IOException if jackson gets a heart attack while parsing.
    */
   static byte[] projectRecursive(final SubdocGetResponse response) throws IOException {
-    ObjectNode root = Mapper.mapper().createObjectNode();
+    ObjectNode root = Mapper.createObjectNode();
 
     for (SubdocField value : response.values()) {
       if (value.status() != SubDocumentOpResponseStatus.SUCCESS
@@ -210,7 +210,7 @@ public enum GetAccessor {
 
       String path = value.path();
       if (!path.contains(".")) {
-        root.set(path, Mapper.mapper().readTree(value.value()));
+        root.set(path, Mapper.decodeIntoTree(value.value()));
         continue;
       }
 
@@ -220,18 +220,18 @@ public enum GetAccessor {
         String component = pathComponents[i];
         ObjectNode maybe = (ObjectNode) parent.get(component);
         if (maybe == null) {
-          maybe = Mapper.mapper().createObjectNode();
+          maybe = Mapper.createObjectNode();
           parent.set(component, maybe);
         }
         parent = maybe;
       }
       parent.set(
         pathComponents[pathComponents.length-1],
-        Mapper.mapper().readTree(value.value())
+        Mapper.decodeIntoTree(value.value())
       );
     }
 
-    return Mapper.mapper().writeValueAsBytes(root);
+    return Mapper.encodeAsBytes(root);
   }
 
 }

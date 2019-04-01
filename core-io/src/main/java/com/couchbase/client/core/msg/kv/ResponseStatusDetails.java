@@ -49,7 +49,7 @@ public class ResponseStatusDetails {
     }
 
     try {
-      HashMap<String,HashMap<String, String>> result = Mapper.mapper().readValue(input, JACKSON_TYPEREF);
+      HashMap<String,HashMap<String, String>> result = Mapper.decodeInto(input, JACKSON_TYPEREF);
       HashMap<String, String> errorMap = result.get("error");
       if (errorMap == null) {
         return null;

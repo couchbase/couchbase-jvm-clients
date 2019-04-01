@@ -45,7 +45,7 @@ public final class BucketConfigParser {
             InjectableValues inject = new InjectableValues.Std()
                     .addValue("env", env)
                     .addValue("origin", origin == null ? NetworkAddress.localhost() : origin);
-            return Mapper.mapper().reader()
+            return Mapper.reader()
                     .forType(BucketConfig.class)
                     .with(inject)
                     .with(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)
