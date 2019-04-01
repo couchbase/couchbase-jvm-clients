@@ -66,7 +66,7 @@ public @interface Stability {
    * may lead to data corruption, security holes etc.</p>
    *
    * <p>Explicitly note that backwards-compatible extensions are always allowed since
-   * they don't brake old code.</p>
+   * they don't break old code.</p>
    *
    * <p>This is the default interface level for an API, unless the API is specifically
    * marked otherwise.</p>
