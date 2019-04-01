@@ -16,5 +16,33 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
+import com.couchbase.client.java.json.JacksonTransformers;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+
 public class ReactiveAnalyticsResult {
+
+    private final AnalyticsResponse response;
+
+    ReactiveAnalyticsResult(final AnalyticsResponse response) {
+        this.response = response;
+    }
+
+    public <T> Flux<T> rowsAs(final Class<T> target) {
+        return response.rows().map(row -> {
+            try {
+                return JacksonTransformers.MAPPER.readValue(row.data(), target);
+            } catch (IOException e) {
+                throw new DecodingFailedException("Decoding of Analytics Row failed!", e);
+            }
+        });
+    }
+
+    public Mono<AnalyticsMeta> meta() {
+        return response.trailer().map(t -> AnalyticsMeta.from(response.header(), t));
+    }
 }

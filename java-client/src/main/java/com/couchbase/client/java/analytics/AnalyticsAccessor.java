@@ -17,17 +17,31 @@
 package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Internal helper to map the results from the analytics requests.
+ *
+ * @since 3.0.0
+ */
 public class AnalyticsAccessor {
 
-  public static CompletableFuture<AsyncAnalyticsResult> analyticsQueryAsync(final Core core,
-                                                             final AnalyticsRequest request) {
+  public static CompletableFuture<AnalyticsResult> analyticsQueryAsync(final Core core,
+                                                                       final AnalyticsRequest request) {
     core.send(request);
-    return request
-      .response()
-      .thenApply(AsyncAnalyticsResult::new);
+    return request.response().thenApply(AnalyticsResult::new);
   }
+
+  public static Mono<ReactiveAnalyticsResult> analyticsQueryReactive(final Core core,
+                                                                     final AnalyticsRequest request) {
+    core.send(request);
+    return Reactor
+      .wrap(request, request.response(), true)
+      .map(ReactiveAnalyticsResult::new);
+  }
+
 }

@@ -18,17 +18,41 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.json.JsonObject;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   public static AnalyticsOptions DEFAULT = new AnalyticsOptions();
 
   private int priority;
+  private String clientContextId;
+  private Map<String, Object> rawParams;
+
+  public static AnalyticsOptions analyticsOptions() {
+    return new AnalyticsOptions();
+  }
 
   private AnalyticsOptions() {}
 
-  public AnalyticsOptions priority(int priority) {
+  public AnalyticsOptions priority(final int priority) {
     this.priority = priority;
+    return this;
+  }
+
+  public AnalyticsOptions clientContextId(final String clientContextId) {
+    this.clientContextId = clientContextId;
+    return this;
+  }
+
+  public AnalyticsOptions rawParam(final String key, final Object value) {
+    if (rawParams == null) {
+      rawParams = new HashMap<>();
+    }
+    this.rawParams.put(key, value);
     return this;
   }
 
@@ -41,6 +65,18 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
     public int priority() {
       return priority;
+    }
+
+    public void injectParams(final JsonObject input) {
+      input.put("client_context_id", clientContextId == null
+          ? UUID.randomUUID().toString()
+          : clientContextId);
+
+      if (rawParams != null) {
+        for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
+          input.put(entry.getKey(), entry.getValue());
+        }
+      }
     }
 
   }

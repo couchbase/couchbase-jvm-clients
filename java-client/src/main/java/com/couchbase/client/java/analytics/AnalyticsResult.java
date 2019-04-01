@@ -16,59 +16,43 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
+import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
 public class AnalyticsResult {
 
-  private final AsyncAnalyticsResult asyncResult;
+  private final AnalyticsResponse response;
 
-  public AnalyticsResult(AsyncAnalyticsResult asyncResult) {
-    this.asyncResult = asyncResult;
+  AnalyticsResult(final AnalyticsResponse response) {
+    this.response = response;
   }
 
-  /**
-   * Get the request identifier of the query request
-   *
-   * @return request identifier
-   */
-  public String requestId() {
-    return this.asyncResult.requestId();
+  public <T> Stream<T> rowsAs(final Class<T> target) {
+    return response.rows().map(row -> {
+      try {
+        return JacksonTransformers.MAPPER.readValue(row.data(), target);
+      } catch (IOException e) {
+        throw new DecodingFailedException("Decoding of Analytics Row failed!", e);
+      }
+    }).toStream();
   }
 
-  /**
-   * Get the client context identifier as set by the client
-   *
-   * @return client context identifier
-   */
-  public Optional<String> clientContextId() {
-    return this.asyncResult.clientContextId();
+  public <T> List<T> allRowsAs(final Class<T> target) {
+    return rowsAs(target).collect(Collectors.toList());
   }
 
-  /**
-   * Get the list of rows that were fetched by the query which are then
-   * decoded to the requested entity class
-   *
-   * @param target target class for converting the query row
-   * @param <T> generic class
-   * @return list of entities
-   */
-  public <T> List<T> rows(Class<T> target) {
-    return block(this.asyncResult.rows(target));
-  }
-
-  /**
-   * Get the list of rows that were fetched by the query which are then
-   * decoded to {@link JsonObject}
-   *
-   * @return list of {@link JsonObject}
-   */
-  public List<JsonObject> rows() {
-    return block(this.asyncResult.rows());
+  public AnalyticsMeta meta() {
+    return AnalyticsMeta.from(response.header(), response.trailer().block());
   }
 
 }

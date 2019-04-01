@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.test;
+package com.couchbase.client.java.analytics;
 
-/**
- * Certain capabilities used to figure out if a test can be run or not.
- */
-public enum Capabilities {
-  /**
-   * This cluster is able to perform sync replications.
-   */
-  SYNC_REPLICATION,
-  /**
-   * This cluster is able to perform N1QL queries.
-   */
-  QUERY,
-  /**
-   * This cluster is able to perform Analytics queries.
-   */
-  ANALYTICS
+public enum AnalyticsStatus {
+    RUNNING,
+    SUCCESS,
+    ERRORS,
+    COMPLETED,
+    STOPPED,
+    TIMEOUT,
+    CLOSED,
+    FATAL,
+    ABORTED,
+    UNKNOWN;
+
+    public static AnalyticsStatus from(final String wireName) {
+        try {
+            return AnalyticsStatus.valueOf(wireName.toUpperCase());
+        } catch (Exception ex) {
+            return AnalyticsStatus.UNKNOWN;
+        }
+    }
+
 }

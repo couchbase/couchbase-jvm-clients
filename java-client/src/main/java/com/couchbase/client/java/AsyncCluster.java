@@ -24,7 +24,7 @@ import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
-import com.couchbase.client.java.analytics.AsyncAnalyticsResult;
+import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.AsyncQueryResult;
@@ -39,9 +39,9 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -187,9 +187,9 @@ public class AsyncCluster {
    * Performs an Analytics query with default {@link AnalyticsOptions}.
    *
    * @param statement the Analytics query statement as a raw string.
-   * @return the {@link AsyncAnalyticsResult} once the response arrives successfully.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
-  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement) {
+  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement) {
     return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
   }
 
@@ -199,13 +199,20 @@ public class AsyncCluster {
    *
    * @param statement the Analytics query statement as a raw string.
    * @param options the custom options for this analytics query.
-   * @return the {@link AsyncAnalyticsResult} once the response arrives successfully.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
-  public CompletableFuture<AsyncAnalyticsResult> analyticsQuery(final String statement,
-                                                                final AnalyticsOptions options) {
+  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement,
+                                                           final AnalyticsOptions options) {
     return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, options));
   }
 
+  /**
+   * Helper method to craft an analytics request.
+   *
+   * @param statement the statement to use.
+   * @param options the analytics options.
+   * @return the created analytics request.
+   */
   AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
@@ -215,9 +222,10 @@ public class AsyncCluster {
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
-    // TODO: improve with options
     JsonObject query = JsonObject.empty();
     query.put("statement", statement);
+    query.put("timeout", encodeDurationToMs(timeout));
+    opts.injectParams(query);
 
     return new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
         query.toString().getBytes(StandardCharsets.UTF_8), opts.priority()

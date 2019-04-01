@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -178,7 +179,10 @@ public class ReactiveCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
 
-    return null;
+    return AnalyticsAccessor.analyticsQueryReactive(
+      asyncCluster.core(),
+      asyncCluster.analyticsRequest(statement, options)
+    );
   }
 
   /**

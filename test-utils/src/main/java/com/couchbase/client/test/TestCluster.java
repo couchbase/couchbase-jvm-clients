@@ -110,12 +110,30 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         hostname = inputHost;
       }
       Map<Services, Integer> ports = new HashMap<>();
-      ports.put(Services.KV, services.get("kv"));
-      ports.put(Services.MANAGER, services.get("mgmt"));
-      ports.put(Services.KV_TLS, services.get("kvSSL"));
-      ports.put(Services.MANAGER_TLS, services.get("mgmtSSL"));
-      ports.put(Services.QUERY, services.get("n1ql"));
-      ports.put(Services.QUERY_TLS, services.get("n1qlSSL"));
+      if (services.containsKey("kv")) {
+        ports.put(Services.KV, services.get("kv"));
+      }
+      if (services.containsKey("kvSSL")) {
+        ports.put(Services.KV_TLS, services.get("kvSSL"));
+      }
+      if (services.containsKey("mgmt")) {
+        ports.put(Services.MANAGER, services.get("mgmt"));
+      }
+      if (services.containsKey("mgmtSSL")) {
+        ports.put(Services.MANAGER_TLS, services.get("mgmtSSL"));
+      }
+      if (services.containsKey("n1ql")) {
+        ports.put(Services.QUERY, services.get("n1ql"));
+      }
+      if (services.containsKey("n1qlSSL")) {
+        ports.put(Services.QUERY_TLS, services.get("n1qlSSL"));
+      }
+      if (services.containsKey("cbas")) {
+        ports.put(Services.ANALYTICS, services.get("cbas"));
+      }
+      if (services.containsKey("cbasSSL")) {
+        ports.put(Services.ANALYTICS_TLS, services.get("cbasSSL"));
+      }
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
@@ -148,6 +166,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       for (String name : services.keySet()) {
         if (name.equals("n1ql") || name.equals("n1qlSSL")) {
           capabilities.add(Capabilities.QUERY);
+        }
+        if (name.equals("cbas") || name.equals("cbasSSL")) {
+          capabilities.add(Capabilities.ANALYTICS);
         }
       }
     }

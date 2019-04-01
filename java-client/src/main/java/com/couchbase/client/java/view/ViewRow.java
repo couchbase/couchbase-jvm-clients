@@ -18,6 +18,7 @@ package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
@@ -109,7 +110,7 @@ public class ViewRow {
       }
       return Optional.ofNullable(JacksonTransformers.MAPPER.treeToValue(subNode, target));
     } catch (JsonProcessingException e) {
-      throw new ViewServiceException("Could not decode id in view row!");
+      throw new DecodingFailedException("Could not decode " + path +" in view row!");
     }
   }
 

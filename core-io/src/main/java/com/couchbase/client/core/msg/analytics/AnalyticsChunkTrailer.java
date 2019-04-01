@@ -24,25 +24,23 @@ import java.util.Optional;
 public class AnalyticsChunkTrailer implements ChunkTrailer {
 
   private final String status;
-  private final Optional<byte[]> metrics;
+  private final byte[] metrics;
   private final Optional<byte[]> warnings;
   private final Optional<byte[]> errors;
-  private final Optional<byte[]> profile;
 
-  public AnalyticsChunkTrailer(String status, Optional<byte[]> metrics, Optional<byte[]> warnings,
-                               Optional<byte[]> errors, Optional<byte[]> profile) {
+  public AnalyticsChunkTrailer(String status, byte[] metrics, Optional<byte[]> warnings,
+                               Optional<byte[]> errors) {
     this.status = status;
     this.metrics = metrics;
     this.warnings = warnings;
     this.errors = errors;
-    this.profile = profile;
   }
 
   public String status() {
     return status;
   }
 
-  public Optional<byte[]> metrics() {
+  public byte[] metrics() {
     return metrics;
   }
 
@@ -54,18 +52,13 @@ public class AnalyticsChunkTrailer implements ChunkTrailer {
     return errors;
   }
 
-  public Optional<byte[]> profile() {
-    return profile;
-  }
-
   @Override
   public String toString() {
     return "AnalyticsChunkTrailer{" +
       "status='" + status + '\'' +
-      ", metrics=" + metrics.map(v -> new String(v, StandardCharsets.UTF_8)) +
+      ", metrics=" + new String(metrics, StandardCharsets.UTF_8) +
       ", warnings=" + warnings.map(v -> new String(v, StandardCharsets.UTF_8)) +
       ", errors=" + errors.map(v -> new String(v, StandardCharsets.UTF_8)) +
-      ", profile=" + profile.map(v -> new String(v, StandardCharsets.UTF_8)) +
       '}';
   }
 }

@@ -43,7 +43,6 @@ public class AnalyticsChunkResponseParser
   private byte[] metrics;
   private byte[] warnings;
   private byte[] errors;
-  private byte[] profile;
 
   AnalyticsChunkResponseParser() {
   }
@@ -57,7 +56,6 @@ public class AnalyticsChunkResponseParser
     metrics = null;
     warnings = null;
     errors = null;
-    profile = null;
   }
 
   @Override
@@ -113,12 +111,6 @@ public class AnalyticsChunkResponseParser
         value.release();
         metrics = data;
       }),
-      new JsonPointer("/profile", (JsonPointerCB1) value -> {
-        byte[] data = new byte[value.readableBytes()];
-        value.readBytes(data);
-        value.release();
-        profile = data;
-      }),
       new JsonPointer("/errors", (JsonPointerCB1) value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
@@ -157,10 +149,9 @@ public class AnalyticsChunkResponseParser
     completeRows();
     completeTrailer(new AnalyticsChunkTrailer(
       status,
-      Optional.ofNullable(metrics),
+      metrics,
       Optional.ofNullable(warnings),
-      Optional.ofNullable(errors),
-      Optional.ofNullable(profile)
+      Optional.ofNullable(errors)
     ));
   }
 

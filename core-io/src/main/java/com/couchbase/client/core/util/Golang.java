@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.test;
+package com.couchbase.client.core.util;
+
+import java.time.Duration;
 
 /**
- * Certain capabilities used to figure out if a test can be run or not.
+ * Helper methods that have to do with certain golang-specific format the server uses.
+ *
+ * @since 2.0.0
  */
-public enum Capabilities {
-  /**
-   * This cluster is able to perform sync replications.
-   */
-  SYNC_REPLICATION,
-  /**
-   * This cluster is able to perform N1QL queries.
-   */
-  QUERY,
-  /**
-   * This cluster is able to perform Analytics queries.
-   */
-  ANALYTICS
+public class Golang {
+
+    /**
+     * Encodes a Java duration into the encoded golang format.
+     *
+     * @param duration the duration to encode.
+     * @return the encoded duration.
+     */
+    public static String encodeDurationToMs(final Duration duration) {
+        return duration.toMillis() + "ms";
+    }
 }

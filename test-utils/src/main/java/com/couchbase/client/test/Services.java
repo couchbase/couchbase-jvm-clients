@@ -6,5 +6,7 @@ public enum Services {
   MANAGER,
   MANAGER_TLS,
   QUERY,
-  QUERY_TLS
+  QUERY_TLS,
+  ANALYTICS,
+  ANALYTICS_TLS,
 }

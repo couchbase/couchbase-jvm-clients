@@ -163,7 +163,7 @@ public class Cluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
-    return new AnalyticsResult(block(async().analyticsQuery(statement, options)));
+    return block(async().analyticsQuery(statement, options));
   }
 
   /**
