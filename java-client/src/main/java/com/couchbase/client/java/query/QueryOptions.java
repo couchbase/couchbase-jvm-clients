@@ -349,14 +349,8 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
         }
       }
 
-      if (rawParams != null) {
-        for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
-          queryJson.put(entry.getKey(), entry.getValue());
-        }
-      }
-
       if (scanConsistency != null) {
-        queryJson.put("scan_consistency", scanConsistency.n1ql());
+        queryJson.put("scan_consistency", scanConsistency.export());
       }
 
       if (queryProfile != null) {
@@ -402,6 +396,12 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       boolean autoPrepare = Boolean.parseBoolean(System.getProperty("com.couchbase.client.query.autoprepared", "false"));
       if (autoPrepare) {
         queryJson.put("auto_prepare", "true");
+      }
+
+      if (rawParams != null) {
+        for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
+          queryJson.put(entry.getKey(), entry.getValue());
+        }
       }
     }
   }

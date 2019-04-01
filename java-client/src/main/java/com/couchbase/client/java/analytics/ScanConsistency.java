@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.analytics;
 
 /**
- * The possible values for scan_consistency in a N1QL request.
+ * The possible values for scan_consistency in an analytics request.
  *
  * @since 3.0.0
  */

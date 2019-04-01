@@ -18,7 +18,10 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValue;
+import com.couchbase.client.java.query.QueryOptions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +34,9 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   private int priority;
   private String clientContextId;
   private Map<String, Object> rawParams;
+  private JsonValue parameters;
+  private ScanConsistency scanConsistency;
+
 
   public static AnalyticsOptions analyticsOptions() {
     return new AnalyticsOptions();
@@ -45,6 +51,39 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   public AnalyticsOptions clientContextId(final String clientContextId) {
     this.clientContextId = clientContextId;
+    return this;
+  }
+
+  /**
+   * Scan consistency for the query
+   *
+   * @param scanConsistency the index scan consistency to be used
+   * @return {@link QueryOptions} for further chaining
+   */
+  public AnalyticsOptions withScanConsistency(ScanConsistency scanConsistency) {
+    this.scanConsistency = scanConsistency;
+    return this;
+  }
+
+  /**
+   * Named parameters if the query is parameterized with custom names
+   *
+   * @param named {@link JsonObject} with name as key
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public AnalyticsOptions withParameters(final JsonObject named) {
+    this.parameters = named;
+    return this;
+  }
+
+  /**
+   * Positional parameters if the query is parameterized with position numbers
+   *
+   * @param positional {@link JsonArray} in the same order as positions
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public AnalyticsOptions withParameters(final JsonArray positional) {
+    this.parameters = positional;
     return this;
   }
 
@@ -71,6 +110,27 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
       input.put("client_context_id", clientContextId == null
           ? UUID.randomUUID().toString()
           : clientContextId);
+
+
+      if (scanConsistency != null) {
+        input.put("scan_consistency", scanConsistency.export());
+      }
+
+      if (parameters != null) {
+        if (parameters instanceof JsonArray && !((JsonArray) parameters).isEmpty()) {
+          input.put("args", (JsonArray) parameters);
+        } else if (parameters instanceof JsonObject && !((JsonObject) parameters).isEmpty()) {
+          JsonObject namedParams = (JsonObject) parameters;
+          namedParams.getNames().forEach(key -> {
+            Object value = namedParams.get(key);
+            if (key.charAt(0) != '$') {
+              input.put('$' + key, value);
+            } else {
+              input.put(key, value);
+            }
+          });
+        }
+      }
 
       if (rawParams != null) {
         for (Map.Entry<String, Object> entry : rawParams.entrySet()) {

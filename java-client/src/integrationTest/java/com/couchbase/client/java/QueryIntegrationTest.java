@@ -180,7 +180,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @Test
     void failOnSyntaxError() {
         assertThrows(QueryServiceException.class, () -> {
-            QueryResult result = cluster.query("invalid n1ql");
+            QueryResult result = cluster.query("invalid export");
         });
     }
 
