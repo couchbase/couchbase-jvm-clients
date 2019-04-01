@@ -29,6 +29,7 @@ import scala.concurrent.duration.Duration
   */
 case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
                         private[scala] val positionalParameters: Option[List[Any]] = None,
+                        // TODO auto-generated clientContextId if it's not provided
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val credentials: Option[Map[String,String]] = None,
                         private[scala] val maxParallelism: Option[Int] = None,
@@ -195,6 +196,18 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 
   def timeout(timeout: Duration): QueryOptions = {
     copy(timeout = Option(timeout))
+  }
+
+  // TODO make Scala wrappers for retry strategy
+
+  /** Sets what retry strategy to use if the operation fails.  See [[RetryStrategy]] for details.
+    *
+    * @param strategy the retry strategy to use
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def retryStrategy(strategy: RetryStrategy): QueryOptions = {
+    copy(retryStrategy = Some(strategy))
   }
 
   private[scala] def durationToN1qlFormat(duration: Duration) = {

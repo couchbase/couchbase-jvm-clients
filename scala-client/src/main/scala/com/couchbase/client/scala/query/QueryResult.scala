@@ -218,7 +218,7 @@ private[scala] object QueryMetrics {
   }
 }
 
-/** Additional information returned by the query service after any rows and errors.
+/** Additional information returned by the query service aside from any rows and errors.
   *
   * @param metrics         metrics related to the query request, if they were not disabled in [[QueryOptions]]
   * @param warnings        any warnings returned from the query service

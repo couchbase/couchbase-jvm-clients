@@ -119,7 +119,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    * Important: {@link #group(boolean)} and this setter should not be used
    * together in the same {@link ViewOptions}. It is sufficient to only use this
    * setter and use {@link #group(boolean)} in cases where you always want
-   * the highest group level implictly.
+   * the highest group level implicitly.
    *
    * @param grouplevel How deep the grouping level should be.
    * @return the {@link ViewOptions} object for proper chaining.
@@ -188,7 +188,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   /**
-   * Enabled debugging on view queries.
+   * Enable debugging on view queries.
    *
    * @return the {@link ViewOptions} object for proper chaining.
    */
@@ -199,7 +199,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   /**
-   * Return the documents in descending by key order.
+   * Return the documents in descending key order.
    *
    * @return the {@link ViewOptions} object for proper chaining.
    */

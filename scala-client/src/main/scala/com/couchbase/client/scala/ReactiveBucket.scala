@@ -15,9 +15,18 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.error.ViewServiceException
+import com.couchbase.client.core.msg.view.{ViewRequest, ViewResponse}
+import com.couchbase.client.scala.query.handlers.{SpatialViewHandler, ViewHandler}
+import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
+import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
+import com.couchbase.client.scala.view._
 import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
-import scala.concurrent.ExecutionContext
+import scala.compat.java8.OptionConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase bucket resource.
   *
@@ -26,13 +35,17 @@ import scala.concurrent.ExecutionContext
   * Applications should not create these manually, but instead use the functions in [[Cluster]].
   *
   * @param name the name of this bucket
-  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *           opened in the normal way, starting from functions in [[Cluster]]
+  * @param ec   an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
+  *             opened in the normal way, starting from functions in [[Cluster]]
+  *
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveBucket private[scala] (val async: AsyncBucket)
-                    (implicit ec: ExecutionContext) {
+class ReactiveBucket private[scala](val async: AsyncBucket)
+                                   (implicit ec: ExecutionContext) {
+  private[scala] val viewHandler = new ViewHandler
+  private[scala] val spatialViewHandler = new SpatialViewHandler
+
   /** Opens and returns a Couchbase scope resource.
     *
     * @param name the name of the scope
@@ -54,9 +67,83 @@ class ReactiveBucket private[scala] (val async: AsyncBucket)
   /** Opens a Couchbase collection resource on the default scope.
     *
     * @param collection the name of the collection
+    *
     * @return a created collection resource
     */
   def collection(name: String): Mono[ReactiveCollection] = {
     scope(DefaultResources.DefaultScope).flatMap(v => v.collection(name))
+  }
+
+  /** Performs a view query against the cluster.
+    *
+    * This is a reactive streaming version of this API.  See [[Bucket]] for a synchronous blocking version, and
+    * [[Bucket.async]] for an async version.
+    *
+    * @param designDoc the view design document to use
+    * @param viewName  the view to use
+    * @param options   any view query options - see [[ViewOptions]] for documentation
+    *
+    * @return a `Mono` containing a [[ViewResult]] (which includes any returned rows)
+    */
+  def viewQuery(designDoc: String,
+                viewName: String,
+                options: ViewOptions = ViewOptions()): Mono[ReactiveViewResult] = {
+    val req = viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
+    viewQuery(req)
+  }
+
+  /** Performs a spatial view query against the cluster.
+    *
+    * This is a reactive streaming version of this API.  See [[Bucket]] for a synchronous blocking version, and
+    * [[Bucket.async]] for an async version.
+    *
+    * @param designDoc the view design document to use
+    * @param viewName  the view to use
+    * @param options   any spatial view query options - see [[SpatialViewOptions]] for documentation
+    *
+    * @return a `Mono` containing a [[ViewResult]] (which includes any returned rows)
+    */
+  def spatialViewQuery(designDoc: String,
+                       viewName: String,
+                       options: SpatialViewOptions = SpatialViewOptions()) = {
+    val req = spatialViewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
+    viewQuery(req)
+  }
+
+  private def viewQuery(req: Try[ViewRequest]): Mono[ReactiveViewResult] = {
+    req match {
+      case Failure(err) =>
+        Mono.error(err)
+
+      case Success(request) =>
+
+        FutureConversions.javaCFToScalaMono(request, request.response(), false)
+          .map(response => {
+
+            val rows: ScalaFlux[ViewRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
+
+              .map[ViewRow](bytes => ViewRow(bytes.data()))
+
+              .flatMap(_ => FutureConversions.javaMonoToScalaMono(response.trailer()))
+
+              // Check for errors
+              .flatMap(trailer => {
+              trailer.error().asScala match {
+                case Some(err) =>
+                  val msg = "Encountered view error '" + err.error() + "' with reason '" + err.reason() + "'"
+                  val error = new ViewServiceException(msg)
+                  Mono.error(error)
+                case _ => Mono.empty
+              }
+            })
+
+
+            val meta = ViewMeta(
+              response.header().debug().asScala.map(v => ViewDebug(v)),
+              response.header().totalRows())
+
+            ReactiveViewResult(meta, rows)
+          })
+    }
   }
 }

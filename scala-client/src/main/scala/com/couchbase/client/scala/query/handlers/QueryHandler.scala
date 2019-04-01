@@ -36,7 +36,10 @@ import scala.util.Try
 private[scala] class QueryHandler() {
   import DurationConversions._
 
-  def request[T](statement: String, options: QueryOptions, core: Core, environment: ClusterEnvironment)
+  def request[T](statement: String,
+                 options: QueryOptions,
+                 core: Core,
+                 environment: ClusterEnvironment)
   : Try[QueryRequest] = {
     // TODO prepared query
 
