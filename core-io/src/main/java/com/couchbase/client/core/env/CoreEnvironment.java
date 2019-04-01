@@ -151,14 +151,12 @@ public class CoreEnvironment {
       final Package p = agentPackage();
       String t = p.getImplementationTitle() == null ? defaultAgentTitle() : p.getImplementationTitle();
       String v = p.getImplementationVersion() == null ? "0.0.0" : p.getImplementationVersion();
-      String os = String.format(
-        "%s %s %s",
+      String os = String.join(" ",
         System.getProperty("os.name"),
         System.getProperty("os.version"),
         System.getProperty("os.arch")
       );
-      String platform = String.format(
-        "%s %s",
+      String platform = String.join(" ",
         System.getProperty("java.vm.name"),
         System.getProperty("java.runtime.version")
       );

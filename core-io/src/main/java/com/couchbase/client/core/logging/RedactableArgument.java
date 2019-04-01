@@ -16,16 +16,18 @@
 
 package com.couchbase.client.core.logging;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Wraps a piece of information that is subject to log redaction.
  * Useful when logging sensitive information:
  * <pre>
- * log.info("Opened bucket {}", RedactableArgument.meta(bucketName));
+ * log.info("Opened bucket {}", RedactableArgument.redactMeta(bucketName));
  * </pre>
  * Or when including sensitive information in an Exception message:
  * <pre>
  * throw new RuntimeException("Failed to process "
- *     + RedactableArgument.user(documentId));
+ *     + RedactableArgument.redactUser(documentId));
  * </pre>
  * The global redaction level is controlled by calling
  * {@link LogRedaction#setRedactionLevel(RedactionLevel)}
@@ -71,7 +73,7 @@ public class RedactableArgument {
    * @param message the message to redact.
    * @return a new {@link RedactableArgument}.
    */
-  public static RedactableArgument user(final Object message) {
+  public static RedactableArgument redactUser(final Object message) {
     return new RedactableArgument(ArgumentType.USER, message);
   }
 
@@ -92,7 +94,7 @@ public class RedactableArgument {
    * @param message the message to redact.
    * @return a new {@link RedactableArgument}.
    */
-  public static RedactableArgument meta(final Object message) {
+  public static RedactableArgument redactMeta(final Object message) {
     return new RedactableArgument(ArgumentType.META, message);
   }
 
@@ -110,7 +112,7 @@ public class RedactableArgument {
    * @param message the message to redact.
    * @return a new {@link RedactableArgument}.
    */
-  public static RedactableArgument system(final Object message) {
+  public static RedactableArgument redactSystem(final Object message) {
     return new RedactableArgument(ArgumentType.SYSTEM, message);
   }
 
@@ -128,6 +130,7 @@ public class RedactableArgument {
     return String.valueOf(message);
   }
 
+  @JsonValue
   @Override
   public String toString() {
     // The exact syntax for "system" and "meta" redaction is yet to be determined.

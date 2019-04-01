@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -161,7 +162,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     public String toString() {
         final StringBuilder sb = new StringBuilder("MemcachedBucketConfig{");
         sb.append("rev=").append(rev);
-        sb.append(", ketamaNodes=").append(ketamaNodes);
+        sb.append(", ketamaNodes=").append(redactSystem(ketamaNodes));
         sb.append('}');
         return sb.toString();
     }

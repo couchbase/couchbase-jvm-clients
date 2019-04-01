@@ -16,10 +16,14 @@
 
 package com.couchbase.client.core.logging;
 
+import com.couchbase.client.core.json.Mapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static org.junit.Assert.assertEquals;
 
 public class RedactableArgumentTest {
@@ -39,26 +43,34 @@ public class RedactableArgumentTest {
   public void shouldNotRedactLogsWhenDisabled() {
     LogRedaction.setRedactionLevel(RedactionLevel.NONE);
 
-    assertEquals("1", RedactableArgument.user(1).toString());
-    assertEquals("null", RedactableArgument.meta(null).toString());
-    assertEquals("system", RedactableArgument.system("system").toString());
+    assertEquals("1", redactUser(1).toString());
+    assertEquals("null", redactMeta(null).toString());
+    assertEquals("system", redactSystem("system").toString());
   }
 
   @Test
   public void shouldOnlyRedactUserOnPartial() {
     LogRedaction.setRedactionLevel(RedactionLevel.PARTIAL);
 
-    assertEquals("<ud>user</ud>", RedactableArgument.user("user").toString());
-    assertEquals("meta", RedactableArgument.meta("meta").toString());
-    assertEquals("system", RedactableArgument.system("system").toString());
+    assertEquals("<ud>user</ud>", redactUser("user").toString());
+    assertEquals("meta", redactMeta("meta").toString());
+    assertEquals("system", redactSystem("system").toString());
   }
 
   @Test
   public void forNowShouldRedactOnlyUserOnFull() {
     LogRedaction.setRedactionLevel(RedactionLevel.FULL);
 
-    assertEquals("<ud>user</ud>", RedactableArgument.user("user").toString());
-    assertEquals("meta", RedactableArgument.meta("meta").toString());
-    assertEquals("system", RedactableArgument.system("system").toString());
+    assertEquals("<ud>user</ud>", redactUser("user").toString());
+    assertEquals("meta", redactMeta("meta").toString());
+    assertEquals("system", redactSystem("system").toString());
+  }
+
+  @Test
+  public void jsonSerialization() {
+    LogRedaction.setRedactionLevel(RedactionLevel.FULL);
+
+    String json = Mapper.encodeAsString(redactUser("bar"));
+    assertEquals("\"<ud>bar</ud>\"", json);
   }
 }

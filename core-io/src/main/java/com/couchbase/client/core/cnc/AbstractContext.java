@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.json.Mapper;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,19 +42,7 @@ public abstract class AbstractContext implements Context {
   public String exportAsString(final ExportFormat format) {
     Map<String, Object> input = new HashMap<>();
     injectExportableParams(input);
-    if (!input.isEmpty()) {
-      switch (format) {
-        case JSON:
-          return Mapper.encodeAsString(input);
-        case JSON_PRETTY:
-          return Mapper.encodeAsStringPretty(input);
-        case STRING:
-          return input.toString();
-        default:
-          throw new UnsupportedOperationException("Unsupported ExportFormat " + format);
-      }
-    }
-    return null;
+    return format.apply(input);
   }
 
   @Override

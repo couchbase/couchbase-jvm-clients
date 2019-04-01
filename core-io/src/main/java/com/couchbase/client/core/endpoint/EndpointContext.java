@@ -24,6 +24,9 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 public class EndpointContext extends CoreContext {
 
   /**
@@ -75,11 +78,11 @@ public class EndpointContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
-    localSocket.ifPresent(s -> input.put("local", s));
+    input.put("remote", redactSystem(remoteHostname().nameOrAddress() + ":" + remotePort()));
+    localSocket.ifPresent(s -> input.put("local", redactSystem(s)));
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
-    bucket.ifPresent(b -> input.put("bucket", b));
+    bucket.ifPresent(b -> input.put("bucket", redactMeta(b)));
     channelId.ifPresent(i -> input.put("channelId", i));
   }
 

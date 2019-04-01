@@ -92,8 +92,9 @@ public class LoggingEventConsumer implements Consumer<Event> {
         .append("µs]");
     }
 
-    if (event.description() != null && !event.description().isEmpty()) {
-      logLineBuilder.append(" ").append(event.description());
+    String description = event.description();
+    if (description != null && !description.isEmpty()) {
+      logLineBuilder.append(" ").append(description);
     }
 
     if (event.context() != null) {

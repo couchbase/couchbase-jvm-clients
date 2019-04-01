@@ -21,6 +21,8 @@ import com.couchbase.client.core.io.IoContext;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+
 /**
  * This event is triggered when during the HELLO negotiation it was
  * determined that the server does not support the select bucket
@@ -51,6 +53,6 @@ public class SelectBucketDisabledEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Select Bucket disabled/not negotiated during HELLO for bucket \"" + bucket + "\"";
+    return "Select Bucket disabled/not negotiated during HELLO for bucket \"" + redactMeta(bucket) + "\"";
   }
 }

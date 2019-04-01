@@ -22,6 +22,9 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 /**
  * The {@link IoContext} is used to extend the core context with IO related metadata
  * that is useful during event generation.
@@ -55,9 +58,9 @@ public class IoContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("local", localSocket());
-    input.put("remote", remoteSocket());
-    bucket.ifPresent(s -> input.put("bucket", s));
+    input.put("local", redactSystem(localSocket()));
+    input.put("remote", redactSystem(remoteSocket()));
+    bucket.ifPresent(s -> input.put("bucket", redactMeta(s)));
   }
 
   /**

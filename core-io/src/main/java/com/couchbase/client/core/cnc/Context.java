@@ -16,6 +16,11 @@
 
 package com.couchbase.client.core.cnc;
 
+import com.couchbase.client.core.json.Mapper;
+
+import java.util.Map;
+import java.util.function.Function;
+
 /**
  * Context represents some state that is passed throughout the system.
  *
@@ -35,19 +40,21 @@ public interface Context {
   /**
    * The format into which the context can be exported.
    */
-  enum ExportFormat {
+  @FunctionalInterface
+  interface ExportFormat extends Function<Map<String, Object>, String> {
     /**
      * Compact JSON.
      */
-    JSON,
+    ExportFormat JSON = Mapper::encodeAsString;
 
     /**
      * Verbose, Pretty JSON.
      */
-    JSON_PRETTY,
+    ExportFormat JSON_PRETTY = Mapper::encodeAsStringPretty;
+
     /**
      * Java "toString" basically.
      */
-    STRING
+    ExportFormat STRING = Object::toString;
   }
 }

@@ -21,6 +21,8 @@ import com.couchbase.client.core.io.IoContext;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+
 /**
  * This event gets created as soon as a bucket has been selected during the
  * KV bootstrap process for each socket/node.
@@ -49,7 +51,7 @@ public class SelectBucketCompletedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Bucket \"" + bucket + "\" selected";
+    return "Bucket \"" + redactMeta(bucket) + "\" selected";
   }
 
 }

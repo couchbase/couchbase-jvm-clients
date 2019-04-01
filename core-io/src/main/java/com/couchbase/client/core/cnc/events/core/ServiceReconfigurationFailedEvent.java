@@ -23,6 +23,8 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 public class ServiceReconfigurationFailedEvent extends AbstractEvent {
 
   private final NetworkAddress hostname;
@@ -51,7 +53,7 @@ public class ServiceReconfigurationFailedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Service " + serviceType + " on " + hostname + "failed to reconfigure: "
+    return "Service " + serviceType + " on " + redactSystem(hostname) + "failed to reconfigure: "
       + reason.getMessage();
   }
 }

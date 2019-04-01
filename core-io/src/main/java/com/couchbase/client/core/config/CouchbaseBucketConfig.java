@@ -29,6 +29,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
@@ -228,11 +231,11 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     @Override
     public String toString() {
         return "DefaultCouchbaseBucketConfig{"
-            + "name='" + name() + '\''
+            + "name='" + redactMeta(name()) + '\''
             + ", locator=" + locator()
-            + ", uri='" + uri() + '\''
-            + ", streamingUri='" + streamingUri() + '\''
-            + ", nodeInfo=" + nodes()
+            + ", uri='" + redactMeta(uri()) + '\''
+            + ", streamingUri='" + redactMeta(streamingUri()) + '\''
+            + ", nodeInfo=" + redactSystem(nodes())
             + ", partitionInfo=" + partitionInfo
             + ", tainted=" + tainted
             + ", rev=" + rev + '}';

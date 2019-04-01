@@ -25,7 +25,7 @@ import java.time.Duration;
 /**
  * If this event is raised, it indicates a serious bug in the system.
  *
- * <p>Basically what happend is that the endpoint dispatched a request of a type it has no
+ * <p>Basically what happened is that the endpoint dispatched a request of a type it has no
  * idea about into the IO layer. This needs to be reported as an issue to the maintainers.</p>
  *
  * @since 2.0.0
@@ -51,7 +51,6 @@ public class InvalidRequestDetectedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return String
-      .format("On IO Handler for Service %s, detected invalid request %s", serviceType, message);
+    return "On IO Handler for Service " + serviceType + ", detected invalid request " + message;
   }
 }

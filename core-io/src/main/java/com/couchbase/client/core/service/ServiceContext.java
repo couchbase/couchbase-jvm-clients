@@ -22,6 +22,8 @@ import com.couchbase.client.core.io.NetworkAddress;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 public class ServiceContext extends CoreContext {
 
   /**
@@ -61,7 +63,7 @@ public class ServiceContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", remoteHostname().nameOrAddress() + ":" + remotePort());
+    input.put("remote", redactSystem(remoteHostname().nameOrAddress() + ":" + remotePort()));
     input.put("type", serviceType);
     bucket.ifPresent(b -> input.put("bucket", b));
   }

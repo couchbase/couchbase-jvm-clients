@@ -21,6 +21,8 @@ import com.couchbase.client.core.io.NetworkAddress;
 
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 public class NodeContext extends CoreContext {
 
   /**
@@ -40,7 +42,7 @@ public class NodeContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", remoteHostname().nameOrAddress());
+    input.put("remote", redactSystem(remoteHostname().nameOrAddress()));
   }
 
 

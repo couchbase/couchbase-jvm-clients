@@ -19,7 +19,7 @@ public class NodePartitionLengthNotEqualEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return String.format("Node list and configuration's partition hosts sizes are not equal. " +
-      "%s vs. %s", actualSize, configSize);
+    return "Node list and configuration's partition hosts sizes are not equal. " +
+      actualSize + " vs. " + configSize;
   }
 }

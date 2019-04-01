@@ -23,6 +23,8 @@ import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import java.time.Duration;
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Captures the end of the KV feature negotiation.
  */
@@ -33,12 +35,12 @@ public class FeaturesNegotiatedEvent extends AbstractEvent {
   public FeaturesNegotiatedEvent(final IoContext ctx, final Duration duration,
                                  final List<ServerFeature> negotiated) {
     super(Severity.DEBUG, Category.IO, duration, ctx);
-    this.negotiated = negotiated;
+    this.negotiated = requireNonNull(negotiated);
   }
 
   @Override
   public String description() {
-    return "Negotiated " + negotiated.toString();
+    return "Negotiated " + negotiated;
   }
 
   /**
