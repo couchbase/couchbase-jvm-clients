@@ -22,7 +22,6 @@ import com.couchbase.client.core.msg.search.SearchChunkHeader;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.nio.charset.StandardCharsets;
@@ -41,13 +40,13 @@ public class SearchChunkResponseParser
     @Override
     protected ByteBufJsonParser initParser() {
         return new ByteBufJsonParser(new JsonPointer[] {
-            new JsonPointer("/status", (JsonPointerCB1) value -> {
+            new JsonPointer("/status", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();
                 status = data;
             }),
-            new JsonPointer("/error", (JsonPointerCB1) value -> {
+            new JsonPointer("/error", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();
@@ -55,25 +54,25 @@ public class SearchChunkResponseParser
                 failRows(new SearchServiceException(error));
 
             }),
-            new JsonPointer("/hits/-", (JsonPointerCB1) value -> {
+            new JsonPointer("/hits/-", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();
                 emitRow(new SearchChunkRow(data));
             }),
-            new JsonPointer("/total_hits", (JsonPointerCB1) value -> {
+            new JsonPointer("/total_hits", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();
                 totalHits = Long.parseLong(new String(data, StandardCharsets.UTF_8));
             }),
-            new JsonPointer("/max_score", (JsonPointerCB1) value -> {
+            new JsonPointer("/max_score", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();
                 maxScore = Double.parseDouble(new String(data, StandardCharsets.UTF_8));
             }),
-            new JsonPointer("/took", (JsonPointerCB1) value -> {
+            new JsonPointer("/took", value -> {
                 byte[] data = new byte[value.readableBytes()];
                 value.readBytes(data);
                 value.release();

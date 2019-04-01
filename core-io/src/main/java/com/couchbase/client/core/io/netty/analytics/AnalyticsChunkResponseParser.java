@@ -17,16 +17,11 @@
 package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.error.AnalyticsServiceException;
-import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
-import com.couchbase.client.core.msg.query.QueryChunkHeader;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
@@ -58,25 +53,25 @@ public class AnalyticsChunkResponseParser
   @Override
   protected ByteBufJsonParser initParser() {
     return new ByteBufJsonParser(new JsonPointer[] {
-      new JsonPointer("/requestID", (JsonPointerCB1) value -> {
+      new JsonPointer("/requestID", value -> {
         String data = value.toString(UTF_8);
         data = data.substring(1, data.length() - 1);
         value.release();
         requestId = data;
       }),
-      new JsonPointer("/signature", (JsonPointerCB1) value -> {
+      new JsonPointer("/signature", value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         signature = Optional.of(data);
       }),
-      new JsonPointer("/clientContextID", (JsonPointerCB1) value -> {
+      new JsonPointer("/clientContextID", value -> {
         String data = value.toString(UTF_8);
         data = data.substring(1, data.length() - 1);
         value.release();
         clientContextId = Optional.of(data);
       }),
-      new JsonPointer("/results/-", (JsonPointerCB1) value -> {
+      new JsonPointer("/results/-", value -> {
         if (clientContextId == null) {
           clientContextId = Optional.empty();
         }
@@ -89,7 +84,7 @@ public class AnalyticsChunkResponseParser
         value.release();
         emitRow(new AnalyticsChunkRow(data));
       }),
-      new JsonPointer("/status", (JsonPointerCB1) value -> {
+      new JsonPointer("/status", value -> {
         if (clientContextId == null) {
           clientContextId = Optional.empty();
         }
@@ -102,20 +97,20 @@ public class AnalyticsChunkResponseParser
         value.release();
         status = data;
       }),
-      new JsonPointer("/metrics", (JsonPointerCB1) value -> {
+      new JsonPointer("/metrics", value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         metrics = data;
       }),
-      new JsonPointer("/errors", (JsonPointerCB1) value -> {
+      new JsonPointer("/errors", value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         errors = data;
         failRows(new AnalyticsServiceException(errors));
       }),
-      new JsonPointer("/warnings", (JsonPointerCB1) value -> {
+      new JsonPointer("/warnings", value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();

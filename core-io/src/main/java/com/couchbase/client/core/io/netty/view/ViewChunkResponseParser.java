@@ -23,7 +23,6 @@ import com.couchbase.client.core.msg.view.ViewChunkRow;
 import com.couchbase.client.core.msg.view.ViewChunkTrailer;
 import com.couchbase.client.core.msg.view.ViewError;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
@@ -41,10 +40,10 @@ public class ViewChunkResponseParser
   @Override
   protected ByteBufJsonParser initParser() {
     return new ByteBufJsonParser(new JsonPointer[] {
-      new JsonPointer("/total_rows", (JsonPointerCB1) value -> {
+      new JsonPointer("/total_rows", value -> {
         totalRows = Long.parseLong(value.toString(UTF_8));
       }),
-      new JsonPointer("/rows/-", (JsonPointerCB1) value -> {
+      new JsonPointer("/rows/-", value -> {
         if (debug == null) {
           debug = Optional.empty();
         }
@@ -53,13 +52,13 @@ public class ViewChunkResponseParser
         value.release();
         emitRow(new ViewChunkRow(data));
       }),
-      new JsonPointer("/debug_info", (JsonPointerCB1) value -> {
+      new JsonPointer("/debug_info", value -> {
         byte[] data = new byte[value.readableBytes()];
         value.readBytes(data);
         value.release();
         debug = Optional.of(data);
       }),
-      new JsonPointer("/error", (JsonPointerCB1) value -> {
+      new JsonPointer("/error", value -> {
         String data = value.toString(UTF_8);
         data = data.substring(1, data.length() - 1);
         value.release();
@@ -67,7 +66,7 @@ public class ViewChunkResponseParser
         ViewError current = error.orElse(new ViewError(null, null));
         error = Optional.of(new ViewError(data, current.reason()));
       }),
-      new JsonPointer("/reason", (JsonPointerCB1) value -> {
+      new JsonPointer("/reason", value -> {
         String data = value.toString(UTF_8);
         data = data.substring(1, data.length() - 1);
         value.release();

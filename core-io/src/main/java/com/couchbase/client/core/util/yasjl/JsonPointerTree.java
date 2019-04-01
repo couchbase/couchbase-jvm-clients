@@ -18,8 +18,6 @@ package com.couchbase.client.core.util.yasjl;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
-
 /**
  * Represents a tree structure of stored {@link JsonPointer}.
  *
@@ -60,7 +58,7 @@ public class JsonPointerTree {
         for (int i = 1; i < jpSize; i++) {
             Node childMatch = parent.match(jpRefTokens.get(i));
             if (childMatch == null) {
-                parent = parent.addChild(jpRefTokens.get(i), jp.jsonPointerCB());
+                parent = parent.addChild(jpRefTokens.get(i), jp.callback());
                 pathDoesNotExist = true;
             } else {
                 parent = childMatch;
@@ -123,7 +121,7 @@ public class JsonPointerTree {
         }
 
         if (node != null && node.children == null) {
-            jp.jsonPointerCB(node.jsonPointerCB);
+            jp.callback(node.callback);
             return true;
         } else {
             return false;
@@ -144,27 +142,27 @@ public class JsonPointerTree {
     class Node {
 
         private final String value;
-        private final JsonPointerCB jsonPointerCB;
+        private final JsonPointerCallback callback;
         private List<Node> children;
 
-        Node(final String value, final JsonPointerCB jsonPointerCB) {
+        Node(final String value, final JsonPointerCallback callback) {
             this.value = value;
             this.children = null;
-            this.jsonPointerCB = jsonPointerCB;
+            this.callback = callback;
         }
 
         /**
          * Adds a child to this node and returns it.
          *
          * @param value the path for the node.
-         * @param jsonPointerCB the callback to store.
+         * @param callback the callback to store.
          * @return the child instance created.
          */
-        Node addChild(final String value, final JsonPointerCB jsonPointerCB) {
+        Node addChild(final String value, final JsonPointerCallback callback) {
             if (children == null) {
                 children = new ArrayList<Node>();
             }
-            Node child = new Node(value, jsonPointerCB);
+            Node child = new Node(value, callback);
             children.add(child);
             return child;
         }
@@ -203,7 +201,7 @@ public class JsonPointerTree {
         public String toString() {
             return "Node{" +
                 "value='" + value + '\'' +
-                ", jsonPointerCB=" + jsonPointerCB +
+                ", callback=" + callback +
                 ", children=" + children +
                 '}';
         }

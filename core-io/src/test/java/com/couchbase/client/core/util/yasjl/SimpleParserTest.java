@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
@@ -45,7 +44,7 @@ class SimpleParserTest {
         final Map<String, Object> results = new HashMap<String, Object>();
         final int[] parseCount = new int[1];
         parseCount[0] = 0;
-        JsonPointer[] jp = { new JsonPointer(path, (JsonPointerCB1) buf -> {
+        JsonPointer[] jp = { new JsonPointer(path, buf -> {
             results.put("value", buf.toString(Charset.defaultCharset()));
             results.put("parseCount", parseCount[0]);
             buf.release();

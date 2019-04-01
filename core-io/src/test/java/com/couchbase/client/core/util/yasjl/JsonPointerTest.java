@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -46,18 +45,18 @@ class JsonPointerTest {
         assertEquals("two", tokens.get(2));
         assertEquals("three", tokens.get(3));
         assertEquals("-", tokens.get(4));
-        assertNull(jp.jsonPointerCB());
+        assertNull(jp.callback());
     }
 
     @Test
     void shouldSetCallback() {
-        JsonPointerCB1 cb1 = value -> { };
-        JsonPointerCB1 cb2 = value -> { };
+        JsonPointerCallback cb1 = value -> { };
+        JsonPointerCallback cb2 = value -> { };
         JsonPointer jp = new JsonPointer("/", cb1);
-        assertEquals(cb1, jp.jsonPointerCB());
+        assertEquals(cb1, jp.callback());
 
-        jp.jsonPointerCB(cb2);
-        assertEquals(cb2, jp.jsonPointerCB());
+        jp.callback(cb2);
+        assertEquals(cb2, jp.callback());
     }
 
     @Test

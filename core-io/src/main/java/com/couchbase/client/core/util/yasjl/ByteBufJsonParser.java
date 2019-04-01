@@ -22,9 +22,6 @@ import java.util.Deque;
 import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
 import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUMBER_VALUE;
 
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB;
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB1;
-import com.couchbase.client.core.util.yasjl.Callbacks.JsonPointerCB2;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
 
@@ -526,13 +523,8 @@ public class ByteBufJsonParser {
         }
 
         void emitJsonPointerValue() {
-            if ((this.isHashValue || this.isArray) && this.jsonPointer.jsonPointerCB() != null) {
-                JsonPointerCB cb = this.jsonPointer.jsonPointerCB();
-                if (cb instanceof JsonPointerCB1) {
-                    ((JsonPointerCB1) cb).call(this.currentValue);
-                } else if (cb instanceof JsonPointerCB2) {
-                    ((JsonPointerCB2) cb).call(this.jsonPointer, this.currentValue);
-                }
+            if ((this.isHashValue || this.isArray) && this.jsonPointer.callback() != null) {
+                this.jsonPointer.callback().accept(this.currentValue);
             } else {
                 this.currentValue.release();
             }
