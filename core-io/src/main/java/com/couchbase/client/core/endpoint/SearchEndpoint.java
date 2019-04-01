@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.io.netty.search.SearchMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
@@ -34,16 +35,21 @@ public class SearchEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new SearchPipelineInitializer();
+    return new SearchPipelineInitializer(endpointContext());
   }
 
   public static class SearchPipelineInitializer implements PipelineInitializer {
 
+    private final EndpointContext endpointContext;
+
+    SearchPipelineInitializer(EndpointContext endpointContext) {
+      this.endpointContext = endpointContext;
+    }
+
     @Override
     public void init(ChannelPipeline pipeline) {
-      pipeline.addLast(new LoggingHandler(LogLevel.ERROR));
       pipeline.addLast(new HttpClientCodec());
-      //pipeline.addLast(new QueryMessageHandler());
+      pipeline.addLast(new SearchMessageHandler(endpointContext));
     }
   }
 

@@ -44,9 +44,6 @@ public class AnalyticsChunkResponseParser
   private byte[] warnings;
   private byte[] errors;
 
-  AnalyticsChunkResponseParser() {
-  }
-
   @Override
   protected void resetState() {
     requestId = null;
