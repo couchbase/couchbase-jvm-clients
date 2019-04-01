@@ -29,10 +29,22 @@ import java.util.Optional;
 
 public class ViewRow {
 
+  /**
+   * Holds the raw, not yet decoded data of the response.
+   */
   private final byte[] raw;
+
+  /**
+   * Provides a pointer into the root nodes of the raw response for easier decoding.
+   */
   private final JsonNode rootNode;
 
-  public ViewRow(final byte[] raw) {
+  /**
+   * Creates anew {@link ViewRow} from the raw row data.
+   *
+   * @param raw the raw json encoded row.
+   */
+  ViewRow(final byte[] raw) {
     this.raw = raw;
     try {
       this.rootNode = JacksonTransformers.MAPPER.readTree(raw);
@@ -41,23 +53,55 @@ public class ViewRow {
     }
   }
 
+  /**
+   * Returns the ID if present.
+   *
+   * @return the ID if present.
+   */
   public Optional<String> id() {
     return decode(String.class, "id");
   }
 
+  /**
+   * Decodes the key into the given target type if present.
+   *
+   * @param target the target type.
+   * @param <T> the generic type to decode into.
+   * @return the decoded key, if present.
+   */
   public <T> Optional<T> keyAs(final Class<T> target) {
     return decode(target, "key");
   }
 
+  /**
+   * Decodes the value into the given target type if present.
+   *
+   * @param target the target type.
+   * @param <T> the generic type to decode into.
+   * @return the decoded value, if present.
+   */
   public <T> Optional<T> valueAs(final Class<T> target) {
     return decode(target, "value");
   }
 
+  /**
+   * Returns the geometry of your result if present in the response.
+   *
+   * @return the geometry if present.
+   */
   public Optional<JsonObject> geometry() {
     return decode(JsonObject.class, "geometry");
   }
 
-  private <T> Optional<T> decode(final Class<T> target, String path) {
+  /**
+   * Helper method to turn a given path of the raw data into the target class.
+   *
+   * @param target the target class to decode into.
+   * @param path the path of the raw json.
+   * @param <T> the generic type to decide into.
+   * @return the generic decoded object if present and not null.
+   */
+  private <T> Optional<T> decode(final Class<T> target, final String path) {
     try {
       JsonNode subNode = rootNode.path(path);
       if (subNode == null || subNode.isNull() || subNode.isMissingNode()) {
@@ -75,4 +119,5 @@ public class ViewRow {
       "raw=" + new String(raw, StandardCharsets.UTF_8) +
       '}';
   }
+
 }

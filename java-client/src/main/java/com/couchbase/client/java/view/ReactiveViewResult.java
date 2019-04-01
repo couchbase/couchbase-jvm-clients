@@ -16,29 +16,47 @@
 
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.view.ViewResponse;
-import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+/**
+ * Holds a the result of a View request operation if successful.
+ *
+ * @since 3.0.0
+ */
 public class ReactiveViewResult {
 
+    /**
+     * Holds the underlying view response from the core.
+     */
     private final ViewResponse response;
 
-    public ReactiveViewResult(final ViewResponse response) {
+    /**
+     * Creates a new {@link ReactiveViewResult}.
+     *
+     * @param response the core response.
+     */
+    ReactiveViewResult(final ViewResponse response) {
         this.response = response;
     }
 
+    /**
+     * Returns the {@link ViewRow ViewRows} in a non-blocking, streaming fashion.
+     *
+     * @return the {@link Flux} of {@link ViewRow ViewRows}.
+     */
     public Flux<ViewRow> rows() {
         return response.rows().map(r -> new ViewRow(r.data()));
     }
 
+    /**
+     * Returns the metadata associated with this {@link ReactiveViewResult}.
+     *
+     * @return the metadata associated.
+     */
     public Mono<ViewMeta> meta() {
-        return Mono.just(new ViewMeta(
-            response.header().debug().map(bytes -> Mapper.decodeInto(bytes, JsonObject.class)),
-            response.header().totalRows()
-        ));
+        return Mono.just(ViewMeta.from(response.header()));
     }
 
 }

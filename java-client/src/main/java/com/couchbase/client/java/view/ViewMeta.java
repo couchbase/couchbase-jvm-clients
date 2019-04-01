@@ -16,24 +16,70 @@
 
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.util.Optional;
 
+/**
+ * Holds Metadata associated with a {@link ViewResult}.
+ *
+ * @since 3.0.0
+ */
 public class ViewMeta {
 
+    /**
+     * If present, holds debug information for the response.
+     */
     private final Optional<JsonObject> debug;
+
+    /**
+     * Holds the total amount of rows in the view.
+     */
     private final long totalRows;
 
-    public ViewMeta(Optional<JsonObject> debug, long totalRows) {
+    /**
+     * Creates a new {@link ViewMeta}.
+     *
+     * @param debug debug information if available.
+     * @param totalRows the total number of rows in the view.
+     */
+    ViewMeta(final Optional<JsonObject> debug, final long totalRows) {
         this.debug = debug;
         this.totalRows = totalRows;
     }
 
+    /**
+     * Creates the {@link ViewMeta} from the chunk header.
+     *
+     * @param header the chunk header.
+     * @return the initialized {@link ViewMeta}.
+     */
+    static ViewMeta from(final ViewChunkHeader header) {
+        return new ViewMeta(
+            header.debug().map(bytes -> Mapper.decodeInto(bytes, JsonObject.class)),
+            header.totalRows()
+        );
+    }
+
+    /**
+     * If present, returns debug information of the view request.
+     *
+     * <p>This information is only present if the debug flag has been set on the view options in the first place. Note
+     * that this is a costly operation and should only be used - as the name suggests - during debugging.</p>
+     *
+     * @return the debug information as a generic {@link JsonObject} if present.
+     */
     public Optional<JsonObject> debug() {
         return debug;
     }
 
+    /**
+     * Returns the total number of rows in the view as presented by the server.
+     *
+     * @return the total number of rows.
+     */
     public long totalRows() {
         return totalRows;
     }
@@ -41,8 +87,8 @@ public class ViewMeta {
     @Override
     public String toString() {
         return "ViewMeta{" +
-            "debug=" + debug +
-            ", totalRows=" + totalRows +
+            "totalRows=" + totalRows +
+            ", debug=" + debug +
             '}';
     }
 }
