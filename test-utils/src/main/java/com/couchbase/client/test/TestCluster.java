@@ -134,6 +134,12 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       if (services.containsKey("cbasSSL")) {
         ports.put(Services.ANALYTICS_TLS, services.get("cbasSSL"));
       }
+      if (services.containsKey("fts")) {
+        ports.put(Services.SEARCH, services.get("fts"));
+      }
+      if (services.containsKey("ftsSSL")) {
+        ports.put(Services.SEARCH_TLS, services.get("ftsSSL"));
+      }
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
@@ -169,6 +175,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         }
         if (name.equals("cbas") || name.equals("cbasSSL")) {
           capabilities.add(Capabilities.ANALYTICS);
+        }
+        if (name.equals("fts") || name.equals("ftsSSL")) {
+          capabilities.add(Capabilities.SEARCH);
         }
       }
     }

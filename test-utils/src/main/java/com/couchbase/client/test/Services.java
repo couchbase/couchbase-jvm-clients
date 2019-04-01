@@ -9,4 +9,6 @@ public enum Services {
   QUERY_TLS,
   ANALYTICS,
   ANALYTICS_TLS,
+  SEARCH,
+  SEARCH_TLS,
 }

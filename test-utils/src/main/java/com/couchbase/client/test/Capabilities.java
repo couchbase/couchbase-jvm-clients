@@ -25,11 +25,15 @@ public enum Capabilities {
    */
   SYNC_REPLICATION,
   /**
-   * This cluster is able to perform N1QL queries.
+   * This cluster is able to handle N1QL queries.
    */
   QUERY,
   /**
-   * This cluster is able to perform Analytics queries.
+   * This cluster is able to handle Analytics queries.
    */
-  ANALYTICS
+  ANALYTICS,
+  /**
+   * This cluster is able to handle Search queries.
+   */
+  SEARCH
 }
