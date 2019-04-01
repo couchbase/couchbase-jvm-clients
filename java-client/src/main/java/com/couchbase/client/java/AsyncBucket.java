@@ -20,7 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewAccessor;
@@ -191,5 +190,4 @@ public class AsyncBucket {
     return new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
             viewName, query, Optional.empty(), development, true);
   }
-
 }

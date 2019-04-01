@@ -20,11 +20,16 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.SearchAccessor;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.SearchResult;
 
 import java.util.function.Supplier;
 
@@ -164,6 +169,28 @@ public class Cluster {
    */
   public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
     return block(async().analyticsQuery(statement, options));
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link SearchRequest} once the response arrives successfully.
+   */
+  public SearchResult searchQuery(final SearchQuery query) {
+    return searchQuery(query, SearchOptions.DEFAULT);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link SearchRequest} once the response arrives successfully.
+   */
+  public SearchResult searchQuery(final SearchQuery query, final SearchOptions options) {
+    SearchRequest request = SearchAccessor.searchRequest(query, options, core().context(), environment());
+    return block(SearchAccessor.searchQueryAsync(asyncCluster.core(), request));
   }
 
   /**

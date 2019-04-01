@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.java.search.result.facets;
 
-package com.couchbase.client.java.search;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.search.facet.TermFacet;
 
-public class SearchResult {
+import java.util.List;
 
-  private final AsyncSearchResult asyncSearchResult;
+/**
+ * Represents the result for a {@link TermFacet}.
+ *
+ * @author Simon Baslé
+ * @author Michael Nitschinger
+ * @since 2.3.0
+ */
+@Stability.Volatile
+public interface TermFacetResult extends FacetResult {
 
-  public SearchResult(AsyncSearchResult asyncSearchResult) {
-    this.asyncSearchResult = asyncSearchResult;
-  }
-
+    List<TermRange> terms();
 }

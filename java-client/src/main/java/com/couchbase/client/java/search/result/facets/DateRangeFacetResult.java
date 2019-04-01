@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.couchbase.client.java.search;
+package com.couchbase.client.java.search.result.facets;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.search.facet.DateRangeFacet;
 
-public class SearchOptions extends CommonOptions<SearchOptions> {
+import java.util.List;
 
-  public static SearchOptions DEFAULT = new SearchOptions();
+/**
+ * Represents the result for a {@link DateRangeFacet}.
+ *
+ * @author Simon Baslé
+ * @author Michael Nitschinger
+ * @since 2.3.0
+ */
+@Stability.Volatile
+public interface DateRangeFacetResult extends FacetResult {
 
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
-  }
-
-  public class BuiltQueryOptions extends BuiltCommonOptions {
-  }
-
+    List<DateRange> dateRanges();
 }

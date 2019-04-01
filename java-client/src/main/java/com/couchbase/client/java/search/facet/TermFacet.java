@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.java.search.facet;
 
-package com.couchbase.client.java.search;
+/**
+ * A facet that gives the number of occurrences of the most recurring terms in all hits.
+ *
+ * @author Simon Baslé
+ * @author Michael Nitschinger
+ * @since 2.3.0
+ */
+public class TermFacet extends SearchFacet {
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
-
-public class SearchOptions extends CommonOptions<SearchOptions> {
-
-  public static SearchOptions DEFAULT = new SearchOptions();
-
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
-  }
-
-  public class BuiltQueryOptions extends BuiltCommonOptions {
-  }
+    TermFacet(String field, int limit) {
+        super(field, limit);
+    }
 
 }

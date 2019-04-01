@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.java.search.sort;
 
-package com.couchbase.client.java.search;
+/**
+ * Sort by the hit score.
+ *
+ * @author Michael Nitschinger
+ * @since 2.4.5
+ */
+public class SearchSortScore extends SearchSort {
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+    @Override
+    protected String identifier() {
+        return "score";
+    }
 
-public class SearchOptions extends CommonOptions<SearchOptions> {
-
-  public static SearchOptions DEFAULT = new SearchOptions();
-
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
-  }
-
-  public class BuiltQueryOptions extends BuiltCommonOptions {
-  }
+    @Override
+    public SearchSortScore descending(boolean descending) {
+        super.descending(descending);
+        return this;
+    }
 
 }

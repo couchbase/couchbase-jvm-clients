@@ -22,13 +22,20 @@ import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.*;
+import com.couchbase.client.java.query.QueryAccessor;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.SearchAccessor;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.SearchResult;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -217,6 +224,28 @@ public class AsyncCluster {
     return new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
         query.toString().getBytes(StandardCharsets.UTF_8), opts.priority()
     );
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   */
+  public CompletableFuture<SearchResult> searchQuery(SearchQuery query) {
+    return searchQuery(query, SearchOptions.DEFAULT);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   */
+  public CompletableFuture<SearchResult> searchQuery(SearchQuery query, SearchOptions options) {
+    SearchRequest request = SearchAccessor.searchRequest(query, options, core.context(), environment());
+    return SearchAccessor.searchQueryAsync(core, request);
   }
 
   /**

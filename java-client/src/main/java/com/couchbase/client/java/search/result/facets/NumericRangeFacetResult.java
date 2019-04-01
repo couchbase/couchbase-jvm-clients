@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.java.search.result.facets;
 
-package com.couchbase.client.java.search;
+import com.couchbase.client.java.search.facet.NumericRangeFacet;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import java.util.List;
 
-public class SearchOptions extends CommonOptions<SearchOptions> {
+/**
+ * Represents the result of a {@link NumericRangeFacet}.
+ *
+ * @author Simon Baslé
+ * @author Michael Nitschinger
+ * @since 2.3.0
+ */
+public interface NumericRangeFacetResult extends FacetResult {
 
-  public static SearchOptions DEFAULT = new SearchOptions();
-
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
-  }
-
-  public class BuiltQueryOptions extends BuiltCommonOptions {
-  }
-
+    List<NumericRange> numericRanges();
 }

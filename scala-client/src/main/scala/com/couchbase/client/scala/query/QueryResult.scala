@@ -25,7 +25,7 @@ import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.util.{Failure, Success, Try}
 
-// TODO add contentAs at result level
+// TODO add rowsAs at result level
 
 /** The results of a N1QL query.
   *

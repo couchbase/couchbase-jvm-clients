@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
@@ -25,12 +26,13 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.search.SearchAccessor;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
-
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class ReactiveCluster {
 
@@ -158,6 +160,28 @@ public class ReactiveCluster {
       asyncCluster.core(),
       asyncCluster.analyticsRequest(statement, options)
     );
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
+   */
+  public Mono<ReactiveSearchResult> searchQuery(SearchQuery query) {
+    return searchQuery(query, SearchOptions.DEFAULT);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
+   */
+  public Mono<ReactiveSearchResult> searchQuery(SearchQuery query, SearchOptions options) {
+    SearchRequest request = SearchAccessor.searchRequest(query, options, async().core().context(), environment());
+    return SearchAccessor.searchQueryReactive(async().core(), request);
   }
 
   /**

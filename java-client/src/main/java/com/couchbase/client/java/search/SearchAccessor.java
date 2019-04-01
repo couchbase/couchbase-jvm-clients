@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,5 +16,134 @@
 
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.search.SearchChunkTrailer;
+import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.msg.search.SearchResponse;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.result.*;
+import com.couchbase.client.java.search.result.impl.DefaultSearchMetrics;
+import com.couchbase.client.java.search.result.impl.DefaultSearchStatus;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Internal helper to access and convert view requests and responses.
+ *
+ * @since 3.0.0
+ */
+@Stability.Internal
 public class SearchAccessor {
+
+    // TODO facets are streaming
+
+    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request) {
+        core.send(request);
+        return Mono.fromFuture(request.response())
+
+                .flatMap(response -> response.rows()
+                        .map(row -> SearchQueryRow.fromResponse(row))
+                        .collectList()
+
+                        .flatMap(rows -> response.trailer()
+                                .map(trailer -> {
+                                    byte[] rawStatus = response.header().getStatus();
+                                    List<RuntimeException> errors = SearchAccessor.parseErrors(rawStatus);
+                                    SearchMeta meta = parseMeta(response, trailer);
+
+                                    return new SearchResult(rows, errors, meta);
+                                })
+                        )
+                )
+
+                .toFuture();
+    }
+
+    static SearchMeta parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
+        byte[] rawStatus = response.header().getStatus();
+        SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
+        List<RuntimeException> errors = SearchAccessor.parseErrors(rawStatus);
+        SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalHits(), trailer.maxScore());
+        SearchMeta meta = new SearchMeta(status, metrics);
+        return meta;
+    }
+
+    public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request) {
+        core.send(request);
+        return Mono.fromFuture(request.response())
+
+                .map(response -> {
+                    byte[] rawStatus = response.header().getStatus();
+                    SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
+
+
+                    // Any errors should be raised in SearchServiceException and will be returned directly
+                    Flux<SearchQueryRow> rows = response.rows()
+                            .map(row -> SearchQueryRow.fromResponse(row));
+
+                    Mono<SearchMeta> meta = response.trailer()
+                            .map(trailer -> {
+                                SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalHits(), trailer.maxScore());
+
+                                return new SearchMeta(status, metrics);
+                            });
+
+                    return new ReactiveSearchResult(rows, meta);
+                });
+    }
+
+    public static List<RuntimeException> parseErrors(byte[] status) {
+        try {
+            JsonObject jsonStatus = JacksonTransformers.MAPPER.readValue(status, JsonObject.class);
+
+            Object errorsRaw = jsonStatus.get("errors");
+
+            List<RuntimeException> exceptions = new ArrayList<>();
+
+            if (errorsRaw instanceof JsonArray) {
+                JsonArray errorsJson = (JsonArray) errorsRaw;
+                for (Object o : errorsJson) {
+                    exceptions.add(new RuntimeException(String.valueOf(o)));
+                }
+            } else if (errorsRaw instanceof JsonObject) {
+                JsonObject errorsJson = (JsonObject) errorsRaw;
+                for (String key : errorsJson.getNames()) {
+                    exceptions.add(new RuntimeException(key + ": " + errorsJson.get(key)));
+                }
+            }
+
+            return exceptions;
+
+        } catch (IOException e) {
+            throw new DecodingFailedException("Failed to decode row '" + new String(status) + "'", e);
+        }
+    }
+
+    public static SearchRequest searchRequest(final SearchQuery query,
+                                              final SearchOptions options,
+                                              final CoreContext context,
+                                              final ClusterEnvironment environment) {
+        JsonObject params = query.export();
+        byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
+        SearchOptions.BuiltQueryOptions opts = options.build();
+
+        Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
+        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+        return new SearchRequest(timeout, context, retryStrategy, environment.credentials(), query.indexName(), bytes);
+    }
 }

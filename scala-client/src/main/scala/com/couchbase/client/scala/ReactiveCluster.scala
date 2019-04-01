@@ -154,7 +154,7 @@ class ReactiveCluster(val async: AsyncCluster)
     ScalaMono.fromFuture(async.bucket(name)).map(v => new ReactiveBucket(v))
   }
 
-  /** Shutdown all cluster resources.
+  /** Shutdown all cluster resources.search
     *
     * This should be called before application exit.
     */

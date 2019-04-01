@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.java.search.sort;
 
-package com.couchbase.client.java.search;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+public enum FieldMissing {
+    FIRST("first"),
+    LAST("last");
 
-public class SearchOptions extends CommonOptions<SearchOptions> {
+    private final String value;
 
-  public static SearchOptions DEFAULT = new SearchOptions();
+    FieldMissing(String value) {
+        this.value = value;
+    }
 
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
-  }
-
-  public class BuiltQueryOptions extends BuiltCommonOptions {
-  }
-
+    public String value() {
+        return value;
+    }
 }

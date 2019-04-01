@@ -17,7 +17,10 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -28,16 +31,38 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
+
 public class SearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
 
-    public SearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy) {
+    private final String indexName;
+    private final byte[] content;
+    private final Credentials credentials;
+
+    // TODO expose all other parameters
+    public SearchRequest(Duration timeout,
+                         CoreContext ctx,
+                         RetryStrategy retryStrategy,
+                         Credentials credentials,
+                         String indexName,
+                         byte[] content) {
         super(timeout, ctx, retryStrategy);
+        this.indexName = indexName;
+        this.content = content;
+        this.credentials = credentials;
     }
 
     @Override
     public FullHttpRequest encode() {
-        return null;
+        ByteBuf c = Unpooled.wrappedBuffer(content);
+        String uri = "/api/index/" + indexName + "/query";
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, c);
+        request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, c.readableBytes());
+        request.headers().set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
+        addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+        return request;
     }
 
     @Override

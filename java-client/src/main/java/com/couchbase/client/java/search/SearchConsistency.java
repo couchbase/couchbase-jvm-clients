@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.search;
 
-public class ReactiveSearchResult {
+/**
+ * An enum listing the various consistency levels for FTS searches
+ * that don't need additional parameters (like a mutation token vector).
+ *
+ * @author Simon Baslé
+ * @since 2.3
+ */
+public enum SearchConsistency {
+
+    NOT_BOUNDED;
+    //TODO in Spock, add REQUEST_PLUS
 }
