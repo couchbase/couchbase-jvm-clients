@@ -15,6 +15,9 @@
     <name>Couchbase JVM Core IO</name>
     <description>The official Couchbase JVM Core IO Library</description>
 
+    <properties>
+        <core-io-deps.version>1.0.0-alpha.2-SNAPSHOT</core-io-deps.version>
+    </properties>
 
     <dependencies>
         <!-- External, Required Dependencies -->
@@ -41,7 +44,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io-deps</artifactId>
-            <version>1.0.0-alpha.2-SNAPSHOT</version>
+            <version>${core-io-deps.version}</version>
         </dependency>
 
         <!-- Test Dependencies -->
@@ -66,7 +69,6 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

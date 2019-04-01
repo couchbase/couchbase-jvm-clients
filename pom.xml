@@ -17,7 +17,37 @@
 
         <junit.version>5.4.0</junit.version>
         <jackson.version>2.9.8</jackson.version>
+
+        <!--Can override this with mvn -Dscala.compat.version=2.11-->
+        <scala.compat.version>2.12</scala.compat.version>
+        <scala.compat.library.version>2.12.8</scala.compat.library.version>
     </properties>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>core-io</artifactId>
+                <version>2.0.0-alpha.2-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>java-client</artifactId>
+                <version>3.0.0-alpha.2-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>test-utils</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>scala-implicits_${scala.compat.version}</artifactId>
+                <version>1.0.0-alpha.2-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <url>https://couchbase.com</url>
     <organization>
