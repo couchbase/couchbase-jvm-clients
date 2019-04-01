@@ -19,6 +19,8 @@ package com.couchbase.client.java.query;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.CommonOptions;
@@ -319,6 +321,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
     @Stability.Internal
     public void injectParams(JsonObject queryJson) {
+      queryJson.put("client_context_id", clientContextId == null
+              ? UUID.randomUUID().toString()
+              : clientContextId);
+
       if (credentials != null && !credentials.isEmpty()) {
         JsonArray creds = JsonArray.create();
         for (Map.Entry<String, String> c : credentials.entrySet()) {
@@ -359,10 +365,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
       if (scanWait != null && (ScanConsistency.REQUEST_PLUS == scanConsistency)) {
         queryJson.put("scan_wait", scanWait);
-      }
-
-      if (clientContextId != null) {
-        queryJson.put("client_context_id", clientContextId);
       }
 
       if (maxParallelism != null) {
