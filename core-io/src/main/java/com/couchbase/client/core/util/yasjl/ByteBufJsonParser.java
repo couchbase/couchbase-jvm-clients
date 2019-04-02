@@ -15,12 +15,12 @@
  */
 package com.couchbase.client.core.util.yasjl;
 
-import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
 import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUMBER_VALUE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
@@ -510,7 +510,7 @@ public class ByteBufJsonParser {
             if (peekMode() == Mode.JSON_STRING_HASH_KEY) {
                 //strip the quotes
                 this.jsonPointer.addToken(this.currentValue.toString(
-                        this.currentValue.readerIndex() + 1, length - 1, Charset.defaultCharset()));
+                        this.currentValue.readerIndex() + 1, length - 1, UTF_8));
             }
         }
 

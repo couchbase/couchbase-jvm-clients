@@ -22,10 +22,10 @@ import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import org.junit.jupiter.api.Test;
 
 import java.io.EOFException;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -45,7 +45,7 @@ class SimpleParserTest {
         final int[] parseCount = new int[1];
         parseCount[0] = 0;
         JsonPointer[] jp = { new JsonPointer(path, buf -> {
-            results.put("value", buf.toString(Charset.defaultCharset()));
+            results.put("value", buf.toString(UTF_8));
             results.put("parseCount", parseCount[0]);
             buf.release();
         })};
