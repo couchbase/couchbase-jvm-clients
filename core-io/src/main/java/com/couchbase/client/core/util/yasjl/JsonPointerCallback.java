@@ -16,12 +16,10 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-
 import java.util.function.Consumer;
 
 /**
  * @author Subhashni Balakrishnan
  */
-public interface JsonPointerCallback extends Consumer<ByteBuf> {
+public interface JsonPointerCallback extends Consumer<byte[]> {
 }

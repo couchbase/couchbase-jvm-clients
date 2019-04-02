@@ -45,9 +45,8 @@ class SimpleParserTest {
         final int[] parseCount = new int[1];
         parseCount[0] = 0;
         JsonPointer[] jp = { new JsonPointer(path, buf -> {
-            results.put("value", buf.toString(UTF_8));
+            results.put("value", new String(buf, UTF_8));
             results.put("parseCount", parseCount[0]);
-            buf.release();
         })};
         ByteBufJsonParser parser = new ByteBufJsonParser(jp);
         parser.initialize(inBuf);

@@ -457,9 +457,9 @@ public class ByteBufJsonParser {
     /**
      * JsonLevel can be a nesting level of an json object or json array.
      */
-    class JsonLevel {
+    static class JsonLevel {
 
-        private final Deque<Mode> modes;
+        private final Deque<Mode> modes = new ArrayDeque<>();
         private final JsonPointer jsonPointer;
 
         private ByteBuf currentValue;
@@ -468,7 +468,6 @@ public class ByteBufJsonParser {
         private int arrayIndex;
 
         JsonLevel(final Mode mode, final JsonPointer jsonPointer) {
-            this.modes = new ArrayDeque<Mode>();
             this.pushMode(mode);
             this.jsonPointer = jsonPointer;
         }
@@ -508,9 +507,9 @@ public class ByteBufJsonParser {
         void setCurrentValue(ByteBuf value, int length) {
             this.currentValue = value;
             if (peekMode() == Mode.JSON_STRING_HASH_KEY) {
-                //strip the quotes
-                this.jsonPointer.addToken(this.currentValue.toString(
-                        this.currentValue.readerIndex() + 1, length - 1, UTF_8));
+                String withoutQuotes = this.currentValue.toString(
+                  this.currentValue.readerIndex() + 1, length - 1, UTF_8);
+                this.jsonPointer.addToken(withoutQuotes);
             }
         }
 
@@ -524,7 +523,15 @@ public class ByteBufJsonParser {
 
         void emitJsonPointerValue() {
             if ((this.isHashValue || this.isArray) && this.jsonPointer.callback() != null) {
-                this.jsonPointer.callback().accept(this.currentValue);
+                final byte[] bytes;
+                try {
+                    bytes = new byte[this.currentValue.readableBytes()];
+                    this.currentValue.readBytes(bytes);
+                } finally {
+                    this.currentValue.release();
+                }
+                this.jsonPointer.callback().accept(bytes);
+
             } else {
                 this.currentValue.release();
             }

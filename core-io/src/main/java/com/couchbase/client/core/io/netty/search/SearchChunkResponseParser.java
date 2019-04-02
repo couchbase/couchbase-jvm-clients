@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.error.SearchServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkHeader;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
@@ -40,44 +41,15 @@ public class SearchChunkResponseParser
     @Override
     protected ByteBufJsonParser initParser() {
         return new ByteBufJsonParser(new JsonPointer[] {
-            new JsonPointer("/status", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                status = data;
-            }),
+            new JsonPointer("/status", value -> status = value),
             new JsonPointer("/error", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                error = data;
+                error = value;
                 failRows(new SearchServiceException(error));
-
             }),
-            new JsonPointer("/hits/-", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                emitRow(new SearchChunkRow(data));
-            }),
-            new JsonPointer("/total_hits", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                totalHits = Long.parseLong(new String(data, StandardCharsets.UTF_8));
-            }),
-            new JsonPointer("/max_score", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                maxScore = Double.parseDouble(new String(data, StandardCharsets.UTF_8));
-            }),
-            new JsonPointer("/took", value -> {
-                byte[] data = new byte[value.readableBytes()];
-                value.readBytes(data);
-                value.release();
-                took = Long.parseLong(new String(data, StandardCharsets.UTF_8));
-            })
+            new JsonPointer("/hits/-", value -> emitRow(new SearchChunkRow(value))),
+            new JsonPointer("/total_hits", value -> totalHits = Mapper.decodeInto(value, Long.class)),
+            new JsonPointer("/max_score", value -> maxScore = Mapper.decodeInto(value, Double.class)),
+            new JsonPointer("/took", value -> took = Mapper.decodeInto(value, Long.class))
         });
     }
 
