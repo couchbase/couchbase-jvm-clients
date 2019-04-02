@@ -179,9 +179,8 @@ public class ReactiveCluster {
    * @param options the custom options for this query.
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
-  public Mono<ReactiveSearchResult> searchQuery(SearchQuery query, SearchOptions options) {
-    SearchRequest request = SearchAccessor.searchRequest(query, options, async().core().context(), environment());
-    return SearchAccessor.searchQueryReactive(async().core(), request);
+  public Mono<ReactiveSearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
+    return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(query, options));
   }
 
   /**

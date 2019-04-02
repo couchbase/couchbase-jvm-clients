@@ -106,7 +106,7 @@ public class SearchAccessor {
                 });
     }
 
-    public static List<RuntimeException> parseErrors(byte[] status) {
+    static List<RuntimeException> parseErrors(final byte[] status) {
         try {
             JsonObject jsonStatus = JacksonTransformers.MAPPER.readValue(status, JsonObject.class);
 
@@ -133,17 +133,4 @@ public class SearchAccessor {
         }
     }
 
-    public static SearchRequest searchRequest(final SearchQuery query,
-                                              final SearchOptions options,
-                                              final CoreContext context,
-                                              final ClusterEnvironment environment) {
-        JsonObject params = query.export();
-        byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
-        SearchOptions.BuiltQueryOptions opts = options.build();
-
-        Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
-        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-        return new SearchRequest(timeout, context, retryStrategy, environment.credentials(), query.indexName(), bytes);
-    }
 }

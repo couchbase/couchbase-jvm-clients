@@ -232,7 +232,7 @@ public class AsyncCluster {
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
-  public CompletableFuture<SearchResult> searchQuery(SearchQuery query) {
+  public CompletableFuture<SearchResult> searchQuery(final SearchQuery query) {
     return searchQuery(query, SearchOptions.DEFAULT);
   }
 
@@ -243,9 +243,22 @@ public class AsyncCluster {
    * @param options the custom options for this query.
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
-  public CompletableFuture<SearchResult> searchQuery(SearchQuery query, SearchOptions options) {
-    SearchRequest request = SearchAccessor.searchRequest(query, options, core.context(), environment());
-    return SearchAccessor.searchQueryAsync(core, request);
+  public CompletableFuture<SearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
+    return SearchAccessor.searchQueryAsync(core, searchRequest(query, options));
+  }
+
+  SearchRequest searchRequest(final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SarchQuery");
+    notNull(options, "SearchOptions");
+
+    SearchOptions.BuiltQueryOptions opts = options.build();
+    JsonObject params = query.export();
+    byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
+
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+    return new SearchRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+      query.indexName(), bytes);
   }
 
   /**

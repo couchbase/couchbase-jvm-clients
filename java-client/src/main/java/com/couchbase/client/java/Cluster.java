@@ -189,8 +189,7 @@ public class Cluster {
    * @return the {@link SearchRequest} once the response arrives successfully.
    */
   public SearchResult searchQuery(final SearchQuery query, final SearchOptions options) {
-    SearchRequest request = SearchAccessor.searchRequest(query, options, core().context(), environment());
-    return block(SearchAccessor.searchQueryAsync(asyncCluster.core(), request));
+    return block(asyncCluster.searchQuery(query, options));
   }
 
   /**
