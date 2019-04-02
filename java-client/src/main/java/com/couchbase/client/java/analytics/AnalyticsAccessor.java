@@ -19,6 +19,7 @@ package com.couchbase.client.java.analytics;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
@@ -32,16 +33,25 @@ public class AnalyticsAccessor {
 
   public static CompletableFuture<AnalyticsResult> analyticsQueryAsync(final Core core,
                                                                        final AnalyticsRequest request) {
-    core.send(request);
-    return request.response().thenApply(AnalyticsResult::new);
+    return analyticsQueryInternal(core, request)
+      .flatMap(response -> response
+        .rows()
+        .collectList()
+        .flatMap(rows -> response
+          .trailer()
+          .map(trailer -> new AnalyticsResult(response.header(), rows, trailer))
+        )
+      )
+      .toFuture();
   }
 
-  public static Mono<ReactiveAnalyticsResult> analyticsQueryReactive(final Core core,
-                                                                     final AnalyticsRequest request) {
+  public static Mono<ReactiveAnalyticsResult> analyticsQueryReactive(final Core core, final AnalyticsRequest request) {
+    return analyticsQueryInternal(core, request).map(ReactiveAnalyticsResult::new);
+  }
+
+  private static Mono<AnalyticsResponse> analyticsQueryInternal(final Core core, final AnalyticsRequest request) {
     core.send(request);
-    return Reactor
-      .wrap(request, request.response(), true)
-      .map(ReactiveAnalyticsResult::new);
+    return Reactor.wrap(request, request.response(), true);
   }
 
 }

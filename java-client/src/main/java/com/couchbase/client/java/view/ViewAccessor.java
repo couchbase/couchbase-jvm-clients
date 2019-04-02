@@ -19,10 +19,15 @@ package com.couchbase.client.java.view;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.view.ViewChunkRow;
 import com.couchbase.client.core.msg.view.ViewRequest;
+import com.couchbase.client.core.msg.view.ViewResponse;
+import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * Internal helper to access and convert view requests and responses.
@@ -33,13 +38,21 @@ import java.util.concurrent.CompletableFuture;
 public class ViewAccessor {
 
     public static CompletableFuture<ViewResult> viewQueryAsync(final Core core, final ViewRequest request) {
-        core.send(request);
-        return request.response().thenApply(ViewResult::new);
+        return viewQueryInternal(core, request)
+          .flatMap(response -> response
+            .rows()
+            .collectList()
+            .map(rows -> new ViewResult(response.header(), rows))
+          )
+          .toFuture();
     }
 
     public static Mono<ReactiveViewResult> viewQueryReactive(final Core core, final ViewRequest request) {
-        core.send(request);
-        return Reactor.wrap(request, request.response(), true).map(ReactiveViewResult::new);
+        return viewQueryInternal(core, request).map(ReactiveViewResult::new);
     }
 
+    private static Mono<ViewResponse> viewQueryInternal(final Core core, final ViewRequest request) {
+        core.send(request);
+        return Reactor.wrap(request, request.response(), true);
+    }
 }

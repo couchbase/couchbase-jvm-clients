@@ -23,24 +23,28 @@ import java.util.stream.Stream;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
-import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.java.codec.Decoder;
+import com.couchbase.client.core.msg.query.QueryChunkHeader;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
+import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.EncodedDocument;
 
 /**
- * Query Result that fetches the parts of the Query response asynchronously
+ * Holds the results (including metadata) of a N1QL query.
  *
  * @since 3.0.0
  */
 @Stability.Volatile
 public class QueryResult {
 
-    private final QueryResponse response;
+    private final List<QueryChunkRow> rows;
+    private final QueryChunkHeader header;
+    private final QueryChunkTrailer trailer;
 
-    QueryResult(final QueryResponse response) {
-        this.response = response;
+    QueryResult(QueryChunkHeader header, List<QueryChunkRow> rows, QueryChunkTrailer trailer) {
+        this.rows = rows;
+        this.header = header;
+        this.trailer = trailer;
     }
 
     /**
@@ -58,25 +62,14 @@ public class QueryResult {
      * @param target the target class to decode into
      * @throws DecodingFailedException if any row could not be successfully decoded
      */
-    public <T> Stream<T> rowsAs(Class<T> target) {
-        return response.rows().map(n -> {
+    public <T> Stream<T> rowsAs(final Class<T> target) {
+        return rows.stream().map(n -> {
             try {
                 return JacksonTransformers.MAPPER.readValue(n.data(), target);
             } catch (IOException ex) {
                 throw new DecodingFailedException(ex);
             }
-        }).toStream();
-    }
-
-    /**
-     * Returns all rows, converted into the target class, using a custom decoder.
-     * <p>
-     * @param target the target class to decode into
-     * @param decoder the customer {@link Decoder} to use
-     * @throws DecodingFailedException if any row could not be successfully decoded
-     */
-    public <T> Stream<T> rowsAs(Class<T> target, Decoder<T> decoder) {
-        return response.rows().map(n -> decoder.decode(target, EncodedDocument.of(0, n.data()))).toStream();
+        });
     }
 
     public <T> List<T> allRowsAs(final Class<T> target) {
@@ -96,6 +89,15 @@ public class QueryResult {
      * Returns a {@link QueryMeta} giving access to the additional metadata associated with this query.
      */
     public QueryMeta meta() {
-        return QueryMeta.from(response.header(), response.trailer().block());
+        return QueryMeta.from(header, trailer);
+    }
+
+    @Override
+    public String toString() {
+        return "QueryResult{" +
+                "rows=" + rows +
+                ", header=" + header +
+                ", trailer=" + trailer +
+                '}';
     }
 }

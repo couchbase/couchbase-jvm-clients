@@ -16,7 +16,11 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
@@ -29,22 +33,33 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
+/**
+ * Holds the results (including metadata) of an analytics query.
+ *
+ * @since 3.0.0
+ */
+@Stability.Volatile
 public class AnalyticsResult {
 
-  private final AnalyticsResponse response;
+  private final List<AnalyticsChunkRow> rows;
+  private final AnalyticsChunkHeader header;
+  private final AnalyticsChunkTrailer trailer;
 
-  AnalyticsResult(final AnalyticsResponse response) {
-    this.response = response;
+  AnalyticsResult(AnalyticsChunkHeader header, List<AnalyticsChunkRow> rows, AnalyticsChunkTrailer trailer) {
+    this.rows = rows;
+    this.header = header;
+    this.trailer = trailer;
   }
 
+
   public <T> Stream<T> rowsAs(final Class<T> target) {
-    return response.rows().map(row -> {
+    return rows.stream().map(row -> {
       try {
         return JacksonTransformers.MAPPER.readValue(row.data(), target);
       } catch (IOException e) {
         throw new DecodingFailedException("Decoding of Analytics Row failed!", e);
       }
-    }).toStream();
+    });
   }
 
   public <T> List<T> allRowsAs(final Class<T> target) {
@@ -70,7 +85,15 @@ public class AnalyticsResult {
   }
 
   public AnalyticsMeta meta() {
-    return AnalyticsMeta.from(response.header(), response.trailer().block());
+    return AnalyticsMeta.from(header, trailer);
   }
 
+  @Override
+  public String toString() {
+    return "AnalyticsResult{" +
+            "rows=" + rows +
+            ", header=" + header +
+            ", trailer=" + trailer +
+            '}';
+  }
 }

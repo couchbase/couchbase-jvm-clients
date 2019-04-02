@@ -18,25 +18,40 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
+import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.query.QueryResponse;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class QueryAccessor {
 
-
-    public static CompletableFuture<QueryResult> queryAsync(final Core core,
-                                                            final QueryRequest request) {
-        core.send(request);
-        return request.response().thenApply(QueryResult::new);
+    public static CompletableFuture<QueryResult> queryAsync(final Core core, final QueryRequest request) {
+        return queryInternal(core, request)
+          .flatMap(response -> response
+            .rows()
+            .collectList()
+            .flatMap(rows -> response
+                .trailer()
+                .map(trailer -> new QueryResult(response.header(), rows, trailer))
+            )
+          )
+          .toFuture();
     }
 
     public static Mono<ReactiveQueryResult> queryReactive(final Core core,
                                                           final QueryRequest request) {
-        core.send(request);
-        return Reactor
-            .wrap(request, request.response(), true)
-            .map(ReactiveQueryResult::new);
+        return queryInternal(core, request).map(ReactiveQueryResult::new);
     }
+
+    private static Mono<QueryResponse> queryInternal(final Core core, final QueryRequest request) {
+        core.send(request);
+        return Reactor.wrap(request, request.response(), true);
+    }
+
 }

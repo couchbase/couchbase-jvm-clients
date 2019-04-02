@@ -16,9 +16,8 @@
 
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.view.ViewResponse;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.msg.view.ViewChunkHeader;
+import com.couchbase.client.core.msg.view.ViewChunkRow;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,18 +30,12 @@ import java.util.stream.Stream;
  */
 public class ViewResult {
 
-  /**
-   * Holds the underlying view response from the core.
-   */
-  private final ViewResponse response;
+  private final List<ViewChunkRow> rows;
+  private final ViewChunkHeader header;
 
-  /**
-   * Creates a new {@link ViewResult}.
-   *
-   * @param response the core response.
-   */
-  ViewResult(final ViewResponse response) {
-    this.response = response;
+  ViewResult(ViewChunkHeader header, List<ViewChunkRow> rows) {
+    this.rows = rows;
+    this.header = header;
   }
 
   /**
@@ -51,7 +44,7 @@ public class ViewResult {
    * @return the {@link Stream} of {@link ViewRow ViewRows}.
    */
   public Stream<ViewRow> rows() {
-    return response.rows().map(r -> new ViewRow(r.data())).toStream();
+    return rows.stream().map(r -> new ViewRow(r.data()));
   }
 
   /**
@@ -74,15 +67,14 @@ public class ViewResult {
    * @return the metadata associated.
    */
   public ViewMeta meta() {
-    return ViewMeta.from(response.header());
+    return ViewMeta.from(header);
   }
 
   @Override
   public String toString() {
     return "ViewResult{" +
-      "rows=" + allRows() +
-      ", meta=" + meta() +
+      "rows=" + rows +
+      ", header=" + header +
       '}';
   }
-
 }
