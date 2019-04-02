@@ -16,16 +16,19 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.WS_CR;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.WS_LF;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.WS_SPACE;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.WS_TAB;
 
 /**
  * Processes JSON ws
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonWhiteSpaceByteBufProcessor implements ByteBufProcessor {
+public class JsonWhiteSpaceByteBufProcessor implements ByteProcessor {
 
     public boolean process(byte value) throws Exception {
         switch(value) {

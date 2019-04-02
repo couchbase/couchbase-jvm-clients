@@ -16,16 +16,17 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_ES;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_ST;
 
 /**
  * Processes JSON String value
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonStringByteBufProcessor implements ByteBufProcessor {
+public class JsonStringByteBufProcessor implements ByteProcessor {
     private State currentState;
 
     private enum State {

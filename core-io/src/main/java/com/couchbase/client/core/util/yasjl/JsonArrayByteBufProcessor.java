@@ -16,16 +16,18 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.C_SQUARE;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_ST;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.O_SQUARE;
 
 /**
  * Process JSON array
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonArrayByteBufProcessor implements ByteBufProcessor {
+public class JsonArrayByteBufProcessor implements ByteProcessor {
     private boolean isString;
     private int count;
     private final JsonStringByteBufProcessor stProcessor;

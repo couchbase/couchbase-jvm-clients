@@ -16,14 +16,14 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
 
 /**
  * Processes byte order mark. It supports only UTF-8.
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonBOMByteBufProcessor implements ByteBufProcessor {
+public class JsonBOMByteBufProcessor implements ByteProcessor {
     private static final byte BOM1 = (byte)0xEF;
     private static final byte BOM2 = (byte)0xBB;
     private static final byte BOM3 = (byte)0xBF;

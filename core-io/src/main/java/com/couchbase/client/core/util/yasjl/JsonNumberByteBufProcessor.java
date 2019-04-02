@@ -16,18 +16,17 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
+
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_MINUS;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_PLUS;
 
 /**
  * Process JSON number
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonNumberByteBufProcessor implements ByteBufProcessor {
-
-    public JsonNumberByteBufProcessor() {
-    }
+public class JsonNumberByteBufProcessor implements ByteProcessor {
 
     //not verifying if valid
     public boolean process(byte value) throws Exception {

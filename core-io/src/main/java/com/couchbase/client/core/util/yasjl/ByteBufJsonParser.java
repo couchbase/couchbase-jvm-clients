@@ -15,17 +15,27 @@
  */
 package com.couchbase.client.core.util.yasjl;
 
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
+
+import java.io.EOFException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static com.couchbase.client.core.util.yasjl.JsonParserUtils.*;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.C_CURLY;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.C_SQUARE;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_COLON;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_COMMA;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_F;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_N;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_ST;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.JSON_T;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode;
 import static com.couchbase.client.core.util.yasjl.JsonParserUtils.Mode.JSON_NUMBER_VALUE;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.O_CURLY;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.O_SQUARE;
+import static com.couchbase.client.core.util.yasjl.JsonParserUtils.isNumber;
 import static java.nio.charset.StandardCharsets.UTF_8;
-
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
-
-import java.io.EOFException;
 
 /**
  * The {@link ByteBufJsonParser} allows to query for values identified by {@link JsonPointer} in Netty {@link ByteBuf}.
@@ -327,7 +337,7 @@ public class ByteBufJsonParser {
      */
     private void readValue(final JsonLevel level) throws EOFException {
         int readerIndex = content.readerIndex();
-        ByteBufProcessor processor = null;
+        ByteProcessor processor = null;
         Mode mode = level.peekMode();
         switch (mode) {
             case JSON_ARRAY_VALUE:

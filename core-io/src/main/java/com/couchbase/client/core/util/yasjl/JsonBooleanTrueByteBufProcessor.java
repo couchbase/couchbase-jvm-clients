@@ -16,14 +16,14 @@
 
 package com.couchbase.client.core.util.yasjl;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufProcessor;
+import com.couchbase.client.core.deps.io.netty.util.ByteProcessor;
 
 /**
  * Processes JSON true value
  *
  * @author Subhashni Balakrishnan
  */
-public class JsonBooleanTrueByteBufProcessor implements ByteBufProcessor {
+public class JsonBooleanTrueByteBufProcessor implements ByteProcessor {
     private static final byte T1 = (byte)'t';
     private static final byte T2 = (byte)'r';
     private static final byte T3 = (byte)'u';
