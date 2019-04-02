@@ -19,6 +19,8 @@ package com.couchbase.client.util;
 import java.io.InputStream;
 import java.util.function.BooleanSupplier;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Provides a bunch of utility APIs that help with testing.
  */
@@ -69,7 +71,7 @@ public class Utils {
   public static String readResource(final String filename, final Class<?> clazz) {
     String path = "/" + clazz.getPackage().getName().replace(".", "/") + "/" + filename;
     InputStream stream = clazz.getResourceAsStream(path);
-    java.util.Scanner s = new java.util.Scanner(stream).useDelimiter("\\A");
+    java.util.Scanner s = new java.util.Scanner(stream, UTF_8.name()).useDelimiter("\\A");
     return s.hasNext() ? s.next() : "";
   }
 }

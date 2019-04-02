@@ -52,7 +52,7 @@ class SimpleParserTest {
         parser.initialize(inBuf);
 
         try {
-            inBuf.writeBytes("{\"foo\": [\"bar\", \"baz\"],".getBytes());
+            inBuf.writeBytes("{\"foo\": [\"bar\", \"baz\"],".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -60,7 +60,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"\":0,".getBytes());
+            inBuf.writeBytes("\"\":0,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -68,7 +68,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"a/b\": 1,".getBytes());
+            inBuf.writeBytes("\"a/b\": 1,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -76,7 +76,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"c%d\": 2,".getBytes());
+            inBuf.writeBytes("\"c%d\": 2,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -84,7 +84,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"e^f\": 3,".getBytes());
+            inBuf.writeBytes("\"e^f\": 3,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -92,7 +92,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"g|h\": 4,".getBytes());
+            inBuf.writeBytes("\"g|h\": 4,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -100,7 +100,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"i\\j\": 5,".getBytes());
+            inBuf.writeBytes("\"i\\j\": 5,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -109,7 +109,7 @@ class SimpleParserTest {
 
 
         try {
-            inBuf.writeBytes("\"k\\\"l\": 6,".getBytes());
+            inBuf.writeBytes("\"k\\\"l\": 6,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -117,7 +117,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\" \": 7,".getBytes());
+            inBuf.writeBytes("\" \": 7,".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();
@@ -126,7 +126,7 @@ class SimpleParserTest {
         }
 
         try {
-            inBuf.writeBytes("\"m~n\": 8}".getBytes());
+            inBuf.writeBytes("\"m~n\": 8}".getBytes(UTF_8));
             parseCount[0]++;
             parser.parse();
             inBuf.discardReadBytes();

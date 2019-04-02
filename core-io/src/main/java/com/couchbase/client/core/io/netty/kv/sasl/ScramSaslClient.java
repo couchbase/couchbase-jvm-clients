@@ -36,10 +36,12 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 class ScramSaslClient implements SaslClient  {
 
-  private static final byte[] CLIENT_KEY = "Client Key".getBytes();
-  private static final byte[] SERVER_KEY = "Server Key".getBytes();
+  private static final byte[] CLIENT_KEY = "Client Key".getBytes(UTF_8);
+  private static final byte[] SERVER_KEY = "Server Key".getBytes(UTF_8);
 
   private final String name;
   private final String hmacAlgorithm;
@@ -107,11 +109,11 @@ class ScramSaslClient implements SaslClient  {
 
       clientFirstMessage = "n,,n=" + getUserName() + ",r=" + clientNonce;
       clientFirstMessageBare = clientFirstMessage.substring(3);
-      return clientFirstMessage.getBytes();
+      return clientFirstMessage.getBytes(UTF_8);
     } else if (serverFirstMessage == null) {
-      serverFirstMessage = new String(challenge);
+      serverFirstMessage = new String(challenge, UTF_8);
 
-      HashMap<String, String> attributes = new HashMap<String, String>();
+      HashMap<String, String> attributes = new HashMap<>();
       try {
         decodeAttributes(attributes, serverFirstMessage);
       } catch (Exception ex) {
@@ -145,11 +147,11 @@ class ScramSaslClient implements SaslClient  {
 
       clientFinalMessageNoProof = "c=biws,r=" + nonce;
       String client_final_message = clientFinalMessageNoProof + ",p=" + Base64.getEncoder().encodeToString(getClientProof());
-      return client_final_message.getBytes();
+      return client_final_message.getBytes(UTF_8);
     } else if (serverFinalMessage == null) {
-      serverFinalMessage = new String(challenge);
+      serverFinalMessage = new String(challenge, UTF_8);
 
-      HashMap<String, String> attributes = new HashMap<String, String>();
+      HashMap<String, String> attributes = new HashMap<>();
       try {
         decodeAttributes(attributes, serverFinalMessage);
       } catch (Exception ex) {
@@ -253,11 +255,11 @@ class ScramSaslClient implements SaslClient  {
       if (password == null || password.isEmpty()) {
         key = new EmptySecretKey(hmacAlgorithm);
       } else {
-        key = new SecretKeySpec(password.getBytes(), hmacAlgorithm);
+        key = new SecretKeySpec(password.getBytes(UTF_8), hmacAlgorithm);
       }
       mac.init(key);
       mac.update(salt);
-      mac.update("\00\00\00\01".getBytes()); // Append INT(1)
+      mac.update("\00\00\00\01".getBytes(UTF_8)); // Append INT(1)
 
       byte[] un = mac.doFinal();
       mac.update(un);
@@ -299,9 +301,7 @@ class ScramSaslClient implements SaslClient  {
     final PasswordCallback passwordCallback = new PasswordCallback("Password", false);
     try {
       callbacks.handle(new Callback[]{passwordCallback});
-    } catch (IOException e) {
-      throw new SaslException("Missing callback fetch password", e);
-    } catch (UnsupportedCallbackException e) {
+    } catch (IOException | UnsupportedCallbackException e) {
       throw new SaslException("Missing callback fetch password", e);
     }
 
@@ -324,7 +324,7 @@ class ScramSaslClient implements SaslClient  {
    */
   private byte[] getServerSignature() {
     byte[] serverKey = hmac(saltedPassword, SERVER_KEY);
-    return hmac(serverKey, getAuthMessage().getBytes());
+    return hmac(serverKey, getAuthMessage().getBytes(UTF_8));
   }
 
   /**
@@ -342,7 +342,7 @@ class ScramSaslClient implements SaslClient  {
   private byte[] getClientProof() {
     byte[] clientKey = hmac(saltedPassword, CLIENT_KEY);
     byte[] storedKey = digest.digest(clientKey);
-    byte[] clientSignature = hmac(storedKey, getAuthMessage().getBytes());
+    byte[] clientSignature = hmac(storedKey, getAuthMessage().getBytes(UTF_8));
 
     xor(clientKey, clientSignature);
     return clientKey;
