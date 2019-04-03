@@ -86,7 +86,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query("select 'hello world' as Greeting");
 
         assertNotNull(result.meta().requestId());
-        assertFalse(result.meta().clientContextId().isPresent());
+        assertTrue(result.meta().clientContextId().isPresent());
         assertEquals(QueryStatus.SUCCESS, result.meta().status());
         assertFalse(result.meta().warnings().isPresent());
         assertEquals(1, result.allRowsAs(JsonObject.class).size());
@@ -109,7 +109,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         );
 
         assertNotNull(result.meta().requestId());
-        assertFalse(result.meta().clientContextId().isPresent());
+        assertTrue(result.meta().clientContextId().isPresent());
         assertEquals(QueryStatus.SUCCESS, result.meta().status());
         assertFalse(result.meta().warnings().isPresent());
         assertEquals(1, result.allRowsAs(JsonObject.class).size());

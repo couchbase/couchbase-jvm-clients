@@ -78,13 +78,22 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
    * @return this options builder for chaining purposes.
    */
   public SELF withDurabilityLevel(final DurabilityLevel durabilityLevel) {
-    notNull(persistTo, "DurabilityLevel");
-    if (persistTo != PersistTo.NONE || replicateTo != ReplicateTo.NONE) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
+    notNull(durabilityLevel, "DurabilityLevel");
+
+    // DurabilityLevel.NONE is provided as a convenience so that apps don't have to do branching logic when they're
+    // constructing options blocks
+    if (durabilityLevel != DurabilityLevel.NONE) {
+      if (persistTo != PersistTo.NONE || replicateTo != ReplicateTo.NONE) {
+        throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
+          "the same time!");
+      }
+
+      this.durabilityLevel = Optional.of(durabilityLevel);
+    }
+    else {
+      this.durabilityLevel = Optional.empty();
     }
 
-    this.durabilityLevel = Optional.of(durabilityLevel);
     return self();
   }
 

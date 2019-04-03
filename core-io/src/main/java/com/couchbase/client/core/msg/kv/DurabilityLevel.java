@@ -1,6 +1,7 @@
 package com.couchbase.client.core.msg.kv;
 
 public enum DurabilityLevel {
+  NONE((byte) 0x00),
   MAJORITY((byte) 0x01),
   MAJORITY_AND_PERSIST_ON_MASTER((byte) 0x02),
   PERSIST_TO_MAJORITY((byte) 0x03);
