@@ -17,13 +17,11 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.io.netty.search.SearchMessageHandler;
+import com.couchbase.client.core.io.netty.search.SearchHandlerSwitcher;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LogLevel;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LoggingHandler;
 
 public class SearchEndpoint extends BaseEndpoint {
 
@@ -49,7 +47,7 @@ public class SearchEndpoint extends BaseEndpoint {
     @Override
     public void init(ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new SearchMessageHandler(endpointContext));
+      pipeline.addLast(SearchHandlerSwitcher.SWITCHER_IDENTIFIER, new SearchHandlerSwitcher(endpointContext));
     }
   }
 

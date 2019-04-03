@@ -169,7 +169,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
       writtenRequests.put(nextOpaque, request);
       try {
-        ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext));
+        ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext), promise);
         writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
       }
       catch(RuntimeException err) {

@@ -18,14 +18,30 @@ package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Helper methods that need to be used when dealing with the HTTP protocol.
+ *
+ * @since 2.0.0
+ */
 public class HttpProtocol {
 
+  /**
+   * Adds http basic auth to a given request.
+   *
+   * @param request the request where it should be added.
+   * @param user the username.
+   * @param password the password.
+   */
   public static void addHttpBasicAuth(final HttpRequest request, final String user,
                                       final String password) {
     // if both user and password are null or empty, don't add http basic auth
@@ -43,6 +59,23 @@ public class HttpProtocol {
       + encoded.toString(UTF_8));
     encoded.release();
     raw.release();
+  }
+
+  /**
+   * Calculates the remote host for caching so that it is set on each query request.
+   *
+   * @param remoteAddress the remote address.
+   * @return the converted remote http host.
+   */
+  public static String remoteHttpHost(final SocketAddress remoteAddress) {
+    final String remoteHost;
+    if (remoteAddress instanceof InetSocketAddress) {
+      InetSocketAddress inetAddr = (InetSocketAddress) remoteAddress;
+      remoteHost = inetAddr.getAddress().getHostAddress() + ":" + inetAddr.getPort();
+    } else {
+      remoteHost = remoteAddress.toString();
+    }
+    return remoteHost;
   }
 
 }

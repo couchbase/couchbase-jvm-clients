@@ -25,7 +25,6 @@ import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
 import com.couchbase.client.core.util.yasjl.JsonPointer;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class SearchChunkResponseParser

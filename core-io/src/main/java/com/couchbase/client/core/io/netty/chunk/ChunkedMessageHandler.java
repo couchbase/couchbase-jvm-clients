@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.chunk;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
@@ -40,9 +41,12 @@ import com.couchbase.client.core.util.ResponseStatusConverter;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
+
 /**
  * Implements the chunk stream handling for all generic http stream based services.
  */
+@ChannelHandler.Sharable
 public abstract class ChunkedMessageHandler
   <H extends ChunkHeader,
   ROW extends ChunkRow,
@@ -115,7 +119,8 @@ public abstract class ChunkedMessageHandler
       currentRequest = (REQ) msg;
       FullHttpRequest encoded = currentRequest.encode();
       encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
-      ctx.write(encoded);
+      encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
+      ctx.write(encoded, promise);
     } catch (Throwable t) {
       // TODO: handle encoding/write failures
     }
@@ -125,7 +130,7 @@ public abstract class ChunkedMessageHandler
   public void channelActive(final ChannelHandlerContext ctx) {
     currentBuffer = ctx.alloc().buffer();
 
-    remoteHost = remoteHttpHost(ctx);
+    remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
     ioContext = new IoContext(
       endpointContext,
       ctx.channel().localAddress(),
@@ -158,7 +163,7 @@ public abstract class ChunkedMessageHandler
   }
 
   @Override
-  public void channelInactive(ChannelHandlerContext ctx) {
+  public void handlerRemoved(final ChannelHandlerContext ctx) {
     cleanupState();
     ReferenceCountUtil.release(currentBuffer);
     ctx.fireChannelInactive();
@@ -203,25 +208,6 @@ public abstract class ChunkedMessageHandler
     currentResponse = null;
     currentRequest = null;
     currentResponseStatus = null;
-  }
-
-
-  /**
-   * Calculates the remote host for caching so that it is set on each query request.
-   *
-   * @param ctx the channel handler context.
-   * @return the converted remote http host.
-   */
-  private String remoteHttpHost(final ChannelHandlerContext ctx) {
-    final String remoteHost;
-    final SocketAddress addr = ctx.channel().remoteAddress();
-    if (addr instanceof InetSocketAddress) {
-      InetSocketAddress inetAddr = (InetSocketAddress) addr;
-      remoteHost = inetAddr.getAddress().getHostAddress() + ":" + inetAddr.getPort();
-    } else {
-      remoteHost = addr.toString();
-    }
-    return remoteHost;
   }
 
 }

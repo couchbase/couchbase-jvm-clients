@@ -17,14 +17,11 @@
 package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -35,8 +32,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

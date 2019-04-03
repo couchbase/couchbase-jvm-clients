@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2018 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.io.netty.search;
+package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
-import com.couchbase.client.core.msg.search.*;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 
-public class SearchMessageHandler
-        extends ChunkedMessageHandler<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse, SearchRequest> {
+public interface NonChunkedHttpRequest<R extends Response> extends Encodable<FullHttpRequest>, Request<R> {
 
-    public SearchMessageHandler(EndpointContext endpointContext) {
-        super(endpointContext, new SearchChunkResponseParser());
-    }
+  R decode(FullHttpResponse response);
 
 }
-
