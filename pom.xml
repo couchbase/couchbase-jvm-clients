@@ -28,12 +28,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>core-io</artifactId>
-                <version>2.0.0-alpha.2</version>
+                <version>2.0.0-alpha.3-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>java-client</artifactId>
-                <version>3.0.0-alpha.2</version>
+                <version>3.0.0-alpha.3-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
@@ -43,7 +43,7 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-implicits_${scala.compat.version}</artifactId>
-                <version>1.0.0-alpha.2</version>
+                <version>1.0.0-alpha.3-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

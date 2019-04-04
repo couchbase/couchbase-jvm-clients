@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>java-client</artifactId>
-    <version>3.0.0-alpha.2</version>
+    <version>3.0.0-alpha.3-SNAPSHOT</version>
 
     <name>Couchbase Java SDK</name>
     <description>The official Couchbase Java SDK</description>
