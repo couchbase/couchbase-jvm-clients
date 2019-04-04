@@ -1,9 +1,9 @@
 # Couchbase JVM Clients
 
-This repository contains the next generation of Couchbase SDKs ("3.0") as well as a brand-new 
+This repository contains the next generation of Couchbase SDKs ("3.0") as well as a rewritten 
 `core-io` library.
 
-It is currently under development and not ready for prime-time, although we are getting there.
+It is currently in an `alpha` state and not ready for prime-time, although we are getting there.
 
 ## Overview
 
@@ -41,7 +41,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0-alpha.1</version>
+        <version>3.0.0-alpha.2</version>
     </dependency>
 </dependencies>
 ```
@@ -53,7 +53,7 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.0-alpha.1</version>
+        <version>1.0.0-alpha.2</version>
     </dependency>
 </dependencies>
 ```
