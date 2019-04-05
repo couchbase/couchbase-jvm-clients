@@ -17,11 +17,16 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
+import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+
 
 public class IoConfig {
 
@@ -37,6 +42,7 @@ public class IoConfig {
   private final CircuitBreakerConfig searchCircuitBreakerConfig;
   private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
+  private final Set<ServiceType> captureTraffic;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -64,6 +70,9 @@ public class IoConfig {
     managerCircuitBreakerConfig = Optional
       .ofNullable(builder.managerCircuitBreakerConfig)
       .orElse(CircuitBreakerConfig.disabled());
+    captureTraffic = Optional
+      .ofNullable(builder.captureTraffic)
+      .orElse(Collections.emptySet());
   }
 
   public static IoConfig create() {
@@ -110,6 +119,10 @@ public class IoConfig {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 
+  public static Builder captureTraffic(final ServiceType... serviceTypes) {
+    return builder().captureTraffic(serviceTypes);
+  }
+
   public Set<SaslMechanism> allowedSaslMechanisms() {
     return allowedSaslMechanisms;
   }
@@ -146,6 +159,10 @@ public class IoConfig {
     return configPollInterval;
   }
 
+  public Set<ServiceType> captureTraffic() {
+    return captureTraffic;
+  }
+
   public static class Builder {
 
     private Set<SaslMechanism> allowedSaslMechanisms;
@@ -157,6 +174,7 @@ public class IoConfig {
     private CircuitBreakerConfig searchCircuitBreakerConfig;
     private CircuitBreakerConfig analyticsCircuitBreakerConfig;
     private CircuitBreakerConfig managerCircuitBreakerConfig;
+    private Set<ServiceType> captureTraffic;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -204,6 +222,13 @@ public class IoConfig {
 
     public Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
       this.managerCircuitBreakerConfig = managerCircuitBreakerConfig;
+      return this;
+    }
+
+    public Builder captureTraffic(final ServiceType... serviceTypes) {
+      this.captureTraffic = new HashSet<>(Arrays.asList(
+        serviceTypes.length == 0 ? ServiceType.values() : serviceTypes
+      ));
       return this;
     }
   }

@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
+import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
@@ -108,6 +109,8 @@ public abstract class BaseEndpoint implements Endpoint {
 
   private final RequestCompletionConsumer requestCompletionConsumer = new RequestCompletionConsumer();
 
+  private final ServiceType serviceType;
+
   /**
    * Once connected, contains the channel to work with.
    */
@@ -142,6 +145,7 @@ public abstract class BaseEndpoint implements Endpoint {
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
     this.eventLoopGroup = eventLoopGroup;
+    this.serviceType = serviceType;
   }
 
   /**
@@ -221,6 +225,9 @@ public abstract class BaseEndpoint implements Endpoint {
                 } catch (Exception e) {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }
+              }
+              if (endpointContext.environment().ioConfig().captureTraffic().contains(serviceType)) {
+                pipeline.addLast(new TrafficCaptureHandler(endpointContext));
               }
               pipelineInitializer().init(pipeline);
               pipeline.addLast(new PipelineErrorHandler(endpointContext));
