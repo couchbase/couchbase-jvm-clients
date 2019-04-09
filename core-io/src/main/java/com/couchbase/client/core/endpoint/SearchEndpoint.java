@@ -25,8 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCode
 
 public class SearchEndpoint extends BaseEndpoint {
 
-  public SearchEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
-                        final int port) {
+  public SearchEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().searchCircuitBreakerConfig(), ServiceType.SEARCH);
   }
@@ -45,7 +44,7 @@ public class SearchEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(ChannelPipeline pipeline) {
+    public void init(final ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
       pipeline.addLast(SearchHandlerSwitcher.SWITCHER_IDENTIFIER, new SearchHandlerSwitcher(endpointContext));
     }

@@ -19,11 +19,11 @@ package com.couchbase.client.core.msg.search;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
-public class UpsertSearchIndexResponse extends BaseResponse {
+public class RemoveSearchIndexResponse extends BaseResponse {
 
   private final byte[] content;
 
-  UpsertSearchIndexResponse(ResponseStatus status, final byte[] content) {
+  RemoveSearchIndexResponse(ResponseStatus status, final byte[] content) {
     super(status);
     this.content = content;
   }

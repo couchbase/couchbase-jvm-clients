@@ -23,6 +23,7 @@ import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.ReactiveSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
@@ -40,6 +41,11 @@ public class ReactiveCluster {
    * Holds the underlying async cluster reference.
    */
   private final AsyncCluster asyncCluster;
+
+  /**
+   * Holds the index management capabilities.
+   */
+  private final ReactiveSearchIndexManager searchIndexManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -96,6 +102,7 @@ public class ReactiveCluster {
    */
   ReactiveCluster(final AsyncCluster asyncCluster) {
     this.asyncCluster = asyncCluster;
+    this.searchIndexManager = new ReactiveSearchIndexManager(asyncCluster.searchIndexes());
   }
 
   /**
@@ -110,6 +117,13 @@ public class ReactiveCluster {
    */
   public ClusterEnvironment environment() {
     return asyncCluster.environment();
+  }
+
+  /**
+   * Provides access to the index management capabilities.
+   */
+  public ReactiveSearchIndexManager searchIndexes() {
+    return searchIndexManager;
   }
 
   /**

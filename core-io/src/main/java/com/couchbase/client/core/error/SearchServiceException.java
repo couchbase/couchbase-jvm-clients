@@ -29,6 +29,16 @@ import java.nio.charset.StandardCharsets;
 public class SearchServiceException extends CouchbaseException {
     private final byte[] content;
 
+    public SearchServiceException(String message) {
+        super();
+        this.content = message.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public SearchServiceException(String message, Throwable cause) {
+        super(message, cause);
+        this.content = message.getBytes(StandardCharsets.UTF_8);
+    }
+
     public SearchServiceException(byte[] content) {
         super();
         this.content = content;
