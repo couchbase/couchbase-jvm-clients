@@ -82,34 +82,36 @@ class AsyncCluster(environment: => ClusterEnvironment)
         core.send(request)
 
         import reactor.core.scala.publisher.{Mono => ScalaMono}
-        val rowsKeeper = new AtomicReference[Seq[QueryRow]]()
 
         val ret: Future[QueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
           propagateCancellation = true)
           .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
             .collectSeq()
-            .flatMap(rows => {
-              rowsKeeper.set(rows.map(v => QueryRow(v.data())))
-
-              FutureConversions.javaMonoToScalaMono(response.trailer())
-            })
-            .map(addl => QueryResult(
-              rowsKeeper.get(),
-              response.header().requestId(),
-              response.header().clientContextId().asScala,
-              response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
-              addl.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
-              addl.warnings.asScala.map(bytes => QueryWarnings(bytes)),
-              addl.status,
-              addl.profile.asScala.map(QueryProfile))
+            .flatMap(rows => FutureConversions.javaMonoToScalaMono(response.trailer())
+              .map(trailer => QueryResult(
+                rows,
+                QueryMeta(
+                  response.header().requestId(),
+                  response.header().clientContextId().asScala,
+                  response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
+                  trailer.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
+                  trailer.warnings.asScala.map(bytes => QueryWarnings(bytes)),
+                  trailer.status,
+                  trailer.profile.asScala.map(QueryProfile)))
+              )
             )
           )
+
           .onErrorResume(err => {
             err match {
-              case e: QueryServiceException => ScalaMono.error(QueryError(e.content))
+              case e: QueryServiceException =>
+                val x = QueryError(e.content)
+                ScalaMono.error(x)
               case _ => ScalaMono.error(err)
             }
-          }).toFuture
+          })
+
+          .toFuture
 
         ret
 
@@ -126,7 +128,8 @@ class AsyncCluster(environment: => ClusterEnvironment)
     * @param statement the Analytics query to execute
     * @param options   any query options - see [[AnalyticsOptions]] for documentation
     *
-    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a
     *         `Failure`
     */
   def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Future[AnalyticsResult] = {

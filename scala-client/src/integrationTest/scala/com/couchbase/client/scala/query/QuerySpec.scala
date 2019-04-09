@@ -44,7 +44,8 @@ class QuerySpec extends FunSuite {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
-        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+        val rows = result.allRowsAs[String].get
+        assert(rows.head == """{"Greeting":"hello world"}""")
       case Failure(err) => throw err
     }
   }
@@ -52,14 +53,39 @@ class QuerySpec extends FunSuite {
   test("hello world content as JsonObject") {
     cluster.query("""select 'hello world 2' as Greeting""") match {
       case Success(result) =>
-        assert(result.clientContextId.isEmpty)
-        assert(result.requestId != null)
+        assert(result.meta.clientContextId.isEmpty)
+        assert(result.meta.requestId != null)
         assert(result.rows.size == 1)
-        assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world 2")
-        val signature = result.signature.get.contentAs[JsonObject].get
+        val rows = result.allRowsAs[JsonObject].get
+        assert(rows.head.str("Greeting") == "hello world 2")
+        val signature = result.meta.signature.get.contentAs[JsonObject].get
         assert(signature.size > 0)
 
-        val out = result
+        val out = result.meta
+        assert(out.metrics.get.errorCount == 0)
+        assert(out.metrics.get.warningCount == 0)
+        assert(out.metrics.get.mutationCount == 0)
+        assert(out.warnings.size == 0)
+        assert(out.status == "success")
+        assert(out.profile.isEmpty)
+
+      case Failure(err) => throw err
+    }
+  }
+
+  test("hello world content as JsonObject for-comp") {
+    (for {
+      result <- cluster.query("""select 'hello world 2' as Greeting""")
+      rows <- result.allRowsAs[JsonObject]
+    } yield (result, rows)) match {
+      case Success((result, rows)) =>
+        assert(result.rows.size == 1)
+        val rows = result.allRowsAs[JsonObject].get
+        assert(rows.head.str("Greeting") == "hello world 2")
+        val signature = result.meta.signature.get.contentAs[JsonObject].get
+        assert(signature.size > 0)
+
+        val out = result.meta
         assert(out.metrics.get.errorCount == 0)
         assert(out.metrics.get.warningCount == 0)
         assert(out.metrics.get.mutationCount == 0)
@@ -75,7 +101,8 @@ class QuerySpec extends FunSuite {
     cluster.query("""select "hello world" as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
-        assert(result.rows.head.contentAs[String].get == """{"Greeting":"hello world"}""")
+        val rows = result.allRowsAs[String].get
+        assert(rows.head == """{"Greeting":"hello world"}""")
       case Failure(err) => throw err
     }
   }
@@ -88,21 +115,25 @@ class QuerySpec extends FunSuite {
     //    val statement = s"""SELECT * FROM default USE KEYS '$docId1';"""
     cluster.query(statement) match {
       case Success(result) =>
-        val rows = result.rows.toSeq
+        val rows = result.allRowsAs[ujson.Obj].get
         assert(rows.size == 2)
-        assert(rows.head.contentAs[ujson.Obj].get("name").str == """Andy""")
-        assert(rows.last.contentAs[ujson.Obj].get("name").str == """Beth""")
+        assert(rows.head("name").str == """Andy""")
+        assert(rows.last("name").str == """Beth""")
       case Failure(err) =>
         throw err
     }
   }
 
   test("error due to bad syntax") {
-    cluster.query("""select*from""") match {
+    val x = cluster.query("""select*from""")
+    x match {
       case Success(result) =>
         assert(false)
       case Failure(err: QueryError) =>
-        println(err)
+        val msg = err.msg
+        // TODO recheck after David's query changes are merged
+//        assert(msg == "syntax error - at end of input")
+//        assert(err.code == Success(3000))
       case Failure(err) =>
         throw err
     }
@@ -112,7 +143,7 @@ class QuerySpec extends FunSuite {
 
     cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMap(result => {
-        result.rows.doOnNext(v => {
+        result.rowsAs[String].doOnNext(v => {
           println("GOT A ROW!!" + v)
         }).collectSeq()
 
@@ -129,11 +160,11 @@ class QuerySpec extends FunSuite {
 
   test("reactive additional") {
 
-    val rowsKeeper = new AtomicReference[Seq[QueryRow]]()
+    val rowsKeeper = new AtomicReference[Seq[JsonObject]]()
 
     val out: QueryMeta = cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMapMany(result => {
-        result.rows
+        result.rowsAs[JsonObject]
           .collectSeq()
           .doOnNext(rows => {
             rowsKeeper.set(rows)
@@ -155,7 +186,7 @@ class QuerySpec extends FunSuite {
     assertThrows[QueryServiceException](
       cluster.reactive.query("""sselect*from""")
         .flatMapMany(result => {
-          result.rows
+          result.rowsAs[String]
             .doOnNext(v => assert(false))
             .doOnError(err => println("expected ERR: " + err))
         })
@@ -165,13 +196,14 @@ class QuerySpec extends FunSuite {
   test("options - profile") {
     cluster.query("""select 'hello world' as Greeting""", QueryOptions().profile(N1qlProfile.Timings)) match {
       case Success(result) =>
-        assert(result.profile.nonEmpty)
-        val profile = result.profile.get.contentAs[JsonObject].get
-        assert(profile.size > 0)
-        assert(result.clientContextId.isEmpty)
-        assert(result.requestId != null)
+        assert(result.meta.profile.nonEmpty)
+        val profile = result.meta.profile.get.contentAs[JsonObject].get
+        assert(result.meta.profile.size > 0)
+        assert(result.meta.clientContextId.isEmpty)
+        assert(result.meta.requestId != null)
         assert(result.rows.size == 1)
-        assert(result.rows.head.contentAs[JsonObject].get.str("Greeting") == "hello world")
+        val rows = result.allRowsAs[JsonObject].get
+        assert(rows.head.str("Greeting") == "hello world")
 
       case Failure(err) => throw err
     }
@@ -204,7 +236,7 @@ class QuerySpec extends FunSuite {
     cluster.query(
       """select 'hello world' as Greeting""",
       QueryOptions().clientContextId("test")) match {
-      case Success(result) => assert(result.clientContextId.contains("test"))
+      case Success(result) => assert(result.meta.clientContextId.contains("test"))
       case Failure(err) => throw err
     }
   }
@@ -214,7 +246,7 @@ class QuerySpec extends FunSuite {
       """select 'hello world' as Greeting""",
       QueryOptions().disableMetrics(true)) match {
       case Success(result) =>
-        assert(result.metrics.get.errorCount == 0)
+        assert(result.meta.metrics.get.errorCount == 0)
       case Failure(err) => throw err
     }
   }

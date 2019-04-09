@@ -29,33 +29,39 @@ import scala.util.{Failure, Success, Try}
 /** The results of an Analytics query.
   *
   * @param rows            all rows returned from the analytics service
-  * @param clientContextId if a clientContextId was provided in [[AnalyticsOptions]] it will be returned here.  This
-  *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the analytics query, if any were present
-  * @param metrics         metrics related to the analytics request, if they are available
-  * @param warnings        any warnings returned from the analytics service
-  * @param status          the raw status string returned from the analytics service
+  * @param meta            any additional information related to the Analytics query
+  *
+  * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
+  *                        implicit `Decodable[T]` can be found, and can include [[JsonObject]], a case class, String,
+  *                        or one of a number of supported third-party JSON libraries.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
 case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
-                           private[scala] val requestId: String,
-                           clientContextId: Option[String],
-                           signature: Option[AnalyticsSignature],
-                           metrics: Option[AnalyticsMetrics],
-                           warnings: Option[AnalyticsWarnings],
-                           status: String) {
-  /** Return all rows, converted into the application's preferred representation.
+                           meta: AnalyticsMeta) {
+  /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the analytics service first.
     *
-    * @tparam T $SupportedTypes
-    */
-  def rowsAs[T](implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    val out = rows.map(row => {
-      ev.decode(row.data(), Conversions.JsonFlags)
-    })
+    * $SupportedTypes
+    *
+    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See allRowsAs` for a more
+    * convenient interface that does not require handling individual row decode errors.
+    **/
+  def rowsAs[T]
+  (implicit ev: Conversions.Decodable[T]): Iterator[Try[T]] = {
+    rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+  }
 
-    FunctionalUtil.traverse(out)
+  /** All returned rows.  All rows are buffered from the analytics service first.
+    *
+    * $SupportedTypes
+    *
+    * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
+    */
+  def allRowsAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
+    val r = rows.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+    FunctionalUtil.traverse(r)
   }
 }
 
@@ -64,11 +70,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
   * @param rows            a Flux of any returned rows.  If the Analytics service returns an error while returning the
   *                        rows, it will
   *                        be raised on this Flux
-  * @param clientContextId if a clientContextId was provided in [[AnalyticsOptions]] it will be returned here.  This
-  *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the Analytics query, if any were present
-  * @param meta            a Mono containing additional information related to the Analytics query, that is received from the
-  *                        Analytics service after any rows and errors
+  * @param meta            any additional information related to the Analytics query
   */
 case class ReactiveAnalyticsResult(private[scala] val rows: Flux[AnalyticsChunkRow],
                                    meta: Mono[AnalyticsMeta]) {

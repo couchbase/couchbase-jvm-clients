@@ -18,73 +18,70 @@ package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.msg.query.QueryResponse
+import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryResponse}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.util.FunctionalUtil
 import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.util.{Failure, Success, Try}
 
-// TODO add rowsAs at result level
-
 /** The results of a N1QL query.
   *
   * @param rows            all rows returned from the query
-  * @param clientContextId if a clientContextId was provided in [[QueryOptions]] it will be returned here.  This
-  *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the query, if any were present
-  * @param metrics         metrics related to the query request, if they were not disabled in [[QueryOptions]]
-  * @param warnings        any warnings returned from the query service
-  * @param status          the raw status string returned from the query service
-  * @param profile         if a profile was requested in [[QueryOptions]] it will be returned here
+  * @param meta            any additional information related to the query
   *
+  * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
+  *                        implicit `Decodable[T]` can be found, and can include [[JsonObject]], a case class, String,
+  *                        or one of a number of supported third-party JSON libraries.
   * @author Graham Pople
   * @since 1.0.0
   */
-case class QueryResult(rows: Seq[QueryRow],
-                       private[scala] val requestId: String,
-                       clientContextId: Option[String],
-                       signature: Option[QuerySignature],
-                       metrics: Option[QueryMetrics],
-                       warnings: Option[QueryWarnings],
-                       status: String,
-                       profile: Option[QueryProfile])
+case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
+                       meta: QueryMeta) {
+  /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the query service first.
+    *
+    * $SupportedTypes
+    *
+    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See allRowsAs` for a more
+    * convenient interface that does not require handling individual row decode errors.
+    **/
+  def rowsAs[T]
+  (implicit ev: Conversions.Decodable[T]): Iterator[Try[T]] = {
+    rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+  }
+
+  /** All returned rows.  All rows are buffered from the query service first.
+    *
+    * $SupportedTypes
+    *
+    * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
+    */
+  def allRowsAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
+    val r = rows.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+    FunctionalUtil.traverse(r)
+  }
+}
 
 /** The results of a N1QL query, as returned by the reactive API.
   *
-  * @param rows            a Flux of any returned rows.  If the query service returns an error while returning the
-  *                        rows, it will
-  *                        be raised on this Flux
-  * @param clientContextId if a clientContextId was provided in [[QueryOptions]] it will be returned here.  This
-  *                        allows the application to tie requests and responses together.
-  * @param signature       details of the signature of the query, if any were present
-  * @param meta      a Mono containing additional information related to the query, that is received from the
-  *                        query service after any rows and errors
+  * @param meta            any additional information related to the query
   */
-case class ReactiveQueryResult(rows: Flux[QueryRow],
-                               meta: Mono[QueryMeta])
-
-/** An individual query result row.
-  *
-  * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.Conversions.Decodable]] can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
-  */
-case class QueryRow(private val _content: Array[Byte]) {
-
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = _content
-
-  /** Return the content, converted into the application's preferred representation.
+case class ReactiveQueryResult(private val rows: Flux[QueryChunkRow],
+                               meta: Mono[QueryMeta]) {
+  /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
+    * while returning the rows, it will be raised on this.
     *
-    * @tparam T $SupportedTypes
+    * $SupportedTypes
     */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
+  def rowsAs[T]
+  (implicit ev: Conversions.Decodable[T]): Flux[T] = {
+    rows.map(row => {
+      // The .get will raise an exception as .onError on the flux
+      ev.decode(row.data(), Conversions.JsonFlags).get
+    })
   }
-
-  override def toString: String = contentAs[JsonObject].get.toString
 }
 
 /** Returns the profile information of a query request, in JSON form. */
@@ -108,19 +105,23 @@ case class QueryProfile(private val _content: Array[Byte]) {
 /** If an error is returned by the query service as it is processing rows, this will be raised. */
 case class QueryError(private val content: Array[Byte]) extends CouchbaseException {
   private lazy val str = new String(content, CharsetUtil.UTF_8)
-  private lazy val json = JsonObject.fromJson(str)
+  private lazy val json = JsonObjectSafe.fromJson(str)
 
   /** A human-readable error code. */
   def msg: String = {
-    json.safe.str("msg") match {
-      case Success(msg) => msg
-      case Failure(_) => s"unknown error ($str)"
+    json match {
+      case Success(j) =>
+        j.str("msg") match {
+          case Success(msg) => msg
+          case Failure(_) => s"unknown error ($str)"
+        }
+      case Failure(err) => s"unknown error ($str)"
     }
   }
 
   /** The raw error code returned by the query service. */
   def code: Try[Int] = {
-    json.safe.num("code")
+    json.flatMap(_.num("code"))
   }
 
 

@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
@@ -64,13 +65,12 @@ class ReactiveCluster(val async: AsyncCluster)
 
         val ret: ScalaMono[ReactiveQueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-//            response.rows().map[QueryRow]((bytes: Array[Byte]) => QueryRow(bytes))
 
-            val rows: ScalaFlux[QueryRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
-              .map[QueryRow](bytes => QueryRow(bytes.data()))
+            val rows: ScalaFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
               .onErrorMap((err: Throwable) => {
                 val x: Throwable = err match {
-                  case e: QueryServiceException => QueryError(e.content)
+                  case e: QueryServiceException =>
+                    QueryError(e.content)
                   case _ => err
                 }
                 x
