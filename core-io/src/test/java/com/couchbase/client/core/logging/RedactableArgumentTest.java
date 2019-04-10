@@ -17,30 +17,30 @@
 package com.couchbase.client.core.logging;
 
 import com.couchbase.client.core.json.Mapper;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static org.junit.Assert.assertEquals;
 
-public class RedactableArgumentTest {
+class RedactableArgumentTest {
   private static RedactionLevel origLevel;
 
-  @BeforeClass
-  public static void saveOrigLevel() {
+  @BeforeAll
+  static void saveOrigLevel() {
     origLevel = LogRedaction.getRedactionLevel();
   }
 
-  @AfterClass
-  public static void restoreOrigLevel() {
+  @AfterAll
+  static void restoreOrigLevel() {
     LogRedaction.setRedactionLevel(origLevel);
   }
 
   @Test
-  public void shouldNotRedactLogsWhenDisabled() {
+  void shouldNotRedactLogsWhenDisabled() {
     LogRedaction.setRedactionLevel(RedactionLevel.NONE);
 
     assertEquals("1", redactUser(1).toString());
@@ -49,7 +49,7 @@ public class RedactableArgumentTest {
   }
 
   @Test
-  public void shouldOnlyRedactUserOnPartial() {
+  void shouldOnlyRedactUserOnPartial() {
     LogRedaction.setRedactionLevel(RedactionLevel.PARTIAL);
 
     assertEquals("<ud>user</ud>", redactUser("user").toString());
@@ -58,7 +58,7 @@ public class RedactableArgumentTest {
   }
 
   @Test
-  public void forNowShouldRedactOnlyUserOnFull() {
+  void forNowShouldRedactOnlyUserOnFull() {
     LogRedaction.setRedactionLevel(RedactionLevel.FULL);
 
     assertEquals("<ud>user</ud>", redactUser("user").toString());
@@ -67,7 +67,7 @@ public class RedactableArgumentTest {
   }
 
   @Test
-  public void jsonSerialization() {
+  void jsonSerialization() {
     LogRedaction.setRedactionLevel(RedactionLevel.FULL);
 
     String json = Mapper.encodeAsString(redactUser("bar"));
