@@ -149,12 +149,13 @@ class AsyncCluster(environment: => ClusterEnvironment)
               FutureConversions.javaMonoToScalaMono(response.trailer())
                 .map(trailer => AnalyticsResult(
                   rows,
+                  AnalyticsMeta(
                   response.header().requestId(),
                   response.header().clientContextId().asScala,
                   response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
                   Some(AnalyticsMetrics.fromBytes(trailer.metrics)),
                   trailer.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
-                  trailer.status)
+                  trailer.status))
                 )
             )
           )
