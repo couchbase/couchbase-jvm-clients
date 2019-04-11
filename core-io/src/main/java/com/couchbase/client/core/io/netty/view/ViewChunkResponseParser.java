@@ -18,17 +18,13 @@ package com.couchbase.client.core.io.netty.view;
 
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
 import com.couchbase.client.core.msg.view.ViewChunkTrailer;
 import com.couchbase.client.core.msg.view.ViewError;
-import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ViewChunkResponseParser
   extends BaseChunkResponseParser<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer> {
@@ -38,47 +34,45 @@ public class ViewChunkResponseParser
 
   private Optional<ViewError> error;
 
-  @Override
-  protected ByteBufJsonParser initParser() {
-    return new ByteBufJsonParser(new JsonPointer[] {
-      new JsonPointer("/total_rows", value -> totalRows = Mapper.decodeInto(value, Long.class)),
-      new JsonPointer("/rows/-", value -> {
-        if (debug == null) {
-          debug = Optional.empty();
-        }
-        emitRow(new ViewChunkRow(value));
-      }),
-      new JsonPointer("/debug_info", value -> {
-        debug = Optional.of(value);
-      }),
-      new JsonPointer("/error", value -> {
-        String data = Mapper.decodeInto(value, String.class);
+  private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
+    .doOnValue("/total_rows", v -> totalRows = v.readLong())
+    .doOnValue("/rows/-", v -> {
+      if (debug == null) {
+        debug = Optional.empty();
+      }
+      emitRow(new ViewChunkRow(v.readBytes()));
+    })
+    .doOnValue("/debug_info", v -> debug = Optional.of(v.readBytes()))
+    .doOnValue("/error", v -> {
+      String data = v.readString();
 
-        ViewError current = error.orElse(new ViewError(null, null));
-        error = Optional.of(new ViewError(data, current.reason()));
-      }),
-      new JsonPointer("/reason", value -> {
-        String data = Mapper.decodeInto(value, String.class);
+      ViewError current = error.orElse(new ViewError(null, null));
+      error = Optional.of(new ViewError(data, current.reason()));
+    })
+    .doOnValue("/reason", v -> {
+      String data = v.readString();
 
-        ViewError current = error.orElse(new ViewError(null, null));
-        error = Optional.of(new ViewError(current.error(), data));
-      })
+      ViewError current = error.orElse(new ViewError(null, null));
+      error = Optional.of(new ViewError(current.error(), data));
     });
+
+  @Override
+  protected JsonStreamParser.Builder parserBuilder() {
+    return parserBuilder;
   }
 
   @Override
-  protected void resetState() {
-    totalRows = 0L;
+  protected void doCleanup() {
+    totalRows = null;
+    debug = null;
     error = Optional.empty();
-    debug = Optional.empty();
   }
 
   @Override
   public Optional<ViewChunkHeader> header() {
-    if (totalRows != null && debug != null) {
-      return Optional.of(new ViewChunkHeader(totalRows, debug));
-    }
-    return Optional.empty();
+    return (totalRows != null && debug != null)
+      ? Optional.of(new ViewChunkHeader(totalRows, debug))
+      : Optional.empty();
   }
 
   @Override

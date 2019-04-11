@@ -127,4 +127,11 @@ public class AnalyticsMeta {
         });
     }
 
+    @Override
+    public String toString() {
+        return "AnalyticsMeta{" +
+          "header=" + header +
+          ", trailer=" + trailer +
+          '}';
+    }
 }

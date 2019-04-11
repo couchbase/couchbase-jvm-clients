@@ -18,12 +18,10 @@ package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
 
@@ -33,6 +31,7 @@ public class QueryChunkResponseParser
   private String requestId;
   private Optional<byte[]> signature;
   private Optional<String> clientContextId;
+
   private String status;
   private byte[] metrics;
   private byte[] warnings;
@@ -40,10 +39,11 @@ public class QueryChunkResponseParser
   private byte[] profile;
 
   @Override
-  protected void resetState() {
+  protected void doCleanup() {
     requestId = null;
-    signature = null;
-    clientContextId = null;
+    signature = Optional.empty();
+    clientContextId = Optional.empty();
+
     status = null;
     metrics = null;
     warnings = null;
@@ -51,57 +51,41 @@ public class QueryChunkResponseParser
     profile = null;
   }
 
+  private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
+    .doOnValue("/requestID", v -> requestId = v.readString())
+    .doOnValue("/signature", v -> signature = Optional.of(v.readBytes()))
+    .doOnValue("/clientContextID", v -> clientContextId = Optional.of(v.readString()))
+    .doOnValue("/results/-", v -> {
+      markHeaderComplete();
+      emitRow(new QueryChunkRow(v.readBytes()));
+    })
+    .doOnValue("/status", v -> {
+      markHeaderComplete();
+      status = v.readString();
+    })
+    .doOnValue("/metrics", v -> metrics = v.readBytes())
+    .doOnValue("/profile", v -> profile = v.readBytes())
+    .doOnValue("/errors", v -> {
+      errors = v.readBytes();
+      failRows(new QueryServiceException(errors));
+    })
+    .doOnValue("/warnings", v -> warnings = v.readBytes());
+
   @Override
-  protected ByteBufJsonParser initParser() {
-    return new ByteBufJsonParser(new JsonPointer[] {
-      new JsonPointer("/requestID", value -> requestId = Mapper.decodeInto(value, String.class)),
-      new JsonPointer("/signature", value -> signature = Optional.of(value)),
-      new JsonPointer("/clientContextID", value -> clientContextId = Optional.of(Mapper.decodeInto(value, String.class))),
-      new JsonPointer("/results/-", value -> {
-        if (clientContextId == null) {
-          clientContextId = Optional.empty();
-        }
-        if (signature == null) {
-          signature = Optional.empty();
-        }
-
-        emitRow(new QueryChunkRow(value));
-      }),
-      new JsonPointer("/status", value -> {
-        if (clientContextId == null) {
-          clientContextId = Optional.empty();
-        }
-        if (signature == null) {
-          signature = Optional.empty();
-        }
-
-        status = Mapper.decodeInto(value, String.class);
-      }),
-      new JsonPointer("/metrics", value -> metrics = value),
-      new JsonPointer("/profile", value -> profile = value),
-      new JsonPointer("/errors", value -> {
-        errors = value;
-        failRows(new QueryServiceException(errors));
-      }),
-      new JsonPointer("/warnings", value -> warnings = value)
-    });
+  protected JsonStreamParser.Builder parserBuilder() {
+    return parserBuilder;
   }
 
   @Override
   public Optional<QueryChunkHeader> header() {
-    if (requestId != null && signature != null && clientContextId != null) {
-      return Optional.of(new QueryChunkHeader(requestId, clientContextId, signature));
-    }
-    return Optional.empty();
+    return isHeaderComplete()
+      ? Optional.of(new QueryChunkHeader(requestId, clientContextId, signature))
+      : Optional.empty();
   }
 
   @Override
   public Optional<Throwable> error() {
-    if (errors == null) {
-      return Optional.empty();
-    } else {
-      return Optional.of(new QueryServiceException(errors));
-    }
+    return Optional.ofNullable(errors).map(QueryServiceException::new);
   }
 
   @Override

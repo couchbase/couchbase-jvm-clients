@@ -39,4 +39,12 @@ public class SearchMeta {
     public SearchMetrics metrics() {
         return metrics;
     }
+
+    @Override
+    public String toString() {
+        return "SearchMeta{" +
+          "status=" + status +
+          ", metrics=" + metrics +
+          '}';
+    }
 }

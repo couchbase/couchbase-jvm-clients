@@ -47,26 +47,32 @@ public interface ChunkResponseParser<H extends ChunkHeader, ROW extends ChunkRow
   Optional<Throwable> error();
 
   /**
-   * Called when a fresh request should be initialized.
+   * If the parser fails due to malformed input the cause is returned here.
+   */
+  Optional<Throwable> decodingFailure();
+
+  /**
+   * Begins a new parsing session.
    *
-   * <p>Also use this to reset any earlier state.</p>
-   *
-   * @param content the content slice to use on parsing.
    * @param channelConfig the channel config used for backpressure auto-read.
    */
-  void initialize(final ByteBuf content, ChannelConfig channelConfig);
+  void initialize(ChannelConfig channelConfig);
 
   /**
-   * Receives a signal complete, usually to complete the rows and the trailer.
+   * Releases resources managed by the parser and prepares it for reuse.
    */
-  void signalComplete();
+  void cleanup();
 
   /**
-   * Signal to parse the content to proceed.
-   *
-   * <p>If true is returned, the read bits from the content buffer are going to be cleaned up.</p>
+   * Parses the given JSON document fragment. The parser takes ownership of the buffer
+   * and is responsible for releasing it.
    */
-  boolean parse();
+  void feed(ByteBuf input);
+
+  /**
+   * Indicates the complete JSON document has been fed to the parser.
+   */
+  void endOfInput();
 
   /**
    * Returns the currently assigned flux for the rows.

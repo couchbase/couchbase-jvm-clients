@@ -18,67 +18,61 @@ package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.error.SearchServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.search.SearchChunkHeader;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
-import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
 
 public class SearchChunkResponseParser
-        extends BaseChunkResponseParser<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer> {
+  extends BaseChunkResponseParser<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer> {
 
-    private byte[] status;
-    private byte[] error;
+  private byte[] status;
+  private byte[] error;
 
-    private long totalHits;
-    private double maxScore;
-    private long took;
+  private long totalHits;
+  private double maxScore;
+  private long took;
 
-    @Override
-    protected ByteBufJsonParser initParser() {
-        return new ByteBufJsonParser(new JsonPointer[] {
-            new JsonPointer("/status", value -> status = value),
-            new JsonPointer("/error", value -> {
-                error = value;
-                failRows(new SearchServiceException(error));
-            }),
-            new JsonPointer("/hits/-", value -> emitRow(new SearchChunkRow(value))),
-            new JsonPointer("/total_hits", value -> totalHits = Mapper.decodeInto(value, Long.class)),
-            new JsonPointer("/max_score", value -> maxScore = Mapper.decodeInto(value, Double.class)),
-            new JsonPointer("/took", value -> took = Mapper.decodeInto(value, Long.class))
-        });
-    }
+  @Override
+  protected void doCleanup() {
+    status = null;
+    error = null;
+    totalHits = 0;
+    maxScore = 0.0;
+    took = 0;
+  }
 
-    @Override
-    protected void resetState() {
-        status = null;
-        totalHits = 0;
-        maxScore = 0.0;
-        took = 0;
-    }
+  private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
+    .doOnValue("/status", v -> status = v.readBytes())
+    .doOnValue("/error", v -> {
+      error = v.readBytes();
+      failRows(new SearchServiceException(error));
+    })
+    .doOnValue("/hits/-", v -> emitRow(new SearchChunkRow(v.readBytes())))
+    .doOnValue("/total_hits", v -> totalHits = v.readLong())
+    .doOnValue("/max_score", v -> maxScore = v.readDouble())
+    .doOnValue("/took", v -> took = v.readLong());
 
-    @Override
-    public Optional<SearchChunkHeader> header() {
-        if (status != null) {
-            return Optional.of(new SearchChunkHeader(status));
-        }
-        return Optional.empty();    }
+  @Override
+  protected JsonStreamParser.Builder parserBuilder() {
+    return parserBuilder;
+  }
 
-    @Override
-    public Optional<Throwable> error() {
-        if (error == null) {
-            return Optional.empty();
-        } else {
-            return Optional.of(new SearchServiceException(error));
-        }
-    }
+  @Override
+  public Optional<SearchChunkHeader> header() {
+    return Optional.ofNullable(status).map(SearchChunkHeader::new);
+  }
 
-    @Override
-    public void signalComplete() {
-        completeRows();
-        completeTrailer(new SearchChunkTrailer(totalHits, maxScore, took));
-    }
+  @Override
+  public Optional<Throwable> error() {
+    return Optional.ofNullable(error).map(SearchServiceException::new);
+  }
+
+  @Override
+  public void signalComplete() {
+    completeRows();
+    completeTrailer(new SearchChunkTrailer(totalHits, maxScore, took));
+  }
 }

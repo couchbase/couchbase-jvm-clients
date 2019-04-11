@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.chunk;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -38,9 +37,6 @@ import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.util.ResponseStatusConverter;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
@@ -49,10 +45,10 @@ import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 @ChannelHandler.Sharable
 public abstract class ChunkedMessageHandler
   <H extends ChunkHeader,
-  ROW extends ChunkRow,
-  T extends ChunkTrailer,
+    ROW extends ChunkRow,
+    T extends ChunkTrailer,
     R extends ChunkedResponse<H, ROW, T>,
-  REQ extends HttpRequest<H, ROW, T, R>> extends ChannelDuplexHandler {
+    REQ extends HttpRequest<H, ROW, T, R>> extends ChannelDuplexHandler {
 
   /**
    * The query endpoint context.
@@ -95,11 +91,6 @@ public abstract class ChunkedMessageHandler
   private ResponseStatus convertedResponseStatus;
 
   /**
-   * The current content buffer accumulated from the server.
-   */
-  private ByteBuf currentBuffer;
-
-  /**
    * Creates a new {@link ChunkedMessageHandler}.
    *
    * @param endpointContext the related endpoint context.
@@ -112,7 +103,7 @@ public abstract class ChunkedMessageHandler
   }
 
   @Override
-  @SuppressWarnings({"unchecked"})
+  @SuppressWarnings("unchecked")
   public void write(final ChannelHandlerContext ctx, final Object msg,
                     final ChannelPromise promise) {
     try {
@@ -128,8 +119,6 @@ public abstract class ChunkedMessageHandler
 
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
-    currentBuffer = ctx.alloc().buffer();
-
     remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
     ioContext = new IoContext(
       endpointContext,
@@ -146,9 +135,10 @@ public abstract class ChunkedMessageHandler
       if (msg instanceof HttpResponse) {
         handleHttpResponse(ctx, (HttpResponse) msg);
       } else if (msg instanceof HttpContent) {
+        ((HttpContent) msg).retain(); // Parser takes ownership; counteract the release in 'finally' block.
         handleHttpContent((HttpContent) msg);
         if (msg instanceof LastHttpContent) {
-          chunkResponseParser.signalComplete();
+          chunkResponseParser.endOfInput();
           if (!isSuccess()) {
             completeResponseWithFailure();
           }
@@ -165,21 +155,17 @@ public abstract class ChunkedMessageHandler
   @Override
   public void handlerRemoved(final ChannelHandlerContext ctx) {
     cleanupState();
-    ReferenceCountUtil.release(currentBuffer);
     ctx.fireChannelInactive();
   }
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
     currentResponseStatus = msg;
     convertedResponseStatus = ResponseStatusConverter.fromHttp(msg.status().code());
-    chunkResponseParser.initialize(currentBuffer, ctx.channel().config());
+    chunkResponseParser.initialize(ctx.channel().config());
   }
 
   private void handleHttpContent(final HttpContent msg) {
-    currentBuffer.writeBytes(msg.content());
-    if (chunkResponseParser.parse()) {
-      currentBuffer.discardReadBytes();
-    }
+    chunkResponseParser.feed(msg.content());
 
     if (currentResponse == null && isSuccess() && chunkResponseParser.header().isPresent()) {
       completeInitialResponse(chunkResponseParser.header().get());
@@ -187,7 +173,7 @@ public abstract class ChunkedMessageHandler
   }
 
   private boolean isSuccess() {
-    return convertedResponseStatus.success();
+    return convertedResponseStatus.success() && !chunkResponseParser.decodingFailure().isPresent();
   }
 
   private void completeInitialResponse(final H header) {
@@ -198,13 +184,14 @@ public abstract class ChunkedMessageHandler
   }
 
   private void completeResponseWithFailure() {
-    currentRequest.fail(chunkResponseParser.error().orElse(
-      new CouchbaseException("Request failed, but no more information available"))
-    );
+    final Throwable cause = chunkResponseParser.decodingFailure().orElseGet(
+      () -> chunkResponseParser.error().orElseGet(
+        () -> new CouchbaseException("Request failed, but no more information available")));
+    currentRequest.fail(cause);
   }
 
   private void cleanupState() {
-    currentBuffer.clear();
+    chunkResponseParser.cleanup();
     currentResponse = null;
     currentRequest = null;
     currentResponseStatus = null;

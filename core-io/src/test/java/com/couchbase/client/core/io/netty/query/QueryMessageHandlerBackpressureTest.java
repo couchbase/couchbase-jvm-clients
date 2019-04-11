@@ -17,14 +17,6 @@
 package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.RoleBasedCredentials;
-import com.couchbase.client.core.io.NetworkAddress;
-import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
 import com.couchbase.client.core.deps.io.netty.bootstrap.ServerBootstrap;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -47,6 +39,14 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCodec;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -134,15 +134,15 @@ class QueryMessageHandlerBackpressureTest {
     final QueryResponse response = request.response().get();
 
     assertEquals(0, rows.size());
-    StepVerifier.create(response.rows().map(v -> new String(v.data(), UTF_8)),0)
+    StepVerifier.create(response.rows().map(v -> new String(v.data(), UTF_8)), 0)
       .thenRequest(1)
-      .expectNext("{\"foo\"}")
+      .expectNext("{\"foo\":1}")
       .thenRequest(1)
-      .expectNext("{\"bar\"}")
+      .expectNext("{\"bar\":1}")
       .thenRequest(2)
-      .expectNext("{\"faz\"}","{\"baz\"}")
+      .expectNext("{\"faz\":1}", "{\"baz\":1}")
       .thenRequest(4)
-      .expectNext("{\"fazz\"}","{\"bazz\"}","{\"fizz\"}","{\"bizz\"}")
+      .expectNext("{\"fazz\":1}", "{\"bazz\":1}", "{\"fizz\":1}", "{\"bizz\":1}")
       .expectComplete()
       .verify();
   }
@@ -169,7 +169,7 @@ class QueryMessageHandlerBackpressureTest {
 
               @Override
               public void channelReadComplete(ChannelHandlerContext ctx) {
-                String content = "{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\"},{\"bar\"},{\"faz\"},{\"baz\"},{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}";
+                String content = "{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\":1},{\"bar\":1},{\"faz\":1},{\"baz\":1},{\"fazz\":1},{\"bazz\":1},{\"fizz\":1},{\"bizz\":1}]}";
 
                 HttpResponse response = new DefaultHttpResponse(
                   HttpVersion.HTTP_1_1,
@@ -178,16 +178,16 @@ class QueryMessageHandlerBackpressureTest {
                 response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length());
                 ctx.write(response);
                 ctx.write(new DefaultHttpContent(
-                  Unpooled.copiedBuffer("{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\"},", UTF_8)
+                  Unpooled.copiedBuffer("{\"requestID\": \"1234\", \"signature\": \"bla\", \"results\": [{\"foo\":1},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultHttpContent(
-                        Unpooled.copiedBuffer("{\"bar\"},", UTF_8)
+                  Unpooled.copiedBuffer("{\"bar\":1},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultHttpContent(
-                        Unpooled.copiedBuffer("{\"faz\"},{\"baz\"},", UTF_8)
+                  Unpooled.copiedBuffer("{\"faz\":1},{\"baz\":1},", UTF_8)
                 ));
                 ctx.writeAndFlush(new DefaultLastHttpContent(
-                        Unpooled.copiedBuffer("{\"fazz\"},{\"bazz\"},{\"fizz\"},{\"bizz\"}]}", UTF_8)
+                  Unpooled.copiedBuffer("{\"fazz\":1},{\"bazz\":1},{\"fizz\":1},{\"bizz\":1}]}", UTF_8)
                 ));
               }
             });

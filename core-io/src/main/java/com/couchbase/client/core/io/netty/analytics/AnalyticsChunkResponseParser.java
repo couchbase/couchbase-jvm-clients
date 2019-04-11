@@ -18,12 +18,10 @@ package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.error.AnalyticsServiceException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
-import com.couchbase.client.core.util.yasjl.ByteBufJsonParser;
-import com.couchbase.client.core.util.yasjl.JsonPointer;
 
 import java.util.Optional;
 
@@ -33,72 +31,58 @@ public class AnalyticsChunkResponseParser
   private String requestId;
   private Optional<byte[]> signature;
   private Optional<String> clientContextId;
+
   private String status;
   private byte[] metrics;
   private byte[] warnings;
   private byte[] errors;
 
   @Override
-  protected void resetState() {
+  protected void doCleanup() {
     requestId = null;
-    signature = null;
-    clientContextId = null;
+    signature = Optional.empty();
+    clientContextId = Optional.empty();
+
     status = null;
     metrics = null;
     warnings = null;
     errors = null;
   }
 
+  private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
+    .doOnValue("/requestID", v -> requestId = v.readString())
+    .doOnValue("/signature", v -> signature = Optional.of(v.readBytes()))
+    .doOnValue("/clientContextID", v -> clientContextId = Optional.of(v.readString()))
+    .doOnValue("/results/-", v -> {
+      markHeaderComplete();
+      emitRow(new AnalyticsChunkRow(v.readBytes()));
+    })
+    .doOnValue("/status", v -> {
+      markHeaderComplete();
+      status = v.readString();
+    })
+    .doOnValue("/metrics", v -> metrics = v.readBytes())
+    .doOnValue("/errors", v -> {
+      errors = v.readBytes();
+      failRows(new AnalyticsServiceException(errors));
+    })
+    .doOnValue("/warnings", v -> warnings = v.readBytes());
+
   @Override
-  protected ByteBufJsonParser initParser() {
-    return new ByteBufJsonParser(new JsonPointer[] {
-      new JsonPointer("/requestID", value -> requestId = Mapper.decodeInto(value, String.class)),
-      new JsonPointer("/signature", value -> signature = Optional.of(value)),
-      new JsonPointer("/clientContextID", value -> clientContextId = Optional.of(Mapper.decodeInto(value, String.class))),
-      new JsonPointer("/results/-", value -> {
-        if (clientContextId == null) {
-          clientContextId = Optional.empty();
-        }
-        if (signature == null) {
-          signature = Optional.empty();
-        }
-
-        emitRow(new AnalyticsChunkRow(value));
-      }),
-      new JsonPointer("/status", value -> {
-        if (clientContextId == null) {
-          clientContextId = Optional.empty();
-        }
-        if (signature == null) {
-          signature = Optional.empty();
-        }
-
-        status = Mapper.decodeInto(value, String.class);
-      }),
-      new JsonPointer("/metrics", value -> metrics = value),
-      new JsonPointer("/errors", value -> {
-        errors = value;
-        failRows(new AnalyticsServiceException(errors));
-      }),
-      new JsonPointer("/warnings", value -> warnings = value)
-    });
+  protected JsonStreamParser.Builder parserBuilder() {
+    return parserBuilder;
   }
 
   @Override
   public Optional<AnalyticsChunkHeader> header() {
-    if (requestId != null && signature != null && clientContextId != null) {
-      return Optional.of(new AnalyticsChunkHeader(requestId, clientContextId, signature));
-    }
-    return Optional.empty();
+    return isHeaderComplete()
+      ? Optional.of(new AnalyticsChunkHeader(requestId, clientContextId, signature))
+      : Optional.empty();
   }
 
   @Override
   public Optional<Throwable> error() {
-    if (errors == null) {
-      return Optional.empty();
-    } else {
-      return Optional.of(new AnalyticsServiceException(errors));
-    }
+    return Optional.ofNullable(errors).map(AnalyticsServiceException::new);
   }
 
   @Override

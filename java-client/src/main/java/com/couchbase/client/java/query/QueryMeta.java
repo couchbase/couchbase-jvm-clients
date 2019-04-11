@@ -136,4 +136,12 @@ public class QueryMeta {
             }
         });
     }
+
+    @Override
+    public String toString() {
+        return "QueryMeta{" +
+          "header=" + header +
+          ", trailer=" + trailer +
+          '}';
+    }
 }
