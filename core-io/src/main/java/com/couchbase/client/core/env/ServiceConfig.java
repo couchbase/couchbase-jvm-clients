@@ -94,7 +94,7 @@ public class ServiceConfig {
     return analyticsServiceConfig;
   }
 
-  static class Builder {
+  public static class Builder {
 
     private KeyValueServiceConfig keyValueServiceConfig = null;
     private QueryServiceConfig queryServiceConfig = null;

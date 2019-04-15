@@ -13,23 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.scala.env
 
-package com.couchbase.client.scala.util
-
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.Try
-
-/** Utility functions to deal with asynchronous API.
-  *
-  * @author Graham Pople
-  * @since 1.0.0
-  */
-private[scala] object AsyncUtils {
-  // All operations should be bounded by core or the server
-  private val DefaultTimeout = Duration.Inf
-
-  def block[A](in: Future[A], timeout: Duration = DefaultTimeout): Try[A] = {
-    Try(Await.result(in, timeout))
-  }
-}
+case class SeedNode(address: String,
+                    kvPort: Option[Int] = None,
+                    httpPort: Option[Int] = None)

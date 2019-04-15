@@ -42,8 +42,8 @@ import scala.util.{Failure, Success}
   */
 class AsyncBucket private[scala](val name: String,
                                  private[scala] val core: Core,
-                                 private[scala] val environment: ClusterEnvironment)
-                                (implicit ec: ExecutionContext) {
+                                 private[scala] val environment: ClusterEnvironment) {
+  private[scala] implicit val ec: ExecutionContext = environment.ec
   val reactive = new ReactiveBucket(this)
 
   /** Opens and returns a Couchbase scope resource.

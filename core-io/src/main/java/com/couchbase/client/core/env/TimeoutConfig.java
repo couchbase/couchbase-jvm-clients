@@ -139,41 +139,97 @@ public class TimeoutConfig {
       return new TimeoutConfig(this);
     }
 
+    /**
+     * Sets the timeout to use for key-value operations.
+     *
+     * <p>The default is 2.5 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder kvTimeout(Duration kvTimeout) {
       this.kvTimeout = kvTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for manager operations.
+     *
+     * <p>The default is 5 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder managerTimeout(Duration managerTimeout) {
       this.managerTimeout = managerTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for query operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder queryTimeout(Duration queryTimeout) {
       this.queryTimeout = queryTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for view operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder viewTimeout(Duration viewTimeout) {
       this.viewTimeout = viewTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for search operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder searchTimeout(Duration searchTimeout) {
       this.searchTimeout = searchTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for analytics operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder analyticsTimeout(Duration analyticsTimeout) {
       this.analyticsTimeout = analyticsTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for connection operations.
+     *
+     * <p>The default is 5 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder connectTimeout(Duration connectTimeout) {
       this.connectTimeout = connectTimeout;
       return this;
     }
 
+    /**
+     * Sets the timeout to use for disconnection operations.
+     *
+     * <p>The default is 5 seconds.</p>
+     *
+     * @return this, for chaining
+     */
     public Builder disconnectTimeout(Duration disconnectTimeout) {
       this.disconnectTimeout = disconnectTimeout;
       return this;

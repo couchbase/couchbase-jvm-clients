@@ -33,8 +33,8 @@ import scala.concurrent.ExecutionContext
   * @since 1.0.0
   */
 class Scope private[scala] (val async: AsyncScope,
-            bucketName: String)
-           (implicit ec: ExecutionContext) {
+            bucketName: String) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
 
   /** Access a Reactive version of this API. */
   lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)

@@ -32,8 +32,9 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-class Bucket private[scala] (val async: AsyncBucket)
-            (implicit ec: ExecutionContext) {
+class Bucket private[scala] (val async: AsyncBucket) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
+
   /** Returns the name of this bucket. */
   def name: String = async.name
 

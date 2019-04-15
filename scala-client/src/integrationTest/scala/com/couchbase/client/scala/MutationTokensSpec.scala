@@ -1,8 +1,7 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.{IoConfig, IoEnvironment}
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.util.Validate
 import org.scalatest.FunSuite
 
@@ -13,7 +12,7 @@ class MutationTokensSpec extends FunSuite {
 
     val env = ClusterEnvironment
       .builder("localhost", "Administrator", "password")
-      .ioConfig(IoConfig.mutationTokensEnabled(true))
+      .ioConfig(IoConfig().mutationTokensEnabled(true))
       .build
     val cluster = Cluster.connect(env)
     val bucket = cluster.bucket("default")

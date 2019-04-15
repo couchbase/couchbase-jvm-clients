@@ -41,8 +41,8 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveBucket private[scala](val async: AsyncBucket)
-                                   (implicit ec: ExecutionContext) {
+class ReactiveBucket private[scala](val async: AsyncBucket) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
   private[scala] val viewHandler = new ViewHandler
   private[scala] val spatialViewHandler = new SpatialViewHandler
 

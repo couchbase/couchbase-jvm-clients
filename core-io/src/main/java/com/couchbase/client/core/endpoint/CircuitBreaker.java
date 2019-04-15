@@ -26,7 +26,7 @@ package com.couchbase.client.core.endpoint;
  *
  * @since 2.0.0
  */
-interface CircuitBreaker {
+public interface CircuitBreaker {
 
   /**
    * Marks that a circuit breaker should start tracking.

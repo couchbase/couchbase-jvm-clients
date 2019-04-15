@@ -74,12 +74,12 @@ private[scala] class QueryHandler() {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
         val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
+        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
         val request: QueryRequest = new QueryRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials(),
+          environment.credentials,
           queryBytes)
 
         request

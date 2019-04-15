@@ -1,10 +1,9 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.{IoConfig, SeedNode}
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.util.Validate
-import org.scalatest.{FunSpec, FunSuite}
+import org.scalatest.FunSuite
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -18,7 +17,7 @@ class KeyValueSpec extends FunSuite {
 
   test("config") {
     val env: ClusterEnvironment = ClusterEnvironment.builder("localhost", "Administrator", "password")
-      .seedNodes(SeedNode.create("localhost"))
+      .seedNodes(SeedNode("localhost"))
       .build
   }
 

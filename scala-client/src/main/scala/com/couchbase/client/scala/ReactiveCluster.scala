@@ -48,8 +48,8 @@ import scala.util.{Failure, Success}
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveCluster(val async: AsyncCluster)
-                     (implicit ec: ExecutionContext) {
+class ReactiveCluster(val async: AsyncCluster) {
+  private[scala] implicit val ec: ExecutionContext = async.env.ec
   private val env = async.env
 
   /** Performs a N1QL query against the cluster.
@@ -221,7 +221,15 @@ class ReactiveCluster(val async: AsyncCluster)
     * This should be called before application exit.
     */
   def shutdown(): ScalaMono[Unit] = {
-    ScalaMono.fromFuture(async.shutdown())
+    FutureConversions.javaMonoToScalaMono(async.core.shutdown())
+      .then(ScalaMono.defer(() => {
+        if (env.owned) {
+          ScalaMono.fromRunnable(() => env.shutdown())
+        }
+        else {
+          ScalaMono.empty[Unit]
+        }
+      }))
   }
 }
 
@@ -231,7 +239,6 @@ class ReactiveCluster(val async: AsyncCluster)
   *                        attempted operation.
   */
 object ReactiveCluster {
-  private implicit val ec = Cluster.ec
 
   /** Connect to a Couchbase cluster with a username and a password as credentials.
     *
@@ -244,8 +251,10 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): ScalaMono[ReactiveCluster] = {
-    ScalaMono.fromFuture(AsyncCluster.connect(connectionString, username, password)
-      .map(cluster => new ReactiveCluster(cluster)))
+    val cluster = Cluster.connect(connectionString, username, password)
+    implicit val ec = cluster.ec
+
+    ScalaMono.just(new ReactiveCluster(cluster.async))
   }
 
   /** Connect to a Couchbase cluster with custom [[Credentials]].
@@ -258,8 +267,9 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, credentials: Credentials): ScalaMono[ReactiveCluster] = {
-    ScalaMono.fromFuture(AsyncCluster.connect(connectionString, credentials)
-      .map(cluster => new ReactiveCluster(cluster)))
+    val cluster = Cluster.connect(connectionString, credentials)
+    implicit val ec = cluster.ec
+    ScalaMono.just(new ReactiveCluster(cluster.async))
   }
 
   /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
@@ -271,7 +281,8 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(environment: ClusterEnvironment): ScalaMono[ReactiveCluster] = {
-    ScalaMono.fromFuture(AsyncCluster.connect(environment)
-      .map(cluster => new ReactiveCluster(cluster)))
+    val cluster = Cluster.connect(environment)
+    implicit val ec = cluster.ec
+    ScalaMono.just(new ReactiveCluster(cluster.async))
   }
 }

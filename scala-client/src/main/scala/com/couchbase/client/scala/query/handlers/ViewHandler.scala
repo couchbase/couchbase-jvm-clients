@@ -82,12 +82,12 @@ private[scala] class ViewHandler() {
       val bytes = options.keys.map(s => s.getBytes(UTF_8))
 
         val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
+        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
         Try(new ViewRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials(),
+          environment.credentials,
           bucketName,
           designDoc,
           viewName,

@@ -80,8 +80,8 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-class BinaryCollection(val async: AsyncBinaryCollection)
-                      (implicit ec: ExecutionContext) {
+class BinaryCollection(val async: AsyncBinaryCollection) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
   private val kvTimeout = async.kvTimeout
   private val environment = async.environment
 
@@ -110,7 +110,7 @@ class BinaryCollection(val async: AsyncBinaryCollection)
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
              timeout: Duration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy()): Try[MutationResult] = {
+             retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
     Collection.block(async.append(id, content, cas, durability, parentSpan, timeout, retryStrategy), timeout)
 
   }
@@ -137,7 +137,7 @@ class BinaryCollection(val async: AsyncBinaryCollection)
               durability: Durability = Disabled,
               parentSpan: Option[Span] = None,
               timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = environment.retryStrategy()): Try[MutationResult] = {
+              retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
     Collection.block(async.prepend(id, content, cas, durability, parentSpan, timeout, retryStrategy), timeout)
   }
 
@@ -168,7 +168,7 @@ class BinaryCollection(val async: AsyncBinaryCollection)
                 expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Try[CounterResult] = {
+                retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
     Collection.block(async.increment(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
       retryStrategy), timeout)
   }
@@ -200,7 +200,7 @@ class BinaryCollection(val async: AsyncBinaryCollection)
                 expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Try[CounterResult] = {
+                retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
     Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
       retryStrategy), timeout)
   }

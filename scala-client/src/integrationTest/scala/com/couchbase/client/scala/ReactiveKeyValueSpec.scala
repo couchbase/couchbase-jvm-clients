@@ -8,7 +8,7 @@ import scala.util.{Failure, Success, Try}
 import reactor.core.publisher.{Mono => JavaMono}
 import reactor.core.scala.publisher.{Mono => ScalaMono}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 
@@ -284,9 +284,12 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
   test("initialise async") {
-    import Cluster.ec
-    val coll: Future[AsyncCollection] = AsyncCluster.connect("localhost", "Administrator", "password")
-      .flatMap(cluster => cluster.bucket("default"))
+    val cluster = Await.result(
+      AsyncCluster.connect("localhost", "Administrator", "password"),
+      Duration.Inf)
+    implicit val ec = ExecutionContext.Implicits.global
+
+    val coll: Future[AsyncCollection] = cluster.bucket("default")
       .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
       .flatMap(scope => scope.defaultCollection)
 

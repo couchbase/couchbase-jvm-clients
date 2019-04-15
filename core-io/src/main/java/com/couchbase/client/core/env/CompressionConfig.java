@@ -17,7 +17,7 @@
 package com.couchbase.client.core.env;
 
 /**
- * Allows to configure and customize compression configuration.
+ * Allows configuring and customizing the compression configuration.
  *
  * @since 2.0.0
  */
@@ -73,6 +73,8 @@ public class CompressionConfig {
   /**
    * The minimum size after which compression is performed.
    *
+   * <p>The default is 32 bytes.</p>
+   *
    * @param minSize minimum size in bytes.
    * @return this {@link Builder} for chaining purposes.
    */
@@ -83,6 +85,8 @@ public class CompressionConfig {
   /**
    * The minimum ratio after which a compressed doc is sent compressed
    * versus the uncompressed version is sent for efficiency.
+   *
+   * <p>The default is 0.83.</p>
    *
    * @param minRatio the minimum ratio.
    * @return this {@link Builder} for chaining purposes.

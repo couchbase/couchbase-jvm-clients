@@ -41,8 +41,8 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
-                              (implicit ec: ExecutionContext) {
+class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
 
   import com.couchbase.client.scala.util.DurationConversions._
 
@@ -71,7 +71,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
              durability: Durability = Disabled,
              parentSpan: Option[Span] = None,
              timeout: Duration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutationResult] = {
+             retryStrategy: RetryStrategy = environment.retryStrategy): Future[MutationResult] = {
     val req = async.binaryAppendHandler.request(id, content, cas, durability, parentSpan, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryAppendHandler, durability, false, timeout)
   }
@@ -86,7 +86,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
               durability: Durability = Disabled,
               parentSpan: Option[Span] = None,
               timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = environment.retryStrategy()): Future[MutationResult] = {
+              retryStrategy: RetryStrategy = environment.retryStrategy): Future[MutationResult] = {
     val req = async.binaryPrependHandler.request(id, content, cas, durability, parentSpan, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryPrependHandler, durability, false, timeout)
   }
@@ -103,7 +103,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
                 expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[CounterResult] = {
+                retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
     val req = async.binaryIncrementHandler.request(id, delta, initial, cas, durability, expiration, parentSpan, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryIncrementHandler, durability, false, timeout)
   }
@@ -120,7 +120,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection)
                 expiration: Duration = 0.seconds,
                 parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy()): Future[CounterResult] = {
+                retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
     val req = async.binaryDecrementHandler.request(id, delta, initial, cas, durability, expiration, parentSpan, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryDecrementHandler, durability, false, timeout)
   }

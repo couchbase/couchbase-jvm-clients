@@ -111,13 +111,9 @@ object Collection {
 class Collection(
                   /** Provides access to an async version of this API. */
                   val async: AsyncCollection,
-                  bucketName: String)(
+                  bucketName: String) {
+  private[scala] implicit val ec: ExecutionContext = async.ec
 
-                  /** The implicit execution context upon which all `Future`s will be exexcuted.  As long as
-                    * Couchbase resources are opened in the usual way through the methods in [[Cluster]], this will
-                    * be provided automatically for you. */
-                  implicit ec: ExecutionContext
-                ) {
   /** Provides access to a reactive-programming version of this API. */
   val reactive = new ReactiveCollection(async)
 

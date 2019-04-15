@@ -1,10 +1,9 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.IoConfig
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException
 import com.couchbase.client.scala.durability.Durability.{Disabled, Majority, MajorityAndPersistOnMaster, PersistToMajority}
 import com.couchbase.client.scala.durability._
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import org.scalatest.FunSuite
 
 import scala.concurrent.duration.Duration
@@ -15,8 +14,8 @@ class DurabilitySpec extends FunSuite {
 
     val env = ClusterEnvironment
       .builder("localhost", "Administrator", "password")
-      .ioConfig(IoConfig.mutationTokensEnabled(true))
-      .build()
+      .ioConfig(IoConfig().mutationTokensEnabled(true))
+      .build
     val cluster = Cluster.connect(env)
     val bucket = cluster.bucket("default")
     val coll = bucket.defaultCollection

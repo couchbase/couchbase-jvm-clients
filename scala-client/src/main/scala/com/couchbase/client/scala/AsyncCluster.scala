@@ -17,7 +17,7 @@ package com.couchbase.client.scala
 
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
 import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
@@ -29,6 +29,15 @@ import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
 import io.opentracing.Span
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
+import com.couchbase.client.scala.search.SearchQuery
+import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
+import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
+import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
+import io.opentracing.Span
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
+import com.couchbase.client.scala.util.FutureConversions
+import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
@@ -49,14 +58,14 @@ import scala.util.{Failure, Success}
   * @author Graham Pople
   * @since 1.0.0
   */
-class AsyncCluster(environment: => ClusterEnvironment)
-                  (implicit ec: ExecutionContext) {
-  private[scala] val core = Core.create(environment)
+class AsyncCluster(environment: => ClusterEnvironment) {
+  private[scala] implicit val ec: ExecutionContext = environment.ec
+  private[scala] val core = Core.create(environment.coreEnv)
   private[scala] val env = environment
-  private[scala] val kvTimeout = javaDurationToScala(env.timeoutConfig().kvTimeout())
-  private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig().searchTimeout())
-  private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig().analyticsTimeout())
-  private[scala] val retryStrategy = env.retryStrategy()
+  private[scala] val kvTimeout = javaDurationToScala(env.timeoutConfig.kvTimeout())
+  private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig.searchTimeout())
+  private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
+  private[scala] val retryStrategy = env.retryStrategy
   private[scala] val queryHandler = new QueryHandler()
   private[scala] val analyticsHandler = new AnalyticsHandler()
   private[scala] val searchHandler = new SearchHandler()
@@ -247,9 +256,16 @@ class AsyncCluster(environment: => ClusterEnvironment)
     * This should be called before application exit.
     */
   def shutdown(): Future[Unit] = {
-    FutureConversions.javaCFToScalaFuture(
-      environment.shutdownAsync(environment.timeoutConfig().disconnectTimeout())
-    ).map(_ => Unit)
+    FutureConversions.javaMonoToScalaMono(core.shutdown())
+      .flatMap(_ => {
+        if (env.owned) {
+          Mono.fromRunnable(() => env.shutdown())
+        }
+        else {
+          Mono.empty[Unit]
+        }
+      })
+      .toFuture
   }
 }
 
@@ -259,7 +275,6 @@ class AsyncCluster(environment: => ClusterEnvironment)
   *                        attempted operation.
   */
 object AsyncCluster {
-  private implicit val ec = Cluster.ec
 
   /** Connect to a Couchbase cluster with a username and a password as credentials.
     *
@@ -272,8 +287,10 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
+    val cluster = Cluster.connect(connectionString, username, password)
+    implicit val ec = cluster.ec
     Future {
-      Cluster.connect(connectionString, username, password).async
+      cluster.async
     }
   }
 
@@ -287,8 +304,10 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
+    val env = ClusterEnvironment.create(connectionString, credentials, true)
+    implicit val ec = env.ec
     Future {
-      Cluster.connect(connectionString, credentials).async
+      Cluster.connect(env).async
     }
   }
 
@@ -301,8 +320,10 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(environment: ClusterEnvironment): Future[AsyncCluster] = {
+    val cluster = Cluster.connect(environment)
+    implicit val ec = cluster.ec
     Future {
-      Cluster.connect(environment).async
+      cluster.async
     }
   }
 }

@@ -70,12 +70,12 @@ private[scala] class SpatialViewHandler() {
       val params = options.encode()
 
       val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
+      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       Try(new ViewRequest(timeout,
         core.context(),
         retryStrategy,
-        environment.credentials(),
+        environment.credentials,
         bucketName,
         designDoc,
         viewName,

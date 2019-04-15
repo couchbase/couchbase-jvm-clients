@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -190,36 +191,71 @@ public class IoConfig {
       return this;
     }
 
+    /**
+     * Configures whether mutation tokens will be returned from the server for all mutation operations.
+     *
+     * @return this, for chaining
+     */
     public Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
       this.mutationTokensEnabled = mutationTokensEnabled;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for key-value operations.
+     *
+     * @return this, for chaining
+     */
     public Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
       this.kvCircuitBreakerConfig = kvCircuitBreakerConfig;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for query operations.
+     *
+     * @return this, for chaining
+     */
     public Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
       this.queryCircuitBreakerConfig = queryCircuitBreakerConfig;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for view operations.
+     *
+     * @return this, for chaining
+     */
     public Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
       this.viewCircuitBreakerConfig = viewCircuitBreakerConfig;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for search operations.
+     *
+     * @return this, for chaining
+     */
     public Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
       this.searchCircuitBreakerConfig = searchCircuitBreakerConfig;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for analytics operations.
+     *
+     * @return this, for chaining
+     */
     public Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
       this.analyticsCircuitBreakerConfig = analyticsCircuitBreakerConfig;
       return this;
     }
 
+    /**
+     * Configures a {@link CircuitBreaker} to use for manager operations.
+     *
+     * @return this, for chaining
+     */
     public Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
       this.managerCircuitBreakerConfig = managerCircuitBreakerConfig;
       return this;

@@ -290,15 +290,13 @@ public class AsyncCluster {
    * Performs a non-reversible shutdown of this {@link AsyncCluster}.
    */
   public CompletableFuture<Void> shutdown() {
-    return core.shutdown().then(Mono.defer(() -> {
+    return core.shutdown().flatMap(ignore -> {
       if (environment instanceof OwnedSupplier) {
-        return environment
-          .get()
-          .shutdownReactive(environment.get().timeoutConfig().disconnectTimeout());
+        return Mono.fromRunnable(() -> environment.get().shutdown(environment.get().timeoutConfig().disconnectTimeout())).then();
       } else {
         return Mono.empty();
       }
-    })).toFuture();
+    }).toFuture();
   }
 
 }

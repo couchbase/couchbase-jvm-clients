@@ -19,17 +19,17 @@ package com.couchbase.client.core.endpoint;
 import java.time.Duration;
 
 /**
- * Allows to configure a {@link CircuitBreaker}.
+ * Allows configuring a {@link CircuitBreaker}.
  *
  * @since 2.0.0
  */
 public class CircuitBreakerConfig {
 
-  private static final boolean DEFAULT_ENABLED = true;
-  private static final int DEFAULT_VOLUME_THRESHOLD = 20;
-  private static final int DEFAULT_ERROR_THRESHOLD_PERCENTAGE = 50;
-  private static final Duration DEFAULT_SLEEP_WINDOW = Duration.ofSeconds(5);
-  private static final Duration DEFAULT_ROLLING_WINDOW = Duration.ofMinutes(1);
+  public static final boolean DEFAULT_ENABLED = true;
+  public static final int DEFAULT_VOLUME_THRESHOLD = 20;
+  public static final int DEFAULT_ERROR_THRESHOLD_PERCENTAGE = 50;
+  public static final Duration DEFAULT_SLEEP_WINDOW = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_ROLLING_WINDOW = Duration.ofMinutes(1);
 
   private final boolean enabled;
   private final int volumeThreshold;
@@ -132,6 +132,8 @@ public class CircuitBreakerConfig {
      * The volume threshold defines how many operations need to be in the window at least so that
      * the threshold percentage can be meaningfully calculated.
      *
+     * <p>The default is 20.</p>
+     *
      * @param volumeThreshold the volume threshold in the interval.
      * @return this {@link Builder} for chaining purposes.
      */
@@ -141,7 +143,9 @@ public class CircuitBreakerConfig {
     }
 
     /**
-     * How many percent of operations need to fail in a window until the circuit is opened.
+     * The percentage of operations that need to fail in a window until the circuit is opened.
+     *
+     * <p>The default is 50.</p>
      *
      * @param errorThresholdPercentage the percent of ops that need to fail.
      * @return this {@link Builder} for chaining purposes.
@@ -154,6 +158,8 @@ public class CircuitBreakerConfig {
     /**
      * The sleep window that is waited from when the circuit opens to when the canary is tried.
      *
+     * <p>The default is 5 seconds.</p>
+     *
      * @param sleepWindow the sleep window as a duration.
      * @return this {@link Builder} for chaining purposes.
      */
@@ -164,6 +170,8 @@ public class CircuitBreakerConfig {
 
     /**
      * How long the window is in which the number of failed ops are tracked in a rolling fashion.
+     *
+     * <p>The default is 1 minute.</p>
      *
      * @param rollingWindow the rolling window duration.
      * @return this {@link Builder} for chaining purposes.

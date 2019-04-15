@@ -271,16 +271,15 @@ public class CoreEnvironment {
   }
 
   /**
-   * Shuts down this environment reactively.
+   * Shuts down this Environment.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
    * at the very last operation in the SDK shutdown process.</p>
    *
    * @param timeout the timeout to wait maximum.
-   * @return a mono that completes once the shutdown is either successful or aborted.
    */
-  public Mono<Void> shutdownReactive(final Duration timeout) {
-    return diagnosticsMonitor.stop()
+  public void shutdown(final Duration timeout) {
+    diagnosticsMonitor.stop()
       .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop() : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
@@ -293,44 +292,12 @@ public class CoreEnvironment {
         }
         return Mono.<Void>empty();
       }))
-      .timeout(timeout);
-  }
-
-  public Mono<Void> shutdownReactive() {
-    return shutdownReactive(timeoutConfig.disconnectTimeout());
-  }
-
-  /**
-   * Shuts down this environment asynchronously.
-   *
-   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
-   * at the very last operation in the SDK shutdown process.</p>
-   *
-   * @param timeout the timeout to wait maximum.
-   * @return a future that completes once the shutdown is either successful or aborted.
-   */
-  public CompletableFuture<Void> shutdownAsync(final Duration timeout) {
-    return shutdownReactive(timeout).toFuture();
-  }
-
-  public CompletableFuture<Void> shutdownAsync() {
-    return shutdownReactive(timeoutConfig.disconnectTimeout()).toFuture();
-  }
-
-  /**
-   * Shuts down this Environment.
-   *
-   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
-   * at the very last operation in the SDK shutdown process.</p>
-   *
-   * @param timeout the timeout to wait maximum.
-   */
-  public void shutdown(final Duration timeout) {
-    shutdownReactive(timeout).block();
+      .timeout(timeout)
+      .block();
   }
 
   public void shutdown() {
-    shutdownReactive(timeoutConfig.disconnectTimeout()).block();
+    shutdown(timeoutConfig.disconnectTimeout());
   }
 
   public static class Builder<SELF extends Builder<SELF>> {

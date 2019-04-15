@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
@@ -41,8 +42,9 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-class Cluster private[scala](env: => ClusterEnvironment)
-                            (implicit ec: ExecutionContext) {
+class Cluster private[scala](env: => ClusterEnvironment) {
+
+  private[scala] implicit val ec: ExecutionContext = env.ec
 
   /** Access an asynchronous version of this API. */
   lazy val async = new AsyncCluster(env)
@@ -136,7 +138,7 @@ class Cluster private[scala](env: => ClusterEnvironment)
     * This should be called before application exit.
     */
   def shutdown(): Unit = {
-    AsyncUtils.block(async.shutdown(), Duration.Inf)
+    reactive.shutdown().block()
   }
 }
 
@@ -146,7 +148,6 @@ class Cluster private[scala](env: => ClusterEnvironment)
   *                        attempted operation.
   */
 object Cluster {
-  private[scala] implicit val ec = ClusterEnvironment.ec
 
   /** Connect to a Couchbase cluster with a username and a password as credentials.
     *
@@ -158,7 +159,7 @@ object Cluster {
     * @return a [[Cluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Cluster = {
-    val env = ClusterEnvironment.create(connectionString, username, password)
+    val env = ClusterEnvironment.create(connectionString, username, password, true)
     new Cluster(env)
   }
 

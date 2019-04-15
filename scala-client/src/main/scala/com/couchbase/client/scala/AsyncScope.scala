@@ -42,8 +42,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AsyncScope private[scala] (scopeName: String,
                  bucketName: String,
                  private val core: Core,
-                 private val environment: ClusterEnvironment)
-                (implicit ec: ExecutionContext) {
+                 private[scala] val environment: ClusterEnvironment) {
+  private[scala] implicit val ec: ExecutionContext = environment.ec
 
   /** The name of this scope. */
   def name = scopeName
@@ -60,7 +60,7 @@ class AsyncScope private[scala] (scopeName: String,
     }
     else {
       val request = new GetCollectionIdRequest(Duration.ofSeconds(1),
-        core.context(), bucketName, environment.retryStrategy(), scopeName, name)
+        core.context(), bucketName, environment.retryStrategy, scopeName, name)
       core.send(request)
       FutureConverters.toScala(request.response())
         .map(res => {

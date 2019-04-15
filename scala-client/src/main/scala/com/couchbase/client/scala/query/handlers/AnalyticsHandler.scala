@@ -64,12 +64,12 @@ private[scala] class AnalyticsHandler() {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
         val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.analyticsTimeout())
-        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
+        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
         new AnalyticsRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials(),
+          environment.credentials,
           queryBytes,
           if (options.priority) -1 else 0)
       })

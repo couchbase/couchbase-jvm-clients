@@ -18,14 +18,17 @@ package com.couchbase.client.scala.env
 
 import java.util.concurrent.{Executors, ThreadFactory}
 
-import com.couchbase.client.core.env.{
-  ConnectionStringPropertyLoader, CoreEnvironment, Credentials,
-  RoleBasedCredentials
-}
+import com.couchbase.client.core
+import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, Credentials}
+import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.util.DurationConversions._
+import com.couchbase.client.scala.util.FutureConversions
+import io.opentracing.Tracer
+import reactor.core.scala.publisher.Mono
 import reactor.core.scala.scheduler.ExecutionContextScheduler
-import reactor.core.scheduler.Scheduler
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 
@@ -36,31 +39,109 @@ import scala.util.Try
   * only create one of these.  The same environment can be shared by multiple cluster connections.
   */
 object ClusterEnvironment {
-  // Create the thread pool that will be used for all Future throughout the SDK.
-  // TODO move thread pool into local cluster env
 
-  // Implementation note: there are some potentially long-running operations that will need to go on this pool.  E.g.
-  // buffering a query result.  So, make it unlimited.
-  private[scala] val threadPool = Executors.newCachedThreadPool(new ThreadFactory {
-    override def newThread(runnable: Runnable): Thread = {
-      val thread = new Thread(runnable)
-      // Make it a daemon thread so it doesn't block app exit
-      thread.setDaemon(true)
-      thread.setName("cb-comps-" + thread.getId)
-      thread
+  case class Builder(private[scala] val credentials: Credentials,
+                     private[scala] val owned: Boolean,
+                     private[scala] val connectionString: Option[String] = None,
+                     private[scala] val ioEnvironment: Option[IoEnvironment] = None,
+                     private[scala] val ioConfig: Option[IoConfig] = None,
+                     private[scala] val compressionConfig: Option[CompressionConfig] = None,
+                     private[scala] val securityConfig: Option[SecurityConfig] = None,
+                     private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
+                     private[scala] val serviceConfig: Option[ServiceConfig] = None,
+                     private[scala] val loggerConfig: Option[LoggerConfig] = None,
+                     private[scala] val tracer: Option[Tracer] = None,
+                     private[scala] val seedNodes: Option[Set[SeedNode]] = None,
+                     private[scala] val retryStrategy: Option[RetryStrategy] = None) {
+
+    def build: ClusterEnvironment = {
+      new ClusterEnvironment(this)
     }
-  })
-  private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
-  private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
-
-  // TODO want to re-implement CoreEnvironment.Builder in Scala
-  class Builder(credentials: Credentials) extends CoreEnvironment.Builder[Builder](credentials) {
-    override def build = new ClusterEnvironment(scheduler(defaultScheduler))
 
     // None of the builder methods throw currently on invalid config (e.g. a minimum compression size < 0).  If they do,
     // the exception will instead be stored and raised in this Try.
     // TODO some do throw and need handling, see BucketConfigParser (e.g. bad connection string)
     def buildSafe = Try(build)
+
+    def connectionString(value: String): ClusterEnvironment.Builder = {
+      copy(connectionString = Some(value))
+    }
+
+    /** Sets the [[IoEnvironment]] config.
+      *
+      * @return this, for chaining
+      */
+    def ioEnvironment(config: IoEnvironment): ClusterEnvironment.Builder = {
+      copy(ioEnvironment = Some(config))
+    }
+
+    /** Sets the [[IoConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def ioConfig(config: IoConfig): ClusterEnvironment.Builder = {
+      copy(ioConfig = Some(config))
+    }
+
+    /** Sets the [[CompressionConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def compressionConfig(config: CompressionConfig): ClusterEnvironment.Builder = {
+      copy(compressionConfig = Some(config))
+    }
+
+    /** Sets the [[SecurityConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def securityConfig(config: SecurityConfig): ClusterEnvironment.Builder = {
+      copy(securityConfig = Some(config))
+    }
+
+    /** Sets the [[TimeoutConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def timeoutConfig(config: TimeoutConfig): ClusterEnvironment.Builder = {
+      copy(timeoutConfig = Some(config))
+    }
+
+    /** Sets the [[ServiceConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def serviceConfig(config: ServiceConfig): ClusterEnvironment.Builder = {
+      copy(serviceConfig = Some(config))
+    }
+
+    /** Sets the [[IoConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def loggerConfig(config: LoggerConfig): ClusterEnvironment.Builder = {
+      copy(loggerConfig = Some(config))
+    }
+
+    /** Sets the [[Tracer]] OpenTracing tracer.
+      *
+      * @return this, for chaining
+      */
+    def tracer(tracer: Tracer): ClusterEnvironment.Builder = {
+      copy(tracer = Some(tracer))
+    }
+
+    def seedNodes(nodes: Set[SeedNode]): ClusterEnvironment.Builder = {
+      copy(seedNodes = Some(nodes))
+    }
+
+    def seedNodes(nodes: SeedNode*): ClusterEnvironment.Builder = {
+      copy(seedNodes = Some(nodes.toSet))
+    }
+
+    def retryStrategy(value: RetryStrategy): ClusterEnvironment.Builder = {
+      copy(retryStrategy = Some(value))
+    }
   }
 
   /** Creates a ClusterEnvironment to connect to a Couchbase cluster with a username and password as credentials.
@@ -74,9 +155,13 @@ object ClusterEnvironment {
     *
     * @return a constructed `ClusterEnvironment`
     */
-  def create(connectionString: String, username: String, password: String) = {
-    new ClusterEnvironment(new Builder(new RoleBasedCredentials(username, password)).load(new
-        ConnectionStringPropertyLoader(connectionString)))
+  def create(connectionString: String, username: String, password: String): ClusterEnvironment = {
+    create(connectionString, username, password, true)
+  }
+
+  private[scala] def create(connectionString: String, username: String, password: String, owned: Boolean)
+  : ClusterEnvironment = {
+    create(connectionString, RoleBasedCredentials(username, password), owned)
   }
 
   /** Creates a ClusterEnvironment to connect to a Couchbase cluster with custom [[Credentials]].
@@ -90,7 +175,13 @@ object ClusterEnvironment {
     * @return a constructed `ClusterEnvironment`
     */
   def create(connectionString: String, credentials: Credentials): ClusterEnvironment = {
-    new ClusterEnvironment(new Builder(credentials).load(new ConnectionStringPropertyLoader(connectionString)))
+    create(connectionString, credentials, true)
+  }
+
+
+  private[scala] def create(connectionString: String, credentials: Credentials, owned: Boolean): ClusterEnvironment = {
+    new ClusterEnvironment(Builder(credentials, owned)
+      .connectionString(connectionString))
   }
 
   /** Creates a `ClusterEnvironment.Builder` setup to connect to a Couchbase cluster with a username and password as
@@ -107,8 +198,7 @@ object ClusterEnvironment {
     * @return a `ClusterEnvironment.Builder`
     */
   def builder(connectionString: String, username: String, password: String): ClusterEnvironment.Builder = {
-    val credentials = new RoleBasedCredentials(username, password)
-    new Builder(credentials).load(new ConnectionStringPropertyLoader(connectionString))
+    builder(connectionString, RoleBasedCredentials(username, password))
   }
 
 
@@ -124,7 +214,8 @@ object ClusterEnvironment {
     * @return a `ClusterEnvironment.Builder`
     */
   def builder(connectionString: String, credentials: Credentials): ClusterEnvironment.Builder = {
-    new Builder(credentials).load(new ConnectionStringPropertyLoader(connectionString))
+    Builder(credentials, false)
+      .connectionString(connectionString)
   }
 
   /** Creates a `ClusterEnvironment.Builder` setup to connect with custom [[Credentials]].
@@ -139,14 +230,93 @@ object ClusterEnvironment {
     * @param credentials      custom credentials used when connecting to the cluster.
     *
     * @return a ClusterEnvironment.Builder`
-    */
+    **/
   def builder(credentials: Credentials): ClusterEnvironment.Builder = {
-    new Builder(credentials)
+    Builder(credentials, false)
   }
 }
 
-class ClusterEnvironment(builder: ClusterEnvironment.Builder) extends CoreEnvironment(builder) {
+private[scala] class CoreEnvironmentWrapper(credentials: Credentials)
+  extends core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper](credentials) {}
+
+private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper])
+  extends core.env.CoreEnvironment(builder) {
+
   override protected def defaultAgentTitle(): String = "scala"
 
   override protected def agentPackage(): Package = classOf[ClusterEnvironment].getPackage
 }
+
+/** All configuration options related to a cluster environment, along with some long-lived resources including a
+  * thread-pool.
+  *
+  * @param owned whether the cluster owns the environment, which will decide if it shuts it down automatically when
+  *              the cluster is shutdown
+  */
+class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
+  private[scala] val owned: Boolean = builder.owned
+
+  private[scala] def credentials: Credentials = coreEnv.credentials()
+
+  private[scala] def timeoutConfig = coreEnv.timeoutConfig()
+
+  private[scala] def retryStrategy = coreEnv.retryStrategy()
+
+  // Create the thread pool that will be used for all `Future`s throughout the SDK.
+
+  // Implementation note: there are some potentially long-running operations that will need to go on this pool.  E.g.
+  // buffering a query result.  So, make it unlimited.
+  private[scala] val threadPool = Executors.newCachedThreadPool(new ThreadFactory {
+    override def newThread(runnable: Runnable): Thread = {
+      val thread = new Thread(runnable)
+      // Make it a daemon thread so it doesn't block app exit
+      thread.setDaemon(true)
+      thread.setName("cb-comps-" + thread.getId)
+      thread
+    }
+  })
+  private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
+
+
+  private val coreBuilder = new CoreEnvironmentWrapper(builder.credentials)
+
+  builder.connectionString.foreach(v => coreBuilder.load(new ConnectionStringPropertyLoader(v)))
+  builder.ioEnvironment.foreach(v => coreBuilder.ioEnvironment(v.toCore))
+  builder.ioConfig.foreach(v => coreBuilder.ioConfig(v.toCore))
+  builder.compressionConfig.foreach(v => coreBuilder.compressionConfig(v.toCore))
+  builder.securityConfig.foreach(v => coreBuilder.securityConfig(v.toCore))
+  builder.timeoutConfig.foreach(v => coreBuilder.timeoutConfig(v.toCore))
+  builder.serviceConfig.foreach(v => coreBuilder.serviceConfig(v.toCore))
+  builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
+
+  private[scala] val coreEnv = new CoreEnvironment(new CoreEnvironmentWrapper(builder.credentials))
+
+  /**
+    * Shuts this environment down.  If the application created this (i.e. rather than using one of the convenience
+    * `Cluster.create` methods, then it is responsible for calling shutdown on it.
+    *
+    * This will block until everything is shutdown, or the timeout is exceeded.
+    *
+    * Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+    * at the very last operation in the SDK shutdown process.
+    *
+    * @param timeout the timeout to wait maximum.
+    */
+  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = {
+    Mono.fromCallable(() => coreEnv.shutdown(timeout))
+
+      .flatMap(_ => Mono.fromCallable(() => {
+        threadPool.shutdownNow()
+        defaultScheduler.dispose()
+      }))
+
+      .timeout(timeout)
+
+      .block()
+  }
+}
+
+
+
+
