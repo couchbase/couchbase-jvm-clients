@@ -22,8 +22,8 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.HighlightStyle;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.result.hits.DefaultHitLocations;
-import com.couchbase.client.java.search.result.hits.HitLocations;
+import com.couchbase.client.java.search.result.rows.DefaultRowLocations;
+import com.couchbase.client.java.search.result.rows.RowLocations;
 
 import java.io.IOException;
 import java.util.*;
@@ -40,11 +40,11 @@ public class SearchQueryRow {
     private final String id;
     private final double score;
     private final JsonObject explanation;
-    private final HitLocations locations;
+    private final RowLocations locations;
     private final Map<String, List<String>> fragments;
     private final Map<String, String> fields;
 
-    public SearchQueryRow(String index, String id, double score, JsonObject explanation, HitLocations locations,
+    public SearchQueryRow(String index, String id, double score, JsonObject explanation, RowLocations locations,
                           Map<String, List<String>> fragments, Map<String, String> fields) {
         this.index = index;
         this.id = id;
@@ -84,9 +84,9 @@ public class SearchQueryRow {
     }
 
     /**
-     * This hit's location, as an {@link HitLocations} map-like object.
+     * This rows's location, as an {@link RowLocations} map-like object.
      */
-    public HitLocations locations() {
+    public RowLocations locations() {
         return this.locations;
     }
 
@@ -155,7 +155,7 @@ public class SearchQueryRow {
                 explanationJson = JsonObject.empty();
             }
 
-            HitLocations locations = DefaultHitLocations.from(hit.getObject("locations"));
+            RowLocations locations = DefaultRowLocations.from(hit.getObject("locations"));
 
             JsonObject fragmentsJson = hit.getObject("fragments");
             Map<String, List<String>> fragments;

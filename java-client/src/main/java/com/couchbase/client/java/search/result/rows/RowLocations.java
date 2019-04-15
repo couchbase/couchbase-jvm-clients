@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.hits;
+package com.couchbase.client.java.search.result.rows;
 
 import com.couchbase.client.core.annotation.Stability;
 
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Represents the locations of a search result hit. {@link HitLocation locations} show
+ * Represents the locations of a search result row. {@link RowLocation locations} show
  * where a given term occurs inside of a given field.
  *
  * @author Simon Baslé
@@ -29,19 +29,19 @@ import java.util.Set;
  * @since 2.3.0
  */
 @Stability.Volatile
-public interface HitLocations {
+public interface RowLocations {
 
     /** add a location and allow method chaining */
-    HitLocations add(HitLocation l);
+    RowLocations add(RowLocation l);
 
     /**list all locations for a given field (any term) */
-    List<HitLocation> get(String field);
+    List<RowLocation> get(String field);
 
     /**list all locations for a given field and term */
-    List<HitLocation> get(String field, String term);
+    List<RowLocation> get(String field, String term);
 
     /**list all locations (any field, any term) */
-    List<HitLocation> getAll();
+    List<RowLocation> getAll();
 
     /**size of all() */
     long count();

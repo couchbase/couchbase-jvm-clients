@@ -17,6 +17,8 @@ package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.facet.SearchFacet;
@@ -25,13 +27,14 @@ import com.couchbase.client.java.search.result.SearchQueryRow;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.sort.SearchSort;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
  * The FTS API entry point. Describes an FTS query entirely (index, query body and parameters) and can
- * be used at the {@link Bucket} level to perform said query. Also has factory methods for all types of
+ * be used at the {@link Cluster} level to perform said query. Also has factory methods for all types of
  * fts queries (as in the various types a query body can have: term, match, conjunction, ...).
  *
  * @author Simon Baslé
@@ -52,7 +55,7 @@ public class SearchQuery {
     private String[] fields;
     private JsonArray sort;
     private Map<String, SearchFacet> facets;
-    private Long serverSideTimeout;
+    private Duration serverSideTimeout;
     private SearchConsistency consistency;
     private MutationToken mutationState;
 
@@ -177,9 +180,9 @@ public class SearchQuery {
      * ===================================== */
 
     /**
-     * Add a limit to the query on the number of hits it can return.
+     * Add a limit to the query on the number of rows it can return.
      *
-     * @param limit the maximum number of hits to return.
+     * @param limit the maximum number of rows to return.
      * @return this SearchQuery for chaining.
      */
     public SearchQuery limit(int limit) {
@@ -188,7 +191,7 @@ public class SearchQuery {
     }
 
     /**
-     * Set the number of hits to skip (eg. for pagination).
+     * Set the number of rows to skip (eg. for pagination).
      *
      * @param skip the number of results to skip.
      * @return this SearchQuery for chaining.
@@ -366,14 +369,13 @@ public class SearchQuery {
 
     /**
      * Sets the server side timeout. By default, the SDK will set this value to the configured
-     * {@link CouchbaseEnvironment#searchTimeout() searchTimeout} from the environment.
+     * search timeout in {@link ClusterEnvironment#timeoutConfig()} from the environment.
      *
      * @param timeout the server side timeout to apply.
-     * @param unit the unit for the timeout.
      * @return this SearchQuery for chaining.
      */
-    public SearchQuery serverSideTimeout(long timeout, TimeUnit unit) {
-        this.serverSideTimeout = unit.toMillis(timeout);
+    public SearchQuery serverSideTimeout(Duration timeout) {
+        this.serverSideTimeout = timeout;
         return this;
     }
 
@@ -483,7 +485,7 @@ public class SearchQuery {
      * @return the value of the {@link #serverSideTimeout(long, TimeUnit)} parameter, or null if it was not set.
      */
     public Long getServerSideTimeout() {
-        return serverSideTimeout;
+        return serverSideTimeout.toNanos();
     }
 
     /* ===============================

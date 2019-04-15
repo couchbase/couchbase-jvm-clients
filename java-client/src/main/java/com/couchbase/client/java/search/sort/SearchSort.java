@@ -63,7 +63,7 @@ public abstract class SearchSort {
     }
 
     /**
-     * Sort by a field in the hits.
+     * Sort by a field in the rows.
      *
      * @param field the field name.
      */

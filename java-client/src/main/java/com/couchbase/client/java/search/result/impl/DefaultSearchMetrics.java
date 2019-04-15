@@ -31,12 +31,12 @@ import java.io.IOException;
 public class DefaultSearchMetrics implements SearchMetrics {
 
     private final long took;
-    private final long totalHits;
+    private final long totalRows;
     private final double maxScore;
 
-    public DefaultSearchMetrics(long took, long totalHits, double maxScore) {
+    public DefaultSearchMetrics(long took, long totalRows, double maxScore) {
         this.took = took;
-        this.totalHits = totalHits;
+        this.totalRows = totalRows;
         this.maxScore = maxScore;
     }
 
@@ -46,8 +46,8 @@ public class DefaultSearchMetrics implements SearchMetrics {
     }
 
     @Override
-    public long totalHits() {
-        return this.totalHits;
+    public long totalRows() {
+        return this.totalRows;
     }
 
     @Override
@@ -59,7 +59,7 @@ public class DefaultSearchMetrics implements SearchMetrics {
     public String toString() {
         return "DefaultSearchMetrics{" +
                 "took=" + took +
-                ", totalHits=" + totalHits +
+                ", totalRows=" + totalRows +
                 ", maxScore=" + maxScore +
                 '}';
     }

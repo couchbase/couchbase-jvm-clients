@@ -32,7 +32,7 @@ public interface SearchMetrics {
     /**
      * The total number of rows (or {@link SearchQueryRow}) in the result.
      */
-    long totalHits();
+    long totalRows();
 
     /**
      * The largest score amongst the rows.

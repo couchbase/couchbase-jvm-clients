@@ -71,8 +71,7 @@ public class SearchAccessor {
     static SearchMeta parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
         byte[] rawStatus = response.header().getStatus();
         SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
-        List<RuntimeException> errors = SearchAccessor.parseErrors(rawStatus);
-        SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalHits(), trailer.maxScore());
+        SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
         SearchMeta meta = new SearchMeta(status, metrics);
         return meta;
     }
@@ -92,7 +91,7 @@ public class SearchAccessor {
 
                     Mono<SearchMeta> meta = response.trailer()
                             .map(trailer -> {
-                                SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalHits(), trailer.maxScore());
+                                SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
 
                                 return new SearchMeta(status, metrics);
                             });

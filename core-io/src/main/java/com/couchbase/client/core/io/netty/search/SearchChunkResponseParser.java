@@ -31,15 +31,15 @@ public class SearchChunkResponseParser
   private byte[] status;
   private byte[] error;
 
-  private long totalHits;
-  private double maxScore;
-  private long took;
+    private long totalRows;
+    private double maxScore;
+    private long took;
 
   @Override
   protected void doCleanup() {
     status = null;
     error = null;
-    totalHits = 0;
+    totalRows = 0;
     maxScore = 0.0;
     took = 0;
   }
@@ -51,7 +51,7 @@ public class SearchChunkResponseParser
       failRows(new SearchServiceException(error));
     })
     .doOnValue("/hits/-", v -> emitRow(new SearchChunkRow(v.readBytes())))
-    .doOnValue("/total_hits", v -> totalHits = v.readLong())
+    .doOnValue("/total_rows", v -> totalRows = v.readLong())
     .doOnValue("/max_score", v -> maxScore = v.readDouble())
     .doOnValue("/took", v -> took = v.readLong());
 
@@ -70,9 +70,9 @@ public class SearchChunkResponseParser
     return Optional.ofNullable(error).map(SearchServiceException::new);
   }
 
-  @Override
-  public void signalComplete() {
-    completeRows();
-    completeTrailer(new SearchChunkTrailer(totalHits, maxScore, took));
-  }
+    @Override
+    public void signalComplete() {
+        completeRows();
+        completeTrailer(new SearchChunkTrailer(totalRows, maxScore, took));
+    }
 }

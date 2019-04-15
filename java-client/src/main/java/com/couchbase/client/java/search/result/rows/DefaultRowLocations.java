@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.hits;
+package com.couchbase.client.java.search.result.rows;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonArray;
@@ -22,31 +22,31 @@ import com.couchbase.client.java.json.JsonObject;
 import java.util.*;
 
 /**
- * A default implementation of a {@link HitLocations}.
+ * A default implementation of a {@link RowLocations}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
 @Stability.Volatile
-public class DefaultHitLocations implements HitLocations {
+public class DefaultRowLocations implements RowLocations {
 
-    private final Map<String, Map<String, List<HitLocation>>> locations = new HashMap<String, Map<String, List<HitLocation>>>();
+    private final Map<String, Map<String, List<RowLocation>>> locations = new HashMap<String, Map<String, List<RowLocation>>>();
     private int size;
 
     @Override
-    public HitLocations add(HitLocation l) {
-        //note: it is not expected that multiple threads concurrently add a HitLocation, as even a
+    public RowLocations add(RowLocation l) {
+        //note: it is not expected that multiple threads concurrently add a RowLocation, as even a
         //streaming parser would parse a single hit in its entirety, not individual locations.
-        Map<String, List<HitLocation>> byTerm = locations.get(l.field());
+        Map<String, List<RowLocation>> byTerm = locations.get(l.field());
         if (byTerm == null) {
-            byTerm = new HashMap<String, List<HitLocation>>();
+            byTerm = new HashMap<String, List<RowLocation>>();
             locations.put(l.field(), byTerm);
         }
 
-        List<HitLocation> list = byTerm.get(l.term());
+        List<RowLocation> list = byTerm.get(l.term());
         if (list == null) {
-            list = new ArrayList<HitLocation>();
+            list = new ArrayList<RowLocation>();
             byTerm.put(l.term(), list);
         }
 
@@ -56,39 +56,39 @@ public class DefaultHitLocations implements HitLocations {
     }
 
     @Override
-    public List<HitLocation> get(String field) {
-        Map<String, List<HitLocation>> byTerm = locations.get(field);
+    public List<RowLocation> get(String field) {
+        Map<String, List<RowLocation>> byTerm = locations.get(field);
         if (byTerm == null) {
             return Collections.emptyList();
         }
 
-        List<HitLocation> result = new LinkedList<HitLocation>();
-        for (List<HitLocation> termList : byTerm.values()) {
+        List<RowLocation> result = new LinkedList<RowLocation>();
+        for (List<RowLocation> termList : byTerm.values()) {
             result.addAll(termList);
         }
         return result;
     }
 
     @Override
-    public List<HitLocation> get(String field, String term) {
-        Map<String, List<HitLocation>> byTerm = locations.get(field);
+    public List<RowLocation> get(String field, String term) {
+        Map<String, List<RowLocation>> byTerm = locations.get(field);
         if (byTerm == null) {
             return Collections.emptyList();
         }
 
-        List<HitLocation> result = byTerm.get(term);
+        List<RowLocation> result = byTerm.get(term);
         if (result == null) {
             return Collections.emptyList();
         }
-        return new ArrayList<HitLocation>(result);
+        return new ArrayList<RowLocation>(result);
     }
 
     @Override
-    public List<HitLocation> getAll() {
-        List<HitLocation> all = new LinkedList<HitLocation>();
-        for (Map.Entry<String, Map<String, List<HitLocation>>> terms : locations.entrySet()) {
-            for (List<HitLocation> hitLocations : terms.getValue().values()) {
-                all.addAll(hitLocations);
+    public List<RowLocation> getAll() {
+        List<RowLocation> all = new LinkedList<RowLocation>();
+        for (Map.Entry<String, Map<String, List<RowLocation>>> terms : locations.entrySet()) {
+            for (List<RowLocation> rowLocations : terms.getValue().values()) {
+                all.addAll(rowLocations);
             }
         }
         return all;
@@ -106,7 +106,7 @@ public class DefaultHitLocations implements HitLocations {
 
     @Override
     public List<String> termsFor(String field) {
-        final Map<String, List<HitLocation>> termMap = locations.get(field);
+        final Map<String, List<RowLocation>> termMap = locations.get(field);
         if (termMap == null) {
             return Collections.emptyList();
         }
@@ -116,17 +116,17 @@ public class DefaultHitLocations implements HitLocations {
     @Override
     public Set<String> terms() {
         Set<String> termSet = new HashSet<String>();
-        for (Map<String,List<HitLocation>> termMap : locations.values()) {
+        for (Map<String,List<RowLocation>> termMap : locations.values()) {
             termSet.addAll(termMap.keySet());
         }
         return termSet;
     }
 
     /**
-     * Parses a FTS JSON representation of a {@link HitLocations}.
+     * Parses a FTS JSON representation of a {@link RowLocations}.
      */
-    public static HitLocations from(JsonObject locationsJson) {
-        DefaultHitLocations hitLocations = new DefaultHitLocations();
+    public static RowLocations from(JsonObject locationsJson) {
+        DefaultRowLocations hitLocations = new DefaultRowLocations();
         if (locationsJson == null) {
             return hitLocations;
         }
@@ -150,7 +150,7 @@ public class DefaultHitLocations implements HitLocations {
                             arrayPositions[j] = arrayPositionsJson.getLong(j);
                         }
                     }
-                    hitLocations.add(new HitLocation(field, term, pos, start, end, arrayPositions));
+                    hitLocations.add(new RowLocation(field, term, pos, start, end, arrayPositions));
                 }
             }
         }
@@ -159,14 +159,14 @@ public class DefaultHitLocations implements HitLocations {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("DefaultHitLocations{")
+        StringBuilder sb = new StringBuilder("DefaultRowLocations{")
                 .append("size=").append(size)
                 .append(", locations=[");
 
-        for (Map<String, List<HitLocation>> map : locations.values()) {
-            for (List<HitLocation> hitLocations : map.values()) {
-                for (HitLocation hitLocation : hitLocations) {
-                    sb.append(hitLocation).append(",");
+        for (Map<String, List<RowLocation>> map : locations.values()) {
+            for (List<RowLocation> rowLocations : map.values()) {
+                for (RowLocation rowLocation : rowLocations) {
+                    sb.append(rowLocation).append(",");
                 }
             }
         }

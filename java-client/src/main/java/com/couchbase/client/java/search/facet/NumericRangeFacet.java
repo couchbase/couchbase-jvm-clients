@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A facet that categorizes hits into numerical ranges (or buckets) provided by the user.
+ * A facet that categorizes rows into numerical ranges (or buckets) provided by the user.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger

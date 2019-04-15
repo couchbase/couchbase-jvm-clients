@@ -34,7 +34,7 @@ public class SearchMeta {
 //  }
 
     /**
-     * Provides a {@link SearchMetrics} object giving statistics on the request like number of hits, total time taken...
+     * Provides a {@link SearchMetrics} object giving statistics on the request like number of rows, total time taken...
      */
     public SearchMetrics metrics() {
         return metrics;

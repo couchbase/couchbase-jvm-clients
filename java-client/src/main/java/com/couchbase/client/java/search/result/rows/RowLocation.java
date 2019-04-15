@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.hits;
+package com.couchbase.client.java.search.result.rows;
 
 
 import com.couchbase.client.core.annotation.Stability;
@@ -21,7 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import java.util.Arrays;
 
 /**
- * A FTS result hit location indicates at which position a given term occurs inside a given field.
+ * A FTS result row location indicates at which position a given term occurs inside a given field.
  * In case the field is an array, {@link #arrayPositions} will indicate which index/indices in the
  * array contain the term.
  *
@@ -30,7 +30,7 @@ import java.util.Arrays;
  * @since 2.3.0
  */
 @Stability.Volatile
-public class HitLocation {
+public class RowLocation {
 
     private final String field;
     private final String term;
@@ -43,7 +43,7 @@ public class HitLocation {
      */
     private final long[] arrayPositions;
 
-    public HitLocation(String field, String term, long pos, long start, long end, long[] arrayPositions) {
+    public RowLocation(String field, String term, long pos, long start, long end, long[] arrayPositions) {
         this.field = field;
         this.term = term;
         this.pos = pos;
@@ -52,7 +52,7 @@ public class HitLocation {
         this.arrayPositions = arrayPositions;
     }
 
-    public HitLocation(String field, String term, long pos, long start, long end) {
+    public RowLocation(String field, String term, long pos, long start, long end) {
         this(field, term, pos, start, end, null);
     }
 
@@ -92,7 +92,7 @@ public class HitLocation {
             return false;
         }
 
-        HitLocation that = (HitLocation) o;
+        RowLocation that = (RowLocation) o;
 
         if (pos != that.pos) {
             return false;
@@ -127,7 +127,7 @@ public class HitLocation {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder()
-                .append("HitLocation{")
+                .append("RowLocation{")
                 .append("field='").append(field).append('\'')
                 .append(", term='").append(term).append('\'')
                 .append(", pos=").append(pos)

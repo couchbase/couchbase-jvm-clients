@@ -19,7 +19,7 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
- * Sort by a location and unit in the hits.
+ * Sort by a location and unit in the rows.
  *
  * @author Michael Nitschinger
  * @since 2.4.5

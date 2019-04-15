@@ -20,18 +20,18 @@ import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 
 public class SearchChunkTrailer implements ChunkTrailer {
 
-    private final long totalHits;
+    private final long totalRows;
     private final double maxScore;
     private final long took;
 
-    public SearchChunkTrailer(long totalHits, double maxScore, long took) {
-        this.totalHits = totalHits;
+    public SearchChunkTrailer(long totalRows, double maxScore, long took) {
+        this.totalRows = totalRows;
         this.maxScore = maxScore;
         this.took = took;
     }
 
-    public long totalHits() {
-        return totalHits;
+    public long totalRows() {
+        return totalRows;
     }
 
     public double maxScore() {

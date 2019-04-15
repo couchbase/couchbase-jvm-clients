@@ -18,7 +18,7 @@ package com.couchbase.client.java.search.sort;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
- * Sort by a field in the hits.
+ * Sort by a field in the rows.
  *
  * @author Michael Nitschinger
  * @since 2.4.5

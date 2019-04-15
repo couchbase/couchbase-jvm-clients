@@ -16,7 +16,7 @@
 package com.couchbase.client.java.search.facet;
 
 /**
- * A facet that gives the number of occurrences of the most recurring terms in all hits.
+ * A facet that gives the number of occurrences of the most recurring terms in all rows.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
