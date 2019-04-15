@@ -16,20 +16,22 @@
 package com.couchbase.client.scala
 
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
-import com.couchbase.client.scala.util.FutureConversions
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
+import com.couchbase.client.scala.search.SearchQuery
+import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
+import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
+import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
+import io.opentracing.Span
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -51,9 +53,13 @@ class AsyncCluster(environment: => ClusterEnvironment)
                   (implicit ec: ExecutionContext) {
   private[scala] val core = Core.create(environment)
   private[scala] val env = environment
-
+  private[scala] val kvTimeout = javaDurationToScala(env.timeoutConfig().kvTimeout())
+  private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig().searchTimeout())
+  private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig().analyticsTimeout())
+  private[scala] val retryStrategy = env.retryStrategy()
   private[scala] val queryHandler = new QueryHandler()
   private[scala] val analyticsHandler = new AnalyticsHandler()
+  private[scala] val searchHandler = new SearchHandler()
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
@@ -129,8 +135,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
     * @param options   any query options - see [[AnalyticsOptions]] for documentation
     *
     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-    *         else a
-    *         `Failure`
+    *         else a `Failure`
     */
   def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Future[AnalyticsResult] = {
 
@@ -150,12 +155,12 @@ class AsyncCluster(environment: => ClusterEnvironment)
                 .map(trailer => AnalyticsResult(
                   rows,
                   AnalyticsMeta(
-                  response.header().requestId(),
-                  response.header().clientContextId().asScala,
-                  response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
-                  Some(AnalyticsMetrics.fromBytes(trailer.metrics)),
-                  trailer.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
-                  trailer.status))
+                    response.header().requestId(),
+                    response.header().clientContextId().asScala,
+                    response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
+                    Some(AnalyticsMetrics.fromBytes(trailer.metrics)),
+                    trailer.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
+                    trailer.status))
                 )
             )
           )
@@ -172,6 +177,69 @@ class AsyncCluster(environment: => ClusterEnvironment)
       case Failure(err)
       => Future.failed(err)
     }
+  }
+
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
+    * @param parentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a
+    *                        way of
+    *                        tracing complex distributed systems.  This field allows an OpenTracing parent span to be
+    *                        provided, which will become the parent of any spans created by the SDK as a result of this
+    *                        operation.  Note that if a span is not provided then the SDK will try to access any
+    *                        thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
+    *                        recommended to provide the parentSpan explicitly if possible, as thread-local is not a
+    *                        100% reliable way of passing parameters.
+    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
+    *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
+    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    *
+    * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def searchQuery(query: SearchQuery,
+                  parentSpan: Option[Span] = None,
+                  timeout: Duration = searchTimeout,
+                  retryStrategy: RetryStrategy = retryStrategy): Future[SearchResult] = {
+
+    searchHandler.request(query, parentSpan, timeout, retryStrategy, core, environment) match {
+      case Success(request) =>
+        core.send(request)
+
+        val ret: Future[SearchResult] =
+          FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+              .map(row => SearchQueryRow.fromResponse(row))
+              .collectSeq()
+              .flatMap(rows =>
+
+                FutureConversions.javaMonoToScalaMono(response.trailer())
+                  .map(trailer => {
+
+                    val rowsConverted = FunctionalUtil.traverse(rows)
+                    val rawStatus = response.header.getStatus
+                    val errors = SearchHandler.parseSearchErrors(rawStatus)
+                    val meta = SearchHandler.parseSearchMeta(response, trailer)
+
+                    SearchResult(
+                      rowsConverted,
+                      errors,
+                      meta
+                    )
+                  })
+              )
+            )
+            .toFuture
+
+        ret
+
+      case Failure(err) => Future.failed(err)
+    }
+
   }
 
   /** Shutdown all cluster resources.
@@ -193,8 +261,7 @@ class AsyncCluster(environment: => ClusterEnvironment)
 object AsyncCluster {
   private implicit val ec = Cluster.ec
 
-  /**
-    * Connect to a Couchbase cluster with a username and a password as credentials.
+  /** Connect to a Couchbase cluster with a username and a password as credentials.
     *
     * $DeferredErrors
     *
@@ -210,8 +277,7 @@ object AsyncCluster {
     }
   }
 
-  /**
-    * Connect to a Couchbase cluster with custom [[Credentials]].
+  /** Connect to a Couchbase cluster with custom [[Credentials]].
     *
     * $DeferredErrors
     *
@@ -226,8 +292,7 @@ object AsyncCluster {
     }
   }
 
-  /**
-    * Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
+  /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
     *
     * $DeferredErrors
     *

@@ -124,8 +124,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     */
   def pipelineBatch(pipelineBatch: Int): QueryOptions = copy(pipelineBatch = Some(pipelineBatch))
 
-  /**
-    * If set to true (false being the default), the metrics object will not be returned from N1QL and
+  /** If set to true (false being the default), the metrics object will not be returned from N1QL and
     * as a result be more efficient. Note that if metrics are disabled you are losing information
     * to diagnose problems - so use with care!
     *

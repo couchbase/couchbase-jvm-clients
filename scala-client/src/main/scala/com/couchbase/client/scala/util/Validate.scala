@@ -35,8 +35,7 @@ private[scala] object Validate {
     else Success(input)
   }
 
-  /**
-    * Check if the given string is not null or empty.
+  /** Check if the given string is not null or empty.
     *
     * <p>If it is null or empty, a `Failure(IllegalArgumentException)` is raised with a
     * proper message.</p>

@@ -46,8 +46,7 @@ case class SpatialViewOptions(
     copy(development = Some(value))
   }
 
-  /**
-    * Limit the number of the returned documents to the specified number.
+  /** Limit the number of the returned documents to the specified number.
     *
     * @return this for further chaining
     */

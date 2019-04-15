@@ -12,8 +12,8 @@ import scala.util.{Failure, Success, Try}
 class KeyValueSpec extends FunSuite {
   // TODO support Jenkins
 
-    val cluster = Cluster.connect("10.112.191.101", "Administrator", "password")
-    val bucket = cluster.bucket("ranter")
+    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val bucket = cluster.bucket("default")
     val coll = bucket.defaultCollection
 
   test("config") {

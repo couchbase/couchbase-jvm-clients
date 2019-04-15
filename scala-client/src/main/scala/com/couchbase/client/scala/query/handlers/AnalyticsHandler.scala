@@ -63,7 +63,7 @@ private[scala] class AnalyticsHandler() {
       Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
-        val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
+        val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.analyticsTimeout())
         val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy())
 
         new AnalyticsRequest(timeout,

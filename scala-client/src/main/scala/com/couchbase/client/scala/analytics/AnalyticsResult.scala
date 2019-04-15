@@ -18,7 +18,7 @@ package com.couchbase.client.scala.analytics
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.msg.analytics.{AnalyticsChunkRow, AnalyticsResponse}
+import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.util.FunctionalUtil
@@ -44,7 +44,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
     *
     * $SupportedTypes
     *
-    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See allRowsAs` for a more
+    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See `allRowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     **/
   def rowsAs[T]

@@ -259,7 +259,7 @@ public class AsyncCluster {
   }
 
   SearchRequest searchRequest(final SearchQuery query, final SearchOptions options) {
-    notNull(query, "SarchQuery");
+    notNull(query, "SearchQuery");
     notNull(options, "SearchOptions");
 
     SearchOptions.BuiltQueryOptions opts = options.build();

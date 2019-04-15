@@ -17,12 +17,16 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.search.SearchQuery
+import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
+import io.opentracing.Span
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -98,6 +102,34 @@ class Cluster private[scala](env: => ClusterEnvironment)
     AsyncUtils.block(async.analyticsQuery(statement, options), timeout)
   }
 
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
+    * @param parentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a
+    *                        way of
+    *                        tracing complex distributed systems.  This field allows an OpenTracing parent span to be
+    *                        provided, which will become the parent of any spans created by the SDK as a result of this
+    *                        operation.  Note that if a span is not provided then the SDK will try to access any
+    *                        thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
+    *                        recommended to provide the parentSpan explicitly if possible, as thread-local is not a
+    *                        100% reliable way of passing parameters.
+    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
+    *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
+    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    *
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def searchQuery(query: SearchQuery,
+                  parentSpan: Option[Span] = None,
+                  timeout: Duration = async.searchTimeout,
+                  retryStrategy: RetryStrategy = async.retryStrategy): Try[SearchResult] = {
+    AsyncUtils.block(async.searchQuery(query, parentSpan, timeout, retryStrategy))
+  }
 
   /** Shutdown all cluster resources.
     *
@@ -116,8 +148,7 @@ class Cluster private[scala](env: => ClusterEnvironment)
 object Cluster {
   private[scala] implicit val ec = ClusterEnvironment.ec
 
-  /**
-    * Connect to a Couchbase cluster with a username and a password as credentials.
+  /** Connect to a Couchbase cluster with a username and a password as credentials.
     *
     * $DeferredErrors
     *
@@ -131,8 +162,7 @@ object Cluster {
     new Cluster(env)
   }
 
-  /**
-    * Connect to a Couchbase cluster with custom [[Credentials]].
+  /** Connect to a Couchbase cluster with custom [[Credentials]].
     *
     * $DeferredErrors
     *
@@ -144,8 +174,7 @@ object Cluster {
     new Cluster(ClusterEnvironment.create(connectionString, credentials))
   }
 
-  /**
-    * Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
+  /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
     *
     * $DeferredErrors
     *
