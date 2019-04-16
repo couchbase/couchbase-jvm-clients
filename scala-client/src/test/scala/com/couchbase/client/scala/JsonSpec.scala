@@ -3,7 +3,7 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.scala.codec.Conversions._
-import com.couchbase.client.scala.codec.EncodeParams
+import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
 import com.couchbase.client.scala.implicits.Codecs
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray, writeToArray}
 import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}

@@ -16,10 +16,12 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.QueryServiceException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -60,7 +62,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
+        environment = environment()
+                .ioConfig(IoConfig.mutationTokensEnabled(true))
+                .build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
@@ -284,6 +288,23 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           .block();
         assertNotNull(rows);
         assertEquals(1, rows.size());
+    }
+
+    @Test
+    void consistentWith() {
+        String id = UUID.randomUUID().toString();
+        MutationResult mr = collection.insert(id, FOO_CONTENT);
+
+        QueryOptions options = queryOptions()
+                .consistentWith(mr.mutationToken().get())
+                .withParameters(JsonArray.from(id));
+        QueryResult result = cluster.query(
+                "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
+                options
+        );
+        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+        assertEquals(1, rows.size());
+        assertEquals(FOO_CONTENT, rows.get(0));
     }
 
     /**

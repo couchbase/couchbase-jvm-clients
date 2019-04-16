@@ -17,11 +17,10 @@
 package com.couchbase.client.java.query;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
@@ -37,21 +36,22 @@ import com.couchbase.client.java.json.JsonValue;
 public class QueryOptions extends CommonOptions<QueryOptions> {
 
   public static QueryOptions DEFAULT = new QueryOptions();
-  private Map<String, Object> rawParams;
-  private Map<String, String> credentials;
-  private ScanConsistency scanConsistency;
-  private QueryProfile queryProfile;
-  private String clientContextId;
-  private Boolean metricsDisabled;
-  private String scanWait;
-  private Integer maxParallelism;
-  private Integer pipelineCap;
-  private Integer pipelineBatch;
-  private Integer scanCap;
-  private Boolean readonly;
-  private Boolean pretty;
-  private JsonValue parameters;
-  private boolean prepared;
+  private Optional<Map<String, Object>> rawParams = Optional.empty();
+  private Optional<Map<String, String>> credentials = Optional.empty();
+  private Optional<ScanConsistency> scanConsistency = Optional.empty();
+  private Optional<QueryProfile> queryProfile = Optional.empty();
+  private Optional<String> clientContextId = Optional.empty();
+  private Optional<Boolean> metricsDisabled = Optional.empty();
+  private Optional<String> scanWait = Optional.empty();
+  private Optional<Integer> maxParallelism = Optional.empty();
+  private Optional<Integer> pipelineCap = Optional.empty();
+  private Optional<Integer> pipelineBatch = Optional.empty();
+  private Optional<Integer> scanCap = Optional.empty();
+  private Optional<Boolean> readonly = Optional.empty();
+  private Optional<Boolean> pretty = Optional.empty();
+  private Optional<JsonValue> parameters = Optional.empty();
+  private Optional<Boolean> prepared = Optional.empty();
+  private Optional<List<MutationToken>> consistentWith = Optional.empty();
 
   private QueryOptions() {}
 
@@ -67,10 +67,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return {@link QueryOptions} for further chaining
    */
   public QueryOptions withRawParams(String param, Object value) {
-    if (this.rawParams == null) {
-      this.rawParams = new HashMap<>();
+    if (!this.rawParams.isPresent()) {
+      this.rawParams = Optional.of(new HashMap<>());
     }
-    this.rawParams.put(param, value.toString());
+    this.rawParams.get().put(param, value.toString());
     return this;
   }
 
@@ -82,10 +82,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return {@link QueryOptions} for further chaining
    */
   public QueryOptions withCredentials(String user, String password) {
-    if (this.credentials == null) {
-      this.credentials = new HashMap<>();
+    if (!this.credentials.isPresent()) {
+      this.credentials = Optional.of(new HashMap<>());
     }
-    this.credentials.put(user, password);
+    this.credentials.get().put(user, password);
     return this;
   }
 
@@ -96,7 +96,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return {@link QueryOptions} for further chaining
    */
   public QueryOptions withScanConsistency(ScanConsistency scanConsistency) {
-    this.scanConsistency = scanConsistency;
+    this.scanConsistency = Optional.of(scanConsistency);
     return this;
   }
 
@@ -107,7 +107,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return {@link QueryOptions} for further chaining
    */
   public QueryOptions withProfile(QueryProfile queryProfile) {
-    this.queryProfile = queryProfile;
+    this.queryProfile = Optional.of(queryProfile);
     return this;
   }
 
@@ -119,7 +119,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withClientContextId(String clientContextId) {
-    this.clientContextId = clientContextId;
+    this.clientContextId = Optional.of(clientContextId);
     return this;
   }
 
@@ -132,12 +132,12 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withMetricsDisabled(boolean metricsDisabled) {
-    this.metricsDisabled = metricsDisabled;
+    this.metricsDisabled = Optional.of(metricsDisabled);
     return this;
   }
 
   /**
-   * If the {@link ScanConsistency#NOT_BOUNDED NOT_BOUNDED scan consistency} has been chosen, does nothing.
+   * If the {@link ScanConsistency#NOT_BOUNDED scan consistency} has been chosen, does nothing.
    *
    * Otherwise, sets the maximum time the client is willing to wait for an index to catch up to the
    * vector timestamp in the request.
@@ -146,10 +146,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withScanWait(Duration wait) {
-    if (this.scanConsistency == ScanConsistency.NOT_BOUNDED) {
-      this.scanWait = null;
+    if (this.scanConsistency.isPresent() && this.scanConsistency.get() == ScanConsistency.NOT_BOUNDED) {
+      this.scanWait = Optional.empty();
     } else {
-      this.scanWait = Golang.encodeDurationToMs(wait);
+      this.scanWait = Optional.of(Golang.encodeDurationToMs(wait));
     }
     return this;
   }
@@ -161,7 +161,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withMaxParallelism(int maxParallelism) {
-    this.maxParallelism = maxParallelism;
+    this.maxParallelism = Optional.of(maxParallelism);
     return this;
   }
 
@@ -177,7 +177,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withPrettyEnabled(boolean prettyEnabled) {
-    this.pretty = prettyEnabled;
+    this.pretty = Optional.of(prettyEnabled);
     return this;
   }
 
@@ -200,7 +200,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withReadonlyEnabled(boolean readonlyEnabled) {
-    this.readonly = readonlyEnabled;
+    this.readonly = Optional.of(readonlyEnabled);
     return this;
   }
 
@@ -213,7 +213,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withScanCap(int scanCap) {
-    this.scanCap = scanCap;
+    this.scanCap = Optional.of(scanCap);
     return this;
   }
 
@@ -224,7 +224,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions pipelineBatch(int pipelineBatch) {
-    this.pipelineBatch = pipelineBatch;
+    this.pipelineBatch = Optional.of(pipelineBatch);
     return this;
   }
 
@@ -235,7 +235,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions pipelineCap(int pipelineCap) {
-    this.pipelineCap = pipelineCap;
+    this.pipelineCap = Optional.of(pipelineCap);
     return this;
   }
 
@@ -246,7 +246,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withParameters(final JsonObject named) {
-    this.parameters = named;
+    this.parameters = Optional.of(named);
     return this;
   }
 
@@ -257,7 +257,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions withParameters(final JsonArray positional) {
-    this.parameters = positional;
+    this.parameters = Optional.of(positional);
     return this;
   }
 
@@ -268,7 +268,29 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions prepared(final boolean prepared) {
-    this.prepared = prepared;
+    this.prepared = Optional.of(prepared);
+    return this;
+  }
+
+  /**
+   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
+   *
+   * @param tokens the mutation tokens
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public QueryOptions consistentWith(MutationToken... tokens) {
+    this.consistentWith = Optional.of(Arrays.asList(tokens));
+    return this;
+  }
+
+  /**
+   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
+   *
+   * @param tokens the mutation tokens
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public QueryOptions consistentWith(List<MutationToken> tokens) {
+    this.consistentWith = Optional.of(tokens);
     return this;
   }
 
@@ -279,71 +301,33 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
   public class BuiltQueryOptions extends BuiltCommonOptions {
 
-    public Map<String, Object> getRawParams() {
-      return rawParams;
-    }
-
-    public Map<String, String> credentials() {
-      return credentials;
-    }
-
-    public ScanConsistency scanConsistency() {
-      return scanConsistency;
-    }
-
-    public QueryProfile profile() {
-      return queryProfile;
-    }
-
-    private String clientContextId() { return clientContextId; }
-
-    private boolean metricsDisabled() { return metricsDisabled; }
-
-    private String scanWait()  { return scanWait; }
-
-    private int pipelineBatch() { return pipelineBatch; }
-
-    private int pipelineCap() { return pipelineCap; }
-
-    private int scanCap() { return scanCap; }
-
-    private boolean readOnly() { return readonly; }
-
-    private boolean pretty() { return pretty; }
-
-    public JsonValue parameters() {
-      return parameters;
-    }
-
-    public boolean isPrepared() {
-      return prepared;
-    }
-
     @Stability.Internal
     public void injectParams(JsonObject queryJson) {
-      queryJson.put("client_context_id", clientContextId == null
-              ? UUID.randomUUID().toString()
-              : clientContextId);
+      queryJson.put("client_context_id", clientContextId.orElse(UUID.randomUUID().toString()));
 
-      if (credentials != null && !credentials.isEmpty()) {
-        JsonArray creds = JsonArray.create();
-        for (Map.Entry<String, String> c : credentials.entrySet()) {
-          if (c.getKey() != null && !c.getKey().isEmpty()) {
-            creds.add(JsonObject.create()
-                    .put("user", c.getKey())
-                    .put("pass", c.getValue()));
+      credentials.ifPresent(cr -> {
+        if (!cr.isEmpty()) {
+          JsonArray creds = JsonArray.create();
+
+          for (Map.Entry<String, String> c : cr.entrySet()) {
+            if (c.getKey() != null && !c.getKey().isEmpty()) {
+              creds.add(JsonObject.create().put("user", c.getKey()).put("pass", c.getValue()));
+            }
+          }
+
+          if (!creds.isEmpty()) {
+            queryJson.put("creds", creds);
           }
         }
-        if (!creds.isEmpty()) {
-          queryJson.put("creds", creds);
-        }
-      }
+      });
 
-      if (parameters != null) {
-        if (parameters instanceof JsonArray && !((JsonArray) parameters).isEmpty()) {
-          queryJson.put("args", (JsonArray) parameters);
-        } else if (parameters instanceof JsonObject && !((JsonObject) parameters).isEmpty()) {
-          JsonObject namedParams = (JsonObject) parameters;
+      parameters.ifPresent(params -> {
+        if (params instanceof JsonArray && !((JsonArray) params).isEmpty()) {
+          queryJson.put("args", (JsonArray) params);
+        }
+        else if (params instanceof JsonObject && !((JsonObject) params).isEmpty()) {
+          JsonObject namedParams = (JsonObject) params;
+
           namedParams.getNames().forEach(key -> {
             Object value = namedParams.get(key);
             if (key.charAt(0) != '$') {
@@ -353,58 +337,65 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
             }
           });
         }
-      }
+      });
 
-      if (scanConsistency != null) {
-        queryJson.put("scan_consistency", scanConsistency.export());
-      }
+      scanConsistency.ifPresent(sc -> queryJson.put("scan_consistency", sc.export()));
 
-      if (queryProfile != null) {
-        queryJson.put("profile", queryProfile.toString());
-      }
+      consistentWith.ifPresent(cw -> {
+        if (scanConsistency.isPresent()) {
+          throw new IllegalArgumentException("`withScanConsistency(...)` cannot be used "
+                  + "together with `consistentWith(...)`");
+        }
 
-      if (scanWait != null && (ScanConsistency.REQUEST_PLUS == scanConsistency)) {
-        queryJson.put("scan_wait", scanWait);
-      }
+        JsonObject mutationState = JsonObject.create();
+        for (MutationToken token : cw) {
+          JsonObject bucket = mutationState.getObject(token.bucket());
+          if (bucket == null) {
+            bucket = JsonObject.create();
+            mutationState.put(token.bucket(), bucket);
+          }
 
-      if (maxParallelism != null) {
-        queryJson.put("max_parallelism", maxParallelism.toString());
-      }
+          bucket.put(
+                  String.valueOf(token.vbucketID()),
+                  JsonArray.from(token.sequenceNumber(), String.valueOf(token.vbucketUUID()))
+          );
+        }
+        queryJson.put("scan_vectors", mutationState);
+        queryJson.put("scan_consistency", "at_plus");
+      });
 
-      if (pipelineCap != null) {
-        queryJson.put("pipeline_cap", pipelineCap.toString());
-      }
+      queryProfile.ifPresent(v -> queryJson.put("profile", v.toString()));
 
-      if (pipelineBatch != null) {
-        queryJson.put("pipeline_batch", pipelineBatch.toString());
-      }
+      scanWait.ifPresent(v -> {
+        if (!scanConsistency.isPresent() || ScanConsistency.NOT_BOUNDED != scanConsistency.get()) {
+          queryJson.put("scan_wait", v);
+        }
+      });
 
-      if (scanCap != null) {
-        queryJson.put("scan_cap", scanCap.toString());
-      }
+      maxParallelism.ifPresent(v -> queryJson.put("max_parallelism", v.toString()));
 
-      if (metricsDisabled != null) {
-        queryJson.put("metrics", metricsDisabled.toString());
-      }
+      pipelineCap.ifPresent(v -> queryJson.put("pipeline_cap", v.toString()));
 
-      if (pretty != null) {
-        queryJson.put("pretty", pretty.toString());
-      }
+      pipelineBatch.ifPresent(v -> queryJson.put("pipeline_batch", v.toString()));
 
-      if (readonly != null) {
-        queryJson.put("readonly", readonly.toString());
-      }
+      scanCap.ifPresent(v -> queryJson.put("scan_cap", v.toString()));
+
+      metricsDisabled.ifPresent(v -> queryJson.put("metrics", v.toString()));
+
+      pretty.ifPresent(v -> queryJson.put("pretty", v.toString()));
+
+      readonly.ifPresent(v -> queryJson.put("readonly", v.toString()));
 
       boolean autoPrepare = Boolean.parseBoolean(System.getProperty("com.couchbase.client.query.autoprepared", "false"));
       if (autoPrepare) {
         queryJson.put("auto_prepare", "true");
       }
 
-      if (rawParams != null) {
-        for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
+      rawParams.ifPresent(v -> {
+      for (Map.Entry<String, Object> entry : v.entrySet()) {
           queryJson.put(entry.getKey(), entry.getValue());
         }
-      }
+      });
     }
   }
 }
