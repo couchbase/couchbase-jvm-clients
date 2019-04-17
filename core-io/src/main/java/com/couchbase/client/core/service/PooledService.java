@@ -76,7 +76,7 @@ abstract class PooledService implements Service {
   /**
    * If disconnect called by a caller, set to true.
    */
-  private volatile AtomicBoolean disconnected;
+  private final AtomicBoolean disconnected;
 
   /**
    * Creates a new {@link PooledService}.
