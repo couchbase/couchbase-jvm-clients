@@ -24,7 +24,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -53,24 +52,12 @@ public class IoConfig {
     allowedSaslMechanisms = Optional
       .ofNullable(builder.allowedSaslMechanisms)
       .orElse(EnumSet.allOf(SaslMechanism.class));
-    kvCircuitBreakerConfig = Optional
-      .ofNullable(builder.kvCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
-    queryCircuitBreakerConfig = Optional
-      .ofNullable(builder.queryCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
-    viewCircuitBreakerConfig = Optional
-      .ofNullable(builder.viewCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
-    searchCircuitBreakerConfig = Optional
-      .ofNullable(builder.searchCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
-    analyticsCircuitBreakerConfig = Optional
-      .ofNullable(builder.analyticsCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
-    managerCircuitBreakerConfig = Optional
-      .ofNullable(builder.managerCircuitBreakerConfig)
-      .orElse(CircuitBreakerConfig.disabled());
+    kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig.build();
+    queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig.build();
+    viewCircuitBreakerConfig = builder.viewCircuitBreakerConfig.build();
+    searchCircuitBreakerConfig = builder.searchCircuitBreakerConfig.build();
+    analyticsCircuitBreakerConfig = builder.analyticsCircuitBreakerConfig.build();
+    managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig.build();
     captureTraffic = Optional
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
@@ -96,27 +83,27 @@ public class IoConfig {
     return builder().configPollInterval(configPollInterval);
   }
 
-  public static Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
+  public static Builder kvCircuitBreakerConfig(CircuitBreakerConfig.Builder kvCircuitBreakerConfig) {
     return builder().kvCircuitBreakerConfig(kvCircuitBreakerConfig);
   }
 
-  public static Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
+  public static Builder queryCircuitBreakerConfig(CircuitBreakerConfig.Builder queryCircuitBreakerConfig) {
     return builder().queryCircuitBreakerConfig(queryCircuitBreakerConfig);
   }
 
-  public static Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
+  public static Builder viewCircuitBreakerConfig(CircuitBreakerConfig.Builder viewCircuitBreakerConfig) {
     return builder().viewCircuitBreakerConfig(viewCircuitBreakerConfig);
   }
 
-  public static Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
+  public static Builder searchCircuitBreakerConfig(CircuitBreakerConfig.Builder searchCircuitBreakerConfig) {
     return builder().searchCircuitBreakerConfig(searchCircuitBreakerConfig);
   }
 
-  public static Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
+  public static Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig) {
     return builder().analyticsCircuitBreakerConfig(analyticsCircuitBreakerConfig);
   }
 
-  public static Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
+  public static Builder managerCircuitBreakerConfig(CircuitBreakerConfig.Builder managerCircuitBreakerConfig) {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 
@@ -169,12 +156,12 @@ public class IoConfig {
     private Set<SaslMechanism> allowedSaslMechanisms;
     private boolean mutationTokensEnabled = DEFAULT_MUTATION_TOKENS_ENABLED;
     private Duration configPollInterval;
-    private CircuitBreakerConfig kvCircuitBreakerConfig;
-    private CircuitBreakerConfig queryCircuitBreakerConfig;
-    private CircuitBreakerConfig viewCircuitBreakerConfig;
-    private CircuitBreakerConfig searchCircuitBreakerConfig;
-    private CircuitBreakerConfig analyticsCircuitBreakerConfig;
-    private CircuitBreakerConfig managerCircuitBreakerConfig;
+    private CircuitBreakerConfig.Builder kvCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder queryCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder viewCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder searchCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
 
     public IoConfig build() {
@@ -206,9 +193,13 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder kvCircuitBreakerConfig(CircuitBreakerConfig kvCircuitBreakerConfig) {
+    public Builder kvCircuitBreakerConfig(CircuitBreakerConfig.Builder kvCircuitBreakerConfig) {
       this.kvCircuitBreakerConfig = kvCircuitBreakerConfig;
       return this;
+    }
+
+    public CircuitBreakerConfig.Builder kvCircuitBreakerConfig() {
+      return kvCircuitBreakerConfig;
     }
 
     /**
@@ -216,9 +207,13 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder queryCircuitBreakerConfig(CircuitBreakerConfig queryCircuitBreakerConfig) {
+    public Builder queryCircuitBreakerConfig(CircuitBreakerConfig.Builder queryCircuitBreakerConfig) {
       this.queryCircuitBreakerConfig = queryCircuitBreakerConfig;
       return this;
+    }
+
+    public CircuitBreakerConfig.Builder queryCircuitBreakerConfig() {
+      return queryCircuitBreakerConfig;
     }
 
     /**
@@ -226,9 +221,13 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder viewCircuitBreakerConfig(CircuitBreakerConfig viewCircuitBreakerConfig) {
+    public Builder viewCircuitBreakerConfig(CircuitBreakerConfig.Builder viewCircuitBreakerConfig) {
       this.viewCircuitBreakerConfig = viewCircuitBreakerConfig;
       return this;
+    }
+
+    public CircuitBreakerConfig.Builder viewCircuitBreakerConfig() {
+      return viewCircuitBreakerConfig;
     }
 
     /**
@@ -236,9 +235,13 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder searchCircuitBreakerConfig(CircuitBreakerConfig searchCircuitBreakerConfig) {
+    public Builder searchCircuitBreakerConfig(CircuitBreakerConfig.Builder searchCircuitBreakerConfig) {
       this.searchCircuitBreakerConfig = searchCircuitBreakerConfig;
       return this;
+    }
+
+    public CircuitBreakerConfig.Builder searchCircuitBreakerConfig() {
+      return searchCircuitBreakerConfig;
     }
 
     /**
@@ -246,9 +249,13 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig analyticsCircuitBreakerConfig) {
+    public Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig) {
       this.analyticsCircuitBreakerConfig = analyticsCircuitBreakerConfig;
       return this;
+    }
+
+    public CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig() {
+      return analyticsCircuitBreakerConfig;
     }
 
     /**
@@ -256,15 +263,19 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder managerCircuitBreakerConfig(CircuitBreakerConfig managerCircuitBreakerConfig) {
+    public Builder managerCircuitBreakerConfig(CircuitBreakerConfig.Builder managerCircuitBreakerConfig) {
       this.managerCircuitBreakerConfig = managerCircuitBreakerConfig;
       return this;
     }
 
+    public CircuitBreakerConfig.Builder managerCircuitBreakerConfig() {
+      return managerCircuitBreakerConfig;
+    }
+
     public Builder captureTraffic(final ServiceType... serviceTypes) {
-      this.captureTraffic = new HashSet<>(Arrays.asList(
-        serviceTypes.length == 0 ? ServiceType.values() : serviceTypes
-      ));
+      this.captureTraffic = serviceTypes.length == 0
+        ? EnumSet.allOf(ServiceType.class)
+        : EnumSet.copyOf(Arrays.asList(serviceTypes));
       return this;
     }
   }

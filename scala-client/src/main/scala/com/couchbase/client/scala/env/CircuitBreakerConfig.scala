@@ -36,7 +36,7 @@ case class CircuitBreakerConfig(private[scala] val enabled: Boolean =
                                 private[scala] val rollingWindow: Duration =
                                 core.endpoint.CircuitBreakerConfig.DEFAULT_ROLLING_WINDOW) {
 
-  private[scala] def toCore: endpoint.CircuitBreakerConfig = {
+  private[scala] def toCore: endpoint.CircuitBreakerConfig.Builder = {
     val builder = endpoint.CircuitBreakerConfig.builder()
 
     builder.enabled(enabled)
@@ -44,8 +44,6 @@ case class CircuitBreakerConfig(private[scala] val enabled: Boolean =
     builder.errorThresholdPercentage(errorThresholdPercentage)
     builder.sleepWindow(sleepWindow)
     builder.rollingWindow(rollingWindow)
-
-    builder.build()
   }
 
   /** Enables or disables this circuit breaker.

@@ -18,7 +18,10 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.*;
+import com.couchbase.client.core.cnc.DefaultEventBus;
+import com.couchbase.client.core.cnc.DiagnosticsMonitor;
+import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import io.opentracing.Tracer;
@@ -27,11 +30,16 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link CoreEnvironment} is an extendable, configurable and stateful
@@ -108,8 +116,10 @@ public class CoreEnvironment {
     return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
   }
 
-  @SuppressWarnings({"unchecked"})
+  @SuppressWarnings( {"unchecked"})
   protected CoreEnvironment(final Builder builder) {
+    new SystemPropertyPropertyLoader().load(builder);
+
     this.credentials = builder.credentials;
     this.userAgent = defaultUserAgent();
     this.eventBus = Optional
@@ -122,14 +132,14 @@ public class CoreEnvironment {
         Schedulers.newParallel("cb-comp", Schedulers.DEFAULT_POOL_SIZE, true))
       );
 
-    this.ioEnvironment = Optional.ofNullable(builder.ioEnvironment).orElse(IoEnvironment.create());
-    this.ioConfig = Optional.ofNullable(builder.ioConfig).orElse(IoConfig.create());
-    this.compressionConfig = Optional.ofNullable(builder.compressionConfig).orElse(CompressionConfig.create());
-    this.securityConfig = Optional.ofNullable(builder.securityConfig).orElse(SecurityConfig.create());
-    this.timeoutConfig = Optional.ofNullable(builder.timeoutConfig).orElse(TimeoutConfig.create());
-    this.serviceConfig = Optional.ofNullable(builder.serviceConfig).orElse(ServiceConfig.create());
+    this.ioEnvironment = builder.ioEnvironment.build();
+    this.ioConfig = builder.ioConfig.build();
+    this.compressionConfig = builder.compressionConfig.build();
+    this.securityConfig = builder.securityConfig.build();
+    this.timeoutConfig = builder.timeoutConfig.build();
+    this.serviceConfig = builder.serviceConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
-    this.loggerConfig = Optional.ofNullable(builder.loggerConfig).orElse(LoggerConfig.create());
+    this.loggerConfig = builder.loggerConfig.build();
     this.seedNodes = Optional.ofNullable(builder.seedNodes).orElse(DEFAULT_SEED_NODES);
     this.tracer = Optional.ofNullable(builder.tracer).orElse(null); // TODO fixme default
 
@@ -302,13 +312,13 @@ public class CoreEnvironment {
 
   public static class Builder<SELF extends Builder<SELF>> {
 
-    private IoEnvironment ioEnvironment = null;
-    private IoConfig ioConfig = null;
-    private CompressionConfig compressionConfig = null;
-    private SecurityConfig securityConfig = null;
-    private TimeoutConfig timeoutConfig = null;
-    private ServiceConfig serviceConfig = null;
-    private LoggerConfig loggerConfig = null;
+    private IoEnvironment.Builder ioEnvironment = IoEnvironment.builder();
+    private IoConfig.Builder ioConfig = IoConfig.builder();
+    private CompressionConfig.Builder compressionConfig = CompressionConfig.builder();
+    private SecurityConfig.Builder securityConfig = SecurityConfig.builder();
+    private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
+    private ServiceConfig.Builder serviceConfig = ServiceConfig.builder();
+    private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Tracer tracer;
@@ -323,7 +333,7 @@ public class CoreEnvironment {
       this.credentials = credentials;
     }
 
-    @SuppressWarnings({ "unchecked" })
+    @SuppressWarnings("unchecked")
     protected SELF self() {
       return (SELF) this;
     }
@@ -334,38 +344,62 @@ public class CoreEnvironment {
     }
 
     public SELF ioEnvironment(final IoEnvironment.Builder ioEnvironment) {
-      this.ioEnvironment = ioEnvironment.build();
+      this.ioEnvironment = ioEnvironment;
       return self();
     }
 
     public SELF ioConfig(final IoConfig.Builder ioConfig) {
-      this.ioConfig = ioConfig.build();
+      this.ioConfig = requireNonNull(ioConfig);
       return self();
+    }
+
+    public IoConfig.Builder ioConfig() {
+      return ioConfig;
     }
 
     public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
-      this.compressionConfig = compressionConfig.build();
+      this.compressionConfig = requireNonNull(compressionConfig);
       return self();
+    }
+
+    public CompressionConfig.Builder compressionConfig() {
+      return compressionConfig;
     }
 
     public SELF securityConfig(final SecurityConfig.Builder securityConfig) {
-      this.securityConfig = securityConfig.build();
+      this.securityConfig = requireNonNull(securityConfig);
       return self();
+    }
+
+    public SecurityConfig.Builder securityConfig() {
+      return securityConfig;
     }
 
     public SELF timeoutConfig(final TimeoutConfig.Builder timeoutConfig) {
-      this.timeoutConfig = timeoutConfig.build();
+      this.timeoutConfig = requireNonNull(timeoutConfig);
       return self();
+    }
+
+    public TimeoutConfig.Builder timeoutConfig() {
+      return this.timeoutConfig;
     }
 
     public SELF serviceConfig(final ServiceConfig.Builder serviceConfig) {
-      this.serviceConfig = serviceConfig.build();
+      this.serviceConfig = requireNonNull(serviceConfig);
       return self();
     }
 
+    public ServiceConfig.Builder serviceConfig() {
+      return serviceConfig;
+    }
+
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
-      this.loggerConfig = loggerConfig.build();
+      this.loggerConfig = requireNonNull(loggerConfig);
       return self();
+    }
+
+    public LoggerConfig.Builder loggerConfig() {
+      return loggerConfig;
     }
 
     public SELF tracer(final Tracer tracer) {

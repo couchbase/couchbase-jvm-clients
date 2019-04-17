@@ -62,9 +62,8 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
   void connectNoopAndDisconnect() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
 
-    ServiceConfig serviceConfig = KeyValueServiceConfig.create();
     KeyValueService service = new KeyValueService(
-      serviceConfig,
+      KeyValueServiceConfig.builder().build(),
       coreContext,
       NetworkAddress.create(node.hostname()),
       node.ports().get(Services.KV),

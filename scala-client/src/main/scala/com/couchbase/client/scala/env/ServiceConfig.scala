@@ -83,8 +83,9 @@ case class ServiceConfig(private[scala] val keyValueServiceConfig: Option[KeyVal
 
 case class KeyValueServiceConfig(private[scala] val endpoints: Option[Int] = None) {
 
-  private[scala] def toCore: service.KeyValueServiceConfig = {
-    service.KeyValueServiceConfig.create(endpoints.getOrElse(service.KeyValueServiceConfig.DEFAULT_ENDPOINTS))
+  private[scala] def toCore: service.KeyValueServiceConfig.Builder = {
+    service.KeyValueServiceConfig.builder()
+      .endpoints(endpoints.getOrElse(service.KeyValueServiceConfig.DEFAULT_ENDPOINTS))
   }
 
   def endpoints(value: Int): KeyValueServiceConfig = {
@@ -96,8 +97,9 @@ case class QueryServiceConfig(private[scala] val minEndpoints: Int = core.servic
                               private[scala] val maxEndpoints: Int = core.service.QueryServiceConfig.DEFAULT_MAX_ENDPOINTS,
                               private[scala] val idleTime: Duration = core.service.QueryServiceConfig.DEFAULT_IDLE_TIME) {
 
-  private[scala] def toCore: service.QueryServiceConfig = {
-    service.QueryServiceConfig.create(minEndpoints, maxEndpoints, idleTime)
+  private[scala] def toCore: service.QueryServiceConfig.Builder = {
+    service.QueryServiceConfig.builder()
+      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): QueryServiceConfig = {
@@ -117,8 +119,9 @@ case class ViewServiceConfig(private[scala] val minEndpoints: Int = core.service
                              private[scala] val maxEndpoints: Int = core.service.ViewServiceConfig.DEFAULT_MAX_ENDPOINTS,
                              private[scala] val idleTime: Duration = core.service.ViewServiceConfig.DEFAULT_IDLE_TIME) {
 
-  private[scala] def toCore: service.ViewServiceConfig = {
-    service.ViewServiceConfig.create(minEndpoints, maxEndpoints, idleTime)
+  private[scala] def toCore: service.ViewServiceConfig.Builder = {
+    service.ViewServiceConfig.builder()
+      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): ViewServiceConfig = {
@@ -138,8 +141,9 @@ case class SearchServiceConfig(private[scala] val minEndpoints: Int = core.servi
                                private[scala] val maxEndpoints: Int = core.service.SearchServiceConfig.DEFAULT_MAX_ENDPOINTS,
                                private[scala] val idleTime: Duration = core.service.SearchServiceConfig.DEFAULT_IDLE_TIME) {
 
-  private[scala] def toCore: service.SearchServiceConfig = {
-    service.SearchServiceConfig.create(minEndpoints, maxEndpoints, idleTime)
+  private[scala] def toCore: service.SearchServiceConfig.Builder = {
+    service.SearchServiceConfig.builder()
+      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): SearchServiceConfig = {
@@ -159,8 +163,9 @@ case class AnalyticsServiceConfig(private[scala] val minEndpoints: Int = core.se
                                   private[scala] val maxEndpoints: Int = core.service.AnalyticsServiceConfig.DEFAULT_MAX_ENDPOINTS,
                                   private[scala] val idleTime: Duration = core.service.AnalyticsServiceConfig.DEFAULT_IDLE_TIME) {
 
-  private[scala] def toCore: service.AnalyticsServiceConfig = {
-    service.AnalyticsServiceConfig.create(minEndpoints, maxEndpoints, idleTime)
+  private[scala] def toCore: service.AnalyticsServiceConfig.Builder = {
+    service.AnalyticsServiceConfig.builder()
+      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): AnalyticsServiceConfig = {

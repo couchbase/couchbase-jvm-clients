@@ -2,55 +2,26 @@ package com.couchbase.client.core.service;
 
 import java.time.Duration;
 
-public class AnalyticsServiceConfig implements ServiceConfig {
+public class AnalyticsServiceConfig extends AbstractPooledEndpointServiceConfig {
 
   public static final int DEFAULT_MAX_ENDPOINTS = 12;
   public static final int DEFAULT_MIN_ENDPOINTS = 0;
   public static final Duration DEFAULT_IDLE_TIME = Duration.ofMinutes(5);
 
-  private final int minEndpoints;
-  private final int maxEndpoints;
-  private final Duration idleTime;
-
-  public static AnalyticsServiceConfig create() {
-    return create(DEFAULT_MIN_ENDPOINTS, DEFAULT_MAX_ENDPOINTS, DEFAULT_IDLE_TIME);
+  public static Builder builder() {
+    return new Builder()
+      .minEndpoints(DEFAULT_MIN_ENDPOINTS)
+      .maxEndpoints(DEFAULT_MAX_ENDPOINTS)
+      .idleTime(DEFAULT_IDLE_TIME);
   }
 
-  public static AnalyticsServiceConfig create(int maxEndpoints) {
-    return create(DEFAULT_MIN_ENDPOINTS, maxEndpoints, DEFAULT_IDLE_TIME);
+  private AnalyticsServiceConfig(Builder builder) {
+    super(builder);
   }
 
-  public static AnalyticsServiceConfig create(int minEndpoints, int maxEndpoints) {
-    return create(minEndpoints, maxEndpoints, DEFAULT_IDLE_TIME);
-  }
-
-  public static AnalyticsServiceConfig create(int minEndpoints, int maxEndpoints, Duration idleTime) {
-    return new AnalyticsServiceConfig(minEndpoints, maxEndpoints, idleTime);
-  }
-
-  private AnalyticsServiceConfig(int minEndpoints, int maxEndpoints, Duration idleTime) {
-    this.minEndpoints = minEndpoints;
-    this.maxEndpoints = maxEndpoints;
-    this.idleTime = idleTime;
-  }
-
-  @Override
-  public int minEndpoints() {
-    return minEndpoints;
-  }
-
-  @Override
-  public int maxEndpoints() {
-    return maxEndpoints;
-  }
-
-  @Override
-  public Duration idleTime() {
-    return idleTime;
-  }
-
-  @Override
-  public boolean pipelined() {
-    return false;
+  public static class Builder extends AbstractPooledEndpointServiceConfig.Builder<Builder> {
+    public AnalyticsServiceConfig build() {
+      return new AnalyticsServiceConfig(this);
+    }
   }
 }

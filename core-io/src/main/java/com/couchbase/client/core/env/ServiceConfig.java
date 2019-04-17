@@ -16,9 +16,13 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.service.*;
+import com.couchbase.client.core.service.AnalyticsServiceConfig;
+import com.couchbase.client.core.service.KeyValueServiceConfig;
+import com.couchbase.client.core.service.QueryServiceConfig;
+import com.couchbase.client.core.service.SearchServiceConfig;
+import com.couchbase.client.core.service.ViewServiceConfig;
 
-import java.util.Optional;
+import static java.util.Objects.requireNonNull;
 
 public class ServiceConfig {
 
@@ -36,42 +40,32 @@ public class ServiceConfig {
     return new Builder();
   }
 
-  public static Builder keyValueServiceConfig(KeyValueServiceConfig keyValueServiceConfig) {
+  public static Builder keyValueServiceConfig(KeyValueServiceConfig.Builder keyValueServiceConfig) {
     return builder().keyValueServiceConfig(keyValueServiceConfig);
   }
 
-  public static Builder queryServiceConfig(QueryServiceConfig queryServiceConfig) {
+  public static Builder queryServiceConfig(QueryServiceConfig.Builder queryServiceConfig) {
     return builder().queryServiceConfig(queryServiceConfig);
   }
 
-  public static Builder viewServiceConfig(ViewServiceConfig viewServiceConfig) {
+  public static Builder viewServiceConfig(ViewServiceConfig.Builder viewServiceConfig) {
     return builder().viewServiceConfig(viewServiceConfig);
   }
 
-  public static Builder searchServiceConfig(SearchServiceConfig searchServiceConfig) {
+  public static Builder searchServiceConfig(SearchServiceConfig.Builder searchServiceConfig) {
     return builder().searchServiceConfig(searchServiceConfig);
   }
 
-  public static Builder analyticsServiceConfig(AnalyticsServiceConfig analyticsServiceConfig) {
+  public static Builder analyticsServiceConfig(AnalyticsServiceConfig.Builder analyticsServiceConfig) {
     return builder().analyticsServiceConfig(analyticsServiceConfig);
   }
 
   private ServiceConfig(Builder builder) {
-    this.keyValueServiceConfig = Optional
-      .ofNullable(builder.keyValueServiceConfig)
-      .orElse(KeyValueServiceConfig.create());
-    this.queryServiceConfig = Optional
-      .ofNullable(builder.queryServiceConfig)
-      .orElse(QueryServiceConfig.create());
-    this.viewServiceConfig = Optional
-      .ofNullable(builder.viewServiceConfig)
-      .orElse(ViewServiceConfig.create());
-    this.analyticsServiceConfig = Optional
-      .ofNullable(builder.analyticsServiceConfig)
-      .orElse(AnalyticsServiceConfig.create());
-    this.searchServiceConfig = Optional
-      .ofNullable(builder.searchServiceConfig)
-      .orElse(SearchServiceConfig.create());
+    this.keyValueServiceConfig = builder.keyValueServiceConfig.build();
+    this.queryServiceConfig = builder.queryServiceConfig.build();
+    this.viewServiceConfig = builder.viewServiceConfig.build();
+    this.analyticsServiceConfig = builder.analyticsServiceConfig.build();
+    this.searchServiceConfig = builder.searchServiceConfig.build();
   }
 
   public KeyValueServiceConfig keyValueServiceConfig() {
@@ -96,35 +90,55 @@ public class ServiceConfig {
 
   public static class Builder {
 
-    private KeyValueServiceConfig keyValueServiceConfig = null;
-    private QueryServiceConfig queryServiceConfig = null;
-    private ViewServiceConfig viewServiceConfig = null;
-    private SearchServiceConfig searchServiceConfig = null;
-    private AnalyticsServiceConfig analyticsServiceConfig = null;
+    private KeyValueServiceConfig.Builder keyValueServiceConfig = KeyValueServiceConfig.builder();
+    private QueryServiceConfig.Builder queryServiceConfig = QueryServiceConfig.builder();
+    private ViewServiceConfig.Builder viewServiceConfig = ViewServiceConfig.builder();
+    private SearchServiceConfig.Builder searchServiceConfig = SearchServiceConfig.builder();
+    private AnalyticsServiceConfig.Builder analyticsServiceConfig = AnalyticsServiceConfig.builder();
 
-    public Builder keyValueServiceConfig(KeyValueServiceConfig keyValueServiceConfig) {
-      this.keyValueServiceConfig = keyValueServiceConfig;
+    public Builder keyValueServiceConfig(KeyValueServiceConfig.Builder keyValueServiceConfig) {
+      this.keyValueServiceConfig = requireNonNull(keyValueServiceConfig);
       return this;
     }
 
-    public Builder queryServiceConfig(QueryServiceConfig queryServiceConfig) {
-      this.queryServiceConfig = queryServiceConfig;
+    public KeyValueServiceConfig.Builder keyValueServiceConfig() {
+      return keyValueServiceConfig;
+    }
+
+    public Builder queryServiceConfig(QueryServiceConfig.Builder queryServiceConfig) {
+      this.queryServiceConfig = requireNonNull(queryServiceConfig);
       return this;
     }
 
-    public Builder viewServiceConfig(ViewServiceConfig viewServiceConfig) {
-      this.viewServiceConfig = viewServiceConfig;
+    public QueryServiceConfig.Builder queryServiceConfig() {
+      return queryServiceConfig;
+    }
+
+    public Builder viewServiceConfig(ViewServiceConfig.Builder viewServiceConfig) {
+      this.viewServiceConfig = requireNonNull(viewServiceConfig);
       return this;
     }
 
-    public Builder searchServiceConfig(SearchServiceConfig searchServiceConfig) {
-      this.searchServiceConfig = searchServiceConfig;
+    public ViewServiceConfig.Builder viewServiceConfig() {
+      return viewServiceConfig;
+    }
+
+    public Builder searchServiceConfig(SearchServiceConfig.Builder searchServiceConfig) {
+      this.searchServiceConfig = requireNonNull(searchServiceConfig);
       return this;
     }
 
-    public Builder analyticsServiceConfig(AnalyticsServiceConfig analyticsServiceConfig) {
-      this.analyticsServiceConfig = analyticsServiceConfig;
+    public SearchServiceConfig.Builder searchServiceConfig() {
+      return searchServiceConfig;
+    }
+
+    public Builder analyticsServiceConfig(AnalyticsServiceConfig.Builder analyticsServiceConfig) {
+      this.analyticsServiceConfig = requireNonNull(analyticsServiceConfig);
       return this;
+    }
+
+    public AnalyticsServiceConfig.Builder analyticsServiceConfig() {
+      return analyticsServiceConfig;
     }
 
     public ServiceConfig build() {

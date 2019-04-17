@@ -7,16 +7,12 @@ public class KeyValueServiceConfig implements ServiceConfig {
 
   private final int endpoints;
 
-  public static KeyValueServiceConfig create() {
-    return create(DEFAULT_ENDPOINTS);
+  public static KeyValueServiceConfig.Builder builder() {
+    return new Builder().endpoints(DEFAULT_ENDPOINTS);
   }
 
-  public static KeyValueServiceConfig create(int endpoints) {
-    return new KeyValueServiceConfig(endpoints);
-  }
-
-  private KeyValueServiceConfig(int endpoints) {
-    this.endpoints = endpoints;
+  private KeyValueServiceConfig(Builder builder) {
+    this.endpoints = builder.endpoints;
   }
 
   @Override
@@ -37,5 +33,25 @@ public class KeyValueServiceConfig implements ServiceConfig {
   @Override
   public boolean pipelined() {
     return true;
+  }
+
+  public static class Builder {
+    private int endpoints;
+
+    public Builder endpoints(int endpoints) {
+      this.endpoints = endpoints;
+      return this;
+    }
+
+    public KeyValueServiceConfig build() {
+      return new KeyValueServiceConfig(this);
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "KeyValueServiceConfig{" +
+      "endpoints=" + endpoints +
+      '}';
   }
 }
