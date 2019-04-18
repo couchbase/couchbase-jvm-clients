@@ -78,7 +78,7 @@ pipeline {
 //                    }
 //                }
 //            }
-//        }
+        }
         stage('test-integration-server') {
             agent { label 'sdk-integration-test-linux' }
             when {
