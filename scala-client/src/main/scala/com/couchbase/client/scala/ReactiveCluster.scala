@@ -148,6 +148,7 @@ class ReactiveCluster(val async: AsyncCluster) {
               .map(trailer => {
                 val rawStatus = response.header.getStatus
                 val errors = SearchHandler.parseSearchErrors(rawStatus)
+                // TODO errors need to be raised...
                 val meta = SearchHandler.parseSearchMeta(response, trailer)
 
                 meta

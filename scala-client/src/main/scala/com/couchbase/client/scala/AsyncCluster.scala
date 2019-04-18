@@ -19,7 +19,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
 import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
-import com.couchbase.client.core.msg.query.QueryChunkRow
+import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -174,40 +174,11 @@ class AsyncCluster(environment: => ClusterEnvironment) {
                   retryStrategy: RetryStrategy = retryStrategy): Future[SearchResult] = {
 
     searchHandler.request(query, parentSpan, timeout, retryStrategy, core, environment) match {
-      case Success(request) =>
-        core.send(request)
-
-        val ret: Future[SearchResult] =
-          FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows())
-              .map(row => SearchQueryRow.fromResponse(row))
-              .collectSeq()
-              .flatMap(rows =>
-
-                FutureConversions.javaMonoToScalaMono(response.trailer())
-                  .map(trailer => {
-
-                    val rowsConverted = RowTraversalUtil.traverse(rows.iterator)
-                    val rawStatus = response.header.getStatus
-                    val errors = SearchHandler.parseSearchErrors(rawStatus)
-                    val meta = SearchHandler.parseSearchMeta(response, trailer)
-
-                    SearchResult(
-                      rowsConverted,
-                      errors,
-                      meta
-                    )
-                  })
-              )
-            )
-            .toFuture
-
-        ret
-
+      case Success(request) => AsyncCluster.searchQuery(request, core)
       case Failure(err) => Future.failed(err)
     }
-
   }
+
 
   /** Shutdown all cluster resources.
     *
@@ -217,9 +188,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     FutureConversions.javaMonoToScalaMono(core.shutdown())
       .flatMap(_ => {
         if (env.owned) {
-          Mono.fromRunnable(new Runnable {
-            override def run(): Unit = env.shutdown()
-          })
+          Mono.fromRunnable(() => env.shutdown())
         }
         else {
           Mono.empty[Unit]
@@ -285,5 +254,36 @@ object AsyncCluster {
     Future {
       cluster.async
     }
+  }
+
+  private[client] def searchQuery(request: SearchRequest, core: Core): Future[SearchResult] = {
+    core.send(request)
+
+    val ret: Future[SearchResult] =
+      FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+        .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+          // This can throw, which will return a failed Future as desired
+          .map(row => SearchQueryRow.fromResponse(row))
+          .collectSeq()
+          .flatMap(rows =>
+
+            FutureConversions.javaMonoToScalaMono(response.trailer())
+              .map(trailer => {
+
+                val rawStatus = response.header.getStatus
+                val errors = SearchHandler.parseSearchErrors(rawStatus)
+                val meta = SearchHandler.parseSearchMeta(response, trailer)
+
+                SearchResult(
+                  rows,
+                  errors,
+                  meta
+                )
+              })
+          )
+        )
+        .toFuture
+
+    ret
   }
 }

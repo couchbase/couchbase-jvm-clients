@@ -60,7 +60,11 @@ case class SearchQueryRow(index: String,
 
 
 object SearchQueryRow {
-  private[scala] def fromResponse(row: SearchChunkRow): Try[SearchQueryRow] = try {
+  /* Converts a SearchChunkRow to a SearchQueryRow.
+   *
+   * Allowed to throw on failure.
+   * */
+  private[scala] def fromResponse(row: SearchChunkRow): SearchQueryRow = try {
     val hit = JacksonTransformers.MAPPER.readValue(row.data, classOf[JsonObject])
     val safe = hit.safe
 
@@ -94,10 +98,10 @@ object SearchQueryRow {
       case _ => Map.empty
     }
 
-    Success(new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields))
+    new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields)
   } catch {
     case e: IOException =>
-      Failure(new DecodingFailedException("Failed to decode row '" + new String(row.data, UTF_8) + "'", e))
+      throw new DecodingFailedException("Failed to decode row '" + new String(row.data, UTF_8) + "'", e)
   }
 
 }

@@ -50,7 +50,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Stability.Internal
 public class SearchAccessor {
 
-    // TODO facets are streaming
+    // TODO facets are streaming (update: they're not, but they need adding)
 
     public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request) {
         core.send(request);

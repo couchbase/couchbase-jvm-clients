@@ -34,7 +34,7 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-case class SearchResult(private[scala] val _rows: Try[Seq[SearchQueryRow]],
+case class SearchResult(private[scala] val _rows: Seq[SearchQueryRow],
                         errors: Seq[RuntimeException],
                         meta: SearchMeta) {
   /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the FTS service first.
@@ -42,15 +42,15 @@ case class SearchResult(private[scala] val _rows: Try[Seq[SearchQueryRow]],
     * The return type is of `Iterator[Try[SearchQueryRow]]` in case any row cannot be decoded.  See `allRowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     */
-  def rows: Try[Iterator[SearchQueryRow]] = {
-    _rows.map(_.iterator)
+  def rows: Iterator[SearchQueryRow] = {
+    _rows.iterator
   }
 
   /** All returned rows.  All rows are buffered from the FTS service first.
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def allRows: Try[Seq[SearchQueryRow]] = _rows
+  def allRows: Seq[SearchQueryRow] = _rows
 
   /** All returned rows.  All rows are buffered from the FTS service first.
     *
@@ -61,7 +61,7 @@ case class SearchResult(private[scala] val _rows: Try[Seq[SearchQueryRow]],
     if (errors.nonEmpty) {
       Failure(errors.head)
     }
-    else _rows
+    else Success(_rows)
   }
 }
 
@@ -124,8 +124,8 @@ private[scala] object SearchStatus {
       case Success(jo) =>
         SearchStatus(
           jo.numLong("total").getOrElse(0),
-          jo.numLong("failed").getOrElse(0),
-          jo.numLong("successful").getOrElse(0)
+          jo.numLong("successful").getOrElse(0),
+          jo.numLong("failed").getOrElse(0)
         )
 
       case Failure(err) =>
