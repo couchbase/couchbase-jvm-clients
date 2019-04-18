@@ -164,7 +164,7 @@ def buildsAndTests(PLATFORMS) {
                     stage("build-${platform}") {
                         cleanWs()
                         unstash 'couchbase-jvm-clients'
-                        installJDK(platform, JDK_VERSION)
+                        installJDK(platform, JAVA_VERSION)
 
                         if (platform == "windows") {
                             batWithEcho("dir deps")
