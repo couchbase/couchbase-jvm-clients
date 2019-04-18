@@ -134,11 +134,11 @@ pipeline {
                 // TODO: upload relevant artifacts to maven
                 // tag and push tag
             }
-            post {
-                always {
-//                    archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
-                }
-            }
+//            post {
+//                always {
+////                    archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
+//                }
+//            }
         }
     }
 }
