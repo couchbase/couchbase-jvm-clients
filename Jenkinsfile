@@ -63,8 +63,7 @@ pipeline {
             post {
                 always {
                     dir("couchbase-jvm-clients") {
-                        if (platform == "windows") {
-                        } else {
+                        if (platform != "windows") {
                             shWithEcho("find . -iname *.jar")
                         }
 
