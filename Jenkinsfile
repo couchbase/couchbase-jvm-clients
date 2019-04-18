@@ -170,12 +170,14 @@ def buildsAndTests(PLATFORMS) {
                             batWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
                                 batWithEcho("java -version")
+                                batWithEcho("make")
                                 batWithEcho("mvn package -Dmaven.test.skip")
                             }
                         } else {
                             shWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
                                 shWithEcho("java -version")
+                                shWithEcho("make")
                                 shWithEcho("mvn package -Dmaven.test.skip")
                             }
                         }
@@ -185,7 +187,7 @@ def buildsAndTests(PLATFORMS) {
                         if (platform == "windows") {
                             dir('couchbase-jvm-clients') {
                                 // TODO
-                                batWithEcho("mvn test -DuseMock=true -Dci=true")
+                                batWithEcho("mvn --fail-at-end test -DuseMock=true -Dci=true")
                             }
                         } else {
                             dir('couchbase-jvm-clients') {
