@@ -156,9 +156,9 @@ def buildsAndTests(PLATFORMS) {
             node(platform) {
                 def envStr = []
                 if (platform == "windows") {
-                    envStr = ["JAVA_HOME=${WORKSPACE}\\deps\\jdk${JDK_VERSION}", "PATH=${WORKSPACE}\\deps\\jdk${JDK_VERSION}\\bin:$PATH"]
+                    envStr = ["JAVA_HOME=${WORKSPACE}\\deps\\java-${JAVA_VERSION}", "PATH=${WORKSPACE}\\deps\\java-${JAVA_VERSION}\\bin:$PATH"]
                 } else {
-                    envStr = ["JAVA_HOME=${WORKSPACE}/deps/jdk${JDK_VERSION}", "PATH=${WORKSPACE}/deps/jdk${JDK_VERSION}/bin:$PATH"]
+                    envStr = ["JAVA_HOME=${WORKSPACE}/deps/java-${JAVA_VERSION}", "PATH=${WORKSPACE}/deps/java-${JAVA_VERSION}/bin:$PATH"]
                 }
                 withEnv(envStr) {
                     stage("build-${platform}") {
@@ -205,23 +205,31 @@ def buildsAndTests(PLATFORMS) {
     parallel tests
 }
 
-def installJDK(PLATFORM, JDK_VERSION) {
+def installJDK(PLATFORM, JAVA_VERSION) {
     def install = false
 
+    echo "checking install"
     if (!fileExists("deps")) {
+        echo "file deps does not exist"
         install = true
     } else {
+        echo "file deps does exist"
         dir("deps") {
-            install = !fileExists("jdk${JDK_VERSION}")
+            install = !fileExists("java-${JAVA_VERSION}")
+            if (install) {
+                echo "java-${JAVA_VERSION} exists"
+            } else {
+                echo "java-${JAVA_VERSION} does not exist"
+            }
         }
     }
 
     if (install) {
         if (PLATFORM.contains("windows")) {
-            batWithEcho("mkdir deps && mkdir deps\\jdk1.8.0_")
+            batWithEcho("mkdir deps && mkdir deps\\java-${JAVA_VERSION}")
             batWithEcho("cbdep install -d deps java ${JAVA_VERSION}")
         } else {
-            shWithEcho("mkdir deps && mkdir deps/jdk1.8.0_")
+            shWithEcho("mkdir deps && mkdir deps/java-${JAVA_VERSION}")
             shWithEcho("cbdep install -d deps java ${JAVA_VERSION}")
         }
     }
