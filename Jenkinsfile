@@ -63,14 +63,19 @@ pipeline {
             post {
                 always {
                     dir("couchbase-jvm-clients") {
+                        if (platform == "windows") {
+                        } else {
+                            shWithEcho("find . -iname *.jar")
+                        }
+
                         //archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
 //                        archiveArtifacts artifacts: 'scala-client/build/libs/*.jar', fingerprint: true
 //                        archiveArtifacts artifacts: 'scala-implicits/build/libs/*.jar', fingerprint: true
-                        archiveArtifacts artifacts: 'core-io/build/libs/*.jar', fingerprint: true
+//                        archiveArtifacts artifacts: 'core-io/build/libs/*.jar', fingerprint: true
 //                        archiveArtifacts artifacts: 'benchmarks/build/libs/*.jar', fingerprint: true
 //                        archiveArtifacts artifacts: 'kotlin-client/build/libs/*.jar', fingerprint: true
 //                        archiveArtifacts artifacts: 'java-examples/build/libs/*.jar', fingerprint: true
-                        archiveArtifacts artifacts: 'java-client/build/libs/*.jar', fingerprint: true
+//                        archiveArtifacts artifacts: 'java-client/build/libs/*.jar', fingerprint: true
                     }
                 }
             }
@@ -132,7 +137,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
+//                    archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
                 }
             }
         }
