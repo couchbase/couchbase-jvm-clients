@@ -17,20 +17,23 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 public class GetAndTouchOptions extends CommonDurabilityOptions<GetAndTouchOptions> {
-  public static GetAndTouchOptions DEFAULT = new GetAndTouchOptions();
 
-  @Stability.Internal
-  public BuiltGetAndTouchOptions build() {
-    return new BuiltGetAndTouchOptions();
+  public static GetAndTouchOptions getAndTouchOptions() {
+    return new GetAndTouchOptions();
   }
 
-  public class BuiltGetAndTouchOptions extends BuiltCommonDurabilityOptions {
+  private GetAndTouchOptions() {
+  }
+
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonDurabilityOptions {
 
   }
 

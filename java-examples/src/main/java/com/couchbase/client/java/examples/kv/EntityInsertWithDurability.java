@@ -20,7 +20,6 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutationResult;
 
 import java.time.Duration;
@@ -42,7 +41,7 @@ public class EntityInsertWithDurability {
       id,
       new Person("Jon Henry", 34, null, null),
       insertOptions()
-        .withDurabilityLevel(DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+        .durabilityLevel(DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER)
         .timeout(Duration.ofSeconds(30))
     );
 

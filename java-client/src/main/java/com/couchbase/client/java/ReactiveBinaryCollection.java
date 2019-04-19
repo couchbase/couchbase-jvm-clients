@@ -33,9 +33,17 @@ import com.couchbase.client.java.kv.PrependAccessor;
 import com.couchbase.client.java.kv.PrependOptions;
 import reactor.core.publisher.Mono;
 
-import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
+import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
+import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
+import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
 
 public class ReactiveBinaryCollection {
+
+  static final PrependOptions DEFAULT_PREPEND_OPTIONS = prependOptions();
+  static final AppendOptions DEFAULT_APPEND_OPTIONS = appendOptions();
+  static final IncrementOptions DEFAULT_INCREMENT_OPTIONS = incrementOptions();
+  static final DecrementOptions DEFAULT_DECREMENT_OPTIONS = decrementOptions();
 
   private final AsyncBinaryCollection async;
   private final Core core;
@@ -46,13 +54,13 @@ public class ReactiveBinaryCollection {
   }
 
   public Mono<MutationResult> append(final String id, final byte[] content) {
-    return append(id, content, AppendOptions.DEFAULT);
+    return append(id, content, DEFAULT_APPEND_OPTIONS);
   }
 
   public Mono<MutationResult> append(final String id, final byte[] content,
                                      final AppendOptions options) {
     return Mono.defer(() -> {
-      AppendOptions.BuiltAppendOptions opts = options.build();
+      AppendOptions.Built opts = options.build();
       AppendRequest request = async.appendRequest(id, content, options);
       return Reactor.wrap(
         request,
@@ -63,14 +71,14 @@ public class ReactiveBinaryCollection {
   }
 
   public Mono<MutationResult> prepend(final String id, final byte[] content) {
-    return prepend(id, content, PrependOptions.DEFAULT);
+    return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
   public Mono<MutationResult> prepend(final String id, final byte[] content,
                                       final PrependOptions options) {
     return Mono.defer(() -> {
       PrependRequest request = async.prependRequest(id, content, options);
-      PrependOptions.BuiltPrependOptions opts = options.build();
+      PrependOptions.Built opts = options.build();
       return Reactor.wrap(
         request,
         PrependAccessor.prepend(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -80,13 +88,13 @@ public class ReactiveBinaryCollection {
   }
 
   public Mono<CounterResult> increment(final String id) {
-    return increment(id, IncrementOptions.DEFAULT);
+    return increment(id, DEFAULT_INCREMENT_OPTIONS);
   }
 
   public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
     return Mono.defer(() -> {
       IncrementRequest request = async.incrementRequest(id, options);
-      IncrementOptions.BuiltIncrementOptions opts = options.build();
+      IncrementOptions.Built opts = options.build();
       return Reactor.wrap(
         request,
         CounterAccessor.increment(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -96,13 +104,13 @@ public class ReactiveBinaryCollection {
   }
 
   public Mono<CounterResult> decrement(final String id) {
-    return decrement(id, DecrementOptions.DEFAULT);
+    return decrement(id, DEFAULT_DECREMENT_OPTIONS);
   }
 
   public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
     return Mono.defer(() -> {
       DecrementRequest request = async.decrementRequest(id, options);
-      DecrementOptions.BuiltDecrementOptions opts = options.build();
+      DecrementOptions.Built opts = options.build();
       return Reactor.wrap(
         request,
         CounterAccessor.decrement(core, request, id, opts.persistTo(), opts.replicateTo()),

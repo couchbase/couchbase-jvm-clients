@@ -34,6 +34,9 @@ import com.couchbase.client.java.search.result.SearchResult;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
@@ -149,7 +152,7 @@ public class Cluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public QueryResult query(final String statement) {
-    return query(statement, QueryOptions.DEFAULT);
+    return query(statement, DEFAULT_QUERY_OPTIONS);
   }
 
   /**
@@ -170,7 +173,7 @@ public class Cluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public AnalyticsResult analyticsQuery(final String statement) {
-    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
 
   /**
@@ -191,7 +194,7 @@ public class Cluster {
    * @return the {@link SearchRequest} once the response arrives successfully.
    */
   public SearchResult searchQuery(final SearchQuery query) {
-    return searchQuery(query, SearchOptions.DEFAULT);
+    return searchQuery(query, DEFAULT_SEARCH_OPTIONS);
   }
 
   /**

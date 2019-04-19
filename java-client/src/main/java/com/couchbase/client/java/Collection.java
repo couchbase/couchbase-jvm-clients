@@ -24,16 +24,16 @@ import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetFromReplicaOptions;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_FROM_REPLICA_OPTIONS;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -239,7 +240,7 @@ public class Collection {
    * @return a stream of results from the active and the replica.
    */
   public Stream<GetResult> getFromReplica(final String id) {
-    return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
+    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
   }
 
   /**

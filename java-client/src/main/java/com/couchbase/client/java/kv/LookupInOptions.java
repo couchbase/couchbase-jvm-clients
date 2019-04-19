@@ -21,14 +21,19 @@ import com.couchbase.client.java.CommonOptions;
 
 public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
-  public static LookupInOptions DEFAULT = new LookupInOptions();
-
-  @Stability.Internal
-  public BuiltLookupInOptions build() {
-    return new BuiltLookupInOptions();
+  public static LookupInOptions lookupInOptions() {
+    return new LookupInOptions();
   }
 
-  public class BuiltLookupInOptions extends BuiltCommonOptions {
+  private LookupInOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
 
   }
 

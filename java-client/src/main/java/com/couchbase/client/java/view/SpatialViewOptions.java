@@ -22,7 +22,6 @@ import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
 
 public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
-  public static SpatialViewOptions DEFAULT = new SpatialViewOptions();
 
   /**
    * Contains all stored params.
@@ -142,11 +141,11 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
   }
 
   @Stability.Internal
-  public SpatialViewOptions.BuiltSpatialViewOptions build() {
-    return new BuiltSpatialViewOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltSpatialViewOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
     public boolean development() {
       return development;

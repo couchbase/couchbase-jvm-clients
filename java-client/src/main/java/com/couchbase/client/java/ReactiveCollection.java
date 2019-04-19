@@ -21,15 +21,70 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
-import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.msg.kv.GetAndLockRequest;
+import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
+import com.couchbase.client.core.msg.kv.RemoveRequest;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.msg.kv.TouchRequest;
+import com.couchbase.client.core.msg.kv.UnlockRequest;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.*;
+import com.couchbase.client.java.kv.ExistsAccessor;
+import com.couchbase.client.java.kv.ExistsOptions;
+import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAndLockOptions;
+import com.couchbase.client.java.kv.GetAndTouchOptions;
+import com.couchbase.client.java.kv.GetFromReplicaOptions;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertAccessor;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInAccessor;
+import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInResult;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInAccessor;
+import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
+import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.RemoveAccessor;
+import com.couchbase.client.java.kv.RemoveOptions;
+import com.couchbase.client.java.kv.ReplaceAccessor;
+import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ReplicaMode;
+import com.couchbase.client.java.kv.TouchAccessor;
+import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockAccessor;
+import com.couchbase.client.java.kv.UnlockOptions;
+import com.couchbase.client.java.kv.UpsertAccessor;
+import com.couchbase.client.java.kv.UpsertOptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+
+import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
+import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
+import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
+import static com.couchbase.client.java.kv.GetFromReplicaOptions.getFromReplicaOptions;
+import static com.couchbase.client.java.kv.GetOptions.getOptions;
+import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
+import static com.couchbase.client.java.kv.LookupInOptions.lookupInOptions;
+import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
+import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
+import static com.couchbase.client.java.kv.TouchOptions.touchOptions;
+import static com.couchbase.client.java.kv.UnlockOptions.unlockOptions;
+import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 
 /**
  * The {@link ReactiveCollection} provides sophisticated asynchronous access to all collection APIs.
@@ -43,6 +98,20 @@ import java.util.Optional;
  * @since 3.0.0
  */
 public class ReactiveCollection {
+
+  static final ExistsOptions DEFAULT_EXISTS_OPTIONS = existsOptions();
+  static final GetAndLockOptions DEFAULT_GET_AND_LOCK_OPTIONS = getAndLockOptions();
+  static final GetAndTouchOptions DEFAULT_GET_AND_TOUCH_OPTIONS = getAndTouchOptions();
+  static final GetFromReplicaOptions DEFAULT_GET_FROM_REPLICA_OPTIONS = getFromReplicaOptions();
+  static final GetOptions DEFAULT_GET_OPTIONS = getOptions();
+  static final InsertOptions DEFAULT_INSERT_OPTIONS = insertOptions();
+  static final LookupInOptions DEFAULT_LOOKUP_IN_OPTIONS = lookupInOptions();
+  static final MutateInOptions DEFAULT_MUTATE_IN_OPTIONS = mutateInOptions();
+  static final RemoveOptions DEFAULT_REMOVE_OPTIONS = removeOptions();
+  static final ReplaceOptions DEFAULT_REPLACE_OPTIONS = replaceOptions();
+  static final TouchOptions DEFAULT_TOUCH_OPTIONS = touchOptions();
+  static final UnlockOptions DEFAULT_UNLOCK_OPTIONS = unlockOptions();
+  static final UpsertOptions DEFAULT_UPSERT_OPTIONS = upsertOptions();
 
   /**
    * Holds the underlying async collection.
@@ -133,7 +202,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} indicating once loaded or failed.
    */
   public Mono<Optional<GetResult>> get(final String id) {
-    return get(id, GetOptions.DEFAULT);
+    return get(id, DEFAULT_GET_OPTIONS);
   }
 
   /**
@@ -147,7 +216,7 @@ public class ReactiveCollection {
    */
   public Mono<Optional<GetResult>> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
-      GetOptions.BuiltGetOptions opts = options.build();
+      GetOptions.Built opts = options.build();
       if (opts.projections() == null && !opts.withExpiration()) {
         GetRequest request = asyncCollection.fullGetRequest(id, options);
         return Reactor.wrap(request, GetAccessor.get(core, id, request), true);
@@ -168,7 +237,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<Optional<GetResult>> getAndLock(final String id) {
-    return getAndLock(id, GetAndLockOptions.DEFAULT);
+    return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
@@ -199,7 +268,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<Optional<GetResult>> getAndTouch(final String id, final Duration expiration) {
-    return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
+    return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
   /**
@@ -217,7 +286,7 @@ public class ReactiveCollection {
                                      final GetAndTouchOptions options) {
     return Mono.defer(() -> {
       GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
-      GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
+      GetAndTouchOptions.Built opts = options.build();
       return Reactor.wrap(
           request,
           GetAccessor.getAndTouch(core, id, request, opts.persistTo(), opts.replicateTo()),
@@ -236,7 +305,7 @@ public class ReactiveCollection {
    * @return a flux of results from the active and the replica.
    */
   public Flux<GetResult> getFromReplica(final String id) {
-    return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
+    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
   }
 
   /**
@@ -258,7 +327,7 @@ public class ReactiveCollection {
           .wrap(request, GetAccessor.get(core, id, request), true)
           .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
 
-        GetFromReplicaOptions.BuiltGetFromReplicaOptions opts = options.build();
+        GetFromReplicaOptions.Built opts = options.build();
         if (opts.replicaMode() == ReplicaMode.ALL) {
           result = result.onErrorResume(t -> {
             coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(
@@ -279,7 +348,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<ExistsResult> exists(final String id) {
-    return exists(id, ExistsOptions.DEFAULT);
+    return exists(id, DEFAULT_EXISTS_OPTIONS);
   }
 
   /**
@@ -305,7 +374,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once removed or failed.
    */
   public Mono<MutationResult> remove(final String id) {
-    return remove(id, RemoveOptions.DEFAULT);
+    return remove(id, DEFAULT_REMOVE_OPTIONS);
   }
 
   /**
@@ -317,7 +386,7 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> remove(final String id, final RemoveOptions options) {
     return Mono.defer(() -> {
-      RemoveOptions.BuiltRemoveOptions opts = options.build();
+      RemoveOptions.Built opts = options.build();
       RemoveRequest request = asyncCollection.removeRequest(id, options);
       return Reactor.wrap(
         request,
@@ -335,7 +404,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once inserted or failed.
    */
   public Mono<MutationResult> insert(final String id, Object content) {
-    return insert(id, content, InsertOptions.DEFAULT);
+    return insert(id, content, DEFAULT_INSERT_OPTIONS);
   }
 
   /**
@@ -348,7 +417,7 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> insert(final String id, Object content, final InsertOptions options) {
     return Mono.defer(() -> {
-      InsertOptions.BuiltInsertOptions opts = options.build();
+      InsertOptions.Built opts = options.build();
       InsertRequest request = asyncCollection.insertRequest(id, content, options);
       return Reactor.wrap(
         request,
@@ -366,7 +435,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once upserted or failed.
    */
   public Mono<MutationResult> upsert(final String id, Object content) {
-    return upsert(id, content, UpsertOptions.DEFAULT);
+    return upsert(id, content, DEFAULT_UPSERT_OPTIONS);
   }
 
   /**
@@ -380,7 +449,7 @@ public class ReactiveCollection {
   public Mono<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
     return Mono.defer(() -> {
       UpsertRequest request = asyncCollection.upsertRequest(id, content, options);
-      UpsertOptions.BuiltUpsertOptions opts = options.build();
+      UpsertOptions.Built opts = options.build();
       return Reactor.wrap(
         request,
         UpsertAccessor.upsert(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -397,7 +466,7 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once replaced or failed.
    */
   public Mono<MutationResult> replace(final String id, Object content) {
-    return replace(id, content, ReplaceOptions.DEFAULT);
+    return replace(id, content, DEFAULT_REPLACE_OPTIONS);
   }
 
   /**
@@ -410,7 +479,7 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
     return Mono.defer(() -> {
-      ReplaceOptions.BuiltReplaceOptions opts = options.build();
+      ReplaceOptions.Built opts = options.build();
       ReplaceRequest request = asyncCollection.replaceRequest(id, content, options);
       return Reactor.wrap(
         request,
@@ -428,7 +497,7 @@ public class ReactiveCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public Mono<MutationResult> touch(final String id, final Duration expiry) {
-    return touch(id, expiry, TouchOptions.DEFAULT);
+    return touch(id, expiry, DEFAULT_TOUCH_OPTIONS);
   }
 
   /**
@@ -442,7 +511,7 @@ public class ReactiveCollection {
   public Mono<MutationResult> touch(final String id, final Duration expiry,
                                     final TouchOptions options) {
     return Mono.defer(() -> {
-      TouchOptions.BuiltTouchOptions opts = options.build();
+      TouchOptions.Built opts = options.build();
       TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
       return Reactor.wrap(
         request,
@@ -460,7 +529,7 @@ public class ReactiveCollection {
    * @return the mono which completes once a response has been received.
    */
   public Mono<Void> unlock(final String id, final long cas) {
-    return unlock(id, cas, UnlockOptions.DEFAULT);
+    return unlock(id, cas, DEFAULT_UNLOCK_OPTIONS);
   }
 
   /**
@@ -488,7 +557,7 @@ public class ReactiveCollection {
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
   public Mono<Optional<LookupInResult>> lookupIn(final String id, List<LookupInSpec> specs) {
-    return lookupIn(id, specs, LookupInOptions.DEFAULT);
+    return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
 
   /**
@@ -518,7 +587,7 @@ public class ReactiveCollection {
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    */
   public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs) {
-    return mutateIn(id, specs, MutateInOptions.DEFAULT);
+    return mutateIn(id, specs, DEFAULT_MUTATE_IN_OPTIONS);
   }
 
   /**
@@ -532,7 +601,7 @@ public class ReactiveCollection {
   public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs,
                                        final MutateInOptions options) {
     return Mono.defer(() -> {
-      MutateInOptions.BuiltMutateInOptions opts = options.build();
+      MutateInOptions.Built opts = options.build();
       SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, options);
       return Reactor.wrap(
         request,

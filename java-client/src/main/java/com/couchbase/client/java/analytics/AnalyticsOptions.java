@@ -29,8 +29,6 @@ import java.util.UUID;
 
 public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
-  public static AnalyticsOptions DEFAULT = new AnalyticsOptions();
-
   private int priority;
   private String clientContextId;
   private Map<String, Object> rawParams;
@@ -60,7 +58,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @param scanConsistency the index scan consistency to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public AnalyticsOptions withScanConsistency(ScanConsistency scanConsistency) {
+  public AnalyticsOptions scanConsistency(ScanConsistency scanConsistency) {
     this.scanConsistency = scanConsistency;
     return this;
   }
@@ -71,7 +69,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @param named {@link JsonObject} with name as key
    * @return this {@link QueryOptions} for chaining.
    */
-  public AnalyticsOptions withParameters(final JsonObject named) {
+  public AnalyticsOptions parameters(final JsonObject named) {
     this.parameters = named;
     return this;
   }
@@ -82,7 +80,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @param positional {@link JsonArray} in the same order as positions
    * @return this {@link QueryOptions} for chaining.
    */
-  public AnalyticsOptions withParameters(final JsonArray positional) {
+  public AnalyticsOptions parameters(final JsonArray positional) {
     this.parameters = positional;
     return this;
   }
@@ -96,11 +94,11 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   }
 
   @Stability.Internal
-  public AnalyticsOptions.BuiltQueryOptions build() {
-    return new AnalyticsOptions.BuiltQueryOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltQueryOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
     public int priority() {
       return priority;

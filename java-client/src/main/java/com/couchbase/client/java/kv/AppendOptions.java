@@ -19,9 +19,15 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 
 public class AppendOptions extends CommonDurabilityOptions<AppendOptions> {
-  public static AppendOptions DEFAULT = new AppendOptions();
 
   private long cas = 0;
+
+  public static AppendOptions appendOptions() {
+    return new AppendOptions();
+  }
+
+  private AppendOptions() {
+  }
 
   public AppendOptions cas(long cas) {
     this.cas = cas;
@@ -29,11 +35,11 @@ public class AppendOptions extends CommonDurabilityOptions<AppendOptions> {
   }
 
   @Stability.Internal
-  public BuiltAppendOptions build() {
-    return new BuiltAppendOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltAppendOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public long cas() {
       return cas;

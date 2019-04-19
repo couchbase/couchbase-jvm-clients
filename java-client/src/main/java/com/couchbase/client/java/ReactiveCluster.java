@@ -35,7 +35,15 @@ import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
 
+import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
+import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+import static com.couchbase.client.java.search.SearchOptions.searchOptions;
+
 public class ReactiveCluster {
+
+  static final QueryOptions DEFAULT_QUERY_OPTIONS = queryOptions();
+  static final SearchOptions DEFAULT_SEARCH_OPTIONS = searchOptions();
+  static final AnalyticsOptions DEFAULT_ANALYTICS_OPTIONS = analyticsOptions();
 
   /**
    * Holds the underlying async cluster reference.
@@ -133,7 +141,7 @@ public class ReactiveCluster {
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
   public Mono<ReactiveQueryResult> query(final String statement) {
-    return this.query(statement, QueryOptions.DEFAULT);
+    return this.query(statement, DEFAULT_QUERY_OPTIONS);
   }
 
   /**
@@ -157,7 +165,7 @@ public class ReactiveCluster {
    * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
    */
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
-    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
 
 
@@ -183,7 +191,7 @@ public class ReactiveCluster {
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
   public Mono<ReactiveSearchResult> searchQuery(SearchQuery query) {
-    return searchQuery(query, SearchOptions.DEFAULT);
+    return searchQuery(query, DEFAULT_SEARCH_OPTIONS);
   }
 
   /**

@@ -20,14 +20,20 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 public class UnlockOptions extends CommonOptions<UnlockOptions> {
-  public static UnlockOptions DEFAULT = new UnlockOptions();
 
-  @Stability.Internal
-  public BuiltUnlockoptions build() {
-    return new BuiltUnlockoptions();
+  public static UnlockOptions unlockOptions() {
+    return new UnlockOptions();
   }
 
-  public class BuiltUnlockoptions extends BuiltCommonOptions {
+  private UnlockOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
 
   }
 

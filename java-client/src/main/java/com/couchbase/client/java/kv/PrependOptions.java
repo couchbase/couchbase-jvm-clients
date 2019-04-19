@@ -19,7 +19,13 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 
 public class PrependOptions extends CommonDurabilityOptions<PrependOptions> {
-  public static PrependOptions DEFAULT = new PrependOptions();
+
+  public static PrependOptions prependOptions() {
+    return new PrependOptions();
+  }
+
+  private PrependOptions() {
+  }
 
   private long cas;
 
@@ -29,11 +35,11 @@ public class PrependOptions extends CommonDurabilityOptions<PrependOptions> {
   }
 
   @Stability.Internal
-  public BuiltPrependOptions build() {
-    return new BuiltPrependOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltPrependOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public long cas() {
       return cas;

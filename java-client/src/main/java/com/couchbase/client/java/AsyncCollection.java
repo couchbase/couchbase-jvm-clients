@@ -24,11 +24,55 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.msg.kv.GetAndLockRequest;
+import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
+import com.couchbase.client.core.msg.kv.RemoveRequest;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.msg.kv.TouchRequest;
+import com.couchbase.client.core.msg.kv.UnlockRequest;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.*;
+import com.couchbase.client.java.kv.EncodedDocument;
+import com.couchbase.client.java.kv.ExistsAccessor;
+import com.couchbase.client.java.kv.ExistsOptions;
+import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAndLockOptions;
+import com.couchbase.client.java.kv.GetAndTouchOptions;
+import com.couchbase.client.java.kv.GetFromReplicaOptions;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertAccessor;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInAccessor;
+import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInResult;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInAccessor;
+import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
+import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.RemoveAccessor;
+import com.couchbase.client.java.kv.RemoveOptions;
+import com.couchbase.client.java.kv.ReplaceAccessor;
+import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ReplicaMode;
+import com.couchbase.client.java.kv.TouchAccessor;
+import com.couchbase.client.java.kv.TouchOptions;
+import com.couchbase.client.java.kv.UnlockAccessor;
+import com.couchbase.client.java.kv.UnlockOptions;
+import com.couchbase.client.java.kv.UpsertAccessor;
+import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.math.BigInteger;
 import java.time.Duration;
@@ -42,6 +86,19 @@ import java.util.stream.Stream;
 import static com.couchbase.client.core.cnc.tracing.TracingUtils.attachSpan;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_FROM_REPLICA_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_MUTATE_IN_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_TOUCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UNLOCK_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UPSERT_OPTIONS;
 import static com.couchbase.client.java.kv.GetAccessor.EXPIRATION_MACRO;
 
 /**
@@ -178,7 +235,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
   public CompletableFuture<Optional<GetResult>> get(final String id) {
-    return get(id, GetOptions.DEFAULT);
+    return get(id, DEFAULT_GET_OPTIONS);
   }
 
   /**
@@ -193,7 +250,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
     notNull(options, "GetOptions");
-    GetOptions.BuiltGetOptions opts = options.build();
+    GetOptions.Built opts = options.build();
 
     if (opts.projections() == null && !opts.withExpiration()) {
       return GetAccessor.get(core, id, fullGetRequest(id, options));
@@ -213,7 +270,7 @@ public class AsyncCollection {
   GetRequest fullGetRequest(final String id, final GetOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
-    GetOptions.BuiltGetOptions opts = options.build();
+    GetOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -239,7 +296,7 @@ public class AsyncCollection {
   SubdocGetRequest subdocGetRequest(final String id, final GetOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetOptions");
-    GetOptions.BuiltGetOptions opts = options.build();
+    GetOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -292,7 +349,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<GetResult>> getAndLock(final String id) {
-    return getAndLock(id, GetAndLockOptions.DEFAULT);
+    return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
@@ -321,7 +378,7 @@ public class AsyncCollection {
   GetAndLockRequest getAndLockRequest(final String id, final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetAndLockOptions");
-    GetAndLockOptions.BuiltGetAndLockOptions opts = options.build();
+    GetAndLockOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -344,7 +401,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration) {
-    return getAndTouch(id, expiration, GetAndTouchOptions.DEFAULT);
+    return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
   /**
@@ -359,7 +416,7 @@ public class AsyncCollection {
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
-    GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
+    GetAndTouchOptions.Built opts = options.build();
     return GetAccessor.getAndTouch(
       core,
       id,
@@ -383,11 +440,11 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(expiration, "Expiration");
     notNull(options, "GetAndTouchOptions");
-    GetAndTouchOptions.BuiltGetAndTouchOptions opts = options.build();
+    GetAndTouchOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetAndTouchRequest request =  new GetAndTouchRequest(id, collectionId, timeout, coreContext,
+    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
       bucket, retryStrategy, expiration, opts.durabilityLevel());
     attachSpan(TracingUtils.OpName.GET_AND_TOUCH, environment, opts.parentSpan(), request);
     return request;
@@ -401,7 +458,7 @@ public class AsyncCollection {
    * @return a list of results from the active and the replica.
    */
   public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id) {
-    return getFromReplica(id, GetFromReplicaOptions.DEFAULT);
+    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
   }
 
   /**
@@ -430,7 +487,7 @@ public class AsyncCollection {
                                             final GetFromReplicaOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetFromReplicaOptions");
-    GetFromReplicaOptions.BuiltGetFromReplicaOptions opts = options.build();
+    GetFromReplicaOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -470,7 +527,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<Optional<ExistsResult>> exists(final String id) {
-    return exists(id, ExistsOptions.DEFAULT);
+    return exists(id, DEFAULT_EXISTS_OPTIONS);
   }
 
   /**
@@ -495,7 +552,7 @@ public class AsyncCollection {
   ObserveViaCasRequest existsRequest(final String id, final ExistsOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "ExistsOptions");
-    ExistsOptions.BuiltExistsOptions opts = options.build();
+    ExistsOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -513,7 +570,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id) {
-    return remove(id, RemoveOptions.DEFAULT);
+    return remove(id, DEFAULT_REMOVE_OPTIONS);
   }
 
   /**
@@ -524,7 +581,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
-    RemoveOptions.BuiltRemoveOptions opts = options.build();
+    RemoveOptions.Built opts = options.build();
     return RemoveAccessor.remove(core, removeRequest(id, options), id, opts.persistTo(),
       opts.replicateTo());
   }
@@ -539,7 +596,7 @@ public class AsyncCollection {
   RemoveRequest removeRequest(final String id, final RemoveOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "RemoveOptions");
-    RemoveOptions.BuiltRemoveOptions opts = options.build();
+    RemoveOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -555,7 +612,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once inserted or failed.
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content) {
-    return insert(id, content, InsertOptions.DEFAULT);
+    return insert(id, content, DEFAULT_INSERT_OPTIONS);
   }
 
   /**
@@ -568,7 +625,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content,
                                                   final InsertOptions options) {
-    InsertOptions.BuiltInsertOptions opts = options.build();
+    InsertOptions.Built opts = options.build();
     return InsertAccessor.insert(core, insertRequest(id, content, options), id, opts.persistTo(),
       opts.replicateTo());
   }
@@ -585,7 +642,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "InsertOptions");
-    InsertOptions.BuiltInsertOptions opts = options.build();
+    InsertOptions.Built opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
@@ -603,7 +660,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once upserted or failed.
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content) {
-    return upsert(id, content, UpsertOptions.DEFAULT);
+    return upsert(id, content, DEFAULT_UPSERT_OPTIONS);
   }
 
   /**
@@ -616,7 +673,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content,
                                                   final UpsertOptions options) {
-    UpsertOptions.BuiltUpsertOptions opts = options.build();
+    UpsertOptions.Built opts = options.build();
     return UpsertAccessor.upsert(
       core,
       upsertRequest(id, content, options),
@@ -638,7 +695,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "UpsertOptions");
-    UpsertOptions.BuiltUpsertOptions opts = options.build();
+    UpsertOptions.Built opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
@@ -655,7 +712,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once replaced or failed.
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content) {
-    return replace(id, content, ReplaceOptions.DEFAULT);
+    return replace(id, content, DEFAULT_REPLACE_OPTIONS);
   }
 
   /**
@@ -668,7 +725,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content,
                                                    final ReplaceOptions options) {
-    ReplaceOptions.BuiltReplaceOptions opts = options.build();
+    ReplaceOptions.Built opts = options.build();
     return ReplaceAccessor.replace(
       core,
       replaceRequest(id, content, options),
@@ -691,7 +748,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "ReplaceOptions");
-    ReplaceOptions.BuiltReplaceOptions opts = options.build();
+    ReplaceOptions.Built opts = options.build();
 
     EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
@@ -711,7 +768,7 @@ public class AsyncCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry) {
-    return touch(id, expiry, TouchOptions.DEFAULT);
+    return touch(id, expiry, DEFAULT_TOUCH_OPTIONS);
   }
 
   /**
@@ -724,7 +781,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry,
                                                  final TouchOptions options) {
-    TouchOptions.BuiltTouchOptions opts = options.build();
+    TouchOptions.Built opts = options.build();
     return TouchAccessor.touch(
       core,
       touchRequest(id, expiry, options),
@@ -745,7 +802,7 @@ public class AsyncCollection {
   TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "TouchOptions");
-    TouchOptions.BuiltTouchOptions opts = options.build();
+    TouchOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -761,7 +818,7 @@ public class AsyncCollection {
    * @return the future which completes once a response has been received.
    */
   public CompletableFuture<Void> unlock(final String id, final long cas) {
-    return unlock(id, cas, UnlockOptions.DEFAULT);
+    return unlock(id, cas, DEFAULT_UNLOCK_OPTIONS);
   }
 
   /**
@@ -788,7 +845,7 @@ public class AsyncCollection {
   UnlockRequest unlockRequest(final String id, final long cas, final UnlockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "UnlockOptions");
-    UnlockOptions.BuiltUnlockoptions opts = options.build();
+    UnlockOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -804,7 +861,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
                                                               final List<LookupInSpec> specs) {
-    return lookupIn(id, specs, LookupInOptions.DEFAULT);
+    return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
 
   /**
@@ -834,7 +891,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNullOrEmpty(specs, "LookupInSpecs");
     notNull(options, "LookupInOptions");
-    LookupInOptions.BuiltLookupInOptions opts = options.build();
+    LookupInOptions.Built opts = options.build();
 
     List<SubdocGetRequest.Command> commands = specs
       .stream()
@@ -856,7 +913,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutateInResult> mutateIn(final String id,
                                                     final List<MutateInSpec> specs) {
-    return mutateIn(id, specs, MutateInOptions.DEFAULT);
+    return mutateIn(id, specs, DEFAULT_MUTATE_IN_OPTIONS);
   }
 
   /**
@@ -870,7 +927,7 @@ public class AsyncCollection {
   public CompletableFuture<MutateInResult> mutateIn(final String id,
                                                     final List<MutateInSpec> specs,
                                                     final MutateInOptions options) {
-    MutateInOptions.BuiltMutateInOptions opts = options.build();
+    MutateInOptions.Built opts = options.build();
     return MutateInAccessor.mutateIn(
       core,
       mutateInRequest(id, specs, options),
@@ -899,7 +956,7 @@ public class AsyncCollection {
       notNullOrEmpty(id, "Id");
       notNull(specs, "MutateInSpecs");
       notNull(options, "MutateInOptions");
-      MutateInOptions.BuiltMutateInOptions opts = options.build();
+      MutateInOptions.Built opts = options.build();
 
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());

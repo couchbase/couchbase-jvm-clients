@@ -26,8 +26,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
 
-  public static InsertOptions DEFAULT = new InsertOptions();
-
   private Duration expiry = Duration.ZERO;
   private Encoder encoder = DefaultEncoder.INSTANCE;
 
@@ -50,11 +48,11 @@ public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
   }
 
   @Stability.Internal
-  public BuiltInsertOptions build() {
-    return new BuiltInsertOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltInsertOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public Duration expiry() {
       return expiry;

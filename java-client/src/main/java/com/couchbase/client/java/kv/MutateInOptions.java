@@ -22,8 +22,6 @@ import java.time.Duration;
 
 public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
-  public static MutateInOptions DEFAULT = new MutateInOptions();
-
   private Duration expiry = Duration.ZERO;
   private long cas = 0;
   private boolean insertDocument = false;
@@ -34,7 +32,6 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   }
 
   private MutateInOptions() {
-
   }
 
   public MutateInOptions expiry(final Duration expiry) {
@@ -58,11 +55,11 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   }
 
   @Stability.Internal
-  public BuiltMutateInOptions build() {
-    return new BuiltMutateInOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltMutateInOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public Duration expiry() {
       return expiry;

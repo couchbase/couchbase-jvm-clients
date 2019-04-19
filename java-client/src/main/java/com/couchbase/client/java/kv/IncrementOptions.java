@@ -17,15 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-
 public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> {
-  public static IncrementOptions DEFAULT = new IncrementOptions();
 
   private long delta;
   private Optional<Long> initial;
@@ -68,11 +63,11 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   @Stability.Internal
-  public BuiltIncrementOptions build() {
-    return new BuiltIncrementOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltIncrementOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public int expiry() {
       return expiry;

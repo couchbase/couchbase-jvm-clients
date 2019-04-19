@@ -26,13 +26,12 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
-  public static ReplaceOptions DEFAULT = new ReplaceOptions();
-
   private Duration expiry = Duration.ZERO;
   private Encoder encoder = DefaultEncoder.INSTANCE;
   private long cas;
 
-  private ReplaceOptions() { }
+  private ReplaceOptions() {
+  }
 
   public static ReplaceOptions replaceOptions() {
     return new ReplaceOptions();
@@ -56,11 +55,11 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
   }
 
   @Stability.Internal
-  public BuiltReplaceOptions build() {
-    return new BuiltReplaceOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltReplaceOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public Duration expiry() {
       return expiry;

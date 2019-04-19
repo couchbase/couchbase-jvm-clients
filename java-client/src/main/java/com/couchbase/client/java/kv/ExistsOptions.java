@@ -21,14 +21,19 @@ import com.couchbase.client.java.CommonOptions;
 
 public class ExistsOptions extends CommonOptions<ExistsOptions> {
 
-  public static ExistsOptions DEFAULT = new ExistsOptions();
-
-  @Stability.Internal
-  public BuiltExistsOptions build() {
-    return new BuiltExistsOptions();
+  public static ExistsOptions existsOptions() {
+    return new ExistsOptions();
   }
 
-  public class BuiltExistsOptions extends BuiltCommonOptions {
+  private ExistsOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
 
 
   }

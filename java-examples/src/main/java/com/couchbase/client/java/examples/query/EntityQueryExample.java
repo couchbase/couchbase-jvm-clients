@@ -1,11 +1,9 @@
 package com.couchbase.client.java.examples.query;
 
-import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.examples.kv.Person;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 
 import java.time.Duration;
@@ -24,7 +22,7 @@ public class EntityQueryExample {
       statement,
       queryOptions()
         .timeout(Duration.ofSeconds(75))
-        .withParameters(JsonObject.create().put("type", "person"))
+        .parameters(JsonObject.create().put("type", "person"))
     );
 
     for (Person person : result.rowsAs(Person.class).collect(Collectors.toList())) {

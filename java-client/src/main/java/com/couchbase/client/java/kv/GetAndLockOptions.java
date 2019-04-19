@@ -22,9 +22,15 @@ import com.couchbase.client.java.CommonOptions;
 import java.time.Duration;
 
 public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
-  public static GetAndLockOptions DEFAULT = new GetAndLockOptions();
 
   private Duration lockFor;
+
+  public static GetAndLockOptions getAndLockOptions() {
+    return new GetAndLockOptions();
+  }
+
+  private GetAndLockOptions() {
+  }
 
   public GetAndLockOptions lockFor(Duration duration) {
     this.lockFor = duration;
@@ -36,11 +42,11 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
   }
 
   @Stability.Internal
-  public BuiltGetAndLockOptions build() {
-    return new BuiltGetAndLockOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltGetAndLockOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
     public Duration lockFor() {
       return lockFor;

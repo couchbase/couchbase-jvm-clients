@@ -47,6 +47,9 @@ import java.util.function.Supplier;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster.
@@ -149,7 +152,7 @@ public class AsyncCluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public CompletableFuture<QueryResult> query(final String statement) {
-    return query(statement, QueryOptions.DEFAULT);
+    return query(statement, DEFAULT_QUERY_OPTIONS);
   }
 
   /**
@@ -174,7 +177,7 @@ public class AsyncCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    QueryOptions.BuiltQueryOptions opts = options.build();
+    QueryOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
@@ -195,7 +198,7 @@ public class AsyncCluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement) {
-    return analyticsQuery(statement, AnalyticsOptions.DEFAULT);
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
 
 
@@ -222,7 +225,7 @@ public class AsyncCluster {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "AnalyticsOptions");
 
-    AnalyticsOptions.BuiltQueryOptions opts = options.build();
+    AnalyticsOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
@@ -244,7 +247,7 @@ public class AsyncCluster {
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
   public CompletableFuture<SearchResult> searchQuery(final SearchQuery query) {
-    return searchQuery(query, SearchOptions.DEFAULT);
+    return searchQuery(query, DEFAULT_SEARCH_OPTIONS);
   }
 
   /**
@@ -262,7 +265,7 @@ public class AsyncCluster {
     notNull(query, "SearchQuery");
     notNull(options, "SearchOptions");
 
-    SearchOptions.BuiltQueryOptions opts = options.build();
+    SearchOptions.Built opts = options.build();
     JsonObject params = query.export();
     byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
 

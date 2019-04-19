@@ -16,9 +16,6 @@
 
 package com.couchbase.client.java.query;
 
-import java.time.Duration;
-import java.util.*;
-
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.util.Golang;
@@ -27,15 +24,22 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValue;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 /**
- * N1QL query rrequest options.
+ * N1QL query request options.
  *
  * @since 3.0.0
  */
 @Stability.Volatile
 public class QueryOptions extends CommonOptions<QueryOptions> {
 
-  public static QueryOptions DEFAULT = new QueryOptions();
   private Optional<Map<String, Object>> rawParams = Optional.empty();
   private Optional<Map<String, String>> credentials = Optional.empty();
   private Optional<ScanConsistency> scanConsistency = Optional.empty();
@@ -66,7 +70,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param value the parameter value
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions withRawParams(String param, Object value) {
+  public QueryOptions rawParams(String param, Object value) {
     if (!this.rawParams.isPresent()) {
       this.rawParams = Optional.of(new HashMap<>());
     }
@@ -81,7 +85,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param password the user password
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions withCredentials(String user, String password) {
+  public QueryOptions credentials(String user, String password) {
     if (!this.credentials.isPresent()) {
       this.credentials = Optional.of(new HashMap<>());
     }
@@ -95,7 +99,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param scanConsistency the index scan consistency to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions withScanConsistency(ScanConsistency scanConsistency) {
+  public QueryOptions scanConsistency(ScanConsistency scanConsistency) {
     this.scanConsistency = Optional.of(scanConsistency);
     return this;
   }
@@ -106,7 +110,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param queryProfile the query profile level to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions withProfile(QueryProfile queryProfile) {
+  public QueryOptions profile(QueryProfile queryProfile) {
     this.queryProfile = Optional.of(queryProfile);
     return this;
   }
@@ -118,7 +122,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param clientContextId the client context ID (null to send none)
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withClientContextId(String clientContextId) {
+  public QueryOptions clientContextId(String clientContextId) {
     this.clientContextId = Optional.of(clientContextId);
     return this;
   }
@@ -131,7 +135,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param metricsDisabled true if disabled, false otherwise (false = default).
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withMetricsDisabled(boolean metricsDisabled) {
+  public QueryOptions metricsDisabled(boolean metricsDisabled) {
     this.metricsDisabled = Optional.of(metricsDisabled);
     return this;
   }
@@ -145,7 +149,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param wait the duration.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withScanWait(Duration wait) {
+  public QueryOptions scanWait(Duration wait) {
     if (this.scanConsistency.isPresent() && this.scanConsistency.get() == ScanConsistency.NOT_BOUNDED) {
       this.scanWait = Optional.empty();
     } else {
@@ -160,7 +164,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param maxParallelism the maximum parallelism for this query, 0 or negative values disable it.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withMaxParallelism(int maxParallelism) {
+  public QueryOptions maxParallelism(int maxParallelism) {
     this.maxParallelism = Optional.of(maxParallelism);
     return this;
   }
@@ -176,7 +180,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param prettyEnabled if set to false, pretty responses are disabled.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withPrettyEnabled(boolean prettyEnabled) {
+  public QueryOptions prettyEnabled(boolean prettyEnabled) {
     this.pretty = Optional.of(prettyEnabled);
     return this;
   }
@@ -199,7 +203,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param readonlyEnabled true if readonly should be forced, false is the default and will use the server side default.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withReadonlyEnabled(boolean readonlyEnabled) {
+  public QueryOptions readonlyEnabled(boolean readonlyEnabled) {
     this.readonly = Optional.of(readonlyEnabled);
     return this;
   }
@@ -212,7 +216,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param scanCap the scan_cap param, use 0 or negative number to disable.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withScanCap(int scanCap) {
+  public QueryOptions scanCap(int scanCap) {
     this.scanCap = Optional.of(scanCap);
     return this;
   }
@@ -245,7 +249,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param named {@link JsonObject} with name as key
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withParameters(final JsonObject named) {
+  public QueryOptions parameters(final JsonObject named) {
     this.parameters = Optional.of(named);
     return this;
   }
@@ -256,7 +260,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param positional {@link JsonArray} in the same order as positions
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions withParameters(final JsonArray positional) {
+  public QueryOptions parameters(final JsonArray positional) {
     this.parameters = Optional.of(positional);
     return this;
   }
@@ -295,11 +299,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   }
 
   @Stability.Internal
-  public BuiltQueryOptions build() {
-    return new BuiltQueryOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltQueryOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
     @Stability.Internal
     public void injectParams(JsonObject queryJson) {

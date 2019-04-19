@@ -48,14 +48,14 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
   /**
    * Allows to customize the poll-based durability requirements for this operation.
    *
-   * <p>Note: it is not possible to set this option and {@link #withDurabilityLevel(DurabilityLevel)} at
+   * <p>Note: it is not possible to set this option and {@link #durabilityLevel(DurabilityLevel)} at
    * the same time.</p>
    *
    * @param persistTo the durability persistence requirement.
    * @param replicateTo the durability replication requirement.
    * @return this options builder for chaining purposes.
    */
-  public SELF withDurability(final PersistTo persistTo, final ReplicateTo replicateTo) {
+  public SELF durability(final PersistTo persistTo, final ReplicateTo replicateTo) {
     notNull(persistTo, "ObservePersistTo");
     notNull(replicateTo, "ObserveReplicateTo");
     if (durabilityLevel.isPresent()) {
@@ -71,13 +71,13 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
   /**
    * Allows to customize the enhanced durability requirements for this operation.
    *
-   * <p>Note: it is not possible to set this option and {@link #withDurabilityLevel(DurabilityLevel)} at
+   * <p>Note: it is not possible to set this option and {@link #durabilityLevel(DurabilityLevel)} at
    * the same time.</p>
    *
    * @param durabilityLevel the enhanced durability requirement.
    * @return this options builder for chaining purposes.
    */
-  public SELF withDurabilityLevel(final DurabilityLevel durabilityLevel) {
+  public SELF durabilityLevel(final DurabilityLevel durabilityLevel) {
     notNull(durabilityLevel, "DurabilityLevel");
 
     // DurabilityLevel.NONE is provided as a convenience so that apps don't have to do branching logic when they're

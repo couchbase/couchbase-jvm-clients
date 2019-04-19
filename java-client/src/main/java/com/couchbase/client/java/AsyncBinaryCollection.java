@@ -39,6 +39,10 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_APPEND_OPTIONS;
+import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_DECREMENT_OPTIONS;
+import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_INCREMENT_OPTIONS;
+import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_PREPEND_OPTIONS;
 
 public class AsyncBinaryCollection {
 
@@ -58,12 +62,12 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<MutationResult> append(final String id, final byte[] content) {
-    return append(id, content, AppendOptions.DEFAULT);
+    return append(id, content, DEFAULT_APPEND_OPTIONS);
   }
 
   public CompletableFuture<MutationResult> append(final String id, final byte[] content,
                                                   final AppendOptions options) {
-    AppendOptions.BuiltAppendOptions opts = options.build();
+    AppendOptions.Built opts = options.build();
     return AppendAccessor.append(
       core,
       appendRequest(id, content, options),
@@ -77,7 +81,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "AppendOptions");
-    AppendOptions.BuiltAppendOptions opts = options.build();
+    AppendOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -86,12 +90,12 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content) {
-    return prepend(id, content, PrependOptions.DEFAULT);
+    return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
                                                    final PrependOptions options) {
-    PrependOptions.BuiltPrependOptions opts = options.build();
+    PrependOptions.Built opts = options.build();
     return PrependAccessor.prepend(
       core,
       prependRequest(id, content, options),
@@ -105,7 +109,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id");
     notNull(content, "Content");
     notNull(options, "PrependOptions");
-    PrependOptions.BuiltPrependOptions opts = options.build();
+    PrependOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -114,11 +118,11 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> increment(final String id) {
-    return increment(id, IncrementOptions.DEFAULT);
+    return increment(id, DEFAULT_INCREMENT_OPTIONS);
   }
 
   public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
-    IncrementOptions.BuiltIncrementOptions opts = options.build();
+    IncrementOptions.Built opts = options.build();
     return CounterAccessor.increment(
       core,
       incrementRequest(id, options),
@@ -131,7 +135,7 @@ public class AsyncBinaryCollection {
   IncrementRequest incrementRequest(final String id, final IncrementOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "IncrementOptions");
-    IncrementOptions.BuiltIncrementOptions opts = options.build();
+    IncrementOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -140,11 +144,11 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> decrement(final String id) {
-    return decrement(id, DecrementOptions.DEFAULT);
+    return decrement(id, DEFAULT_DECREMENT_OPTIONS);
   }
 
   public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
-    DecrementOptions.BuiltDecrementOptions opts = options.build();
+    DecrementOptions.Built opts = options.build();
     return CounterAccessor.decrement(
       core,
       decrementRequest(id, options),
@@ -157,7 +161,7 @@ public class AsyncBinaryCollection {
   DecrementRequest decrementRequest(final String id, final DecrementOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "DecrementOptions");
-    DecrementOptions.BuiltDecrementOptions opts = options.build();
+    DecrementOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());

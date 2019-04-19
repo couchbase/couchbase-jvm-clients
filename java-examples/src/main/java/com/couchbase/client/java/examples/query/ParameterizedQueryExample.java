@@ -20,7 +20,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
@@ -33,13 +32,13 @@ public class ParameterizedQueryExample {
 
     QueryResult result = cluster.query(
       "select * from `travel-sample` where type = ? limit 5",
-      queryOptions().withParameters(JsonArray.from("airport"))
+      queryOptions().parameters(JsonArray.from("airport"))
     );
     System.out.println(result.rowsAsObject());
 
     result = cluster.query(
       "select * from `travel-sample` where type = $type limit 5",
-      queryOptions().withParameters(JsonObject.empty().put("type", "airport"))
+      queryOptions().parameters(JsonObject.empty().put("type", "airport"))
     );
     System.out.println(result.rowsAsObject());
 

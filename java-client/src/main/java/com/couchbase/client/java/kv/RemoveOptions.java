@@ -17,17 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.CommonOptions;
-
-import java.time.Duration;
-import java.util.Optional;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
-
-  public static RemoveOptions DEFAULT = new RemoveOptions();
 
   private long cas;
 
@@ -44,11 +35,11 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
 
 
   @Stability.Internal
-  public BuiltRemoveOptions build() {
-    return new BuiltRemoveOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltRemoveOptions extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonDurabilityOptions {
 
     public long cas() {
       return cas;

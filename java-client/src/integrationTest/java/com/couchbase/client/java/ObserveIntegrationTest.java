@@ -72,7 +72,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       MutationResult result = collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        insertOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(result.cas() != 0);
       assertFalse(result.mutationToken().isPresent());
@@ -85,7 +85,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       MutationResult result = collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        insertOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(result.cas() != 0);
       assertFalse(result.mutationToken().isPresent());
@@ -93,7 +93,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
       MutationResult removeResult = collection.remove(
         id,
-        removeOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        removeOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(removeResult.cas() != 0);
       assertTrue(result.cas() != removeResult.cas());
@@ -109,7 +109,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.THREE, ReplicateTo.NONE)
+          insertOptions().durability(PersistTo.THREE, ReplicateTo.NONE)
         )
       );
       assertThrows(
@@ -117,7 +117,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.NONE, ReplicateTo.TWO)
+          insertOptions().durability(PersistTo.NONE, ReplicateTo.TWO)
         )
       );
       assertThrows(
@@ -125,7 +125,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.FOUR, ReplicateTo.THREE)
+          insertOptions().durability(PersistTo.FOUR, ReplicateTo.THREE)
         )
       );
     }
@@ -138,7 +138,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       assertThrows(RuntimeException.class, () -> collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.NONE, ReplicateTo.ONE).timeout(Duration.ofSeconds(1))
+        insertOptions().durability(PersistTo.NONE, ReplicateTo.ONE).timeout(Duration.ofSeconds(1))
       ));
     }
   }
@@ -174,7 +174,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       MutationResult result = collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        insertOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(result.cas() != 0);
       assertTrue(result.mutationToken().isPresent());
@@ -187,14 +187,14 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       MutationResult result = collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        insertOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(result.cas() != 0);
 
 
       MutationResult removeResult = collection.remove(
         id,
-        removeOptions().withDurability(PersistTo.ACTIVE, ReplicateTo.NONE)
+        removeOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE)
       );
       assertTrue(removeResult.cas() != 0);
       assertTrue(result.cas() != removeResult.cas());
@@ -210,7 +210,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.THREE, ReplicateTo.NONE)
+          insertOptions().durability(PersistTo.THREE, ReplicateTo.NONE)
         )
       );
       assertThrows(
@@ -218,7 +218,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.NONE, ReplicateTo.TWO)
+          insertOptions().durability(PersistTo.NONE, ReplicateTo.TWO)
         )
       );
       assertThrows(
@@ -226,7 +226,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         () -> collection.insert(
           UUID.randomUUID().toString(),
           value,
-          insertOptions().withDurability(PersistTo.FOUR, ReplicateTo.THREE)
+          insertOptions().durability(PersistTo.FOUR, ReplicateTo.THREE)
         )
       );
     }
@@ -239,7 +239,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       assertThrows(RuntimeException.class, () -> collection.insert(
         id,
         "some value",
-        insertOptions().withDurability(PersistTo.NONE, ReplicateTo.ONE).timeout(Duration.ofSeconds(1))
+        insertOptions().durability(PersistTo.NONE, ReplicateTo.ONE).timeout(Duration.ofSeconds(1))
       ));
     }
 

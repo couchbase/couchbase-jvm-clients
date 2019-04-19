@@ -23,7 +23,6 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 public class ViewOptions extends CommonOptions<ViewOptions> {
-  public static ViewOptions DEFAULT = new ViewOptions();
 
   /**
    * Contains all stored params.
@@ -336,11 +335,11 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   @Stability.Internal
-  public ViewOptions.BuiltViewOptions build() {
-    return new ViewOptions.BuiltViewOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltViewOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
 
     public String keys() {

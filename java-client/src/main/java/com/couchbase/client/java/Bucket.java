@@ -20,14 +20,13 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.SpatialViewOptions;
-import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
-import java.util.concurrent.CompletableFuture;
-
 import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveBucket.DEFAULT_SPATIAL_VIEW_OPTIONS;
+import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 
 /**
  * Provides access to a Couchbase bucket in a blocking fashion.
@@ -123,7 +122,7 @@ public class Bucket {
   }
 
   public ViewResult spatialViewQuery(final String designDoc, final String viewName) {
-    return spatialViewQuery(designDoc, viewName, SpatialViewOptions.DEFAULT);
+    return spatialViewQuery(designDoc, viewName, DEFAULT_SPATIAL_VIEW_OPTIONS);
   }
 
   public ViewResult spatialViewQuery(final String designDoc, final String viewName,
@@ -132,7 +131,7 @@ public class Bucket {
   }
 
   public ViewResult viewQuery(final String designDoc, final String viewName) {
-    return viewQuery(designDoc, viewName, ViewOptions.DEFAULT);
+    return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
   public ViewResult viewQuery(final String designDoc, final String viewName,

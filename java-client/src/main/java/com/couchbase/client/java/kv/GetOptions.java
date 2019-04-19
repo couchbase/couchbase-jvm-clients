@@ -17,7 +17,6 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -31,11 +30,6 @@ import java.util.List;
  * @since 3.0.0
  */
 public class GetOptions extends CommonOptions<GetOptions> {
-
-  /**
-   * The default options, used most of the time.
-   */
-  public static final GetOptions DEFAULT = new GetOptions();
 
   /**
    * If the expiration should also fetched with a get.
@@ -87,11 +81,11 @@ public class GetOptions extends CommonOptions<GetOptions> {
   }
 
   @Stability.Internal
-  public BuiltGetOptions build() {
-    return new BuiltGetOptions();
+  public Built build() {
+    return new Built();
   }
 
-  public class BuiltGetOptions extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions {
 
     public boolean withExpiration() {
       return withExpiration;

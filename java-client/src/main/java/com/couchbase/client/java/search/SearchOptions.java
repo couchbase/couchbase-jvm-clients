@@ -21,16 +21,19 @@ import com.couchbase.client.java.CommonOptions;
 
 public class SearchOptions extends CommonOptions<SearchOptions> {
 
-  public static SearchOptions DEFAULT = new SearchOptions();
-
-  private SearchOptions() {}
-
-  @Stability.Internal
-  public SearchOptions.BuiltQueryOptions build() {
-    return new SearchOptions.BuiltQueryOptions();
+  public static SearchOptions searchOptions() {
+    return new SearchOptions();
   }
 
-  public class BuiltQueryOptions extends BuiltCommonOptions {
+  private SearchOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
   }
 
 }
