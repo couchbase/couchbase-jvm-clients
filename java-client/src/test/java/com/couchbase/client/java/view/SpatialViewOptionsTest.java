@@ -37,20 +37,20 @@ class SpatialViewOptionsTest {
   @Test
   void shouldSetStartRange() {
     SpatialViewOptions options = spatialViewOptions().startRange(JsonArray.from(5.87, 47.27, 1000));
-    assertEquals("start_range=[5.87,47.27,1000]", options.export());
+    assertEquals("start_range=%5B5.87%2C47.27%2C1000%5D", options.export());
   }
 
   @Test
   void shouldSetEndRange() {
     SpatialViewOptions options = spatialViewOptions().endRange(JsonArray.from(15.04, 55.06, null));
-    assertEquals("end_range=[15.04,55.06,null]", options.export());
+    assertEquals("end_range=%5B15.04%2C55.06%2Cnull%5D", options.export());
   }
 
   @Test
   void shouldSetRange() {
     SpatialViewOptions options = spatialViewOptions()
       .range(JsonArray.from(null, null, 1000), JsonArray.from(null, null, 2000));
-    assertEquals("start_range=[null,null,1000]&end_range=[null,null,2000]", options.export());
+    assertEquals("start_range=%5Bnull%2Cnull%2C1000%5D&end_range=%5Bnull%2Cnull%2C2000%5D", options.export());
   }
 
   @Test

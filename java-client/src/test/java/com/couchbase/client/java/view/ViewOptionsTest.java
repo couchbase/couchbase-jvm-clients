@@ -248,7 +248,7 @@ class ViewOptionsTest {
       .group(true)
       .reduce(false)
       .startKey(JsonArray.from("foo", true));
-    assertEquals("reduce=false&group=true&debug=true&descending=true&startkey=%5B%22foo%22%2Ctrue%5D",
+    assertEquals("descending=true&debug=true&group=true&reduce=false&startkey=%5B%22foo%22%2Ctrue%5D",
       options.export());
   }
 

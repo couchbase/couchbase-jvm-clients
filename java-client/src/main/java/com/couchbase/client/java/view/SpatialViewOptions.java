@@ -17,31 +17,17 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
-
-import java.net.URLEncoder;
 
 public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
   public static SpatialViewOptions DEFAULT = new SpatialViewOptions();
 
-  private static final int PARAM_LIMIT_OFFSET = 0;
-  private static final int PARAM_SKIP_OFFSET = 2;
-  private static final int PARAM_STALE_OFFSET = 4;
-  private static final int PARAM_DEBUG_OFFSET = 6;
-  private static final int PARAM_START_RANGE_OFFSET = 8;
-  private static final int PARAM_END_RANGE_OFFSET = 10;
-  private static final int PARAM_ONERROR_OFFSET = 12;
-
-  /**
-   * Number of supported possible params for a query.
-   */
-  private static final int NUM_PARAMS = 7;
-
   /**
    * Contains all stored params.
    */
-  private final String[] params;
+  private final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames();
   private boolean development;
 
   public static SpatialViewOptions spatialViewOptions() {
@@ -49,7 +35,6 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
   }
 
   private SpatialViewOptions() {
-    params = new String[NUM_PARAMS * 2];
   }
 
   public SpatialViewOptions development(boolean development) {
@@ -68,8 +53,7 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
     if (limit < 0) {
       throw new IllegalArgumentException("Limit must be >= 0.");
     }
-    params[PARAM_LIMIT_OFFSET] = "limit";
-    params[PARAM_LIMIT_OFFSET+1] = Integer.toString(limit);
+    params.set("limit", limit);
     return this;
   }
 
@@ -83,14 +67,13 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
     if (skip < 0) {
       throw new IllegalArgumentException("Skip must be >= 0.");
     }
-    params[PARAM_SKIP_OFFSET] = "skip";
-    params[PARAM_SKIP_OFFSET+1] = Integer.toString(skip);
+    params.set("skip", skip);
     return this;
   }
 
   /**
    * Allow the results from a stale view to be used.
-   *
+   * <p>
    * See the "Stale" enum for more information on the possible options. The
    * default setting is "update_after"!
    *
@@ -98,8 +81,7 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
    * @return the {@link SpatialViewOptions} object for proper chaining.
    */
   public SpatialViewOptions stale(final Stale stale) {
-    params[PARAM_STALE_OFFSET] = "stale";
-    params[PARAM_STALE_OFFSET+1] = stale.identifier();
+    params.set("stale", stale.identifier());
     return this;
   }
 
@@ -109,20 +91,17 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
    * @return the {@link SpatialViewOptions} object for proper chaining.
    */
   public SpatialViewOptions debug(boolean debug) {
-    params[PARAM_DEBUG_OFFSET] = "debug";
-    params[PARAM_DEBUG_OFFSET+1] = Boolean.toString(debug);
+    params.set("debug", debug);
     return this;
   }
 
   public SpatialViewOptions startRange(final JsonArray startRange) {
-    params[PARAM_START_RANGE_OFFSET] = "start_range";
-    params[PARAM_START_RANGE_OFFSET+1] = startRange.toString();
+    params.set("start_range", startRange.toString());
     return this;
   }
 
   public SpatialViewOptions endRange(final JsonArray endRange) {
-    params[PARAM_END_RANGE_OFFSET] = "end_range";
-    params[PARAM_END_RANGE_OFFSET+1] = endRange.toString();
+    params.set("end_range", endRange.toString());
     return this;
   }
 
@@ -134,33 +113,15 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
 
   /**
    * Sets the response in the event of an error.
-   *
+   * <p>
    * See the "OnError" enum for more details on the available options.
    *
    * @param onError The appropriate error handling type.
    * @return the {@link SpatialViewOptions} object for proper chaining.
    */
   public SpatialViewOptions onError(final OnError onError) {
-    params[PARAM_ONERROR_OFFSET] = "on_error";
-    params[PARAM_ONERROR_OFFSET+1] = onError.identifier();
+    params.set("on_error", onError.identifier());
     return this;
-  }
-
-  /**
-   * Helper method to properly encode a string.
-   *
-   * This method can be overridden if a different encoding logic needs to be
-   * used.
-   *
-   * @param source source string.
-   * @return encoded target string.
-   */
-  protected String encode(final String source) {
-    try {
-      return URLEncoder.encode(source, "UTF-8");
-    } catch(Exception ex) {
-      throw new RuntimeException("Could not prepare view argument: " + ex);
-    }
   }
 
   @Override
@@ -177,27 +138,7 @@ public class SpatialViewOptions extends CommonOptions<SpatialViewOptions> {
 
 
   String export() {
-    StringBuilder sb = new StringBuilder();
-    boolean firstParam = true;
-    for (int i = 0; i < params.length; i++) {
-      if (params[i] == null) {
-        i++;
-        continue;
-      }
-
-      boolean even = i % 2 == 0;
-      if (even) {
-        if (!firstParam) {
-          sb.append("&");
-        }
-      }
-      sb.append(params[i]);
-      firstParam = false;
-      if (even) {
-        sb.append('=');
-      }
-    }
-    return sb.toString();
+    return params.build();
   }
 
   @Stability.Internal
