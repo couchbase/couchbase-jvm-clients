@@ -74,7 +74,6 @@ import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 
-import java.math.BigInteger;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -174,7 +173,7 @@ public class AsyncCollection {
     this.coreContext = core.context();
     this.environment = environment;
     this.bucket = bucket;
-    this.collectionId = UnsignedLEB128.encode(BigInteger.valueOf(id));
+    this.collectionId = UnsignedLEB128.encode(id);
     this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, bucket, collectionId);
   }
 

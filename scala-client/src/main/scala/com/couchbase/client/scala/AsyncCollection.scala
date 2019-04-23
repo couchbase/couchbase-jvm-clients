@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala
 
-import java.math.BigInteger
 import java.nio.charset.Charset
 import java.util.Optional
 import java.util.concurrent.TimeUnit
@@ -82,7 +81,7 @@ class AsyncCollection(name: String,
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig.kvTimeout())
   private[scala] val retryStrategy = environment.retryStrategy
-  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(BigInteger.valueOf(collectionId))
+  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
   private[scala] val hp = HandlerParams(core, bucketName, collectionIdEncoded)
   private[scala] val existsHandler = new ExistsHandler(hp)
   private[scala] val insertHandler = new InsertHandler(hp)

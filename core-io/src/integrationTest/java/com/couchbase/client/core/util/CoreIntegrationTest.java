@@ -44,7 +44,7 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
   /**
    * Calculates the default collection id.
    */
-  public static byte[] DEFAULT_COLLECTION_ID = UnsignedLEB128.encode(BigInteger.valueOf(0));
+  public static byte[] DEFAULT_COLLECTION_ID = UnsignedLEB128.encode(0);
 
   /**
    * Creates an environment builder that already has all the needed properties to bootstrap

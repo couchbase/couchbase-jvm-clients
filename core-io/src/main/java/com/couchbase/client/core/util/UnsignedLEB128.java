@@ -16,51 +16,117 @@
 
 package com.couchbase.client.core.util;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+
+import java.io.ByteArrayOutputStream;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
 
 /**
- * Unsigned LEB 128 converter util from big integer
+ * Encodes and decodes the unsigned LEB128 (Little Endian Base 128) format.
+ * See https://en.wikipedia.org/wiki/LEB128
  */
 public class UnsignedLEB128 {
-  private static BigInteger x = new BigInteger("7F", 16);
-
-  /**
-   * Encode the given integer to LEB128 byte array
-   *
-   * @param in the number to be encoded
-   * @return encoded byte array
-   */
-  public static byte[] encode(BigInteger in) {
-    List<Byte> encoded = new ArrayList<>();
-    encoded.add(in.and(x).toByteArray()[0]);
-    in = in.shiftRight(7);
-
-    while(in.bitCount() > 0) {
-      encoded.add(in.and(x).toByteArray()[0]);
-      in = in.shiftRight(7);
-    }
-
-    byte[] res = new byte[encoded.size()];
-    for(int j=encoded.size()-1,i=0;j>=0;j--,i++) {
-      res[i] = i == 0 ? encoded.get(j) : ((byte)(encoded.get(j) | 0x80));
-    }
-    return res;
+  private UnsignedLEB128() {
+    throw new AssertionError("not instantiable");
   }
 
   /**
-   * Decode the given LEB128 byte array to int
+   * Reads an unsigned LEB128 value from the buffer. If this methods throws an exception
+   * the reader index remains unchanged, otherwise the index advances past the value.
    *
-   * @param in byte array
-   * @return decoded integer
+   * @return the decoded value
+   * @throws ArithmeticException       if the decoded value is longer than 64 bits.
+   * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
    */
-  public static BigInteger decode(byte[] in) {
-    BigInteger res = BigInteger.valueOf(0);
-    for (int i=in.length-1,j=0; i>=0; i--,j++) {
-      BigInteger t = BigInteger.valueOf(in[i]);
-      res = res.or(t.and(x).shiftLeft(7 * j));
+  public static long read(ByteBuf buf) {
+    final int readerMark = buf.readerIndex();
+    try {
+      return read(buf::readByte);
+    } catch (Exception e) {
+      buf.readerIndex(readerMark);
+      throw e;
     }
-    return res;
+  }
+
+  /**
+   * Advances the buffer's reader index past the unsigned LEB128 value at the reader index.
+   * If this methods throws an exception the reader index will be unchanged.
+   *
+   * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
+   */
+  public static void skip(ByteBuf buf) {
+    final int readerMark = buf.readerIndex();
+    try {
+      while (true) {
+        if ((buf.readByte() & 0x80) == 0) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      buf.readerIndex(readerMark);
+      throw e;
+    }
+  }
+
+  /**
+   * Writes the unsigned LEB128 representation of the value to the buffer.
+   */
+  public static void write(ByteBuf buf, long value) {
+    write(value, buf::writeByte);
+  }
+
+  /**
+   * Returns a byte array containing the unsigned LEB128 representation of the given value.
+   */
+  public static byte[] encode(long value) {
+    ByteArrayOutputStream result = new ByteArrayOutputStream();
+    write(value, result::write);
+    return result.toByteArray();
+  }
+
+  /**
+   * Given a byte array starting with an unsigned LEB128 value, returns the decoded form
+   * of that value.
+   *
+   * @throws ArithmeticException       if the decoded value is larger than 64 bits.
+   * @throws IndexOutOfBoundsException if the input does not contain a complete LEB128 value
+   */
+  public static long decode(byte[] bytes) {
+    return read(Unpooled.wrappedBuffer(bytes));
+  }
+
+  private static long read(IntSupplier byteSource) {
+    long result = 0;
+
+    for (int i = 0; ; i++) {
+      final int b = byteSource.getAsInt();
+      final long low7Bits = b & 0x7f;
+      final boolean done = (b & 0x80) == 0;
+
+      // The first 9 groups of 7 bits are guaranteed to fit (9 * 7 = 63 bits).
+      // That leaves room for only the low-order bit from the 10th group (which has index 9)
+      if (i == 9 && (b & 0xfe) != 0) {
+        throw new ArithmeticException("Value is larger than 64-bits");
+      }
+
+      result |= low7Bits << (7 * i);
+      if (done) {
+        return result;
+      }
+    }
+  }
+
+  private static void write(long value, IntConsumer byteSink) {
+    while (true) {
+      final int b = (int) (value & 0x7f);
+      value >>>= 7;
+      if (value == 0) {
+        byteSink.accept(b);
+        return;
+      }
+      byteSink.accept(b | 0x80);
+    }
   }
 }
