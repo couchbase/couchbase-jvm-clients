@@ -21,6 +21,9 @@ import java.security.cert.X509Certificate;
 
 public class SecurityConfig {
 
+  public static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
+
+  private final boolean nativeTlsEnabled;
   private final boolean tlsEnabled;
   private final boolean certAuthEnabled;
   private final X509Certificate[] trustCertificates;
@@ -52,6 +55,7 @@ public class SecurityConfig {
 
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
+    nativeTlsEnabled = builder.nativeTlsEnabled;
     certAuthEnabled = builder.certAuthEnabled;
     trustCertificates = builder.trustCertificates;
     trustManagerFactory = builder.trustManagerFactory;
@@ -84,9 +88,14 @@ public class SecurityConfig {
     return trustManagerFactory;
   }
 
+  public boolean nativeTlsEnabled() {
+    return nativeTlsEnabled;
+  }
+
   public static class Builder {
 
     private boolean tlsEnabled = false;
+    private boolean nativeTlsEnabled = DEFAULT_NATIVE_TLS_ENABLED;
     private boolean certAuthEnabled = false;
     private X509Certificate[] trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
@@ -97,6 +106,11 @@ public class SecurityConfig {
 
     public Builder tlsEnabled(boolean tlsEnabled) {
       this.tlsEnabled = tlsEnabled;
+      return this;
+    }
+
+    public Builder nativeTlsEnabled(boolean nativeTlsEnabled) {
+      this.nativeTlsEnabled = nativeTlsEnabled;
       return this;
     }
 

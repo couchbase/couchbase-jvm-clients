@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
@@ -42,6 +43,9 @@ import java.util.function.Supplier;
  */
 public class IoEnvironment {
 
+  public static final boolean DEFAULT_NATIVE_IO_ENABLED = true;
+
+  private final boolean nativeIoEnabled;
   private final Supplier<EventLoopGroup> managerEventLoopGroup;
   private final Supplier<EventLoopGroup> kvEventLoopGroup;
   private final Supplier<EventLoopGroup> queryEventLoopGroup;
@@ -82,34 +86,57 @@ public class IoEnvironment {
   }
 
   private IoEnvironment(final Builder builder) {
+    nativeIoEnabled = builder.nativeIoEnabled;
+
     Supplier<EventLoopGroup> httpDefaultGroup = null;
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
       || builder.viewEventLoopGroup == null) {
-      httpDefaultGroup = createEventLoopGroup(fairThreadCount(), "cb-io-http");
+      httpDefaultGroup = createEventLoopGroup(nativeIoEnabled, fairThreadCount(), "cb-io-http");
     }
 
     managerEventLoopGroup = builder.managerEventLoopGroup == null
-      ? createEventLoopGroup(1, "cb-io-manager")
+      ? createEventLoopGroup(nativeIoEnabled, 1, "cb-io-manager")
       : builder.managerEventLoopGroup;
+    sanityCheckEventLoop(managerEventLoopGroup);
+
     kvEventLoopGroup = builder.kvEventLoopGroup == null
-      ? createEventLoopGroup(fairThreadCount(), "cb-io-kv")
+      ? createEventLoopGroup(nativeIoEnabled, fairThreadCount(), "cb-io-kv")
       : builder.kvEventLoopGroup;
+    sanityCheckEventLoop(kvEventLoopGroup);
+
     queryEventLoopGroup = builder.queryEventLoopGroup == null
       ? httpDefaultGroup
       : builder.queryEventLoopGroup;
+    sanityCheckEventLoop(queryEventLoopGroup);
+
     analyticsEventLoopGroup = builder.analyticsEventLoopGroup == null
       ? httpDefaultGroup
       : builder.queryEventLoopGroup;
+    sanityCheckEventLoop(analyticsEventLoopGroup);
+
     searchEventLoopGroup = builder.searchEventLoopGroup == null
       ? httpDefaultGroup
       : builder.searchEventLoopGroup;
+    sanityCheckEventLoop(searchEventLoopGroup);
+
     viewEventLoopGroup = builder.viewEventLoopGroup == null
       ? httpDefaultGroup
       : builder.viewEventLoopGroup;
+    sanityCheckEventLoop(viewEventLoopGroup);
   }
 
+  /**
+   * Helper method to check if the event loop group is allowed with the current setup.
+   *
+   * @param group the group to check.
+   */
+  private void sanityCheckEventLoop(final Supplier<EventLoopGroup> group) {
+    if (!nativeIoEnabled && !(group.get() instanceof NioEventLoopGroup)) {
+      throw new IllegalStateException("Native IO is disabled and the EventLoopGroup is not a NioEventLoopGroup");
+    }
+  }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for config traffic.
@@ -165,6 +192,15 @@ public class IoEnvironment {
     return viewEventLoopGroup;
   }
 
+  /**
+   * Returns true if native IO is enabled and can be used if supported.
+   *
+   * @return true if enabled.
+   */
+  public boolean nativeIoEnabled() {
+    return nativeIoEnabled;
+  }
+
   public Mono<Void> shutdown(Duration timeout) {
     return Flux.merge(
       shutdownGroup(managerEventLoopGroup, timeout),
@@ -204,16 +240,18 @@ public class IoEnvironment {
    * <p>If KQueue or Epoll native transports are available, it will use those. If not
    * there is always the fallback to the Nio transport which is always available.</p>
    *
+   * @param nativeIoEnabled native IO enabled.
    * @param numThreads number of threads to to assign to the group.
    * @param poolName the name of the threads.
    * @return the created group.
    */
-  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final int numThreads, final String poolName) {
+  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final boolean nativeIoEnabled, final int numThreads,
+                                                                    final String poolName) {
     ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
 
-    if (Epoll.isAvailable()) {
+    if (nativeIoEnabled && Epoll.isAvailable()) {
       return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
-    } else if (KQueue.isAvailable()) {
+    } else if (nativeIoEnabled && KQueue.isAvailable()) {
       return new OwnedSupplier<>(new KQueueEventLoopGroup(numThreads, threadFactory));
     } else {
       return new OwnedSupplier<>(new NioEventLoopGroup(numThreads, threadFactory));
@@ -239,6 +277,7 @@ public class IoEnvironment {
 
   public static class Builder {
 
+    private boolean nativeIoEnabled = DEFAULT_NATIVE_IO_ENABLED;
     private Supplier<EventLoopGroup> managerEventLoopGroup = null;
     private Supplier<EventLoopGroup> kvEventLoopGroup = null;
     private Supplier<EventLoopGroup> queryEventLoopGroup = null;
@@ -273,6 +312,11 @@ public class IoEnvironment {
 
     public Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
       this.viewEventLoopGroup = new ExternalSupplier<>(viewEventLoopGroup);
+      return this;
+    }
+
+    public Builder nativeIoEnabled(boolean nativeIoEnabled) {
+      this.nativeIoEnabled = nativeIoEnabled;
       return this;
     }
 

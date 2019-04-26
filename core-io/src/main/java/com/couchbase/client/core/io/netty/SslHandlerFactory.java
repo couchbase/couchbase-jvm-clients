@@ -37,7 +37,7 @@ public class SslHandlerFactory {
 
   public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config)
     throws Exception {
-    SslProvider provider =  OPENSSL_AVAILABLE ? SslProvider.OPENSSL : SslProvider.JDK;
+    SslProvider provider =  OPENSSL_AVAILABLE && config.nativeTlsEnabled() ? SslProvider.OPENSSL : SslProvider.JDK;
 
     SslContextBuilder context = SslContextBuilder.forClient()
       .sslProvider(provider);
