@@ -10,15 +10,18 @@ It is currently in an `alpha` state and not ready for prime-time, although we ar
 This repository contains the following projects:
 
  - `core-io`: the core library for all language bindings
- - `java-client`: the java language binding
- - `scala-client`: the scala language binding
+ - `java-client`: the Java language binding
+ - `scala-client`: the Scala language binding
 
 And soon:
 
- - `kotlin-client`: the kotlin language binding
+ - `kotlin-client`: the Kotlin language binding
  
-Regular Couchbase users will note that both the scala and the kotlin binding are new! Yes they are, 
-and we are trying to develop them as first-class citizens similar to the java client going forward.
+Regular Couchbase users will note that both the Scala and the Kotlin binding are new! Yes they are, 
+and we are trying to develop them as first-class citizens similar to the Java client going forward.
+ 
+Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html) 
+and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
  
 ## Usage
 

@@ -259,7 +259,9 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     FutureConversions.javaMonoToScalaMono(core.shutdown())
       .flatMap(_ => {
         if (env.owned) {
-          Mono.fromRunnable(() => env.shutdown())
+          Mono.fromRunnable(new Runnable {
+            override def run(): Unit = env.shutdown()
+          })
         }
         else {
           Mono.empty[Unit]

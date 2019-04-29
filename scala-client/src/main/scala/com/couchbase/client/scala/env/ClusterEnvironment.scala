@@ -304,11 +304,15 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
     * @param timeout the timeout to wait maximum.
     */
   def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = {
-    Mono.fromCallable(() => coreEnv.shutdown(timeout))
+    Mono.fromRunnable(new Runnable {
+      override def run(): Unit = coreEnv.shutdown(timeout)
+    })
 
-      .flatMap(_ => Mono.fromCallable(() => {
-        threadPool.shutdownNow()
-        defaultScheduler.dispose()
+      .flatMap(_ => Mono.fromRunnable(new Runnable {
+        override def run(): Unit = {
+          threadPool.shutdownNow()
+          defaultScheduler.dispose()
+        }
       }))
 
       .timeout(timeout)

@@ -224,7 +224,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     FutureConversions.javaMonoToScalaMono(async.core.shutdown())
       .then(ScalaMono.defer(() => {
         if (env.owned) {
-          ScalaMono.fromRunnable(() => env.shutdown())
+          ScalaMono.fromRunnable(new Runnable {
+            override def run(): Unit = env.shutdown()
+          })
         }
         else {
           ScalaMono.empty[Unit]
