@@ -21,9 +21,11 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.util.FunctionalUtil
+import com.couchbase.client.scala.util.{FunctionalUtil, RowTraversalUtil}
 import reactor.core.scala.publisher.{Flux, Mono}
 
+import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 /** The results of an Analytics query.
@@ -60,8 +62,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
     */
   def allRowsAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    val r = rows.map(row => ev.decode(row.data(), Conversions.JsonFlags))
-    FunctionalUtil.traverse(r)
+    RowTraversalUtil.traverse(rowsAs[T])
   }
 }
 

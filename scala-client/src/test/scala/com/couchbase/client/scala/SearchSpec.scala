@@ -3,18 +3,20 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.sort.SearchSort
-import org.scalatest.FunSuite
+import org.junit.jupiter.api.Test
 
-class SearchSpec extends FunSuite {
+class SearchSpec {
   val defaultQuery = SearchQuery.booleanField(true)
 
-  test("sort") {
+  @Test
+  def sort() {
     SearchQuery("index", defaultQuery).sort(SearchSort.byId)
     SearchQuery("index", defaultQuery).sort(SearchSort.byField("test"))
     SearchQuery("index", defaultQuery).sort(SearchSort.byField("test").descending(true))
   }
 
-  test("facets") {
+  @Test
+  def facets() {
     val query = SearchQuery("index", defaultQuery)
       .addFacet("facet1", SearchFacet.term("field1", 10))
       .addFacet("facet2", SearchFacet.numeric("field2", 10)

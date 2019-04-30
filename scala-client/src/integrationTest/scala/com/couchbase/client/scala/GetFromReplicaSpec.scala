@@ -1,24 +1,44 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.util.Validate
-import org.scalatest.FunSuite
+import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
+import org.junit.jupiter.api.TestInstance.Lifecycle
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
-class GetFromReplicaSpec extends FunSuite {
+@TestInstance(Lifecycle.PER_CLASS)
+class GetFromReplicaSpec extends ScalaIntegrationTest {
 
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+  private var env: ClusterEnvironment = _
+  private var cluster: Cluster = _
+  private var coll: Collection = _
+  private var reactive: ReactiveCollection = _
+  private var async: AsyncCollection = _
 
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    val x: ClusterEnvironment.Builder = environment.ioConfig(IoConfig().mutationTokensEnabled(true))
+    env = x.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
+    reactive = coll.reactive
+    async = coll.async
+  }
 
-  private val reactive = coll.reactive
-  private val async = coll.async
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
 
-  test("any async") {
+  @Test
+  def any_async() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
 
@@ -28,25 +48,27 @@ class GetFromReplicaSpec extends FunSuite {
 
     val future = async.getAnyReplica(docId)
 
-      val result = Await.result(future, Duration.Inf)
+    val result = Await.result(future, Duration.Inf)
 
-      result.contentAs[ujson.Obj] match {
-        case Success(body) => assert(body("hello").str == "world")
-        case Failure(err) => assert(false, s"unexpected error $err")
-      }
+    result.contentAs[ujson.Obj] match {
+      case Success(body) => assert(body("hello").str == "world")
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
   }
 
-  test("any blocking") {
+  @Test
+  def any_blocking() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
     val result = coll.getAnyReplica(docId).get
 
-      assert(result.contentAs[ujson.Obj].get("hello").str == "world")
+    assert(result.contentAs[ujson.Obj].get("hello").str == "world")
   }
 
-  test("any reactive") {
+  @Test
+  def any_reactive() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
@@ -54,11 +76,13 @@ class GetFromReplicaSpec extends FunSuite {
     val results = reactive.getAnyReplica(docId)
 
     val result = results.block()
-      assert(result.contentAs[ujson.Obj].get("hello").str == "world")
+    assert(result.contentAs[ujson.Obj].get("hello").str == "world")
   }
 
 
-  test("all async") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def all_async() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
 
@@ -76,19 +100,23 @@ class GetFromReplicaSpec extends FunSuite {
     })
   }
 
-  test("all blocking") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def all_blocking() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
 
     val results = coll.getAllReplicas(docId)
 
-    for (result <- results) {
+    for ( result <- results ) {
       assert(result.contentAs[ujson.Obj].get("hello").str == "world")
     }
   }
 
-  test("all reactive") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def all_reactive() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)

@@ -2,11 +2,11 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.scala.json.JsonObject
-import org.scalatest.{FlatSpec, FunSuite}
+import org.junit.jupiter.api.{Assertions, Test}
 
 import scala.util.{Failure, Success}
 
-class JsonObjectDynamicSpec extends FunSuite {
+class JsonObjectDynamicSpec {
 
   val raw =
     """{"name":"John Smith",
@@ -16,159 +16,192 @@ class JsonObjectDynamicSpec extends FunSuite {
   val jsonSafe = json.safe
 
 
-  test("safe root incorrectly read as object") {
+  @Test
+  def safe_root_incorrectly_read_as_object() {
     assert(jsonSafe.dyn.address.obj.isFailure)
   }
 
-  test("safe name.str") {
+  @Test
+  def safe_name_str() {
     assert(jsonSafe.dyn.name.str.get == "John Smith")
   }
 
-  test("safe name.int") {
+  @Test
+  def safe_name_int() {
     assert(jsonSafe.dyn.name.num.isFailure)
   }
 
-  test("safe age.int") {
+  @Test
+  def safe_age_int() {
     assert(jsonSafe.dyn.age.num.get == 29)
   }
 
-  test("safe age.double") {
+  @Test
+  def safe_age_double() {
     assert(jsonSafe.dyn.age.numDouble.get == 29.0)
   }
 
-  test("safe age.str") {
+  @Test
+  def safe_age_str() {
     assert(jsonSafe.dyn.age.str.get == "29")
   }
 
 
-  test("safe address.arr") {
+  @Test
+  def safe_address_arr() {
     assert(jsonSafe.dyn.address.arr.isSuccess)
   }
 
-  test("safe name.arr") {
+  @Test
+  def safe_name_arr() {
     assert(jsonSafe.dyn.name.arr.isFailure)
   }
 
-  test("safe name(0).str") {
+  @Test
+  def safe_name_0_str() {
     assert(jsonSafe.dyn.name(0).str.isFailure)
   }
 
-  test("safe address(0).address.str") {
+  @Test
+  def safe_address_0_address_str() {
     assert(jsonSafe.dyn.address(0).address.str.get == "123 Fake Street")
   }
 
-  test("safe address(0).no_exist.str") {
+  @Test
+  def safe_address_0_no_exist_str() {
     assert(jsonSafe.dyn.address(0).no_exist.str.isFailure)
   }
 
-  test("safe address(0).obj") {
+  @Test
+  def safe_address_0_obj() {
     jsonSafe.dyn.address(0).obj match {
       case Success(v) =>
-      case Failure(err) => fail(err)
+      case Failure(err) => Assertions.fail(err)
     }
   }
 
-  test("safe address(1).obj") {
+  @Test
+  def safe_address_1_obj() {
     assert(jsonSafe.dyn.address(1).obj.isFailure)
   }
 
-  test("safe address(-1).obj") {
+  @Test
+  def safe_address_minus1_obj() {
     assert(jsonSafe.dyn.address(-1).obj.isFailure)
   }
 
-  test("safe address(0).regional.obj") {
+  @Test
+  def safe_address_0_regional_obj() {
     assert(jsonSafe.dyn.address(0).regional.obj.isSuccess)
   }
 
-  test("safe address(0).regional.county.str") {
+  @Test
+  def safe_address_0_regional_county_str() {
     assert(jsonSafe.dyn.address(0).regional.county.str.get == "essex")
   }
 
-  test("safe address(0).regional.county.int") {
+  @Test
+  def safe_address_0_regional_county_int() {
     assert(jsonSafe.dyn.address(0).regional.county.num.isFailure)
   }
 
 
-
-  test("root incorrectly read as object") {
-    assertThrows[DecodingFailedException](
+  @Test
+  def root_incorrectly_read_as_object() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
       json.dyn.address.obj
-    )
+    ))
   }
 
-  test("name.str") {
-    assert(json.dyn.name.str== "John Smith")
+  @Test
+  def name_str() {
+    assert(json.dyn.name.str == "John Smith")
   }
 
-  test("name.int") {
-    assertThrows[NumberFormatException](
-    json.dyn.name.num
-    )
+  @Test
+  def name_int() {
+    Assertions.assertThrows(classOf[NumberFormatException], () => (
+      json.dyn.name.num
+    ))
   }
 
-  test("age.int") {
-    assert(json.dyn.age.num== 29)
+  @Test
+  def age_int() {
+    assert(json.dyn.age.num == 29)
   }
 
-  test("age.double") {
-    assert(json.dyn.age.numDouble== 29.0)
+  @Test
+  def age_double() {
+    assert(json.dyn.age.numDouble == 29.0)
   }
 
-  test("age.str") {
-    assert(json.dyn.age.str== "29")
+  @Test
+  def age_str() {
+    assert(json.dyn.age.str == "29")
   }
 
 
-  test("address.arr") {
+  @Test
+  def address_arr() {
     json.dyn.address.arr
   }
 
-  test("name.arr") {
-    assertThrows[DecodingFailedException](
+  @Test
+  def name_arr() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
       json.dyn.name.arr
-      )
+    ))
   }
 
-  test("name(0).str") {
-    assertThrows[DecodingFailedException](
+  @Test
+  def name_0_str() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
       json.dyn.name(0).str
-    )
+    ))
   }
 
-  test("address(0).address.str") {
-    assert(json.dyn.address(0).address.str== "123 Fake Street")
+  @Test
+  def address_0_address_str() {
+    assert(json.dyn.address(0).address.str == "123 Fake Street")
   }
 
-  test("address(0).no_exist.str") {
-    assertThrows[DecodingFailedException](
+  @Test
+  def address_0_no_exist_str() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
       json.dyn.address(0).no_exist.str
-    )
+    ))
   }
 
-  test("address(0).obj") {
-      json.dyn.address(0).obj
+  @Test
+  def address_0_obj() {
+    json.dyn.address(0).obj
   }
 
-  test("address(1).obj") {
-    assertThrows[DecodingFailedException](
-      json.dyn.address(1).obj)
+  @Test
+  def address_1_obj() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
+      json.dyn.address(1).obj))
   }
 
-  test("address(-1).obj") {
-    assertThrows[DecodingFailedException](
-      json.dyn.address(-1).obj)
+  @Test
+  def address_minus1_obj() {
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (
+      json.dyn.address(-1).obj))
   }
 
-  test("address(0).regional.obj") {
-      json.dyn.address(0).regional.obj
+  @Test
+  def address_0_regional_obj() {
+    json.dyn.address(0).regional.obj
   }
 
-  test("address(0).regional.county.str") {
-    assert(json.dyn.address(0).regional.county.str== "essex")
+  @Test
+  def address_0_regional_county_str() {
+    assert(json.dyn.address(0).regional.county.str == "essex")
   }
 
-  test("address(0).regional.county.int") {
-    assertThrows[NumberFormatException](
-      json.dyn.address(0).regional.county.num)
+  @Test
+  def address_0_regional_county_int() {
+    Assertions.assertThrows(classOf[NumberFormatException], () => (
+      json.dyn.address(0).regional.county.num))
   }
 }

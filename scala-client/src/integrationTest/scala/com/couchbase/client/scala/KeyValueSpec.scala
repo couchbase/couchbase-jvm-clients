@@ -2,26 +2,47 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
-import com.couchbase.client.scala.util.Validate
-import org.scalatest.FunSuite
+import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class KeyValueSpec extends FunSuite {
-  // TODO support Jenkins
+@TestInstance(Lifecycle.PER_CLASS)
+class KeyValueSpec extends ScalaIntegrationTest {
 
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+  private var env: ClusterEnvironment = null
+  private var cluster: Cluster = null
+  private var coll: Collection = null
 
-  test("config") {
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    val x: ClusterEnvironment.Builder = environment
+    env = x.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
+
+  }
+
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
+
+  @Test
+  def config() {
     val env: ClusterEnvironment = ClusterEnvironment.builder("localhost", "Administrator", "password")
       .seedNodes(SeedNode("localhost"))
       .build
   }
 
-  test("insert") {
+  @Test
+  def insert() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -38,7 +59,8 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("exists") {
+  @Test
+  def exists() {
     val docId = TestUtils.docId()
     coll.remove(docId)
 
@@ -61,7 +83,8 @@ class KeyValueSpec extends FunSuite {
     docId
   }
 
-  test("insert returns cas") {
+  @Test
+  def insert_returns_cas() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -72,7 +95,8 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("insert without expiry") {
+  @Test
+  def insert_without_expiry() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -84,7 +108,9 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("insert with expiry") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def insert_with_expiry() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -96,7 +122,9 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("get and lock") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def get_and_lock() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -117,7 +145,8 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("unlock") {
+  @Test
+  def unlock() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -144,7 +173,9 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("get and touch") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def get_and_touch() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -161,7 +192,8 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("remove") {
+  @Test
+  def remove() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -176,7 +208,8 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("upsert when doc does not exist") {
+  @Test
+  def upsert_when_doc_does_not_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -198,7 +231,8 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("upsert when doc does exist") {
+  @Test
+  def upsert_when_doc_does_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -226,7 +260,8 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does not exist") {
+  @Test
+  def replace_when_doc_does_not_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -240,7 +275,8 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does exist with cas=0") {
+  @Test
+  def replace_when_doc_does_exist_with_2() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -268,7 +304,8 @@ class KeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does exist with cas") {
+  @Test
+  def replace_when_doc_does_exist_with_3() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -295,7 +332,8 @@ class KeyValueSpec extends FunSuite {
     }
   }
 
-  test("validations") {
+  @Test
+  def validations() {
     val validations: Try[Any] = for {
       _ <- Validate.notNullOrEmpty("", "id")
     } yield null

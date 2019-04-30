@@ -15,16 +15,18 @@
  */
 package com.couchbase.client.scala.util
 
-import scala.util.{Success, Try}
+import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success, Try}
 
 /** Useful functional bits.
   *
   * Who needs Cats?
   *
-  * @author Graham Pople
   * @since 1.0.0
   */
 private[scala] object FunctionalUtil {
+  @Deprecated // Likely to be slow, not tailrec
   def traverse[T](in: List[Try[T]]): Try[List[T]] = {
     in match {
       case x :: Nil => x.map(List(_))
@@ -36,6 +38,7 @@ private[scala] object FunctionalUtil {
     }
   }
 
+  @Deprecated // Likely to be slow, not tailrec
   def traverse[T](in: Seq[Try[T]]): Try[Seq[T]] = {
     in match {
       case x +: Nil => x.map(Seq(_))
@@ -46,4 +49,5 @@ private[scala] object FunctionalUtil {
       })
     }
   }
+
 }

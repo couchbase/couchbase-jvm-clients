@@ -27,8 +27,7 @@ import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
-import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
-import io.opentracing.Span
+import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions, RowTraversalUtil}
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
@@ -36,7 +35,6 @@ import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
 import io.opentracing.Span
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
-import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.OptionConverters._
@@ -229,7 +227,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
                 FutureConversions.javaMonoToScalaMono(response.trailer())
                   .map(trailer => {
 
-                    val rowsConverted = FunctionalUtil.traverse(rows)
+                    val rowsConverted = RowTraversalUtil.traverse(rows.iterator)
                     val rawStatus = response.header.getStatus
                     val errors = SearchHandler.parseSearchErrors(rawStatus)
                     val meta = SearchHandler.parseSearchMeta(response, trailer)

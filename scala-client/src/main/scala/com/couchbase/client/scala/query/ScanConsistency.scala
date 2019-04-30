@@ -29,8 +29,6 @@ object ScanConsistency {
     private[scala] def encoded = "not_bounded"
   }
 
-  //case class AtPlus(consistentWith: List[MutationToken], scanWait: Option[Duration] = None) extends ScanConsistency
-
   /** The query blocks until any indexes used by the query are updated to reflect any pending mutations. */
   case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency {
     private[scala] def encoded = "request_plus"

@@ -31,7 +31,8 @@
 //  */
 //
 //class DemoSpec extends FunSuite {
-//  test("demo") {
+//  @Test
+//def demo() {
 //
 //
 //    // 1. Add support for Collections - DP in Mad Hatter

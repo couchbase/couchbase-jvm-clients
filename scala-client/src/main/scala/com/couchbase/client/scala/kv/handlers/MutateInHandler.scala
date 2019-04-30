@@ -125,7 +125,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
       case ResponseStatus.EXISTS =>
         document match {
-          case DocumentCreation.Insert => throw DefaultErrorUtil.casMismatch(id)
+          case DocumentCreation.Insert => throw DefaultErrorUtil.docExists(id)
           case _ => throw DefaultErrorUtil.casMismatch(id)
         }
 

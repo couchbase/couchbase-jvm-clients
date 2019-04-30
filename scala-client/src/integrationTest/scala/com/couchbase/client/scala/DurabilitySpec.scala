@@ -1,98 +1,122 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException
-import com.couchbase.client.scala.durability.Durability.{Disabled, Majority, MajorityAndPersistOnMaster, PersistToMajority}
+import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
-import org.scalatest.FunSuite
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
-class DurabilitySpec extends FunSuite {
-  // TODO get testing against mock working
+@TestInstance(Lifecycle.PER_CLASS)
+@IgnoreWhen(missesCapabilities = Array(Capabilities.SYNC_REPLICATION))
+class DurabilitySpec extends ScalaIntegrationTest {
 
-    val env = ClusterEnvironment
-      .builder("localhost", "Administrator", "password")
-      .ioConfig(IoConfig().mutationTokensEnabled(true))
-      .build
-    val cluster = Cluster.connect(env)
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+  private var env: ClusterEnvironment = null
+  private var cluster: Cluster = null
+  private var coll: Collection = null
 
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    val x: ClusterEnvironment.Builder = environment.ioConfig(IoConfig().mutationTokensEnabled(true))
+    env = x.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
 
-//  test("replicateTo = 2") {
-//    val docId = TestUtils.docId()
-//    val content = ujson.Obj("hello" -> "world")
-//    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.Two)) match {
-//      case Success(result) =>
-//      case Failure(err) => assert(false, s"unexpected error $err")
-//    }
-//  }
-//
-//  test("persistTo = 2") {
-//    val docId = TestUtils.docId()
-//    val content = ujson.Obj("hello" -> "world")
-//    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.None, PersistTo.Two)) match {
-//      case Success(result) =>
-//      case Failure(err) => assert(false, s"unexpected error $err")
-//    }
-//  }
+  }
 
-//  test("majority") {
-//    val docId = TestUtils.docId()
-//    val content = ujson.Obj("hello" -> "world")
-//    coll.insert(docId, content, durability = Majority) match {
-//      case Success(result) =>assert(false, s"success not expected")
-//      case Failure(err: DurabilityLevelNotAvailableException) =>
-//      case Failure(err) => assert(false, s"unexpected error $err")
-//    }
-//  }
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
 
-  test("Disabled") {
+  @Test
+  def replicateTo_2() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Disabled) match {
+    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.Two)) match {
+      case Success(result) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  def persistTo_2() {
+    val docId = TestUtils.docId()
+    val content = ujson.Obj("hello" -> "world")
+    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.None, PersistTo.Two)) match {
+      case Success(result) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  def majority() {
+    val docId = TestUtils.docId()
+    val content = ujson.Obj("hello" -> "world")
+    coll.insert(docId, content, durability = Durability.Majority) match {
+      case Success(result) => assert(false, s"success not expected")
+      case Failure(err: DurabilityLevelNotAvailableException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  def Disabled() {
+    val docId = TestUtils.docId()
+    val content = ujson.Obj("hello" -> "world")
+    coll.insert(docId, content, durability = Durability.Disabled) match {
       case Success(_) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
   // TODO see if can support Junit5-style test exclusions
-  ignore("Majority, timeout too short") {
+  @Test
+  def MajorityTimeoutTooShort() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Majority, timeout = Duration.Zero) match {
-      case Success(_) =>assert(false, s"unexpected success")
+    coll.insert(docId, content, durability = Durability.Majority, timeout = Duration.Zero) match {
+      case Success(_) => assert(false, s"unexpected success")
       case Failure(err: IllegalArgumentException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
 
-  // Durability on server side currently seems unstable, will retest later
-  ignore("Majority") {
+  // TODO Durability on server side currently seems unstable, will retest later
+  @Test
+  def Majority() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Majority) match {
+    coll.insert(docId, content, durability = Durability.Majority) match {
       case Success(_) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
-  ignore("MajorityAndPersistOnMaster") {
+  @Test
+  def MajorityAndPersistOnMaster() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = MajorityAndPersistOnMaster) match {
+    coll.insert(docId, content, durability = Durability.MajorityAndPersistOnMaster) match {
       case Success(_) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
-  ignore("PersistToMajority") {
+  @Test
+  def PersistToMajority() {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = PersistToMajority) match {
+    coll.insert(docId, content, durability = Durability.PersistToMajority) match {
       case Success(_) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }

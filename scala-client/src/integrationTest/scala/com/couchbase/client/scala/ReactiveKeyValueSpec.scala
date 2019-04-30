@@ -1,23 +1,44 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
-import org.scalatest.FunSuite
-
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
-import reactor.core.publisher.{Mono => JavaMono}
+import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import reactor.core.scala.publisher.{Mono => ScalaMono}
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 
-class ReactiveKeyValueSpec extends FunSuite {
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val blocking = bucket.defaultCollection
+@TestInstance(Lifecycle.PER_CLASS)
+class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
-  val coll = blocking.reactive
+  private var env: ClusterEnvironment = _
+  private var cluster: Cluster = _
+  private var blocking: Collection = _
+  private var coll: ReactiveCollection = _
+
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    val x: ClusterEnvironment.Builder = environment
+    env = x.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    blocking = bucket.defaultCollection
+    coll = blocking.reactive
+
+  }
+
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
 
   def wrap[T](in: ScalaMono[T]): Try[T] = {
     try {
@@ -28,7 +49,8 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("insert") {
+  @Test
+  def insert() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -46,7 +68,8 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("exists") {
+  @Test
+  def exists() {
     val docId = TestUtils.docId()
     coll.remove(docId)
 
@@ -68,7 +91,8 @@ class ReactiveKeyValueSpec extends FunSuite {
     docId
   }
 
-  test("insert returns cas") {
+  @Test
+  def insert_returns_cas() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -79,7 +103,8 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
 
-  test("insert without expiry") {
+  @Test
+  def insert_without_expiry() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -91,7 +116,9 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("insert with expiry") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def insert_with_expiry() {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -103,7 +130,9 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("get and lock") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def get_and_lock() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -124,13 +153,15 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("get and touch") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def get_and_touch() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
     val insertResult = wrap(coll.insert(docId, content, expiration = 10.seconds)).get
 
-    assert (insertResult.cas != 0)
+    assert(insertResult.cas != 0)
 
     wrap(coll.getAndTouch(docId, 1.second)) match {
       case Success(Some(result)) =>
@@ -141,7 +172,8 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("remove") {
+  @Test
+  def remove() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -151,12 +183,13 @@ class ReactiveKeyValueSpec extends FunSuite {
 
     wrap(coll.get(docId)) match {
       case Success(Some(result)) => assert(false, s"doc $docId exists and should not")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Success(None) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
-  test("upsert when doc does not exist") {
+  @Test
+  def upsert_when_doc_does_not_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -178,13 +211,14 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
 
-  test("upsert when doc does exist") {
+  @Test
+  def upsert_when_doc_does_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
     val insertResult = wrap(coll.insert(docId, content))
 
-    assert (insertResult.isSuccess)
+    assert(insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
     val upsertResult = wrap(coll.upsert(docId, content2))
@@ -206,7 +240,8 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does not exist") {
+  @Test
+  def replace_when_doc_does_not_exist() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -220,13 +255,14 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does exist with cas=0") {
+  @Test
+  def replace_when_doc_does_exist_with() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
     val insertResult = wrap(coll.insert(docId, content))
 
-    assert (insertResult.isSuccess)
+    assert(insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
     val replaceResult = wrap(coll.replace(docId, content2))
@@ -248,13 +284,14 @@ class ReactiveKeyValueSpec extends FunSuite {
   }
 
 
-  test("replace when doc does exist with cas") {
+  @Test
+  def replace_when_doc_does_exist_with_2() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
     val insertResult = wrap(coll.insert(docId, content))
 
-    assert (insertResult.isSuccess)
+    assert(insertResult.isSuccess)
 
     val content2 = ujson.Obj("hello" -> "world2")
     val replaceResult = wrap(coll.replace(docId, content2, insertResult.get.cas))
@@ -275,7 +312,8 @@ class ReactiveKeyValueSpec extends FunSuite {
     }
   }
 
-  test("initialise reactively") {
+  @Test
+  def initialise_reactively() {
     val coll: ReactiveCollection = ReactiveCluster.connect("localhost", "Administrator", "password")
       .flatMap(cluster => cluster.bucket("default"))
       .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
@@ -283,7 +321,8 @@ class ReactiveKeyValueSpec extends FunSuite {
       .block()
   }
 
-  test("initialise async") {
+  @Test
+  def initialise_async() {
     val cluster = Await.result(
       AsyncCluster.connect("localhost", "Administrator", "password"),
       Duration.Inf)

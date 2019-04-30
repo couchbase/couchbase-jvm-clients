@@ -21,7 +21,7 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryResponse}
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.util.FunctionalUtil
+import com.couchbase.client.scala.util.{FunctionalUtil, RowTraversalUtil}
 import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.util.{Failure, Success, Try}
@@ -59,8 +59,7 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
     */
   def allRowsAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    val r = rows.map(row => ev.decode(row.data(), Conversions.JsonFlags))
-    FunctionalUtil.traverse(r)
+    RowTraversalUtil.traverse(rowsAs[T])
   }
 }
 

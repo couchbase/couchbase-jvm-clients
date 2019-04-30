@@ -1,22 +1,38 @@
 package com.couchbase.client.scala.encodings
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.core.error.subdoc.MultiMutationException
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.codec.Conversions.Encodable
 import com.couchbase.client.scala.codec.DocumentFlags
-import com.couchbase.client.scala.{Cluster, TestUtils}
-import org.scalatest.FunSuite
+import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.test.ClusterAwareIntegrationTest
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
 import scala.util.{Failure, Success}
 
-class EncodingsSpec extends FunSuite {
+@TestInstance(Lifecycle.PER_CLASS)
+class EncodingsSpec extends ScalaIntegrationTest {
 
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+  private var env: ClusterEnvironment = _
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    env = environment.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
+  }
 
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
 
   def getContent(docId: String): ujson.Obj = {
     coll.get(docId) match {
@@ -34,7 +50,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("encode encoded-json-string") {
+  @Test
+  def encode_encoded_json_string() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -44,7 +61,8 @@ class EncodingsSpec extends FunSuite {
     assert(doc.flags == DocumentFlags.Json)
   }
 
-  test("encode encoded-json-string directly as string") {
+  @Test
+  def encode_encoded_json_string_directly_as_string() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
     coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
@@ -54,7 +72,8 @@ class EncodingsSpec extends FunSuite {
     assert(doc.flags == DocumentFlags.String)
   }
 
-  test("decode encoded-json-string as json") {
+  @Test
+  def decode_encoded_json_string_as_json() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -66,7 +85,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode encoded-json-string as string") {
+  @Test
+  def decode_encoded_json_string_as_string() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -79,19 +99,21 @@ class EncodingsSpec extends FunSuite {
   }
 
 
-
-  test("encode raw-string") {
+  @Test
+  def encode_raw_string() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
 
     val doc = coll.get(docId).get
 
-    assert(doc.flags == DocumentFlags.String)
+    // This is a bad assumption, the app should have specified string type
+    assert(doc.flags == DocumentFlags.Json)
   }
 
 
-  test("encode raw-string directly as string") {
+  @Test
+  def encode_raw_string_directly_as_string() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
@@ -102,7 +124,8 @@ class EncodingsSpec extends FunSuite {
   }
 
 
-  test("decode raw-string as json should fail") {
+  @Test
+  def decode_raw_string_as_json_should_fail() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -114,7 +137,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-string written directly as json, into json, should fail") {
+  @Test
+  def decode_raw_string_written_directly_as_json_into_json() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -126,7 +150,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-string as string") {
+  @Test
+  def decode_raw_string_as_string() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -138,7 +163,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-string written directly as string, into string") {
+  @Test
+  def decode_raw_string_written_directly_as_string_into() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
     coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
@@ -151,8 +177,8 @@ class EncodingsSpec extends FunSuite {
   }
 
 
-
-  test("encode json-bytes") {
+  @Test
+  def encode_json_bytes() {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
@@ -163,7 +189,8 @@ class EncodingsSpec extends FunSuite {
     assert(doc.flags == DocumentFlags.Json)
   }
 
-  test("decode json-bytes as json") {
+  @Test
+  def decode_json_bytes_as_json() {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
@@ -176,7 +203,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode json-bytes as string") {
+  @Test
+  def decode_json_bytes_as_string() {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
@@ -189,7 +217,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode json-bytes, written directly as json, into json") {
+  @Test
+  def decode_json_bytes_written_directly_as_json_into() {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
@@ -202,7 +231,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode json-bytes, written directly as binary, into json") {
+  @Test
+  def decode_json_bytes_written_directly_as_binary_into() {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
@@ -210,22 +240,25 @@ class EncodingsSpec extends FunSuite {
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
-        // stored as binary but it's still legit json, seems ok to be able to decode as json
+      // stored as binary but it's still legit json, seems ok to be able to decode as json
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
-  test("encode raw-bytes") {
+  @Test
+  def encode_raw_bytes() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
 
     val doc = coll.get(docId).get
 
-    assert(doc.flags == DocumentFlags.Binary)
+    // This is a bad assumption, the app should have specified binary type
+    assert(doc.flags == DocumentFlags.Json)
   }
 
-  test("raw json-bytes as json should fail") {
+  @Test
+  def raw_json_bytes_as_json_should_fail() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -237,7 +270,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-bytes as string should fail") {
+  @Test
+  def decode_raw_bytes_as_string_should_fail() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -249,7 +283,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-bytes, written directly as binary, as string should fail") {
+  @Test
+  def decode_raw_bytes_written_directly_as_binary_as_string() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content)(Encodable.AsValue.BytesConvert).get
@@ -261,7 +296,8 @@ class EncodingsSpec extends FunSuite {
     }
   }
 
-  test("decode raw-bytes as bytes") {
+  @Test
+  def decode_raw_bytes_as_bytes() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content).get
@@ -269,7 +305,8 @@ class EncodingsSpec extends FunSuite {
     assert(coll.get(docId).get.contentAsBytes sameElements content)
   }
 
-  test("decode raw-bytes, written directly as binary, as bytes") {
+  @Test
+  def decode_raw_bytes_written_directly_as_binary_as() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
     coll.insert(docId, content)(Encodable.AsValue.BytesConvert).get

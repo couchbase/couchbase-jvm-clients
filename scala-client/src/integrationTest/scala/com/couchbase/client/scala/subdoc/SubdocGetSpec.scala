@@ -1,25 +1,44 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.subdoc.PathNotFoundException
-import com.couchbase.client.core.error.{DecodingFailedException, DocumentDoesNotExistException, TemporaryLockFailureException}
-import com.couchbase.client.scala.json.JsonArray
-import com.couchbase.client.scala.kv.LookupInSpec
-import com.couchbase.client.scala.{Cluster, TestUtils}
-import org.scalatest.FunSuite
-
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
-import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.subdoc.PathNotFoundException
+import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.json.JsonArray
+import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv.LookupInSpec._
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.test.ClusterAwareIntegrationTest
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
-class SubdocGetSpec extends FunSuite {
+import scala.util.{Failure, Success}
 
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+@TestInstance(Lifecycle.PER_CLASS)
+class SubdocGetSpec extends ScalaIntegrationTest {
 
+  private var env: ClusterEnvironment = _
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
-  test("no commands") {
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    env = environment.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
+  }
+
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
+
+  @Test
+  def no_commands() {
     val docId = TestUtils.docId()
     coll.lookupIn(docId, Array[LookupInSpec]()) match {
       case Success(result) => assert(false, s"unexpected success")
@@ -30,7 +49,8 @@ class SubdocGetSpec extends FunSuite {
   }
 
 
-  test("lookupIn") {
+  @Test
+  def lookupIn() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world",
@@ -38,7 +58,7 @@ class SubdocGetSpec extends FunSuite {
       "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, Array(get("foo"),get("age"))) match {
+    coll.lookupIn(docId, Array(get("foo"), get("age"))) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
@@ -49,23 +69,25 @@ class SubdocGetSpec extends FunSuite {
   }
 
 
-  test("get array") {
+  @Test
+  def get_array() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("animals" -> ujson.Arr("cat","dog"))
+    val content = ujson.Obj("animals" -> ujson.Arr("cat", "dog"))
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("animals"))) match {
       case Success(result) =>
         assert(result.contentAsBytes(0).get sameElements """["cat","dog"]""".getBytes(CharsetUtil.UTF_8))
         assert(result.contentAs[String](0).get == """["cat","dog"]""")
-        assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat","dog"))
-        assert(result.contentAs[JsonArray](0).get == JsonArray("cat","dog"))
+        assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat", "dog"))
+        assert(result.contentAs[JsonArray](0).get == JsonArray("cat", "dog"))
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
-  test("path does not exist single") {
+  @Test
+  def path_does_not_exist_single() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -79,7 +101,8 @@ class SubdocGetSpec extends FunSuite {
   }
 
   // TODO server actually returns failure here, do we want to surface that?
-  test("path does not exist multi") {
+  @Test
+  def path_does_not_exist_multi() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -98,7 +121,8 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  test("lookupIn with doc") {
+  @Test
+  def lookupIn_with_doc() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world",
@@ -119,7 +143,8 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  test("exists single") {
+  @Test
+  def exists_single() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> ujson.Arr("world"))
@@ -137,7 +162,8 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  test("exists multi") {
+  @Test
+  def exists_multi() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> ujson.Arr("world"),
@@ -146,7 +172,7 @@ class SubdocGetSpec extends FunSuite {
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId,
-      Array(count("hello"), exists("age"), exists("does_not_exist"))) match {
+      Array(LookupInSpec.count("hello"), LookupInSpec.exists("age"), LookupInSpec.exists("does_not_exist"))) match {
       case Success(result) =>
         assert(result.exists(0))
         assert(result.exists(1))
@@ -167,7 +193,8 @@ class SubdocGetSpec extends FunSuite {
     }
   }
 
-  test("count") {
+  @Test
+  def count() {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> ujson.Arr("world"),
@@ -176,7 +203,7 @@ class SubdocGetSpec extends FunSuite {
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId,
-      Array(count("hello"), exists("age"), exists("does_not_exist"))) match {
+      Array(LookupInSpec.count("hello"), exists("age"), exists("does_not_exist"))) match {
       case Success(result) =>
         assert(result.contentAs[Boolean](1).get)
         result.contentAs[Boolean](2) match {

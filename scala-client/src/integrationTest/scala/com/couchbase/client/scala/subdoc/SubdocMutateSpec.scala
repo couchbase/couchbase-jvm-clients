@@ -1,25 +1,44 @@
 package com.couchbase.client.scala.subdoc
 
 import com.couchbase.client.core.error.DocumentAlreadyExistsException
-import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException, SubDocumentException}
+import com.couchbase.client.core.error.subdoc.MultiMutationException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
+import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.{Cluster, TestUtils}
-import org.scalatest.FunSuite
+import com.couchbase.client.scala.kv.LookupInSpec._
+import com.couchbase.client.scala.kv.MutateInSpec._
+import com.couchbase.client.scala.kv.{DocumentCreation, MutateInMacro, MutateInSpec}
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.{Failure, Success}
 import scala.concurrent.duration._
-import com.couchbase.client.scala.kv.MutateInSpec._
-import com.couchbase.client.scala.kv.LookupInSpec._
-import com.couchbase.client.scala.kv.{DocumentCreation, MutateInMacro, MutateInSpec}
+import scala.util.{Failure, Success}
 
-class SubdocMutateSpec extends FunSuite {
+@TestInstance(Lifecycle.PER_CLASS)
+class SubdocMutateSpec extends ScalaIntegrationTest {
 
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
-    val bucket = cluster.bucket("default")
-    val coll = bucket.defaultCollection
+  private var env: ClusterEnvironment = _
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
+  @BeforeAll
+  def beforeAll(): Unit = {
+    val config = ClusterAwareIntegrationTest.config()
+    env = environment.build
+    cluster = Cluster.connect(env)
+    val bucket = cluster.bucket(config.bucketname)
+    coll = bucket.defaultCollection
+  }
+
+  @AfterAll
+  def afterAll(): Unit = {
+    cluster.shutdown()
+    env.shutdown()
+  }
 
 
   def getContent(docId: String): ujson.Obj = {
@@ -71,7 +90,8 @@ class SubdocMutateSpec extends FunSuite {
     (docId, insertResult.cas)
   }
 
-  test("no commands") {
+  @Test
+  def no_commands() {
     val docId = TestUtils.docId()
     coll.mutateIn(docId, Array[MutateInSpec]()) match {
       case Success(result) => assert(false, s"unexpected success")
@@ -82,7 +102,8 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-  test("insert string") {
+  @Test
+  def insert_string() {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
@@ -97,7 +118,8 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo2").str == "bar2")
   }
 
-  test("upsert existing doc") {
+  @Test
+  def upsert_existing_doc() {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
@@ -112,7 +134,8 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo2").str == "bar2")
   }
 
-  test("insert existing doc") {
+  @Test
+  def insert_existing_doc() {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
@@ -123,7 +146,8 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("insert not-existing doc") {
+  @Test
+  def insert_not_existing_doc() {
     val docId = TestUtils.docId()
 
     coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
@@ -134,7 +158,8 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo2").str == "bar2")
   }
 
-  test("upsert not-existing doc") {
+  @Test
+  def upsert_not_existing_doc() {
     val docId = TestUtils.docId()
 
     coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Upsert) match {
@@ -146,18 +171,19 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-  test("remove") {
+  @Test
+  def remove() {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(remove("foo"))) match {
+    coll.mutateIn(docId, Array(MutateInSpec.remove("foo"))) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    assertThrows[NoSuchElementException](getContent(docId)("foo"))
+    Assertions.assertThrows(classOf[NoSuchElementException], () => (getContent(docId)("foo")))
   }
 
 
@@ -185,7 +211,8 @@ class SubdocMutateSpec extends FunSuite {
     coll.lookupIn(docId, Array(get("x").xattr)).get.contentAs[ujson.Obj](0).get
   }
 
-  private def checkSingleOpFailure(content: ujson.Obj, ops: Seq[MutateInSpec], expected: SubDocumentOpResponseStatus) = {
+  private def checkSingleOpFailure(content: ujson.Obj, ops: Seq[MutateInSpec], expected: SubDocumentOpResponseStatus)
+  = {
     val (docId, cas) = prepare(content)
 
     coll.mutateIn(docId, ops) match {
@@ -196,7 +223,8 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  private def checkSingleOpFailureXattr(content: ujson.Obj, ops: Seq[MutateInSpec], expected: SubDocumentOpResponseStatus) = {
+  private def checkSingleOpFailureXattr(content: ujson.Obj, ops: Seq[MutateInSpec],
+                                        expected: SubDocumentOpResponseStatus) = {
     val (docId, cas) = prepareXattr(content)
 
     coll.mutateIn(docId, ops) match {
@@ -207,11 +235,14 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("insert string already there") {
-    checkSingleOpFailure(ujson.Obj("foo" -> "bar"), Array(insert("foo", "bar2")), SubDocumentOpResponseStatus.PATH_EXISTS)
+  @Test
+  def insert_string_already_there() {
+    checkSingleOpFailure(ujson.Obj("foo" -> "bar"), Array(insert("foo", "bar2")), SubDocumentOpResponseStatus
+      .PATH_EXISTS)
   }
 
-  test("insert bool") {
+  @Test
+  def insert_bool() {
     val content = ujson.Obj()
     val (docId, cas) = prepare(content)
 
@@ -224,43 +255,50 @@ class SubdocMutateSpec extends FunSuite {
     assert(!getContent(docId)("foo2").bool)
   }
 
-  test("replace bool") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"), 
+  @Test
+  def replace_bool() {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"),
       Array(replace("hello", false)))
     assert(!updatedContent("hello").bool)
   }
 
-  test("insert int") {
+  @Test
+  def insert_int() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
       Array(insert("hello", false)))
     assert(!updatedContent("hello").bool)
   }
 
-  test("replace int") {
+  @Test
+  def replace_int() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"),
       Array(replace("hello", 42)))
     assert(updatedContent("hello").num == 42)
   }
 
-  test("replace long") {
+  @Test
+  def replace_long() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"),
       Array(replace("hello", Long.MaxValue)))
     assert(updatedContent("hello").num == Long.MaxValue)
   }
 
-  test("replace double") {
+  @Test
+  def replace_double() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"),
       Array(replace("hello", 42.3)))
     assert(updatedContent("hello").num == 42.3)
   }
 
-  test("replace short") {
+  @Test
+  def replace_short() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("hello" -> "world"),
       Array(replace("hello", Short.MaxValue)))
     assert(updatedContent("hello").num == Short.MaxValue)
   }
-  
-  test("replace string") {
+
+  @Test
+  def replace_string() {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
@@ -275,57 +313,68 @@ class SubdocMutateSpec extends FunSuite {
     assert(getContent(docId)("foo").str == "bar2")
   }
 
-  test("replace string does not exist") {
+  @Test
+  def replace_string_does_not_exist() {
     checkSingleOpFailure(ujson.Obj(), Array(replace("foo", "bar2")), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
-  test("upsert string") {
+  @Test
+  def upsert_string() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> "bar"), Array(upsert("foo", "bar2")))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("upsert string does not exist") {
+  @Test
+  def upsert_string_does_not_exist() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(upsert("foo", "bar2")))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("array append") {
+  @Test
+  def array_append() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
       Array(arrayAppend("foo", "world")))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world"))
   }
 
-  test("array prepend") {
+  @Test
+  def array_prepend() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
       Array(arrayPrepend("foo", "world")))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world", "hello"))
   }
 
-  test("array insert") {
+  @Test
+  def array_insert() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       Array(arrayInsert("foo[1]", "cruel")))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
   }
 
-  test("array insert unique does not exist") {
+  @Test
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  def array_insert_unique_does_not_exist() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       Array(arrayAddUnique("foo", "cruel")))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   }
 
-  test("array insert unique does exist") {
+  @Test
+  def array_insert_unique_does_exist() {
     val updatedContent = checkSingleOpFailure(ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
       Array(arrayAddUnique("foo", "cruel")),
       SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
-  test("counter +5") {
+  @Test
+  def counter__5 () {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
       Array(increment("foo", 5)))
     assert(updatedContent("foo").num == 15)
   }
 
-  test("counter +5 returned") {
+  @Test
+  def counter_5_returned () {
     val content = ujson.Obj("foo" -> 10)
     val (docId, cas) = prepare(content)
 
@@ -336,222 +385,269 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("counter -5") {
+  @Test
+  def counter_minus5() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10),
       Array(decrement("foo", 3)))
     assert(updatedContent("foo").num == 7)
   }
 
 
-  test("insert xattr") {
+  @Test
+  def insert_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("remove xattr") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(remove("x.foo").xattr))
-    assertThrows[NoSuchElementException](updatedContent("foo"))
+  @Test
+  def remove_xattr() {
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(MutateInSpec.remove("x.foo").xattr))
+    Assertions.assertThrows(classOf[NoSuchElementException], () => (updatedContent("foo")))
   }
 
-  test("remove xattr does not exist") {
-    checkSingleOpFailureXattr(ujson.Obj(), Array(remove("x.foo").xattr), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+  @Test
+  def remove_xattr_does_not_exist() {
+    checkSingleOpFailureXattr(ujson.Obj(), Array(MutateInSpec.remove("x.foo").xattr), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
-  test("insert string already there xattr") {
-    checkSingleOpFailureXattr(ujson.Obj("foo" -> "bar"), Array(insert("x.foo", "bar2").xattr), SubDocumentOpResponseStatus.PATH_EXISTS)
+  @Test
+  def insert_string_already_there_xattr() {
+    checkSingleOpFailureXattr(ujson.Obj("foo" -> "bar"), Array(insert("x.foo", "bar2").xattr),
+      SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
-  test("replace string xattr") {
+  @Test
+  def replace_string_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(replace("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("replace string does not exist xattr") {
+  @Test
+  def replace_string_does_not_exist_xattr() {
     checkSingleOpFailure(ujson.Obj(), Array(replace("x.foo", "bar2").xattr), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
-  test("upsert string xattr") {
+  @Test
+  def upsert_string_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> "bar"), Array(upsert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("upsert string does not exist xattr") {
+  @Test
+  def upsert_string_does_not_exist_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo", "bar2").xattr))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("array append xattr") {
+  @Test
+  def array_append_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello")),
       Array(arrayAppend("x.foo", "world").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world"))
   }
 
-  test("array prepend xattr") {
+  @Test
+  def array_prepend_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello")),
       Array(arrayPrepend("x.foo", "world").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world", "hello"))
   }
 
-  test("array insert xattr") {
+  @Test
+  def array_insert_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       Array(arrayInsert("x.foo[1]", "cruel").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
   }
 
-  test("array insert unique does not exist xattr") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def array_insert_unique_does_not_exist_3() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       Array(arrayAddUnique("x.foo", "cruel").xattr))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
   }
 
-  test("array insert unique does exist xattr") {
+  @Test
+  def array_insert_unique_does_exist_xattr() {
     checkSingleOpFailureXattr(ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
       Array(arrayAddUnique("x.foo", "cruel").xattr),
       SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
-  test("counter +5 xatr") {
+  @Test
+  def counter_5_xatr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10),
       Array(increment("x.foo", 5).xattr))
     assert(updatedContent("foo").num == 15)
   }
 
-  test("counter -5 xatr") {
+  @Test
+  def counter_minus5_xatr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10),
       Array(decrement("x.foo", 3).xattr))
     assert(updatedContent("foo").num == 7)
   }
 
 
-  test("insert expand macro xattr do not flag") {
+  @Test
+  def insert_expand_macro_xattr_do_not() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo", "${Mutation.CAS}").xattr))
     assert(updatedContent("foo").str == "${Mutation.CAS}")
   }
 
-  test("insert expand macro xattr") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def insert_expand_macro_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
       Array(insert("x.foo", MutateInMacro.MutationCAS).xattr))
     assert(updatedContent("foo").str != "${Mutation.CAS}")
   }
 
 
-  test("insert xattr createPath") {
+  @Test
+  def insert_xattr_createPath() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(insert("x.foo.baz", "bar2").xattr.createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
-  test("insert string already there xattr createPath") {
+  @Test
+  def insert_string_already_there_xattr_createPath() {
     // TODO this should return PATH_EXISTS surely?  maybe another bug related to not doing single path
-    checkSingleOpFailureXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(insert("x.foo.baz", "bar2")), SubDocumentOpResponseStatus.PATH_NOT_FOUND)
+    checkSingleOpFailureXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(insert("x.foo.baz", "bar2")),
+      SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
 
-  test("upsert string xattr createPath") {
-    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("x.foo", "bar2").xattr.createPath))
+  @Test
+  def upsert_string_xattr_createPath() {
+    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("x" +
+      ".foo", "bar2").xattr.createPath))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("upsert string does not exist xattr createPath") {
+  @Test
+  def upsert_string_does_not_exist_xattr_2() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(), Array(upsert("x.foo.baz", "bar2").xattr.createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
-  test("array append xattr createPath") {
+  @Test
+  def array_append_xattr_createPath() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
       Array(arrayAppend("x.foo", "world").xattr.createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
-  test("array prepend xattr createPath") {
+  @Test
+  def array_prepend_xattr_createPath() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
       Array(arrayPrepend("x.foo", "world").xattr.createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   // TODO failing with bad input server error
-  //  test("array insert xattr createPath") {
-  //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-  //      Array(arrayInsert("x.foo[0]", "cruel").xattr.createPath)
-  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
-  //  }
-  //
-  //  test("array insert unique does not exist xattr createPath") {
-  //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-  //      Array(arrayAddUnique("x.foo", "cruel").xattr.createPath)
-  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
-  //  }
+  //  @Test
+  def array_insert_xattr_createPath() {
+    //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
+    //      Array(arrayInsert("x.foo[0]", "cruel").xattr.createPath)
+    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
+  }
+
+  @Test
+  def array_insert_unique_does_not_exist_xattr() {
+    //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
+    //      Array(arrayAddUnique("x.foo", "cruel").xattr.createPath)
+    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+  }
 
 
-  test("counter +5 xattr createPath") {
+  @Test
+  def counter_5_xattr_createPath() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
       Array(increment("x.foo", 5).xattr.createPath))
     assert(updatedContent("foo").num == 5)
   }
 
-  test("counter -5 xattr createPath") {
+  @Test
+  def counter_minus5_xattr_createPath() {
     val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
       Array(decrement("x.foo", 3).xattr.createPath))
     assert(updatedContent("foo").num == -3)
   }
 
 
-  test("insert createPath") {
+  @Test
+  def insert_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(insert("foo.baz", "bar2").createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
-  test("insert string already there createPath") {
-    checkSingleOpFailure(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(insert("foo.baz", "bar2")), SubDocumentOpResponseStatus.PATH_EXISTS)
+  @Test
+  def insert_string_already_there_createPath() {
+    checkSingleOpFailure(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(insert("foo.baz", "bar2")),
+      SubDocumentOpResponseStatus.PATH_EXISTS)
   }
 
-  test("upsert string createPath") {
-    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("foo", "bar2").createPath))
+  @Test
+  def upsert_string_createPath() {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(upsert("foo",
+      "bar2").createPath))
     assert(updatedContent("foo").str == "bar2")
   }
 
-  test("upsert string does not exist createPath") {
+  @Test
+  def upsert_string_does_not_exist_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(), Array(upsert("foo.baz", "bar2").createPath))
     assert(updatedContent("foo").obj("baz").str == "bar2")
   }
 
-  test("array append createPath") {
+  @Test
+  def array_append_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
       Array(arrayAppend("foo", "world").createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
-  test("array prepend createPath") {
+  @Test
+  def array_prepend_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
       Array(arrayPrepend("foo", "world").createPath))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
   // TODO failing with bad input server error
-  //  test("array insert createPath") {
-  //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-  //      Array(arrayInsert("foo[0]", "cruel").createPath)
-  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
-  //  }
-  //
-  //  test("array insert unique does not exist createPath") {
-  //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-  //      Array(arrayAddUnique("foo", "cruel").createPath)
-  //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
-  //  }
+  @Test
+  def array_insert_createPath() {
+    //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+    //      Array(arrayInsert("foo[0]", "cruel").createPath)
+    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
+  }
+
+//  @Test
+//  def array_insert_unique_does_not_exist() {
+//    //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+//    //      Array(arrayAddUnique("foo", "cruel").createPath)
+//    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+//  }
 
 
-  test("counter +5 createPath") {
+  @Test
+  def counter_5_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
       Array(increment("foo", 5).createPath))
     assert(updatedContent("foo").num == 5)
   }
 
-  test("counter -5 createPath") {
+  @Test
+  def counter_minus5_createPath() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj(),
       Array(decrement("foo", 3).createPath))
     assert(updatedContent("foo").num == -3)
   }
 
-  test("expiration") {
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def expiration() {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
@@ -569,7 +665,8 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-  test("> 16") {
+  @Test
+  def moreThan16() {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
@@ -596,7 +693,8 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("two commands succeed") {
+  @Test
+  def two_commands_succeed() {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
@@ -613,13 +711,14 @@ class SubdocMutateSpec extends FunSuite {
   }
 
 
-  test("two commands one fails") {
+  @Test
+  def two_commands_one_fails() {
     val content = ujson.Obj("foo1" -> "bar_orig_1", "foo2" -> "bar_orig_2")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo0", "bar0")
-      , insert("foo1", "bar1")
-      , remove("foo3"))) match {
+    coll.mutateIn(docId, Array(insert("foo0", "bar0"),
+      insert("foo1", "bar1"),
+      MutateInSpec.remove("foo3"))) match {
       case Success(result) =>
       case Failure(err: MultiMutationException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -629,7 +728,8 @@ class SubdocMutateSpec extends FunSuite {
     assert(updated("foo1").str == "bar_orig_1")
   }
 
-  test("write and read primitive boolean") {
+  @Test
+  def write_and_read_primitive_boolean() {
     val docId = TestUtils.docId()
     assert(coll.mutateIn(docId, Array(upsert("foo", true)), document = DocumentCreation.Insert).isSuccess)
 
@@ -643,7 +743,8 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("write and read primitive int") {
+  @Test
+  def write_and_read_primitive_int() {
     val docId = TestUtils.docId()
     assert(coll.mutateIn(docId, Array(upsert("foo", 42)), document = DocumentCreation.Insert).isSuccess)
 
@@ -656,7 +757,8 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("write and read primitive double") {
+  @Test
+  def write_and_read_primitive_double() {
     val docId = TestUtils.docId()
     assert(coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = DocumentCreation.Insert).isSuccess)
 
@@ -669,9 +771,11 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("write and read primitive long") {
+  @Test
+  def write_and_read_primitive_long() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = DocumentCreation.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = DocumentCreation.Insert)
+      .isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -682,9 +786,11 @@ class SubdocMutateSpec extends FunSuite {
     }
   }
 
-  test("write and read primitive short") {
+  @Test
+  def write_and_read_primitive_short() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = DocumentCreation.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = DocumentCreation.Insert)
+      .isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))

@@ -1,23 +1,23 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.cnc.LoggingEventConsumer
 import com.couchbase.client.core.env.SaslMechanism
 import com.couchbase.client.scala.env._
-import org.scalatest.FunSuite
+import org.junit.jupiter.api.Test
 
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Success
 
-class EnvironmentSpec extends FunSuite {
-  test("basic") {
+class EnvironmentSpec {
+  @Test
+  def basic() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build
     val cluster = Cluster.connect(env)
     cluster.shutdown()
     env.shutdown()
   }
 
-  test("buildSafe") {
+  @Test
+  def buildSafe() {
     ClusterEnvironment.builder("localhost", "Administrator", "password").buildSafe match {
       case Success(env) =>
         val cluster = Cluster.connect(env)
@@ -27,26 +27,29 @@ class EnvironmentSpec extends FunSuite {
     }
   }
 
-  test("basic unowned") {
+  @Test
+  def basic_unowned() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build
     val cluster = Cluster.connect(env)
-    assert (!env.owned)
+    assert(!env.owned)
     cluster.shutdown()
     env.shutdown()
     assert(env.threadPool.isShutdown)
     assert(env.threadPool.isTerminated)
   }
 
-  test("basic owned") {
+  @Test
+  def basic_owned() {
     val cluster = Cluster.connect("localhost", "Administrator", "password")
     val env = cluster.async.env
-    assert (env.owned)
+    assert(env.owned)
     cluster.shutdown()
     assert(env.threadPool.isShutdown)
     assert(env.threadPool.isTerminated)
   }
 
-  test("io env") {
+  @Test
+  def io_env() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password")
       .ioEnvironment(IoEnvironment()
         .managerEventLoopGroup(null)
@@ -55,42 +58,45 @@ class EnvironmentSpec extends FunSuite {
     env.shutdown()
   }
 
-  test("io config") {
+  @Test
+  def io_config() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password")
       .ioConfig(IoConfig()
-          .mutationTokensEnabled(true)
-          .allowedSaslMechanisms(Set(SaslMechanism.PLAIN, SaslMechanism.CRAM_MD5))
-          .configPollInterval(Duration("5 seconds"))
-          .kvCircuitBreakerConfig(CircuitBreakerConfig()
-              .enabled(true)
-              .errorThresholdPercentage(50)
-              .sleepWindow(Duration("10 seconds"))
-          )
+        .mutationTokensEnabled(true)
+        .allowedSaslMechanisms(Set(SaslMechanism.PLAIN, SaslMechanism.CRAM_MD5))
+        .configPollInterval(Duration("5 seconds"))
+        .kvCircuitBreakerConfig(CircuitBreakerConfig()
+          .enabled(true)
+          .errorThresholdPercentage(50)
+          .sleepWindow(Duration("10 seconds"))
+        )
       )
 
       .build
     env.shutdown()
   }
 
-  test("service config") {
+  @Test
+  def service_config() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password")
       .serviceConfig(ServiceConfig()
-          .keyValueServiceConfig(KeyValueServiceConfig()
-              .endpoints(5))
-          .queryServiceConfig(QueryServiceConfig()
-              .maxEndpoints(10)
-              .minEndpoints(3))
+        .keyValueServiceConfig(KeyValueServiceConfig()
+          .endpoints(5))
+        .queryServiceConfig(QueryServiceConfig()
+          .maxEndpoints(10)
+          .minEndpoints(3))
       )
       .build
     env.shutdown()
   }
 
-  test("logging config") {
+  @Test
+  def logging_config() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password")
       .loggerConfig(LoggerConfig()
-          .loggerName("test")
-          .fallbackToConsole(true)
-          .disableSlf4J(true)
+        .loggerName("test")
+        .fallbackToConsole(true)
+        .disableSlf4J(true)
       )
       .build
     env.shutdown()
