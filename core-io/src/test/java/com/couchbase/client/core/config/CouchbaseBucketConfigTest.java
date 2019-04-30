@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.couchbase.client.util.Utils.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -150,6 +151,26 @@ class CouchbaseBucketConfigTest {
     void shouldHandleMissingBucketUuid() {
         CouchbaseBucketConfig config = readConfig("config_without_uuid.json");
         assertNull(config.uuid());
+    }
+
+    /**
+     * This test makes sure that we are properly extracting the cluster capabilities from the config
+     * section while keeping all the other services empty so it is safe to look up (and not returning
+     * null or anything).
+     */
+    @Test
+    void shouldDetectClusterCapabilities() {
+        CouchbaseBucketConfig config = readConfig("cluster_run_cluster_capabilities.json");
+        Map<ServiceType, Set<ClusterCapabilities>> cc = config.clusterCapabilities();
+
+        assertEquals(1, cc.get(ServiceType.QUERY).size());
+        assertTrue(cc.get(ServiceType.QUERY).contains(ClusterCapabilities.ENHANCED_PREPARED_STATEMENTS));
+
+        assertTrue(cc.get(ServiceType.KV).isEmpty());
+        assertTrue(cc.get(ServiceType.SEARCH).isEmpty());
+        assertTrue(cc.get(ServiceType.ANALYTICS).isEmpty());
+        assertTrue(cc.get(ServiceType.MANAGER).isEmpty());
+        assertTrue(cc.get(ServiceType.VIEWS).isEmpty());
     }
 
     /**

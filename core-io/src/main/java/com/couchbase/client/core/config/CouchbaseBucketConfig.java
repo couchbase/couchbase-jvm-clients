@@ -27,6 +27,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -58,17 +59,19 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
      */
     @JsonCreator
     public CouchbaseBucketConfig(
-        @JsonProperty("rev") long rev,
-        @JsonProperty("uuid") String uuid,
-        @JsonProperty("name") String name,
-        @JsonProperty("uri") String uri,
-        @JsonProperty("streamingUri") String streamingUri,
-        @JsonProperty("vBucketServerMap") PartitionInfo partitionInfo,
-        @JsonProperty("nodes") List<NodeInfo> nodeInfos,
-        @JsonProperty("nodesExt") List<PortInfo> portInfos,
-        @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
-        @JacksonInject("origin") NetworkAddress origin) {
-        super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities, origin);
+      @JsonProperty("rev") long rev,
+      @JsonProperty("uuid") String uuid,
+      @JsonProperty("name") String name,
+      @JsonProperty("uri") String uri,
+      @JsonProperty("streamingUri") String streamingUri,
+      @JsonProperty("vBucketServerMap") PartitionInfo partitionInfo,
+      @JsonProperty("nodes") List<NodeInfo> nodeInfos,
+      @JsonProperty("nodesExt") List<PortInfo> portInfos,
+      @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
+      @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
+      @JacksonInject("origin") NetworkAddress origin) {
+        super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
+          origin, clusterCapabilities);
         this.partitionInfo = partitionInfo;
         this.tainted = partitionInfo.tainted();
         List<NodeInfo> extendedNodeInfos = this.nodes(); // includes ports for SSL services

@@ -21,6 +21,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonSubTy
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a Couchbase Bucket Configuration.
@@ -117,5 +119,9 @@ public interface BucketConfig {
    */
   boolean hasFastForwardMap();
 
+  /**
+   * Returns the cluster capabilities reported by the server.
+   */
+  Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities();
 
 }

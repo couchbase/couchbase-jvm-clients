@@ -20,8 +20,14 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class AbstractBucketConfig implements BucketConfig {
 
@@ -33,16 +39,21 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final List<NodeInfo> nodeInfo;
     private final int enabledServices;
     private final List<BucketCapabilities> bucketCapabilities;
+    private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final NetworkAddress origin;
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
-                                   List<NodeInfo> nodeInfos, List<PortInfo> portInfos, List<BucketCapabilities> bucketCapabilities, NetworkAddress origin) {
+                                   List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
+                                   List<BucketCapabilities> bucketCapabilities, NetworkAddress origin,
+                                   Map<String, Set<ClusterCapabilities>> clusterCapabilities
+    ) {
         this.uuid = uuid;
         this.name = name;
         this.locator = locator;
         this.uri = uri;
         this.streamingUri = streamingUri;
         this.bucketCapabilities = bucketCapabilities;
+        this.clusterCapabilities = convertClusterCapabilities(clusterCapabilities);
         this.origin = origin;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
         int es = 0;
@@ -55,6 +66,56 @@ public abstract class AbstractBucketConfig implements BucketConfig {
             }
         }
         this.enabledServices = es;
+    }
+
+    private Map<ServiceType, Set<ClusterCapabilities>> convertClusterCapabilities(
+      final Map<String, Set<ClusterCapabilities>> input) {
+
+        Map<ServiceType, Set<ClusterCapabilities>> result = new HashMap<>();
+        result.put(ServiceType.MANAGER, Collections.emptySet());
+        result.put(ServiceType.QUERY, Collections.emptySet());
+        result.put(ServiceType.VIEWS, Collections.emptySet());
+        result.put(ServiceType.KV, Collections.emptySet());
+        result.put(ServiceType.SEARCH, Collections.emptySet());
+        result.put(ServiceType.ANALYTICS, Collections.emptySet());
+
+        if (input == null) {
+            return result;
+        }
+
+        for (Map.Entry<String, Set<ClusterCapabilities>> entry : input.entrySet()) {
+            Set<ClusterCapabilities> capabilities = entry
+              .getValue()
+              .stream()
+              .filter(Objects::nonNull)
+              .collect(Collectors.toSet());
+
+            if (capabilities.isEmpty()) {
+                continue;
+            }
+
+            switch (entry.getKey()) {
+                case "mgmt":
+                    result.put(ServiceType.MANAGER, EnumSet.copyOf(entry.getValue()));
+                    break;
+                case "n1ql":
+                    result.put(ServiceType.QUERY,EnumSet.copyOf(entry.getValue()));
+                    break;
+                case "capi":
+                    result.put(ServiceType.VIEWS, EnumSet.copyOf(entry.getValue()));
+                    break;
+                case "kv":
+                    result.put(ServiceType.KV, EnumSet.copyOf(entry.getValue()));
+                    break;
+                case "fts":
+                    result.put(ServiceType.SEARCH, EnumSet.copyOf(entry.getValue()));
+                    break;
+                case "cbas":
+                    result.put(ServiceType.ANALYTICS, EnumSet.copyOf(entry.getValue()));
+                    break;
+            }
+        }
+        return result;
     }
 
     /**
@@ -145,5 +206,10 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     @Override
     public boolean serviceEnabled(ServiceType type) {
         return (enabledServices & (1 << type.ordinal())) != 0;
+    }
+
+    @Override
+    public Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities() {
+        return clusterCapabilities;
     }
 }

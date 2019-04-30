@@ -30,6 +30,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -65,8 +67,10 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JsonProperty("nodes") List<NodeInfo> nodeInfos,
             @JsonProperty("nodesExt") List<PortInfo> portInfos,
             @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
+            @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
             @JacksonInject("origin") NetworkAddress origin) {
-        super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities, origin);
+        super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
+          origin, clusterCapabilities);
         this.rev = rev;
         this.ketamaNodes = new TreeMap<>();
         this.hashingStrategy = StandardMemcachedHashingStrategy.INSTANCE;

@@ -67,7 +67,7 @@ class AbstractBucketConfigTest {
 
         SampleBucketConfig(List<NodeInfo> nodeInfos, List<PortInfo> portInfos) {
             super(UUID, NAME, LOCATOR, URI, STREAMING_URI, nodeInfos, portInfos, null,
-                NetworkAddress.localhost());
+                NetworkAddress.localhost(), null);
         }
 
         @Override
