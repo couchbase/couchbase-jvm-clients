@@ -290,7 +290,7 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
   builder.serviceConfig.foreach(v => coreBuilder.serviceConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
 
-  private[scala] val coreEnv = new CoreEnvironment(new CoreEnvironmentWrapper(builder.credentials))
+  private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 
   /**
     * Shuts this environment down.  If the application created this (i.e. rather than using one of the convenience
@@ -305,10 +305,12 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
     */
   def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = {
     Mono.fromRunnable(new Runnable {
-      override def run(): Unit = coreEnv.shutdown(timeout)
+      override def run(): Unit = {
+        coreEnv.shutdown(timeout)
+      }
     })
 
-      .flatMap(_ => Mono.fromRunnable(new Runnable {
+      .then(Mono.fromRunnable(new Runnable {
         override def run(): Unit = {
           threadPool.shutdownNow()
           defaultScheduler.dispose()
