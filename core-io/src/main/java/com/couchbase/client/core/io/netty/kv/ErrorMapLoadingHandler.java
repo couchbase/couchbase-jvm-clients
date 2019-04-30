@@ -16,21 +16,20 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.json.MapperException;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.IoContext;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
@@ -45,7 +44,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
-import static com.couchbase.client.core.json.Mapper.decodeInto;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -187,8 +185,8 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       byte[] input = new byte[body.get().readableBytes()];
       body.get().readBytes(input);
       try {
-        return Optional.of(decodeInto(input, ErrorMap.class));
-      } catch (MapperException e) {
+        return Optional.of(ErrorMap.fromJson(input));
+      } catch (IOException e) {
         endpointContext.environment().eventBus().publish(new ErrorMapUndecodableEvent(
           ioContext, e.getMessage(), new String(input, UTF_8)
         ));
