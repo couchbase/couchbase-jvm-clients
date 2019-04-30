@@ -281,6 +281,8 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
 
   private val coreBuilder = new CoreEnvironmentWrapper(builder.credentials)
 
+  import collection.JavaConverters._
+
   builder.connectionString.foreach(v => coreBuilder.load(new ConnectionStringPropertyLoader(v)))
   builder.ioEnvironment.foreach(v => coreBuilder.ioEnvironment(v.toCore))
   builder.ioConfig.foreach(v => coreBuilder.ioConfig(v.toCore))
@@ -289,6 +291,9 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
   builder.timeoutConfig.foreach(v => coreBuilder.timeoutConfig(v.toCore))
   builder.serviceConfig.foreach(v => coreBuilder.serviceConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
+  builder.seedNodes.foreach(sn => coreBuilder.seedNodes(sn.map(_.toCore).asJava))
+  builder.tracer.foreach(t => coreBuilder.tracer(t))
+  builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 
