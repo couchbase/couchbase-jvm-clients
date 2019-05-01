@@ -208,8 +208,9 @@ def buildsAndTests(PLATFORMS) {
                     post {
                         always {
                             // Process the Junit test results
-                            junit 'java-client/target/surefire-reports/*.xml'                        }
-                            junit 'core-io/target/surefire-reports/*.xml'                        }
+                            junit 'java-client/target/surefire-reports/*.xml'
+                            junit 'core-io/target/surefire-reports/*.xml'
+                        }
                     }
 
                 }
