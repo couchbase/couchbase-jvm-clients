@@ -357,9 +357,6 @@ public enum MemcacheProtocol {
   /**
    * Helper method to create the flexible extras for sync replication.
    *
-   * <p>TODO: the server right now does not support sending the timeout, so it needs
-   * to be reenabled once the server supports it.</p>
-   *
    * @param alloc the allocator to use.
    * @param type the type of sync replication.
    * @param timeout the timeout to use.
@@ -371,9 +368,7 @@ public enum MemcacheProtocol {
     ByteBuf flexibleExtras = alloc.buffer(3);
     flexibleExtras.writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03);
     flexibleExtras.writeByte(type.code());
-    flexibleExtras.writeShort(0);
-    // TODO: reenable timeout once the server implements it!
-    //flexibleExtras.writeShort((short) timeout.toMillis());
+    flexibleExtras.writeShort((short) timeout.toMillis());
     return flexibleExtras;
   }
 
