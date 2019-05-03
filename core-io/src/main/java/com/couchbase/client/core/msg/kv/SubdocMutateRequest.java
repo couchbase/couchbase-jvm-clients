@@ -115,8 +115,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ByteBuf request;
     if (syncReplicationType.isPresent()) {
       if (ctx.syncReplicationEnabled()) {
-        Duration timeoutAdjusted = RequestUtil.handleDurabilityTimeout(context(), timeout());
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeoutAdjusted);
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
                 noCas(), flexibleExtras, extras, key, body);
         flexibleExtras.release();

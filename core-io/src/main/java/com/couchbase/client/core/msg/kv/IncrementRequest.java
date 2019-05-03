@@ -71,8 +71,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
     ByteBuf request;
     if (syncReplicationType.isPresent()) {
       if (ctx.syncReplicationEnabled()) {
-        Duration timeoutAdjusted = RequestUtil.handleDurabilityTimeout(context(), timeout());
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeoutAdjusted);
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
                 partition(), opaque, cas, flexibleExtras, extras, key, noBody());
         flexibleExtras.release();

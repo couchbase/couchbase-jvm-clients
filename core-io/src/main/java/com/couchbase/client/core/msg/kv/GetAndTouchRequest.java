@@ -59,8 +59,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
     ByteBuf request;
     if (syncReplicationType.isPresent()) {
       if (ctx.syncReplicationEnabled()) {
-        Duration timeoutAdjusted = RequestUtil.handleDurabilityTimeout(context(), timeout());
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeoutAdjusted);
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
                 partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
         flexibleExtras.release();

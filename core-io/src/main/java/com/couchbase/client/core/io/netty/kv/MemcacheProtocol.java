@@ -40,6 +40,11 @@ public enum MemcacheProtocol {
   ;
 
   /**
+   * Holds the max value a unsigned short can represent.
+   */
+  public static int UNSIGNED_SHORT_MAX = 65535;
+
+  /**
    * The fixed header size.
    */
   static final int HEADER_SIZE = 24;
@@ -84,6 +89,11 @@ public enum MemcacheProtocol {
    */
   public static final byte SYNC_REPLICATION_FLEXIBLE_IDENT = 0b00010000;
 
+  /**
+   * Minimum sync durability timeout that can be set and which will override any lower
+   * user-provided value.
+   */
+  public static final short SYNC_REPLICATION_TIMEOUT_FLOOR_MS = 1500;
 
   /**
    * Create a flexible memcached protocol request with all fields necessary.
@@ -357,6 +367,9 @@ public enum MemcacheProtocol {
   /**
    * Helper method to create the flexible extras for sync replication.
    *
+   * <p>Note that this method writes a short value from an integer deadline. The netty method will make sure to
+   * only look at the lower 16 bits - this allows us to write an unsigned short!</p>
+   *
    * @param alloc the allocator to use.
    * @param type the type of sync replication.
    * @param timeout the timeout to use.
@@ -365,10 +378,22 @@ public enum MemcacheProtocol {
   public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc,
                                                 final DurabilityLevel type,
                                                 final Duration timeout) {
+    long userTimeout = timeout.toMillis();
+
+    int deadline = userTimeout >= UNSIGNED_SHORT_MAX
+      // -1 because 0xffff is going to be reserved by the cluster. 1ms less doesn't matter.
+      ? UNSIGNED_SHORT_MAX - 1
+      // per spec 90% of the timeout is used as the deadline
+      : (int) (userTimeout * 0.9);
+
+    if (deadline < SYNC_REPLICATION_TIMEOUT_FLOOR_MS) {
+      deadline = SYNC_REPLICATION_TIMEOUT_FLOOR_MS;
+    }
+
     ByteBuf flexibleExtras = alloc.buffer(3);
     flexibleExtras.writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03);
     flexibleExtras.writeByte(type.code());
-    flexibleExtras.writeShort((short) timeout.toMillis());
+    flexibleExtras.writeShort(deadline);
     return flexibleExtras;
   }
 

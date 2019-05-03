@@ -68,8 +68,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> {
     ByteBuf request;
     if (syncReplicationType.isPresent()) {
       if (ctx.syncReplicationEnabled()) {
-        Duration timeoutAdjusted = RequestUtil.handleDurabilityTimeout(context(), timeout());
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeoutAdjusted);
+        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
         request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
                 opaque, cas, flexibleExtras, noExtras(), key, content);
         flexibleExtras.release();
