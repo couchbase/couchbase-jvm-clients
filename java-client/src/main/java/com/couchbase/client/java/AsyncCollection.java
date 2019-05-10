@@ -382,7 +382,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    Duration lockFor = options.lockFor() == null ? Duration.ofSeconds(30) : options.lockFor();
+    Duration lockFor = opts.lockFor() == null ? Duration.ofSeconds(30) : opts.lockFor();
     GetAndLockRequest request = new GetAndLockRequest(
       id, collectionId, timeout, coreContext, bucket, retryStrategy, lockFor
     );

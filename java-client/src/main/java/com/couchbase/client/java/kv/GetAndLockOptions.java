@@ -32,13 +32,9 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
   private GetAndLockOptions() {
   }
 
-  public GetAndLockOptions lockFor(Duration duration) {
+  public GetAndLockOptions lockFor(final Duration duration) {
     this.lockFor = duration;
     return this;
-  }
-
-  public Duration lockFor() {
-    return lockFor;
   }
 
   @Stability.Internal
