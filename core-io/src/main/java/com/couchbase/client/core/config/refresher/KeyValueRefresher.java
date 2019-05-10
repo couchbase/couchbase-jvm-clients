@@ -207,11 +207,9 @@ public class KeyValueRefresher implements Refresher {
           // TODO: debug event that it got ignored.
           return response.status().success();
         })
-        .map(response -> {
-          String raw = new String(response.content(), UTF_8);
-          raw = raw.replace("$HOST", nodeInfo.hostname().address());
-          return new ProposedBucketConfigContext(name, raw, nodeInfo.hostname());
-        }).onErrorResume(t -> {
+        .map(response ->
+          new ProposedBucketConfigContext(name, new String(response.content(), UTF_8), nodeInfo.hostname())
+        ).onErrorResume(t -> {
           // TODO: raise a warning that fetching a config individual failed.
           return Mono.empty();
         });

@@ -43,7 +43,7 @@ public class ProposedBucketConfigContext {
         ObjectUtil.checkNotNull(bucketName, "bucket name cannot be null!");
         ObjectUtil.checkNotNull(config, "the raw config cannot be null!");
         this.bucketName = bucketName;
-        this.config = config;
+        this.config = config.replace("$HOST", origin.address());
         this.origin = origin;
     }
 
