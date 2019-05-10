@@ -23,6 +23,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +46,7 @@ import static org.mockito.Mockito.when;
  */
 class BaseLoaderTest {
 
-  private static final NetworkAddress SEED = NetworkAddress.localhost();
+  private static final NodeIdentifier SEED = new NodeIdentifier(NetworkAddress.localhost(), 8091);
   private static final String BUCKET = "bucket";
   private static final int PORT = 1234;
   private static final ServiceType SERVICE = ServiceType.KV;
@@ -64,7 +65,7 @@ class BaseLoaderTest {
   void loadsAndParsesConfig() {
     Loader loader = new BaseLoader(core, SERVICE) {
       @Override
-      protected Mono<byte[]> discoverConfig(NetworkAddress seed, String bucket) {
+      protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.just(Utils.readResource(
           "../config_with_external.json",
           BaseLoaderTest.class
@@ -84,7 +85,7 @@ class BaseLoaderTest {
   void failsWhenConfigNotParsable() {
     Loader loader = new BaseLoader(core, SERVICE) {
       @Override
-      protected Mono<byte[]> discoverConfig(NetworkAddress seed, String bucket) {
+      protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.just("invalid".getBytes(UTF_8));
       }
     };
@@ -99,7 +100,7 @@ class BaseLoaderTest {
   void failsWhenServiceCannotBeEnabled() {
     Loader loader = new BaseLoader(core, SERVICE) {
       @Override
-      protected Mono<byte[]> discoverConfig(NetworkAddress seed, String bucket) {
+      protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.error(new IllegalStateException("Not expected to be called!"));
       }
     };
@@ -113,7 +114,7 @@ class BaseLoaderTest {
   void failsWhenChildDiscoverFails() {
     Loader loader = new BaseLoader(core, SERVICE) {
       @Override
-      protected Mono<byte[]> discoverConfig(NetworkAddress seed, String bucket) {
+      protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.error(new CouchbaseException("Failed discovering for some reason"));
       }
     };

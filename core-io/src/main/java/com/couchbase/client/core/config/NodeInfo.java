@@ -18,6 +18,7 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -99,6 +100,10 @@ public class NodeInfo {
 
     public NetworkAddress hostname() {
         return hostname;
+    }
+
+    public NodeIdentifier identifier() {
+        return new NodeIdentifier(hostname, directServices.get(ServiceType.MANAGER));
     }
 
     public Map<ServiceType, Integer> services() {

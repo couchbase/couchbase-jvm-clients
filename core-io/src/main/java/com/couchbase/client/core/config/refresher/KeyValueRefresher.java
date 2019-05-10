@@ -198,7 +198,7 @@ public class KeyValueRefresher implements Refresher {
         ctx,
         name,
         BestEffortRetryStrategy.INSTANCE,
-        nodeInfo.hostname()
+        nodeInfo.identifier()
       );
       core.send(request);
       return Reactor

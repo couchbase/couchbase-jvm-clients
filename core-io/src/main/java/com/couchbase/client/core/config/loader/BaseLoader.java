@@ -22,6 +22,7 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
 
@@ -67,7 +68,7 @@ public abstract class BaseLoader implements Loader {
    * @param bucket the name of the bucket to fetch from.
    * @return the encoded json version of the config if complete, an error otherwise.
    */
-  protected abstract Mono<byte[]> discoverConfig(final NetworkAddress seed, final String bucket);
+  protected abstract Mono<byte[]> discoverConfig(final NodeIdentifier seed, final String bucket);
 
   /**
    * Performs the config loading through multiple steps.
@@ -88,13 +89,13 @@ public abstract class BaseLoader implements Loader {
    * @return if successful, returns a config. It fails the mono otherwise.
    */
   @Override
-  public Mono<BucketConfig> load(final NetworkAddress seed, final int port, final String bucket) {
+  public Mono<BucketConfig> load(final NodeIdentifier seed, final int port, final String bucket) {
     return core
       .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
-      .map(config -> config.replace("$HOST", seed.address()))
-      .map(config -> BucketConfigParser.parse(config, core.context().environment(), seed))
+      .map(config -> config.replace("$HOST", seed.address().address()))
+      .map(config -> BucketConfigParser.parse(config, core.context().environment(), seed.address()))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException
         ? ex
         : new ConfigException("Caught exception while loading config.", ex)

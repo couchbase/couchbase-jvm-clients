@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
@@ -52,7 +53,7 @@ public class KeyValueLoader extends BaseLoader {
   }
 
   @Override
-  protected Mono<byte[]> discoverConfig(final NetworkAddress seed, final String bucket) {
+  protected Mono<byte[]> discoverConfig(final NodeIdentifier seed, final String bucket) {
     final CoreContext ctx = core().context();
 
     return Mono.defer(() -> {

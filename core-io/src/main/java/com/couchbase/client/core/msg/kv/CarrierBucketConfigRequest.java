@@ -5,6 +5,7 @@ import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
@@ -16,10 +17,10 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest {
 
-  private final NetworkAddress target;
+  private final NodeIdentifier target;
 
   public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
-                                    final RetryStrategy retryStrategy, final NetworkAddress target) {
+                                    final RetryStrategy retryStrategy, final NodeIdentifier target) {
     super(timeout, ctx, bucket, retryStrategy, null, null);
     this.target = target;
   }
@@ -40,7 +41,7 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   }
 
   @Override
-  public NetworkAddress target() {
+  public NodeIdentifier target() {
     return target;
   }
 }

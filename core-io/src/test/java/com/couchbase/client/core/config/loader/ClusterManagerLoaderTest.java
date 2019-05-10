@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.when;
  */
 class ClusterManagerLoaderTest {
 
-  private static final NetworkAddress SEED = mock(NetworkAddress.class);
+  private static final NodeIdentifier SEED = mock(NodeIdentifier.class);
   private static final String BUCKET = "bucket";
 
   private ClusterManagerLoader loader;

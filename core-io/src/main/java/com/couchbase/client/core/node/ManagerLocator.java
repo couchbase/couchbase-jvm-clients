@@ -15,7 +15,7 @@ public class ManagerLocator implements Locator {
                        final List<Node> nodes, final ClusterConfig config, final CoreContext ctx) {
     if (request instanceof TargetedRequest) {
       for (Node n : nodes) {
-        if (n.address().equals(((TargetedRequest) request).target())) {
+        if (n.identifier().equals(((TargetedRequest) request).target())) {
           n.send(request);
         }
       }

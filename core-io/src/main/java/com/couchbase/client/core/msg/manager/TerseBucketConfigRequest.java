@@ -21,6 +21,7 @@ import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -37,10 +38,10 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
 
   private final String bucketName;
   private final Credentials credentials;
-  private final NetworkAddress target;
+  private final NodeIdentifier target;
 
   public TerseBucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                                  String bucketName, Credentials credentials, final NetworkAddress target) {
+                                  String bucketName, Credentials credentials, final NodeIdentifier target) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
     this.credentials = credentials;
@@ -55,7 +56,7 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
   }
 
   @Override
-  public NetworkAddress target() {
+  public NodeIdentifier target() {
     return target;
   }
 

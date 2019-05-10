@@ -34,6 +34,7 @@ import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceType;
@@ -202,18 +203,18 @@ public class Core {
    * <p>This is advanced, internal functionality and should only be used if the caller knows
    * what they are doing.</p>
    *
-   * @param target the node to check.
+   * @param identifier the node to check.
    * @param serviceType the service type to enable if not enabled already.
    * @return a {@link Mono} which completes once initiated.
    */
   @Stability.Internal
-  public Mono<Void> ensureServiceAt(final NetworkAddress target, final ServiceType serviceType,
+  public Mono<Void> ensureServiceAt(final NodeIdentifier identifier, final ServiceType serviceType,
                                     final int port, final Optional<String> bucket) {
     return Flux
       .fromIterable(nodes)
-      .filter(n -> n.address().equals(target))
+      .filter(n -> n.identifier().equals(identifier))
       .switchIfEmpty(Mono.defer(() -> {
-        Node node = createNode(target);
+        Node node = createNode(identifier);
         nodes.add(node);
         return Mono.just(node);
       }))
@@ -221,8 +222,8 @@ public class Core {
       .then();
   }
 
-  protected Node createNode(final NetworkAddress target) {
-    return Node.create(coreContext, target);
+  protected Node createNode(final NodeIdentifier identifier) {
+    return Node.create(coreContext, identifier);
   }
 
   /**
@@ -251,15 +252,15 @@ public class Core {
   /**
    * This method is used to remove a service from a node.
    *
-   * @param target the node to check.
+   * @param identifier the node to check.
    * @param serviceType the service type to remove if present.
    * @return a {@link Mono} which completes once initiated.
    */
-  private Mono<Void> removeServiceFrom(final NetworkAddress target, final ServiceType serviceType,
+  private Mono<Void> removeServiceFrom(final NodeIdentifier identifier, final ServiceType serviceType,
                                        final Optional<String> bucket) {
     return Flux
       .fromIterable(new ArrayList<>(nodes))
-      .filter(n -> n.address().equals(target))
+      .filter(n -> n.identifier().equals(identifier))
       .filter(node -> node.serviceEnabled(serviceType))
       .flatMap(node -> node.removeService(serviceType, bucket))
       .then();
@@ -399,7 +400,7 @@ public class Core {
               return true;
             })
             .flatMap(s -> removeServiceFrom(
-              ni.hostname(),
+              ni.identifier(),
               s,
               s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
@@ -417,7 +418,7 @@ public class Core {
           Flux<Void> serviceAddFlux = Flux
             .fromIterable(services)
             .flatMap(s -> ensureServiceAt(
-              ni.hostname(),
+              ni.identifier(),
               s.getKey(),
               s.getValue(),
               s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())

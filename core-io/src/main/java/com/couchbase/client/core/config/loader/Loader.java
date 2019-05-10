@@ -18,6 +18,7 @@ package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
 /**
@@ -39,6 +40,6 @@ public interface Loader {
    * @param bucket the name of the bucket.
    * @return a {@link Mono} eventually completing with a config or failing.
    */
-  Mono<BucketConfig> load(final NetworkAddress seed, int port, final String bucket);
+  Mono<BucketConfig> load(final NodeIdentifier seed, int port, final String bucket);
 
 }

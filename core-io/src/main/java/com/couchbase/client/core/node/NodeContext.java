@@ -28,21 +28,22 @@ public class NodeContext extends CoreContext {
   /**
    * The hostname of this node.
    */
-  private final NetworkAddress remoteHostname;
+  private final NodeIdentifier nodeIdentifier;
 
-  public NodeContext(CoreContext ctx, NetworkAddress remoteHostname) {
+  public NodeContext(CoreContext ctx, NodeIdentifier nodeIdentifier) {
     super(ctx.core(), ctx.id(), ctx.environment());
-    this.remoteHostname = remoteHostname;
+    this.nodeIdentifier = nodeIdentifier;
   }
 
   public NetworkAddress remoteHostname() {
-    return remoteHostname;
+    return nodeIdentifier.address();
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteHostname().nameOrAddress()));
+    input.put("managerPort", redactSystem(nodeIdentifier.managerPort()));
   }
 
 

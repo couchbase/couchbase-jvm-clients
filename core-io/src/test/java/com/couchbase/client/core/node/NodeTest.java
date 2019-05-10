@@ -28,7 +28,6 @@ import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
@@ -42,7 +41,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,14 +84,14 @@ class NodeTest {
   void disconnectedOnInit() {
     Node node = Node.create(
       CTX,
-      mock(NetworkAddress.class)
+      mock(NodeIdentifier.class)
     );
     assertEquals(NodeState.DISCONNECTED, node.state());
   }
 
   @Test
   void idleIfAllIdle() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -117,7 +115,7 @@ class NodeTest {
 
   @Test
   void canAddAndRemoveServices() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -141,7 +139,7 @@ class NodeTest {
 
   @Test
   void connectedIfOneConnected() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -161,7 +159,7 @@ class NodeTest {
 
   @Test
   void connectedIfAllConnected() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -185,7 +183,7 @@ class NodeTest {
 
   @Test
   void connectedIfSomeIdleAndRestConnected() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       final AtomicInteger counter = new AtomicInteger();
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
@@ -216,7 +214,7 @@ class NodeTest {
 
   @Test
   void degradedIfAtLeastOneConnected() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       final AtomicInteger counter = new AtomicInteger();
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
@@ -251,7 +249,7 @@ class NodeTest {
 
   @Test
   void connectingIfAllConnecting() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -275,7 +273,7 @@ class NodeTest {
 
   @Test
   void disconnectingIfAllDisconnecting() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -299,7 +297,7 @@ class NodeTest {
 
   @Test
   void performsDisconnect() {
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
@@ -336,7 +334,7 @@ class NodeTest {
   @SuppressWarnings({"unchecked"})
   void sendsToFoundLocalService() {
     final Service s = mock(Service.class);
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
@@ -359,7 +357,7 @@ class NodeTest {
   @Test
   void sendsToFoundGlobalService() {
     final Service s = mock(Service.class);
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
@@ -383,7 +381,7 @@ class NodeTest {
   void retriesIfLocalServiceNotFound() {
     final Service s = mock(Service.class);
     final AtomicReference<Request<?>> retried = new AtomicReference<>();
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
@@ -412,7 +410,7 @@ class NodeTest {
   void retriesIfGlobalServiceNotFound() {
     final Service s = mock(Service.class);
     final AtomicReference<Request<?>> retried = new AtomicReference<>();
-    Node node = new Node(CTX, mock(NetworkAddress.class)) {
+    Node node = new Node(CTX, mock(NodeIdentifier.class)) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
@@ -445,7 +443,7 @@ class NodeTest {
     CoreContext ctx = new CoreContext(core, 1, env);
 
     try {
-      Node node = new Node(ctx, mock(NetworkAddress.class)) {
+      Node node = new Node(ctx, mock(NodeIdentifier.class)) {
         @Override
         protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
           Service s = mock(Service.class);

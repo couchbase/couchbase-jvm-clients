@@ -23,7 +23,6 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -72,7 +71,7 @@ public class KeyValueLocator implements Locator {
                                        final CoreContext ctx) {
     for (Node node : nodes) {
       if (node.state() == NodeState.CONNECTED || node.state() == NodeState.DEGRADED) {
-        if (!request.target().equals(node.address())) {
+        if (!request.target().equals(node.identifier())) {
           continue;
         }
         node.send((Request) request);
@@ -96,7 +95,7 @@ public class KeyValueLocator implements Locator {
 
     NodeInfo nodeInfo = config.nodeAtIndex(nodeId);
     for (Node node : nodes) {
-      if (node.address().equals(nodeInfo.hostname())) {
+      if (node.identifier().equals(nodeInfo.identifier())) {
         node.send(request);
         return;
       }
@@ -142,11 +141,11 @@ public class KeyValueLocator implements Locator {
    */
   private static void memcacheBucket(final KeyValueRequest<?> request, final List<Node> nodes,
                                      final MemcachedBucketConfig config, final CoreContext ctx) {
-    NetworkAddress hostname = config.nodeForId(request.key());
+    NodeIdentifier identifier = config.nodeForId(request.key());
     request.partition((short) 0);
 
     for (Node node : nodes) {
-      if (node.address().equals(hostname)) {
+      if (node.identifier().equals(identifier)) {
         node.send(request);
         return;
       }

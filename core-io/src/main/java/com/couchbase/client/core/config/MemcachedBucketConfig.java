@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonInject;
@@ -117,7 +118,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         }
     }
 
-    public NetworkAddress nodeForId(final byte[] id) {
+    public NodeIdentifier nodeForId(final byte[] id) {
         long hash = calculateKetamaHash(id);
 
         if (!ketamaNodes.containsKey(hash)) {
@@ -129,7 +130,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             }
         }
 
-        return ketamaNodes.get(hash).hostname();
+        return ketamaNodes.get(hash).identifier();
     }
 
     @Override

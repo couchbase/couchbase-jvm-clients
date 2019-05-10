@@ -24,6 +24,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.Node;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
@@ -32,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -73,7 +73,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.address()).thenReturn(NetworkAddress.create("10.143.190.101"));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -83,7 +83,7 @@ class CoreTest {
 
 
     Node mock102 = mock(Node.class);
-    when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -101,8 +101,8 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NetworkAddress target) {
-        return mocks.get(target.address());
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target.address().address());
       }
     };
     configs.onNext(clusterConfig);
@@ -159,6 +159,7 @@ class CoreTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void addServicesOnNewConfig() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
@@ -167,7 +168,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.address()).thenReturn(NetworkAddress.create("10.143.190.101"));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -177,7 +178,7 @@ class CoreTest {
 
 
     Node mock102 = mock(Node.class);
-    when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -196,8 +197,8 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NetworkAddress target) {
-        return mocks.get(target.address());
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target.address().address());
       }
     };
     configs.onNext(clusterConfig);
@@ -259,6 +260,7 @@ class CoreTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void removeNodesAndServicesOnNewConfig() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
@@ -267,7 +269,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.address()).thenReturn(NetworkAddress.create("10.143.190.101"));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -276,7 +278,7 @@ class CoreTest {
     when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
-    when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -295,8 +297,8 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NetworkAddress target) {
-        return mocks.get(target.address());
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target.address().address());
       }
     };
     configs.onNext(clusterConfig);
@@ -342,6 +344,7 @@ class CoreTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void removesNodeIfNotPresentInConfigAnymore() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
@@ -350,7 +353,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.address()).thenReturn(NetworkAddress.create("10.143.190.101"));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -359,7 +362,7 @@ class CoreTest {
     when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
-    when(mock102.address()).thenReturn(NetworkAddress.create("10.143.190.102"));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -377,8 +380,8 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NetworkAddress target) {
-        return mocks.get(target.address());
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target.address().address());
       }
     };
     configs.onNext(clusterConfig);
@@ -420,6 +423,78 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     verify(mock102, times(1)).disconnect();
+  }
+
+  /**
+   * With cluster_run it is possible to run more than one node on the same hostname. So we need to make sure that
+   * the node is identified by a tuple of hostname and manager port, and this should work.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void addsSecondNodeIfBothSameHostname() {
+    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
+    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    ClusterConfig clusterConfig = new ClusterConfig();
+    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.config()).thenReturn(clusterConfig);
+
+    Node mock101 = mock(Node.class);
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("127.0.0.1"), 9000));
+    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
+      .thenReturn(Mono.empty());
+    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
+      .thenReturn(Mono.empty());
+    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock101.disconnect()).thenReturn(Mono.empty());
+
+
+    Node mock102 = mock(Node.class);
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("127.0.0.1"), 9001));
+    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
+      .thenReturn(Mono.empty());
+    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
+      .thenReturn(Mono.empty());
+    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock102.disconnect()).thenReturn(Mono.empty());
+
+    final Map<String, Node> mocks = new HashMap<>();
+    mocks.put("127.0.0.1:9000", mock101);
+    mocks.put("127.0.0.1:9001", mock102);
+    new Core(ENV) {
+      @Override
+      public ConfigurationProvider configurationProvider() {
+        return configProvider;
+      }
+
+      @Override
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target.address().address() + ":" + target.managerPort());
+      }
+    };
+    configs.onNext(clusterConfig);
+
+    BucketConfig oneNodeConfig = BucketConfigParser.parse(
+      Utils.readResource("cluster_run_two_nodes.json", CoreTest.class),
+      ENV,
+      NetworkAddress.localhost()
+    );
+    clusterConfig.setBucketConfig(oneNodeConfig);
+    configs.onNext(clusterConfig);
+
+    verify(mock101, times(1))
+      .addService(ServiceType.VIEWS, 9500, Optional.empty());
+    verify(mock101, times(1))
+      .addService(ServiceType.MANAGER, 9000, Optional.empty());
+    verify(mock101, times(1))
+      .addService(ServiceType.KV, 12000, Optional.of("default"));
+
+
+    verify(mock102, times(1))
+      .addService(ServiceType.VIEWS, 9501, Optional.empty());
+    verify(mock102, times(1))
+      .addService(ServiceType.MANAGER, 9001, Optional.empty());
+    verify(mock102, times(1))
+      .addService(ServiceType.KV, 12002, Optional.of("default"));
   }
 
 }

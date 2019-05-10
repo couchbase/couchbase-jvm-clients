@@ -1,9 +1,9 @@
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.io.NetworkAddress;
+import com.couchbase.client.core.node.NodeIdentifier;
 
 public interface TargetedRequest {
 
-  NetworkAddress target();
+  NodeIdentifier target();
 
 }

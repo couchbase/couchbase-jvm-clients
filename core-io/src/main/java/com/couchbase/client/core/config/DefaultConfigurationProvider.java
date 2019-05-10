@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -116,12 +117,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Flux
           .fromIterable(core.context().environment().seedNodes())
           .take(MAX_PARALLEL_LOADERS)
-          .flatMap(seed -> keyValueLoader
-            .load(seed.getAddress(), seed.kvPort().orElse(kvPort), name)
-            .onErrorResume(t -> clusterManagerLoader.load(
-              seed.getAddress(), seed.httpPort().orElse(managerPort), name
-            ))
-          )
+          .flatMap(seed -> {
+            NodeIdentifier identifier = new NodeIdentifier(seed.getAddress(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
+            return keyValueLoader
+              .load(identifier, seed.kvPort().orElse(kvPort), name)
+              .onErrorResume(t -> clusterManagerLoader.load(
+                identifier, seed.httpPort().orElse(managerPort), name
+              ));
+          })
           .take(1)
           .switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single bucket configuration for bucket: " + name)

@@ -48,6 +48,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -62,7 +63,7 @@ public class Node {
    */
   private static final String GLOBAL_SCOPE = "_$GLOBAL$_";
 
-  private final NetworkAddress address;
+  private final NodeIdentifier identifier;
   private final NodeContext ctx;
   private final Credentials credentials;
   private final Map<String, Map<ServiceType, Service>> services;
@@ -73,13 +74,13 @@ public class Node {
    */
   private final AtomicInteger enabledServices = new AtomicInteger(0);
 
-  public static Node create(final CoreContext ctx, final NetworkAddress address) {
-    return new Node(ctx, address);
+  public static Node create(final CoreContext ctx, final NodeIdentifier identifier) {
+    return new Node(ctx, identifier);
   }
 
-  protected Node(final CoreContext ctx, final NetworkAddress address) {
-    this.address = address;
-    this.ctx = new NodeContext(ctx, address);
+  protected Node(final CoreContext ctx, final NodeIdentifier identifier) {
+    this.identifier = identifier;
+    this.ctx = new NodeContext(ctx, identifier);
     this.credentials = ctx.environment().credentials();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
@@ -307,7 +308,7 @@ public class Node {
       return;
     }
 
-    request.context().dispatchedTo(address);
+    request.context().dispatchedTo(identifier.address());
     service.send(request);
   }
 
@@ -323,10 +324,10 @@ public class Node {
   }
 
   /**
-   * Returns the address of the current node.
+   * Returns the node identifier.
    */
-  public NetworkAddress address() {
-    return address;
+  public NodeIdentifier identifier() {
+    return identifier;
   }
 
   /**
@@ -352,9 +353,11 @@ public class Node {
    * @return a created service, but not yet connected or anything.
    */
   protected Service createService(final ServiceType serviceType, final int port,
-                                final Optional<String> bucket) {
+                                  final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
     ServiceConfig sc = env.serviceConfig();
+    NetworkAddress address = identifier.address();
+
     switch (serviceType) {
       case KV:
         if (bucket.isPresent()) {
@@ -378,4 +381,18 @@ public class Node {
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }
   }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Node node = (Node) o;
+    return Objects.equals(identifier, node.identifier);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(identifier);
+  }
+
 }

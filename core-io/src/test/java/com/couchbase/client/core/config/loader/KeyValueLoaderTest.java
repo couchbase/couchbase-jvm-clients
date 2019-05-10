@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigResponse;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ import static org.mockito.Mockito.when;
  */
 class KeyValueLoaderTest {
 
-  private static final NetworkAddress SEED = mock(NetworkAddress.class);
+  private static final NodeIdentifier SEED = mock(NodeIdentifier.class);
   private static final String BUCKET = "bucket";
 
   private KeyValueLoader loader;

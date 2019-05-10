@@ -48,17 +48,17 @@ class KeyValueLocatorTest {
   void locateGetRequestForCouchbaseBucket() {
     Locator locator = new KeyValueLocator();
 
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:11210",
+    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
       Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:11210",
+    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
       Collections.EMPTY_MAP, null);
 
     GetRequest getRequestMock = mock(GetRequest.class);
     ClusterConfig configMock = mock(ClusterConfig.class);
     Node node1Mock = mock(Node.class);
-    when(node1Mock.address()).thenReturn(NetworkAddress.create("192.168.56.101"));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
     Node node2Mock = mock(Node.class);
-    when(node2Mock.address()).thenReturn(NetworkAddress.create("192.168.56.102"));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
     CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
     when(getRequestMock.bucket()).thenReturn("bucket");
@@ -81,15 +81,15 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     // Setup 2 nodes
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:11210",
+    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
       Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:11210",
+    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
       Collections.EMPTY_MAP, null);
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.address()).thenReturn(NetworkAddress.create("192.168.56.101"));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
     Node node2Mock = mock(Node.class);
-    when(node2Mock.address()).thenReturn(NetworkAddress.create("192.168.56.102"));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
@@ -137,15 +137,15 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     // Setup 2 nodes
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:11210",
+    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
       Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:11210",
+    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
       Collections.EMPTY_MAP, null);
     List<Node> nodes = new ArrayList<Node>();
     Node node1Mock = mock(Node.class);
-    when(node1Mock.address()).thenReturn(NetworkAddress.create("192.168.56.101"));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
     Node node2Mock = mock(Node.class);
-    when(node2Mock.address()).thenReturn(NetworkAddress.create("192.168.56.102"));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
     nodes.addAll(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
