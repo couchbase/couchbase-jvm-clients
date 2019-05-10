@@ -349,12 +349,11 @@ class AsyncCollection(name: String,
     * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
   def getAndTouch(id: String,
                   expiration: Duration,
-                  durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy
                  ): Future[GetResult] = {
-    val req = getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
+    val req = getAndTouchHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, getAndTouchHandler)
       .map {
         case Some(x) => x

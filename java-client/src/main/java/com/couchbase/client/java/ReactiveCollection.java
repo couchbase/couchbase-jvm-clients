@@ -283,13 +283,12 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<Optional<GetResult>> getAndTouch(final String id, final Duration expiration,
-                                     final GetAndTouchOptions options) {
+                                               final GetAndTouchOptions options) {
     return Mono.defer(() -> {
       GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
-      GetAndTouchOptions.Built opts = options.build();
       return Reactor.wrap(
           request,
-          GetAccessor.getAndTouch(core, id, request, opts.persistTo(), opts.replicateTo()),
+          GetAccessor.getAndTouch(core, id, request),
           true
         );
     });

@@ -40,14 +40,12 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
 
   def request[T](id: String,
                  expiration: java.time.Duration,
-                 durability: Durability = Disabled,
                  parentSpan: Option[Span] = None,
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[GetAndTouchRequest] = {
     val validations: Try[GetAndTouchRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
-      _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
@@ -65,8 +63,7 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
         hp.core.context(),
         hp.bucketName,
         retryStrategy,
-        expiration,
-        durability.toDurabilityLevel))
+        expiration))
     }
   }
 

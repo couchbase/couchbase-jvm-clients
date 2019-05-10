@@ -385,7 +385,6 @@ class Collection(
     *
     * @param id             $Id
     * @param expiration     $Expiration
-    * @param durability     $Durability
     * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
@@ -395,7 +394,6 @@ class Collection(
     **/
   def getAndTouch(id: String,
                   expiration: Duration,
-                  durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
@@ -403,7 +401,6 @@ class Collection(
       async.getAndTouch(
         id,
         expiration,
-        durability,
         parentSpan,
         timeout,
         retryStrategy

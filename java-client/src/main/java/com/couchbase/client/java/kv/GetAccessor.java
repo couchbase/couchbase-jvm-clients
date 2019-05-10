@@ -99,9 +99,7 @@ public enum GetAccessor {
 
   public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core,
                                                                    final String id,
-                                                                   final GetAndTouchRequest request,
-                                                                   final PersistTo persistTo,
-                                                                   final ReplicateTo replicateTo) {
+                                                                   final GetAndTouchRequest request) {
     core.send(request);
     return request
       .response()
@@ -118,24 +116,6 @@ public enum GetAccessor {
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
-      }).thenCompose(result -> {
-        if (!result.isPresent()) {
-          return CompletableFuture.completedFuture(result);
-        }
-
-        final ObserveContext ctx = new ObserveContext(
-          core.context(),
-          persistTo.coreHandle(),
-          replicateTo.coreHandle(),
-          Optional.empty(), // GAT does NOT support mutation tokens.
-          result.get().cas(),
-          request.bucket(),
-          id,
-          request.collection(),
-          false,
-          request.timeout()
-        );
-        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       })
       .whenComplete((r, t) -> completeSpan(request));
   }

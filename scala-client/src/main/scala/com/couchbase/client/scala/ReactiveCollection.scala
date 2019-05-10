@@ -240,12 +240,11 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
   def getAndTouch(id: String,
                   expiration: Duration,
-                  durability: Durability = Disabled,
                   parentSpan: Option[Span] = None,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy
                  ): Mono[Option[GetResult]] = {
-    val req = async.getAndTouchHandler.request(id, expiration, durability, parentSpan, timeout, retryStrategy)
+    val req = async.getAndTouchHandler.request(id, expiration, parentSpan, timeout, retryStrategy)
     wrap(req, id, async.getAndTouchHandler)
   }
 

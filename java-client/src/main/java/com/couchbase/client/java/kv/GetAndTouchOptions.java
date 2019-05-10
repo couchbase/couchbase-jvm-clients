@@ -17,8 +17,9 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
 
-public class GetAndTouchOptions extends CommonDurabilityOptions<GetAndTouchOptions> {
+public class GetAndTouchOptions extends CommonOptions<GetAndTouchOptions> {
 
   public static GetAndTouchOptions getAndTouchOptions() {
     return new GetAndTouchOptions();
@@ -27,13 +28,12 @@ public class GetAndTouchOptions extends CommonDurabilityOptions<GetAndTouchOptio
   private GetAndTouchOptions() {
   }
 
-
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
-  public class Built extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonOptions {
 
   }
 

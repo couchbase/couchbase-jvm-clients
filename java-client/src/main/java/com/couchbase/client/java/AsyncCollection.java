@@ -415,14 +415,7 @@ public class AsyncCollection {
   public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
-    GetAndTouchOptions.Built opts = options.build();
-    return GetAccessor.getAndTouch(
-      core,
-      id,
-      getAndTouchRequest(id, expiration, options),
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options));
   }
 
   /**
@@ -444,7 +437,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
-      bucket, retryStrategy, expiration, opts.durabilityLevel());
+      bucket, retryStrategy, expiration);
     attachSpan(TracingUtils.OpName.GET_AND_TOUCH, environment, opts.parentSpan(), request);
     return request;
   }
