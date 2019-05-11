@@ -103,6 +103,12 @@ public class Core {
 
   private final AtomicBoolean reconfigureInProgress = new AtomicBoolean(false);
 
+  /**
+   * We use a barrier to only run one reconfiguration at the same time, so when a new one comes in
+   * and is ignored we need to set a flag to come back to it once the others finished.
+   */
+  private final AtomicBoolean moreConfigsPending = new AtomicBoolean(false);
+
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
   public static Core create(final CoreEnvironment environment) {
@@ -296,14 +302,14 @@ public class Core {
           .subscribe(
             v -> {},
             e -> {
-              reconfigureInProgress.set(false);
+              clearReconfigureInProgress();
               coreContext
                 .environment()
                 .eventBus()
                 .publish(new ReconfigurationErrorDetectedEvent(context(), e));
             },
             () -> {
-              reconfigureInProgress.set(false);
+              clearReconfigureInProgress();
               coreContext
                 .environment()
                 .eventBus()
@@ -331,14 +337,14 @@ public class Core {
         .subscribe(
         v -> {},
         e -> {
-          reconfigureInProgress.set(false);
+          clearReconfigureInProgress();
           coreContext
             .environment()
             .eventBus()
             .publish(new ReconfigurationErrorDetectedEvent(context(), e));
         },
         () -> {
-          reconfigureInProgress.set(false);
+          clearReconfigureInProgress();
           coreContext
             .environment()
             .eventBus()
@@ -349,10 +355,21 @@ public class Core {
         }
       );
     } else {
+      moreConfigsPending.set(true);
       coreContext
         .environment()
         .eventBus()
         .publish(new ReconfigurationIgnoredEvent(coreContext));
+    }
+  }
+
+  /**
+   * Clean reconfiguration in progress and check if there is a new one we need to try.
+   */
+  private void clearReconfigureInProgress() {
+    reconfigureInProgress.set(false);
+    if (moreConfigsPending.compareAndSet(true, false)) {
+      reconfigure();
     }
   }
 
