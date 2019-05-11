@@ -25,7 +25,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -110,13 +111,22 @@ public class KeyValueRefresher implements Refresher {
    */
   private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
 
-  private final long configPollInterval;
+  /**
+   * Holds the allowable config poll interval in nanoseconds.
+   */
+  private final long configPollIntervalNanos;
+
+  /**
+   * Stores the timeout used for config refresh requests, keeping it in reasonable bounds (between 1 and 5s).
+   */
+  private final Duration configRequestTimeout;
 
 
   public KeyValueRefresher(final ConfigurationProvider provider, final Core core) {
     this.core = core;
     this.provider = provider;
-    this.configPollInterval = core.context().environment().ioConfig().configPollInterval().toNanos();
+    this.configPollIntervalNanos = core.context().environment().ioConfig().configPollInterval().toNanos();
+    this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
 
     pollRegistration = Flux
       .interval(POLLER_INTERVAL)
@@ -126,6 +136,25 @@ public class KeyValueRefresher implements Refresher {
         .flatMap(KeyValueRefresher.this::maybeUpdateBucket)
       )
       .subscribe(configsSink::next);
+  }
+
+  /**
+   * Helper method to make sure the config poll interval is set to a fixed bound every time.
+   *
+   * <p>The config poll interval is used, but the lower limit is set to 1 second and the upper limit
+   * to 5 seconds to make sure it stays in "sane" bounds.</p>
+   *
+   * @param configPollIntervalNanos the config poll interval is used to determine the bounds.
+   * @return the duration for the config request timeout.
+   */
+  private Duration clampConfigRequestTimeout(final long configPollIntervalNanos) {
+    if (configPollIntervalNanos > TimeUnit.SECONDS.toNanos(5)) {
+      return Duration.ofSeconds(5);
+    } else if (configPollIntervalNanos < TimeUnit.SECONDS.toNanos(1)) {
+      return Duration.ofSeconds(1);
+    } else {
+      return Duration.ofNanos(configPollIntervalNanos);
+    }
   }
 
   @Override
@@ -144,7 +173,7 @@ public class KeyValueRefresher implements Refresher {
    */
   private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name) {
     Long last = registrations.get(name);
-    boolean overInterval = last != null && (System.nanoTime() - last) >= configPollInterval;
+    boolean overInterval = last != null && (System.nanoTime() - last) >= configPollIntervalNanos;
     boolean allowed = tainted.contains(name) || overInterval;
 
     return allowed
@@ -185,6 +214,14 @@ public class KeyValueRefresher implements Refresher {
   /**
    * Helper method to fetch a config per node provided.
    *
+   * <p>Note that the bucket config request sent here has a fail fast strategy, so that if nodes are offline they
+   * do not circle the system forever (given they have a specific node target). Since the refresher polls every
+   * fixed interval anyways, fresh requests will flood the system eventually and there is no point in keeping
+   * the old ones around.</p>
+   *
+   * <p>Also, the timeout is set to the poll interval since it does not make sense to keep them around any
+   * longer.</p>
+   *
    * @param name the bucket name.
    * @param nodes the flux of nodes that can be used to fetch a config.
    * @return returns configs for each node if found.
@@ -194,10 +231,10 @@ public class KeyValueRefresher implements Refresher {
     return nodes.flatMap(nodeInfo -> {
       CoreContext ctx = core.context();
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
-        ctx.environment().timeoutConfig().kvTimeout(),
+        configRequestTimeout,
         ctx,
         name,
-        BestEffortRetryStrategy.INSTANCE,
+        FailFastRetryStrategy.INSTANCE,
         nodeInfo.identifier()
       );
       core.send(request);
