@@ -204,10 +204,20 @@
         </testResources>
 
         <plugins>
+
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
                 <version>4.0.1</version>
+
+                <configuration>
+                    <args>
+                        <!--Required for Scala 2.11 build, this enables support for Java SAM.  This is on by default in-->
+                        <!--Scala 2.12+ -->
+                        <arg>-Xexperimental</arg>
+                    </args>
+                </configuration>
+
                 <!--Seem to need this to get any Scala compiled-->
                 <executions>
                     <execution>

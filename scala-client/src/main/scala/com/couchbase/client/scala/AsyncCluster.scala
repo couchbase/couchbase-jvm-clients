@@ -19,6 +19,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
 import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -35,7 +36,7 @@ import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
 import io.opentracing.Span
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.{Flux, Mono}
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
@@ -98,21 +99,23 @@ class AsyncCluster(environment: => ClusterEnvironment) {
 
         val ret: Future[QueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
           propagateCancellation = true)
-          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
-            .collectSeq()
-            .flatMap(rows => FutureConversions.javaMonoToScalaMono(response.trailer())
-              .map(trailer => QueryResult(
-                rows,
-                QueryMeta(
-                  response.header().requestId(),
-                  response.header().clientContextId().asScala,
-                  response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
-                  trailer.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
-                  trailer.warnings.asScala.map(bytes => QueryWarnings(bytes)),
-                  trailer.status,
-                  trailer.profile.asScala.map(QueryProfile)))
+          .flatMap(response => {
+            FutureConversions.javaFluxToScalaFlux(response.rows())
+              .collectSeq()
+              .flatMap(rows => FutureConversions.javaMonoToScalaMono(response.trailer())
+                .map(trailer => QueryResult(
+                  rows,
+                  QueryMeta(
+                    response.header().requestId(),
+                    response.header().clientContextId().asScala,
+                    response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
+                    trailer.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
+                    trailer.warnings.asScala.map(bytes => QueryWarnings(bytes)),
+                    trailer.status,
+                    trailer.profile.asScala.map(QueryProfile)))
+                )
               )
-            )
+          }
           )
 
           .onErrorResume(err => {
@@ -154,7 +157,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
 
         val ret: Future[AnalyticsResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
           propagateCancellation = true)
-          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows())
             .collectSeq()
             .flatMap(rows =>
 
@@ -219,7 +222,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
 
         val ret: Future[SearchResult] =
           FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
+            .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows())
               .map(row => SearchQueryRow.fromResponse(row))
               .collectSeq()
               .flatMap(rows =>
