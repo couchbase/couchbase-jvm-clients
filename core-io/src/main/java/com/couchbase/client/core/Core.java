@@ -219,13 +219,27 @@ public class Core {
     return Node.create(coreContext, target);
   }
 
-  private Mono<Void> maybeRemoveNode(final Node node) {
-    if (node.hasServicesEnabled()) {
-      return Mono.empty();
-    } else {
+  /**
+   * Check if the given {@link Node} needs to be removed from the cluster topology.
+   *
+   * @param node the node in question
+   * @param config the current config.
+   * @return a mono once disconnected (or completes immediately if there is no need to do so).
+   */
+  private Mono<Void> maybeRemoveNode(final Node node, final ClusterConfig config) {
+    boolean stillPresent = config
+      .bucketConfigs()
+      .values()
+      .stream()
+      .flatMap(bc -> bc.nodes().stream())
+      .anyMatch(ni -> ni.identifier().equals(node.identifier()));
+
+    if (!stillPresent || !node.hasServicesEnabled()) {
       nodes.remove(node);
       return node.disconnect();
     }
+
+    return Mono.empty();
   }
 
   /**
@@ -241,10 +255,7 @@ public class Core {
       .fromIterable(new ArrayList<>(nodes))
       .filter(n -> n.address().equals(target))
       .filter(node -> node.serviceEnabled(serviceType))
-      .flatMap(node -> node
-        .removeService(serviceType, bucket)
-        .flatMap(v -> maybeRemoveNode(node))
-      )
+      .flatMap(node -> node.removeService(serviceType, bucket))
       .then();
   }
 
@@ -273,9 +284,11 @@ public class Core {
    */
   private void reconfigure() {
     if (reconfigureInProgress.compareAndSet(false, true)) {
+      final ClusterConfig configForThisAttempt = currentConfig;
+
       long start = System.nanoTime();
 
-      if (currentConfig.bucketConfigs().isEmpty()) {
+      if (configForThisAttempt.bucketConfigs().isEmpty()) {
         Flux
           .fromIterable(new ArrayList<>(nodes))
           .flatMap(Node::disconnect)
@@ -305,14 +318,14 @@ public class Core {
       }
 
       Flux<BucketConfig> bucketConfigFlux = Flux
-        .just(currentConfig)
+        .just(configForThisAttempt)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
 
       reconfigureBuckets(bucketConfigFlux)
         .then(Mono.defer(() ->
           Flux
             .fromIterable(new ArrayList<>(nodes))
-            .flatMap(this::maybeRemoveNode)
+            .flatMap(n -> maybeRemoveNode(n, configForThisAttempt))
             .then()
         ))
         .subscribe(
