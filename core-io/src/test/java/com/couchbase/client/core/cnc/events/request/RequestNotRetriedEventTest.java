@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,19 @@
 
 package com.couchbase.client.core.cnc.events.request;
 
-import com.couchbase.client.core.cnc.AbstractEvent;
-import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
-/**
- * This event is raised if a request is not retried anymore.
- */
-public class RequestNotRetriedEvent extends AbstractEvent {
+class RequestNotRetriedEventTest {
 
-  private final Class<? extends Request> clazz;
-
-  public RequestNotRetriedEvent(final Class<? extends Request> clazz, final RequestContext context) {
-    super(Severity.WARN, Category.REQUEST, Duration.ZERO, context);
-    this.clazz = clazz;
-  }
-
-  @Override
-  public String description() {
-    return "Request " + clazz.getSimpleName() + " not retried per RetryStrategy";
+  @Test
+  void verifyDescription() {
+    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class));
+    assertEquals("Request GetRequest not retried per RetryStrategy", event.description());
   }
 
 }

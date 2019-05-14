@@ -72,7 +72,7 @@ public class RetryOrchestrator {
     if (duration.isPresent()) {
       retryWithDuration(ctx, request, duration.get());
     } else {
-      ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.context()));
+      ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.getClass(), request.context()));
       request.cancel(CancellationReason.NO_MORE_RETRIES);
     }
   }
