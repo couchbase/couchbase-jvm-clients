@@ -17,10 +17,13 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
+import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
+import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
@@ -50,6 +53,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 /**
  * The main entry point into the core layer.
@@ -174,7 +178,19 @@ public class Core {
    */
   @Stability.Internal
   public Mono<Void> openBucket(final String name) {
-    return configurationProvider.openBucket(name);
+    return Mono.defer(() -> {
+      long start = System.nanoTime();
+      return configurationProvider
+        .openBucket(name)
+        .doOnSuccess(ignored -> {
+          BucketOpenedEvent event = new BucketOpenedEvent(
+            Duration.ofNanos(System.nanoTime() - start),
+            coreContext,
+            name
+          );
+          coreContext.environment().eventBus().publish(event);
+        });
+    });
   }
 
   /**
@@ -193,7 +209,19 @@ public class Core {
    */
   @Stability.Internal
   public Mono<Void> closeBucket(final String name) {
-    return configurationProvider.closeBucket(name);
+    return Mono.defer(() -> {
+      long start = System.nanoTime();
+      return configurationProvider
+        .closeBucket(name)
+        .doOnSuccess(ignored -> {
+          BucketClosedEvent event = new BucketClosedEvent(
+            Duration.ofNanos(System.nanoTime() - start),
+            coreContext,
+            name
+          );
+          coreContext.environment().eventBus().publish(event);
+        });
+    });
   }
 
   /**
@@ -272,8 +300,16 @@ public class Core {
   @Stability.Internal
   public Mono<Void> shutdown() {
     return Mono.defer(() -> {
+      long start = System.nanoTime();
       if (shutdown.compareAndSet(false, true)) {
-        return configurationProvider.shutdown();
+        return Flux
+          .fromIterable(currentConfig.bucketConfigs().keySet())
+          .flatMap(this::closeBucket)
+          .then(configurationProvider.shutdown())
+          .doOnTerminate(() -> coreContext.environment().eventBus().publish(
+            new ShutdownCompletedEvent(Duration.ofNanos(System.nanoTime() - start), coreContext)
+          ))
+          .then();
       }
       return Mono.empty();
     });
