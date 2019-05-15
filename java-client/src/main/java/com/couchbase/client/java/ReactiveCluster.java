@@ -24,7 +24,6 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.ReactiveSearchIndexManager;
-import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
@@ -152,9 +151,10 @@ public class ReactiveCluster {
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
-    return QueryAccessor.queryReactive(
-      asyncCluster.core(),
-      asyncCluster.queryRequest(statement, options)
+    final QueryOptions.Built opts = options.build();
+    return asyncCluster.queryAccessor().queryReactive(
+      asyncCluster.queryRequest(statement, opts),
+      opts
     );
   }
 

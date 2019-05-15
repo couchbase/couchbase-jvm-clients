@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.service.ServiceType;
+
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +73,19 @@ public class ClusterConfig {
     return "ClusterConfig{" +
       "bucketConfigs=" + bucketConfigs +
       '}';
+  }
+
+  /**
+   * Returns the current cluster capabilities.
+   *
+   * <p>Right now this needs at least one bucket open, and it grabs the capabilities from the first bucket
+   * config available. If needed, in the future this can be made more intelligent (caching?).</p>
+   */
+  public Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities() {
+    for (BucketConfig bc : bucketConfigs().values()) {
+      return bc.clusterCapabilities();
+    }
+    return Collections.emptyMap();
   }
 
 }

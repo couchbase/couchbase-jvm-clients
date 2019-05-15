@@ -44,13 +44,15 @@ public class QueryRequest
 
   private static final String URI = "/query";
   private final byte[] query;
+  private final String statement;
 
   private final Credentials credentials;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                      final Credentials credentials, final byte[] query) {
+                      final Credentials credentials, final String statement, final byte[] query) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
+    this.statement = statement;
     this.credentials = credentials;
   }
 
@@ -79,6 +81,14 @@ public class QueryRequest
   @Override
   public ServiceType serviceType() {
     return ServiceType.QUERY;
+  }
+
+  public String statement() {
+    return statement;
+  }
+
+  public Credentials credentials() {
+    return credentials;
   }
 
 }

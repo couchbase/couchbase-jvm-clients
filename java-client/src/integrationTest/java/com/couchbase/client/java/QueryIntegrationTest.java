@@ -189,9 +189,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failOnSyntaxError() {
-        assertThrows(QueryServiceException.class, () -> {
-            QueryResult result = cluster.query("invalid export");
-        });
+        assertThrows(QueryServiceException.class, () -> cluster.query("invalid export"));
     }
 
     @Test
@@ -311,6 +309,70 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         List<JsonObject> rows = result.allRowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
+    }
+
+    /**
+     * This test is intentionally kept generic, since we want to make sure with every query version
+     * that we run against we have a version that works. Also, we perform the same query multiple times
+     * to make sure a primed and non-primed cache both work out of the box.
+     */
+    @Test
+    void handlesPreparedStatements() {
+        String id = insertDoc();
+
+        for (int i = 0; i < 10; i++) {
+            QueryOptions options = queryOptions()
+              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .adhoc(false);
+            QueryResult result = cluster.query(
+              "select " + bucketName + ".* from " + bucketName + " where meta().id=\"" + id + "\"",
+              options
+            );
+
+            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            assertEquals(1, rows.size());
+            assertEquals(FOO_CONTENT, rows.get(0));
+        }
+    }
+
+    @Test
+    void handlesPreparedStatementsWithNamedArgs() {
+        String id = insertDoc();
+
+        for (int i = 0; i < 10; i++) {
+            QueryOptions options = queryOptions()
+              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .parameters(JsonObject.create().put("id", id))
+              .adhoc(false);
+            QueryResult result = cluster.query(
+              "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
+              options
+            );
+
+            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            assertEquals(1, rows.size());
+            assertEquals(FOO_CONTENT, rows.get(0));
+        }
+    }
+
+    @Test
+    void handlesPreparedStatementsWithPositionalArgs() {
+        String id = insertDoc();
+
+        for (int i = 0; i < 10; i++) {
+            QueryOptions options = queryOptions()
+              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .parameters(JsonArray.from(id))
+              .adhoc(false);
+            QueryResult result = cluster.query(
+              "select " + bucketName + ".* from " + bucketName + " where meta().id=$1",
+              options
+            );
+
+            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            assertEquals(1, rows.size());
+            assertEquals(FOO_CONTENT, rows.get(0));
+        }
     }
 
     /**

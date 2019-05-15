@@ -80,6 +80,7 @@ private[scala] class QueryHandler() {
           core.context(),
           retryStrategy,
           environment.credentials,
+          statement,
           queryBytes)
 
         request

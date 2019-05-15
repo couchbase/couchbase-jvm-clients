@@ -88,7 +88,7 @@ class QueryMessageHandlerTest {
 
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), ENV.credentials(), query
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), ENV.credentials(), "statement", query
     );
     channel.writeAndFlush(request);
 

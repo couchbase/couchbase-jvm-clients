@@ -72,6 +72,8 @@ public class AsyncCluster {
 
   private final AsyncSearchIndexManager searchIndexManager;
 
+  private final QueryAccessor queryAccessor;
+
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
    *
@@ -119,6 +121,7 @@ public class AsyncCluster {
     this.environment = environment;
     this.core = Core.create(environment.get());
     this.searchIndexManager = new AsyncSearchIndexManager(core);
+    this.queryAccessor = new QueryAccessor(core);
   }
 
   /**
@@ -163,7 +166,8 @@ public class AsyncCluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
-    return QueryAccessor.queryAsync(core, queryRequest(statement, options));
+    final QueryOptions.Built opts = options.build();
+    return queryAccessor.queryAsync(queryRequest(statement, opts), opts);
   }
 
   /**
@@ -173,22 +177,20 @@ public class AsyncCluster {
    * @param options the options.
    * @return the constructed query request.
    */
-  QueryRequest queryRequest(final String statement, final QueryOptions options) {
+  QueryRequest queryRequest(final String statement, final QueryOptions.Built options) {
     notNullOrEmpty(statement, "Statement");
     notNull(options, "QueryOptions");
 
-    QueryOptions.Built opts = options.build();
-
-    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+    Duration timeout = options.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.get().retryStrategy());
 
     JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
-    opts.injectParams(query);
+    options.injectParams(query);
 
     return new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
-      query.toString().getBytes(StandardCharsets.UTF_8));
+      statement, query.toString().getBytes(StandardCharsets.UTF_8));
   }
 
   /**
@@ -302,4 +304,11 @@ public class AsyncCluster {
     }).toFuture();
   }
 
+  /**
+   * Provides access to the internal query accessor.
+   */
+  @Stability.Internal
+  QueryAccessor queryAccessor() {
+    return queryAccessor;
+  }
 }

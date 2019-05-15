@@ -54,6 +54,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Optional<Boolean> readonly = Optional.empty();
   private Optional<JsonValue> parameters = Optional.empty();
   private Optional<Boolean> prepared = Optional.empty();
+  private Optional<Boolean> adhoc = Optional.empty();
   private Optional<List<MutationToken>> consistentWith = Optional.empty();
 
   private QueryOptions() {}
@@ -89,6 +90,17 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       this.credentials = Optional.of(new HashMap<>());
     }
     this.credentials.get().put(user, password);
+    return this;
+  }
+
+  /**
+   * If set to false, enables transparent prepared statement support.
+   *
+   * @param adhoc if this is an ad-hoc query.
+   * @return {@link QueryOptions} for further chaining.
+   */
+  public QueryOptions adhoc(final boolean adhoc) {
+    this.adhoc = Optional.of(adhoc);
     return this;
   }
 
@@ -287,6 +299,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+
+    public boolean adhoc() {
+      return adhoc.orElse(true);
+    }
 
     @Stability.Internal
     public void injectParams(JsonObject queryJson) {
