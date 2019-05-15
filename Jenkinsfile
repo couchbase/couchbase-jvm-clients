@@ -204,15 +204,15 @@ def buildsAndTests(PLATFORMS) {
                         }
                         // TODO: IF YOU HAVE INTEGRATION TESTS THAT RUN AGAINST THE MOCK DO THAT HERE
                         // USING THE PACKAGE(S) CREATED ABOVE
-                    }
-                    post {
-                        always {
-                            // Process the Junit test results
-                            junit 'java-client/target/surefire-reports/*.xml'
-                            junit 'core-io/target/surefire-reports/*.xml'
+
+                        post {
+                            always {
+                                // Process the Junit test results
+                                junit 'java-client/target/surefire-reports/*.xml'
+                                junit 'core-io/target/surefire-reports/*.xml'
+                            }
                         }
                     }
-
                 }
             }
         }
