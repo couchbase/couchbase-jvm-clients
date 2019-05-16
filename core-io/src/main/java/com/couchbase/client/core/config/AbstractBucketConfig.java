@@ -94,24 +94,30 @@ public abstract class AbstractBucketConfig implements BucketConfig {
                 continue;
             }
 
+            EnumSet<ClusterCapabilities> filtered = EnumSet.copyOf(entry
+              .getValue()
+              .stream()
+              .filter(Objects::nonNull)
+              .collect(Collectors.toSet()));
+
             switch (entry.getKey()) {
                 case "mgmt":
-                    result.put(ServiceType.MANAGER, EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.MANAGER, filtered);
                     break;
                 case "n1ql":
-                    result.put(ServiceType.QUERY,EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.QUERY, filtered);
                     break;
                 case "capi":
-                    result.put(ServiceType.VIEWS, EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.VIEWS, filtered);
                     break;
                 case "kv":
-                    result.put(ServiceType.KV, EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.KV, filtered);
                     break;
                 case "fts":
-                    result.put(ServiceType.SEARCH, EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.SEARCH, filtered);
                     break;
                 case "cbas":
-                    result.put(ServiceType.ANALYTICS, EnumSet.copyOf(entry.getValue()));
+                    result.put(ServiceType.ANALYTICS, filtered);
                     break;
             }
         }
