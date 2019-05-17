@@ -52,7 +52,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Optional<Integer> pipelineBatch = Optional.empty();
   private Optional<Integer> scanCap = Optional.empty();
   private Optional<Boolean> readonly = Optional.empty();
-  private Optional<Boolean> pretty = Optional.empty();
   private Optional<JsonValue> parameters = Optional.empty();
   private Optional<Boolean> prepared = Optional.empty();
   private Optional<List<MutationToken>> consistentWith = Optional.empty();
@@ -166,22 +165,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    */
   public QueryOptions maxParallelism(int maxParallelism) {
     this.maxParallelism = Optional.of(maxParallelism);
-    return this;
-  }
-
-
-  /**
-   * If set to false, the server will be instructed to remove extra whitespace from the JSON response
-   * in order to save bytes. In performance-critical environments as well as large responses this is
-   * recommended in order to cut down on network traffic.
-   *
-   * Note that this option is only supported in Couchbase Server 4.5.1 or later.
-   *
-   * @param prettyEnabled if set to false, pretty responses are disabled.
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public QueryOptions prettyEnabled(boolean prettyEnabled) {
-    this.pretty = Optional.of(prettyEnabled);
     return this;
   }
 
@@ -385,8 +368,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       scanCap.ifPresent(v -> queryJson.put("scan_cap", v.toString()));
 
       metricsDisabled.ifPresent(v -> queryJson.put("metrics", v.toString()));
-
-      pretty.ifPresent(v -> queryJson.put("pretty", v.toString()));
 
       readonly.ifPresent(v -> queryJson.put("readonly", v.toString()));
 
