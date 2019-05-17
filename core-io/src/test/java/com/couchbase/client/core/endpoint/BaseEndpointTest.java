@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
@@ -358,6 +359,7 @@ class BaseEndpointTest {
 
     assertEquals(0, endpoint.lastResponseReceived());
     response.complete(mock(Response.class));
+    endpoint.markRequestCompletion();
     assertTrue(endpoint.lastResponseReceived() > 0);
     assertTrue(endpoint.free());
   }
@@ -403,7 +405,7 @@ class BaseEndpointTest {
 
     @Override
     protected PipelineInitializer pipelineInitializer() {
-      return pipeline -> { };
+      return (endpoint, pipeline) -> { };
     }
 
     @Override

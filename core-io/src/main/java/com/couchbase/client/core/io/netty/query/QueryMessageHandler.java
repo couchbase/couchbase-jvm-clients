@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -27,8 +28,8 @@ import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 public class QueryMessageHandler
   extends ChunkedMessageHandler<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse, QueryRequest> {
 
-  public QueryMessageHandler(EndpointContext endpointContext) {
-    super(endpointContext, new QueryChunkResponseParser());
+  public QueryMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
+    super(endpoint, endpointContext, new QueryChunkResponseParser());
   }
 
 }

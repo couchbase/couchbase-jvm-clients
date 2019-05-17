@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DecodingFailedException;
@@ -85,6 +86,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private final String bucketName;
 
   /**
+   * The surrounding endpoint.
+   */
+  private final BaseEndpoint endpoint;
+
+  /**
    * Stores the current IO context.
    */
   private IoContext ioContext;
@@ -104,7 +110,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param endpointContext the parent core context.
    */
-  public KeyValueMessageHandler(final EndpointContext endpointContext, final String bucketName) {
+  public KeyValueMessageHandler(final BaseEndpoint endpoint,
+                                final EndpointContext endpointContext, final String bucketName) {
+    this.endpoint = endpoint;
     this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
     this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
@@ -229,6 +237,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       }
     }
 
+    if (endpoint != null) {
+      endpoint.markRequestCompletion();
+    }
     ReferenceCountUtil.release(response);
   }
 

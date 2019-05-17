@@ -16,14 +16,19 @@
 
 package com.couchbase.client.core.io.netty.search;
 
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.ChunkedHandlerSwitcher;
 import com.couchbase.client.core.msg.search.SearchRequest;
 
 public class SearchHandlerSwitcher extends ChunkedHandlerSwitcher {
 
-  public SearchHandlerSwitcher(final EndpointContext context) {
-    super(new ChunkedSearchMessageHandler(context), new NonChunkedSearchMessageHandler(context), SearchRequest.class);
+  public SearchHandlerSwitcher(final BaseEndpoint endpoint, final EndpointContext context) {
+    super(
+      new ChunkedSearchMessageHandler(endpoint, context),
+      new NonChunkedSearchMessageHandler(context),
+      SearchRequest.class
+    );
   }
 
 }

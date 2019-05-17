@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
@@ -61,6 +62,11 @@ public abstract class ChunkedMessageHandler
   private final ChunkResponseParser<H, ROW, T> chunkResponseParser;
 
   /**
+   * Holds the surrounding endpoint.
+   */
+  private final BaseEndpoint endpoint;
+
+  /**
    * The IO context once connected.
    */
   private IoContext ioContext;
@@ -93,11 +99,14 @@ public abstract class ChunkedMessageHandler
   /**
    * Creates a new {@link ChunkedMessageHandler}.
    *
+   * @param endpoint holds the surrounding endpoint.
    * @param endpointContext the related endpoint context.
    * @param chunkResponseParser the chunk response parser to use for this handler.
    */
-  protected ChunkedMessageHandler(final EndpointContext endpointContext,
+  protected ChunkedMessageHandler(final BaseEndpoint endpoint,
+                                  final EndpointContext endpointContext,
                                   final ChunkResponseParser<H, ROW, T> chunkResponseParser) {
+    this.endpoint = endpoint;
     this.endpointContext = endpointContext;
     this.chunkResponseParser = chunkResponseParser;
   }
@@ -143,6 +152,9 @@ public abstract class ChunkedMessageHandler
             completeResponseWithFailure();
           }
           cleanupState();
+          if (endpoint != null) {
+            endpoint.markRequestCompletion();
+          }
         }
       } else {
         // todo: error -> unknown response type

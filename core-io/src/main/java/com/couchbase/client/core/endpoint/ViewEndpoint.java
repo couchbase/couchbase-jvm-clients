@@ -47,9 +47,9 @@ public class ViewEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(ChannelPipeline pipeline) {
+    public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new ViewMessageHandler(endpointContext));
+      pipeline.addLast(new ViewMessageHandler(endpoint, endpointContext));
     }
   }
 

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.search;
 
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.search.*;
@@ -23,8 +24,8 @@ import com.couchbase.client.core.msg.search.*;
 class ChunkedSearchMessageHandler
         extends ChunkedMessageHandler<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse, SearchRequest> {
 
-    ChunkedSearchMessageHandler(EndpointContext endpointContext) {
-        super(endpointContext, new SearchChunkResponseParser());
+    ChunkedSearchMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
+        super(endpoint, endpointContext, new SearchChunkResponseParser());
     }
 
 }

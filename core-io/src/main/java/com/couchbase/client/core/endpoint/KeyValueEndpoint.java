@@ -65,7 +65,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(ChannelPipeline pipeline) {
+    public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new MemcacheProtocolDecodeHandler());
       pipeline.addLast(new MemcacheProtocolVerificationHandler(ctx));
 
@@ -81,7 +81,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       }
 
       pipeline.addLast(new SelectBucketHandler(ctx, bucketname));
-      pipeline.addLast(new KeyValueMessageHandler(ctx, bucketname));
+      pipeline.addLast(new KeyValueMessageHandler(endpoint, ctx, bucketname));
     }
 
     /**

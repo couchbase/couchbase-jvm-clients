@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
@@ -98,6 +99,11 @@ public abstract class BaseEndpoint implements Endpoint {
   private final CircuitBreaker circuitBreaker;
 
   /**
+   * Check if the circuit breaker is enabled.
+   */
+  private final boolean circuitBreakerEnabled;
+
+  /**
    * If the current endpoint is free or not.
    */
   private final AtomicInteger outstandingRequests;
@@ -135,9 +141,13 @@ public abstract class BaseEndpoint implements Endpoint {
                final ServiceType serviceType) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
-    this.circuitBreaker = circuitBreakerConfig.enabled()
-      ? new LazyCircuitBreaker(circuitBreakerConfig)
-      : NoopCircuitBreaker.INSTANCE;
+    if (circuitBreakerConfig.enabled()) {
+      this.circuitBreaker = new LazyCircuitBreaker(circuitBreakerConfig);
+      this.circuitBreakerEnabled = true;
+    } else {
+      this.circuitBreaker = NoopCircuitBreaker.INSTANCE;
+      this.circuitBreakerEnabled = false;
+    }
     this.endpointContext = new AtomicReference<>(
       new EndpointContext(serviceContext, hostname, port, circuitBreaker, serviceType,
         Optional.empty(), serviceContext.bucket(), Optional.empty())
@@ -229,7 +239,7 @@ public abstract class BaseEndpoint implements Endpoint {
               if (endpointContext.environment().ioConfig().captureTraffic().contains(serviceType)) {
                 pipeline.addLast(new TrafficCaptureHandler(endpointContext));
               }
-              pipelineInitializer().init(pipeline);
+              pipelineInitializer().init(BaseEndpoint.this, pipeline);
               pipeline.addLast(new PipelineErrorHandler(endpointContext));
             }
           });
@@ -349,9 +359,11 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public <R extends Request<? extends Response>> void send(R request) {
     if (canWrite()) {
-        circuitBreaker.track();
         outstandingRequests.incrementAndGet();
-        request.response().whenComplete(requestCompletionConsumer);
+        if (circuitBreakerEnabled) {
+          circuitBreaker.track();
+          request.response().whenComplete(requestCompletionConsumer);
+        }
         channel.writeAndFlush(request);
     } else {
       RetryOrchestrator.maybeRetry(endpointContext.get(), request);
@@ -366,6 +378,18 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public long lastResponseReceived() {
     return lastResponseTimestamp;
+  }
+
+  /**
+   * Called from the event loop handlers to mark a request as being completed.
+   *
+   * <p>We need to make this call explicitly from the outside and cannot just listen on the request response
+   * callback because with streaming responses the actual completion might happen much later.</p>
+   */
+  @Stability.Internal
+  public void markRequestCompletion() {
+    outstandingRequests.decrementAndGet();
+    lastResponseTimestamp = System.nanoTime();
   }
 
   /**
@@ -406,10 +430,12 @@ public abstract class BaseEndpoint implements Endpoint {
     return Mono.fromFuture(completableFuture);
   }
 
+  /**
+   * Returns the current endpoint context for external use.
+   */
   public EndpointContext endpointContext() {
     return endpointContext.get();
   }
-
 
   /**
    * This request completion consumer is cached in the parent class to reuse it
@@ -426,8 +452,6 @@ public abstract class BaseEndpoint implements Endpoint {
       } else {
         circuitBreaker.markFailure();
       }
-      outstandingRequests.decrementAndGet();
-      lastResponseTimestamp = System.nanoTime();
     }
   }
 

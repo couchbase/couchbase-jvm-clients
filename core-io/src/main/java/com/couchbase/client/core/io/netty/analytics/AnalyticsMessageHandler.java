@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.io.netty.query.QueryChunkResponseParser;
@@ -33,8 +34,8 @@ import com.couchbase.client.core.msg.query.QueryResponse;
 public class AnalyticsMessageHandler
   extends ChunkedMessageHandler<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer, AnalyticsResponse, AnalyticsRequest> {
 
-  public AnalyticsMessageHandler(EndpointContext endpointContext) {
-    super(endpointContext, new AnalyticsChunkResponseParser());
+  public AnalyticsMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
+    super(endpoint, endpointContext, new AnalyticsChunkResponseParser());
   }
 
 }

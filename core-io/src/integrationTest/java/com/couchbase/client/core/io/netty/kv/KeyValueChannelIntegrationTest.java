@@ -108,7 +108,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
             endpointContext,
             config().bucketname(),
             env.credentials()
-          ).init(ch.pipeline());
+          ).init(null, ch.pipeline());
         }
       });
 
@@ -138,7 +138,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
             endpointContext,
             config().bucketname(),
             new RoleBasedCredentials(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
-          ).init(ch.pipeline());
+          ).init(null, ch.pipeline());
         }
       });
 
@@ -159,7 +159,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
             endpointContext,
             config().bucketname(),
             new RoleBasedCredentials("vfwmf42343rew", config().adminPassword())
-          ).init(ch.pipeline());
+          ).init(null, ch.pipeline());
         }
       });
 
@@ -180,7 +180,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
             endpointContext,
             "42eredwefrfe",
             env.credentials()
-          ).init(ch.pipeline());
+          ).init(null, ch.pipeline());
         }
       });
 

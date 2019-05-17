@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.view;
 
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
@@ -26,8 +27,8 @@ import com.couchbase.client.core.msg.view.ViewResponse;
 
 public class ViewMessageHandler extends ChunkedMessageHandler<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse, ViewRequest> {
 
-  public ViewMessageHandler(EndpointContext endpointContext) {
-    super(endpointContext, new ViewChunkResponseParser());
+  public ViewMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
+    super(endpoint, endpointContext, new ViewChunkResponseParser());
   }
 
 }

@@ -28,8 +28,9 @@ public interface PipelineInitializer {
   /**
    * Initializes the pipeline with the handlers that are part of the implementation.
    *
+   * @param endpoint the outer endpoint which sometimes needs to be accessed.
    * @param pipeline the pipeline to modify.
    */
-  void init(final ChannelPipeline pipeline);
+  void init(final BaseEndpoint endpoint, final ChannelPipeline pipeline);
 
 }

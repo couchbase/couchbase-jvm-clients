@@ -44,9 +44,9 @@ public class SearchEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(final ChannelPipeline pipeline) {
+    public void init(final BaseEndpoint endpoint, final ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(SearchHandlerSwitcher.SWITCHER_IDENTIFIER, new SearchHandlerSwitcher(endpointContext));
+      pipeline.addLast(SearchHandlerSwitcher.SWITCHER_IDENTIFIER, new SearchHandlerSwitcher(endpoint, endpointContext));
     }
   }
 

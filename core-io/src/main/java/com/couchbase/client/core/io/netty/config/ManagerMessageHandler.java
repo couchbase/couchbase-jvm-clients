@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
@@ -53,8 +54,10 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   private ManagerRequest<Response> currentRequest;
   private ByteBuf currentContent;
   private final EventBus eventBus;
+  private final BaseEndpoint endpoint;
 
-  public ManagerMessageHandler(CoreContext coreContext) {
+  public ManagerMessageHandler(BaseEndpoint endpoint, CoreContext coreContext) {
+    this.endpoint = endpoint;
     this.coreContext = coreContext;
     this.eventBus = coreContext.environment().eventBus();
   }
@@ -105,6 +108,9 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
         Response response = currentRequest.decode(copy);
         currentRequest.succeed(response);
         currentRequest = null;
+        if (endpoint != null) {
+          endpoint.markRequestCompletion();
+        }
       }
     } else {
       // todo: error since a type returned that was not expected

@@ -47,9 +47,9 @@ public class AnalyticsEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(ChannelPipeline pipeline) {
+    public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new AnalyticsMessageHandler(endpointContext));
+      pipeline.addLast(new AnalyticsMessageHandler(endpoint, endpointContext));
     }
   }
 

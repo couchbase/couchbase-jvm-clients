@@ -156,7 +156,7 @@ class ChunkedHandlerSwitcherTest {
 
     @SuppressWarnings({"unchecked"})
     TestChunkedMessageHandler() {
-      super(endpointContext, mock(ChunkResponseParser.class));
+      super(null, endpointContext, mock(ChunkResponseParser.class));
     }
   }
 

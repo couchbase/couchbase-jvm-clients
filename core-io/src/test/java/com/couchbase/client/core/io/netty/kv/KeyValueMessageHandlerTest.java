@@ -61,7 +61,7 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void opaqueIsIncreasing() {
-    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(CTX, BUCKET));
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
 
     try {
       channel.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
@@ -91,8 +91,8 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void opaqueIsPerChannel() {
-    EmbeddedChannel channel1 = new EmbeddedChannel(new KeyValueMessageHandler(CTX, BUCKET));
-    EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(CTX, BUCKET));
+    EmbeddedChannel channel1 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
+    EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
 
     try {
       channel1.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),

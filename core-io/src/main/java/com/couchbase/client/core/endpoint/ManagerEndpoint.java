@@ -28,9 +28,9 @@ public class ManagerEndpoint extends BaseEndpoint {
     }
 
     @Override
-    public void init(ChannelPipeline pipeline) {
+    public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new ManagerMessageHandler(endpointContext));
+      pipeline.addLast(new ManagerMessageHandler(endpoint, endpointContext));
     }
   }
 }

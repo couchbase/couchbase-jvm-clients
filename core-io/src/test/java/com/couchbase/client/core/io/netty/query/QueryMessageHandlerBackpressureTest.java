@@ -115,7 +115,7 @@ class QueryMessageHandlerBackpressureTest {
         protected void initChannel(LocalChannel ch) {
           ch.pipeline()
             .addLast(new HttpClientCodec())
-            .addLast(new QueryMessageHandler(endpointContext));
+            .addLast(new QueryMessageHandler(null, endpointContext));
         }
       });
 
