@@ -360,8 +360,6 @@ class AsyncCollection(name: String,
     getSubDoc(id, spec, withExpiration = false, parentSpan, timeout, retryStrategy)
   }
 
-  // TODO this needs to return GetFromReplicaResult
-
   /** Retrieves any available version of the document.
     *
     * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */

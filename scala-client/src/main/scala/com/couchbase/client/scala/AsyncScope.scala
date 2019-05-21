@@ -22,8 +22,6 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO get ScalaDocs using JavaDoc's CSS style
-
 /** Represents a Couchbase scope resource.
   *
   * This is an asynchronous version of the [[Scope]] interface.

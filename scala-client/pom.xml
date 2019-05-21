@@ -22,6 +22,7 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>scala-implicits_${scala.compat.version}</artifactId>
@@ -58,7 +59,6 @@
             <version>1.14.0</version>
             <scope>test</scope>
         </dependency>
-
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -148,6 +148,13 @@
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+            <version>3.6.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_${scala.compat.version}</artifactId>
             <version>3.6.4</version>
             <scope>test</scope>
         </dependency>
@@ -264,16 +271,13 @@
 
                     <artifactSet>
                         <includes>
-                            <!--TODO shade or reuse core's-->
                             <include>com.fasterxml.jackson.core:jackson-databind</include>
                             <include>com.fasterxml.jackson.core:jackson-core</include>
                             <include>com.fasterxml.jackson.core:jackson-annotations</include>
 
                             <include>com.couchbase.client:scala-implicits_${scala.compat.version}</include>
-                            <!--TODO SHADE-->
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
                             <include>org.scala-lang.modules:scala-java8-compat_${scala.compat.version}</include>
-                            <!--TODO remove findbugs-->
                         </includes>
                         <excludes>
                             <!--<exclude>io.projectreactor:reactor-scala-extensions_${scala.compat.version}</exclude>-->

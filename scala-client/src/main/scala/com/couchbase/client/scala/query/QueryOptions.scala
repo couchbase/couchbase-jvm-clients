@@ -29,7 +29,6 @@ import scala.concurrent.duration.Duration
   */
 case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
                         private[scala] val positionalParameters: Option[List[Any]] = None,
-                        // TODO auto-generated clientContextId if it's not provided
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val credentials: Option[Map[String,String]] = None,
                         private[scala] val maxParallelism: Option[Int] = None,
@@ -41,7 +40,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val scanCap: Option[Int] = None,
                         private[scala] val scanConsistency: Option[ScanConsistency] = None,
-                        // TODO support
                         //                        consistentWith: Option[List[MutationToken]]
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None
@@ -197,8 +195,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     copy(timeout = Option(timeout))
   }
 
-  // TODO make Scala wrappers for retry strategy
-
   /** Sets what retry strategy to use if the operation fails.  See [[RetryStrategy]] for details.
     *
     * @param strategy the retry strategy to use
@@ -245,10 +241,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     scanConsistency.foreach(v => out.put("scan_consistency", v.encoded))
     profile.foreach(v => out.put("profile", v.toString.toLowerCase))
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
-
-    // TODO
-//    if (scanWait != null && ScanConsistency.REQUEST_PLUS eq scanConsistency) queryJson.put("scan_wait", scanWait)
-
     clientContextId.foreach(v => out.put("client_context_id", v))
     maxParallelism.foreach(v => out.put("max_parallelism", v.toString))
     pipelineCap.foreach(v => out.put("pipeline_cap", v.toString))

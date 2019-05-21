@@ -29,11 +29,8 @@ import io.opentracing.Span
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
-
-// TODO add cluster.shutdown() notice to docswell
-// TODO try for-comps with async API
 
 /**
   * Handles requests and responses for KV SubDocument mutation operations.

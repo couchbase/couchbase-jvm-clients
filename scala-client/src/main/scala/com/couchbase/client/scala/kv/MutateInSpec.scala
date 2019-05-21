@@ -21,7 +21,6 @@ import scala.util.Try
   * @since 1.0.0
   */
 object MutateInSpec {
-  // TODO fix ***CHANGEME*** when docs are available
 
   /** Returns a `MutateInSpec` with the intent of inserting a value into a JSON object.
     *
@@ -137,8 +136,6 @@ object MutateInSpec {
     }
     ArrayInsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
   }
-
-  // TODO add variants of these that take multiple values
 
   /** Returns a `MutateInSpec` with the intent of inserting a value into an existing JSON array, but only if the value
     * is not already contained in the array (by way of string comparison).

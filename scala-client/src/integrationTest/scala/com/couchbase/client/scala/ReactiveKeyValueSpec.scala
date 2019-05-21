@@ -311,30 +311,4 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
-
-  @Disabled // TODO fails on Jenkins (http://sdk.jenkins.couchbase.com/job/sdk3/job/jvm/job/couchbase-jvm-clients-gerrit-verification/55/console)
-  @Test
-  def initialise_reactively() {
-    val coll: ReactiveCollection = ReactiveCluster.connect("localhost", "Administrator", "password")
-      .flatMap(cluster => cluster.bucket("default"))
-      .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
-      .flatMap(scope => scope.defaultCollection)
-      .block()
-  }
-
-
-  @Disabled // TODO fails on Jenkins (http://sdk.jenkins.couchbase.com/job/sdk3/job/jvm/job/couchbase-jvm-clients-gerrit-verification/55/console)
-  @Test
-  def initialise_async() {
-    val cluster = Await.result(
-      AsyncCluster.connect("localhost", "Administrator", "password"),
-      Duration.Inf)
-    implicit val ec = ExecutionContext.Implicits.global
-
-    val coll: Future[AsyncCollection] = cluster.bucket("default")
-      .flatMap(bucket => bucket.scope(DefaultResources.DefaultScope))
-      .flatMap(scope => scope.defaultCollection)
-
-    val c: AsyncCollection = Await.result(coll, Duration.Inf)
-  }
 }

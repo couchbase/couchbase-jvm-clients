@@ -133,9 +133,7 @@ class Collection(
     * @param project        projection is an advanced feature allowing one or more fields to be fetched from a JSON
     *                       document, and the results
     *                       combined into a [[com.couchbase.client.scala.json.JsonObject]] result.  By default this
-    *                       is set to None, meaning a normal full document fetch will be performed. For a full
-    *                       description
-    *                       of this feature see **CHANGEME**.
+    *                       is set to None, meaning a normal full document fetch will be performed.
     * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
@@ -470,15 +468,14 @@ class Collection(
     * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         [[com.couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found. $ErrorHandling
     **/
   def getAllReplicas(id: String,
                      parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = retryStrategy): Iterable[GetResult] =
-  // TODO make this skip failed replicas
     reactive.getAllReplicas(id, parentSpan, timeout, retryStrategy).toIterable()
 
   /** Checks if a document exists.

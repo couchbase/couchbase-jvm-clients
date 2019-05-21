@@ -194,8 +194,6 @@ case class ViewOptions(
     copy(timeout = Option(timeout))
   }
 
-  // TODO make Scala wrappers for retry strategy
-
   /** Sets what retry strategy to use if the operation fails.  See [[RetryStrategy]] for details.
     *
     * @param strategy the retry strategy to use

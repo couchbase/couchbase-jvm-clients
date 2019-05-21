@@ -100,7 +100,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     }
   }
 
-  // TODO server actually returns failure here, do we want to surface that?
   @Test
   def path_does_not_exist_multi() {
     val docId = TestUtils.docId()

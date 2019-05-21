@@ -78,7 +78,6 @@ class DurabilitySpec extends ScalaIntegrationTest {
     }
   }
 
-  // TODO see if can support Junit5-style test exclusions
   @Test
   def MajorityTimeoutTooShort() {
     val docId = TestUtils.docId()
@@ -91,7 +90,6 @@ class DurabilitySpec extends ScalaIntegrationTest {
   }
 
 
-  // TODO Durability on server side currently seems unstable, will retest later
   @Test
   def Majority() {
     val docId = TestUtils.docId()

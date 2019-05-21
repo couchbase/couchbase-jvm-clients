@@ -513,7 +513,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
   @Test
   def insert_string_already_there_xattr_createPath() {
-    // TODO this should return PATH_EXISTS surely?  maybe another bug related to not doing single path
+    // Seems this should return PATH_EXISTS instead...
     checkSingleOpFailureXattr(ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")), Array(insert("x.foo.baz", "bar2")),
       SubDocumentOpResponseStatus.PATH_NOT_FOUND)
   }
@@ -545,19 +545,20 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
-  // TODO failing with bad input server error
-  //  @Test
+  // Failing with bad input server error - investigate under SCBC-30
+  @Disabled
+  @Test
   def array_insert_xattr_createPath() {
-    //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-    //      Array(arrayInsert("x.foo[0]", "cruel").xattr.createPath)
-    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
+        val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
+          Array(arrayInsert("x.foo[0]", "cruel").xattr.createPath))
+        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
   }
 
   @Test
   def array_insert_unique_does_not_exist_xattr() {
-    //    val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
-    //      Array(arrayAddUnique("x.foo", "cruel").xattr.createPath)
-    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+        val updatedContent = checkSingleOpSuccessXattr(ujson.Obj(),
+          Array(arrayAddUnique("x.foo", "cruel").xattr.createPath))
+        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
   }
 
 
@@ -615,21 +616,20 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("world"))
   }
 
-  // TODO failing with bad input server error
-  @Test
-  def array_insert_createPath() {
-    //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-    //      Array(arrayInsert("foo[0]", "cruel").createPath)
-    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
-  }
-
+  // Will look at under SCBC-30
 //  @Test
-//  def array_insert_unique_does_not_exist() {
-//    //    val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-//    //      Array(arrayAddUnique("foo", "cruel").createPath)
-//    //    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "world", "cruel"))
+//  def array_insert_createPath() {
+//        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+//          Array(arrayInsert("foo[0]", "cruel").createPath))
+//        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
 //  }
 
+//  @Test
+//  def array_insert_unique_does_not_exist_createPath() {
+//        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+//          Array(arrayAddUnique("foo", "cruel").createPath))
+//        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer(test"cruel"))
+//  }
 
   @Test
   def counter_5_createPath() {

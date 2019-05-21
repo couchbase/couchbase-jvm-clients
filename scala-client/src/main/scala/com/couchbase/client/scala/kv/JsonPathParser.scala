@@ -28,9 +28,6 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-// TODO move this into core
-// TODO handle backticks encoded
-// TODO check someArray[0][1]
 private[scala] object JsonPathParser {
   def parse(path: String): Try[Seq[PathElement]] = {
     def debugPos(idx: Int) = s"position $idx"

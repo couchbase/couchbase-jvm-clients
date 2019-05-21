@@ -82,7 +82,6 @@ private[scala] object ProjectionsApplier {
       case x :: xs =>
         x match {
           case PathArray(str, idx) =>
-            // TODO handle multiple projections into same array
             val toInsert = JsonArray.create
             in match {
               case Left(obj) =>

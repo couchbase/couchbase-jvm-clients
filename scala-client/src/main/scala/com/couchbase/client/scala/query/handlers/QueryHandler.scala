@@ -41,7 +41,6 @@ private[scala] class QueryHandler() {
                  core: Core,
                  environment: ClusterEnvironment)
   : Try[QueryRequest] = {
-    // TODO prepared query
 
     val validations: Try[QueryRequest] = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")

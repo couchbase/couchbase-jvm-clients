@@ -42,8 +42,6 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
 
-    // TODO get number of replicas from cluster and wait until they're all written, on all tests
-
     assert(coll.insert(docId, content).isSuccess)
 
     val future = async.getAnyReplica(docId)

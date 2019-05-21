@@ -178,9 +178,6 @@ object Conversions {
       }
     }
 
-    // TODO support Serializable
-
-
     /** These encoders treat the provided values as raw binary or strings. */
     object AsValue {
 
@@ -477,11 +474,11 @@ object Conversions {
     }
 
     /** `Decodable` converting a binary representation of a document into a `JValue`,
-      * from the external JSON library Play4s.
+      * from the external JSON library Json4s.
       *
-      * Play4s is an optional dependency.
+      * Json4s is an optional dependency.
       */
-    implicit object Play4sConvert extends Decodable[org.json4s.JsonAST.JValue] {
+    implicit object Json4sConvert extends Decodable[org.json4s.JsonAST.JValue] {
       override def decode(bytes: Array[Byte], params: EncodeParams) = {
         tryDecode(org.json4s.native.JsonMethods.parse(new String(bytes, CharsetUtil.UTF_8)))
       }

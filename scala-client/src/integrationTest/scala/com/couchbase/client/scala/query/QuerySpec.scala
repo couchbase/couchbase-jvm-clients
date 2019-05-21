@@ -21,6 +21,7 @@ class QuerySpec extends ScalaIntegrationTest {
   private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: Collection = _
+  private var bucketName: String = _
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -29,6 +30,9 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster = Cluster.connect(env)
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+
+    cluster.query("create primary index on `" + config.bucketname + "`")
+    bucketName = config.bucketname()
   }
 
   @AfterAll
@@ -131,13 +135,12 @@ class QuerySpec extends ScalaIntegrationTest {
     }
   }
 
-  @Disabled // TODO get this passing
   @Test
   def read_2_docs_use_keys() {
     val (docId1, _) = prepare(ujson.Obj("name" -> "Andy"))
     val (docId2, _) = prepare(ujson.Obj("name" -> "Beth"))
 
-    val statement =s"""select name from default use keys ['$docId1', '$docId2'];"""
+    val statement =s"""select name from `${bucketName}` use keys ['$docId1', '$docId2'];"""
     //    val statement = s"""SELECT * FROM default USE KEYS '$docId1';"""
     cluster.query(statement, QueryOptions().scanConsistency(ScanConsistency.RequestPlus())) match {
       case Success(result) =>
@@ -158,9 +161,9 @@ class QuerySpec extends ScalaIntegrationTest {
         assert(false)
       case Failure(err: QueryError) =>
         val msg = err.msg
-      // TODO recheck after David's query changes are merged
-      //        assert(msg == "syntax error - at end of input")
-      //        assert(err.code == Success(3000))
+      // Fix under SCBC-33
+//              assert(msg == "syntax error - at end of input")
+//              assert(err.code == Success(3000))
       case Failure(err) =>
         throw err
     }
@@ -241,13 +244,12 @@ class QuerySpec extends ScalaIntegrationTest {
     }
   }
 
-  @Disabled // TODO get passing
   @Test
   def options_named_params () {
     coll.insert(TestUtils.docId(), JsonObject("name" -> "Eric Wimp"))
 
     cluster.query(
-      """select * from default where name=$nval""",
+      s"""select * from `${bucketName}` where name=$$nval""",
       QueryOptions().namedParameter("nval", "Eric Wimp")
         .scanConsistency(ScanConsistency.RequestPlus())) match {
       case Success(result) =>
@@ -257,12 +259,11 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @Disabled // TODO get passing
   def options_positional_params () {
     coll.insert(TestUtils.docId(), JsonObject("name" -> "Eric Wimp"))
 
     cluster.query(
-      """select * from default where name=$1""",
+      s"""select * from `${bucketName}` where name=$$1""",
       QueryOptions().positionalParameters("Eric Wimp")
         .scanConsistency(ScanConsistency.RequestPlus())) match {
       case Success(result) => assert(result.rows.size > 0)

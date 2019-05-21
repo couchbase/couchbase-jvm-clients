@@ -28,6 +28,21 @@ class EnvironmentSpec {
   }
 
   @Test
+  def badConnstrReturnsErr() {
+    ClusterEnvironment.builder("not:a:valid:conn:str", "", "").buildSafe match {
+      case Success(env) => assert(false)
+      case _ =>
+    }
+  }
+
+  @Test
+  def badConnstrCreatingCluster() {
+    // Changing under SCBD-35
+//    val cluster = Cluster.connect("not:a:valid:conn:str", "Administrator", "password")
+  }
+
+
+  @Test
   def basic_unowned() {
     val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build
     val cluster = Cluster.connect(env)

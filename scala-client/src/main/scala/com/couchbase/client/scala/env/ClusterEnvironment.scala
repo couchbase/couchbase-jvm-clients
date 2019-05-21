@@ -58,9 +58,6 @@ object ClusterEnvironment {
       new ClusterEnvironment(this)
     }
 
-    // None of the builder methods throw currently on invalid config (e.g. a minimum compression size < 0).  If they do,
-    // the exception will instead be stored and raised in this Try.
-    // TODO some do throw and need handling, see BucketConfigParser (e.g. bad connection string)
     def buildSafe = Try(build)
 
     def connectionString(value: String): ClusterEnvironment.Builder = {
