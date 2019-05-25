@@ -16,10 +16,13 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.DocumentAlreadyExistsException;
 import com.couchbase.client.core.error.DocumentDoesNotExistException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
+import com.couchbase.client.core.service.KeyValueServiceConfig;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;

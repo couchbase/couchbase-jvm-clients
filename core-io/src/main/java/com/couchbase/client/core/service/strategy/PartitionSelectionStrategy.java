@@ -17,8 +17,10 @@
 package com.couchbase.client.core.service.strategy;
 
 import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.service.EndpointSelectionStrategy;
 
 import java.util.List;
@@ -26,15 +28,19 @@ import java.util.List;
 public class PartitionSelectionStrategy implements EndpointSelectionStrategy {
 
   @Override
-  public <R extends Request<? extends Response>> Endpoint select(R request, List<Endpoint> endpoints) {
+  public <R extends Request<? extends Response>> Endpoint select(final R request, final List<Endpoint> endpoints) {
     int size = endpoints.size();
     if (size == 0) {
       return null;
-    } else if (size == 1) {
-      return endpoints.get(0);
-    } else {
-      throw new UnsupportedOperationException("Implement me!");
     }
+
+    short partition = ((KeyValueRequest<?>) request).partition();
+    Endpoint endpoint = size == 1 ? endpoints.get(0) : endpoints.get(partition % size);
+    if (endpoint != null && endpoint.state() == EndpointState.CONNECTED && endpoint.free()) {
+      return endpoint;
+    }
+
+    return null;
   }
 
 }
