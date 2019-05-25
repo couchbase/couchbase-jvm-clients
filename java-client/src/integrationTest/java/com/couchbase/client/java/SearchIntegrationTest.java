@@ -16,12 +16,8 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.AnalyticsServiceException;
-import com.couchbase.client.java.analytics.AnalyticsMeta;
-import com.couchbase.client.java.analytics.AnalyticsResult;
-import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.manager.SearchIndex;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -31,9 +27,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
-import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -42,14 +38,60 @@ import static org.junit.jupiter.api.Assertions.*;
 @IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
 class SearchIntegrationTest extends JavaIntegrationTest {
 
+    private static final String INDEX_DEF = "{\n" +
+      "  \"type\": \"fulltext-index\",\n" +
+      "  \"name\": \"$NAME$\",\n" +
+      "  \"sourceType\": \"couchbase\",\n" +
+      "  \"sourceName\": \"$BUCKET$\",\n" +
+      "  \"planParams\": {\n" +
+      "    \"maxPartitionsPerPIndex\": 171\n" +
+      "  },\n" +
+      "  \"params\": {\n" +
+      "    \"doc_config\": {\n" +
+      "      \"docid_prefix_delim\": \"\",\n" +
+      "      \"docid_regexp\": \"\",\n" +
+      "      \"mode\": \"type_field\",\n" +
+      "      \"type_field\": \"type\"\n" +
+      "    },\n" +
+      "    \"mapping\": {\n" +
+      "      \"analysis\": {},\n" +
+      "      \"default_analyzer\": \"standard\",\n" +
+      "      \"default_datetime_parser\": \"dateTimeOptional\",\n" +
+      "      \"default_field\": \"_all\",\n" +
+      "      \"default_mapping\": {\n" +
+      "        \"dynamic\": true,\n" +
+      "        \"enabled\": true\n" +
+      "      },\n" +
+      "      \"default_type\": \"_default\",\n" +
+      "      \"docvalues_dynamic\": true,\n" +
+      "      \"index_dynamic\": true,\n" +
+      "      \"store_dynamic\": false,\n" +
+      "      \"type_field\": \"_type\"\n" +
+      "    },\n" +
+      "    \"store\": {\n" +
+      "      \"indexType\": \"scorch\",\n" +
+      "      \"kvStoreName\": \"\"\n" +
+      "    }\n" +
+      "  },\n" +
+      "  \"sourceParams\": {}\n" +
+      "}";
+
     private static Cluster cluster;
     private static ClusterEnvironment environment;
+    private static Collection collection;
 
     @BeforeAll
     static void setup() {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());
+        collection = bucket.defaultCollection();
+
+        String indexDef = INDEX_DEF
+          .replace("$BUCKET$", config().bucketname())
+          .replace("$NAME$", "idx-" + config().bucketname());
+
+        cluster.searchIndexes().insert(SearchIndex.fromJson(indexDef.getBytes(StandardCharsets.UTF_8)));
     }
 
     @AfterAll
@@ -59,13 +101,32 @@ class SearchIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    void simpleSearch() {
-        SearchResult result = cluster.searchQuery(new SearchQuery("travel-sample-index-unstored",
-                SearchQuery.queryString("united")).limit(10));
+    void simpleSearch() throws Exception {
+        String docId = UUID.randomUUID().toString();
+        collection.insert(docId, "{\"name\": \"michael\"}");
 
-        assertTrue(result.errors().isEmpty());
-        assertEquals(10, result.rows().size());
+        for (int i = 0; i < 20; i++) {
+            try {
+                SearchResult result = cluster.searchQuery(new SearchQuery(
+                  "idx-" + config().bucketname(),
+                  SearchQuery.queryString("michael")
+                ));
+
+                if (result.rows().size() >= 1) {
+                    assertEquals(docId, result.rows().get(0).id());
+                }
+                break;
+            } catch (Exception ex) {
+                // TODO: we need to figure out a better way to make sure an index
+                // TODO: is properly created to avoid race conditions in unit tests
+                System.err.println(ex);
+                ex.printStackTrace();
+                Thread.sleep(1000);
+            }
+        }
+
+        // index didn't come up after 10 seconds :/
+        fail();
     }
-
 
 }

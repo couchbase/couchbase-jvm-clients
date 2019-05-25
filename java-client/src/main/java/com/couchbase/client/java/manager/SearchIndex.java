@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.SearchServiceException;
 import com.couchbase.client.java.json.JacksonTransformers;
@@ -47,7 +48,12 @@ public class SearchIndex {
 
   private SearchIndex(byte[] raw) {
     try {
-      this.rootNode = (ObjectNode) JacksonTransformers.MAPPER.readTree(raw).path("indexDef");
+
+      JsonNode node = JacksonTransformers.MAPPER.readTree(raw);
+      if (node.has("indexDef")) {
+        node = node.path("indexDef");
+      }
+      this.rootNode = (ObjectNode) node;
     } catch (IOException e) {
       throw new SearchServiceException("Could not decode index definition!", e);
     }
