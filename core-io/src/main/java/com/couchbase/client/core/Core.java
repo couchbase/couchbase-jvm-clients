@@ -123,7 +123,7 @@ public class Core {
 
   protected Core(final CoreEnvironment environment) {
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
-    this.configurationProvider = configurationProvider();
+    this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
     currentConfig = configurationProvider.config();
     configurationProvider
@@ -140,9 +140,13 @@ public class Core {
    *
    * @return by default returns the default config provider.
    */
+  ConfigurationProvider createConfigurationProvider() {
+    return new DefaultConfigurationProvider(this);
+  }
+
   @Stability.Internal
   public ConfigurationProvider configurationProvider() {
-    return new DefaultConfigurationProvider(this);
+    return configurationProvider;
   }
 
   public <R extends Response> void send(final Request<R> request) {

@@ -19,11 +19,9 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -122,35 +120,15 @@ public class AsyncScope {
    */
   public CompletableFuture<AsyncCollection> collection(final String name) {
     notNullOrEmpty(name, "Name");
+
     if (CollectionIdentifier.DEFAULT_COLLECTION.equals(name) && CollectionIdentifier.DEFAULT_SCOPE.equals(scopeName)) {
-      return CompletableFuture.completedFuture(new AsyncCollection(
-        name,
-        this.scopeName,
-        bucketName,
-        core,
-        environment
-      ));
+      return CompletableFuture.completedFuture(new AsyncCollection(name, scopeName, bucketName, core, environment));
     } else {
-      GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1),
-        core.context(), environment.retryStrategy(), new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)));
-      core.send(request);
-      return request
-        .response()
-        .thenApply(res -> {
-          if (res.status().success() && res.collectionId().isPresent()) {
-            return new AsyncCollection(
-              name,
-              this.scopeName,
-              bucketName,
-              core,
-              environment
-            );
-          } else {
-            // TODO: delay into collection!
-            throw new IllegalStateException("Could not open collection "
-              + "(either not successful or id not present)");
-          }
-        });
+      return core
+        .configurationProvider()
+        .refreshCollectionMap(bucketName, false)
+        .then(Mono.defer(() -> Mono.just(new AsyncCollection(name, scopeName, bucketName, core, environment))))
+        .toFuture();
     }
   }
 

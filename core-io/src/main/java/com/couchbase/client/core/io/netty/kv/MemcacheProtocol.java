@@ -441,6 +441,8 @@ public enum MemcacheProtocol {
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
             || status == Status.SUBDOC_INVALID_COMBO.status) {
       return ResponseStatus.SUBDOC_FAILURE;
+    } else if (status == Status.UNKNOWN_COLLECTION.status) {
+      return ResponseStatus.UNKNOWN_COLLECTION;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -778,7 +780,11 @@ public enum MemcacheProtocol {
     /**
      * Unlocks a write locked document.
      */
-    UNLOCK((byte) 0x95);
+    UNLOCK((byte) 0x95),
+    /**
+     * Returns the collections manifest for a bucket.
+     */
+    COLLECTIONS_GET_MANIFEST((byte) 0xba);
 
     private final byte opcode;
 
@@ -945,7 +951,12 @@ public enum MemcacheProtocol {
      *
      * <p>it may Succeed or Fail; but the final value is not yet known.</p>
      */
-    SYNC_WRITE_AMBIGUOUS((short) 0xa3);
+    SYNC_WRITE_AMBIGUOUS((short) 0xa3),
+
+    /**
+     * The collection ID provided is unknown, maybe it changed or got dropped.
+     */
+    UNKNOWN_COLLECTION((short) 0x88);
 
     private final short status;
 

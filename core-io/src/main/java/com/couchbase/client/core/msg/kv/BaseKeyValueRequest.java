@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.error.CollectionDoesNotExistException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
@@ -79,6 +80,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
 
   protected byte[] keyWithCollection(ChannelContext ctx) {
     byte[] collection = ctx.collectionMap().get(collectionIdentifier);
+    if (collection == null) {
+      throw new CollectionDoesNotExistException("Collection \""
+        + collectionIdentifier.collection() + "\" in scope \""
+        + collectionIdentifier.scope() + "\" does not exist.");
+    }
     byte[] encoded = new byte[key.length + collection.length];
     System.arraycopy(collection, 0, encoded, 0, collection.length);
     System.arraycopy(key, 0, encoded, collection.length, key.length);

@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
@@ -42,7 +43,10 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectHashMap;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
+import java.time.Duration;
 import java.util.List;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
@@ -229,6 +233,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ResponseStatus status = MemcacheProtocol.decodeStatus(response);
       if (status == ResponseStatus.NOT_MY_VBUCKET) {
         handleNotMyVbucket(request, response);
+      } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
+        handleOutdatedCollection(request);
       } else {
         try {
           Response decoded = request.decode(response, channelContext);
@@ -261,6 +267,20 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
         new ProposedBucketConfigContext(bucketName, c, origin)
       ));
+  }
+
+  /**
+   * Helper method to redispatch a request and signal that we need to refresh the collection map.
+   *
+   * @param request the request to retry.
+   */
+  private void handleOutdatedCollection(final KeyValueRequest<Response> request) {
+    final long start = System.nanoTime();
+    ioContext.core().configurationProvider().refreshCollectionMap(bucketName, true).subscribe(v -> {}, err -> {
+      Duration duration = Duration.ofNanos(System.nanoTime() - start);
+      eventBus.publish(new CollectionMapRefreshFailedEvent(duration, ioContext, err));
+    });
+    RetryOrchestrator.retryImmediately(ioContext, request);
   }
 
 }

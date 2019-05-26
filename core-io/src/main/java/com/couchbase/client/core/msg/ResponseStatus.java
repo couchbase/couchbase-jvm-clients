@@ -124,7 +124,9 @@ public enum ResponseStatus {
 
   TOO_MANY_REQUESTS,
 
-  INVALID_ARGS;
+  INVALID_ARGS,
+
+  UNKNOWN_COLLECTION;
 
 
 

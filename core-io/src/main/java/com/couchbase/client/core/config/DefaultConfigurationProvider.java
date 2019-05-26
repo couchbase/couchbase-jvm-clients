@@ -17,7 +17,9 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigUpdatedEvent;
 import com.couchbase.client.core.config.loader.KeyValueLoader;
@@ -25,18 +27,29 @@ import com.couchbase.client.core.config.loader.ClusterManagerLoader;
 import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueRefresher;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.CollectionsNotAvailableException;
 import com.couchbase.client.core.error.ConfigException;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
+import com.couchbase.client.core.msg.kv.GetCollectionManifestResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
@@ -225,6 +238,60 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Mono.error(new AlreadyShutdownException());
       }
     });
+  }
+
+  @Override
+  public Mono<Void> refreshCollectionMap(final String bucket, final boolean force) {
+    if (!collectionMap.hasBucketMap(bucket) || force) {
+      return Mono.defer(() -> {
+        GetCollectionManifestRequest request = new GetCollectionManifestRequest(
+          core.context().environment().timeoutConfig().kvTimeout(),
+          core.context(),
+          BestEffortRetryStrategy.INSTANCE,
+          new CollectionIdentifier(bucket, null, null)
+        );
+        core.send(request);
+        return Reactor
+          .wrap(request, request.response(), true)
+          .flatMap(response -> {
+            if (response.status().success() && response.manifest().isPresent()) {
+              parseAndStoreCollectionsManifest(bucket, response.manifest().get());
+              return Mono.empty();
+            } else {
+              if (response.status() == ResponseStatus.UNKNOWN) {
+                return Mono.error(new CollectionsNotAvailableException());
+              } else {
+                return Mono.error(new CouchbaseException(response.toString()));
+              }
+            }
+          })
+          .then();
+      });
+    } else {
+      return Mono.empty();
+    }
+  }
+
+  /**
+   * Parses a raw collections manifest and stores it in the collections map.
+   *
+   * @param raw the raw manifest.
+   */
+  private void parseAndStoreCollectionsManifest(final String bucket, final String raw) {
+    try {
+      CollectionsManifest manifest = Mapper.reader().forType(CollectionsManifest.class).readValue(raw);
+      for (CollectionsManifestScope scope : manifest.scopes()) {
+        for (CollectionsManifestCollection collection : scope.collections()) {
+          long parsed = Long.parseLong(collection.uid(), 16);
+          collectionMap.put(
+            new CollectionIdentifier(bucket, Optional.of(scope.name()), Optional.of(collection.name())),
+            UnsignedLEB128.encode(parsed)
+          );
+        }
+      }
+    } catch (Exception ex) {
+      eventBus.publish(new CollectionMapDecodingFailedEvent(core.context(), ex));
+    }
   }
 
   /**

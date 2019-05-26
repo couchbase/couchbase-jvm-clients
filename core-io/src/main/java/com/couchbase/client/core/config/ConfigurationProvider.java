@@ -92,4 +92,14 @@ public interface ConfigurationProvider  {
    */
   CollectionMap collectionMap();
 
+  /**
+   * Helper method to refresh the collection map for the given bucket.
+   *
+   * @param bucket the name of the bucket.
+   * @param force if set, the provider must fetch a new one. otherwise it will only fetch one for the bucket if not
+   *              already present.
+   * @return once refreshed completes the mono (or fails if error).
+   */
+  Mono<Void> refreshCollectionMap(String bucket, boolean force);
+
 }

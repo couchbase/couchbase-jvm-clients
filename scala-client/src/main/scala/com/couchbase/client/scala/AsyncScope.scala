@@ -15,12 +15,8 @@
  */
 package com.couchbase.client.scala
 
-import java.time.Duration
-import java.util.Optional
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.msg.kv.GetCollectionIdRequest
 import com.couchbase.client.scala.env.ClusterEnvironment
 
 import scala.compat.java8.FutureConverters
@@ -55,25 +51,15 @@ class AsyncScope private[scala] (scopeName: String,
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Future[AsyncCollection] = {
-    if (name == DefaultResources.DefaultCollection && scopeName == DefaultResources.DefaultScope) {
+    if (name == CollectionIdentifier.DEFAULT_COLLECTION && scopeName == CollectionIdentifier.DEFAULT_SCOPE) {
       Future {
         new AsyncCollection(name, bucketName, scopeName, core, environment)
       }
     }
     else {
-      val request = new GetCollectionIdRequest(Duration.ofSeconds(1),
-        core.context(), environment.retryStrategy, new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)))
-      core.send(request)
-      FutureConverters.toScala(request.response())
-        .map(res => {
-          if (res.status().success()) {
-            new AsyncCollection(name, bucketName, scopeName, core, environment)
-          } else {
-            // TODO BLOCKED collection opening is going to be redone later
-            throw new IllegalStateException("Do not raise me.. propagate into collection.. " + "collection error")
-          }
-        })
-
+      FutureConverters
+        .toScala(core.configurationProvider().refreshCollectionMap(bucketName, false).toFuture)
+        .map(_ => new AsyncCollection(name, bucketName, scopeName, core, environment))
     }
   }
 }
