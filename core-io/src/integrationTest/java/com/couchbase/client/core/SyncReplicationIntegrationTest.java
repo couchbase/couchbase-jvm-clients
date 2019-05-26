@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.msg.kv.UpsertResponse;
@@ -74,8 +75,8 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, null, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.of(DurabilityLevel.MAJORITY));
     core.send(upsertRequest);
 

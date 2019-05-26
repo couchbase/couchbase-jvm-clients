@@ -1,6 +1,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -19,9 +20,9 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
 
   private final NodeIdentifier target;
 
-  public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                                     final RetryStrategy retryStrategy, final NodeIdentifier target) {
-    super(timeout, ctx, bucket, retryStrategy, null, null);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
     this.target = target;
   }
 

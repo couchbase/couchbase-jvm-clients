@@ -68,14 +68,13 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       ev.encode(content) match {
         case Success(encoded) =>
           Success(new ReplaceRequest(id,
-            hp.collectionIdEncoded,
             encoded._1,
             expiration.getSeconds,
             encoded._2.flags,
             timeout,
             cas,
             hp.core.context(),
-            hp.bucketName,
+            hp.collectionIdentifier,
             retryStrategy,
             durability.toDurabilityLevel))
 

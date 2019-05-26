@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
@@ -38,12 +39,14 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
   private Core core;
   private CoreEnvironment env;
+  private CollectionIdentifier collectionIdentifier;
 
   @BeforeEach
   void beforeEach() {
     env = environment().ioConfig(IoConfig.mutationTokensEnabled(true)).build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
+    collectionIdentifier = CollectionIdentifier.fromDefault(config().bucketname());
   }
 
   @AfterEach
@@ -57,8 +60,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -66,7 +69,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(upsertResponse.mutationToken());
 
     AppendRequest appendRequest = new AppendRequest(Duration.ofSeconds(1), core.context(),
-      config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID,
+      collectionIdentifier, env.retryStrategy(), id,
       ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
     core.send(appendRequest);
 
@@ -80,8 +83,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -89,7 +92,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(upsertResponse.mutationToken());
 
     PrependRequest prependRequest = new PrependRequest(Duration.ofSeconds(1), core.context(),
-      config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID,
+      collectionIdentifier, env.retryStrategy(), id,
       ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
     core.send(prependRequest);
 
@@ -103,8 +106,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "{}".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -121,7 +124,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
             false)
     );
     SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(Duration.ofSeconds(1),
-      core.context(), config().bucketname(), env.retryStrategy(), id, DEFAULT_COLLECTION_ID,
+      core.context(), collectionIdentifier, env.retryStrategy(), id,
       false, false, commands, 0, 0, Optional.empty());
     core.send(subdocMutateRequest);
 
@@ -135,8 +138,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
 
@@ -150,17 +153,17 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
     assertMutationToken(upsertResponse.mutationToken());
 
-    ReplaceRequest replaceRequest = new ReplaceRequest(id, DEFAULT_COLLECTION_ID, content,
+    ReplaceRequest replaceRequest = new ReplaceRequest(id, content,
       0, 0, Duration.ofSeconds(1), upsertResponse.cas(), core.context(),
-      config().bucketname(), env.retryStrategy(), Optional.empty());
+      collectionIdentifier, env.retryStrategy(), Optional.empty());
     core.send(replaceRequest);
 
     ReplaceResponse replaceResponse = replaceRequest.response().get();
@@ -173,16 +176,16 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    UpsertRequest upsertRequest = new UpsertRequest(id, DEFAULT_COLLECTION_ID, content,
-      0, 0, Duration.ofSeconds(1), core.context(), config().bucketname(),
+    UpsertRequest upsertRequest = new UpsertRequest(id, content,
+      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty());
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
     assertMutationToken(upsertResponse.mutationToken());
 
-    RemoveRequest removeRequest = new RemoveRequest(id, DEFAULT_COLLECTION_ID, upsertResponse.cas(),
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+    RemoveRequest removeRequest = new RemoveRequest(id, upsertResponse.cas(),
+      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty());
     core.send(removeRequest);
 
     RemoveResponse removeResponse = removeRequest.response().get();
@@ -195,8 +198,8 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty());
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
@@ -209,16 +212,16 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "1".getBytes(UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty());
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
     assertMutationToken(insertResponse.mutationToken());
 
-    IncrementRequest incrementRequest = new IncrementRequest(Duration.ofSeconds(1), core.context(), config().bucketname(),
-      env.retryStrategy(), id, 0, DEFAULT_COLLECTION_ID, 1, Optional.empty(), 0, Optional.empty());
+    IncrementRequest incrementRequest = new IncrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty());
     core.send(incrementRequest);
 
     IncrementResponse incrementResponse = incrementRequest.response().get();
@@ -231,16 +234,16 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "10".getBytes(UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty());
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
     assertMutationToken(insertResponse.mutationToken());
 
-    DecrementRequest decrementRequest = new DecrementRequest(Duration.ofSeconds(1), core.context(), config().bucketname(),
-      env.retryStrategy(), id, 0, DEFAULT_COLLECTION_ID, 1, Optional.empty(), 0, Optional.empty());
+    DecrementRequest decrementRequest = new DecrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty());
     core.send(decrementRequest);
 
     DecrementResponse decrementResponse = decrementRequest.response().get();

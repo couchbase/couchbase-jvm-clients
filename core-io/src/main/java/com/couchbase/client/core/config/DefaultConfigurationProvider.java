@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -80,6 +81,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final ClusterConfig currentConfig = new ClusterConfig();
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
+  private final CollectionMap collectionMap;
 
   public DefaultConfigurationProvider(final Core core) {
     this.core = core;
@@ -89,10 +91,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     clusterManagerLoader = new ClusterManagerLoader(core);
     keyValueRefresher = new KeyValueRefresher(this, core);
     clusterManagerRefresher = new ClusterManagerRefresher(this, core);
+    this.collectionMap = new CollectionMap();
 
     configsSink.next(currentConfig);
     keyValueRefresher.configs().subscribe(this::proposeBucketConfig);
     clusterManagerRefresher.configs().subscribe(this::proposeBucketConfig);
+  }
+
+  @Override
+  public CollectionMap collectionMap() {
+    return collectionMap;
   }
 
   @Override

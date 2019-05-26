@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -40,16 +41,16 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   private final Duration expiration;
 
 
-  public GetAndTouchRequest(final String key, final byte[] collection, final Duration timeout,
-                            final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy,
+  public GetAndTouchRequest(final String key, final Duration timeout, final CoreContext ctx,
+                            CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
                             final Duration expiration) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.expiration = expiration;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
 
     ByteBuf request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),

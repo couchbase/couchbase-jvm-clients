@@ -57,18 +57,16 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
 
           val replicaRequests: Seq[ReplicaGetRequest] = Range(0, numReplicas)
             .map(replicaIndex => new ReplicaGetRequest(id,
-              hp.collectionIdEncoded,
               timeout,
               hp.core.context(),
-              hp.bucketName,
+              hp.collectionIdentifier,
               retryStrategy,
               (replicaIndex + 1).shortValue()))
 
           val activeRequest = new GetRequest(id,
-            hp.collectionIdEncoded,
             timeout,
             hp.core.context(),
-            hp.bucketName,
+            hp.collectionIdentifier,
             retryStrategy)
 
           val requests: Seq[GetRequest] = activeRequest +: replicaRequests

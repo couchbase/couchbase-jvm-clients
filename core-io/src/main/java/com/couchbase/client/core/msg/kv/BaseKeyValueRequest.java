@@ -17,18 +17,13 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
-import com.couchbase.client.core.io.netty.kv.ErrorMap;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.BaseRequest;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -47,21 +42,19 @@ public abstract class BaseKeyValueRequest<R extends Response>
   implements KeyValueRequest<R> {
 
   private static byte[] EMPTY_KEY = new byte[] {};
-  private final String bucket;
   private final byte[] key;
-  private final byte[] collection;
+  private final CollectionIdentifier collectionIdentifier;
 
   /**
    * Once set, stores the partition where this request should be dispatched against.
    */
   private volatile short partition;
 
-  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final String bucket,
-                      final RetryStrategy retryStrategy, String key, byte[] collection) {
+  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+                      final String key, final CollectionIdentifier collectionIdentifier) {
     super(timeout, ctx, retryStrategy);
-    this.bucket = bucket;
     this.key = encodeKey(key);
-    this.collection = collection;
+    this.collectionIdentifier = collectionIdentifier;
   }
 
   @Override
@@ -84,7 +77,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
     return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(UTF_8);
   }
 
-  protected byte[] keyWithCollection() {
+  protected byte[] keyWithCollection(ChannelContext ctx) {
+    byte[] collection = ctx.collectionMap().get(collectionIdentifier);
     byte[] encoded = new byte[key.length + collection.length];
     System.arraycopy(collection, 0, encoded, 0, collection.length);
     System.arraycopy(key, 0, encoded, collection.length, key.length);
@@ -100,21 +94,18 @@ public abstract class BaseKeyValueRequest<R extends Response>
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("type", serviceType().ident());
-    if (bucket != null) {
-      ctx.put("bucket", bucket);
+
+    if (collectionIdentifier != null) {
+      ctx.put("bucket", collectionIdentifier.bucket());
+      ctx.put("scope", collectionIdentifier.scope());
+      ctx.put("collection", collectionIdentifier.collection());
     }
+
     if (key != null) {
       ctx.put("key", new String(key, UTF_8));
     }
-    if (collection != null) {
-      ctx.put("cid", UnsignedLEB128.decode(collection));
-    }
-    return ctx;
-  }
 
-  @Override
-  public String bucket() {
-    return bucket;
+    return ctx;
   }
 
   @Override
@@ -123,7 +114,13 @@ public abstract class BaseKeyValueRequest<R extends Response>
   }
 
   @Override
-  public byte[] collection() {
-    return collection;
+  public String bucket() {
+    return collectionIdentifier.bucket();
   }
+
+  @Override
+  public CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
+  }
+
 }

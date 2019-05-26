@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -40,21 +41,6 @@ import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
  * Provides access to a Couchbase bucket in an async fashion.
  */
 public class AsyncBucket {
-
-  /**
-   * Holds the name of the default scope, hardcoded.
-   */
-  static final String DEFAULT_SCOPE = "_default";
-
-  /**
-   * Holds the name of the default collection, hardcoded.
-   */
-  static final String DEFAULT_COLLECTION = "_default";
-
-  /**
-   * Holds the default collection ID, hardcoded.
-   */
-  static final long DEFAULT_COLLECTION_ID = 0;
 
   /**
    * The name of the bucket.
@@ -127,7 +113,7 @@ public class AsyncBucket {
    * @return the {@link AsyncCollection} once opened.
    */
   public CompletableFuture<AsyncCollection> defaultCollection() {
-    return new AsyncScope(DEFAULT_SCOPE, name, core, environment).defaultCollection();
+    return new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment).defaultCollection();
   }
 
   /**
@@ -137,7 +123,7 @@ public class AsyncBucket {
    */
   public CompletableFuture<AsyncCollection> collection(final String collection) {
     notNullOrEmpty(collection, "Collection");
-    return new AsyncScope(DEFAULT_SCOPE, name, core, environment).collection(collection);
+    return new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment).collection(collection);
   }
 
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName) {

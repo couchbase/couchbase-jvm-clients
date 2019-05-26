@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -59,13 +60,12 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final Optional<DurabilityLevel> syncReplicationType;
 
 
-  public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final RetryStrategy retryStrategy, final String key,
-                             final byte[] collection,
                              final boolean insertDocument, final boolean upsertDocument,
                              final List<Command> commands, long expiration, long cas,
                              final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     byte flags = 0;
 
     if (insertDocument && upsertDocument) {
@@ -90,7 +90,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
 
     ByteBuf extras = alloc.buffer();
     if (flags != 0) {

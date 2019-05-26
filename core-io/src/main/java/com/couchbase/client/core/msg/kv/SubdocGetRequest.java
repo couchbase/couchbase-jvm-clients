@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -45,10 +46,10 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   private final List<Command> commands;
   private final String origKey;
 
-  public SubdocGetRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public SubdocGetRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           final RetryStrategy retryStrategy, final String key,
-                          final byte[] collection, final byte flags, final List<Command> commands) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+                          final byte flags, final List<Command> commands) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.flags = flags;
     this.commands = commands;
     this.origKey = key;
@@ -56,7 +57,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
 
     ByteBuf extras = flags != 0
       ? alloc.buffer(Byte.BYTES).writeByte(flags)

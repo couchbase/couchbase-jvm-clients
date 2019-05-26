@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.SpatialViewOptions;
@@ -25,7 +26,6 @@ import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 import static com.couchbase.client.java.view.SpatialViewOptions.spatialViewOptions;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
@@ -100,7 +100,7 @@ public class ReactiveBucket {
    * @return the {@link ReactiveCollection} once opened.
    */
   public Mono<ReactiveCollection> defaultCollection() {
-    return scope(DEFAULT_SCOPE).flatMap(ReactiveScope::defaultCollection);
+    return scope(CollectionIdentifier.DEFAULT_SCOPE).flatMap(ReactiveScope::defaultCollection);
   }
 
   /**
@@ -109,7 +109,7 @@ public class ReactiveBucket {
    * @return the {@link ReactiveCollection} once opened.
    */
   public Mono<ReactiveCollection> collection(final String name) {
-    return scope(DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
+    return scope(CollectionIdentifier.DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {

@@ -67,13 +67,12 @@ private[scala] class InsertHandler(hp: HandlerParams)
       ev.encode(content) match {
         case Success(encoded) =>
           Success(new InsertRequest(id,
-            hp.collectionIdEncoded,
             encoded._1,
             expiration.getSeconds,
             encoded._2.flags,
             timeout,
             hp.core.context(),
-            hp.bucketName,
+            hp.collectionIdentifier,
             retryStrategy,
             durability.toDurabilityLevel))
         case Failure(err) =>

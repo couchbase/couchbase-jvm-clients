@@ -24,6 +24,7 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -39,7 +40,6 @@ import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.ExistsAccessor;
@@ -74,6 +74,7 @@ import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -147,25 +148,24 @@ public class AsyncCollection {
   private final String scopeName;
 
   /**
-   * Holds the collection id in an encoded format.
-   */
-  private final byte[] collectionId;
-
-  /**
    * Holds the async binary collection object.
    */
   private final AsyncBinaryCollection asyncBinaryCollection;
+
+  /**
+   * Stores information about the collection.
+   */
+  private final CollectionIdentifier collectionIdentifier;
 
   /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
    * @param scopeName the name of the scope associated.
-   * @param id the id
    * @param core the core into which ops are dispatched.
    * @param environment the surrounding environment for config options.
    */
-  AsyncCollection(final String name, final String scopeName, final long id, final String bucket,
+  AsyncCollection(final String name, final String scopeName, final String bucket,
                   final Core core, final ClusterEnvironment environment) {
     this.name = name;
     this.scopeName = scopeName;
@@ -173,8 +173,8 @@ public class AsyncCollection {
     this.coreContext = core.context();
     this.environment = environment;
     this.bucket = bucket;
-    this.collectionId = UnsignedLEB128.encode(id);
-    this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, bucket, collectionId);
+    this.collectionIdentifier = new CollectionIdentifier(bucket, Optional.of(scopeName), Optional.of(name));
+    this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
   }
 
   /**
@@ -273,13 +273,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetRequest request = new GetRequest(id,
-      collectionId,
-      timeout,
-      coreContext,
-      bucket,
-      retryStrategy
-    );
+    GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
     attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
   }
@@ -332,7 +326,7 @@ public class AsyncCollection {
     }
 
     SubdocGetRequest request = new SubdocGetRequest(
-      timeout, coreContext, bucket, retryStrategy, id, collectionId, (byte) 0, commands
+      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0, commands
     );
     attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
@@ -384,7 +378,7 @@ public class AsyncCollection {
 
     Duration lockFor = opts.lockFor() == null ? Duration.ofSeconds(30) : opts.lockFor();
     GetAndLockRequest request = new GetAndLockRequest(
-      id, collectionId, timeout, coreContext, bucket, retryStrategy, lockFor
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockFor
     );
     attachSpan(TracingUtils.OpName.GET_AND_LOCK, environment, opts.parentSpan(), request);
     return request;
@@ -436,8 +430,8 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetAndTouchRequest request = new GetAndTouchRequest(id, collectionId, timeout, coreContext,
-      bucket, retryStrategy, expiration);
+    GetAndTouchRequest request = new GetAndTouchRequest(id, timeout, coreContext,
+      collectionIdentifier, retryStrategy, expiration);
     attachSpan(TracingUtils.OpName.GET_AND_TOUCH, environment, opts.parentSpan(), request);
     return request;
   }
@@ -494,16 +488,16 @@ public class AsyncCollection {
       if (opts.replicaMode() == ReplicaMode.ALL) {
         int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
         List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
-        requests.add(new GetRequest(id, collectionId, timeout, coreContext, bucket, retryStrategy));
+        requests.add(new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy));
         for (int i = 0; i < numReplicas; i++) {
           requests.add(new ReplicaGetRequest(
-            id, collectionId, timeout, coreContext, bucket, retryStrategy, (short) (i + 1)
+            id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1)
           ));
         }
         return requests.stream();
       } else {
         return Stream.of(new ReplicaGetRequest(
-          id, collectionId, timeout, coreContext, bucket, retryStrategy,
+          id, timeout, coreContext, collectionIdentifier, retryStrategy,
           (short) opts.replicaMode().ordinal()
         ));
       }
@@ -548,8 +542,8 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, bucket,
-      retryStrategy, id, collectionId, true, 0);
+    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, collectionIdentifier,
+      retryStrategy, id, true, 0);
     attachSpan(TracingUtils.OpName.EXISTS, environment, opts.parentSpan(), request);
     return request;
   }
@@ -592,8 +586,8 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new RemoveRequest(id, collectionId, opts.cas(), timeout,
-      coreContext, bucket, retryStrategy, opts.durabilityLevel());
+    return new RemoveRequest(id, opts.cas(), timeout,
+      coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
   }
 
   /**
@@ -640,8 +634,8 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    return new InsertRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, coreContext, bucket, retryStrategy, opts.durabilityLevel());
+    return new InsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
+      encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
   }
 
   /**
@@ -692,8 +686,8 @@ public class AsyncCollection {
     EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new UpsertRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, coreContext, bucket, retryStrategy, opts.durabilityLevel());
+    return new UpsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
+      encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
   }
 
   /**
@@ -746,8 +740,8 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    return new ReplaceRequest(id, collectionId, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, opts.cas(), coreContext, bucket, retryStrategy,
+    return new ReplaceRequest(id, encoded.content(), opts.expiry().getSeconds(),
+      encoded.flags(), timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy,
       opts.durabilityLevel()
     );
   }
@@ -798,7 +792,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new TouchRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+    return new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       expiry.getSeconds(), opts.durabilityLevel());
   }
 
@@ -841,7 +835,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new UnlockRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, cas);
+    return new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas);
   }
 
   /**
@@ -892,7 +886,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new SubdocGetRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+    return new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       (byte) 0, commands);
   }
 
@@ -958,7 +952,7 @@ public class AsyncCollection {
         .map(v -> v.encode())
         .collect(Collectors.toList());
 
-      return new SubdocMutateRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId,
+      return new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.insertDocument(), opts.upsertDocument(),
         commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()

@@ -69,10 +69,9 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
           Success(new PrependRequest(
             timeout,
             hp.core.context(),
-            hp.bucketName,
+            hp.collectionIdentifier,
             retryStrategy,
             id,
-            hp.collectionIdEncoded,
             encoded._1,
             cas,
             durability.toDurabilityLevel

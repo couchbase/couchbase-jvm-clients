@@ -24,6 +24,7 @@ import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -285,8 +286,8 @@ class PooledServiceTest {
     NoopRequest request = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request);
 
@@ -318,14 +319,14 @@ class PooledServiceTest {
     NoopRequest request1 = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     NoopRequest request2 = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request1);
     service.send(request2);
@@ -358,8 +359,8 @@ class PooledServiceTest {
     NoopRequest request = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request);
     assertEquals(1, service.trackedEndpoints().size());
@@ -396,15 +397,15 @@ class PooledServiceTest {
     NoopRequest request1 = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request1);
     NoopRequest request2 = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
-      "bucket",
-      BestEffortRetryStrategy.INSTANCE
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request2);
 

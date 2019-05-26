@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -35,11 +36,10 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   private final boolean active;
   private final long vbucketUUID;
 
-  public ObserveViaSeqnoRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public ObserveViaSeqnoRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                                 final RetryStrategy retryStrategy,
-                                final int replica, final boolean active, final long vbucketUUID, final String key,
-                                final byte[] collection) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+                                final int replica, final boolean active, final long vbucketUUID, final String key) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.replica = replica;
     this.active = active;
     this.vbucketUUID = vbucketUUID;

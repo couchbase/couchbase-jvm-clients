@@ -18,10 +18,9 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import reactor.core.publisher.Mono;
-
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -100,7 +99,7 @@ public class ReactiveScope {
    * @return the default collection once opened.
    */
   public Mono<ReactiveCollection> defaultCollection() {
-    return collection(DEFAULT_COLLECTION);
+    return collection(CollectionIdentifier.DEFAULT_COLLECTION);
   }
 
   /**

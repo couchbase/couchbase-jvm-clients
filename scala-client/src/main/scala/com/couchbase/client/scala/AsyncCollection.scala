@@ -15,48 +15,33 @@
  */
 package com.couchbase.client.scala
 
-import java.nio.charset.Charset
 import java.util.Optional
-import java.util.concurrent.TimeUnit
 
-import scala.concurrent.duration.Duration
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.error._
-import com.couchbase.client.core.error.subdoc.SubDocumentException
-import com.couchbase.client.core.msg.{Request, Response, ResponseStatus}
+import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.kv._
-import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
+import com.couchbase.client.core.msg.{Request, Response}
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
-import com.couchbase.client.core.util.{UnsignedLEB128, Validators}
-
-import scala.compat.java8.FunctionConverters._
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.kv.handlers._
 import com.couchbase.client.scala.util.FutureConversions
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.scala.AsyncCollection.wrap
 import io.opentracing.Span
-import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.{ExecutionContext, Future, JavaConversions}
-import scala.concurrent.duration.{Duration, _}
-import scala.util.{Failure, Success, Try}
-import scala.reflect.runtime.universe._
-import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv.handlers._
-
-import scala.collection.mutable.ArrayBuffer
-import scala.language.implicitConversions
 import scala.compat.java8.OptionConverters._
-import collection.JavaConverters._
+import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.implicitConversions
+import scala.util.{Failure, Success, Try}
 
-case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Array[Byte])
+case class HandlerParams(core: Core, bucketName: String, collectionIdentifier: CollectionIdentifier)
 
 
 /** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point
@@ -71,8 +56,8 @@ case class HandlerParams(core: Core, bucketName: String, collectionIdEncoded: Ar
   *                          but returns the same result object asynchronously in a `Future`.
   * */
 class AsyncCollection(name: String,
-                      collectionId: Long,
                       bucketName: String,
+                      scopeName: String,
                       val core: Core,
                       val environment: ClusterEnvironment) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
@@ -81,8 +66,8 @@ class AsyncCollection(name: String,
 
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig.kvTimeout())
   private[scala] val retryStrategy = environment.retryStrategy
-  private[scala] val collectionIdEncoded = UnsignedLEB128.encode(collectionId)
-  private[scala] val hp = HandlerParams(core, bucketName, collectionIdEncoded)
+  private[scala] val collectionIdentifier = new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
+  private[scala] val hp = HandlerParams(core, bucketName, collectionIdentifier)
   private[scala] val existsHandler = new ExistsHandler(hp)
   private[scala] val insertHandler = new InsertHandler(hp)
   private[scala] val replaceHandler = new ReplaceHandler(hp)
@@ -113,7 +98,7 @@ class AsyncCollection(name: String,
                                                                                       timeout: java.time.Duration)
   : Future[Res] = {
     AsyncCollection.wrapWithDurability(in, id, handler, durability, remove, timeout, core, bucketName,
-      collectionIdEncoded)
+      collectionIdentifier)
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -291,9 +276,8 @@ class AsyncCollection(name: String,
                 ReplicateTo.asCore(replicateTo),
                 response.mutationToken.asJava,
                 response.cas,
-                bucketName,
+                collectionIdentifier,
                 id,
-                collectionIdEncoded,
                 false,
                 timeout
               )
@@ -461,7 +445,7 @@ object AsyncCollection {
                                                                                timeout: java.time.Duration,
                                                                                core: Core,
                                                                                bucketName: String,
-                                                                               collectionIdEncoded: Array[Byte])
+                                                                               collectionidentifier: CollectionIdentifier)
                                                                               (implicit ec: ExecutionContext)
   : Future[Res] = {
     val initial: Future[Res] = wrap(in, id, handler, core)
@@ -475,9 +459,8 @@ object AsyncCollection {
             ReplicateTo.asCore(replicateTo),
             response.mutationToken.asJava,
             response.cas,
-            bucketName,
+            collectionidentifier,
             id,
-            collectionIdEncoded,
             remove,
             timeout
           )

@@ -17,12 +17,12 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.util.Utils.readResource;
@@ -43,8 +43,8 @@ class DecompressionTest {
       DecompressionTest.class
     ));
 
-    GetRequest request = new GetRequest("mydoc", null, Duration.ofSeconds(1),
-      mock(CoreContext.class), "bucket", BestEffortRetryStrategy.INSTANCE);
+    GetRequest request = new GetRequest("mydoc", Duration.ofSeconds(1),
+      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE);
     GetResponse decoded = request.decode(response, null);
 
     assertEquals(
@@ -60,8 +60,8 @@ class DecompressionTest {
       DecompressionTest.class
     ));
 
-    ReplicaGetRequest request = new ReplicaGetRequest("mydoc", null, Duration.ofSeconds(1),
-      mock(CoreContext.class), "bucket", BestEffortRetryStrategy.INSTANCE, (short) 1);
+    ReplicaGetRequest request = new ReplicaGetRequest("mydoc", Duration.ofSeconds(1),
+      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, (short) 1);
     GetResponse decoded = request.decode(response, null);
 
     assertEquals(
@@ -77,8 +77,8 @@ class DecompressionTest {
       DecompressionTest.class
     ));
 
-    GetAndLockRequest request = new GetAndLockRequest("mydoc", null,
-      Duration.ofSeconds(1), mock(CoreContext.class), "bucket",
+    GetAndLockRequest request = new GetAndLockRequest("mydoc",
+      Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
       BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1));
     GetAndLockResponse decoded = request.decode(response, null);
 
@@ -95,8 +95,8 @@ class DecompressionTest {
       DecompressionTest.class
     ));
 
-    GetAndTouchRequest request = new GetAndTouchRequest("mydoc", null,
-      Duration.ofSeconds(1), mock(CoreContext.class), "bucket",
+    GetAndTouchRequest request = new GetAndTouchRequest("mydoc",
+      Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
       BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1));
     GetAndTouchResponse decoded = request.decode(response, null);
 

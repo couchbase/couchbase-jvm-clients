@@ -47,7 +47,7 @@ public class Observe {
     }
 
     Flux<ObserveItem> observed = Flux.defer(() -> {
-      BucketConfig config = ctx.core().clusterConfig().bucketConfig(ctx.bucket());
+      BucketConfig config = ctx.core().clusterConfig().bucketConfig(ctx.collectionIdentifier().bucket());
       return Flux.just(validateReplicas(config, ctx.persistTo(), ctx.replicateTo()));
     })
     .flatMap(replicas -> ctx.mutationToken().isPresent() ? viaMutationToken(replicas, ctx) : viaCas(replicas, ctx));
@@ -66,19 +66,17 @@ public class Observe {
     }
 
     Duration timeout = ctx.timeout();
-    String bucket = ctx.bucket();
     RetryStrategy retryStrategy = ctx.retryStrategy();
     String id = ctx.key();
-    byte[] collection = ctx.collection();
 
     List<ObserveViaCasRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
-      requests.add(new ObserveViaCasRequest(timeout, ctx, bucket, retryStrategy, id, collection, true, 0));
+      requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, true, 0));
     }
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
-        requests.add(new ObserveViaCasRequest(timeout, ctx, bucket, retryStrategy, id, collection, false, i));
+        requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, false, i));
       }
     }
     return Flux
@@ -98,22 +96,20 @@ public class Observe {
     }
 
     Duration timeout = ctx.timeout();
-    String bucket = ctx.bucket();
     RetryStrategy retryStrategy = ctx.retryStrategy();
     MutationToken mutationToken = ctx.mutationToken().get();
     String id = ctx.key();
-    byte[] collection = ctx.collection();
 
     List<ObserveViaSeqnoRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
-      requests.add(new ObserveViaSeqnoRequest(timeout, ctx, bucket, retryStrategy, 0, true,
-        mutationToken.vbucketUUID(), id, collection));
+      requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, 0, true,
+        mutationToken.vbucketUUID(), id));
     }
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
-        requests.add(new ObserveViaSeqnoRequest(timeout, ctx, bucket, retryStrategy, i, false,
-          mutationToken.vbucketUUID(), id, collection));
+        requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, i, false,
+          mutationToken.vbucketUUID(), id));
       }
     }
 

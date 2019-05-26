@@ -54,10 +54,9 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
     }
     else {
       Success(new GetAndLockRequest(id,
-        hp.collectionIdEncoded,
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         expiration))
     }

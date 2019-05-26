@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -68,6 +69,6 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    */
   byte[] key();
 
-  byte[] collection();
+  CollectionIdentifier collectionIdentifier();
 
 }

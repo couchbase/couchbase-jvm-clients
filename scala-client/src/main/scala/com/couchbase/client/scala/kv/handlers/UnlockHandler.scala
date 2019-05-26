@@ -57,10 +57,9 @@ private[scala] class UnlockHandler(hp: HandlerParams)
       Success(new UnlockRequest(
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         id,
-        hp.collectionIdEncoded,
         cas))
     }
   }

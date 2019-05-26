@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
@@ -49,16 +50,13 @@ public class AsyncBinaryCollection {
   private final Core core;
   private final CoreContext coreContext;
   private final CoreEnvironment environment;
-  private final String bucket;
-  private final byte[] collectionId;
+  private final CollectionIdentifier collectionIdentifier;
 
-  AsyncBinaryCollection(final Core core, final CoreEnvironment environment, final String bucket,
-                        final byte[] collectionId) {
+  AsyncBinaryCollection(final Core core, final CoreEnvironment environment, final CollectionIdentifier collectionIdentifier) {
     this.core = core;
     this.coreContext = core.context();
     this.environment = environment;
-    this.bucket = bucket;
-    this.collectionId = collectionId;
+    this.collectionIdentifier = collectionIdentifier;
   }
 
   public CompletableFuture<MutationResult> append(final String id, final byte[] content) {
@@ -85,7 +83,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new AppendRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
+    return new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
   }
 
@@ -113,7 +111,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new PrependRequest(timeout, coreContext, bucket, retryStrategy, id, collectionId, content,
+    return new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
   }
 
@@ -139,7 +137,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new IncrementRequest(timeout, coreContext, bucket, retryStrategy, id, opts.cas(), collectionId,
+    return new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
   }
 
@@ -165,7 +163,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new DecrementRequest(timeout, coreContext, bucket, retryStrategy, id, opts.cas(), collectionId,
+    return new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
   }
 }

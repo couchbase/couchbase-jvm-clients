@@ -22,6 +22,7 @@ import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
@@ -116,7 +117,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     assertTrue(channel.isActive());
     assertTrue(channel.isOpen());
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, endpointContext, config().bucketname(), null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, endpointContext, null, CollectionIdentifier.fromDefault(config().bucketname()));
     channel.writeAndFlush(request);
     NoopResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());

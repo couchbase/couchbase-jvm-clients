@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -33,10 +34,10 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
   private final int replica;
   private final boolean active;
 
-  public ObserveViaCasRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public ObserveViaCasRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                               final RetryStrategy retryStrategy, final String key,
-                              final byte[] collection, boolean active, int replica) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+                              boolean active, int replica) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.active = active;
     this.replica = replica;
   }
@@ -51,7 +52,7 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    byte[] key = ctx.collectionsEnabled() ? keyWithCollection() : key();
+    byte[] key = ctx.collectionsEnabled() ? keyWithCollection(ctx) : key();
     int keyLength = key.length;
     ByteBuf content = alloc.buffer(keyLength + 4);
     content.writeShort(partition());

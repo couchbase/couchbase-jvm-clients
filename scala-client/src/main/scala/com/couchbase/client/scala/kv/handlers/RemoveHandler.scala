@@ -59,11 +59,10 @@ private[scala] class RemoveHandler(hp: HandlerParams)
     }
     else {
       Success(new RemoveRequest(id,
-        hp.collectionIdEncoded,
         cas,
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         durability.toDurabilityLevel))
     }

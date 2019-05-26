@@ -47,9 +47,8 @@ public enum DurabilityUtils {
           replicateTo.coreHandle(),
           result.mutationToken(),
           result.cas(),
-          request.bucket(),
+          request.collectionIdentifier(),
           key,
-          request.collection(),
           remove,
           request.timeout()
         );

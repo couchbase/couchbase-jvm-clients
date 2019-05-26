@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -46,14 +47,14 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
  */
 public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
-  public GetRequest(final String key, final byte[] collection, final Duration timeout,
-                    final CoreContext ctx, final String bucket, final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
+                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

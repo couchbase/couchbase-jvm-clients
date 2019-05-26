@@ -18,12 +18,12 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_SPATIAL_VIEW_OPTIONS;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
@@ -109,7 +109,7 @@ public class Bucket {
    * @return the {@link Collection} once opened.
    */
   public Collection defaultCollection() {
-    return scope(DEFAULT_SCOPE).defaultCollection();
+    return scope(CollectionIdentifier.DEFAULT_SCOPE).defaultCollection();
   }
 
   /**
@@ -118,7 +118,7 @@ public class Bucket {
    * @return the {@link Collection} once opened.
    */
   public Collection collection(final String name) {
-    return scope(DEFAULT_SCOPE).collection(name);
+    return scope(CollectionIdentifier.DEFAULT_SCOPE).collection(name);
   }
 
   public ViewResult spatialViewQuery(final String designDoc, final String viewName) {

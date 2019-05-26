@@ -18,6 +18,7 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
@@ -91,7 +92,9 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, serviceContext, config().bucketname(), null);
+    NoopRequest request = new NoopRequest(Duration.ZERO, serviceContext, null,
+      CollectionIdentifier.fromDefault(config().bucketname())
+    );
     assertTrue(request.id() > 0);
     endpoint.send(request);
 

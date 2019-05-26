@@ -18,9 +18,12 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.service.ServiceType;
@@ -35,17 +38,23 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class KeyValueMessageHandlerTest {
 
   private static CoreEnvironment ENV;
   private static EndpointContext CTX;
   private static String BUCKET = "bucket";
+  private static CollectionIdentifier CID = CollectionIdentifier.fromDefault(BUCKET);
 
   @BeforeAll
   private static void setup() {
     ENV = CoreEnvironment.create("foo", "bar");
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, ENV);
+    Core core = mock(Core.class);
+    CoreContext coreContext = new CoreContext(core, 1, ENV);
+    ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
+    when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());
+    when(core.configurationProvider()).thenReturn(configurationProvider);
     CTX = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
@@ -64,16 +73,16 @@ class KeyValueMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
 
     try {
-      channel.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
-        CTX, BUCKET, null));
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
+        CTX, CID, null));
       channel.flushOutbound();
 
       ByteBuf request = channel.readOutbound();
       assertEquals(1, MemcacheProtocol.opaque(request));
       ReferenceCountUtil.release(request);
 
-      channel.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
-        CTX, BUCKET, null));
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
+        CTX, CID, null));
       channel.flushOutbound();
 
       request = channel.readOutbound();
@@ -95,16 +104,16 @@ class KeyValueMessageHandlerTest {
     EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
 
     try {
-      channel1.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
-        CTX, BUCKET, null));
+      channel1.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
+        CTX, CID, null));
       channel1.flushOutbound();
 
       ByteBuf request = channel1.readOutbound();
       assertEquals(1, MemcacheProtocol.opaque(request));
       ReferenceCountUtil.release(request);
 
-      channel2.writeOutbound(new GetRequest("key", null, Duration.ofSeconds(1),
-        CTX, BUCKET, null));
+      channel2.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
+        CTX, CID, null));
       channel2.flushOutbound();
 
       request = channel2.readOutbound();

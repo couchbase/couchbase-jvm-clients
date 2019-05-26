@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -35,10 +36,10 @@ public class ReplicaGetRequest extends GetRequest {
 
   private final short replica;
 
-  public ReplicaGetRequest(final String key, final byte[] collection, final Duration timeout,
-                           final CoreContext ctx, final String bucket,
+  public ReplicaGetRequest(final String key, final Duration timeout,
+                           final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                            final RetryStrategy retryStrategy, final short replica) {
-    super(key, collection, timeout, ctx, bucket, retryStrategy);
+    super(key, timeout, ctx, collectionIdentifier, retryStrategy);
     this.replica = replica;
   }
 
@@ -48,7 +49,7 @@ public class ReplicaGetRequest extends GetRequest {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_REPLICA, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

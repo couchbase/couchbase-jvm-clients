@@ -1,6 +1,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -23,20 +24,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
 
-  private final String scopeName;
-  private final String collectionName;
-
-  public GetCollectionIdRequest(final Duration timeout, final CoreContext ctx, final String bucket,
+  public GetCollectionIdRequest(final Duration timeout, final CoreContext ctx,
                                 final RetryStrategy retryStrategy,
-                                final String scopeName, final String collectionName) {
-    super(timeout, ctx, bucket, retryStrategy, null, null);
-    this.scopeName = scopeName;
-    this.collectionName = collectionName;
+                                CollectionIdentifier collectionIdentifier) {
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.copiedBuffer(scopeName + "." + collectionName, UTF_8);
+    ByteBuf key = Unpooled.copiedBuffer(collectionIdentifier().scope() + "." + collectionIdentifier().collection(), UTF_8);
     ByteBuf request = request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

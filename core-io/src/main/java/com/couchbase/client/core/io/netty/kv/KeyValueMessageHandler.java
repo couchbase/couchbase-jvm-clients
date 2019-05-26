@@ -27,6 +27,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Response;
@@ -159,7 +160,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       mutationTokens,
       bucketName,
       syncReplication,
-      altRequest
+      altRequest,
+      ioContext.core().configurationProvider().collectionMap()
     );
 
     ctx.fireChannelActive();

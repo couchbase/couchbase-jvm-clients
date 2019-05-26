@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -85,5 +86,10 @@ public interface ConfigurationProvider  {
    * @param ctx the bucket config and surrounding context.
    */
   void proposeBucketConfig(ProposedBucketConfigContext ctx);
+
+  /**
+   * Returns the attached collection map.
+   */
+  CollectionMap collectionMap();
 
 }

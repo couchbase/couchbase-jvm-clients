@@ -53,10 +53,9 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
     }
     else {
       Success(new GetRequest(id,
-        hp.collectionIdEncoded,
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy))
     }
   }

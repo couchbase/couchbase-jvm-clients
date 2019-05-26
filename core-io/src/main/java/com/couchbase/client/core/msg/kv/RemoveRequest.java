@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -42,18 +43,18 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
   private final Optional<DurabilityLevel> syncReplicationType;
 
 
-  public RemoveRequest(final String key, final byte[] collection, final long cas, final Duration timeout,
-                       final CoreContext ctx, final String bucket,
+  public RemoveRequest(final String key, final long cas, final Duration timeout,
+                       final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                        final RetryStrategy retryStrategy,
                        final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.cas = cas;
     this.syncReplicationType = syncReplicationType;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
 
     ByteBuf request;
     if (syncReplicationType.isPresent()) {

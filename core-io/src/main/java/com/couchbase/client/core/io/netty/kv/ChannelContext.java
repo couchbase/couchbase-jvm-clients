@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.io.CollectionMap;
 
 /**
  * Holds context to encode KV operations based on what got negotiated in the channel.
@@ -31,16 +32,19 @@ public class ChannelContext {
   private final boolean mutationTokensEnabled;
   private final boolean syncReplication;
   private final boolean altRequest;
+  private final CollectionMap collectionMap;
 
   public ChannelContext(final CompressionConfig compression, final boolean collections,
                         final boolean mutationTokens, final String bucket,
-                        final boolean syncReplication, final boolean altRequest) {
+                        final boolean syncReplication, final boolean altRequest,
+                        final CollectionMap collectionMap) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
     this.bucket = bucket;
     this.syncReplication = syncReplication;
     this.altRequest = altRequest;
+    this.collectionMap = collectionMap;
   }
 
   public boolean collectionsEnabled() {
@@ -65,6 +69,10 @@ public class ChannelContext {
 
   public boolean alternateRequestEnabled() {
     return altRequest;
+  }
+
+  public CollectionMap collectionMap() {
+    return collectionMap;
   }
 
   /**

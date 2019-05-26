@@ -29,6 +29,7 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;

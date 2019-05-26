@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -37,10 +38,10 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
 
-  public AppendRequest(Duration timeout, CoreContext ctx, String bucket,
-                       RetryStrategy retryStrategy, String key, byte[] collection, byte[] content,
+  public AppendRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                       RetryStrategy retryStrategy, String key, byte[] content,
                        long cas, final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.content = content;
     this.cas = cas;
     this.syncReplicationType = syncReplicationType;
@@ -48,7 +49,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
 
     byte datatype = 0;
     ByteBuf content;

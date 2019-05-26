@@ -16,8 +16,10 @@
 package com.couchbase.client.scala
 
 import java.time.Duration
+import java.util.Optional
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest
 import com.couchbase.client.scala.env.ClusterEnvironment
 
@@ -55,17 +57,17 @@ class AsyncScope private[scala] (scopeName: String,
   def collection(name: String): Future[AsyncCollection] = {
     if (name == DefaultResources.DefaultCollection && scopeName == DefaultResources.DefaultScope) {
       Future {
-        new AsyncCollection(name, DefaultResources.DefaultCollectionId, bucketName, core, environment)
+        new AsyncCollection(name, bucketName, scopeName, core, environment)
       }
     }
     else {
       val request = new GetCollectionIdRequest(Duration.ofSeconds(1),
-        core.context(), bucketName, environment.retryStrategy, scopeName, name)
+        core.context(), environment.retryStrategy, new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)))
       core.send(request)
       FutureConverters.toScala(request.response())
         .map(res => {
           if (res.status().success()) {
-            new AsyncCollection(name, res.collectionId().get(), bucketName, core, environment)
+            new AsyncCollection(name, bucketName, scopeName, core, environment)
           } else {
             // TODO BLOCKED collection opening is going to be redone later
             throw new IllegalStateException("Do not raise me.. propagate into collection.. " + "collection error")

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.service.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -30,24 +31,22 @@ public class ObserveContext extends CoreContext {
   private final Observe.ObserveReplicateTo replicateTo;
   private final Optional<MutationToken> mutationToken;
   private final long cas;
-  private final String bucket;
+  private final CollectionIdentifier  collectionIdentifier;
   private final String key;
-  private final byte[] collection;
   private final boolean remove;
   private final Duration timeout;
   private final RetryStrategy retryStrategy;
 
   public ObserveContext(CoreContext ctx, Observe.ObservePersistTo persistTo, Observe.ObserveReplicateTo replicateTo,
-                        Optional<MutationToken> mutationToken, long cas, String bucket, String key,
-                        byte[] collection, boolean remove, Duration timeout) {
+                        Optional<MutationToken> mutationToken, long cas, CollectionIdentifier collectionIdentifier, String key,
+                        boolean remove, Duration timeout) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.persistTo = persistTo;
     this.replicateTo = replicateTo;
     this.mutationToken = mutationToken;
     this.cas = cas;
-    this.bucket = bucket;
     this.key = key;
-    this.collection = collection;
+    this.collectionIdentifier = collectionIdentifier;
     this.remove = remove;
     this.timeout = timeout;
     this.retryStrategy = FailFastRetryStrategy.INSTANCE;
@@ -69,16 +68,12 @@ public class ObserveContext extends CoreContext {
     return cas;
   }
 
-  public String bucket() {
-    return bucket;
+  public CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
   }
 
   public String key() {
     return key;
-  }
-
-  public byte[] collection() {
-    return collection;
   }
 
   public boolean remove() {

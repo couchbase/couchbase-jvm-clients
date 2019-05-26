@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -37,15 +38,15 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
 
   private final long cas;
 
-  public UnlockRequest(Duration timeout, CoreContext ctx, String bucket,
-                       RetryStrategy retryStrategy, String key, byte[] collection, long cas) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+  public UnlockRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                       RetryStrategy retryStrategy, String key, long cas) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.cas = cas;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
     key.release();

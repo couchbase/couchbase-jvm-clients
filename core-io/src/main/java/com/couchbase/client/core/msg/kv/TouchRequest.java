@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -42,17 +43,17 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
   private final Optional<DurabilityLevel> syncReplicationType;
 
 
-  public TouchRequest(Duration timeout, CoreContext ctx, String bucket,
-                      RetryStrategy retryStrategy, String key, byte[] collection, long expiry,
+  public TouchRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                      RetryStrategy retryStrategy, String key, long expiry,
                       final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.expiry = expiry;
     this.syncReplicationType = syncReplicationType;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf extras = alloc.buffer(Integer.BYTES);
     extras.writeInt((int) expiry);
 

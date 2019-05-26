@@ -18,16 +18,15 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION;
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_COLLECTION_ID;
-import static com.couchbase.client.java.AsyncBucket.DEFAULT_SCOPE;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -112,7 +111,7 @@ public class AsyncScope {
    * @return the default collection once opened.
    */
   public CompletableFuture<AsyncCollection> defaultCollection() {
-    return collection(DEFAULT_COLLECTION);
+    return collection(CollectionIdentifier.DEFAULT_COLLECTION);
   }
 
   /**
@@ -123,18 +122,17 @@ public class AsyncScope {
    */
   public CompletableFuture<AsyncCollection> collection(final String name) {
     notNullOrEmpty(name, "Name");
-    if (DEFAULT_COLLECTION.equals(name) && DEFAULT_SCOPE.equals(scopeName)) {
+    if (CollectionIdentifier.DEFAULT_COLLECTION.equals(name) && CollectionIdentifier.DEFAULT_SCOPE.equals(scopeName)) {
       return CompletableFuture.completedFuture(new AsyncCollection(
         name,
         this.scopeName,
-        DEFAULT_COLLECTION_ID,
         bucketName,
         core,
         environment
       ));
     } else {
       GetCollectionIdRequest request = new GetCollectionIdRequest(Duration.ofSeconds(1),
-        core.context(), bucketName, environment.retryStrategy(), scopeName, name);
+        core.context(), environment.retryStrategy(), new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)));
       core.send(request);
       return request
         .response()
@@ -143,7 +141,6 @@ public class AsyncScope {
             return new AsyncCollection(
               name,
               this.scopeName,
-              res.collectionId().get(),
               bucketName,
               core,
               environment

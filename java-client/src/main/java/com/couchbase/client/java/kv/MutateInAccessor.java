@@ -39,9 +39,8 @@ public class MutateInAccessor {
           replicateTo.coreHandle(),
           result.mutationToken(),
           result.cas(),
-          request.bucket(),
+          request.collectionIdentifier(),
           key,
-          request.collection(),
           false,
           request.timeout()
         );

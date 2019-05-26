@@ -85,10 +85,9 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       else {
         Success(new SubdocGetRequest(timeout,
           hp.core.context(),
-          hp.bucketName,
+          hp.collectionIdentifier,
           retryStrategy,
           id,
-          hp.collectionIdEncoded,
           0,
           commands))
       }

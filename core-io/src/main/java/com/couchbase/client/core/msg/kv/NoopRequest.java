@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -39,9 +40,9 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition
  */
 public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
-  public NoopRequest(final Duration timeout, final CoreContext ctx, final String bucket,
-                     final RetryStrategy retryStrategy) {
-    super(timeout, ctx, bucket, retryStrategy, null, null);
+  public NoopRequest(final Duration timeout, final CoreContext ctx,
+                     final RetryStrategy retryStrategy, CollectionIdentifier collectionIdentifier) {
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
   }
 
   @Override

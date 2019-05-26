@@ -24,6 +24,7 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -39,6 +40,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -233,7 +235,7 @@ public class KeyValueRefresher implements Refresher {
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
         configRequestTimeout,
         ctx,
-        name,
+        new CollectionIdentifier(name, Optional.empty(), Optional.empty()),
         FailFastRetryStrategy.INSTANCE,
         nodeInfo.identifier()
       );

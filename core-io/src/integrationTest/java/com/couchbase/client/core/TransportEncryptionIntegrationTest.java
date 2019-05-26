@@ -19,6 +19,7 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
@@ -86,15 +87,15 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       String id = UUID.randomUUID().toString();
       byte[] content = "hello, world".getBytes(UTF_8);
 
-      InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+      InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty());
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();
       assertTrue(insertResponse.status().success());
 
-      GetRequest getRequest = new GetRequest(id, DEFAULT_COLLECTION_ID, Duration.ofSeconds(1),
-        core.context(), config().bucketname(), env.retryStrategy());
+      GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
+        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
       core.send(getRequest);
 
       GetResponse getResponse = getRequest.response().get();
@@ -120,15 +121,15 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       String id = UUID.randomUUID().toString();
       byte[] content = "hello, world".getBytes(UTF_8);
 
-      InsertRequest insertRequest = new InsertRequest(id, DEFAULT_COLLECTION_ID, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(), Optional.empty());
+      InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty());
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();
       assertTrue(insertResponse.status().success());
 
-      GetRequest getRequest = new GetRequest(id, DEFAULT_COLLECTION_ID, Duration.ofSeconds(1),
-        core.context(), config().bucketname(), env.retryStrategy());
+      GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
+        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
       core.send(getRequest);
 
       GetResponse getResponse = getRequest.response().get();

@@ -57,10 +57,9 @@ private[scala] class ExistsHandler(hp: HandlerParams)
     else {
       Success(new ObserveViaCasRequest(timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         id,
-        hp.collectionIdEncoded,
         true,
         0
       ))

@@ -19,6 +19,7 @@ package com.couchbase.client.core.subdoc;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.subdoc.*;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -57,8 +58,8 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
   private byte[] insertContent(String id, String in) {
     byte[] content = in.getBytes(UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, null, content, 0, 0,
-            Duration.ofSeconds(1), core.context(), config().bucketname(), env.retryStrategy(),
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+            Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.empty());
     core.send(insertRequest);
 
@@ -82,7 +83,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     byte[] content = insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-            config().bucketname(), env.retryStrategy(), id, null, (byte) 0, commands);
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
     core.send(request);
 
     SubdocGetResponse response = null;

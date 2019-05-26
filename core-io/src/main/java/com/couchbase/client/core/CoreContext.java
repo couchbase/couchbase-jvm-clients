@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.CollectionMap;
 
 import java.util.Map;
 

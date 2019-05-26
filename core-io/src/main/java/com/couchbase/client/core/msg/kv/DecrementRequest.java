@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -40,11 +41,11 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
   private final long cas;
 
 
-  public DecrementRequest(Duration timeout, CoreContext ctx, String bucket,
-                          RetryStrategy retryStrategy, String key, long cas, byte[] collection,
+  public DecrementRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                          RetryStrategy retryStrategy, String key, long cas,
                           long delta, Optional<Long> initial, int expiry,
                           final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, bucket, retryStrategy, key, collection);
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     if (initial.isPresent() && initial.get() < 0) {
       throw new IllegalArgumentException("The initial needs to be >= 0");
     }
@@ -57,7 +58,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection() : key());
+    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
     ByteBuf extras = alloc.buffer();
     extras.writeLong(delta);
     if (initial.isPresent()) {

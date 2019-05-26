@@ -74,11 +74,10 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
       Success(new IncrementRequest(
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         id,
         cas,
-        hp.collectionIdEncoded,
         delta,
         i,
         expiration.getSeconds.toInt,

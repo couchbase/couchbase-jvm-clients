@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
@@ -28,6 +29,8 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
+
+import java.util.Optional;
 
 /**
  * This loader is responsible for initially loading a configuration through the kv protocol.
@@ -60,7 +63,7 @@ public class KeyValueLoader extends BaseLoader {
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
         ctx.environment().timeoutConfig().kvTimeout(),
         ctx,
-        bucket,
+        new CollectionIdentifier(bucket, Optional.empty(), Optional.empty()),
         BestEffortRetryStrategy.INSTANCE,
         seed
       );

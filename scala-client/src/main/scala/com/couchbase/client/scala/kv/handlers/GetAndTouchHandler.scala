@@ -58,10 +58,9 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
     else {
 
       Success(new GetAndTouchRequest(id,
-        hp.collectionIdEncoded,
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         expiration))
     }

@@ -74,11 +74,10 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
       Success(new DecrementRequest(
         timeout,
         hp.core.context(),
-        hp.bucketName,
+        hp.collectionIdentifier,
         retryStrategy,
         id,
         cas,
-        hp.collectionIdEncoded,
         delta,
         i,
         expiration.getSeconds.toInt,

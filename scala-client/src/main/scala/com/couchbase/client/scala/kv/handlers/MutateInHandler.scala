@@ -91,10 +91,9 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
           else {
             Try(new SubdocMutateRequest(timeout,
               hp.core.context(),
-              hp.bucketName,
+              hp.collectionIdentifier,
               retryStrategy,
               id,
-              hp.collectionIdEncoded,
               document == DocumentCreation.Insert,
               document == DocumentCreation.Upsert,
               commands,
