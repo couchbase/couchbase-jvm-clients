@@ -27,7 +27,7 @@ public class QueryEndpoint extends BaseEndpoint {
 
   public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
-      ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY);
+      ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY, false);
   }
 
   @Override

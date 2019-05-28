@@ -11,7 +11,7 @@ public class ManagerEndpoint extends BaseEndpoint {
 
   public ManagerEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().managerEventLoopGroup().get(),
-      ctx, ctx.environment().ioConfig().managerCircuitBreakerConfig(), ServiceType.MANAGER);
+      ctx, ctx.environment().ioConfig().managerCircuitBreakerConfig(), ServiceType.MANAGER, false);
   }
 
   @Override

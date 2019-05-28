@@ -105,6 +105,9 @@ public abstract class BaseEndpoint implements Endpoint {
 
   /**
    * If the current endpoint is free or not.
+   *
+   * <p>Note that the value is not tracked if pipelined = true, since we only need it
+   * to check if the endpoint is free or not. And it is always free for pipelined endpoints.</p>
    */
   private final AtomicInteger outstandingRequests;
 
@@ -116,6 +119,11 @@ public abstract class BaseEndpoint implements Endpoint {
   private final RequestCompletionConsumer requestCompletionConsumer = new RequestCompletionConsumer();
 
   private final ServiceType serviceType;
+
+  /**
+   * If this endpoint supports pipelining.
+   */
+  private final boolean pipelined;
 
   /**
    * Once connected, contains the channel to work with.
@@ -138,9 +146,10 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
                final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
-               final ServiceType serviceType) {
+               final ServiceType serviceType, final boolean pipelined) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
+    this.pipelined = pipelined;
     if (circuitBreakerConfig.enabled()) {
       this.circuitBreaker = new LazyCircuitBreaker(circuitBreakerConfig);
       this.circuitBreakerEnabled = true;
@@ -359,7 +368,9 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public <R extends Request<? extends Response>> void send(R request) {
     if (canWrite()) {
-        outstandingRequests.incrementAndGet();
+        if (!pipelined) {
+          outstandingRequests.incrementAndGet();
+        }
         if (circuitBreakerEnabled) {
           circuitBreaker.track();
           request.response().whenComplete(requestCompletionConsumer);
@@ -372,7 +383,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
   @Override
   public boolean free() {
-    return outstandingRequests.get() == 0;
+    return pipelined || outstandingRequests.get() == 0;
   }
 
   @Override
@@ -388,7 +399,9 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Stability.Internal
   public void markRequestCompletion() {
-    outstandingRequests.decrementAndGet();
+    if (!pipelined) {
+      outstandingRequests.decrementAndGet();
+    }
     lastResponseTimestamp = System.nanoTime();
   }
 

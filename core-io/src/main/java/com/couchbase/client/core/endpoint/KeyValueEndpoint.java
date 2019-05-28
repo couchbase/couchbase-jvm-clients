@@ -42,7 +42,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
   public KeyValueEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                           final int port, final String bucketname, final Credentials credentials) {
     super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
-      ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV);
+      ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV, true);
     this.credentials = credentials;
     this.bucketname = bucketname;
   }

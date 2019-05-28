@@ -30,7 +30,7 @@ public class AnalyticsEndpoint extends BaseEndpoint {
   public AnalyticsEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
                            final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().analyticsEventLoopGroup().get(),
-      ctx, ctx.environment().ioConfig().analyticsCircuitBreakerConfig(), ServiceType.ANALYTICS);
+      ctx, ctx.environment().ioConfig().analyticsCircuitBreakerConfig(), ServiceType.ANALYTICS, false);
   }
 
   @Override

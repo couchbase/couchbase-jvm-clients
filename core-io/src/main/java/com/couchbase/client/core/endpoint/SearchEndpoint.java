@@ -27,7 +27,7 @@ public class SearchEndpoint extends BaseEndpoint {
 
   public SearchEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroup().get(),
-      ctx, ctx.environment().ioConfig().searchCircuitBreakerConfig(), ServiceType.SEARCH);
+      ctx, ctx.environment().ioConfig().searchCircuitBreakerConfig(), ServiceType.SEARCH, false);
   }
 
   @Override
