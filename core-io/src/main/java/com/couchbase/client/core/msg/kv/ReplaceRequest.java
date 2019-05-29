@@ -34,7 +34,6 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyncReplication;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
  * Uses the KV replace command to replace a document if it exists.

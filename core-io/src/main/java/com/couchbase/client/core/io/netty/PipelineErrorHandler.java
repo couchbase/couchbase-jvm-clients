@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;

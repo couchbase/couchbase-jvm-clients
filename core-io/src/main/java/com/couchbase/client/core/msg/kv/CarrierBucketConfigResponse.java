@@ -19,8 +19,6 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
-import java.util.Arrays;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CarrierBucketConfigResponse extends BaseResponse {

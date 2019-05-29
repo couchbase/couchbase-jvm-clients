@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.msg.kv.ResponseStatusDetails;
-
 /**
  * The {@link ResponseStatus} describes what kind of response came back for a specific
  * request.

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;

@@ -17,16 +17,15 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
 
 import java.time.Duration;
 

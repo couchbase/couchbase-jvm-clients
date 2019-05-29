@@ -25,7 +25,6 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
-import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
 import java.util.HashMap;

@@ -17,9 +17,6 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.util.AttributeKey;
-
-import java.util.List;
 
 /**
  * The {@link ServerFeature} enum describes all the different negotiation modes

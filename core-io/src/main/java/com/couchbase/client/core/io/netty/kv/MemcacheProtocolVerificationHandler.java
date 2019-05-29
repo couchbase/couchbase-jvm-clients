@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;

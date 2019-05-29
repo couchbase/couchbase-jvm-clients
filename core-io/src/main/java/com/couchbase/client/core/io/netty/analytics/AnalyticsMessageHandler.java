@@ -19,17 +19,11 @@ package com.couchbase.client.core.io.netty.analytics;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
-import com.couchbase.client.core.io.netty.query.QueryChunkResponseParser;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
-import com.couchbase.client.core.msg.query.QueryChunkHeader;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.QueryResponse;
 
 public class AnalyticsMessageHandler
   extends ChunkedMessageHandler<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer, AnalyticsResponse, AnalyticsRequest> {
