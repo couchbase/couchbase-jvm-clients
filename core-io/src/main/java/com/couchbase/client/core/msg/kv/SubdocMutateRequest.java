@@ -90,7 +90,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
 
     ByteBuf extras = alloc.buffer();
     if (flags != 0) {

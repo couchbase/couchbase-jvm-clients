@@ -54,7 +54,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
 
     ByteBuf request;
     if (syncReplicationType.isPresent()) {

@@ -17,6 +17,9 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.error.CollectionDoesNotExistException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -77,17 +80,32 @@ public abstract class BaseKeyValueRequest<R extends Response>
     return key == null || key.isEmpty() ? Bytes.EMPTY_BYTE_ARRAY : key.getBytes(UTF_8);
   }
 
-  protected byte[] keyWithCollection(ChannelContext ctx) {
-    byte[] collection = ctx.collectionMap().get(collectionIdentifier);
-    if (collection == null) {
-      throw new CollectionDoesNotExistException("Collection \""
-        + collectionIdentifier.collection() + "\" in scope \""
-        + collectionIdentifier.scope() + "\" does not exist.");
+  /**
+   * This method with return an encoded key with or without the collection prefix, depending on the
+   * context provided.
+   *
+   * @param alloc the buffer allocator to use.
+   * @param ctx the channel context.
+   * @return the encoded ID, maybe with the collection prefix in place.
+   */
+  protected ByteBuf encodedKeyWithCollection(final ByteBufAllocator alloc, final ChannelContext ctx) {
+    if (ctx.collectionsEnabled()) {
+      byte[] collection = ctx.collectionMap().get(collectionIdentifier);
+      if (collection == null) {
+        throw new CollectionDoesNotExistException("Collection \""
+          + collectionIdentifier.collection() + "\" in scope \""
+          + collectionIdentifier.scope() + "\" does not exist.");
+      }
+
+      return alloc
+        .buffer(key.length + collection.length)
+        .writeBytes(collection)
+        .writeBytes(key);
+    } else {
+      return alloc
+        .buffer(key.length)
+        .writeBytes(key);
     }
-    byte[] encoded = new byte[key.length + collection.length];
-    System.arraycopy(collection, 0, encoded, 0, collection.length);
-    System.arraycopy(key, 0, encoded, collection.length, key.length);
-    return encoded;
   }
 
   @Override

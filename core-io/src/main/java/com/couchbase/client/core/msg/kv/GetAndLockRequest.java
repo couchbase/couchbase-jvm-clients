@@ -50,7 +50,7 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
     ByteBuf extras = alloc.buffer(4).writeInt((int) lockFor.getSeconds());
     ByteBuf r = MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
       partition(), opaque, noCas(), extras, key, noBody());

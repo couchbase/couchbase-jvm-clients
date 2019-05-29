@@ -58,7 +58,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
     ByteBuf extras = alloc.buffer();
     extras.writeLong(delta);
     if (initial.isPresent()) {

@@ -51,7 +51,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
     ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
 
     ByteBuf request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),

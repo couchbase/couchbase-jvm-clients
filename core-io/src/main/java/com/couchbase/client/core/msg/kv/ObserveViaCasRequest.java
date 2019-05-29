@@ -52,8 +52,8 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    byte[] key = ctx.collectionsEnabled() ? keyWithCollection(ctx) : key();
-    int keyLength = key.length;
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
+    int keyLength = key.readableBytes();
     ByteBuf content = alloc.buffer(keyLength + 4);
     content.writeShort(partition());
     content.writeShort(keyLength);
@@ -62,6 +62,7 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
     ByteBuf request = request(alloc, MemcacheProtocol.Opcode.OBSERVE_CAS, noDatatype(),
       partition(), opaque, noCas(), noExtras(), noKey(), content);
     content.release();
+    key.release();
     return request;
   }
 

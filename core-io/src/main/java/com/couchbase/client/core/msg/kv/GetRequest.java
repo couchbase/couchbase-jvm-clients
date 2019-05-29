@@ -55,7 +55,7 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
       partition(), opaque, noCas(), noExtras(), key, noBody());
     key.release();

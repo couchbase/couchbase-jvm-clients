@@ -57,7 +57,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
 
     ByteBuf extras = flags != 0
       ? alloc.buffer(Byte.BYTES).writeByte(flags)

@@ -46,7 +46,7 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
     ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
       partition(), opaque, cas, noExtras(), key, noBody());
     key.release();

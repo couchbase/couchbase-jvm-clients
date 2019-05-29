@@ -60,7 +60,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.wrappedBuffer(ctx.collectionsEnabled() ? keyWithCollection(ctx) : key());
+    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
 
     byte datatype = 0;
     ByteBuf content;
