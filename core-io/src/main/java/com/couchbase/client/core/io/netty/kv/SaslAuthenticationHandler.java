@@ -30,6 +30,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.util.Bytes;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -277,7 +278,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    */
   private ByteBuf buildAuthRequest(final ChannelHandlerContext ctx) throws SaslException {
     byte[] payload = saslClient.hasInitialResponse()
-      ? saslClient.evaluateChallenge(new byte[]{})
+      ? saslClient.evaluateChallenge(Bytes.EMPTY_BYTE_ARRAY)
       : null;
     ByteBuf body = payload != null
       ? ctx.alloc().buffer().writeBytes(payload)
@@ -408,7 +409,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
                            final ByteBuf lastPacket, final Throwable cause) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
-    byte[] packetCopy = new byte[] {};
+    byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
     if (lastPacket != null) {
       int ridx = lastPacket.readerIndex();
       lastPacket.readerIndex(lastPacket.writerIndex());

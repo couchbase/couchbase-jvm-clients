@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 
@@ -67,7 +68,7 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
       byte[] content = body(response)
         .map(ByteBufUtil::getBytes)
         .map(bytes -> tryDecompression(bytes, datatype(response)))
-        .orElse(new byte[] {});
+        .orElse(Bytes.EMPTY_BYTE_ARRAY);
       int flags = extras(response).map(x -> x.getInt(0)).orElse(0);
       return new GetAndLockResponse(status, content, cas, flags);
     } else {

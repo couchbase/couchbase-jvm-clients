@@ -25,6 +25,7 @@ import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.Bytes;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -59,7 +60,7 @@ public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollect
       manifest = Optional
         .of(body(response)
         .map(ByteBufUtil::getBytes)
-        .orElse(new byte[] {}))
+        .orElse(Bytes.EMPTY_BYTE_ARRAY))
         .map(b -> new String(b, StandardCharsets.UTF_8));
     }
     return new GetCollectionManifestResponse(status, manifest);

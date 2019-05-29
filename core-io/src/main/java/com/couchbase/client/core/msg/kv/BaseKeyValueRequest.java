@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
@@ -42,7 +43,6 @@ public abstract class BaseKeyValueRequest<R extends Response>
   extends BaseRequest<R>
   implements KeyValueRequest<R> {
 
-  private static byte[] EMPTY_KEY = new byte[] {};
   private final byte[] key;
   private final CollectionIdentifier collectionIdentifier;
 
@@ -75,7 +75,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * @return the encoded key.
    */
   static byte[] encodeKey(final String key) {
-    return key == null || key.isEmpty() ? EMPTY_KEY : key.getBytes(UTF_8);
+    return key == null || key.isEmpty() ? Bytes.EMPTY_BYTE_ARRAY : key.getBytes(UTF_8);
   }
 
   protected byte[] keyWithCollection(ChannelContext ctx) {

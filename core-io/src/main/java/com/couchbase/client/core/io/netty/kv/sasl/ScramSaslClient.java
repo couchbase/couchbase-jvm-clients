@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.io.netty.kv.sasl;
 
+import com.couchbase.client.core.util.Bytes;
+
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -172,7 +174,7 @@ class ScramSaslClient implements SaslClient  {
         throw new SaslException("Server signature is incorrect");
       }
 
-      return new byte[0];
+      return Bytes.EMPTY_BYTE_ARRAY;
     }
 
     throw new SaslException("Can't evaluate challenge on a session which is complete");  }
@@ -184,12 +186,12 @@ class ScramSaslClient implements SaslClient  {
 
   @Override
   public byte[] unwrap(byte[] incoming, int offset, int len) {
-    return new byte[0];
+    return Bytes.EMPTY_BYTE_ARRAY;
   }
 
   @Override
   public byte[] wrap(byte[] outgoing, int offset, int len) {
-    return new byte[0];
+    return Bytes.EMPTY_BYTE_ARRAY;
   }
 
   @Override
@@ -402,7 +404,7 @@ class ScramSaslClient implements SaslClient  {
 
     @Override
     public byte[] getEncoded() {
-      return new byte[] {};
+      return Bytes.EMPTY_BYTE_ARRAY;
     }
   }
 

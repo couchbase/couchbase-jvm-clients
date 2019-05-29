@@ -11,6 +11,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 
@@ -37,7 +38,7 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
     byte[] content = body(response)
       .map(ByteBufUtil::getBytes)
       .map(bytes -> tryDecompression(bytes, datatype(response)))
-      .orElse(new byte[] {});
+      .orElse(Bytes.EMPTY_BYTE_ARRAY);
     return new CarrierBucketConfigResponse(decodeStatus(response), content);
   }
 

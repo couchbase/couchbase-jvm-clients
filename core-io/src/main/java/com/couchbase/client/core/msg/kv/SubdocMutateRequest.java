@@ -31,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -166,7 +167,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
           if (status != SubDocumentOpResponseStatus.SUCCESS) {
             SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
 
-            SubdocField op = new SubdocField(status, Optional.of(err), new byte[] {}, command.path, command.type);
+            SubdocField op = new SubdocField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
             values.add(op);
           }
           else {
