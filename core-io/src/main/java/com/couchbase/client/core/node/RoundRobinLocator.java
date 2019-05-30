@@ -23,7 +23,6 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.MathUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +69,7 @@ public class RoundRobinLocator implements Locator {
     }
 
     int nodeSize = filteredNodes.size();
-    int offset = (int) MathUtils.floorMod(counter.getAndIncrement(), nodeSize);
+    int offset = (int) Math.floorMod(counter.getAndIncrement(), nodeSize);
     Node node = filteredNodes.get(offset);
     if (node != null) {
       node.send(request);
