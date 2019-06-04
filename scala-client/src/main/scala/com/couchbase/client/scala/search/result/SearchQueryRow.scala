@@ -97,7 +97,7 @@ object SearchQueryRow {
     Success(new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields))
   } catch {
     case e: IOException =>
-      Failure(new DecodingFailedException("Failed to decode row '" + new String(row.data) + "'", e))
+      Failure(new DecodingFailedException("Failed to decode row '" + new String(row.data, UTF_8) + "'", e))
   }
 
 }

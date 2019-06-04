@@ -26,13 +26,17 @@ import com.couchbase.client.java.search.result.rows.DefaultRowLocations;
 import com.couchbase.client.java.search.result.rows.RowLocations;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * An FTS result row (or hit).
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 public class SearchQueryRow {
@@ -191,7 +195,7 @@ public class SearchQueryRow {
 
             return new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields);
         } catch (IOException e) {
-            throw new DecodingFailedException("Failed to decode row '" + new String(row.data()) + "'", e);
+            throw new DecodingFailedException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
         }
 
     }

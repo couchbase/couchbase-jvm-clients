@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.java.search.result.impl;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParseException;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonMappingException;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
@@ -24,11 +22,11 @@ import com.couchbase.client.java.search.result.SearchStatus;
 
 import java.io.IOException;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * The default implementation for a {@link SearchStatus}
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 public class DefaultSearchStatus implements SearchStatus {
@@ -110,7 +108,7 @@ public class DefaultSearchStatus implements SearchStatus {
                     value.getLong("successful")
             );
         } catch (IOException e) {
-            throw new DecodingFailedException("Failed to decode status '" + new String(bytes) + "'", e);
+            throw new DecodingFailedException("Failed to decode status '" + new String(bytes, UTF_8) + "'", e);
         }
     }
 }

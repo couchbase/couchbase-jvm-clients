@@ -25,7 +25,11 @@ import com.couchbase.client.core.msg.search.SearchResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.result.*;
+import com.couchbase.client.java.search.result.ReactiveSearchResult;
+import com.couchbase.client.java.search.result.SearchMetrics;
+import com.couchbase.client.java.search.result.SearchQueryRow;
+import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.result.SearchStatus;
 import com.couchbase.client.java.search.result.impl.DefaultSearchMetrics;
 import com.couchbase.client.java.search.result.impl.DefaultSearchStatus;
 import reactor.core.publisher.Flux;
@@ -35,6 +39,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Internal helper to access and convert view requests and responses.
@@ -123,7 +129,7 @@ public class SearchAccessor {
             return exceptions;
 
         } catch (IOException e) {
-            throw new DecodingFailedException("Failed to decode row '" + new String(status) + "'", e);
+            throw new DecodingFailedException("Failed to decode row '" + new String(status, UTF_8) + "'", e);
         }
     }
 
