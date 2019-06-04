@@ -101,7 +101,7 @@ class BuilderPropertySetter {
     }
   }
 
-  public class TypeConverterRegistry {
+  public static class TypeConverterRegistry {
     private final Map<Type, TypeConverter> converters = new HashMap<>();
 
     public TypeConverterRegistry register(Type t, TypeConverter converter) {
@@ -252,7 +252,7 @@ class BuilderPropertySetter {
     ;
   }
 
-  private class CollectionConverter implements TypeConverter {
+  private static class CollectionConverter implements TypeConverter {
     private final Class<? extends Collection> collectionClass;
 
     public <T extends Collection> CollectionConverter(Class<T> collectionClass) {

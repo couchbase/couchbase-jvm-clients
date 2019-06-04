@@ -35,7 +35,7 @@ public class QueryEndpoint extends BaseEndpoint {
     return new QueryPipelineInitializer(endpointContext());
   }
 
-  public class QueryPipelineInitializer implements PipelineInitializer {
+  public static class QueryPipelineInitializer implements PipelineInitializer {
 
     private final EndpointContext endpointContext;
 
