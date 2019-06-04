@@ -24,7 +24,7 @@ import java.util.Optional;
 
 public class BestEffortRetryStrategy implements RetryStrategy {
 
-  public static BestEffortRetryStrategy INSTANCE = new BestEffortRetryStrategy();
+  public static final BestEffortRetryStrategy INSTANCE = new BestEffortRetryStrategy();
 
   private BestEffortRetryStrategy() { }
 

@@ -28,7 +28,7 @@ import com.couchbase.client.core.service.ServiceType;
  */
 public class StandardMemcachedHashingStrategy implements MemcachedHashingStrategy {
 
-    public static StandardMemcachedHashingStrategy INSTANCE = new StandardMemcachedHashingStrategy();
+    public static final StandardMemcachedHashingStrategy INSTANCE = new StandardMemcachedHashingStrategy();
 
     private StandardMemcachedHashingStrategy() { }
 

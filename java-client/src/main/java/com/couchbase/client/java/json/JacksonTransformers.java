@@ -191,5 +191,10 @@ public class JacksonTransformers {
     }
 
 
+    public static void main(String[] args) {
+
+        System.out.println(JsonValue.NULL);
+        System.out.println(JsonNull.NULL);
+    }
 
 }

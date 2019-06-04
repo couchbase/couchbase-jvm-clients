@@ -42,7 +42,7 @@ public enum MemcacheProtocol {
   /**
    * Holds the max value a unsigned short can represent.
    */
-  public static int UNSIGNED_SHORT_MAX = 65535;
+  public static final int UNSIGNED_SHORT_MAX = 65535;
 
   /**
    * The fixed header size.
@@ -447,7 +447,7 @@ public enum MemcacheProtocol {
       return ResponseStatus.UNKNOWN;
     }
   }
-  
+
   /**
    * Converts a KeyValue protocol status into its generic format.  It must be a status that can be returned from a
    * sub-document operation.

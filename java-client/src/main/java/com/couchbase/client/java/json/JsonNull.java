@@ -23,7 +23,7 @@ package com.couchbase.client.java.json;
  */
 public class JsonNull extends JsonValue {
 
-    public static JsonNull INSTANCE = new JsonNull();
+    public static final JsonNull INSTANCE = new JsonNull();
 
     private JsonNull() {}
 

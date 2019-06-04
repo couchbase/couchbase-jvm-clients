@@ -23,7 +23,7 @@ package com.couchbase.client.core.endpoint;
  */
 public class NoopCircuitBreaker implements CircuitBreaker {
 
-  public static NoopCircuitBreaker INSTANCE = new NoopCircuitBreaker();
+  public static final NoopCircuitBreaker INSTANCE = new NoopCircuitBreaker();
 
   private NoopCircuitBreaker() {}
 

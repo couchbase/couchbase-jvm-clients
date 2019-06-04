@@ -24,7 +24,7 @@ import java.util.Optional;
 
 public class FailFastRetryStrategy implements RetryStrategy {
 
-  public static FailFastRetryStrategy INSTANCE = new FailFastRetryStrategy();
+  public static final FailFastRetryStrategy INSTANCE = new FailFastRetryStrategy();
 
   private FailFastRetryStrategy() { }
 

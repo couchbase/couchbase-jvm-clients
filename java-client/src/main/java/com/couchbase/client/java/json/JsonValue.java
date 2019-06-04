@@ -29,7 +29,7 @@ public abstract class JsonValue {
     /**
      * Represents a Json "null".
      */
-    public static JsonNull NULL = JsonNull.INSTANCE;
+    public static final JsonNull NULL = JsonNull.INSTANCE;
 
     /**
      * Static factory method to create an empty {@link JsonObject}.
