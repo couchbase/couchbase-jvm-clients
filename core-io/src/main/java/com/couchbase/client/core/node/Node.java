@@ -260,6 +260,7 @@ public class Node {
           break;
         case IDLE:
           idle++;
+          break;
         case DISCONNECTED:
           // Intentionally ignored.
           break;
