@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2016 - 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,33 @@
 
 package com.couchbase.client.core.error;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
- * Identifying a CAS mismatch on a replace operation..
+ * Indicates an optimistic locking failure.
+ * <p>
+ * The operation failed because the specified compare and swap (CAS) value
+ * differs from the document's actual CAS value. This means the document
+ * was modified since the original CAS value was acquired.
+ * <p>
+ * The application should usually respond by fetching a fresh version
+ * of the document and repeating the failed operation.
  *
- * @author Michael Nitschinger
  * @since 2.0
  */
-public class CASMismatchException extends CouchbaseException implements RetryableOperationException {
+public class CASMismatchException extends CouchbaseException {
+  private final String key;
 
-    public CASMismatchException() {
-        super();
-    }
+  private CASMismatchException(String key) {
+    super("Document with key [" + redactUser(key) + "] has been concurrently modified");
+    this.key = key;
+  }
 
-    public CASMismatchException(String message) {
-        super(message);
-    }
+  public static CASMismatchException forKey(String key) {
+    return new CASMismatchException(key);
+  }
 
-    public CASMismatchException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public CASMismatchException(Throwable cause) {
-        super(cause);
-    }
+  public String key() {
+    return key;
+  }
 }

@@ -183,7 +183,7 @@ class AsyncCollection(name: String,
                 case Success(v: Option[GetResult]) =>
                   v match {
                     case Some(x) => Future.successful(x)
-                    case _ => Future.failed(new DocumentDoesNotExistException(s"Document $id not found"))
+                    case _ => Future.failed(KeyNotFoundException.forKey(id))
                   }
 
                 case Failure(err) => Future.failed(err)
@@ -217,7 +217,7 @@ class AsyncCollection(name: String,
     wrap(req, id, getFullDocHandler)
       .map {
         case Some(x) => x
-        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+        case _ => throw KeyNotFoundException.forKey(id)
       }
   }
 
@@ -237,7 +237,7 @@ class AsyncCollection(name: String,
           .map(response => getSubDocHandler.response(id, response))
           .map {
             case Some(x) => x
-            case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+            case _ => throw KeyNotFoundException.forKey(id)
           }
 
       case Failure(err) => Future.failed(err)
@@ -311,7 +311,7 @@ class AsyncCollection(name: String,
     wrap(req, id, getAndLockHandler)
       .map {
         case Some(x) => x
-        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+        case _ => throw KeyNotFoundException.forKey(id)
       }
   }
 
@@ -341,7 +341,7 @@ class AsyncCollection(name: String,
     wrap(req, id, getAndTouchHandler)
       .map {
         case Some(x) => x
-        case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+        case _ => throw KeyNotFoundException.forKey(id)
       }
   }
 
@@ -396,7 +396,7 @@ class AsyncCollection(name: String,
             })
             .map {
               case Some(x) => x
-              case _ => throw new DocumentDoesNotExistException(s"Document $id not found")
+              case _ => throw KeyNotFoundException.forKey(id)
             }
         })
 

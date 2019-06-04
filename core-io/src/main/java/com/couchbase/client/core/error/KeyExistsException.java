@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,26 @@
  */
 package com.couchbase.client.core.error;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
- * Raised when the document does not exist and a replace operation is used..
+ * Indicates an operation failed because the key already exists.
  *
- * @author Michael Nitschinger
  * @since 2.0
  */
-public class DocumentDoesNotExistException extends CouchbaseException {
+public class KeyExistsException extends CouchbaseException {
+  private final String key;
 
-    public DocumentDoesNotExistException() {
-        super();
-    }
+  private KeyExistsException(String key) {
+    super("Document with key [" + redactUser(key) + " already exists");
+    this.key = key;
+  }
 
-    public DocumentDoesNotExistException(String message) {
-        super(message);
-    }
+  public static KeyExistsException forKey(String key) {
+    return new KeyExistsException(key);
+  }
 
-    public DocumentDoesNotExistException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public DocumentDoesNotExistException(Throwable cause) {
-        super(cause);
-    }
+  public String key() {
+    return key;
+  }
 }

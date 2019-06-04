@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
+import com.couchbase.client.core.error.{KeyNotFoundException, TemporaryLockFailureException}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -249,7 +249,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
     upsertResult match {
       case Success(result) => assert(false, s"doc should not exist")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Failure(err: KeyNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

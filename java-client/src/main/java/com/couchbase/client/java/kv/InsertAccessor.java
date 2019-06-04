@@ -42,7 +42,7 @@ public enum InsertAccessor {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
-            throw DefaultErrorUtil.docExists(key);
+            throw KeyExistsException.forKey(key);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

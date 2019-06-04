@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.DocumentDoesNotExistException
+import com.couchbase.client.core.error.KeyNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -66,7 +66,7 @@ class BinarySpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.increment(docId, 3) match {
       case Success(result) => assert(false, s"success not expected")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Failure(err: KeyNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -120,7 +120,7 @@ class BinarySpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.decrement(docId, 3) match {
       case Success(result) => assert(false, s"success not expected")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Failure(err: KeyNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

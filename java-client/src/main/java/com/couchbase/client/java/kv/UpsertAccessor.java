@@ -18,7 +18,8 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +43,7 @@ public enum UpsertAccessor {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
-            throw new CASMismatchException();
+            throw CASMismatchException.forKey(key);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

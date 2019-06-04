@@ -16,13 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.error.DocumentAlreadyExistsException;
-import com.couchbase.client.core.error.DocumentDoesNotExistException;
+import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.TemporaryLockFailureException;
-import com.couchbase.client.core.service.KeyValueServiceConfig;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -311,7 +308,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult result = collection.remove(id);
     assertTrue(result.cas() != insert.cas());
 
-    assertThrows(DocumentDoesNotExistException.class, () -> collection.remove(id));
+    assertThrows(KeyNotFoundException.class, () -> collection.remove(id));
   }
 
   @Test
@@ -322,7 +319,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult insert = collection.insert(id, expected);
     assertTrue(insert.cas() != 0);
 
-    assertThrows(DocumentAlreadyExistsException.class, () -> collection.insert(id, expected));
+    assertThrows(KeyExistsException.class, () -> collection.insert(id, expected));
   }
 
   @Test
@@ -367,7 +364,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals(expected, collection.get(id).get().contentAsObject());
 
     assertThrows(
-      DocumentDoesNotExistException.class,
+      KeyNotFoundException.class,
       () -> collection.replace("some_doc", JsonObject.empty())
     );
   }
@@ -442,7 +439,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
-      DocumentDoesNotExistException.class,
+      KeyNotFoundException.class,
       () -> collection.binary().append(id, helloBytes)
     );
 
@@ -472,7 +469,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
-            DocumentDoesNotExistException.class,
+            KeyNotFoundException.class,
             () -> collection.reactive().binary().append(id, helloBytes).block()
     );
 
@@ -532,7 +529,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] worldHelloBytes = "World!Hello, ".getBytes(UTF_8);
 
     assertThrows(
-      DocumentDoesNotExistException.class,
+      KeyNotFoundException.class,
       () -> collection.binary().prepend(id, helloBytes)
     );
 
@@ -557,7 +554,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void increment() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(DocumentDoesNotExistException.class, () -> collection.binary().increment(id));
+    assertThrows(KeyNotFoundException.class, () -> collection.binary().increment(id));
 
     CounterResult result = collection.binary().increment(
       id,
@@ -589,7 +586,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void decrement() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(DocumentDoesNotExistException.class, () -> collection.binary().decrement(id));
+    assertThrows(KeyNotFoundException.class, () -> collection.binary().decrement(id));
 
     CounterResult result = collection.binary().decrement(
       id,

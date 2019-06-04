@@ -39,9 +39,9 @@ public class AppendAccessor {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
-            throw new CASMismatchException();
+            throw CASMismatchException.forKey(key);
           case NOT_STORED:
-            throw new DocumentDoesNotExistException();
+            throw KeyNotFoundException.forKey(key);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

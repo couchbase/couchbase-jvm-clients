@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentDoesNotExistException, TemporaryLockFailureException}
+import com.couchbase.client.core.error.{KeyNotFoundException, TemporaryLockFailureException}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -203,7 +203,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
     coll.get(docId) match {
       case Success(result) => assert(false, s"doc $docId exists and should not")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Failure(err: KeyNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -269,7 +269,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
     upsertResult match {
       case Success(result) => assert(false, s"doc should not exist")
-      case Failure(err: DocumentDoesNotExistException) =>
+      case Failure(err: KeyNotFoundException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

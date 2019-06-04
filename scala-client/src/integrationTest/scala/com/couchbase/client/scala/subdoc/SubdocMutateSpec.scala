@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.DocumentAlreadyExistsException
+import com.couchbase.client.core.error.KeyExistsException
 import com.couchbase.client.core.error.subdoc.MultiMutationException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -141,7 +141,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
     coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
       case Success(result) => assert(false)
-      case Failure(err: DocumentAlreadyExistsException) =>
+      case Failure(err: KeyExistsException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

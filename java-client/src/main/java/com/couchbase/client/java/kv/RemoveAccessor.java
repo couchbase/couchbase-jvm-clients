@@ -41,7 +41,7 @@ public enum RemoveAccessor {
         case SUCCESS:
           return new MutationResult(response.cas(), response.mutationToken());
         case EXISTS:
-          throw new CASMismatchException();
+          throw CASMismatchException.forKey(key);
         default:
           throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
       }

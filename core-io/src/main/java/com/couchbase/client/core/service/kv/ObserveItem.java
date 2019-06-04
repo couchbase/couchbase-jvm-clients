@@ -17,7 +17,7 @@
 package com.couchbase.client.core.service.kv;
 
 import com.couchbase.client.core.error.AuthenticationException;
-import com.couchbase.client.core.error.DocumentConcurrentlyModifiedException;
+import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
@@ -66,9 +66,7 @@ class ObserveItem {
 
     if (response.active()) {
       if (!validCas) {
-        throw new DocumentConcurrentlyModifiedException("The CAS on the active node "
-          + "changed for ID \"" + id + "\", indicating it has been modified in the "
-          + "meantime.");
+        throw CASMismatchException.forKey(id);
       }
 
       if (status == persistIdentifier) {

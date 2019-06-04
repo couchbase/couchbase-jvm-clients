@@ -21,25 +21,20 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 @Stability.Internal
 public class DefaultErrorUtil {
-    private DefaultErrorUtil() { }
-
-    public static RuntimeException casMismatch(String id) {
-        return new CASMismatchException("Document " + id + " has been concurrently modified");
-    }
-
-    public static RuntimeException docExists(String id) {
-        return new DocumentAlreadyExistsException("Document " + id + " already exists");
+    private DefaultErrorUtil() {
+        throw new AssertionError("not instantiable");
     }
 
     public static RuntimeException defaultErrorForStatus(String id, ResponseStatus status) {
         switch(status) {
+            case TEMPORARY_FAILURE:
+            case SERVER_BUSY:
+                return new TemporaryFailureException(status.name());
             case TOO_BIG: return new RequestTooBigException();
-            case EXISTS: return DefaultErrorUtil.casMismatch(id);
+            case EXISTS: return CASMismatchException.forKey(id);
             case LOCKED: return new TemporaryLockFailureException();
-            case TEMPORARY_FAILURE: return new TemporaryFailureException();
             case NOT_STORED: return new DocumentMutationLostException();
-            case NOT_FOUND: return new DocumentDoesNotExistException();
-            case SERVER_BUSY: return new TemporaryFailureException();
+            case NOT_FOUND: return KeyNotFoundException.forKey(id);
             case OUT_OF_MEMORY: return new CouchbaseOutOfMemoryException();
             case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException();
             case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException();
