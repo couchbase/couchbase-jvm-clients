@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -52,18 +53,23 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
-    int keyLength = key.readableBytes();
-    ByteBuf content = alloc.buffer(keyLength + 4);
-    content.writeShort(partition());
-    content.writeShort(keyLength);
-    content.writeBytes(key);
+    ByteBuf key = null;
+    ByteBuf content = null;
 
-    ByteBuf request = request(alloc, MemcacheProtocol.Opcode.OBSERVE_CAS, noDatatype(),
-      partition(), opaque, noCas(), noExtras(), noKey(), content);
-    content.release();
-    key.release();
-    return request;
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      int keyLength = key.readableBytes();
+      content = alloc.buffer(keyLength + (Short.BYTES * 2));
+      content.writeShort(partition());
+      content.writeShort(keyLength);
+      content.writeBytes(key);
+
+      return request(alloc, MemcacheProtocol.Opcode.OBSERVE_CAS, noDatatype(),
+        partition(), opaque, noCas(), noExtras(), noKey(), content);
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(content);
+    }
   }
 
   @Override

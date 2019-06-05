@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -54,26 +55,31 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
+    ByteBuf key = null;
+    ByteBuf flexibleExtras = null;
 
-    ByteBuf request;
-    if (syncReplicationType.isPresent()) {
-      if (ctx.syncReplicationEnabled()) {
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-        request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-                partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
-        flexibleExtras.release();
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      ByteBuf request;
+      if (syncReplicationType.isPresent()) {
+        if (ctx.syncReplicationEnabled()) {
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
+            partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
+        }
+        else {
+          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+        }
+      } else {
+        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
+          partition(), opaque, cas, noExtras(), key, noBody());
       }
-      else {
-        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
-      }
-    } else {
-      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-        partition(), opaque, cas, noExtras(), key, noBody());
+
+      return request;
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(flexibleExtras);
     }
-
-    key.release();
-    return request;
   }
 
   @Override

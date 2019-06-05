@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -46,11 +47,14 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
-    ByteBuf r = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
-      partition(), opaque, cas, noExtras(), key, noBody());
-    key.release();
-    return r;
+    ByteBuf key = null;
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
+        partition(), opaque, cas, noExtras(), key, noBody());
+    } finally {
+      ReferenceCountUtil.release(key);
+    }
   }
 
   @Override

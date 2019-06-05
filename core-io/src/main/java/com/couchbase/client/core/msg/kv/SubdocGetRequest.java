@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
@@ -57,46 +58,53 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
+    ByteBuf key = null;
+    ByteBuf extras = null;
+    ByteBuf body = null;
 
-    ByteBuf extras = flags != 0
-      ? alloc.buffer(Byte.BYTES).writeByte(flags)
-      : noExtras();
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
 
-    ByteBuf body;
-    if (commands.size() == 1) {
-      // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
-      // add the others if do the single lookup optimisation.
-      // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
-      // minimal performance gains, in return for additional client complexity.
-      body = commands.get(0).encode(alloc);
-    } else {
-      body = alloc.compositeBuffer(commands.size());
-      for (Command command : commands) {
-        ByteBuf commandBuffer = command.encode(alloc);
-        ((CompositeByteBuf) body).addComponent(commandBuffer);
-        body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
+      if (flags != 0) {
+        extras = alloc.buffer(Byte.BYTES).writeByte(flags);
       }
-    }
 
-    ByteBuf request = request(
-      alloc,
-      MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP,
-      noDatatype(),
-      partition(),
-      opaque,
-      noCas(),
-      extras,
-      key,
-      body
-    );
+      if (commands.size() == 1) {
+        // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
+        // add the others if do the single lookup optimisation.
+        // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
+        // minimal performance gains, in return for additional client complexity.
+        body = commands.get(0).encode(alloc);
+      } else {
+        body = alloc.compositeBuffer(commands.size());
+        for (Command command : commands) {
+          ByteBuf commandBuffer = command.encode(alloc);
+          try {
+            ((CompositeByteBuf) body).addComponent(commandBuffer);
+            body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
+          } catch (Exception ex) {
+            ReferenceCountUtil.release(commandBuffer);
+            throw ex;
+          }
+        }
+      }
 
-    if (flags != 0) {
-      extras.release();
+      return request(
+        alloc,
+        MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP,
+        noDatatype(),
+        partition(),
+        opaque,
+        noCas(),
+        extras == null ? noExtras() : extras,
+        key,
+        body
+      );
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(body);
+      ReferenceCountUtil.release(extras);
     }
-    key.release();
-    body.release();
-    return request;
   }
 
   @Override

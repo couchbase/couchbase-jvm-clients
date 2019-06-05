@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
@@ -29,7 +30,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
@@ -90,48 +90,59 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
+    ByteBuf key = null;
+    ByteBuf extras = null;
+    ByteBuf content = null;
+    ByteBuf flexibleExtras = null;
 
-    ByteBuf extras = alloc.buffer();
-    if (flags != 0) {
-      extras.writeByte(flags);
-    }
-    if (expiration != 0) {
-      extras.writeInt((int) expiration);
-    }
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
 
-    ByteBuf body;
-    if (commands.size() == 1) {
-      body = commands.get(0).encode(alloc);
-    } else {
-      body = alloc.compositeBuffer(commands.size());
-      for (Command command : commands) {
-        ByteBuf commandBuffer = command.encode(alloc);
-        ((CompositeByteBuf) body).addComponent(commandBuffer);
-        body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
+      extras = alloc.buffer();
+      if (flags != 0) {
+        extras.writeByte(flags);
       }
-    }
-
-    ByteBuf request;
-    if (syncReplicationType.isPresent()) {
-      if (ctx.syncReplicationEnabled()) {
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-        request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-                noCas(), flexibleExtras, extras, key, body);
-        flexibleExtras.release();
+      if (expiration != 0) {
+        extras.writeInt((int) expiration);
       }
-      else {
-        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
-      }
-    } else {
-      request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-        cas, extras, key, body);
-    }
 
-    extras.release();
-    key.release();
-    body.release();
-    return request;
+      if (commands.size() == 1) {
+        content = commands.get(0).encode(alloc);
+      } else {
+        content = alloc.compositeBuffer(commands.size());
+        for (Command command : commands) {
+          ByteBuf commandBuffer = command.encode(alloc);
+          try {
+            ((CompositeByteBuf) content).addComponent(commandBuffer);
+            content.writerIndex(content.writerIndex() + commandBuffer.readableBytes());
+          } catch (Exception ex) {
+            ReferenceCountUtil.release(commandBuffer);
+            throw ex;
+          }
+        }
+      }
+
+      ByteBuf request;
+      if (syncReplicationType.isPresent()) {
+        if (ctx.syncReplicationEnabled()) {
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+            noCas(), flexibleExtras, extras, key, content);
+        }
+        else {
+          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+        }
+      } else {
+        request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+          cas, extras, key, content);
+      }
+      return request;
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(extras);
+      ReferenceCountUtil.release(flexibleExtras);
+      ReferenceCountUtil.release(content);
+    }
   }
 
   @Override

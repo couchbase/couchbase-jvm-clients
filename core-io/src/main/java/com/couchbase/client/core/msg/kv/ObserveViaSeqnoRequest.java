@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -55,11 +56,14 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
 
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final ChannelContext ctx) {
-    ByteBuf body = alloc.buffer(Long.BYTES).writeLong(vbucketUUID);
-    ByteBuf request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.OBSERVE_SEQ, noDatatype(), partition(),
-      opaque, noCas(), noExtras(), noKey(), body);
-    body.release();
-    return request;
+    ByteBuf body = null;
+    try {
+      body = alloc.buffer(Long.BYTES).writeLong(vbucketUUID);
+      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.OBSERVE_SEQ, noDatatype(), partition(),
+        opaque, noCas(), noExtras(), noKey(), body);
+    } finally {
+      ReferenceCountUtil.release(body);
+    }
   }
 
   @Override

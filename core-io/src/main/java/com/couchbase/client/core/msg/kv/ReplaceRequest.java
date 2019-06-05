@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -63,48 +64,52 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
+    ByteBuf key = null;
+    ByteBuf content = null;
+    ByteBuf extras = null;
+    ByteBuf flexibleExtras = null;
 
-    byte datatype = 0;
-    ByteBuf content;
-    CompressionConfig config = ctx.compressionConfig();
-    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-      ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
-      if (maybeCompressed != null) {
-        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-        content = maybeCompressed;
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      byte datatype = 0;
+      CompressionConfig config = ctx.compressionConfig();
+      if (config != null && config.enabled() && this.content.length >= config.minSize()) {
+        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
+        if (maybeCompressed != null) {
+          datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
+          content = maybeCompressed;
+        } else {
+          content = Unpooled.wrappedBuffer(this.content);
+        }
       } else {
         content = Unpooled.wrappedBuffer(this.content);
       }
-    } else {
-      content = Unpooled.wrappedBuffer(this.content);
-    }
 
-    ByteBuf extras = alloc.buffer(Integer.BYTES * 2);
-    extras.writeInt(flags);
-    extras.writeInt((int) expiration);
+      extras = alloc.buffer(Integer.BYTES * 2);
+      extras.writeInt(flags);
+      extras.writeInt((int) expiration);
 
-    ByteBuf request;
-    if (syncReplicationType.isPresent()) {
-      if (ctx.syncReplicationEnabled()) {
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-        request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
-                opaque, cas, flexibleExtras, extras, key, content);
-        flexibleExtras.release();
+      ByteBuf request;
+      if (syncReplicationType.isPresent()) {
+        if (ctx.syncReplicationEnabled()) {
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
+            opaque, cas, flexibleExtras, extras, key, content);
+        }
+        else {
+          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+        }
+      } else {
+        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
+          opaque, cas, extras, key, content);
       }
-      else {
-        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
-      }
-    } else {
-      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
-        opaque, cas, extras, key, content);
+      return request;
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(extras);
+      ReferenceCountUtil.release(flexibleExtras);
+      ReferenceCountUtil.release(content);
     }
-
-    key.release();
-    extras.release();
-    content.release();
-
-    return request;
   }
 
   @Override

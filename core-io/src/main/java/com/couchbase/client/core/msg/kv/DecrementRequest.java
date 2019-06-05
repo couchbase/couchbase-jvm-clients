@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -57,36 +58,42 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
-    ByteBuf extras = alloc.buffer();
-    extras.writeLong(delta);
-    if (initial.isPresent()) {
-      extras.writeLong(initial.get());
-      extras.writeInt(expiry);
-    } else {
-      extras.writeLong(0); // no initial present, will lead to doc not found
-      extras.writeInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY);
-    }
+    ByteBuf key = null;
+    ByteBuf extras = null;
+    ByteBuf flexibleExtras = null;
 
-    ByteBuf request;
-    if (syncReplicationType.isPresent()) {
-      if (ctx.syncReplicationEnabled()) {
-        ByteBuf flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-        request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-                partition(), opaque, cas, flexibleExtras, extras, key, noBody());
-        flexibleExtras.release();
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      extras = alloc.buffer((Long.BYTES * 2) + Integer.BYTES);
+      extras.writeLong(delta);
+      if (initial.isPresent()) {
+        extras.writeLong(initial.get());
+        extras.writeInt(expiry);
+      } else {
+        extras.writeLong(0); // no initial present, will lead to doc not found
+        extras.writeInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY);
       }
-      else {
-        throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
-      }
-    } else {
-      request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-        partition(), opaque, cas, extras, key, noBody());
-    }
 
-    extras.release();
-    key.release();
-    return request;
+      ByteBuf request;
+      if (syncReplicationType.isPresent()) {
+        if (ctx.syncReplicationEnabled()) {
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
+            partition(), opaque, cas, flexibleExtras, extras, key, noBody());
+        }
+        else {
+          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+        }
+      } else {
+        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
+          partition(), opaque, cas, extras, key, noBody());
+      }
+      return request;
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(extras);
+      ReferenceCountUtil.release(flexibleExtras);
+    }
   }
 
   @Override

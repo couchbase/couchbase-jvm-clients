@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -48,11 +49,14 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = Unpooled.copiedBuffer(collectionIdentifier().scope() + "." + collectionIdentifier().collection(), UTF_8);
-    ByteBuf request = request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
-      noPartition(), opaque, noCas(), noExtras(), key, noBody());
-    key.release();
-    return request;
+    ByteBuf key = null;
+    try {
+      key = Unpooled.copiedBuffer(collectionIdentifier().scope() + "." + collectionIdentifier().collection(), UTF_8);
+      return request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
+        noPartition(), opaque, noCas(), noExtras(), key, noBody());
+    } finally {
+      ReferenceCountUtil.release(key);
+    }
   }
 
   @Override

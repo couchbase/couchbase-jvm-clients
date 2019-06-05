@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -50,13 +51,19 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
-    ByteBuf extras = alloc.buffer(4).writeInt((int) lockFor.getSeconds());
-    ByteBuf r = MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
-      partition(), opaque, noCas(), extras, key, noBody());
-    extras.release();
-    key.release();
-    return r;
+    ByteBuf key = null;
+    ByteBuf extras = null;
+
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      extras = alloc.buffer(Integer.BYTES).writeInt((int) lockFor.getSeconds());
+
+      return MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(extras);
+    }
   }
 
   @Override

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -51,15 +52,19 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
-    ByteBuf key = encodedKeyWithCollection(alloc, ctx);
-    ByteBuf extras = alloc.buffer(4).writeInt((int) expiration.getSeconds());
+    ByteBuf key = null;
+    ByteBuf extras = null;
 
-    ByteBuf request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
-      partition(), opaque, noCas(), extras, key, noBody());
+    try {
+      key = encodedKeyWithCollection(alloc, ctx);
+      extras = alloc.buffer(Integer.BYTES).writeInt((int) expiration.getSeconds());
 
-    extras.release();
-    key.release();
-    return request;
+      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
+    } finally {
+      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(extras);
+    }
   }
 
   @Override
