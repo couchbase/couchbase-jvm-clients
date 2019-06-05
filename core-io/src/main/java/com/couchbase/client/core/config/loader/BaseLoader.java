@@ -21,7 +21,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
@@ -94,7 +93,7 @@ public abstract class BaseLoader implements Loader {
       .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
-      .map(config -> config.replace("$HOST", seed.address().address()))
+      .map(config -> config.replace("$HOST", seed.address()))
       .map(config -> BucketConfigParser.parse(config, core.context().environment(), seed.address()))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException
         ? ex

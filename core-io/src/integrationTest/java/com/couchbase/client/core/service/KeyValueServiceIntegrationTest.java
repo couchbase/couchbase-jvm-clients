@@ -19,7 +19,6 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -66,7 +65,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
     KeyValueService service = new KeyValueService(
       KeyValueServiceConfig.builder().build(),
       coreContext,
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.KV),
       config().bucketname(),
       env.credentials()

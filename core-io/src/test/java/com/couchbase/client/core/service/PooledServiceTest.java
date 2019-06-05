@@ -25,7 +25,6 @@ import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.NoopRequest;
@@ -65,7 +64,7 @@ class PooledServiceTest {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
-    serviceContext = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+    serviceContext = new ServiceContext(coreContext, "127.0.0.1", 1234,
       ServiceType.KV, Optional.empty());
   }
 

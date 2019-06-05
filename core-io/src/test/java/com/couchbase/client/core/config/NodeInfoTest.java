@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
@@ -58,24 +57,22 @@ class NodeInfoTest {
     void shouldExposeRawHostnameFromConstruction() {
         assertEquals(
             "localhost",
-            new NodeInfo(null, "localhost:8091", new HashMap<>(), null).rawHostname()
+            new NodeInfo(null, "localhost:8091", new HashMap<>(), null).hostname()
         );
 
         assertEquals(
             "127.0.0.1",
-            new NodeInfo(null, "127.0.0.1:8091", new HashMap<>(), null).rawHostname()
+            new NodeInfo(null, "127.0.0.1:8091", new HashMap<>(), null).hostname()
         );
     }
 
     @Test
     void shouldHandleIPv6() {
-        assumeFalse(NetworkAddress.FORCE_IPV4);
-
         Map<String, Integer> ports = new HashMap<String, Integer>();
         NodeInfo info = new NodeInfo(null, "[fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7]:8091", ports, null);
 
         assertEquals(1, info.services().size());
-        assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", info.hostname().address());
+        assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", info.hostname());
         assertEquals(8091, (long) info.services().get(ServiceType.MANAGER));
     }
 

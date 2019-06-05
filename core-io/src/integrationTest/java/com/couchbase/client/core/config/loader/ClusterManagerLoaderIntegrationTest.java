@@ -19,7 +19,6 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -55,14 +54,14 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
    */
   @Test
   //@Disabled
-  void loadConfigViaClusterManagerHttp() throws Exception{
+  void loadConfigViaClusterManagerHttp() {
     TestNodeConfig config = config().firstNodeWith(Services.MANAGER).get();
 
     Core core = Core.create(env);
     ClusterManagerLoader loader = new ClusterManagerLoader(core);
     int port = config.ports().get(Services.MANAGER);
     BucketConfig loaded = loader.load(
-      new NodeIdentifier(NetworkAddress.create(config.hostname()), port),
+      new NodeIdentifier(config.hostname(), port),
       port,
       config().bucketname()
     ).block();

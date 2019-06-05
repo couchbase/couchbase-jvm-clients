@@ -17,7 +17,6 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
@@ -39,7 +38,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
   private final String bucketname;
   private final Credentials credentials;
 
-  public KeyValueEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
+  public KeyValueEndpoint(final ServiceContext ctx, final String hostname,
                           final int port, final String bucketname, final Credentials credentials) {
     super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV, true);

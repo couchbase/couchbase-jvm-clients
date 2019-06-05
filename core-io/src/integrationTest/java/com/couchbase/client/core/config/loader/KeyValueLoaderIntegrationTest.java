@@ -19,7 +19,6 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -61,7 +60,7 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
     Core core = Core.create(env);
     KeyValueLoader loader = new KeyValueLoader(core);
     BucketConfig loaded = loader.load(
-      new NodeIdentifier(NetworkAddress.create(config.hostname()), config.ports().get(Services.MANAGER)),
+      new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV),
       config().bucketname()
     ).block();

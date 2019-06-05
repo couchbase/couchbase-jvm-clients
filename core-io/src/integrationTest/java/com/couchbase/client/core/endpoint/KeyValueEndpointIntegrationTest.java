@@ -19,7 +19,6 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceContext;
@@ -57,7 +56,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     env = environment().build();
     serviceContext = new ServiceContext(
       new CoreContext(null, 1, env),
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.KV),
       ServiceType.KV,
       Optional.empty()
@@ -83,7 +82,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
 
     KeyValueEndpoint endpoint = new KeyValueEndpoint(
       serviceContext,
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.KV),
       config().bucketname(),
       env.credentials()

@@ -27,7 +27,6 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.env.*;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceContext;
@@ -68,7 +67,7 @@ class BaseEndpointTest {
   /**
    * Network address used for all the tests.
    */
-  private static final NetworkAddress LOCALHOST = NetworkAddress.localhost();
+  private static final String LOCALHOST = "127.0.0.1";
 
   /**
    * The port used to connect.
@@ -87,7 +86,7 @@ class BaseEndpointTest {
     eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
-    ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+    ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
   }
 
@@ -129,7 +128,7 @@ class BaseEndpointTest {
       .build();
 
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
-    ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+    ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
 
     try {
@@ -250,7 +249,7 @@ class BaseEndpointTest {
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
-    ServiceContext ctx = new ServiceContext(coreContext, NetworkAddress.localhost(), 1234,
+    ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
 
     try {
@@ -397,7 +396,7 @@ class BaseEndpointTest {
       return new InstrumentedEndpoint(LOCALHOST, PORT, eventLoopGroup, ctx, channelSupplier);
     }
 
-    InstrumentedEndpoint(NetworkAddress hostname, int port, EventLoopGroup eventLoopGroup,
+    InstrumentedEndpoint(String hostname, int port, EventLoopGroup eventLoopGroup,
                          ServiceContext ctx, Supplier<Mono<Channel>> channelSupplier) {
       super(hostname, port, eventLoopGroup, ctx, CircuitBreakerConfig.disabled(), ServiceType.KV, false);
       this.channelSupplier = channelSupplier;

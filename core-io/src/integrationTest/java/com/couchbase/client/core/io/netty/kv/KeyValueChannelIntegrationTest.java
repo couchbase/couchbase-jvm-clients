@@ -23,7 +23,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
@@ -69,7 +68,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     CoreContext coreContext = new CoreContext(null, 1, env);
     endpointContext = new EndpointContext(
       coreContext,
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.KV),
       null,
       ServiceType.KV,

@@ -22,7 +22,6 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
@@ -46,7 +45,7 @@ import static org.mockito.Mockito.when;
  */
 class BaseLoaderTest {
 
-  private static final NodeIdentifier SEED = new NodeIdentifier(NetworkAddress.localhost(), 8091);
+  private static final NodeIdentifier SEED = new NodeIdentifier("127.0.0.1", 8091);
   private static final String BUCKET = "bucket";
   private static final int PORT = 1234;
   private static final ServiceType SERVICE = ServiceType.KV;

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.search.SearchHandlerSwitcher;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -25,7 +24,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCode
 
 public class SearchEndpoint extends BaseEndpoint {
 
-  public SearchEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
+  public SearchEndpoint(final ServiceContext ctx, final String hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().searchCircuitBreakerConfig(), ServiceType.SEARCH, false);
   }

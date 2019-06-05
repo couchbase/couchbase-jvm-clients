@@ -139,7 +139,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .fromIterable(core.context().environment().seedNodes())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
-            NodeIdentifier identifier = new NodeIdentifier(seed.getAddress(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
+            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
             return keyValueLoader
               .load(identifier, seed.kvPort().orElse(kvPort), name)
               .onErrorResume(t -> clusterManagerLoader.load(

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +42,8 @@ class CouchbaseBucketConfigTest {
     void shouldHavePrimaryPartitionsOnNode() {
         CouchbaseBucketConfig config = readConfig("config_with_mixed_partitions.json");
 
-        assertTrue(config.hasPrimaryPartitionsOnNode(NetworkAddress.create("1.2.3.4")));
-        assertFalse(config.hasPrimaryPartitionsOnNode(NetworkAddress.create("2.3.4.5")));
+        assertTrue(config.hasPrimaryPartitionsOnNode("1.2.3.4"));
+        assertFalse(config.hasPrimaryPartitionsOnNode("2.3.4.5"));
         assertEquals(BucketNodeLocator.VBUCKET, config.locator());
         assertFalse(config.ephemeral());
         assertTrue(config.nodes().get(0).alternateAddresses().isEmpty());
@@ -54,7 +53,7 @@ class CouchbaseBucketConfigTest {
     void shouldFallbackToNodeHostnameIfNotInNodesExt() {
         CouchbaseBucketConfig config = readConfig("nodes_ext_without_hostname.json");
 
-        NetworkAddress expected = NetworkAddress.create("1.2.3.4");
+        String expected = "1.2.3.4";
         assertEquals(1, config.nodes().size());
         assertEquals(expected, config.nodes().get(0).hostname());
         assertEquals(BucketNodeLocator.VBUCKET, config.locator());
@@ -99,9 +98,9 @@ class CouchbaseBucketConfigTest {
         assertEquals(1, config.numberOfReplicas());
         assertEquals(1024, config.numberOfPartitions());
         assertEquals(2, config.nodes().size());
-        assertEquals("192.168.1.194", config.nodes().get(0).hostname().address());
+        assertEquals("192.168.1.194", config.nodes().get(0).hostname());
         assertEquals(9000, (int)config.nodes().get(0).services().get(ServiceType.MANAGER));
-        assertEquals("192.168.1.194", config.nodes().get(1).hostname().address());
+        assertEquals("192.168.1.194", config.nodes().get(1).hostname());
         assertEquals(9001, (int)config.nodes().get(1).services().get(ServiceType.MANAGER));
     }
 
@@ -110,9 +109,9 @@ class CouchbaseBucketConfigTest {
         CouchbaseBucketConfig config = readConfig("cluster_run_three_nodes_mds_with_localhost.json");
 
         assertEquals(3, config.nodes().size());
-        assertEquals("192.168.0.102", config.nodes().get(0).hostname().address());
-        assertEquals("127.0.0.1", config.nodes().get(1).hostname().address());
-        assertEquals("127.0.0.1", config.nodes().get(2).hostname().address());
+        assertEquals("192.168.0.102", config.nodes().get(0).hostname());
+        assertEquals("127.0.0.1", config.nodes().get(1).hostname());
+        assertEquals("127.0.0.1", config.nodes().get(2).hostname());
         assertTrue(config.nodes().get(0).services().containsKey(ServiceType.KV));
         assertTrue(config.nodes().get(1).services().containsKey(ServiceType.KV));
         assertFalse(config.nodes().get(2).services().containsKey(ServiceType.KV));
@@ -120,12 +119,11 @@ class CouchbaseBucketConfigTest {
 
     @Test
     void shouldLoadConfigWithIPv6() {
-        assumeFalse(NetworkAddress.FORCE_IPV4);
         CouchbaseBucketConfig config = readConfig("config_with_ipv6.json");
 
         assertEquals(2, config.nodes().size());
-        assertEquals("fd63:6f75:6368:2068:1471:75ff:fe25:a8be", config.nodes().get(0).hostname().address());
-        assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", config.nodes().get(1).hostname().address());
+        assertEquals("fd63:6f75:6368:2068:1471:75ff:fe25:a8be", config.nodes().get(0).hostname());
+        assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", config.nodes().get(1).hostname());
 
         assertEquals(1, config.numberOfReplicas());
         assertEquals(1024, config.numberOfPartitions());
@@ -187,7 +185,6 @@ class CouchbaseBucketConfigTest {
             assertEquals(1, addrs.size());
             AlternateAddress addr = addrs.get(NetworkResolution.EXTERNAL.name());
             assertNotNull(addr.hostname());
-            assertNotNull(addr.rawHostname());
             assertFalse(addr.services().isEmpty());
             assertFalse(addr.sslServices().isEmpty());
             for (int port : addr.services().values()) {

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
@@ -38,8 +37,7 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NodeInfo {
 
-    private final String rawHostname;
-    private final NetworkAddress hostname;
+    private final String hostname;
     private final Map<ServiceType, Integer> directServices;
     private final Map<ServiceType, Integer> sslServices;
     private final Map<String, AlternateAddress> alternateAddresses;
@@ -67,8 +65,7 @@ public class NodeInfo {
             : alternateAddresses;
 
         try {
-            this.rawHostname = trimPort(hostname);
-            this.hostname = NetworkAddress.create(rawHostname);
+            this.hostname = trimPort(hostname);
         } catch (Exception e) {
             throw new CouchbaseException("Could not analyze hostname from config.", e);
         }
@@ -83,14 +80,13 @@ public class NodeInfo {
      * @param direct   the port list of the direct node services.
      * @param ssl      the port list of the ssl node services.
      */
-    public NodeInfo(NetworkAddress hostname, Map<ServiceType, Integer> direct,
+    public NodeInfo(String hostname, Map<ServiceType, Integer> direct,
                     Map<ServiceType, Integer> ssl, Map<String, AlternateAddress> alternateAddresses) {
         if (hostname == null) {
             throw new CouchbaseException(new IllegalArgumentException("NodeInfo hostname cannot be null"));
         }
 
         this.hostname = hostname;
-        this.rawHostname = hostname.nameOrAddress();
         this.directServices = direct;
         this.sslServices = ssl;
         this.alternateAddresses = alternateAddresses == null
@@ -98,7 +94,7 @@ public class NodeInfo {
             : alternateAddresses;
     }
 
-    public NetworkAddress hostname() {
+    public String hostname() {
         return hostname;
     }
 
@@ -149,6 +145,9 @@ public class NodeInfo {
                     assembledHost += ":";
                 }
             }
+            if (assembledHost.startsWith("[") && assembledHost.endsWith("]")) {
+                return assembledHost.substring(1, assembledHost.length() - 1);
+            }
             return assembledHost;
         } else {
             // Simple IPv4 Handling
@@ -156,15 +155,10 @@ public class NodeInfo {
         }
     }
 
-    public String rawHostname() {
-        return rawHostname;
-    }
-
     @Override
     public String toString() {
         return "DefaultNodeInfo{" +
-            "rawHostname='" + rawHostname + '\'' +
-            ", hostname=" + hostname +
+            "hostname=" + hostname +
             ", directServices=" + directServices +
             ", sslServices=" + sslServices +
             ", alternateAddresses=" + alternateAddresses +

@@ -18,7 +18,6 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.NetworkAddress;
 import io.opentracing.Span;
 
 import java.util.HashMap;
@@ -47,7 +46,7 @@ public class RequestContext extends CoreContext {
    */
   private volatile Map<String, Object> payload;
 
-  private volatile NetworkAddress dispatchedTo;
+  private volatile String dispatchedTo;
 
   private volatile Span span;
 
@@ -110,11 +109,11 @@ public class RequestContext extends CoreContext {
     return this;
   }
 
-  public NetworkAddress dispatchedTo() {
+  public String dispatchedTo() {
     return dispatchedTo;
   }
 
-  public RequestContext dispatchedTo(NetworkAddress dispatchedTo) {
+  public RequestContext dispatchedTo(String dispatchedTo) {
     this.dispatchedTo = dispatchedTo;
     return this;
   }

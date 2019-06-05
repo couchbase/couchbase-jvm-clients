@@ -24,7 +24,6 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -55,7 +54,7 @@ class KeyValueMessageHandlerTest {
     ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
     when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());
     when(core.configurationProvider()).thenReturn(configurationProvider);
-    CTX = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+    CTX = new EndpointContext(coreContext, "127.0.0.1", 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
@@ -46,10 +45,10 @@ class RoundRobinLocatorTest {
 
     Node node1Mock = mock(Node.class);
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
     Node node2Mock = mock(Node.class);
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     locator.dispatch(request, nodes, configMock, null);
@@ -73,13 +72,13 @@ class RoundRobinLocatorTest {
     ClusterConfig configMock = mock(ClusterConfig.class);
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     Node node3Mock = mock(Node.class);
-    when(node3Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.103"), 8091));
+    when(node3Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.103", 8091));
     when(node3Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock, node3Mock));
 
@@ -112,16 +111,16 @@ class RoundRobinLocatorTest {
     ClusterConfig configMock = mock(ClusterConfig.class);
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.101"), 8091));
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.102"), 8091));
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node3Mock = mock(Node.class);
-    when(node3Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.103"), 8091));
+    when(node3Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.103", 8091));
     when(node3Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     Node node4Mock = mock(Node.class);
-    when(node4Mock.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("192.168.56.104"), 8091));
+    when(node4Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.104", 8091));
     when(node4Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock, node3Mock, node4Mock));
 

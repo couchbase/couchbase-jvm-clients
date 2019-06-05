@@ -18,7 +18,6 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.DeserializationFeature;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.InjectableValues;
@@ -40,11 +39,11 @@ public final class BucketConfigParser {
      * @param origin the origin of the configuration. If null / none provided then localhost is assumed.
      * @return the parsed bucket configuration.
      */
-    public static BucketConfig parse(final String input, final CoreEnvironment env, final NetworkAddress origin) {
+    public static BucketConfig parse(final String input, final CoreEnvironment env, final String origin) {
         try {
             InjectableValues inject = new InjectableValues.Std()
                     .addValue("env", env)
-                    .addValue("origin", origin == null ? NetworkAddress.localhost() : origin);
+                    .addValue("origin", origin == null ? "127.0.0.1" : origin);
             return Mapper.reader()
                     .forType(BucketConfig.class)
                     .with(inject)

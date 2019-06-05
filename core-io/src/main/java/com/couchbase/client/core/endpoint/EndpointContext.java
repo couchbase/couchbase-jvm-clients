@@ -17,7 +17,6 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.net.SocketAddress;
@@ -32,7 +31,7 @@ public class EndpointContext extends CoreContext {
   /**
    * The hostname of this endpoint.
    */
-  private final NetworkAddress remoteHostname;
+  private final String remoteHostname;
 
   private final Optional<SocketAddress> localSocket;
 
@@ -62,7 +61,7 @@ public class EndpointContext extends CoreContext {
    * @param remoteHostname the remote hostname.
    * @param remotePort the remote port.
    */
-  public EndpointContext(CoreContext ctx, NetworkAddress remoteHostname, int remotePort,
+  public EndpointContext(CoreContext ctx, String remoteHostname, int remotePort,
                          CircuitBreaker circuitBreaker, ServiceType serviceType,
                          Optional<SocketAddress> localSocket, Optional<String> bucket, Optional<String> channelId) {
     super(ctx.core(), ctx.id(), ctx.environment());
@@ -78,7 +77,7 @@ public class EndpointContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", redactSystem(remoteHostname().nameOrAddress() + ":" + remotePort()));
+    input.put("remote", redactSystem(remoteHostname() + ":" + remotePort()));
     localSocket.ifPresent(s -> input.put("local", redactSystem(s)));
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
@@ -86,7 +85,7 @@ public class EndpointContext extends CoreContext {
     channelId.ifPresent(i -> input.put("channelId", i));
   }
 
-  public NetworkAddress remoteHostname() {
+  public String remoteHostname() {
     return remoteHostname;
   }
 

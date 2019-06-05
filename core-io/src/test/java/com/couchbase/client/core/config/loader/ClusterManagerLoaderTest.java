@@ -21,7 +21,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;

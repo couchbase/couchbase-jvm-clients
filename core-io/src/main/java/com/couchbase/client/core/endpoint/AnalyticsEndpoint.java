@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.analytics.AnalyticsMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -27,7 +26,7 @@ import com.couchbase.client.core.deps.io.netty.handler.logging.LoggingHandler;
 
 public class AnalyticsEndpoint extends BaseEndpoint {
 
-  public AnalyticsEndpoint(final ServiceContext ctx, final NetworkAddress hostname,
+  public AnalyticsEndpoint(final ServiceContext ctx, final String hostname,
                            final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().analyticsEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().analyticsCircuitBreakerConfig(), ServiceType.ANALYTICS, false);

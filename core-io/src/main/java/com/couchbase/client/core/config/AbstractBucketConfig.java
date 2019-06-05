@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.ArrayList;
@@ -40,11 +39,11 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final int enabledServices;
     private final List<BucketCapabilities> bucketCapabilities;
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
-    private final NetworkAddress origin;
+    private final String origin;
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
                                    List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
-                                   List<BucketCapabilities> bucketCapabilities, NetworkAddress origin,
+                                   List<BucketCapabilities> bucketCapabilities, String origin,
                                    Map<String, Set<ClusterCapabilities>> clusterCapabilities
     ) {
         this.uuid = uuid;
@@ -136,7 +135,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private List<NodeInfo> nodeInfoFromExtended(final List<PortInfo> nodesExt, final List<NodeInfo> nodeInfos) {
         List<NodeInfo> converted = new ArrayList<NodeInfo>(nodesExt.size());
         for (int i = 0; i < nodesExt.size(); i++) {
-            NetworkAddress hostname = nodesExt.get(i).hostname();
+            String hostname = nodesExt.get(i).hostname();
 
             // Since nodeInfo and nodesExt might not be the same size, this can be null!
             NodeInfo nodeInfo = i >= nodeInfos.size() ? null : nodeInfos.get(i);

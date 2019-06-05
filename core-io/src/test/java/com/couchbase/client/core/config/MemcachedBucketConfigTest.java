@@ -19,7 +19,6 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -63,7 +62,7 @@ class MemcachedBucketConfigTest {
 
         assertEquals(4, config.nodes().size());
         for (Map.Entry<Long, NodeInfo> node : config.ketamaNodes().entrySet()) {
-            String hostname = node.getValue().hostname().address();
+            String hostname = node.getValue().hostname();
             assertTrue(hostname.equals("192.168.56.101") || hostname.equals("192.168.56.102"));
             assertTrue(node.getValue().services().containsKey(ServiceType.KV));
         }
@@ -71,12 +70,11 @@ class MemcachedBucketConfigTest {
 
     @Test
     void shouldLoadConfigWithIPv6() {
-        assumeFalse(NetworkAddress.FORCE_IPV4);
         MemcachedBucketConfig config = readConfig("memcached_with_ipv6.json");
 
         assertEquals(2, config.nodes().size());
         for (Map.Entry<Long, NodeInfo> node : config.ketamaNodes().entrySet()) {
-            String hostname = node.getValue().hostname().address();
+            String hostname = node.getValue().hostname();
             assertTrue(hostname.equals("fd63:6f75:6368:2068:1471:75ff:fe25:a8be")
                 || hostname.equals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7"));
             assertTrue(node.getValue().services().containsKey(ServiceType.KV));
@@ -109,7 +107,6 @@ class MemcachedBucketConfigTest {
             assertEquals(1, addrs.size());
             AlternateAddress addr = addrs.get(NetworkResolution.EXTERNAL.name());
             assertNotNull(addr.hostname());
-            assertNotNull(addr.rawHostname());
             assertFalse(addr.services().isEmpty());
             assertFalse(addr.sslServices().isEmpty());
             for (int port : addr.services().values()) {
@@ -134,7 +131,7 @@ class MemcachedBucketConfigTest {
 
         Collection<NodeInfo> actualRingNodes = config.ketamaNodes().values();
         for (NodeInfo nodeInfo : actualRingNodes) {
-            String actual = nodeInfo.hostname().nameOrAddress();
+            String actual = nodeInfo.hostname();
             assertTrue(mustContain.contains(actual));
             assertFalse(mustNotContain.contains(actual));
         }

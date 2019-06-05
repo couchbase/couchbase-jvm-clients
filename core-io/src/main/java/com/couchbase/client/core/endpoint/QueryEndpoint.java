@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -25,7 +24,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCode
 
 public class QueryEndpoint extends BaseEndpoint {
 
-  public QueryEndpoint(final ServiceContext ctx, final NetworkAddress hostname, final int port) {
+  public QueryEndpoint(final ServiceContext ctx, final String hostname, final int port) {
     super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY, false);
   }

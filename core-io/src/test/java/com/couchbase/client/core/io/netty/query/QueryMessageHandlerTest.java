@@ -35,7 +35,6 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.Utils;
@@ -66,7 +65,7 @@ class QueryMessageHandlerTest {
   static void setup() {
     ENV = CoreEnvironment.create("user", "pass");
     CORE_CTX = new CoreContext(mock(Core.class), 1, ENV);
-    ENDPOINT_CTX = new EndpointContext(CORE_CTX, NetworkAddress.localhost(), 1234,
+    ENDPOINT_CTX = new EndpointContext(CORE_CTX, "127.0.0.1", 1234,
       NoopCircuitBreaker.INSTANCE, ServiceType.QUERY, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

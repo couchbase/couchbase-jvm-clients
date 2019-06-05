@@ -18,7 +18,6 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
 import com.couchbase.client.core.service.ServiceContext;
@@ -49,7 +48,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
     serviceContext = new ServiceContext(
       new CoreContext(null, 1, env),
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.MANAGER),
       ServiceType.MANAGER,
       Optional.empty()
@@ -73,7 +72,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
     ManagerEndpoint endpoint = new ManagerEndpoint(
       serviceContext,
-      NetworkAddress.create(node.hostname()),
+      node.hostname(),
       node.ports().get(Services.MANAGER)
     );
 

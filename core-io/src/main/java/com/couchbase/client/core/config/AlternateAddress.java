@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -29,8 +28,7 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AlternateAddress {
 
-    private final NetworkAddress hostname;
-    private final String rawHostname;
+    private final String hostname;
     private final Map<ServiceType, Integer> directServices;
     private final Map<ServiceType, Integer> sslServices;
 
@@ -39,8 +37,7 @@ public class AlternateAddress {
         @JsonProperty("hostname") String hostname,
         @JsonProperty("ports") Map<String, Integer> ports) {
         try {
-            this.rawHostname = hostname;
-            this.hostname = NetworkAddress.create(rawHostname);
+            this.hostname = hostname;
         } catch (Exception e) {
             throw new CouchbaseException("Could not analyze hostname from config.", e);
         }
@@ -52,12 +49,8 @@ public class AlternateAddress {
         }
     }
 
-    public NetworkAddress hostname() {
+    public String hostname() {
         return hostname;
-    }
-
-    public String rawHostname() {
-        return rawHostname;
     }
 
     public Map<ServiceType, Integer> services() {
@@ -72,7 +65,6 @@ public class AlternateAddress {
     public String toString() {
         return "DefaultAlternateAddress{" +
             "hostname=" + hostname +
-            ", rawHostname='" + rawHostname + '\'' +
             ", directServices=" + directServices +
             ", sslServices=" + sslServices +
             '}';
@@ -92,9 +84,6 @@ public class AlternateAddress {
         if (hostname != null ? !hostname.equals(that.hostname) : that.hostname != null) {
             return false;
         }
-        if (rawHostname != null ? !rawHostname.equals(that.rawHostname) : that.rawHostname != null) {
-            return false;
-        }
         if (directServices != null ? !directServices.equals(that.directServices) : that.directServices != null) {
             return false;
         }
@@ -104,7 +93,6 @@ public class AlternateAddress {
     @Override
     public int hashCode() {
         int result = hostname != null ? hostname.hashCode() : 0;
-        result = 31 * result + (rawHostname != null ? rawHostname.hashCode() : 0);
         result = 31 * result + (directServices != null ? directServices.hashCode() : 0);
         result = 31 * result + (sslServices != null ? sslServices.hashCode() : 0);
         return result;

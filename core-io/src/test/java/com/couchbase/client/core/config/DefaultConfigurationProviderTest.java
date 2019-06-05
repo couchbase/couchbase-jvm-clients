@@ -19,7 +19,6 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +39,8 @@ import static org.mockito.Mockito.when;
 class DefaultConfigurationProviderTest {
 
   private static CoreEnvironment ENVIRONMENT;
+
+  private static String ORIGIN = "127.0.0.1";
 
   @BeforeAll
   static void setup() {
@@ -68,8 +69,7 @@ class DefaultConfigurationProviderTest {
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
-    NetworkAddress origin = NetworkAddress.localhost();
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
     assertFalse(provider.config().bucketConfigs().isEmpty());
     assertEquals(1073, provider.config().bucketConfig("default").rev());
@@ -92,12 +92,11 @@ class DefaultConfigurationProviderTest {
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
-    NetworkAddress origin = NetworkAddress.localhost();
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
     assertFalse(provider.config().bucketConfigs().isEmpty());
@@ -121,9 +120,8 @@ class DefaultConfigurationProviderTest {
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
-    NetworkAddress origin = NetworkAddress.localhost();
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
     String newConfig = Utils.readResource(
@@ -131,7 +129,7 @@ class DefaultConfigurationProviderTest {
       DefaultConfigurationProviderTest.class
     );
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, ORIGIN));
     assertEquals(2, configsPushed.get());
 
     assertFalse(provider.config().bucketConfigs().isEmpty());
@@ -155,9 +153,8 @@ class DefaultConfigurationProviderTest {
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
-    NetworkAddress origin = NetworkAddress.localhost();
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
     String newConfig = Utils.readResource(
@@ -167,7 +164,7 @@ class DefaultConfigurationProviderTest {
 
     provider.shutdown().block();
 
-    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, origin));
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, ORIGIN));
     assertEquals(3, configsPushed.get());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());

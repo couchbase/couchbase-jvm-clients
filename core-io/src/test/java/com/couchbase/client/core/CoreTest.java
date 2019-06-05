@@ -22,7 +22,6 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
@@ -49,6 +48,8 @@ class CoreTest {
 
   private static CoreEnvironment ENV;
 
+  private static String LOCALHOST = "127.0.0.1";
+
   @BeforeAll
   static void beforeAll() {
     ENV = CoreEnvironment.create(mock(Credentials.class));
@@ -73,7 +74,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -83,7 +84,7 @@ class CoreTest {
 
 
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -102,7 +103,7 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address().address());
+        return mocks.get(target.address());
       }
     };
     configs.onNext(clusterConfig);
@@ -110,7 +111,7 @@ class CoreTest {
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
       Utils.readResource("one_node_config.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(oneNodeConfig);
     configs.onNext(clusterConfig);
@@ -133,7 +134,7 @@ class CoreTest {
     BucketConfig twoNodeConfig = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodeConfig);
     configs.onNext(clusterConfig);
@@ -168,7 +169,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -178,7 +179,7 @@ class CoreTest {
 
 
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -198,7 +199,7 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address().address());
+        return mocks.get(target.address());
       }
     };
     configs.onNext(clusterConfig);
@@ -206,7 +207,7 @@ class CoreTest {
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.onNext(clusterConfig);
@@ -232,7 +233,7 @@ class CoreTest {
     BucketConfig twoNodesConfigMore = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfigMore);
     configs.onNext(clusterConfig);
@@ -269,7 +270,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -278,7 +279,7 @@ class CoreTest {
     when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -298,7 +299,7 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address().address());
+        return mocks.get(target.address());
       }
     };
     configs.onNext(clusterConfig);
@@ -306,7 +307,7 @@ class CoreTest {
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.onNext(clusterConfig);
@@ -334,7 +335,7 @@ class CoreTest {
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesLessServices);
     configs.onNext(clusterConfig);
@@ -353,7 +354,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.101"), 8091));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -362,7 +363,7 @@ class CoreTest {
     when(mock101.disconnect()).thenReturn(Mono.empty());
 
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("10.143.190.102"), 8091));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -381,7 +382,7 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address().address());
+        return mocks.get(target.address());
       }
     };
     configs.onNext(clusterConfig);
@@ -389,7 +390,7 @@ class CoreTest {
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.onNext(clusterConfig);
@@ -417,7 +418,7 @@ class CoreTest {
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
       Utils.readResource("one_node_config.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesLessServices);
     configs.onNext(clusterConfig);
@@ -439,7 +440,7 @@ class CoreTest {
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("127.0.0.1"), 9000));
+    when(mock101.identifier()).thenReturn(new NodeIdentifier(LOCALHOST, 9000));
     when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
@@ -449,7 +450,7 @@ class CoreTest {
 
 
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(NetworkAddress.create("127.0.0.1"), 9001));
+    when(mock102.identifier()).thenReturn(new NodeIdentifier(LOCALHOST, 9001));
     when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenReturn(Mono.empty());
     when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
@@ -468,7 +469,7 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address().address() + ":" + target.managerPort());
+        return mocks.get(target.address() + ":" + target.managerPort());
       }
     };
     configs.onNext(clusterConfig);
@@ -476,7 +477,7 @@ class CoreTest {
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
       Utils.readResource("cluster_run_two_nodes.json", CoreTest.class),
       ENV,
-      NetworkAddress.localhost()
+      LOCALHOST
     );
     clusterConfig.setBucketConfig(oneNodeConfig);
     configs.onNext(clusterConfig);

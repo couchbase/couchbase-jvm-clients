@@ -18,7 +18,6 @@ package com.couchbase.client.core.cnc.events.core;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
@@ -27,11 +26,11 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class ServiceReconfigurationFailedEvent extends AbstractEvent {
 
-  private final NetworkAddress hostname;
+  private final String hostname;
   private final ServiceType serviceType;
   private final Throwable reason;
 
-  public ServiceReconfigurationFailedEvent(Context context, NetworkAddress hostname,
+  public ServiceReconfigurationFailedEvent(Context context, String hostname,
                                            ServiceType serviceType, Throwable reason) {
     super(Severity.WARN, Category.CORE, Duration.ZERO, context);
     this.reason = reason;
@@ -43,7 +42,7 @@ public class ServiceReconfigurationFailedEvent extends AbstractEvent {
     return reason;
   }
 
-  public NetworkAddress hostname() {
+  public String hostname() {
     return hostname;
   }
 

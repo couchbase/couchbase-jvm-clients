@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.Mono;
 

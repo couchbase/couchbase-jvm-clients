@@ -25,7 +25,6 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.env.SecurityConfig;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
@@ -144,7 +143,7 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param serviceContext the core context.
    * @param circuitBreakerConfig the circuit breaker config used.
    */
-  BaseEndpoint(final NetworkAddress hostname, final int port, final EventLoopGroup eventLoopGroup,
+  BaseEndpoint(final String hostname, final int port, final EventLoopGroup eventLoopGroup,
                final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
                final ServiceType serviceType, final boolean pipelined) {
     this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
@@ -228,7 +227,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
 
         final Bootstrap channelBootstrap = new Bootstrap()
-          .remoteAddress(endpointContext.remoteHostname().nameOrAddress(), endpointContext.remotePort())
+          .remoteAddress(endpointContext.remoteHostname(), endpointContext.remotePort())
           .group(eventLoopGroup)
           .channel(channelFrom(eventLoopGroup))
           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)

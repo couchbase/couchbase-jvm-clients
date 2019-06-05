@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +52,7 @@ class AbstractBucketConfigTest {
         direct.put(ServiceType.MANAGER, 1235);
         ssl.put(ServiceType.KV, 4567);
 
-        nodeInfos.add(new NodeInfo(NetworkAddress.localhost(), direct, ssl, null));
+        nodeInfos.add(new NodeInfo("127.0.0.1", direct, ssl, null));
 
         BucketConfig bc = new SampleBucketConfig(nodeInfos, null);
 
@@ -67,7 +66,7 @@ class AbstractBucketConfigTest {
 
         SampleBucketConfig(List<NodeInfo> nodeInfos, List<PortInfo> portInfos) {
             super(UUID, NAME, LOCATOR, URI, STREAMING_URI, nodeInfos, portInfos, null,
-                NetworkAddress.localhost(), null);
+               "127.0.0.1", null);
         }
 
         @Override

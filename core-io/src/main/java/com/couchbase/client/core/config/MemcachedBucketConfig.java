@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
@@ -68,7 +67,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JsonProperty("nodesExt") List<PortInfo> portInfos,
             @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
             @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
-            @JacksonInject("origin") NetworkAddress origin) {
+            @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities);
         this.rev = rev;

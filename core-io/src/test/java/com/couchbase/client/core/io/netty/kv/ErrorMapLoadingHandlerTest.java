@@ -26,7 +26,6 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.util.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -81,7 +80,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
-    endpointContext = new EndpointContext(coreContext, NetworkAddress.localhost(), 1234,
+    endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 
@@ -126,8 +125,8 @@ class ErrorMapLoadingHandlerTest {
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(100));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
-    EndpointContext endpointContext = endpointContext = new EndpointContext(coreContext,
-      NetworkAddress.localhost(), 1234, null, ServiceType.KV,
+    EndpointContext endpointContext = new EndpointContext(coreContext,
+      "127.0.0.1", 1234, null, ServiceType.KV,
       Optional.empty(), Optional.empty(), Optional.empty());
 
     ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);

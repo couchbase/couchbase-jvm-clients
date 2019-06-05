@@ -34,9 +34,8 @@ public class StandardMemcachedHashingStrategy implements MemcachedHashingStrateg
 
     @Override
     public String hash(final NodeInfo info, final int repetition) {
-        String hostname = info.rawHostname();
         int port = info.services().get(ServiceType.KV);
-        return hostname + ":" + port + "-" + repetition;
+        return info.hostname() + ":" + port + "-" + repetition;
     }
 
 }

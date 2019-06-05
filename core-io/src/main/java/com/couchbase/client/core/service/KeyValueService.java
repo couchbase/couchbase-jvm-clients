@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.PartitionSelectionStrategy;
 
 import java.util.Optional;
@@ -32,13 +31,13 @@ public class KeyValueService extends PooledService {
 
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
 
-  private final NetworkAddress hostname;
+  private final String hostname;
   private final int port;
   private final String bucketname;
   private final Credentials credentials;
 
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
-                         final NetworkAddress hostname, final int port, final String bucketname,
+                         final String hostname, final int port, final String bucketname,
                          final Credentials credentials) {
     super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV, Optional.of(bucketname)));
     this.hostname = hostname;

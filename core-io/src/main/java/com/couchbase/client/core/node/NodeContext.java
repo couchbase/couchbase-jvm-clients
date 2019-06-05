@@ -17,7 +17,6 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.NetworkAddress;
 
 import java.util.Map;
 
@@ -35,14 +34,14 @@ public class NodeContext extends CoreContext {
     this.nodeIdentifier = nodeIdentifier;
   }
 
-  public NetworkAddress remoteHostname() {
+  public String remoteHostname() {
     return nodeIdentifier.address();
   }
 
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", redactSystem(remoteHostname().nameOrAddress()));
+    input.put("remote", redactSystem(remoteHostname()));
     input.put("managerPort", redactSystem(nodeIdentifier.managerPort()));
   }
 

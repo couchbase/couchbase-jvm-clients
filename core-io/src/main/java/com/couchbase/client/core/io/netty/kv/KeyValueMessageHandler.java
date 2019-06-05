@@ -36,7 +36,6 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -255,7 +254,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to extract the config from, potentially.
    */
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
-    final NetworkAddress origin = request.context().dispatchedTo();
+    final String origin = request.context().dispatchedTo();
     RetryOrchestrator.retryImmediately(ioContext, request);
 
     body(response)

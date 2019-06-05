@@ -28,7 +28,6 @@ import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.ServiceConfig;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -357,7 +356,7 @@ public class Node {
                                   final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
     ServiceConfig sc = env.serviceConfig();
-    NetworkAddress address = identifier.address();
+    String address = identifier.address();
 
     switch (serviceType) {
       case KV:

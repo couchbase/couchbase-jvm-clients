@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonInject;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
@@ -40,7 +39,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
     private final PartitionInfo partitionInfo;
     private final List<NodeInfo> partitionHosts;
-    private final Set<NetworkAddress> nodesWithPrimaryPartitions;
+    private final Set<String> nodesWithPrimaryPartitions;
 
     private final boolean tainted;
     private final long rev;
@@ -69,7 +68,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
       @JsonProperty("nodesExt") List<PortInfo> portInfos,
       @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
       @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
-      @JacksonInject("origin") NetworkAddress origin) {
+      @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities);
         this.partitionInfo = partitionInfo;
@@ -91,9 +90,9 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
      * @param partitions the partitions.
      * @return a set containing the addresses of nodes with primary partitions.
      */
-    private static Set<NetworkAddress> buildNodesWithPrimaryPartitions(final List<NodeInfo> nodeInfos,
+    private static Set<String> buildNodesWithPrimaryPartitions(final List<NodeInfo> nodeInfos,
                                                                        final List<Partition> partitions) {
-        Set<NetworkAddress> nodes = new HashSet<NetworkAddress>(nodeInfos.size());
+        Set<String> nodes = new HashSet<>(nodeInfos.size());
         for (Partition partition : partitions) {
             int index = partition.master();
             if (index >= 0) {
@@ -113,7 +112,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     private static List<NodeInfo> buildPartitionHosts(List<NodeInfo> nodeInfos, PartitionInfo partitionInfo) {
         List<NodeInfo> partitionHosts = new ArrayList<NodeInfo>();
         for (String rawHost : partitionInfo.partitionHosts()) {
-            NetworkAddress convertedHost;
+            String convertedHost;
             int directPort;
             try {
                 String parts[] = rawHost.split(":");
@@ -129,12 +128,15 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
                             host += ":";
                         }
                     }
+                    if (host.startsWith("[") && host.endsWith("]")) {
+                        host = host.substring(1, host.length() - 1);
+                    }
                 } else {
                     // Simple IPv4 Handling
                     host = parts[0];
                 }
 
-                convertedHost = NetworkAddress.create(host);
+                convertedHost = host;
                 try {
                     directPort = Integer.parseInt(port);
                 } catch (NumberFormatException e) {
@@ -171,7 +173,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
         return tainted;
     }
 
-    public boolean hasPrimaryPartitionsOnNode(final NetworkAddress hostname) {
+    public boolean hasPrimaryPartitionsOnNode(final String hostname) {
         return nodesWithPrimaryPartitions.contains(hostname);
     }
 

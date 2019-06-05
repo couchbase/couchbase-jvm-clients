@@ -19,7 +19,6 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.ManagerEndpoint;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.service.strategy.RoundRobinSelectionStrategy;
 
 import java.time.Duration;
@@ -27,10 +26,10 @@ import java.util.Optional;
 
 public class ManagerService extends PooledService {
 
-  private final NetworkAddress hostname;
+  private final String hostname;
   private final int port;
 
-  public ManagerService(CoreContext coreContext, final NetworkAddress hostname, final int port) {
+  public ManagerService(CoreContext coreContext, final String hostname, final int port) {
     super(new ManagerServiceConfig(), new ServiceContext(coreContext, hostname, port, ServiceType.MANAGER, Optional.empty()));
     this.hostname = hostname;
     this.port = port;

@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.core.node;
 
-import com.couchbase.client.core.io.NetworkAddress;
-
 import java.util.Objects;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
@@ -24,22 +22,22 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 /**
  * Identifies a node uniquely in the cluster.
  *
- * <p>If you ask yourself: why is the {@link NetworkAddress} not enough? Well, let me tell you that
+ * <p>If you ask yourself: why is the hostname not enough? Well, let me tell you that
  * it is possible to run multiple nodes on the same host if you compile it from source and know how. So the
  * hostname alone is not enough, we also need to know the cluster manager port to properly identify each
  * node.</p>
  */
 public class NodeIdentifier {
 
-  private final NetworkAddress address;
+  private final String address;
   private final int managerPort;
 
-  public NodeIdentifier(final NetworkAddress address, final int managerPort) {
+  public NodeIdentifier(final String address, final int managerPort) {
     this.address = address;
     this.managerPort = managerPort;
   }
 
-  public NetworkAddress address() {
+  public String address() {
     return address;
   }
 

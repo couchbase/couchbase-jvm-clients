@@ -20,7 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;

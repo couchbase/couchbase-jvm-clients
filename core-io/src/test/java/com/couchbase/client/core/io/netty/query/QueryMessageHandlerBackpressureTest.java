@@ -43,7 +43,6 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.RoleBasedCredentials;
-import com.couchbase.client.core.io.NetworkAddress;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -98,7 +97,7 @@ class QueryMessageHandlerBackpressureTest {
   void requestRecordsExplicitly() throws Exception {
     EndpointContext endpointContext = new EndpointContext(
       core.context(),
-      NetworkAddress.localhost(),
+      "127.0.0.1",
       1234,
       NoopCircuitBreaker.INSTANCE,
       ServiceType.QUERY,
