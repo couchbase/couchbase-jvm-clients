@@ -263,6 +263,11 @@ class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
   private[scala] def retryStrategy = coreEnv.retryStrategy()
 
   // Create the thread pool that will be used for all `Future`s throughout the SDK.
+  // Note that the app will also need its own ExecutionContext to do anything with the returned `Future`. It could be
+  // possible in future to expose this internal thread-pool:
+  // 1. Easier for app as it doesn't have to make own.  Would still have to add an import line though.
+  // 2. More dangerous for us as app could mis-use thread pool.
+  // 3. Can be more efficient as less context switching.
 
   // Implementation note: there are some potentially long-running operations that will need to go on this pool.  E.g.
   // buffering a query result.  So, make it unlimited.
