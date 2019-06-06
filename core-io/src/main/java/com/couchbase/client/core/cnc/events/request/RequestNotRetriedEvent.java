@@ -30,7 +30,7 @@ public class RequestNotRetriedEvent extends AbstractEvent {
   private final Class<? extends Request> clazz;
 
   public RequestNotRetriedEvent(final Class<? extends Request> clazz, final RequestContext context) {
-    super(Severity.WARN, Category.REQUEST, Duration.ZERO, context);
+    super(Severity.INFO, Category.REQUEST, Duration.ZERO, context);
     this.clazz = clazz;
   }
 

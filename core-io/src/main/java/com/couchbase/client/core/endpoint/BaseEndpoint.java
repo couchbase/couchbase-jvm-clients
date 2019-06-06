@@ -56,6 +56,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -343,9 +344,10 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param channel the channel to close.
    */
   private void closeChannel(final Channel channel) {
-    if (channel != null) {
+    if (channel != null && !channel.eventLoop().isShutdown()) {
       final EndpointContext endpointContext = this.endpointContext.get();
       final long start = System.nanoTime();
+
       channel.disconnect().addListener(future -> {
         Duration latency = Duration.ofNanos(System.nanoTime() - start);
         state.set(EndpointState.DISCONNECTED);

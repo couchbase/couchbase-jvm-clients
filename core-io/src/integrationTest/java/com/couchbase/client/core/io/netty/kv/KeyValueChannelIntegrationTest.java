@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
@@ -65,9 +66,10 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     TestNodeConfig node = config().nodes().get(0);
 
     env = environment().build();
-    CoreContext coreContext = new CoreContext(null, 1, env);
+
+    Core core = Core.create(env);
     endpointContext = new EndpointContext(
-      coreContext,
+      core.context(),
       node.hostname(),
       node.ports().get(Services.KV),
       null,
