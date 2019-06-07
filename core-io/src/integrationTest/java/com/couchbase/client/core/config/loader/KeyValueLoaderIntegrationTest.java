@@ -17,7 +17,7 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -26,8 +26,6 @@ import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.time.Duration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -59,14 +57,14 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
 
     Core core = Core.create(env);
     KeyValueLoader loader = new KeyValueLoader(core);
-    BucketConfig loaded = loader.load(
+    ProposedBucketConfigContext loaded = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV),
       config().bucketname()
     ).block();
 
     assertNotNull(loaded);
-    assertEquals(config().bucketname(), loaded.name());
+    assertEquals(config().bucketname(), loaded.bucketName());
 
     core.shutdown().block();
   }

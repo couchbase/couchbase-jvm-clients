@@ -17,16 +17,13 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.config.BucketConfigParser;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -88,13 +85,13 @@ public abstract class BaseLoader implements Loader {
    * @return if successful, returns a config. It fails the mono otherwise.
    */
   @Override
-  public Mono<BucketConfig> load(final NodeIdentifier seed, final int port, final String bucket) {
+  public Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, final int port, final String bucket) {
     return core
       .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))
-      .map(config -> BucketConfigParser.parse(config, core.context().environment(), seed.address()))
+      .map(config -> new ProposedBucketConfigContext(bucket, config, seed.address()))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException
         ? ex
         : new ConfigException("Caught exception while loading config.", ex)

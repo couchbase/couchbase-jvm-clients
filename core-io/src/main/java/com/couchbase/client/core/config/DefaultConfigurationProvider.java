@@ -36,7 +36,6 @@ import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
-import com.couchbase.client.core.msg.kv.GetCollectionManifestResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
@@ -45,11 +44,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
@@ -150,7 +146,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
           ))
-          .doOnNext(this::checkAndApplyConfig)
+          .map(ctx -> {
+            proposeBucketConfig(ctx);
+            return ctx;
+          })
           .then(registerRefresher(name))
           .then()
           .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));

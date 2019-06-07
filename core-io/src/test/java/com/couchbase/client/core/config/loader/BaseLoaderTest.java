@@ -19,6 +19,8 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.BucketConfigParser;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -75,24 +77,10 @@ class BaseLoaderTest {
     when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
       .thenReturn(Mono.empty());
 
-    BucketConfig config = loader.load(SEED, PORT, BUCKET).block();
+    ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET).block();
+    BucketConfig config = BucketConfigParser.parse(ctx.config(), core.context().environment(), ctx.origin());
     assertEquals("default", config.name());
     assertEquals(1073, config.rev());
-  }
-
-  @Test
-  void failsWhenConfigNotParsable() {
-    Loader loader = new BaseLoader(core, SERVICE) {
-      @Override
-      protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
-        return Mono.just("invalid".getBytes(UTF_8));
-      }
-    };
-
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
-      .thenReturn(Mono.empty());
-
-    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET).block());
   }
 
   @Test

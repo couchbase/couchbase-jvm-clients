@@ -18,6 +18,8 @@ package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.BucketConfigParser;
+import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -60,12 +62,13 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
     Core core = Core.create(env);
     ClusterManagerLoader loader = new ClusterManagerLoader(core);
     int port = config.ports().get(Services.MANAGER);
-    BucketConfig loaded = loader.load(
+    ProposedBucketConfigContext ctx = loader.load(
       new NodeIdentifier(config.hostname(), port),
       port,
       config().bucketname()
     ).block();
 
+    BucketConfig loaded = BucketConfigParser.parse(ctx.config(), env, ctx.origin());
     assertNotNull(loaded);
     assertEquals(config().bucketname(), loaded.name());
 
