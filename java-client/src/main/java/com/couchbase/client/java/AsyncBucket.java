@@ -22,7 +22,6 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
@@ -34,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static com.couchbase.client.java.ReactiveBucket.DEFAULT_SPATIAL_VIEW_OPTIONS;
+
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 
 /**
@@ -150,32 +149,7 @@ public class AsyncBucket {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     return new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
-      viewName, query, keysJson, development, false);
+      viewName, query, keysJson, development);
   }
 
-  public CompletableFuture<ViewResult> spatialViewQuery(final String designDoc, final String viewName) {
-    return spatialViewQuery(designDoc, viewName, DEFAULT_SPATIAL_VIEW_OPTIONS);
-  }
-
-  public CompletableFuture<ViewResult> spatialViewQuery(final String designDoc, final String viewName,
-                                                        final SpatialViewOptions options) {
-    return ViewAccessor.viewQueryAsync(core, spatialViewRequest(designDoc, viewName, options));
-  }
-
-  ViewRequest spatialViewRequest(final String designDoc, final String viewName, final SpatialViewOptions options) {
-    notNullOrEmpty(designDoc, "DesignDoc");
-    notNullOrEmpty(viewName, "ViewName");
-    notNull(options, "ViewOptions");
-
-    SpatialViewOptions.Built opts = options.build();
-
-    String query = opts.query();
-    boolean development = opts.development();
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-    return new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
-      viewName, query, Optional.empty(), development, true);
-  }
 }

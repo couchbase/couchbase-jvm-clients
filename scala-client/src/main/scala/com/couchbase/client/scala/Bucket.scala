@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.util.AsyncUtils
-import com.couchbase.client.scala.view.{SpatialViewOptions, ViewOptions, ViewResult}
+import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -88,21 +88,4 @@ class Bucket private[scala] (val async: AsyncBucket) {
   AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
   }
 
-  /** Performs a spatial view query against the cluster.
-    *
-    * This is synchronous (blocking).  See [[Bucket.reactive]] for a reactive streaming version of this API, and
-    * [[Bucket.async]] for an async version.
-    *
-    * @param designDoc the view design document to use
-    * @param viewName  the view to use
-    * @param options   any spatial view query options - see [[SpatialViewOptions]] for documentation
-    *
-    * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
-    *         `Failure`
-    */
-  def spatialViewQuery(designDoc: String,
-                       viewName: String,
-                       options: SpatialViewOptions = SpatialViewOptions()): Try[ViewResult] = {
-    AsyncUtils.block(async.spatialViewQuery(designDoc, viewName, options))
-  }
 }

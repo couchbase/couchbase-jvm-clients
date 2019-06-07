@@ -45,7 +45,6 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   private final Credentials credentials;
   private final String bucket;
   private final boolean development;
-  private final boolean spatial;
   private final String design;
   private final String view;
   private final String query;
@@ -54,14 +53,13 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   public ViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                      final Credentials credentials, final String bucket, final String design,
                      final String view, final String query, Optional<byte[]> keysJson,
-                     final boolean development, final boolean spatial) {
+                     final boolean development) {
     super(timeout, ctx, retryStrategy);
     this.credentials = credentials;
     this.bucket = bucket;
     this.design = design;
     this.view = view;
     this.development = development;
-    this.spatial = spatial;
     this.query = query;
     this.keysJson = keysJson;
   }
@@ -76,7 +74,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     StringBuilder path = new StringBuilder();
     path.append("/").append(bucket).append("/_design/");
     path.append(development ? "dev_" + design : design);
-    path.append(spatial ? "/_spatial/" : "/_view/");
+    path.append("/_view/");
     path.append(view);
     path.append("?").append(query);
 

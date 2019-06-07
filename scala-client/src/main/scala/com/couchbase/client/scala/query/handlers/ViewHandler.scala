@@ -93,8 +93,7 @@ private[scala] class ViewHandler() {
           viewName,
           params,
           bytes.asJava,
-          options.development.getOrElse(false),
-          false))
+          options.development.getOrElse(false)))
     }
   }
 }

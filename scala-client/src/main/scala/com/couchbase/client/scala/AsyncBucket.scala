@@ -16,16 +16,10 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.msg.query.QueryResponse
-import com.couchbase.client.core.msg.view.ViewResponse
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.query.QueryOptions
-import com.couchbase.client.scala.query.handlers.{SpatialViewHandler, ViewHandler}
-import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
-import com.couchbase.client.scala.view.{SpatialViewOptions, ViewMeta, ViewOptions, ViewResult}
+import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 /** Represents a Couchbase bucket resource.
   *
@@ -48,7 +42,7 @@ class AsyncBucket private[scala](val name: String,
 
   /** Opens and returns a Couchbase scope resource.
     *
-    * @param name the name of the scope
+    * @param scope the name of the scope
     */
   def scope(scope: String): Future[AsyncScope] = {
     Future {
@@ -92,34 +86,6 @@ class AsyncBucket private[scala](val name: String,
                 viewName: String,
                 options: ViewOptions = ViewOptions()): Future[ViewResult] = {
     reactive.viewQuery(designDoc, viewName, options)
-
-      .flatMap(response => {
-        response.rows.collectSeq()
-
-          .map(rows => {
-            ViewResult(response.meta, rows)
-          })
-      })
-
-      .toFuture
-  }
-
-  /** Performs a spatial view query against the cluster.
-    *
-    * This is asynchronous.  See [[Bucket.reactive]] for a reactive streaming version of this API, and
-    * [[Bucket]] for a blocking version.
-    *
-    * @param designDoc the view design document to use
-    * @param viewName  the view to use
-    * @param options   any spatial view query options - see [[SpatialViewOptions]] for documentation
-    *
-    * @return a `Future` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
-    *         `Failure`
-    */
-  def spatialViewQuery(designDoc: String,
-                       viewName: String,
-                       options: SpatialViewOptions = SpatialViewOptions()) = {
-    reactive.spatialViewQuery(designDoc, viewName, options)
 
       .flatMap(response => {
         response.rows.collectSeq()

@@ -21,12 +21,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ReactiveViewResult;
-import com.couchbase.client.java.view.SpatialViewOptions;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
-import static com.couchbase.client.java.view.SpatialViewOptions.spatialViewOptions;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
 /**
@@ -35,7 +33,6 @@ import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 public class ReactiveBucket {
 
   static final ViewOptions DEFAULT_VIEW_OPTIONS = viewOptions();
-  static final SpatialViewOptions DEFAULT_SPATIAL_VIEW_OPTIONS = spatialViewOptions();
 
   /**
    * Holds the underlying async bucket reference.
@@ -121,18 +118,6 @@ public class ReactiveBucket {
     return ViewAccessor.viewQueryReactive(
       asyncBucket.core(),
       asyncBucket.viewRequest(designDoc, viewName, options)
-    );
-  }
-
-  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName) {
-    return spatialViewQuery(designDoc, viewName, DEFAULT_SPATIAL_VIEW_OPTIONS);
-  }
-
-  public Mono<ReactiveViewResult> spatialViewQuery(final String designDoc, final String viewName,
-                                                   final SpatialViewOptions options) {
-    return ViewAccessor.viewQueryReactive(
-      asyncBucket.core(),
-      asyncBucket.spatialViewRequest(designDoc, viewName, options)
     );
   }
 
