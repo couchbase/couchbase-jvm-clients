@@ -18,6 +18,8 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.util.ConnectionString;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,18 +36,35 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
    */
   private final ConnectionString connectionString;
 
+  private final BuilderPropertySetter setter = new BuilderPropertySetter();
+
   public ConnectionStringPropertyLoader(final String connectionString) {
     this.connectionString = ConnectionString.create(connectionString);
   }
 
   @Override
   public void load(final CoreEnvironment.Builder builder) {
+    final boolean schemeIsHttp = ConnectionString.Scheme.HTTP == connectionString.scheme();
     Set<SeedNode> seeds = connectionString
-      .allHosts()
+      .hosts()
       .stream()
-      .map(a -> SeedNode.create(a.getAddress().getHostAddress()))
+      .map(a -> SeedNode.create(
+          a.hostname(),
+          !schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
+          schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty()
+      ))
       .collect(Collectors.toSet());
+
+    for (Map.Entry<String, String> entry : connectionString.params().entrySet()) {
+      try {
+        setter.set(builder, entry.getKey(), entry.getValue());
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException(
+          "Failed to apply connection string property \"" + entry.getKey() + "\". " + e.getMessage(), e);
+      }
+    }
 
     builder.seedNodes(seeds);
   }
+
 }

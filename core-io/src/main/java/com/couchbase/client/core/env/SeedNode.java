@@ -35,4 +35,12 @@ public class SeedNode {
     return httpPort;
   }
 
+  @Override
+  public String toString() {
+    return "SeedNode{" +
+      "address='" + address + '\'' +
+      ", kvPort=" + kvPort +
+      ", httpPort=" + httpPort +
+      '}';
+  }
 }
