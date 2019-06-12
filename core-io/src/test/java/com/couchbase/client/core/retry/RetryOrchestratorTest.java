@@ -83,7 +83,7 @@ class RetryOrchestratorTest {
     assertEquals(1, eventBus.publishedEvents().size());
     RequestNotRetriedEvent retryEvent = (RequestNotRetriedEvent) eventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.INFO, retryEvent.severity());
-    assertEquals(Event.Category.REQUEST, retryEvent.category());
+    assertEquals(Event.Category.REQUEST.path(), retryEvent.category());
     assertEquals(requestContext, retryEvent.context());
   }
 
@@ -127,7 +127,7 @@ class RetryOrchestratorTest {
     assertEquals(1, eventBus.publishedEvents().size());
     RequestRetriedEvent retryEvent = (RequestRetriedEvent) eventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.DEBUG, retryEvent.severity());
-    assertEquals(Event.Category.REQUEST, retryEvent.category());
+    assertEquals(Event.Category.REQUEST.path(), retryEvent.category());
     assertEquals(requestContext, retryEvent.context());
   }
 

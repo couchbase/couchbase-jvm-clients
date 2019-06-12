@@ -46,14 +46,14 @@ class LoggingEventConsumerTest {
   void formatAndLogWithoutContextOrDuration() {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO, null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[IO][MyEvent]");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent]");
   }
 
   @Test
   void formatAndLogWithDuration() {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123), null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[IO][MyEvent][123000µs]");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123000µs]");
   }
 
   @Test
@@ -63,7 +63,7 @@ class LoggingEventConsumerTest {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO,
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[IO][MyEvent] {\"foo\":true}");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent] {\"foo\":true}");
   }
 
   @Test
@@ -73,7 +73,7 @@ class LoggingEventConsumerTest {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123),
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[IO][MyEvent][123000µs] {\"foo\":true}");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123000µs] {\"foo\":true}");
   }
 
   @Test
@@ -81,7 +81,7 @@ class LoggingEventConsumerTest {
     Event event = new EventWithDescription("some text");
     loggingEventConsumer.accept(event);
     verify(logger, times(1))
-      .debug("[IO][EventWithDescription][3600000000µs] some text");
+      .debug("[com.couchbase.io][EventWithDescription][3600000000µs] some text");
   }
 
   static class MyEvent extends AbstractEvent {

@@ -43,7 +43,7 @@ public interface Event {
    *
    * @return the event category.
    */
-  Category category();
+  String category();
 
   /**
    * Returns the duration of this event.
@@ -108,6 +108,8 @@ public interface Event {
     TRACING
   }
 
+  String CATEGORY_PREFIX = "com.couchbase.";
+
   /**
    * Describes the category of any given event.
    */
@@ -115,35 +117,45 @@ public interface Event {
     /**
      * Represents an event from the IO subsystem.
      */
-    IO,
+    IO(CATEGORY_PREFIX + "io"),
     /**
      * Represents an event from the Endpoint layer.
      */
-    ENDPOINT,
+    ENDPOINT(CATEGORY_PREFIX + "endpoint"),
     /**
      * Represents an event around a specific request instance.
      */
-    REQUEST,
+    REQUEST(CATEGORY_PREFIX + "request"),
     /**
      * Represents an event that concerns the JVM/OS/system.
      */
-    SYSTEM,
+    SYSTEM(CATEGORY_PREFIX + "system"),
     /**
      * Represents an event from the Service layer.
      */
-    SERVICE,
+    SERVICE(CATEGORY_PREFIX + "service"),
     /**
      * Represents an event from the Node layer.
      */
-    NODE,
+    NODE(CATEGORY_PREFIX + "node"),
     /**
      * Represents an event from the config subsystem.
      */
-    CONFIG,
+    CONFIG(CATEGORY_PREFIX + "config"),
     /**
      * Represents an event from the upper level core subsystem.
      */
-    CORE
+    CORE(CATEGORY_PREFIX + "core");
+
+    private final String path;
+
+    Category(String path) {
+      this.path = path;
+    }
+
+    public String path() {
+      return path;
+    }
   }
 
 }

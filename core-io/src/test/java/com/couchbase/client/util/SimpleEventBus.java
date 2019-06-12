@@ -57,7 +57,7 @@ public class SimpleEventBus implements EventBus {
 
   @Override
   public synchronized PublishResult publish(final Event event) {
-    if (!ignoreSystemEvents || event.category() != Event.Category.SYSTEM) {
+    if (!ignoreSystemEvents || !event.category().equals(Event.Category.SYSTEM.path())) {
       publishedEvents.add(event);
     }
     return PublishResult.SUCCESS;

@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.LoggerConfig;
 
 import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -43,9 +45,11 @@ public class LoggingEventConsumer implements Consumer<Event> {
   private static final boolean SLF4J_AVAILABLE = slf4JOnClasspath();
 
   /**
-   * Contains the selected logger that should be used for logging.
+   * Contains the selected loggers that should be used for logging.
    */
-  private final Logger logger;
+  private final Map<String, Logger> loggers = new HashMap<>(Event.Category.values().length);
+
+  private final LoggerConfig loggerConfig;
 
   /**
    * Creates a new {@link LoggingEventConsumer} with all defaults.
@@ -56,12 +60,16 @@ public class LoggingEventConsumer implements Consumer<Event> {
     return new LoggingEventConsumer(LoggerConfig.create());
   }
 
-  public static LoggingEventConsumer create(LoggerConfig loggerConfig) {
+  public static LoggingEventConsumer create(final LoggerConfig loggerConfig) {
     return new LoggingEventConsumer(loggerConfig);
   }
 
-  private LoggingEventConsumer(LoggerConfig loggerConfig) {
-    String name = loggerConfig.loggerName();
+  private LoggingEventConsumer(final LoggerConfig loggerConfig) {
+    this.loggerConfig = loggerConfig;
+  }
+
+  private Logger createLogger(final String name) {
+    Logger logger;
 
     if (loggerConfig.customLogger() != null) {
       logger = loggerConfig.customLogger();
@@ -72,6 +80,8 @@ public class LoggingEventConsumer implements Consumer<Event> {
     } else {
       logger = new JdkLogger(name);
     }
+
+    return logger;
   }
 
   @Override
@@ -102,6 +112,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     String logLine = logLineBuilder.toString();
+
+    Logger logger = loggers.get(event.category());
+    if (logger == null) {
+      logger = createLogger(event.category());
+      loggers.put(event.category(), logger);
+    }
+
     switch (event.severity()) {
       case VERBOSE:
         logger.trace(logLine);

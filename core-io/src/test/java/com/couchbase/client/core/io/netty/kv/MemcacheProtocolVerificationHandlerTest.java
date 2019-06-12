@@ -104,7 +104,7 @@ class MemcacheProtocolVerificationHandlerTest {
         eventBus.publishedEvents().get(0);
 
       assertEquals(Event.Severity.ERROR, event.severity());
-      assertEquals(Event.Category.IO, event.category());
+      assertEquals(Event.Category.IO.path(), event.category());
       assertTrue(event.description().contains("Invalid Packet detected:"));
     } finally {
       channel.finishAndReleaseAll();

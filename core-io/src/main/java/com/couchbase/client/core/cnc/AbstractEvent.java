@@ -24,10 +24,14 @@ import java.time.Duration;
 public abstract class AbstractEvent implements Event {
 
   private final Severity severity;
-  private final Category category;
+  private final String category;
   private final Duration duration;
   private final Context context;
   private final long createdAt;
+
+  protected AbstractEvent(Severity severity, Category category, Duration duration, Context context) {
+    this(severity, category.path(), duration, context);
+  }
 
   /**
    * Creates a new abstract event.
@@ -37,8 +41,7 @@ public abstract class AbstractEvent implements Event {
    * @param duration the duration for this event.
    * @param context the context if provided.
    */
-  protected AbstractEvent(Severity severity, Category category, Duration duration,
-                          Context context) {
+  protected AbstractEvent(Severity severity, String category, Duration duration, Context context) {
     this.severity = severity;
     this.category = category;
     this.duration = duration;
@@ -52,7 +55,7 @@ public abstract class AbstractEvent implements Event {
   }
 
   @Override
-  public Category category() {
+  public String category() {
     return category;
   }
 
