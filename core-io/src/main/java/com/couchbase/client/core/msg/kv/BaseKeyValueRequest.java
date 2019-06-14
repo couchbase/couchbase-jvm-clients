@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.error.CollectionDoesNotExistException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;

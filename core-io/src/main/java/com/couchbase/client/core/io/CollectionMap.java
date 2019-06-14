@@ -16,12 +16,49 @@
 
 package com.couchbase.client.core.io;
 
+import com.couchbase.client.core.util.UnsignedLEB128;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The {@link CollectionMap} maps a locator to the encoded collection ID representation.
  */
-public class CollectionMap extends ConcurrentHashMap<CollectionIdentifier, byte[]> {
+public class CollectionMap {
+
+  /**
+   * Holds the actual inner map.
+   */
+  private final ConcurrentHashMap<CollectionIdentifier, byte[]> inner = new ConcurrentHashMap<>();
+
+  /**
+   * Holds the identifier for the default collection.
+   */
+  private static final byte[] DEFAULT_ID = UnsignedLEB128.encode(0);
+
+  /**
+   * Retrieves the collection id for the given identifier.
+   *
+   * Might return null if not found! Also it will return the default id for the default scope/collection.
+   *
+   * @param key the key to check
+   * @return the collection id.
+   */
+  public byte[] get(final CollectionIdentifier key) {
+    if (key.isDefault()) {
+      return DEFAULT_ID;
+    }
+    return inner.get(key);
+  }
+
+  /**
+   * Stores a new collection ID with the given identifier.
+   *
+   * @param key the key to store.
+   * @param value the value associated.
+   */
+  public void put(final CollectionIdentifier key, byte[] value) {
+    inner.put(key, value);
+  }
 
   /**
    * Checks if the given bucket is at all present in the map.
@@ -30,7 +67,7 @@ public class CollectionMap extends ConcurrentHashMap<CollectionIdentifier, byte[
    * @return true if so, false otherwise.
    */
   public boolean hasBucketMap(final String bucket) {
-    for (CollectionIdentifier identifier : keySet()) {
+    for (CollectionIdentifier identifier : inner.keySet()) {
       if (bucket.equals(identifier.bucket())) {
         return true;
       }

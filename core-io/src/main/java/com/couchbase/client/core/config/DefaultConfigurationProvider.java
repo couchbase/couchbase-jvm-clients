@@ -247,7 +247,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           core.context().environment().timeoutConfig().kvTimeout(),
           core.context(),
           BestEffortRetryStrategy.INSTANCE,
-          new CollectionIdentifier(bucket, null, null)
+          new CollectionIdentifier(bucket, Optional.empty(), Optional.empty())
         );
         core.send(request);
         return Reactor

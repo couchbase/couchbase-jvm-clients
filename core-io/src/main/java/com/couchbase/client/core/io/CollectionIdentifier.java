@@ -28,12 +28,11 @@ import static java.util.Objects.requireNonNull;
  */
 public class CollectionIdentifier {
 
-
-
   public static final String DEFAULT_SCOPE = "_default";
   public static final String DEFAULT_COLLECTION = "_default";
 
   private final String bucket;
+  private final boolean isDefault;
   private final Optional<String> scope;
   private final Optional<String> collection;
 
@@ -49,6 +48,7 @@ public class CollectionIdentifier {
     this.bucket = bucket;
     this.scope = scope;
     this.collection = collection;
+    this.isDefault = Optional.of(DEFAULT_SCOPE).equals(scope) && Optional.of(DEFAULT_COLLECTION).equals(collection);
   }
 
   public String bucket() {
@@ -61,6 +61,10 @@ public class CollectionIdentifier {
 
   public Optional<String> collection() {
     return collection;
+  }
+
+  public boolean isDefault() {
+    return isDefault;
   }
 
   @Override
@@ -84,6 +88,7 @@ public class CollectionIdentifier {
       "bucket='" + bucket + '\'' +
       ", scope=" + scope +
       ", collection=" + collection +
+      ", isDefault=" + isDefault +
       '}';
   }
 }
