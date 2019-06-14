@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>scala-implicits_${scala.compat.version}</artifactId>
-    <version>1.0.0-alpha.4</version>
+    <version>1.0.0-alpha.5-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Couchbase Scala SDK Implicits</name>
