@@ -226,6 +226,9 @@ public abstract class BaseEndpoint implements Endpoint {
           .connectTimeout()
           .toMillis();
 
+        if (eventLoopGroup.isShutdown()) {
+          throw new IllegalStateException("Event Loop is already shut down, not pursuing connect attempt!");
+        }
 
         final Bootstrap channelBootstrap = new Bootstrap()
           .remoteAddress(endpointContext.remoteHostname(), endpointContext.remotePort())
