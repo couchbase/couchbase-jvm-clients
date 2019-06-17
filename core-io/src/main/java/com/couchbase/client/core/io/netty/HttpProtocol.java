@@ -21,6 +21,8 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -41,8 +43,7 @@ public class HttpProtocol {
    * @param user the username.
    * @param password the password.
    */
-  public static void addHttpBasicAuth(final HttpRequest request, final String user,
-                                      final String password) {
+  public static void addHttpBasicAuth(final HttpRequest request, final String user, final String password) {
     // if both user and password are null or empty, don't add http basic auth
     // this is usually the case when certificate auth is used.
     if ((user == null || user.isEmpty()) && (password == null || password.isEmpty())) {
@@ -50,8 +51,8 @@ public class HttpProtocol {
     }
 
     final String pw = password == null ? "" : password;
-
-    ByteBuf raw = Unpooled.buffer(user.length() + pw.length() + 1);
+    final int userLength = user == null ? 0 : user.length();
+    ByteBuf raw = Unpooled.buffer(userLength + pw.length() + 1);
     raw.writeBytes((user + ":" + pw).getBytes(UTF_8));
     ByteBuf encoded = Base64.encode(raw, false);
     request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic "
@@ -75,6 +76,36 @@ public class HttpProtocol {
       remoteHost = remoteAddress.toString();
     }
     return remoteHost;
+  }
+
+  /**
+   * Converts the http protocol status into its generic format.
+   *
+   * @param status the protocol status.
+   * @return the response status.
+   */
+  public static ResponseStatus decodeStatus(final HttpResponseStatus status) {
+    if (status == null) {
+      return ResponseStatus.UNKNOWN;
+    }
+
+    if (status.equals(HttpResponseStatus.OK)
+      || status.equals(HttpResponseStatus.ACCEPTED)
+      || status.equals(HttpResponseStatus.CREATED)) {
+      return ResponseStatus.SUCCESS;
+    } else if (status.equals(HttpResponseStatus.NOT_FOUND)) {
+      return ResponseStatus.NOT_FOUND;
+    } else if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      return ResponseStatus.INVALID_ARGS;
+    } else if (status.equals(HttpResponseStatus.INTERNAL_SERVER_ERROR)) {
+      return ResponseStatus.INTERNAL_ERROR;
+    } else if (status.equals(HttpResponseStatus.UNAUTHORIZED)) {
+      return ResponseStatus.NO_ACCESS;
+    } else if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
+      return ResponseStatus.TOO_MANY_REQUESTS;
+    } else {
+      return ResponseStatus.UNKNOWN;
+    }
   }
 
 }

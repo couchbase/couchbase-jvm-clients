@@ -30,13 +30,13 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
-import com.couchbase.client.core.util.ResponseStatusConverter;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
@@ -172,7 +172,7 @@ public abstract class ChunkedMessageHandler
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
     currentResponseStatus = msg;
-    convertedResponseStatus = ResponseStatusConverter.fromHttp(msg.status().code());
+    convertedResponseStatus = HttpProtocol.decodeStatus(msg.status());
     chunkResponseParser.initialize(ctx.channel().config());
   }
 

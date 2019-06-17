@@ -16,15 +16,24 @@
 
 package com.couchbase.client.core.msg.manager;
 
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.msg.Encodable;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 
-public interface ManagerRequest<R extends Response> extends Request<R> {
+/**
+ * Parent interface for all requests going to the cluster manager.
+ */
+public interface ManagerRequest<R extends Response> extends Request<R>, Encodable<FullHttpRequest> {
 
-
-  FullHttpRequest encode();
-
-  R decode(byte[] content);
+  /**
+   * Decodes a manager response into its response entity.
+   *
+   * @param response the http header of the response.
+   * @param content the actual content of the response.
+   * @return the decoded value.
+   */
+  R decode(HttpResponse response, byte[] content);
 
 }

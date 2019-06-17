@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.io.netty.config;
+package com.couchbase.client.core.io.netty.manager;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -31,10 +32,13 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.service.ServiceType;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -52,11 +56,19 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   private final CoreContext coreContext;
   private IoContext ioContext;
   private ManagerRequest<Response> currentRequest;
+
+  /**
+   * Holds the bucket streaming response, but only if the current request in question
+   * is one.
+   */
+  private BucketConfigStreamingResponse streamingResponse;
+
   private ByteBuf currentContent;
+  private HttpResponse currentResponse;
   private final EventBus eventBus;
   private final BaseEndpoint endpoint;
 
-  public ManagerMessageHandler(BaseEndpoint endpoint, CoreContext coreContext) {
+  public ManagerMessageHandler(final BaseEndpoint endpoint, final CoreContext coreContext) {
     this.endpoint = endpoint;
     this.coreContext = coreContext;
     this.eventBus = coreContext.environment().eventBus();
@@ -99,29 +111,62 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
     if (msg instanceof HttpResponse) {
-      // lastStatus = ((HttpResponse) msg).status();
+      currentResponse = ((HttpResponse) msg);
+
+      if (isStreamingConfigRequest()) {
+        streamingResponse = (BucketConfigStreamingResponse) currentRequest.decode(currentResponse, null);
+        currentRequest.succeed(streamingResponse);
+      }
     } else if (msg instanceof HttpContent) {
       currentContent.writeBytes(((HttpContent) msg).content());
+
+      if (isStreamingConfigRequest()) {
+        String encodedConfig = currentContent.toString(StandardCharsets.UTF_8);
+        int separatorIndex = encodedConfig.indexOf("\n\n\n\n");
+        if (separatorIndex > 0) {
+          String content = encodedConfig.substring(0, separatorIndex);
+          streamingResponse.pushConfig(content.trim());
+          currentContent.clear();
+          currentContent.writeBytes(encodedConfig.substring(separatorIndex + 4).getBytes(StandardCharsets.UTF_8));
+        }
+      }
+
       if (msg instanceof LastHttpContent) {
-        byte[] copy = new byte[currentContent.readableBytes()];
-        currentContent.readBytes(copy);
-        Response response = currentRequest.decode(copy);
-        currentRequest.succeed(response);
+        if (isStreamingConfigRequest()) {
+          streamingResponse.completeStream();
+          streamingResponse = null;
+        } else {
+          byte[] copy = new byte[currentContent.readableBytes()];
+          currentContent.readBytes(copy);
+          Response response = currentRequest.decode(currentResponse, copy);
+          currentRequest.succeed(response);
+        }
+
         currentRequest = null;
         if (endpoint != null) {
           endpoint.markRequestCompletion();
         }
       }
     } else {
-      // todo: error since a type returned that was not expected
+      ioContext.environment().eventBus().publish(
+        new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
+      );
     }
 
     ReferenceCountUtil.release(msg);
   }
 
+  private boolean isStreamingConfigRequest() {
+    return BucketConfigStreamingRequest.class.isAssignableFrom(currentRequest.getClass());
+  }
+
   @Override
-  public void channelInactive(ChannelHandlerContext ctx) {
+  public void channelInactive(final ChannelHandlerContext ctx) {
     ReferenceCountUtil.release(currentContent);
+    if (streamingResponse != null) {
+      streamingResponse.completeStream();
+    }
     ctx.fireChannelInactive();
   }
+
 }

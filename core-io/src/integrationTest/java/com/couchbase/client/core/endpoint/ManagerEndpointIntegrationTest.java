@@ -18,8 +18,8 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
-import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
+import com.couchbase.client.core.msg.manager.BucketConfigRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigResponse;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
@@ -79,13 +79,13 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    TerseBucketConfigRequest request = new TerseBucketConfigRequest(Duration.ofSeconds(1),
+    BucketConfigRequest request = new BucketConfigRequest(Duration.ofSeconds(1),
       serviceContext, null, config().bucketname(), env.credentials(), null);
 
     assertTrue(request.id() > 0);
     endpoint.send(request);
 
-    TerseBucketConfigResponse response = request.response().get(1, TimeUnit.SECONDS);
+    BucketConfigResponse response = request.response().get(1, TimeUnit.SECONDS);
     assertTrue(response.status().success());
     assertTrue(response.config().length > 0);
 

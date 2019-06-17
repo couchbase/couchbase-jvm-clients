@@ -1,6 +1,6 @@
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.netty.config.ManagerMessageHandler;
+import com.couchbase.client.core.io.netty.manager.ManagerMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;

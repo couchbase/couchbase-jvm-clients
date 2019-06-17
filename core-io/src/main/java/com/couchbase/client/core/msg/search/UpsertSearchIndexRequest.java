@@ -20,11 +20,11 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.ResponseStatusConverter;
 
 import java.time.Duration;
 
@@ -61,7 +61,7 @@ public class UpsertSearchIndexRequest extends BaseRequest<UpsertSearchIndexRespo
   public UpsertSearchIndexResponse decode(final FullHttpResponse response) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
-    return new UpsertSearchIndexResponse(ResponseStatusConverter.fromHttp(response.status().code()), dst);
+    return new UpsertSearchIndexResponse(HttpProtocol.decodeStatus(response.status()), dst);
   }
 
   @Override

@@ -23,15 +23,14 @@ import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
-import com.couchbase.client.core.msg.manager.TerseBucketConfigResponse;
+import com.couchbase.client.core.msg.manager.BucketConfigRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
 
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -71,14 +70,14 @@ class ClusterManagerLoaderTest {
   void loadsConfigSuccessfully() {
     byte[] expectedConfig = "config".getBytes(UTF_8);
 
-    TerseBucketConfigResponse response = mock(TerseBucketConfigResponse.class);
+    BucketConfigResponse response = mock(BucketConfigResponse.class);
     when(response.status()).thenReturn(ResponseStatus.SUCCESS);
     when(response.config()).thenReturn(expectedConfig);
 
     doAnswer(i -> {
-      ((TerseBucketConfigRequest) i.getArgument(0)).succeed(response);
+      ((BucketConfigRequest) i.getArgument(0)).succeed(response);
       return null;
-    }).when(core).send(any(TerseBucketConfigRequest.class));
+    }).when(core).send(any(BucketConfigRequest.class));
 
     byte[] config = loader.discoverConfig(SEED, BUCKET).block();
     assertArrayEquals(expectedConfig, config);
@@ -86,13 +85,13 @@ class ClusterManagerLoaderTest {
 
   @Test
   void errorsIfNonSuccessful() {
-    TerseBucketConfigResponse response = mock(TerseBucketConfigResponse.class);
+    BucketConfigResponse response = mock(BucketConfigResponse.class);
     when(response.status()).thenReturn(ResponseStatus.UNKNOWN);
 
     doAnswer(i -> {
-      ((TerseBucketConfigRequest) i.getArgument(0)).succeed(response);
+      ((BucketConfigRequest) i.getArgument(0)).succeed(response);
       return null;
-    }).when(core).send(any(TerseBucketConfigRequest.class));
+    }).when(core).send(any(BucketConfigRequest.class));
 
     assertThrows(ConfigException.class, () -> loader.discoverConfig(SEED, BUCKET).block());
   }
@@ -100,10 +99,10 @@ class ClusterManagerLoaderTest {
   @Test
   void errorsIfFailedRequest() {
     doAnswer(i -> {
-      ((TerseBucketConfigRequest) i.getArgument(0))
+      ((BucketConfigRequest) i.getArgument(0))
         .fail(new UnsupportedOperationException());
       return null;
-    }).when(core).send(any(TerseBucketConfigRequest.class));
+    }).when(core).send(any(BucketConfigRequest.class));
 
     assertThrows(
       UnsupportedOperationException.class,
@@ -121,11 +120,11 @@ class ClusterManagerLoaderTest {
    */
   @Test
   void cancelRequestOnceUnsubscribed() {
-    final AtomicReference<TerseBucketConfigRequest> request = new AtomicReference<>();
+    final AtomicReference<BucketConfigRequest> request = new AtomicReference<>();
     doAnswer(i -> {
       request.set(i.getArgument(0));
       return null;
-    }).when(core).send(any(TerseBucketConfigRequest.class));
+    }).when(core).send(any(BucketConfigRequest.class));
 
     Disposable disposable = loader.discoverConfig(SEED, BUCKET).subscribe();
     disposable.dispose();

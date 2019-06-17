@@ -20,9 +20,9 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -30,17 +30,18 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
+import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 
-public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConfigResponse> implements TargetedRequest {
+public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse> implements TargetedRequest {
 
-  private static final String TERSE_URI = "/pools/default/b/%s";
+  private static final String PATH = "/pools/default/b/%s";
 
   private final String bucketName;
   private final Credentials credentials;
   private final NodeIdentifier target;
 
-  public TerseBucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                                  String bucketName, Credentials credentials, final NodeIdentifier target) {
+  public BucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
+                             String bucketName, Credentials credentials, final NodeIdentifier target) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
     this.credentials = credentials;
@@ -49,7 +50,11 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
 
   @Override
   public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, String.format(TERSE_URI, bucketName));
+    FullHttpRequest request = new DefaultFullHttpRequest(
+      HttpVersion.HTTP_1_1,
+      HttpMethod.GET,
+      String.format(PATH, bucketName)
+    );
     addHttpBasicAuth(request, credentials.usernameForBucket(bucketName), credentials.passwordForBucket(bucketName));
     return request;
   }
@@ -60,8 +65,8 @@ public class TerseBucketConfigRequest extends BaseManagerRequest<TerseBucketConf
   }
 
   @Override
-  public TerseBucketConfigResponse decode(byte[] content) {
-    return new TerseBucketConfigResponse(ResponseStatus.SUCCESS, content);
+  public BucketConfigResponse decode(final HttpResponse response, final byte[] content) {
+    return new BucketConfigResponse(decodeStatus(response.status()), content);
   }
 
 }

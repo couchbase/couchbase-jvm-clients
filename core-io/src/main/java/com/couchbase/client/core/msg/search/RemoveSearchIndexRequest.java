@@ -23,11 +23,11 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRespon
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.ResponseStatusConverter;
 
 import java.time.Duration;
 
@@ -59,7 +59,7 @@ public class RemoveSearchIndexRequest extends BaseRequest<RemoveSearchIndexRespo
   public RemoveSearchIndexResponse decode(final FullHttpResponse response) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
-    return new RemoveSearchIndexResponse(ResponseStatusConverter.fromHttp(response.status().code()), dst);
+    return new RemoveSearchIndexResponse(HttpProtocol.decodeStatus(response.status()), dst);
   }
 
   @Override

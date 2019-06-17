@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.msg.manager.TerseBucketConfigRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -55,7 +55,7 @@ public class ClusterManagerLoader extends BaseLoader {
     final CoreContext ctx = core().context();
 
     return Mono.defer(() -> {
-      TerseBucketConfigRequest request = new TerseBucketConfigRequest(
+      BucketConfigRequest request = new BucketConfigRequest(
         ctx.environment().timeoutConfig().managerTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,

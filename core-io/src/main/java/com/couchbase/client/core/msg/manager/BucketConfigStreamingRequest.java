@@ -14,56 +14,54 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.search;
+package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.netty.HttpProtocol;
-import com.couchbase.client.core.msg.BaseRequest;
-import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 
-public class GetSearchIndexRequest extends BaseRequest<GetSearchIndexResponse>
-  implements NonChunkedHttpRequest<GetSearchIndexResponse> {
+/**
+ * Performs a (potential endless) streaming request against the cluster manager for the given bucket.
+ */
+public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfigStreamingResponse> {
 
-  private static final String PATH = "/api/index/";
+  private static final String PATH = "/pools/default/bs/%s";
 
-  private final String name;
+  private final String bucketName;
   private final Credentials credentials;
 
-  public GetSearchIndexRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                               Credentials credentials, String name) {
+  public BucketConfigStreamingRequest(final Duration timeout, final CoreContext ctx,
+                                      final RetryStrategy retryStrategy, final String bucketName,
+                                      final Credentials credentials) {
     super(timeout, ctx, retryStrategy);
-    this.name = name;
+    this.bucketName = bucketName;
     this.credentials = credentials;
   }
 
   @Override
+  public BucketConfigStreamingResponse decode(final HttpResponse response, final byte[] content) {
+    return new BucketConfigStreamingResponse(HttpProtocol.decodeStatus(response.status()));
+  }
+
+  @Override
   public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, PATH + name);
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    FullHttpRequest request = new DefaultFullHttpRequest(
+      HttpVersion.HTTP_1_1,
+      HttpMethod.GET,
+      String.format(PATH, bucketName)
+    );
+    addHttpBasicAuth(request, credentials.usernameForBucket(bucketName), credentials.passwordForBucket(bucketName));
     return request;
   }
 
-  @Override
-  public GetSearchIndexResponse decode(final FullHttpResponse response) {
-    byte[] dst = new byte[response.content().readableBytes()];
-    response.content().readBytes(dst);
-    return new GetSearchIndexResponse(HttpProtocol.decodeStatus(response.status()), dst);
-  }
-
-  @Override
-  public ServiceType serviceType() {
-    return ServiceType.SEARCH;
-  }
 }
