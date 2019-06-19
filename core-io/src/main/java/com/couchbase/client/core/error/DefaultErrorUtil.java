@@ -30,10 +30,10 @@ public class DefaultErrorUtil {
             case TEMPORARY_FAILURE:
             case SERVER_BUSY:
                 return new TemporaryFailureException(status.name());
-            case TOO_BIG: return new RequestTooBigException();
+            case TOO_BIG: return ValueTooLargeException.forKey(id);
             case EXISTS: return CASMismatchException.forKey(id);
-            case LOCKED: return new TemporaryLockFailureException();
-            case NOT_STORED: return new DocumentMutationLostException();
+            case LOCKED: return LockException.forKey(id);
+            case NOT_STORED: return DocumentMutationLostException.forKey(id);
             case NOT_FOUND: return KeyNotFoundException.forKey(id);
             case OUT_OF_MEMORY: return new CouchbaseOutOfMemoryException();
             case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException();

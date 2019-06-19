@@ -34,9 +34,9 @@ public class UnlockAccessor {
         switch (response.status()) {
           case SUCCESS:
             return null;
-          // Special Case for backwards compatibility
+          // Special Case for backwards compatibility (see MB-13087)
           case TEMPORARY_FAILURE:
-            throw new TemporaryLockFailureException();
+            throw LockException.forKey(key);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,26 @@
  */
 package com.couchbase.client.core.error;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
  * Thrown when the request is too big for some reason.
  *
- * @author Michael Nitschinger
- * @since 2.1.0
+ * @since 3.0
  */
-public class RequestTooBigException extends CouchbaseException {
+public class ValueTooLargeException extends CouchbaseException {
+  private final String key;
 
-    public RequestTooBigException() {
-        super();
-    }
+  private ValueTooLargeException(String key) {
+    super("The value for key [" + redactUser(key) + "] is too large.");
+    this.key = key;
+  }
 
-    public RequestTooBigException(String message) {
-        super(message);
-    }
+  public static ValueTooLargeException forKey(String key) {
+    return new ValueTooLargeException(key);
+  }
 
-    public RequestTooBigException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public RequestTooBigException(Throwable cause) {
-        super(cause);
-    }
+  public String key() {
+    return key;
+  }
 }

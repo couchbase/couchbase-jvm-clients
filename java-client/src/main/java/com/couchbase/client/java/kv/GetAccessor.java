@@ -21,8 +21,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.*;
-import com.couchbase.client.core.service.kv.Observe;
-import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
@@ -85,9 +83,9 @@ public enum GetAccessor {
               getResponse.cas(),
               Optional.empty()
             ));
-          // This is a special case on getAndLock for backwards compatibility
+          // This is a special case on getAndLock for backwards compatibility (see MB-13087)
           case TEMPORARY_FAILURE:
-            throw new TemporaryLockFailureException();
+            throw LockException.forKey(id);
           case NOT_FOUND:
             return Optional.<GetResult>empty();
           default:

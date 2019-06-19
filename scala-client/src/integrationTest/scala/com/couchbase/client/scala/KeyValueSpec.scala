@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{KeyNotFoundException, TemporaryLockFailureException}
+import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -140,7 +140,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
     coll.getAndLock(docId) match {
       case Success(result) => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: TemporaryLockFailureException) =>
+      case Failure(err: LockException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

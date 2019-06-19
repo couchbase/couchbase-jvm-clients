@@ -18,16 +18,26 @@ package com.couchbase.client.core.error;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
-public class DocumentMutationLostException extends CouchbaseException implements RetryableOperationException {
+/**
+ * Thrown when the server reports a temporary failure that
+ * is very likely to be lock-related (like an already locked
+ * key or a bad cas used for unlock).
+ *
+ * <p>See <a href="https://issues.couchbase.com/browse/MB-13087">this issue</a>
+ * for an explanation of why this is only <i>likely</i> to be lock-related.</p>
+ *
+ * @since 3.0
+ */
+public class LockException extends CouchbaseException implements RetryableOperationException {
   private final String key;
 
-  private DocumentMutationLostException(String key) {
-    super("Mutation for key [" + redactUser(key) + "] was lost (possibly due to failover)");
+  private LockException(String key) {
+    super("Failed to acquire or release the lock on key [" + redactUser(key) + "]");
     this.key = key;
   }
 
-  public static DocumentMutationLostException forKey(String key) {
-    return new DocumentMutationLostException(key);
+  public static LockException forKey(String key) {
+    return new LockException(key);
   }
 
   public String key() {

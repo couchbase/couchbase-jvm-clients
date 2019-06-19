@@ -19,7 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.KeyNotFoundException;
-import com.couchbase.client.core.error.TemporaryLockFailureException;
+import com.couchbase.client.core.error.LockException;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -247,7 +247,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertNotEquals(insert.cas(), getAndLock.get().cas());
     assertEquals(expected, getAndLock.get().contentAsObject());
 
-    assertThrows(TemporaryLockFailureException.class, () -> collection.getAndLock(id));
+    assertThrows(LockException.class, () -> collection.getAndLock(id));
     assertFalse(collection.getAndLock("some_doc").isPresent());
   }
 
@@ -418,8 +418,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     Optional<GetResult> locked = collection.getAndLock(id);
     assertTrue(locked.isPresent());
 
-    assertThrows(TemporaryLockFailureException.class, () -> collection.upsert(id, JsonObject.empty()));
-    assertThrows(TemporaryLockFailureException.class, () -> collection.unlock(id, locked.get().cas() + 1));
+    assertThrows(LockException.class, () -> collection.upsert(id, JsonObject.empty()));
+    assertThrows(LockException.class, () -> collection.unlock(id, locked.get().cas() + 1));
 
     collection.unlock(id, locked.get().cas());
 
