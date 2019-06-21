@@ -17,11 +17,13 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -34,9 +36,15 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,24 +53,24 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @Nested
   @DisplayName("Via CAS")
-  static class ObserveViaCas {
+  class ObserveViaCas {
 
-    private static Cluster cluster;
-    private static ClusterEnvironment environment;
-    private static Collection collection;
+    private Cluster cluster;
+    private ClusterEnvironment environment;
+    private Collection collection;
 
-    @BeforeAll
-    static void seup() {
+    @BeforeEach
+    void beforeEach() {
       environment = environment().build();
       cluster = Cluster.connect(environment);
       Bucket bucket = cluster.bucket(config().bucketname());
       collection = bucket.defaultCollection();
     }
 
-    @AfterAll
-    static void tearDown() {
-      cluster.shutdown();
+    @AfterEach
+    void afterEach() {
       environment.shutdown();
+      cluster.shutdown();
     }
 
     @Test
@@ -141,6 +149,32 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         insertOptions().durability(PersistTo.NONE, ReplicateTo.ONE).timeout(Duration.ofSeconds(1))
       ));
     }
+
+    @Test
+    @IgnoreWhen(replicasLessThan = 1)
+    void canRunIntoConcurrentModifications() throws Exception {
+      String id = UUID.randomUUID().toString();
+
+      ExecutorService executorService = Executors.newFixedThreadPool(10);
+      final CountDownLatch latch = new CountDownLatch(1);
+      for (int i = 0; i < 10; i++) {
+        executorService.submit(() -> {
+          while (latch.getCount() > 0) {
+            try {
+              collection.upsert(id, "some value", upsertOptions().durability(PersistTo.NONE, ReplicateTo.ONE));
+            } catch (CASMismatchException ex) {
+              latch.countDown();
+            } catch (Exception ex) {
+              // ignore.
+            }
+          }
+        });
+      }
+
+      latch.await(30, TimeUnit.SECONDS);
+      executorService.shutdownNow();
+    }
+
   }
 
   @Nested

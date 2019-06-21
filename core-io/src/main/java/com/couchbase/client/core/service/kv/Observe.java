@@ -70,9 +70,9 @@ public class Observe {
     String id = ctx.key();
 
     List<ObserveViaCasRequest> requests = new ArrayList<>();
-    if (ctx.persistTo() != ObservePersistTo.NONE) {
-      requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, true, 0));
-    }
+    // We always need to send the request to the active, otherwise we will not discover if the
+    // CAS changed because of a concurrent modification.
+    requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, true, 0));
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
