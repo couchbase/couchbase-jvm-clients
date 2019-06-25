@@ -151,7 +151,7 @@ public class QueryAccessor {
     /**
      * Main method to drive the prepare and execute cycle.
      *
-     * <p>Depending on if the statement is already cached, this method checks id a prepare needs to be executed,
+     * <p>Depending on if the statement is already cached, this method checks if a prepare needs to be executed,
      * and if so does it. In both cases, afterwards a subsequent execute is conducted with the primed cache and
      * the options that were present in the original query.</p>
      *

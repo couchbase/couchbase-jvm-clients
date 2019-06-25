@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.query
 
+import java.util
+import java.util.{List, UUID}
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.QueryServiceException
@@ -8,6 +10,7 @@ import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -159,6 +162,7 @@ class QuerySpec extends ScalaIntegrationTest {
     x match {
       case Success(result) =>
         assert(false)
+      case Failure(err: QueryServiceException) =>
       case Failure(err: QueryError) =>
         val msg = err.msg
       // Fix under SCBC-33
@@ -310,5 +314,70 @@ class QuerySpec extends ScalaIntegrationTest {
     }
   }
 
+
+  /**
+    * This test is intentionally kept generic, since we want to make sure with every query version
+    * that we run against we have a version that works. Also, we perform the same query multiple times
+    * to make sure a primed and non-primed cache both work out of the box.
+    */
+  @Test
+  def handlesPreparedStatements(): Unit = {
+    val id: String = insertDoc
+    for (i <- Range(0, 10)) {
+      val options: QueryOptions = QueryOptions()
+        .scanConsistency(ScanConsistency.RequestPlus())
+        .adhoc(false)
+      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+        ".id=\"" + id + "\"", options).get
+      val rows = result.allRowsAs[JsonObject].get
+      assert(1 == rows.size)
+      assert(FooContent == rows(0))
+    }
+  }
+
+  @Test
+  def handlesPreparedStatementsWithNamedArgs(): Unit = {
+    val id: String = insertDoc
+    for (i <- Range(0, 10)) {
+      val options: QueryOptions = QueryOptions()
+        .scanConsistency(ScanConsistency.RequestPlus())
+        .adhoc(false)
+        .namedParameters("id" -> id)
+      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+        ".id=$id", options).get
+      val rows = result.allRowsAs[JsonObject].get
+      assert(1 == rows.size)
+      assert(FooContent == rows(0))
+    }
+  }
+
+  @Test
+  def handlesPreparedStatementsWithPositionalArgs(): Unit = {
+    val id: String = insertDoc
+    for (i <- Range(0, 10)) {
+      val options: QueryOptions = QueryOptions()
+        .scanConsistency(ScanConsistency.RequestPlus())
+        .adhoc(false)
+        .positionalParameters(id)
+      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+        ".id=$1", options).get
+      val rows = result.allRowsAs[JsonObject].get
+      assert(1 == rows.size)
+      assert(FooContent == rows(0))
+    }
+  }
+
+  /**
+    * Inserts a document into the collection and returns the ID of it.
+    *
+    * It inserts {@link #FOO_CONTENT}.
+    */
+  private def insertDoc = {
+    val id = UUID.randomUUID.toString
+    coll.insert(id, FooContent)
+    id
+  }
+
+  private val FooContent = JsonObject.create.put("foo", "bar")
 
 }

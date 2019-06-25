@@ -250,7 +250,7 @@ private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[C
   * @param owned whether the cluster owns the environment, which will decide if it shuts it down automatically when
   *              the cluster is shutdown
   */
-class ClusterEnvironment(builder: ClusterEnvironment.Builder) {
+class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder) {
   private[scala] val owned: Boolean = builder.owned
 
   private[scala] def credentials: Credentials = coreEnv.credentials()

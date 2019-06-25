@@ -67,7 +67,7 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
   *
   * @param meta            any additional information related to the query
   */
-case class ReactiveQueryResult(private val rows: Flux[QueryChunkRow],
+case class ReactiveQueryResult(private[scala] val rows: Flux[QueryChunkRow],
                                meta: Mono[QueryMeta]) {
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.

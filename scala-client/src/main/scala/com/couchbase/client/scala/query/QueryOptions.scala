@@ -42,7 +42,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val scanConsistency: Option[ScanConsistency] = None,
                         //                        consistentWith: Option[List[MutationToken]]
                         private[scala] val serverSideTimeout: Option[Duration] = None,
-                        private[scala] val timeout: Option[Duration] = None
+                        private[scala] val timeout: Option[Duration] = None,
+                        private[scala] val adhoc: Boolean = true
                        ) {
   /** Provides a named parameter for queries parameterised that way.
     *
@@ -205,14 +206,30 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     copy(retryStrategy = Some(strategy))
   }
 
+  /** If true (the default), adhoc mode is enabled: queries are just run.
+    *
+    * If false, adhoc mode is disabled and transparent prepared statement mode is enabled: queries
+    * are first prepared so they can be executed more efficiently in the future.
+    *
+    * @param strategy the retry strategy to use
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def adhoc(adhoc: Boolean): QueryOptions = {
+    copy(adhoc = adhoc)
+  }
+
   private[scala] def durationToN1qlFormat(duration: Duration) = {
     if (duration.toSeconds > 0) duration.toSeconds + "s"
     else duration.toNanos + "ns"
   }
 
-  private[scala] def encode() = {
-    val out = JsonObject.create
 
+  private[scala] def encode(): JsonObject = {
+    encode(JsonObject.create)
+  }
+
+  private[scala] def encode(out: JsonObject) = {
     credentials.foreach(creds => {
       val credsArr = JsonArray.create
 

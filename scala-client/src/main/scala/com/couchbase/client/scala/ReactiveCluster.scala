@@ -64,49 +64,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *         returned rows
     **/
   def query(statement: String, options: QueryOptions = QueryOptions()): ScalaMono[ReactiveQueryResult] = {
-    async.queryHandler.request(statement, options, async.core, async.env) match {
-      case Success(request) =>
-
-        async.core.send(request)
-
-        val ret: ScalaMono[ReactiveQueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
-          false)
-          .map(response => {
-
-            val rows: ScalaFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
-              .onErrorMap((err: Throwable) => {
-                val x: Throwable = err match {
-                  case e: QueryServiceException =>
-                    QueryError(e.content)
-                  case _ => err
-                }
-                x
-              })
-
-            val meta: ScalaMono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
-              .map(addl => {
-                QueryMeta(
-                  response.header().requestId(),
-                  response.header().clientContextId().asScala,
-                  response.header().signature().asScala.map(QuerySignature),
-                  addl.metrics().asScala.map(QueryMetrics.fromBytes),
-                  addl.warnings.asScala.map(QueryWarnings),
-                  addl.status,
-                  addl.profile.asScala.map(v => QueryProfile(v))
-                )
-              })
-
-            ReactiveQueryResult(
-              rows,
-              meta
-            )
-          })
-
-        ret
-
-      case Failure(err) =>
-        ScalaMono.error(err)
-    }
+    async.queryHandler.queryReactive(statement, options, env)
   }
 
   /** Performs an Analytics query against the cluster.

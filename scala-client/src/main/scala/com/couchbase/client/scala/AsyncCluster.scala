@@ -65,7 +65,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
   private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy = env.retryStrategy
-  private[scala] val queryHandler = new QueryHandler()
+  private[scala] val queryHandler = new QueryHandler(core)
   private[scala] val analyticsHandler = new AnalyticsHandler()
   private[scala] val searchHandler = new SearchHandler()
 
@@ -90,50 +90,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
-
-    queryHandler.request(statement, options, core, environment) match {
-      case Success(request) =>
-        core.send(request)
-
-        import reactor.core.scala.publisher.{Mono => ScalaMono}
-
-        val ret: Future[QueryResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
-          propagateCancellation = true)
-          .flatMap(response => {
-            FutureConversions.javaFluxToScalaFlux(response.rows())
-              .collectSeq()
-              .flatMap(rows => FutureConversions.javaMonoToScalaMono(response.trailer())
-                .map(trailer => QueryResult(
-                  rows,
-                  QueryMeta(
-                    response.header().requestId(),
-                    response.header().clientContextId().asScala,
-                    response.header().signature.asScala.map(bytes => QuerySignature(bytes)),
-                    trailer.metrics.asScala.map(bytes => QueryMetrics.fromBytes(bytes)),
-                    trailer.warnings.asScala.map(bytes => QueryWarnings(bytes)),
-                    trailer.status,
-                    trailer.profile.asScala.map(QueryProfile)))
-                )
-              )
-          }
-          )
-
-          .onErrorResume(err => {
-            err match {
-              case e: QueryServiceException =>
-                val x = QueryError(e.content)
-                ScalaMono.error(x)
-              case _ => ScalaMono.error(err)
-            }
-          })
-
-          .toFuture
-
-        ret
-
-
-      case Failure(err) => Future.failed(err)
-    }
+    queryHandler.queryAsync(statement, options, env)
   }
 
   /** Performs an Analytics query against the cluster.
