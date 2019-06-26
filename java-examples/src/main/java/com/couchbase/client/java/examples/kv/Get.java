@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.examples.kv;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -40,16 +41,9 @@ public class Get {
 
     // -------------------------------------------------------------------------------------
 
-    /*
-     * The get command returns an Optional to signal if the document is present.
-     *
-     * This might be a bit verbose to work with upfront, but it saves headaches in production which
-     * would otherwise return null or throw an exception at runtime.
-     */
-    Optional<GetResult> airport = collection.get("airport_1291");
-    if (airport.isPresent()) {
-      System.out.println("Found Airport: " + airport.get());
-    } else {
+    try {
+      System.out.println("Found Airport: " + collection.get("airport_1291"));
+    } catch (KeyNotFoundException ex) {
       System.out.println("Airport not found!");
     }
 
@@ -59,15 +53,12 @@ public class Get {
      * If only a couple fields of a document are needed (a projection), then this can be provided
      * through the options.
      */
-    Optional<GetResult> airline = collection.get(
+    GetResult airline = collection.get(
       "airline_10",
       getOptions().project("airportname", "country")
     );
 
-    /*
-     * You can utilize the Java 8+ lambda functions on the Optional for ease of use.
-     */
-    airline.ifPresent(result -> System.out.println("Found airline with fields: " + result));
+    System.out.println("Found airline with fields: " + airline);
 
     // -------------------------------------------------------------------------------------
 
@@ -77,8 +68,8 @@ public class Get {
      * options.
      */
 
-    collection.get("airline_10", getOptions().withExpiration(true))
-      .ifPresent(getResult -> System.out.println("Expiration is: " + getResult.expiration()));
+    GetResult airline2 = collection.get("airline_10", getOptions().withExpiration(true));
+    System.out.println("Expiration is: " + airline2.expiration());
 
   }
 }

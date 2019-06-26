@@ -21,28 +21,30 @@ import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.*;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuple2;
 
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Ported from the Scala SubdocMutateSpec tests.  Please keep in sync.
@@ -69,7 +71,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
 
     private JsonObject getContent(String docId) {
-        return coll.get(docId).get().contentAsObject();
+        return coll.get(docId).contentAsObject();
     }
 
     private String prepare(JsonObject content) {
@@ -131,7 +133,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         coll.mutateIn(docId, ops);
 
-        return coll.get(docId).get().contentAsObject();
+        return coll.get(docId).contentAsObject();
     }
 
     private JsonObject checkSingleOpSuccessXattr(JsonObject content, MutateInSpec ops) {
@@ -143,7 +145,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
         coll.mutateIn(docId, ops);
 
-        return coll.lookupIn(docId, Arrays.asList(LookupInSpec.get("x").xattr())).get().contentAsObject(0);
+        return coll.lookupIn(docId, Arrays.asList(LookupInSpec.get("x").xattr())).contentAsObject(0);
     }
 
     private void checkSingleOpFailure(JsonObject content, MutateInSpec ops, SubDocumentOpResponseStatus expected) {
@@ -586,7 +588,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
         coll.mutateIn(docId,
                 Arrays.asList(MutateInSpec.insert("foo2", "bar2")), MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
 
-        GetResult result = coll.get(docId, GetOptions.getOptions().withExpiration(true)).get();
+        GetResult result = coll.get(docId, GetOptions.getOptions().withExpiration(true));
         assertTrue(result.expiration().isPresent());
         assertTrue(result.expiration().get().getSeconds() != 0);
     }

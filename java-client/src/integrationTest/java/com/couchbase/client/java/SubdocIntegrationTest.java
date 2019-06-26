@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
@@ -28,7 +29,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -55,7 +56,10 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void emptyIfNotFound() {
-    assertFalse(collection.lookupIn("does_not_exist", Arrays.asList(LookupInSpec.get("foo"))).isPresent());
+    assertThrows(
+      KeyNotFoundException.class,
+      () -> collection.lookupIn("does_not_exist", Collections.singletonList(LookupInSpec.get("foo")))
+    );
   }
 
   @Test
@@ -66,16 +70,13 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       id, JsonObject.create().put("foo", "bar").put("num", 1234)
     );
 
-    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("foo"), LookupInSpec.get("num")));
-    assertTrue(result.isPresent());
-    result.ifPresent(r -> {
-      assertEquals("bar", r.contentAs(0, String.class));
-      assertEquals(1234, (int) r.contentAs(1, Integer.class));
-      assertTrue(r.exists(0));
-      assertTrue(r.exists(1));
-      assertFalse(r.exists(2));
-      assertTrue(r.cas() != 0);
-    });
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("foo"), LookupInSpec.get("num")));
+    assertEquals("bar", result.contentAs(0, String.class));
+    assertEquals(1234, (int) result.contentAs(1, Integer.class));
+    assertTrue(result.exists(0));
+    assertTrue(result.exists(1));
+    assertFalse(result.exists(2));
+    assertTrue(result.cas() != 0);
   }
 
   @Test
@@ -87,15 +88,15 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       .put("arr", JsonArray.create())
     );
 
-    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("obj"), LookupInSpec.get("arr")));
-    assertTrue(result.isPresent());
-    result.ifPresent(r -> {
-      assertEquals(JsonObject.empty(), r.contentAsObject(0));
-      assertEquals(JsonArray.empty(), r.contentAsArray(1));
-      assertTrue(r.exists(0));
-      assertTrue(r.exists(1));
-      assertTrue(r.cas() != 0);
-    });
+    LookupInResult result = collection.lookupIn(
+      id,
+      Arrays.asList(LookupInSpec.get("obj"), LookupInSpec.get("arr"))
+    );
+    assertEquals(JsonObject.empty(), result.contentAsObject(0));
+    assertEquals(JsonArray.empty(), result.contentAsArray(1));
+    assertTrue(result.exists(0));
+    assertTrue(result.exists(1));
+    assertTrue(result.cas() != 0);
   }
 
   @Test
@@ -104,12 +105,15 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.empty());
 
-    MutateInResult result = collection.mutateIn(id, Arrays.asList(MutateInSpec.insert("foo", "bar")));
+    MutateInResult result = collection.mutateIn(
+      id,
+      Collections.singletonList(MutateInSpec.insert("foo", "bar"))
+    );
     assertTrue(result.cas() != 0);
 
     assertEquals(
       JsonObject.create().put("foo", "bar"),
-      collection.get(id).get().contentAsObject()
+      collection.get(id).contentAsObject()
     );
   }
 
@@ -119,8 +123,9 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.empty());
 
-    assertThrows(PathNotFoundException.class, () ->
-            collection.lookupIn(id, Arrays.asList(LookupInSpec.get("not_exist")))
+    assertThrows(
+      PathNotFoundException.class,
+      () -> collection.lookupIn(id, Collections.singletonList(LookupInSpec.get("not_exist")))
     );
   }
 
@@ -130,7 +135,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("not_exist"), LookupInSpec.get("foo"))).get();
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("not_exist"), LookupInSpec.get("foo")));
 
     assertFalse(result.exists(0));
     assertTrue(result.exists(1));
@@ -163,11 +168,15 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"))).get();
+    LookupInResult result = collection.lookupIn(
+      id,
+      Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"))
+    );
 
     assertFalse(result.exists(0));
-    assertThrows(PathNotFoundException.class, () ->
-            assertTrue(result.contentAs(0, Boolean.class))
+    assertThrows(
+      PathNotFoundException.class,
+      () -> assertTrue(result.contentAs(0, Boolean.class))
     );
 
     assertTrue(result.exists(1));
@@ -180,7 +189,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", JsonArray.from("hello", "world")));
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.count("foo"))).get();
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("foo")));
 
     assertTrue(result.exists(0));
     assertEquals(2, (int) result.contentAs(0, Integer.class));
@@ -194,12 +203,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     JsonObject content = JsonObject.create().put("foo", "bar");
     collection.upsert(id, content);
 
-    Optional<LookupInResult> result = collection.lookupIn(id, Arrays.asList(LookupInSpec.getFullDocument()));
-
-    assertEquals(
-            content,
-            result.get().contentAsObject(0)
-    );
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.getFullDocument()));
+    assertEquals(content, result.contentAsObject(0));
   }
 
   @Test
@@ -208,19 +213,17 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     JsonObject content = JsonObject.create().put("foo", "bar");
 
-    MutateInResult result = collection.mutateIn(id,
-            Arrays.asList(
-                    // Server doesn't allow fulLDocument to be only op here, get "key not found"
-                    MutateInSpec.upsert("qix", "qux"),
-                    MutateInSpec.fullDocument(content)),
-            MutateInOptions.mutateInOptions().upsertDocument(true));
-
-    Optional<GetResult> doc = collection.get(id);
-
-    assertEquals(
-            content,
-            doc.get().contentAsObject()
+    collection.mutateIn(id,
+      Arrays.asList(
+        // Server doesn't allow fulLDocument to be only op here, get "key not found"
+        MutateInSpec.upsert("qix", "qux"),
+        MutateInSpec.fullDocument(content)
+      ),
+      MutateInOptions.mutateInOptions().upsertDocument(true)
     );
+
+    GetResult doc = collection.get(id);
+    assertEquals(content, doc.contentAsObject());
   }
 
   @Test
@@ -229,19 +232,18 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     JsonObject content = JsonObject.create().put("foo", "bar");
 
-    MutateInResult result = collection.mutateIn(id,
-            Arrays.asList(
-                    // Server doesn't allow fulLDocument to be only op here, get "key not found"
-                    MutateInSpec.upsert("qix", "qux"),
-                    MutateInSpec.fullDocument(content)),
-            MutateInOptions.mutateInOptions().insertDocument(true));
-
-    Optional<GetResult> doc = collection.get(id);
-
-    assertEquals(
-            content,
-            doc.get().contentAsObject()
+    collection.mutateIn(id,
+      Arrays.asList(
+        // Server doesn't allow fulLDocument to be only op here, get "key not found"
+        MutateInSpec.upsert("qix", "qux"),
+        MutateInSpec.fullDocument(content)
+      ),
+      MutateInOptions.mutateInOptions().insertDocument(true)
     );
+
+    GetResult doc = collection.get(id);
+
+    assertEquals(content, doc.contentAsObject());
   }
 
 

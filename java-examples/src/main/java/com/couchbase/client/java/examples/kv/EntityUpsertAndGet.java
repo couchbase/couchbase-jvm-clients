@@ -20,12 +20,10 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.MutationResult;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Optional;
 
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
@@ -56,16 +54,16 @@ public class EntityUpsertAndGet {
       )
     );
 
-    MutationResult mutationResult = collection.upsert(
+    collection.upsert(
       id,
       person,
       upsertOptions().expiry(Duration.ofDays(1))
     );
 
-    Optional<GetResult> getResult = collection.get(id, getOptions().timeout(Duration.ofSeconds(10)));
-    if (getResult.isPresent()) {
-      Person read = getResult.get().contentAs(Person.class);
-    }
+    GetResult getResult = collection.get(id, getOptions().timeout(Duration.ofSeconds(10)));
+    Person read = getResult.contentAs(Person.class);
+    System.out.println("Person read: " + read);
+
   }
 
 }

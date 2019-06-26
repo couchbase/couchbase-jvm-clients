@@ -18,31 +18,30 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.DefaultErrorUtil;
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class ExistsAccessor {
 
-  public static CompletableFuture<Optional<ExistsResult>> exists(final String key,
-                                                                 final Core core,
-                                                                 final ObserveViaCasRequest request) {
+  public static CompletableFuture<ExistsResult> exists(final String key, final Core core,
+                                                       final ObserveViaCasRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
-        if (response.status().success()) {
-          if (response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
-            || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED) {
-            return Optional.of(new ExistsResult(response.cas()));
-          } else {
-            return Optional.<ExistsResult>empty();
-          }
+        boolean found = response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
+          || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
+        if (response.status().success() && found) {
+            return new ExistsResult(response.cas());
+        } else if (!found) {
+          throw KeyNotFoundException.forKey(key);
         } else {
           throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
       });
   }
+
 }

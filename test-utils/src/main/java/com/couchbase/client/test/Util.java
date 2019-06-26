@@ -17,6 +17,7 @@
 package com.couchbase.client.test;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Provides a bunch of utility APIs that help with testing.
@@ -32,6 +33,24 @@ public class Util {
    */
   public static void waitUntilCondition(final BooleanSupplier supplier) {
     while (!supplier.getAsBoolean()) {
+      try {
+        Thread.sleep(1);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  public static void waitUntilThrows(final Class<? extends Exception> clazz, final Supplier<Object> supplier) {
+    while (true) {
+      try {
+        supplier.get();
+      } catch (final Exception ex) {
+        if (ex.getClass().isAssignableFrom(clazz)) {
+          return;
+        }
+      }
+
       try {
         Thread.sleep(1);
       } catch (InterruptedException e) {

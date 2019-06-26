@@ -21,8 +21,6 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.kv.GetResult;
 
-import java.util.Optional;
-
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 
 public class EntityGetWithProjection {
@@ -33,13 +31,11 @@ public class EntityGetWithProjection {
     Collection collection = bucket.defaultCollection();
 
     String id = "p01";
-    Optional<GetResult> result = collection.get(id, getOptions().project("name", "age", "attributes.hair"));
-    result.ifPresent(r -> {
-      Person person = r.contentAs(Person.class);
-      System.out.println(person.name());
-      System.out.println(person.age());
-      System.out.println(person.attributes().hair());
-    });
+    GetResult result = collection.get(id, getOptions().project("name", "age", "attributes.hair"));
+    Person person = result.contentAs(Person.class);
+    System.out.println(person.name());
+    System.out.println(person.age());
+    System.out.println(person.attributes().hair());
   }
 
 }

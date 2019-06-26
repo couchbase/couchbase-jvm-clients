@@ -42,7 +42,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -152,54 +151,42 @@ public class Collection {
   /**
    * Fetches a full Document from a collection with default options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<GetResult> get(final String id) {
+  public GetResult get(final String id) {
     return block(async().get(id));
   }
 
   /**
    * Fetches a full Document from a collection with custom options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<GetResult> get(final String id, final GetOptions options) {
+  public GetResult get(final String id, final GetOptions options) {
     return block(async().get(id, options));
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with default options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<GetResult> getAndLock(final String id) {
+  public GetResult getAndLock(final String id) {
     return block(async().getAndLock(id));
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public Optional<GetResult> getAndLock(final String id, final GetAndLockOptions options) {
+  public GetResult getAndLock(final String id, final GetAndLockOptions options) {
     return block(async().getAndLock(id, options));
   }
 
@@ -212,7 +199,7 @@ public class Collection {
    * @param expiration the new expiration time for the document.
    * @return a {@link GetResult} completing once loaded or failed.
    */
-  public Optional<GetResult> getAndTouch(final String id, final Duration expiration) {
+  public GetResult getAndTouch(final String id, final Duration expiration) {
     return block(async().getAndTouch(id, expiration));
   }
 
@@ -225,8 +212,7 @@ public class Collection {
    * @param options custom options to change the default behavior.
    * @return a {@link GetResult} completing once loaded or failed.
    */
-  public Optional<GetResult> getAndTouch(final String id, final Duration expiration,
-                                         final GetAndTouchOptions options) {
+  public GetResult getAndTouch(final String id, final Duration expiration, final GetAndTouchOptions options) {
     return block(async().getAndTouch(id, expiration, options));
   }
 
@@ -263,7 +249,7 @@ public class Collection {
    * @param id the document ID
    * @return a {@link ExistsResult} completing once loaded or failed.
    */
-  public Optional<ExistsResult> exists(final String id) {
+  public ExistsResult exists(final String id) {
     return block(async().exists(id));
   }
 
@@ -273,7 +259,7 @@ public class Collection {
    * @param id the document ID
    * @return a {@link ExistsResult} completing once loaded or failed.
    */
-  public Optional<ExistsResult> exists(final String id, final ExistsOptions options) {
+  public ExistsResult exists(final String id, final ExistsOptions options) {
     return block(async().exists(id, options));
   }
 
@@ -419,7 +405,7 @@ public class Collection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs) {
+  public LookupInResult lookupIn(final String id, List<LookupInSpec> specs) {
     return block(async().lookupIn(id, specs));
   }
 
@@ -431,8 +417,7 @@ public class Collection {
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public Optional<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs,
-                                           final LookupInOptions options) {
+  public LookupInResult lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
     return block(async().lookupIn(id, specs, options));
   }
 

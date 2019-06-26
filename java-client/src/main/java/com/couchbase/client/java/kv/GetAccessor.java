@@ -20,10 +20,10 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -47,91 +47,76 @@ public enum GetAccessor {
    * @param request the request to dispatch and convert once a response arrives.
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
-  public static CompletableFuture<Optional<GetResult>> get(final Core core, final String id,
-                                                           final GetRequest request) {
+  public static CompletableFuture<GetResult> get(final Core core, final String id,
+                                                 final GetRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(getResponse -> {
-        switch (getResponse.status()) {
-          case SUCCESS:
-            return Optional.of(new GetResult(
-              EncodedDocument.of(getResponse.flags(), getResponse.content()),
-              getResponse.cas(),
-              Optional.empty()
-            ));
-          case NOT_FOUND:
-            return Optional.<GetResult>empty();
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
+        if (getResponse.status() == ResponseStatus.SUCCESS) {
+          return new GetResult(
+            EncodedDocument.of(getResponse.flags(), getResponse.content()),
+            getResponse.cas(),
+            Optional.empty()
+          );
         }
-    });
+        throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
+      });
   }
 
-  public static CompletableFuture<Optional<GetResult>> getAndLock(final Core core, final String id,
-                                                                  final GetAndLockRequest request) {
+  public static CompletableFuture<GetResult> getAndLock(final Core core, final String id,
+                                                        final GetAndLockRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(getResponse -> {
         switch (getResponse.status()) {
           case SUCCESS:
-            return Optional.of(new GetResult(
+            return new GetResult(
               EncodedDocument.of(getResponse.flags(), getResponse.content()),
               getResponse.cas(),
               Optional.empty()
-            ));
+            );
           // This is a special case on getAndLock for backwards compatibility (see MB-13087)
           case TEMPORARY_FAILURE:
             throw LockException.forKey(id);
-          case NOT_FOUND:
-            return Optional.<GetResult>empty();
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
       });
   }
 
-  public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core,
-                                                                   final String id,
-                                                                   final GetAndTouchRequest request) {
+  public static CompletableFuture<GetResult> getAndTouch(final Core core, final String id,
+                                                         final GetAndTouchRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(getResponse -> {
-        switch (getResponse.status()) {
-          case SUCCESS:
-            return Optional.of(new GetResult(
-              EncodedDocument.of(getResponse.flags(), getResponse.content()),
-              getResponse.cas(),
-              Optional.empty()
-            ));
-          case NOT_FOUND:
-            return Optional.<GetResult>empty();
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
+        if (getResponse.status() == ResponseStatus.SUCCESS) {
+          return new GetResult(
+            EncodedDocument.of(getResponse.flags(), getResponse.content()),
+            getResponse.cas(),
+            Optional.empty()
+          );
         }
+        throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
       });
   }
 
-  public static CompletableFuture<Optional<GetResult>> subdocGet(final Core core, final String id,
+  public static CompletableFuture<GetResult> subdocGet(final Core core, final String id,
                                                                  final SubdocGetRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
-        switch (response.status()) {
-          case SUCCESS:
-            return Optional.of(parseSubdocGet(id, response));
-          case NOT_FOUND:
-            return Optional.empty();
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
+        if (response.status() == ResponseStatus.SUCCESS) {
+          return parseSubdocGet(response);
         }
+        throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
       });
   }
 
-  private static GetResult parseSubdocGet(final String id, final SubdocGetResponse response) {
+  private static GetResult parseSubdocGet(final SubdocGetResponse response) {
     if (response.error().isPresent()) {
       throw response.error().get();
     }
@@ -152,7 +137,7 @@ public enum GetAccessor {
     if (content == null) {
       try {
         content = projectRecursive(response);
-      } catch (IOException e) {
+      } catch (Exception e) {
         throw new CouchbaseException("Unexpected Exception while decoding Sub-Document get", e);
       }
     }
@@ -170,9 +155,8 @@ public enum GetAccessor {
    *
    * @param response the raw response from the server.
    * @return the document, encoded as a byte array.
-   * @throws IOException if jackson gets a heart attack while parsing.
    */
-  static byte[] projectRecursive(final SubdocGetResponse response) throws IOException {
+  static byte[] projectRecursive(final SubdocGetResponse response) {
     ObjectNode root = Mapper.createObjectNode();
 
     for (SubdocField value : response.values()) {

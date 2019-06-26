@@ -201,20 +201,18 @@ public class ReactiveCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link Mono} indicating once loaded or failed.
    */
-  public Mono<Optional<GetResult>> get(final String id) {
+  public Mono<GetResult> get(final String id) {
     return get(id, DEFAULT_GET_OPTIONS);
   }
 
   /**
    * Fetches a Document from a collection with custom options.
    *
-   * <p>If the document has not been found, the returned {@link Optional} will be empty.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} indicating once loaded or failed
    */
-  public Mono<Optional<GetResult>> get(final String id, final GetOptions options) {
+  public Mono<GetResult> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
       GetOptions.Built opts = options.build();
       if (opts.projections() == null && !opts.withExpiration()) {
@@ -230,27 +228,21 @@ public class ReactiveCollection {
   /**
    * Fetches a full document and write-locks it for the given duration with default options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<Optional<GetResult>> getAndLock(final String id) {
+  public Mono<GetResult> getAndLock(final String id) {
     return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<Optional<GetResult>> getAndLock(final String id, final GetAndLockOptions options) {
+  public Mono<GetResult> getAndLock(final String id, final GetAndLockOptions options) {
     return Mono.defer(() -> {
       GetAndLockRequest request = asyncCollection.getAndLockRequest(id, options);
       return Reactor.wrap(request, GetAccessor.getAndLock(core, id, request), true);
@@ -261,13 +253,11 @@ public class ReactiveCollection {
    * Fetches a full document and resets its expiration time to the value provided with default
    * options.
    *
-   * <p>If the document has not been found, the returned {@link Optional} will be empty.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param expiration the new expiration time for the document.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<Optional<GetResult>> getAndTouch(final String id, final Duration expiration) {
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiration) {
     return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
@@ -275,14 +265,12 @@ public class ReactiveCollection {
    * Fetches a full document and resets its expiration time to the value provided with custom
    * options.
    *
-   * <p>If the document has not been found, the returned {@link Optional} will be empty.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param expiration the new expiration time for the document.
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<Optional<GetResult>> getAndTouch(final String id, final Duration expiration,
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiration,
                                                final GetAndTouchOptions options) {
     return Mono.defer(() -> {
       GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
@@ -323,8 +311,7 @@ public class ReactiveCollection {
       .flatMap(request -> {
 
         Mono<GetResult> result = Reactor
-          .wrap(request, GetAccessor.get(core, id, request), true)
-          .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+          .wrap(request, GetAccessor.get(core, id, request), true);
 
         GetFromReplicaOptions.Built opts = options.build();
         if (opts.replicaMode() == ReplicaMode.ALL) {
@@ -361,8 +348,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       ObserveViaCasRequest request = asyncCollection.existsRequest(id, options);
       return Reactor
-        .wrap(request, ExistsAccessor.exists(id, core, request), true)
-        .flatMap(getResult -> getResult.map(Mono::just).orElseGet(Mono::empty));
+        .wrap(request, ExistsAccessor.exists(id, core, request), true);
     });
   }
 
@@ -549,27 +535,23 @@ public class ReactiveCollection {
   /**
    * Performs lookups to document fragments with default options.
    *
-   * <p>If the document has not been found, the returned {@link Optional} will be empty.</p>
-   *
    * @param id the outer document ID.
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public Mono<Optional<LookupInResult>> lookupIn(final String id, List<LookupInSpec> specs) {
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs) {
     return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
 
   /**
    * Performs lookups to document fragments with custom options.
    *
-   * <p>If the document has not been found, the returned {@link Optional} will be empty.</p>
-   *
    * @param id the outer document ID.
    * @param specs the spec which specifies the type of lookups to perform.
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public Mono<Optional<LookupInResult>> lookupIn(final String id, List<LookupInSpec> specs,
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs,
                                        final LookupInOptions options) {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);

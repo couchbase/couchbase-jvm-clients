@@ -86,36 +86,30 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(insertResult.cas() != 0);
     assertFalse(insertResult.mutationToken().isPresent());
 
-    Optional<GetResult> getResult = collection.get(id);
-    assertTrue(getResult.isPresent());
-    getResult.ifPresent(r -> {
-      assertEquals("Hello, World", r.contentAs(String.class));
-      assertTrue(r.cas() != 0);
-      assertFalse(r.expiration().isPresent());
-    });
+    GetResult getResult = collection.get(id);
+    assertEquals("Hello, World", getResult.contentAs(String.class));
+    assertTrue(getResult.cas() != 0);
+    assertFalse(getResult.expiration().isPresent());
   }
 
   @Test
   void exists() {
     String id = UUID.randomUUID().toString();
 
-    Optional<ExistsResult> existsResult = collection.exists(id);
-    assertFalse(existsResult.isPresent());
+    assertThrows(KeyNotFoundException.class, () -> collection.exists(id));
 
     MutationResult insertResult = collection.insert(id, "Hello, World");
     assertTrue(insertResult.cas() != 0);
 
-    existsResult = collection.exists(id);
-    assertTrue(existsResult.isPresent());
+    ExistsResult existsResult = collection.exists(id);
 
-    assertEquals(insertResult.cas(), existsResult.get().cas());
-
-    assertFalse(collection.exists("some_id").isPresent());
+    assertEquals(insertResult.cas(), existsResult.cas());
+    assertThrows(KeyNotFoundException.class, () -> collection.exists("some_id"));
   }
 
   @Test
   void emptyIfGetNotFound() {
-    assertFalse(collection.get(UUID.randomUUID().toString()).isPresent());
+    assertThrows(KeyNotFoundException.class, () -> collection.get(UUID.randomUUID().toString()));
   }
 
   @Test
@@ -130,17 +124,14 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult mutationResult = collection.upsert(id, content);
     assertTrue(mutationResult.cas() != 0);
 
-    Optional<GetResult> getResult = collection.get(id, getOptions().project("foo", "created"));
-    assertTrue(getResult.isPresent());
-    getResult.ifPresent(r -> {
-      assertTrue(r.cas() != 0);
-      assertFalse(r.expiration().isPresent());
+    GetResult getResult = collection.get(id, getOptions().project("foo", "created"));
+    assertTrue(getResult.cas() != 0);
+    assertFalse(getResult.expiration().isPresent());
 
-      JsonObject decoded = r.contentAsObject();
-      assertEquals("bar", decoded.getString("foo"));
-      assertEquals(true, decoded.getBoolean("created"));
-      assertFalse(decoded.containsKey("age"));
-    });
+    JsonObject decoded = getResult.contentAsObject();
+    assertEquals("bar", decoded.getString("foo"));
+    assertEquals(true, decoded.getBoolean("created"));
+    assertFalse(decoded.containsKey("age"));
   }
 
   /**
@@ -167,13 +158,10 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
     assertTrue(mutationResult.cas() != 0);
 
-    Optional<GetResult> getResult = collection.get(id, getOptions().withExpiration(true));
-    assertTrue(getResult.isPresent());
-    getResult.ifPresent(r -> {
-      assertTrue(r.expiration().isPresent());
-      assertTrue(r.expiration().get().toMillis() > 0);
-      assertEquals(content, r.contentAsObject());
-    });
+    GetResult getResult = collection.get(id, getOptions().withExpiration(true));
+    assertTrue(getResult.expiration().isPresent());
+    assertTrue(getResult.expiration().get().toMillis() > 0);
+    assertEquals(content, getResult.contentAsObject());
   }
 
   /**
@@ -200,21 +188,18 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
     assertTrue(mutationResult.cas() != 0);
 
-    Optional<GetResult> getResult = collection.get(
+    GetResult getResult = collection.get(
       id,
       getOptions().project("foo", "created").withExpiration(true)
     );
-    assertTrue(getResult.isPresent());
-    getResult.ifPresent(r -> {
-      assertTrue(r.cas() != 0);
-      assertTrue(r.expiration().isPresent());
-      assertTrue(r.expiration().get().toMillis() > 0);
+    assertTrue(getResult.cas() != 0);
+    assertTrue(getResult.expiration().isPresent());
+    assertTrue(getResult.expiration().get().toMillis() > 0);
 
-      JsonObject decoded = r.contentAsObject();
-      assertEquals("bar", decoded.getString("foo"));
-      assertEquals(true, decoded.getBoolean("created"));
-      assertFalse(decoded.containsKey("age"));
-    });
+    JsonObject decoded = getResult.contentAsObject();
+    assertEquals("bar", decoded.getString("foo"));
+    assertEquals(true, decoded.getBoolean("created"));
+    assertFalse(decoded.containsKey("age"));
   }
 
   @Test
@@ -236,15 +221,14 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertTrue(insert.cas() != 0);
 
-    Optional<GetResult> getAndLock = collection.getAndLock(id);
+    GetResult getAndLock = collection.getAndLock(id);
 
-    assertTrue(getAndLock.isPresent());
-    assertTrue(getAndLock.get().cas() != 0);
-    assertNotEquals(insert.cas(), getAndLock.get().cas());
-    assertEquals(expected, getAndLock.get().contentAsObject());
+    assertTrue(getAndLock.cas() != 0);
+    assertNotEquals(insert.cas(), getAndLock.cas());
+    assertEquals(expected, getAndLock.contentAsObject());
 
     assertThrows(LockException.class, () -> collection.getAndLock(id));
-    assertFalse(collection.getAndLock("some_doc").isPresent());
+    assertThrows(KeyNotFoundException.class, () -> collection.getAndLock("some_doc"));
   }
 
   /**
@@ -267,12 +251,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
     assertTrue(insert.cas() != 0);
 
-    Optional<GetResult> getAndTouch = collection.getAndTouch(id, Duration.ofSeconds(1));
+    GetResult getAndTouch = collection.getAndTouch(id, Duration.ofSeconds(1));
 
-    assertTrue(getAndTouch.isPresent());
-    assertTrue(getAndTouch.get().cas() != 0);
-    assertNotEquals(insert.cas(), getAndTouch.get().cas());
-    assertEquals(expected, getAndTouch.get().contentAsObject());
+    assertTrue(getAndTouch.cas() != 0);
+    assertNotEquals(insert.cas(), getAndTouch.cas());
+    assertEquals(expected, getAndTouch.contentAsObject());
 
     waitUntilCondition(() -> {
       try {
@@ -280,7 +263,12 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       } catch (InterruptedException e) {
         // ignored.
       }
-      return !collection.get(id).isPresent();
+      try {
+        collection.get(id);
+        return false;
+      } catch (KeyNotFoundException knf) {
+        return true;
+      }
     });
   }
 
@@ -333,7 +321,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsertOverride.cas() != 0);
     assertTrue(upsert.cas() != upsertOverride.cas());
 
-    assertEquals(expected, collection.get(id).get().contentAsObject());
+    assertEquals(expected, collection.get(id).contentAsObject());
   }
 
   @Test
@@ -357,7 +345,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(replaced.cas() != 0);
     assertTrue(upsert.cas() != replaced.cas());
 
-    assertEquals(expected, collection.get(id).get().contentAsObject());
+    assertEquals(expected, collection.get(id).contentAsObject());
 
     assertThrows(
       KeyNotFoundException.class,
@@ -387,12 +375,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     Thread.sleep(300);
 
-    Optional<GetResult> get = collection.get(id);
-    assertTrue(get.isPresent());
-    get.ifPresent(r -> {
-      assertEquals(expected, r.contentAsObject());
-      assertEquals(r.cas(), touched.cas());
-    });
+    GetResult r = collection.get(id);
+    assertEquals(expected, r.contentAsObject());
+    assertEquals(r.cas(), touched.cas());
 
     waitUntilCondition(() -> {
       try {
@@ -400,7 +385,12 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       } catch (InterruptedException e) {
         // ignored.
       }
-      return !collection.get(id).isPresent();
+      try {
+        collection.get(id);
+        return false;
+      } catch (KeyNotFoundException knf) {
+        return true;
+      }
     });
   }
 
@@ -411,19 +401,18 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult upsert = collection.upsert(id, JsonObject.create().put("foo", true));
     assertTrue(upsert.cas() != 0);
 
-    Optional<GetResult> locked = collection.getAndLock(id);
-    assertTrue(locked.isPresent());
+    GetResult locked = collection.getAndLock(id);
 
     assertThrows(LockException.class, () -> collection.upsert(id, JsonObject.empty()));
-    assertThrows(LockException.class, () -> collection.unlock(id, locked.get().cas() + 1));
+    assertThrows(LockException.class, () -> collection.unlock(id, locked.cas() + 1));
 
-    collection.unlock(id, locked.get().cas());
+    collection.unlock(id, locked.cas());
 
     JsonObject expected = JsonObject.create().put("foo", false);
     MutationResult replaced = collection.replace(id, expected);
     assertTrue(replaced.cas() != 0);
 
-    assertEquals(expected, collection.get(id).get().contentAsObject());
+    assertEquals(expected, collection.get(id).contentAsObject());
   }
 
   @Test
@@ -443,7 +432,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).get().contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(BinaryContent.class).content()
     );
 
     MutationResult append = collection.binary().append(id, worldBytes);
@@ -452,7 +441,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       helloWorldBytes,
-      collection.get(id).get().contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(BinaryContent.class).content()
     );
   }
 
@@ -473,7 +462,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).get().contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(BinaryContent.class).content()
     );
 
     MutationResult append = collection.reactive().binary().append(id, worldBytes).block();
@@ -482,7 +471,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).get().contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(BinaryContent.class).content()
     );
   }
 
@@ -503,7 +492,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).get().contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(BinaryContent.class).content()
     );
 
     MutationResult append = collection.async().binary().append(id, worldBytes).get();
@@ -512,7 +501,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).get().contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(BinaryContent.class).content()
     );
   }
 
@@ -533,7 +522,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).get().contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(BinaryContent.class).content()
     );
 
     MutationResult append = collection.binary().prepend(id, worldBytes);
@@ -542,7 +531,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       worldHelloBytes,
-      collection.get(id).get().contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(BinaryContent.class).content()
     );
   }
 

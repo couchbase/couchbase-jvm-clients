@@ -21,25 +21,21 @@ import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class LookupInAccessor {
 
-  public static CompletableFuture<Optional<LookupInResult>> lookupInAccessor(final String id,
-                                                                             final Core core,
-                                                                             final SubdocGetRequest request) {
+  public static CompletableFuture<LookupInResult> lookupInAccessor(final String id, final Core core,
+                                                                   final SubdocGetRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return Optional.of(new LookupInResult(response.values(), response.cas()));
+            return new LookupInResult(response.values(), response.cas());
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});
-          case NOT_FOUND:
-            return Optional.empty();
             default:
                 throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
         }

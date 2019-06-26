@@ -19,11 +19,7 @@ package com.couchbase.client.java.examples;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
-
-import java.time.Duration;
-import java.util.Optional;
 
 /**
  * This example connects to a bucket, opens a collection and performs a simple operation.
@@ -55,12 +51,12 @@ public class HelloWorld {
     /*
      * Fetch a document from the travel-sample bucket.
      */
-    Optional<GetResult> airport_10 = collection.get("airport_1291");
+    GetResult airport_1291 = collection.get("airport_1291");
 
     /*
      * Print the fetched document.
      */
-    System.err.println(airport_10);
+    System.err.println(airport_1291);
 
   }
 }

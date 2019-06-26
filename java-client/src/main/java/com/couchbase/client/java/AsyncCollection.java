@@ -73,7 +73,6 @@ import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -225,27 +224,21 @@ public class AsyncCollection {
   /**
    * Fetches a full document (or a projection of it) from a collection with default options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> get(final String id) {
+  public CompletableFuture<GetResult> get(final String id) {
     return get(id, DEFAULT_GET_OPTIONS);
   }
 
   /**
    * Fetches a full document (or a projection of it) from a collection with custom options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> get(final String id, final GetOptions options) {
+  public CompletableFuture<GetResult> get(final String id, final GetOptions options) {
     notNull(options, "GetOptions");
     GetOptions.Built opts = options.build();
 
@@ -331,27 +324,21 @@ public class AsyncCollection {
   /**
    * Fetches a full document and write-locks it for the given duration with default options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id) {
+  public CompletableFuture<GetResult> getAndLock(final String id) {
     return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
-   * <p>The {@link Optional} indicates if the document has been found or not. If the document
-   * has not been found, an empty optional will be returned.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndLock(final String id,
+  public CompletableFuture<GetResult> getAndLock(final String id,
                                                            final GetAndLockOptions options) {
     return GetAccessor.getAndLock(core, id, getAndLockRequest(id, options));
   }
@@ -387,7 +374,7 @@ public class AsyncCollection {
    * @param expiration the new expiration time for the document.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
+  public CompletableFuture<GetResult> getAndTouch(final String id,
                                                             final Duration expiration) {
     return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
@@ -401,7 +388,7 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<GetResult>> getAndTouch(final String id,
+  public CompletableFuture<GetResult> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
     return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options));
@@ -437,7 +424,7 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id) {
+  public List<CompletableFuture<GetResult>> getFromReplica(final String id) {
     return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
   }
 
@@ -449,7 +436,7 @@ public class AsyncCollection {
    * @return a list of results from the active and the replica.
    */
   // TODO sync with RFC changes
-  public List<CompletableFuture<Optional<GetResult>>> getFromReplica(final String id,
+  public List<CompletableFuture<GetResult>> getFromReplica(final String id,
                                                                      final GetFromReplicaOptions options) {
     return getFromReplicaRequests(id, options)
       .map(request -> GetAccessor.get(core, id, request))
@@ -506,7 +493,7 @@ public class AsyncCollection {
    * @param id the document ID
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<ExistsResult>> exists(final String id) {
+  public CompletableFuture<ExistsResult> exists(final String id) {
     return exists(id, DEFAULT_EXISTS_OPTIONS);
   }
 
@@ -517,8 +504,7 @@ public class AsyncCollection {
    * @param options to modify the default behavior
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<Optional<ExistsResult>> exists(final String id,
-                                                          final ExistsOptions options) {
+  public CompletableFuture<ExistsResult> exists(final String id, final ExistsOptions options) {
     return ExistsAccessor.exists(id, core, existsRequest(id, options));
   }
 
@@ -838,7 +824,7 @@ public class AsyncCollection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
+  public CompletableFuture<LookupInResult> lookupIn(final String id,
                                                               final List<LookupInSpec> specs) {
     return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
@@ -851,7 +837,7 @@ public class AsyncCollection {
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public CompletableFuture<Optional<LookupInResult>> lookupIn(final String id,
+  public CompletableFuture<LookupInResult> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
     return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options));

@@ -62,7 +62,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   void usesAllEndpointsPerNode() {
     for (int i = 0; i < 2048; i++) {
       collection.upsert("id-" + i, "foobar");
-      assertEquals("foobar", collection.get("id-" + i).get().contentAs(String.class));
+      assertEquals("foobar", collection.get("id-" + i).contentAs(String.class));
     }
   }
 
