@@ -167,20 +167,34 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         values = new ArrayList<>();
       }
       else {
+        // "For successful multi mutations, there will be zero or more results; each of the results containing a value."
         values = new ArrayList<>(commands.size());
-        for (Command command : commands) {
+
+        // Check we can read index (1 byte) and status (2 bytes), else we're done
+        int INDEX_PLUS_STATUS_FIELDS_BYTES = 3;
+        while (body.isReadable(INDEX_PLUS_STATUS_FIELDS_BYTES)) {
           byte index = body.readByte();
+
+          // Only counter ops return values.  Pad the returned values so we can do contentAs(counterOpIdx)
+          while (values.size() < index) {
+            Command padding = commands.get(values.size());
+            SubdocField op = new SubdocField(SubDocumentOpResponseStatus.SUCCESS, Optional.empty(), Bytes.EMPTY_BYTE_ARRAY, padding.path, padding.type);
+            values.add(op);
+          }
+
+          Command command = commands.get(index);
+
+          // "Status of the mutation. If the status indicates success, the next two fields are applicable. If it is an
+          // error then the result has been fully read"
           short statusRaw = body.readShort();
           SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
 
-          // The status here should always be SUCCESS
           if (status != SubDocumentOpResponseStatus.SUCCESS) {
             SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
 
             SubdocField op = new SubdocField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
             values.add(op);
-          }
-          else {
+          } else {
             int valueLength = body.readInt();
             byte[] value = new byte[valueLength];
             body.readBytes(value, 0, valueLength);

@@ -245,4 +245,49 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
 
+  @Test
+  void counterMulti() {
+    JsonObject initial = JsonObject.create()
+            .put("mutated", 0)
+            .put("body", "")
+            .put("first_name", "James")
+            .put("age", 0);
+
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, initial);
+
+    MutateInResult result = collection.mutateIn(id,
+            Arrays.asList(
+                    MutateInSpec.upsert("addr", JsonObject.create()
+                            .put("state", "NV")
+                            .put("pincode", 7)
+                            .put("city", "Chicago")),
+                    MutateInSpec.increment("mutated", 1),
+                    MutateInSpec.upsert("name", JsonObject.create()
+                            .put("last", "")
+                            .put("first", "James")
+                    )
+            ));
+
+    assertEquals(1, result.contentAs(1, Integer.class));
+  }
+
+  @Test
+  void counterSingle() {
+    JsonObject initial = JsonObject.create()
+            .put("mutated", 0)
+            .put("body", "")
+            .put("first_name", "James")
+            .put("age", 0);
+
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, initial);
+
+    MutateInResult result = collection.mutateIn(id,
+            Arrays.asList(
+                    MutateInSpec.increment("mutated", 1)
+            ));
+
+    assertEquals(1, result.contentAs(0, Integer.class));
+  }
 }

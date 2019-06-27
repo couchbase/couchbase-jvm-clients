@@ -23,11 +23,7 @@ import com.couchbase.client.core.error.LockException;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.CounterResult;
-import com.couchbase.client.java.kv.ExistsResult;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -611,5 +607,4 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(result.cas() != 0);
     assertEquals(0L, result.content());
   }
-
 }
