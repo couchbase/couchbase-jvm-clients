@@ -4,7 +4,8 @@ import java.util
 import java.util.{List, UUID}
 import java.util.concurrent.atomic.AtomicReference
 
-import com.couchbase.client.core.error.QueryServiceException
+import com.couchbase.client.core.error.QueryException
+import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.json.JsonObject
@@ -163,12 +164,9 @@ class QuerySpec extends ScalaIntegrationTest {
     x match {
       case Success(result) =>
         assert(false)
-      case Failure(err: QueryServiceException) =>
-      case Failure(err: QueryError) =>
-        val msg = err.msg
-      // Fix under SCBC-33
-//              assert(msg == "syntax error - at end of input")
-//              assert(err.code == Success(3000))
+      case Failure(err: QueryException) =>
+        assert(err.msg == "syntax error - at end of input")
+        assert(err.code == 3000)
       case Failure(err) =>
         throw err
     }
@@ -221,7 +219,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
   @Test
   def reactive_error_due_to_bad_syntax() {
-    Assertions.assertThrows(classOf[QueryServiceException], () => {
+    Assertions.assertThrows(classOf[QueryException], () => {
       cluster.reactive.query("""sselect*from""")
         .flatMapMany(result => {
           result.rowsAs[String]

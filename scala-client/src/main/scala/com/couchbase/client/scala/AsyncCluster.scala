@@ -18,7 +18,8 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
-import com.couchbase.client.core.error.{AnalyticsServiceException, QueryServiceException}
+import com.couchbase.client.core.error.{AnalyticsServiceException, QueryException}
+import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._

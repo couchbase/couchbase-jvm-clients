@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
-import com.couchbase.client.core.error.QueryServiceException;
+import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
@@ -67,7 +67,7 @@ public class QueryChunkResponseParser
     .doOnValue("/profile", v -> profile = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(new QueryServiceException(errors));
+      failRows(new QueryException(errors));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -85,7 +85,7 @@ public class QueryChunkResponseParser
 
   @Override
   public Optional<Throwable> error() {
-    return Optional.ofNullable(errors).map(QueryServiceException::new);
+    return Optional.ofNullable(errors).map(QueryException::new);
   }
 
   @Override

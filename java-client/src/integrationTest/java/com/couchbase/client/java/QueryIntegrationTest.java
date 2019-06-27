@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.error.QueryServiceException;
+import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -189,7 +189,13 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failOnSyntaxError() {
-        assertThrows(QueryServiceException.class, () -> cluster.query("invalid export"));
+        try {
+            cluster.query("invalid export");
+        }
+        catch (QueryException err) {
+            assertEquals("syntax error - at export", err.msg());
+            assertEquals(3000, err.code());
+        }
     }
 
     @Test

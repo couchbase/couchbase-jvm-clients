@@ -23,7 +23,7 @@ import java.util.{Collections, Map, Set}
 import com.couchbase.client.core.{Core, Reactor}
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.QueryServiceException
+import com.couchbase.client.core.error.QueryException
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
@@ -143,14 +143,6 @@ private[scala] class QueryHandler(core: Core) {
     */
   private def convertResponse(response: QueryResponse): ReactiveQueryResult = {
     val rows: Flux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
-      .onErrorMap((err: Throwable) => {
-        val x: Throwable = err match {
-          case e: QueryServiceException =>
-            QueryError(e.content)
-          case _ => err
-        }
-        x
-      })
 
     val meta: Mono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
       .map(addl => {
