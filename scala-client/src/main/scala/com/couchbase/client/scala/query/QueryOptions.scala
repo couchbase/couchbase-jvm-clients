@@ -16,10 +16,15 @@
 
 package com.couchbase.client.scala.query
 
+import java.util
+import java.util.List
+
+import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 
 import scala.concurrent.duration.Duration
+import scala.util.Success
 
 
 /** Customize the execution of a N1QL query.
@@ -28,7 +33,7 @@ import scala.concurrent.duration.Duration
   * @since 1.0.0
   */
 case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
-                        private[scala] val positionalParameters: Option[List[Any]] = None,
+                        private[scala] val positionalParameters: Option[Seq[Any]] = None,
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val credentials: Option[Map[String,String]] = None,
                         private[scala] val maxParallelism: Option[Int] = None,
@@ -40,7 +45,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val scanCap: Option[Int] = None,
                         private[scala] val scanConsistency: Option[ScanConsistency] = None,
-                        //                        consistentWith: Option[List[MutationToken]]
+                        private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None,
                         private[scala] val adhoc: Boolean = true
@@ -180,9 +185,15 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     */
   def scanConsistency(scanConsistency: ScanConsistency): QueryOptions = copy(scanConsistency = Some(scanConsistency))
 
-//  def consistentWith(consistentWith: List[MutationToken]): QueryOptions = {
-//    copy(consistentWith = Option(consistentWith))
-//  }
+  /** Sets the [[MutationToken]]s this query should be consistent with.  These tokens are returned from mutations.
+    *
+    * @param tokens the mutation tokens
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def consistentWith(tokens: Seq[MutationToken]): QueryOptions = {
+    copy(consistentWith = Option(tokens))
+  }
 
   /** Sets a maximum timeout for processing on the server side.
     *
@@ -256,6 +267,24 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
       out.put("args", arr)
     })
     scanConsistency.foreach(v => out.put("scan_consistency", v.encoded))
+    consistentWith.map(cw => {
+      val mutationState = JsonObjectSafe.create
+
+      cw.foreach(token => {
+        val bucket: JsonObject = mutationState.obj(token.bucket) match {
+          case Success(bkt) => bkt.o
+          case _ =>
+            val bkt = JsonObject.create
+            mutationState.put(token.bucket(), bkt)
+            bkt
+        }
+
+        bucket.put(token.vbucketID().toString,
+          JsonArray(token.sequenceNumber -> String.valueOf(token.vbucketUUID)))
+      })
+      out.put("scan_vectors", mutationState.o)
+      out.put("scan_consistency", "at_plus")
+    })
     profile.foreach(v => out.put("profile", v.toString.toLowerCase))
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
     clientContextId.foreach(v => out.put("client_context_id", v))

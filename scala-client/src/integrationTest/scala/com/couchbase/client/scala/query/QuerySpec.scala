@@ -5,7 +5,8 @@ import java.util.{List, UUID}
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.QueryServiceException
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.core.msg.kv.MutationToken
+import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
@@ -29,7 +30,7 @@ class QuerySpec extends ScalaIntegrationTest {
   @BeforeAll
   def beforeAll(): Unit = {
     val config = ClusterAwareIntegrationTest.config()
-    env = environment.build
+    env = environment.ioConfig(IoConfig().mutationTokensEnabled(true)).build
     cluster = Cluster.connect(env)
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
@@ -380,4 +381,18 @@ class QuerySpec extends ScalaIntegrationTest {
 
   private val FooContent = JsonObject.create.put("foo", "bar")
 
+  @Test
+  def consistentWith(): Unit = {
+    val id = UUID.randomUUID.toString
+    val mt: MutationToken = coll.upsert(id, FooContent).get.mutationToken.get
+
+    val options: QueryOptions = QueryOptions()
+      .consistentWith(Seq(mt))
+
+    val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+      ".id=\"" + id + "\"", options).get
+
+    val rows = result.allRowsAs[JsonObject].get
+    assert(1 == rows.size)
+  }
 }
