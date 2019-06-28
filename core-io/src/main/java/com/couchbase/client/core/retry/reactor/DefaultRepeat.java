@@ -123,15 +123,12 @@ public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T
 		context.lastBackoff = nextBackoff;
 
 		if (!repeatPredicate.test(repeatContext)) {
-			log.debug("Stopping repeats since predicate returned false, retry context: {}", repeatContext);
 			return RETRY_EXHAUSTED;
 		}
 		else if (nextBackoff == RETRY_EXHAUSTED) {
-			log.debug("Repeats exhausted, retry context: {}", repeatContext);
 			return RETRY_EXHAUSTED;
 		}
 		else {
-			log.debug("Scheduling repeat attempt, retry context: {}", repeatContext);
 			onRepeat.accept(repeatContext);
 			return nextBackoff;
 		}

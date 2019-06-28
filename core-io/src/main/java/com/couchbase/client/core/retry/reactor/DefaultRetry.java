@@ -121,15 +121,12 @@ public class DefaultRetry<T> extends AbstractRetry<T, Throwable> implements Retr
 		context.lastBackoff = nextBackoff;
 
 		if (!retryPredicate.test(retryContext)) {
-			log.debug("Stopping retries since predicate returned false, retry context: {}", retryContext);
 			return Mono.error(e);
 		}
 		else if (nextBackoff == RETRY_EXHAUSTED) {
-			log.debug("Retries exhausted, retry context: {}", retryContext);
 			return Mono.error(new RetryExhaustedException(e));
 		}
 		else {
-			log.debug("Scheduling retry attempt, retry context: {}", retryContext);
 			onRetry.accept(retryContext);
 			return retryMono(nextBackoff.delay());
 		}
