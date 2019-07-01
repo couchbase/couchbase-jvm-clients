@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.msg.Request;
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,7 +85,7 @@ class BaseEndpointTest {
   @BeforeEach
   void beforeEach() {
     eventLoopGroup = new NioEventLoopGroup(1);
-    eventBus = new SimpleEventBus(true);
+    eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
     ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
@@ -243,7 +245,7 @@ class BaseEndpointTest {
    */
   @Test
   void disconnectDuringRetry() {
-    SimpleEventBus eventBus = new SimpleEventBus(true);
+    SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     CoreEnvironment env = CoreEnvironment.builder(credentials)
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))

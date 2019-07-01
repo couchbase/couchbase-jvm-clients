@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
@@ -51,12 +52,13 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChanne
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
+import com.couchbase.client.core.util.SingleStateful;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,7 +82,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * Holds the current state of this endpoint.
    */
-  private final AtomicReference<EndpointState> state;
+  private final SingleStateful<EndpointState> state;
 
   /**
    * The related context to use.
@@ -147,7 +149,6 @@ public abstract class BaseEndpoint implements Endpoint {
   BaseEndpoint(final String hostname, final int port, final EventLoopGroup eventLoopGroup,
                final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
                final ServiceType serviceType, final boolean pipelined) {
-    this.state = new AtomicReference<>(EndpointState.DISCONNECTED);
     disconnect = new AtomicBoolean(false);
     this.pipelined = pipelined;
     if (circuitBreakerConfig.enabled()) {
@@ -161,6 +162,11 @@ public abstract class BaseEndpoint implements Endpoint {
       new EndpointContext(serviceContext, hostname, port, circuitBreaker, serviceType,
         Optional.empty(), serviceContext.bucket(), Optional.empty())
     );
+    this.state = SingleStateful.fromInitial(
+      EndpointState.DISCONNECTED,
+      (from, to) -> serviceContext.environment().eventBus().publish(new EndpointStateChangedEvent(endpointContext.get(), from, to))
+    );
+
     this.outstandingRequests = new AtomicInteger(0);
     this.lastResponseTimestamp = 0;
     this.eventLoopGroup = eventLoopGroup;
@@ -200,7 +206,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Override
   public void connect() {
-    if (state.compareAndSet(EndpointState.DISCONNECTED, EndpointState.CONNECTING)) {
+    if (state.compareAndTransition(EndpointState.DISCONNECTED, EndpointState.CONNECTING)) {
       reconnect();
     }
   }
@@ -213,7 +219,7 @@ public abstract class BaseEndpoint implements Endpoint {
    * unsuccessful.</p>
    */
   private void reconnect() {
-    state.set(EndpointState.CONNECTING);
+    state.transition(EndpointState.CONNECTING);
 
     final EndpointContext endpointContext = this.endpointContext.get();
 
@@ -317,7 +323,7 @@ public abstract class BaseEndpoint implements Endpoint {
             ));
             this.endpointContext.set(newContext);
             this.circuitBreaker.reset();
-            state.set(EndpointState.CONNECTED);
+            state.transition(EndpointState.CONNECTED);
           }
         },
         error -> endpointContext.environment().eventBus().publish(
@@ -332,7 +338,7 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public void disconnect() {
     if (disconnect.compareAndSet(false, true)) {
-      state.set(EndpointState.DISCONNECTING);
+      state.transition(EndpointState.DISCONNECTING);
       closeChannel(this.channel);
     }
   }
@@ -353,7 +359,8 @@ public abstract class BaseEndpoint implements Endpoint {
 
       channel.disconnect().addListener(future -> {
         Duration latency = Duration.ofNanos(System.nanoTime() - start);
-        state.set(EndpointState.DISCONNECTED);
+        state.transition(EndpointState.DISCONNECTED);
+        state.close();
         if (future.isSuccess()) {
           endpointContext.environment().eventBus().publish(
             new EndpointDisconnectedEvent(latency, endpointContext)
@@ -365,7 +372,8 @@ public abstract class BaseEndpoint implements Endpoint {
         }
       });
     } else {
-      state.set(EndpointState.DISCONNECTED);
+      state.transition(EndpointState.DISCONNECTED);
+      state.close();
     }
   }
 
@@ -415,7 +423,7 @@ public abstract class BaseEndpoint implements Endpoint {
    * @return true if we can, false otherwise.
    */
   private boolean canWrite() {
-    return state.get() == EndpointState.CONNECTED
+    return state.state() == EndpointState.CONNECTED
       && channel.isActive()
       && channel.isWritable()
       && circuitBreaker.allowsRequest();
@@ -423,7 +431,12 @@ public abstract class BaseEndpoint implements Endpoint {
 
   @Override
   public EndpointState state() {
-    return state.get();
+    return state.state();
+  }
+
+  @Override
+  public Flux<EndpointState> states() {
+    return state.states();
   }
 
   /**

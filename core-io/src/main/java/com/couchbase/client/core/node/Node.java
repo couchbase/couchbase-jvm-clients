@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectIgnoredEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.node.NodeStateChangedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
@@ -39,13 +40,15 @@ import com.couchbase.client.core.service.QueryService;
 import com.couchbase.client.core.service.SearchService;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceScope;
+import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.service.ViewService;
+import com.couchbase.client.core.util.CompositeStateful;
+import com.couchbase.client.core.util.Stateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,9 +56,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
-public class Node {
+public class Node implements Stateful<NodeState> {
 
   /**
    * Identifier for global scope services, there is no bucket name like this.
@@ -67,6 +69,11 @@ public class Node {
   private final Credentials credentials;
   private final Map<String, Map<ServiceType, Service>> services;
   private final AtomicBoolean disconnect;
+
+  /**
+   * Holds the endpoint states and as a result the internal service state.
+   */
+  private final CompositeStateful<Service, ServiceState, NodeState> serviceStates;
 
   /**
    * Contains the enabled {@link Service}s on a node level.
@@ -83,6 +90,57 @@ public class Node {
     this.credentials = ctx.environment().credentials();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
+    this.serviceStates = CompositeStateful.create(NodeState.DISCONNECTED, serviceStates -> {
+      if (serviceStates.isEmpty()) {
+        return NodeState.DISCONNECTED;
+      }
+
+      int connected = 0;
+      int connecting = 0;
+      int disconnecting = 0;
+      int idle = 0;
+      int degraded = 0;
+      for (ServiceState service : serviceStates) {
+        switch (service) {
+          case CONNECTED:
+            connected++;
+            break;
+          case CONNECTING:
+            connecting++;
+            break;
+          case DISCONNECTING:
+            disconnecting++;
+            break;
+          case DEGRADED:
+            degraded++;
+            break;
+          case IDLE:
+            idle++;
+            break;
+          case DISCONNECTED:
+            // Intentionally ignored.
+            break;
+          default:
+            throw new IllegalStateException("Unknown unhandled state " + service
+              + ", this is a bug!");
+        }
+      }
+      if (serviceStates.size() == idle) {
+        return NodeState.IDLE;
+      } else if (serviceStates.size() == (connected + idle)) {
+        return NodeState.CONNECTED;
+      } else if (connected > 0 || degraded > 0) {
+        return NodeState.DEGRADED;
+      } else if (connecting > 0) {
+        return NodeState.CONNECTING;
+      } else if (disconnecting > 0) {
+        return NodeState.DISCONNECTING;
+      } else {
+        return NodeState.DISCONNECTED;
+      }
+    },
+      (from, to) -> ctx.environment().eventBus().publish(new NodeStateChangedEvent(this.ctx, from, to))
+    );
 
     ctx.environment().eventBus().publish(new NodeConnectedEvent(Duration.ZERO, this.ctx));
   }
@@ -155,6 +213,7 @@ public class Node {
       if (!localMap.containsKey(type)) {
         long start = System.nanoTime();
         Service service = createService(type, port, bucket);
+        serviceStates.register(service, service);
         localMap.put(type, service);
         enabledServices.set(enabledServices.get() | 1 << type.ordinal());
         // todo: only return once the service is connected?
@@ -211,6 +270,7 @@ public class Node {
       }
 
       Service service = localMap.remove(type);
+      serviceStates.deregister(service);
       long start = System.nanoTime();
       enabledServices.set(enabledServices.get() & ~(1 << service.type().ordinal()));
       // todo: only return once the service is disconnected?
@@ -223,64 +283,14 @@ public class Node {
     });
   }
 
-
-  private synchronized List<Service> services() {
-    return this.services.values().stream()
-      .flatMap(m -> m.values().stream())
-      .collect(Collectors.toList());
+  @Override
+  public Flux<NodeState> states() {
+    return serviceStates.states();
   }
 
+  @Override
   public NodeState state() {
-    // todo: this is a bit wasteful :/
-    List<Service> currentServices = services();
-
-    if (currentServices.isEmpty()) {
-      return NodeState.DISCONNECTED;
-    }
-
-    int connected = 0;
-    int connecting = 0;
-    int disconnecting = 0;
-    int idle = 0;
-    int degraded = 0;
-    for (Service service : currentServices) {
-      switch (service.state()) {
-        case CONNECTED:
-          connected++;
-          break;
-        case CONNECTING:
-          connecting++;
-          break;
-        case DISCONNECTING:
-          disconnecting++;
-          break;
-        case DEGRADED:
-          degraded++;
-          break;
-        case IDLE:
-          idle++;
-          break;
-        case DISCONNECTED:
-          // Intentionally ignored.
-          break;
-        default:
-          throw new IllegalStateException("Unknown unhandled state " + service.state()
-            + ", this is a bug!");
-      }
-    }
-    if (currentServices.size() == idle) {
-      return NodeState.IDLE;
-    } else if (currentServices.size() == (connected + idle)) {
-      return NodeState.CONNECTED;
-    } else if (connected > 0 || degraded > 0) {
-      return NodeState.DEGRADED;
-    } else if (connecting > 0) {
-      return NodeState.CONNECTING;
-    } else if (disconnecting > 0) {
-      return NodeState.DISCONNECTING;
-    } else {
-      return NodeState.DISCONNECTED;
-    }
+    return serviceStates.state();
   }
 
   /**

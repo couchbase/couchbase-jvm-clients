@@ -22,10 +22,12 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectIgnoredEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.node.NodeStateChangedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.msg.Request;
@@ -40,7 +42,9 @@ import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.DirectProcessor;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -96,6 +100,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.IDLE);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -120,6 +125,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -144,6 +150,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -164,6 +171,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -191,6 +199,7 @@ class NodeTest {
         when(s.state()).thenReturn(counter.incrementAndGet() % 2 == 0
           ? ServiceState.IDLE
           : ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -222,6 +231,7 @@ class NodeTest {
         when(s.state()).thenReturn(counter.incrementAndGet() > 1
           ? ServiceState.CONNECTED
           : ServiceState.DISCONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -254,6 +264,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTING);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -278,6 +289,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.DISCONNECTING);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -302,6 +314,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -338,6 +351,7 @@ class NodeTest {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -362,6 +376,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
         when(s.type()).thenReturn(serviceType);
+        when(s.states()).thenReturn(DirectProcessor.create());
         return s;
       }
     };
@@ -385,6 +400,7 @@ class NodeTest {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -414,6 +430,7 @@ class NodeTest {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -435,7 +452,7 @@ class NodeTest {
   @Test
   void sendsEventsIntoEventBus() {
     Core core = mock(Core.class);
-    SimpleEventBus eventBus = new SimpleEventBus(true);
+    SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(NodeStateChangedEvent.class));
     CoreEnvironment env = CoreEnvironment
       .builder(mock(Credentials.class))
       .eventBus(eventBus)
@@ -448,6 +465,7 @@ class NodeTest {
         protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
           Service s = mock(Service.class);
           when(s.type()).thenReturn(serviceType);
+          when(s.states()).thenReturn(DirectProcessor.create());
           when(s.state()).thenReturn(ServiceState.IDLE);
           return s;
         }

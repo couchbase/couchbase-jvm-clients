@@ -18,6 +18,7 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.util.Stateful;
 
 /**
  * The parent interface for all service implementations.
@@ -28,7 +29,7 @@ import com.couchbase.client.core.msg.Response;
  *
  * @since 1.0.0
  */
-public interface Service {
+public interface Service extends Stateful<ServiceState> {
 
   /**
    * Instruct this {@link Service} to connect.
@@ -59,14 +60,13 @@ public interface Service {
   <R extends Request<? extends Response>> void send(R request);
 
   /**
-   * Returns the current state of this {@link Service}.
-   *
-   * @return the state of this service.
+   * Returns the underlying contextual metadata for this service.
    */
-  ServiceState state();
-
   ServiceContext context();
 
+  /**
+   * Represents the service type for this service.
+   */
   ServiceType type();
 
 }

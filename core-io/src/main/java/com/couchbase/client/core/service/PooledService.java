@@ -18,10 +18,14 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.util.CompositeStateful;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -59,9 +63,9 @@ abstract class PooledService implements Service {
   private final List<Endpoint> endpoints;
 
   /**
-   * Holds the initial state for this pooled service.
+   * Holds the endpoint states and as a result the internal service state.
    */
-  private final ServiceState initialState;
+  private final CompositeStateful<Endpoint, EndpointState, ServiceState> endpointStates;
 
   /**
    * The context for this service.
@@ -87,9 +91,51 @@ abstract class PooledService implements Service {
   PooledService(final ServiceConfig serviceConfig, final ServiceContext serviceContext) {
     this.serviceConfig = serviceConfig;
     this.endpoints = new CopyOnWriteArrayList<>();
-    this.initialState = serviceConfig.minEndpoints() > 0
+
+    final ServiceState initialState = serviceConfig.minEndpoints() > 0
       ? ServiceState.DISCONNECTED
       : ServiceState.IDLE;
+
+    this.endpointStates = CompositeStateful.create(initialState, endpointStates -> {
+      if (endpointStates.isEmpty()) {
+        return initialState;
+      }
+
+      ServiceState state = ServiceState.DISCONNECTED;
+      int connected = 0;
+      int connecting = 0;
+      int disconnecting = 0;
+      for (EndpointState endpointState : endpointStates) {
+        switch (endpointState) {
+          case CONNECTED:
+            connected++;
+            break;
+          case CONNECTING:
+            connecting++;
+            break;
+          case DISCONNECTING:
+            disconnecting++;
+            break;
+          default:
+            // ignore
+        }
+      }
+
+      if (endpointStates.size() == connected) {
+        state = ServiceState.CONNECTED;
+      } else if (connected > 0) {
+        state = ServiceState.DEGRADED;
+      } else if (connecting > 0) {
+        state = ServiceState.CONNECTING;
+      } else if (disconnecting > 0) {
+        state = ServiceState.DISCONNECTING;
+      }
+
+      return state;
+    }, (from, to) ->
+      serviceContext.environment().eventBus().publish(new ServiceStateChangedEvent(serviceContext, from, to))
+    );
+
     this.disconnected = new AtomicBoolean(false);
     this.serviceContext = serviceContext;
     this.fixedPool = serviceConfig.minEndpoints() == serviceConfig.maxEndpoints();
@@ -140,6 +186,7 @@ abstract class PooledService implements Service {
       long actualIdleTime = System.nanoTime() - endpoint.lastResponseReceived();
       if (endpoint.free() && actualIdleTime >= serviceConfig.idleTime().toNanos()) {
         this.endpoints.remove(endpoint);
+        endpointStates.deregister(endpoint);
         endpoint.disconnect();
       }
     }
@@ -178,6 +225,7 @@ abstract class PooledService implements Service {
       synchronized (this) {
         if (!disconnected.get()) {
           Endpoint endpoint = createEndpoint();
+          endpointStates.register(endpoint, endpoint);
           endpoint.connect();
           endpoints.add(endpoint);
         }
@@ -198,6 +246,7 @@ abstract class PooledService implements Service {
 
       for (int i = 0; i < serviceConfig.minEndpoints(); i++) {
         Endpoint endpoint = createEndpoint();
+        endpointStates.register(endpoint, endpoint);
         endpoint.connect();
         endpoints.add(endpoint);
       }
@@ -214,6 +263,7 @@ abstract class PooledService implements Service {
 
       for (Endpoint endpoint : endpoints) {
         endpoint.disconnect();
+        endpointStates.deregister(endpoint);
       }
       endpoints.clear();
     }
@@ -226,41 +276,12 @@ abstract class PooledService implements Service {
 
   @Override
   public ServiceState state() {
-    if (endpoints.isEmpty()) {
-      return initialState;
-    }
+    return endpointStates.state();
+  }
 
-    ServiceState state = ServiceState.DISCONNECTED;
-    int connected = 0;
-    int connecting = 0;
-    int disconnecting = 0;
-    for (Endpoint endpoint : endpoints) {
-        switch (endpoint.state()) {
-          case CONNECTED:
-            connected++;
-            break;
-          case CONNECTING:
-            connecting++;
-            break;
-          case DISCONNECTING:
-            disconnecting++;
-            break;
-          default:
-            // ignore
-        }
-    }
-
-    if (endpoints.size() == connected) {
-      state = ServiceState.CONNECTED;
-    } else if (connected > 0) {
-      state = ServiceState.DEGRADED;
-    } else if (connecting > 0) {
-      state = ServiceState.CONNECTING;
-    } else if (disconnecting > 0) {
-      state = ServiceState.DISCONNECTING;
-    }
-
-    return state;
+  @Override
+  public Flux<ServiceState> states() {
+    return endpointStates.states();
   }
 
 }

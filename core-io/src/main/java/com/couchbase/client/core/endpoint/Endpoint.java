@@ -18,6 +18,8 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.util.Stateful;
+import reactor.core.publisher.Flux;
 
 /**
  * The parent interface for all endpoints.
@@ -28,7 +30,7 @@ import com.couchbase.client.core.msg.Response;
  *
  * @since 1.0.0
  */
-public interface Endpoint {
+public interface Endpoint extends Stateful<EndpointState> {
 
   /**
    * Instruct this {@link Endpoint} to connect.
@@ -57,13 +59,6 @@ public interface Endpoint {
    * @param request the request to send.
    */
   <R extends Request<? extends Response>> void send(R request);
-
-  /**
-   * Returns the current state of this {@link Endpoint}.
-   *
-   * @return the state of this endpoint.
-   */
-  EndpointState state();
 
   /**
    * If this endpoint has currently one or more requests outstanding.

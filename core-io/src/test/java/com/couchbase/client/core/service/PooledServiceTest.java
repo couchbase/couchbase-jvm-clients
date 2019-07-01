@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -33,6 +34,7 @@ import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.DirectProcessor;
 
 import java.time.Duration;
 import java.util.*;
@@ -61,7 +63,7 @@ class PooledServiceTest {
 
   @BeforeEach
   void beforeEach() {
-    eventBus = new SimpleEventBus(true);
+    eventBus = new SimpleEventBus(true, Collections.singletonList(ServiceStateChangedEvent.class));
     environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
     serviceContext = new ServiceContext(coreContext, "127.0.0.1", 1234,
@@ -114,8 +116,10 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTING);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTING);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -148,8 +152,10 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -185,9 +191,11 @@ class PooledServiceTest {
     int minEndpoints = 2;
 
     Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -213,9 +221,11 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.free()).thenReturn(true);
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -243,8 +253,11 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
+
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -269,6 +282,7 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.free()).thenReturn(true);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -303,6 +317,8 @@ class PooledServiceTest {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     when(mock1.free()).thenReturn(false);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
+
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
     final AtomicInteger invocation = new AtomicInteger();
@@ -342,6 +358,7 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.free()).thenReturn(false);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -374,11 +391,13 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.free()).thenReturn(false);
     when(mock1.lastResponseReceived()).thenReturn(now);
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
     when(mock2.free()).thenReturn(false);
     when(mock2.lastResponseReceived()).thenReturn(now);
 

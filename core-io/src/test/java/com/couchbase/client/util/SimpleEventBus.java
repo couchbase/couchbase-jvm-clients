@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.EventSubscription;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -43,6 +44,11 @@ public class SimpleEventBus implements EventBus {
   private final boolean ignoreSystemEvents;
 
   /**
+   * Holds a (potential empty) list of
+   */
+  private final List<Class<? extends Event>> eventsToIgnore;
+
+  /**
    * Creates a new {@link SimpleEventBus}.
    *
    * <p>Note that in general you want to ignore system events since they add nondeterminism during
@@ -52,12 +58,28 @@ public class SimpleEventBus implements EventBus {
    * @param ignoreSystemEvents true if they should be ignored (recommended), false otherwise.
    */
   public SimpleEventBus(final boolean ignoreSystemEvents) {
+    this(ignoreSystemEvents, Collections.emptyList());
+  }
+
+  /**
+   * Creates a new {@link SimpleEventBus}.
+   *
+   * <p>Note that in general you want to ignore system events since they add nondeterminism during
+   * assertions when things like garbage collections happen. Of course if you need to test/verify
+   * system events, set the argument to false.</p>
+   *
+   * @param ignoreSystemEvents true if they should be ignored (recommended), false otherwise.
+   * @param othersToIgnore other list of events to ignore.
+   */
+  public SimpleEventBus(final boolean ignoreSystemEvents, List<Class<? extends Event>> othersToIgnore) {
     this.ignoreSystemEvents = ignoreSystemEvents;
+    this.eventsToIgnore = Collections.synchronizedList(othersToIgnore);
   }
 
   @Override
   public synchronized PublishResult publish(final Event event) {
-    if (!ignoreSystemEvents || !event.category().equals(Event.Category.SYSTEM.path())) {
+    boolean inListToIgnore = eventsToIgnore.contains(event.getClass());
+    if (!inListToIgnore && (!ignoreSystemEvents || !event.category().equals(Event.Category.SYSTEM.path()))) {
       publishedEvents.add(event);
     }
     return PublishResult.SUCCESS;
