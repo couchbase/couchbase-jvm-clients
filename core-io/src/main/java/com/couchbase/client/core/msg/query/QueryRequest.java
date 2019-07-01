@@ -67,7 +67,7 @@ public class QueryRequest
       .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
     request.headers()
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

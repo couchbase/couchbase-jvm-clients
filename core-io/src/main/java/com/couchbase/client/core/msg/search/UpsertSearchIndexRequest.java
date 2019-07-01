@@ -51,7 +51,7 @@ public class UpsertSearchIndexRequest extends BaseRequest<UpsertSearchIndexRespo
   public FullHttpRequest encode() {
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, PATH + name,
       Unpooled.wrappedBuffer(payload));
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    addHttpBasicAuth(request, credentials);
     request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
     request.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.length);
     return request;

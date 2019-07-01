@@ -116,7 +116,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
     return new UpsertResponse(
       status,
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 

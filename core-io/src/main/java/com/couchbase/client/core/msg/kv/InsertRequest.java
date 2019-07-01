@@ -117,7 +117,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
     return new InsertResponse(
       status,
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 

@@ -51,7 +51,7 @@ public class GetSearchIndexRequest extends BaseRequest<GetSearchIndexResponse>
   @Override
   public FullHttpRequest encode() {
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, PATH + name);
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

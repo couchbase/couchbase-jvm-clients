@@ -372,7 +372,7 @@ public class Node implements Stateful<NodeState> {
       case KV:
         if (bucket.isPresent()) {
           return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port,
-            bucket.get(), credentials);
+            bucket, credentials);
         } else {
           throw new IllegalStateException("Bucket needs to be present when the " +
             "KeyValueService is created, this is a bug!");

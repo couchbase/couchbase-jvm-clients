@@ -31,15 +31,16 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public class KeyValueEndpoint extends BaseEndpoint {
 
-  private final String bucketname;
+  private final Optional<String> bucketname;
   private final Credentials credentials;
 
   public KeyValueEndpoint(final ServiceContext ctx, final String hostname,
-                          final int port, final String bucketname, final Credentials credentials) {
+                          final int port, final Optional<String> bucketname, final Credentials credentials) {
     super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV, true);
     this.credentials = credentials;
@@ -54,10 +55,10 @@ public class KeyValueEndpoint extends BaseEndpoint {
   public static class KeyValuePipelineInitializer implements PipelineInitializer {
 
     private final EndpointContext ctx;
-    private final String bucketname;
+    private final Optional<String> bucketname;
     private final Credentials credentials;
 
-    public KeyValuePipelineInitializer(EndpointContext ctx, String bucketname, Credentials credentials) {
+    public KeyValuePipelineInitializer(EndpointContext ctx, Optional<String> bucketname, Credentials credentials) {
       this.ctx = ctx;
       this.credentials = credentials;
       this.bucketname = bucketname;
@@ -74,12 +75,12 @@ public class KeyValueEndpoint extends BaseEndpoint {
       if (!ctx.environment().securityConfig().certAuthEnabled()) {
         pipeline.addLast(new SaslAuthenticationHandler(
           ctx,
-          credentials.usernameForBucket(bucketname),
-          credentials.passwordForBucket(bucketname)
+          credentials.username(),
+          credentials.password()
         ));
       }
 
-      pipeline.addLast(new SelectBucketHandler(ctx, bucketname));
+      bucketname.ifPresent(s -> pipeline.addLast(new SelectBucketHandler(ctx, s)));
       pipeline.addLast(new KeyValueMessageHandler(endpoint, ctx, bucketname));
     }
 

@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.net.InetSocketAddress;
@@ -40,10 +41,12 @@ public class HttpProtocol {
    * Adds http basic auth to a given request.
    *
    * @param request the request where it should be added.
-   * @param user the username.
-   * @param password the password.
+   * @param credentials the credentials to use.
    */
-  public static void addHttpBasicAuth(final HttpRequest request, final String user, final String password) {
+  public static void addHttpBasicAuth(final HttpRequest request, final Credentials credentials) {
+    final String user = credentials.username();
+    final String password = credentials.password();
+
     // if both user and password are null or empty, don't add http basic auth
     // this is usually the case when certificate auth is used.
     if ((user == null || user.isEmpty()) && (password == null || password.isEmpty())) {

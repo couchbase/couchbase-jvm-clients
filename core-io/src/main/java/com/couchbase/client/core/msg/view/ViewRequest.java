@@ -93,11 +93,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
       .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
 
-    addHttpBasicAuth(
-      request,
-      credentials.usernameForBucket(bucket),
-      credentials.passwordForBucket(bucket)
-    );
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

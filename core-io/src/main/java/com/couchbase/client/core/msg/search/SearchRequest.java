@@ -60,7 +60,7 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, c);
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request.headers().set(HttpHeaderNames.CONTENT_LENGTH, c.readableBytes());
-        addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+        addHttpBasicAuth(request, credentials);
         return request;
     }
 

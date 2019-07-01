@@ -89,7 +89,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
       ctx.mutationTokensEnabled(),
       partition(),
       response,
-      ctx.bucket()
+      ctx.bucket().get()
     );
     return new RemoveResponse(status, cas(response), mutationToken);
   }

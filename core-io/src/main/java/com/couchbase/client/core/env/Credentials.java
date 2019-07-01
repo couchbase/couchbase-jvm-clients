@@ -30,17 +30,15 @@ public interface Credentials {
   /**
    * Returns the corresponding username for a given bucket.
    *
-   * @param bucket the name of the bucket.
    * @return the username for the given bucket.
    */
-  String usernameForBucket(String bucket);
+  String username();
 
   /**
    * Returns the corresponding password for a given bucket.
    *
-   * @param bucket the name of the bucket.
    * @return the password for the given bucket.
    */
-  String passwordForBucket(String bucket);
+  String password();
 
 }

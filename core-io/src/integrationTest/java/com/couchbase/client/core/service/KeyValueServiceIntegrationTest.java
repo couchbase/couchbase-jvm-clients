@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -67,7 +68,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
       coreContext,
       node.hostname(),
       node.ports().get(Services.KV),
-      config().bucketname(),
+      Optional.of(config().bucketname()),
       env.credentials()
     );
 

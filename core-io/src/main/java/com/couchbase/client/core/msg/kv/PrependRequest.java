@@ -98,7 +98,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> {
     return new PrependResponse(
       decodeStatus(response),
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 }

@@ -244,7 +244,7 @@ class CompressionTest {
       CompressionConfig.builder().enabled(enabled).build(),
       false,
       false,
-      cid.bucket(),
+      Optional.of(cid.bucket()),
       false,
       false,
       new CollectionMap()

@@ -44,6 +44,7 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -84,7 +85,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * The name of the bucket.
    */
-  private final String bucketName;
+  private final Optional<String> bucketName;
 
   /**
    * The surrounding endpoint.
@@ -112,7 +113,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param endpointContext the parent core context.
    */
   public KeyValueMessageHandler(final BaseEndpoint endpoint,
-                                final EndpointContext endpointContext, final String bucketName) {
+                                final EndpointContext endpointContext, final Optional<String> bucketName) {
     this.endpoint = endpoint;
     this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
@@ -261,7 +262,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       .map(b -> b.toString(UTF_8).trim())
       .filter(c -> c.startsWith("{"))
       .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
-        new ProposedBucketConfigContext(bucketName, c, origin)
+        new ProposedBucketConfigContext(request.bucket(), c, origin)
       ));
   }
 
@@ -272,7 +273,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private void handleOutdatedCollection(final KeyValueRequest<Response> request) {
     final long start = System.nanoTime();
-    ioContext.core().configurationProvider().refreshCollectionMap(bucketName, true).subscribe(v -> {}, err -> {
+    ioContext.core().configurationProvider().refreshCollectionMap(request.bucket(), true).subscribe(v -> {}, err -> {
       Duration duration = Duration.ofNanos(System.nanoTime() - start);
       eventBus.publish(new CollectionMapRefreshFailedEvent(duration, ioContext, err));
     });

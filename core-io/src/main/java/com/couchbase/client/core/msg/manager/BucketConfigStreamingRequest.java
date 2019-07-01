@@ -60,7 +60,7 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
       HttpMethod.GET,
       String.format(PATH, bucketName)
     );
-    addHttpBasicAuth(request, credentials.usernameForBucket(bucketName), credentials.passwordForBucket(bucketName));
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

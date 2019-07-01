@@ -72,7 +72,7 @@ public class AnalyticsRequest
     if (priority != NO_PRIORITY) {
       request.headers().set("Analytics-Priority", priority);
     }
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

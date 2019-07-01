@@ -99,7 +99,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
     return new AppendResponse(
       decodeStatus(response),
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 }

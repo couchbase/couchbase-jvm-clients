@@ -90,7 +90,7 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
     return new TouchResponse(
       decodeStatus(response),
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 }

@@ -47,7 +47,7 @@ class KeyValueMessageHandlerTest {
   private static CollectionIdentifier CID = CollectionIdentifier.fromDefault(BUCKET);
 
   @BeforeAll
-  private static void setup() {
+  static void setup() {
     ENV = CoreEnvironment.create("foo", "bar");
     Core core = mock(Core.class);
     CoreContext coreContext = new CoreContext(core, 1, ENV);
@@ -59,7 +59,7 @@ class KeyValueMessageHandlerTest {
   }
 
   @AfterAll
-  private static void teardown() {
+  static void teardown() {
     ENV.shutdown();
   }
 
@@ -69,7 +69,7 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void opaqueIsIncreasing() {
-    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
       channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
@@ -99,8 +99,8 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void opaqueIsPerChannel() {
-    EmbeddedChannel channel1 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
-    EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, BUCKET));
+    EmbeddedChannel channel1 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+    EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
       channel1.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -108,7 +107,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
-            config().bucketname(),
+            Optional.of(config().bucketname()),
             env.credentials()
           ).init(null, ch.pipeline());
         }
@@ -138,7 +137,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
-            config().bucketname(),
+            Optional.of(config().bucketname()),
             new RoleBasedCredentials(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
           ).init(null, ch.pipeline());
         }
@@ -159,7 +158,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
-            config().bucketname(),
+            Optional.of(config().bucketname()),
             new RoleBasedCredentials("vfwmf42343rew", config().adminPassword())
           ).init(null, ch.pipeline());
         }
@@ -180,7 +179,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
-            "42eredwefrfe",
+            Optional.of("42eredwefrfe"),
             env.credentials()
           ).init(null, ch.pipeline());
         }

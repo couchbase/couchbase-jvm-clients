@@ -51,7 +51,7 @@ public class RemoveSearchIndexRequest extends BaseRequest<RemoveSearchIndexRespo
   @Override
   public FullHttpRequest encode() {
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, PATH + name);
-    addHttpBasicAuth(request, credentials.usernameForBucket(""), credentials.passwordForBucket(""));
+    addHttpBasicAuth(request, credentials);
     return request;
   }
 

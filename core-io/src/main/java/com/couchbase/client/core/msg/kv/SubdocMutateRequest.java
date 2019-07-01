@@ -222,7 +222,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       error,
       values,
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 

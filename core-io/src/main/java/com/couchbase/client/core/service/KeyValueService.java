@@ -33,13 +33,13 @@ public class KeyValueService extends PooledService {
 
   private final String hostname;
   private final int port;
-  private final String bucketname;
+  private final Optional<String> bucketname;
   private final Credentials credentials;
 
   public KeyValueService(final ServiceConfig serviceConfig, final CoreContext coreContext,
-                         final String hostname, final int port, final String bucketname,
+                         final String hostname, final int port, final Optional<String> bucketname,
                          final Credentials credentials) {
-    super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV, Optional.of(bucketname)));
+    super(serviceConfig, new ServiceContext(coreContext, hostname, port, ServiceType.KV, bucketname));
     this.hostname = hostname;
     this.port = port;
     this.bucketname = bucketname;

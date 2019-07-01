@@ -102,7 +102,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
       decodeStatus(response),
       body(response).map(ByteBuf::readLong).orElse(0L),
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
 

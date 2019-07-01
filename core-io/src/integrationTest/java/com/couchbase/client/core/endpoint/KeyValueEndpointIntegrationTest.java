@@ -84,7 +84,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
       serviceContext,
       node.hostname(),
       node.ports().get(Services.KV),
-      config().bucketname(),
+      Optional.of(config().bucketname()),
       env.credentials()
     );
 
