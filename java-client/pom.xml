@@ -65,7 +65,7 @@
                             <source>8</source>
                             <doclint>none</doclint>
                             <quiet>true</quiet>
-                            <stylesheetfile>../config/javadoc/style.css</stylesheetfile>
+                            <stylesheetfile>${project.basedir}/../config/javadoc/style.css</stylesheetfile>
                         </configuration>
                     </execution>
                 </executions>
