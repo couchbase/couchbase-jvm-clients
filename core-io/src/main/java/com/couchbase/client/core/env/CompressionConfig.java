@@ -16,6 +16,11 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * Allows configuring and customizing the compression configuration.
  *
@@ -93,6 +98,18 @@ public class CompressionConfig {
    */
   public static Builder minRatio(double minRatio) {
     return builder().minRatio(minRatio);
+  }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("enabled", enabled);
+    export.put("minRatio", minRatio);
+    export.put("minSize", minSize);
+    return export;
   }
 
   /**

@@ -32,13 +32,13 @@ public class UserAgent {
   private final String formattedLong;
   private final String formattedShort;
 
-  public UserAgent(final String name, final String version, final Optional<String> os, final Optional<String> platform) {
+  public UserAgent(final String name, final Optional<String> version, final Optional<String> os, final Optional<String> platform) {
     this.name = name;
-    this.version = version;
+    this.version = version.orElse("0.0.0");
     this.os = os;
     this.platform = platform;
-    this.formattedLong = "couchbase-" + name + "/" + version + formatExtras();
-    this.formattedShort = name + "/" + version + formatExtras();
+    this.formattedLong = "couchbase-" + name + "/" + this.version + formatExtras();
+    this.formattedShort = name + "/" + this.version + formatExtras();
   }
 
   private String formatExtras() {

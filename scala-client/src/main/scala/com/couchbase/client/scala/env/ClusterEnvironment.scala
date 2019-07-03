@@ -241,7 +241,6 @@ private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[C
 
   override protected def defaultAgentTitle(): String = "scala"
 
-  override protected def agentPackage(): Package = classOf[ClusterEnvironment].getPackage
 }
 
 /** All configuration options related to a cluster environment, along with some long-lived resources including a

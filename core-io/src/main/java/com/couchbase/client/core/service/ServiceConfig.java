@@ -17,6 +17,8 @@
 package com.couchbase.client.core.service;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public interface ServiceConfig {
 
@@ -27,5 +29,13 @@ public interface ServiceConfig {
   Duration idleTime();
 
   boolean pipelined();
+
+  default public Map<String, Object> exportAsMap() {
+    Map<String, Object> exported = new LinkedHashMap<>();
+    exported.put("min", minEndpoints());
+    exported.put("max", maxEndpoints());
+    exported.put("idleTimeMs", idleTime().toMillis());
+    return exported;
+  }
 
 }

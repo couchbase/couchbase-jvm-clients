@@ -28,11 +28,6 @@ public class ClusterEnvironment extends CoreEnvironment {
   }
 
   @Override
-  protected Package agentPackage() {
-    return ClusterEnvironment.class.getPackage();
-  }
-
-  @Override
   protected String defaultAgentTitle() {
     return "java";
   }

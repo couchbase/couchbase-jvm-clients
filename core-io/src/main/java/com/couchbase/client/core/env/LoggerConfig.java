@@ -19,6 +19,9 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class LoggerConfig {
 
   private final LoggingEventConsumer.Logger customLogger;
@@ -67,6 +70,19 @@ public class LoggerConfig {
 
   public String loggerName() {
     return loggerName;
+  }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("customLogger", customLogger == null ? null : customLogger.getClass().getSimpleName());
+    export.put("fallbackToConsole", fallbackToConsole);
+    export.put("disableSlf4j", disableSlf4J);
+    export.put("loggerName", loggerName);
+    return export;
   }
 
   public static class Builder {

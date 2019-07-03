@@ -89,7 +89,7 @@ class FeatureNegotiatingHandlerTest {
     timeoutConfig = mock(TimeoutConfig.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
-    when(env.userAgent()).thenReturn(new UserAgent("some", "0.0.0", Optional.empty(), Optional.empty()));
+    when(env.userAgent()).thenReturn(new UserAgent("some", Optional.empty(), Optional.empty(), Optional.empty()));
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
     endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,

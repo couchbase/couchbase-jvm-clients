@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.service.ServiceType;
@@ -24,6 +25,8 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -149,6 +152,25 @@ public class IoConfig {
 
   public Set<ServiceType> captureTraffic() {
     return captureTraffic;
+  }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("allowedSaslMechs", allowedSaslMechanisms);
+    export.put("captureTraffic", captureTraffic);
+    export.put("mutationTokensEnabled", mutationTokensEnabled);
+    export.put("configPollIntervalMillis", configPollInterval.toMillis());
+    export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("viewCircuitBreakerConfig", viewCircuitBreakerConfig.enabled() ? viewCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("searchCircuitBreakerConfig", searchCircuitBreakerConfig.enabled() ? searchCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("analyticsCircuitBreakerConfig", analyticsCircuitBreakerConfig.enabled() ? analyticsCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("managerCircuitBreakerConfig", managerCircuitBreakerConfig.enabled() ? managerCircuitBreakerConfig.exportAsMap() : "disabled");
+    return export;
   }
 
   public static class Builder {

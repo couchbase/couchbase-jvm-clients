@@ -16,8 +16,12 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import javax.net.ssl.TrustManagerFactory;
 import java.security.cert.X509Certificate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class SecurityConfig {
 
@@ -90,6 +94,20 @@ public class SecurityConfig {
 
   public boolean nativeTlsEnabled() {
     return nativeTlsEnabled;
+  }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("tlsEnabled", tlsEnabled);
+    export.put("nativeTlsEnabled", nativeTlsEnabled);
+    export.put("certAuthEnabled", certAuthEnabled);
+    export.put("hasTrustCertificates", trustCertificates != null && trustCertificates.length > 0);
+    export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
+    return export;
   }
 
   public static class Builder {

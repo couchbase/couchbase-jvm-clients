@@ -18,6 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.EventBus;
@@ -29,13 +30,23 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
+import java.net.URL;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
@@ -47,6 +58,33 @@ import static java.util.Objects.requireNonNull;
  * @since 1.0.0
  */
 public class CoreEnvironment {
+
+  private static final String CORE_AGENT_TITLE = "java-core";
+
+  private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
+
+  static {
+    try {
+      Enumeration<URL> resources = CoreEnvironment.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
+      while (resources.hasMoreElements()) {
+        URL manifestUrl = resources.nextElement();
+        if (manifestUrl == null) {
+          continue;
+        }
+        Manifest manifest = new Manifest(manifestUrl.openStream());
+        if (manifest.getEntries() == null) {
+          continue;
+        }
+        for (Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
+          if (entry.getKey().startsWith("couchbase-")) {
+            MANIFEST_INFOS.put(entry.getKey(), entry.getValue());
+          }
+        }
+      }
+    } catch (Exception e) {
+      // Ignored on purpose.
+    }
+  }
 
   /**
    * Holds the default seed nodes (going to localhost) with default ports.
@@ -157,9 +195,6 @@ public class CoreEnvironment {
    */
   private UserAgent defaultUserAgent() {
     try {
-      final Package p = agentPackage();
-      String t = p.getImplementationTitle() == null ? defaultAgentTitle() : p.getImplementationTitle();
-      String v = p.getImplementationVersion() == null ? "0.0.0" : p.getImplementationVersion();
       String os = String.join(" ",
         System.getProperty("os.name"),
         System.getProperty("os.version"),
@@ -169,29 +204,48 @@ public class CoreEnvironment {
         System.getProperty("java.vm.name"),
         System.getProperty("java.runtime.version")
       );
-      return new UserAgent(t, v, Optional.of(os), Optional.of(platform));
+      return new UserAgent(defaultAgentTitle(), clientVersion(), Optional.of(os), Optional.of(platform));
     } catch (Throwable t) {
-      return new UserAgent(defaultAgentTitle(), "0.0.0", Optional.empty(), Optional.empty());
+      return new UserAgent(defaultAgentTitle(), clientVersion(), Optional.empty(), Optional.empty());
     }
-  }
-
-  /**
-   * Make sure to override this in client implementations so it picks up the right manifest.
-   *
-   * <p>This method should be overridden by client implementations to make sure their version
-   * is included instead.</p>
-   *
-   * @return the package of the target application to extract properties.
-   */
-  protected Package agentPackage() {
-    return CoreEnvironment.class.getPackage();
   }
 
   /**
    * Returns the default user agent name that is used as part of the resulting string.
    */
   protected String defaultAgentTitle() {
-    return "java-core";
+    return CORE_AGENT_TITLE;
+  }
+
+  private Optional<String> clientHash() {
+    return loadFromManifest(defaultAgentTitle(), "Impl-Git-Revision");
+  }
+
+  private Optional<String> coreHash() {
+    return loadFromManifest(CORE_AGENT_TITLE, "Impl-Git-Revision");
+  }
+
+  private Optional<String> clientVersion() {
+    return loadFromManifest(defaultAgentTitle(), "Impl-Version");
+  }
+
+  private Optional<String> coreVersion() {
+    return loadFromManifest(CORE_AGENT_TITLE, "Impl-Version");
+  }
+
+  /**
+   * Helper method to load the value from the parsed manifests (if present).
+   *
+   * @param agent the agent suffix, either core or client per pom file.
+   * @param value the value of the manifest attribute to fetch.
+   * @return if found, returns the attribute value or an empty optional otherwise.
+   */
+  private Optional<String> loadFromManifest(final String agent, final String value) {
+    Attributes attributes = MANIFEST_INFOS.get("couchbase-" + agent);
+    if (attributes == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(attributes.getValue(value));
   }
 
   /**
@@ -307,6 +361,50 @@ public class CoreEnvironment {
 
   public void shutdown() {
     shutdown(timeoutConfig.disconnectTimeout());
+  }
+
+  /**
+   * Export this environment into the specified format.
+   *
+   * @param format the format to export into.
+   * @return the exported format as a string representation.
+   */
+  public String exportAsString(final Context.ExportFormat format) {
+    Map<String, Object> input = new LinkedHashMap<>();
+
+    input.put("clientVersion", clientVersion().orElse(null));
+    input.put("clientGitHash", clientHash().orElse(null));
+    input.put("coreVersion", coreVersion().orElse(null));
+    input.put("coreGitHash", coreHash().orElse(null));
+
+    input.put("userAgent", userAgent.formattedLong());
+
+    input.put("seedNodes", seedNodes.stream().map(n -> {
+      Map<String, Object> node = new HashMap<>();
+      node.put("address", n.address());
+      n.kvPort().ifPresent(p -> node.put("kvPort", p));
+      n.httpPort().ifPresent(p -> node.put("httpPort", p));
+      return node;
+    }).collect(Collectors.toList()));
+
+    input.put("ioEnvironment", ioEnvironment.exportAsMap());
+    input.put("ioConfig", ioConfig.exportAsMap());
+    input.put("compressionConfig", compressionConfig.exportAsMap());
+    input.put("securityConfig", securityConfig.exportAsMap());
+    input.put("timeoutConfig", timeoutConfig.exportAsMap());
+    input.put("serviceConfig", serviceConfig.exportAsMap());
+    input.put("loggerConfig", loggerConfig.exportAsMap());
+
+    input.put("credentials", credentials.getClass().getSimpleName());
+    input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
+    input.put("tracer", tracer != null ? tracer.getClass().getSimpleName() : null);
+
+    return format.apply(input);
+  }
+
+  @Override
+  public String toString() {
+    return exportAsString(Context.ExportFormat.STRING);
   }
 
   public static class Builder<SELF extends Builder<SELF>> {

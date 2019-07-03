@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
@@ -31,6 +32,10 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
 import java.time.Duration;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -83,6 +88,26 @@ public class IoEnvironment {
 
   public static Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
     return builder().viewEventLoopGroup(viewEventLoopGroup);
+  }
+
+  /**
+   * Returns this environment as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("nativeIoEnabled", nativeIoEnabled);
+
+    Set<String> eventLoopGroups = new HashSet<>();
+    eventLoopGroups.add(managerEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(kvEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(queryEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(analyticsEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(searchEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(viewEventLoopGroup.get().getClass().getSimpleName());
+    export.put("eventLoopGroups", eventLoopGroups);
+
+    return export;
   }
 
   private IoEnvironment(final Builder builder) {

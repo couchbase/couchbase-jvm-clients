@@ -16,7 +16,11 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Allows configuring a {@link CircuitBreaker}.
@@ -105,6 +109,17 @@ public class CircuitBreakerConfig {
    */
   public Duration rollingWindow() {
     return rollingWindow;
+  }
+
+  @Stability.Volatile
+  public Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+    export.put("enabled", enabled);
+    export.put("volumeThreshold", volumeThreshold);
+    export.put("errorThresholdPercentage", errorThresholdPercentage);
+    export.put("sleepWindowMs", sleepWindow.toMillis());
+    export.put("rollingWindowMs", rollingWindow.toMillis());
+    return export;
   }
 
   public static class Builder {

@@ -16,11 +16,15 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.AnalyticsServiceConfig;
 import com.couchbase.client.core.service.KeyValueServiceConfig;
 import com.couchbase.client.core.service.QueryServiceConfig;
 import com.couchbase.client.core.service.SearchServiceConfig;
 import com.couchbase.client.core.service.ViewServiceConfig;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
@@ -87,6 +91,23 @@ public class ServiceConfig {
   public AnalyticsServiceConfig analyticsServiceConfig() {
     return analyticsServiceConfig;
   }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+
+    export.put("kv", keyValueServiceConfig.exportAsMap());
+    export.put("query", queryServiceConfig.exportAsMap());
+    export.put("view", viewServiceConfig.exportAsMap());
+    export.put("search", searchServiceConfig.exportAsMap());
+    export.put("analytics", analyticsServiceConfig.exportAsMap());
+
+    return export;
+  }
+
 
   public static class Builder {
 

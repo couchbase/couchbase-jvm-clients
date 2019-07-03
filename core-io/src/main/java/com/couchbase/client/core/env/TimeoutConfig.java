@@ -16,7 +16,11 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class TimeoutConfig {
@@ -123,6 +127,26 @@ public class TimeoutConfig {
   public Duration analyticsTimeout() {
     return analyticsTimeout;
   }
+
+  /**
+   * Returns this config as a map so it can be exported into i.e. JSON for display.
+   */
+  @Stability.Volatile
+  Map<String, Object> exportAsMap() {
+    Map<String, Object> export = new LinkedHashMap<>();
+
+    export.put("kvMs", kvTimeout.toMillis());
+    export.put("managerMs", managerTimeout.toMillis());
+    export.put("queryMs", queryTimeout.toMillis());
+    export.put("viewMs", viewTimeout.toMillis());
+    export.put("searchMs", searchTimeout.toMillis());
+    export.put("analyticsMs", analyticsTimeout.toMillis());
+    export.put("connectMs", connectTimeout.toMillis());
+    export.put("disconnectMs", disconnectTimeout.toMillis());
+
+    return export;
+  }
+
 
   public static class Builder {
 

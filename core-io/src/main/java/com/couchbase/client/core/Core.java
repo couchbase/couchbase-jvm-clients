@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
+import com.couchbase.client.core.cnc.events.core.CoreCreatedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
@@ -175,6 +176,7 @@ public class Core {
       currentConfig = c;
       reconfigure();
     });
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment));
   }
 
   /**
