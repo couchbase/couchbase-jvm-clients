@@ -129,7 +129,7 @@ class ManagerMessageHandlerTest {
       channel.writeInbound(new DefaultHttpContent(fullContent.readBytes(len)));
     }
 
-    assertEquals(2, configsPushed.size());
+    waitUntilCondition(() -> configsPushed.size() == 2);
     for (String config : configsPushed) {
       assertTrue(config.startsWith("{"));
       assertTrue(config.endsWith("}"));
