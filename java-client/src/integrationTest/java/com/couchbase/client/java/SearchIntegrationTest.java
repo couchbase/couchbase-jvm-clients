@@ -115,12 +115,12 @@ class SearchIntegrationTest extends JavaIntegrationTest {
                 if (result.rows().size() >= 1) {
                     assertEquals(docId, result.rows().get(0).id());
                 }
-                break;
+                return;
             } catch (Exception ex) {
                 // TODO: we need to figure out a better way to make sure an index
                 // TODO: is properly created to avoid race conditions in unit tests
-                System.err.println(ex);
-                ex.printStackTrace();
+                // System.err.println(ex);
+                // ex.printStackTrace();
                 Thread.sleep(1000);
             }
         }
