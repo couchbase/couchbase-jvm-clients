@@ -69,7 +69,7 @@ public class RoundRobinLocator implements Locator {
     }
 
     int nodeSize = filteredNodes.size();
-    int offset = (int) Math.floorMod(counter.getAndIncrement(), nodeSize);
+    int offset = (int) Math.floorMod(counter.getAndIncrement(), (long) nodeSize);
     Node node = filteredNodes.get(offset);
     if (node != null) {
       node.send(request);
