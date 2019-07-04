@@ -44,7 +44,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0-alpha.4</version>
+        <version>3.0.0-alpha.5</version>
     </dependency>
 </dependencies>
 ```
