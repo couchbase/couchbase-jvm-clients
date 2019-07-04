@@ -38,7 +38,8 @@ public enum BucketCapabilities {
     DCP("dcp"),
     XATTR("xattr"),
     SNAPPY("snappy"),
-    COLLECTIONS("collections");
+    COLLECTIONS("collections"),
+    DURABLE_WRITE("durableWrite");
 
     private final String raw;
 
