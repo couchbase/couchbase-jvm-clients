@@ -44,6 +44,7 @@ import static org.mockito.Mockito.when;
 class KeyValueLocatorTest {
 
   @Test
+  @SuppressWarnings("unchecked")
   void locateGetRequestForCouchbaseBucket() {
     Locator locator = new KeyValueLocator();
 
@@ -76,6 +77,7 @@ class KeyValueLocatorTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void pickFastForwardIfAvailableAndRetry() {
     Locator locator = new KeyValueLocator();
 
@@ -132,6 +134,7 @@ class KeyValueLocatorTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void pickCurrentIfNoFFMapAndRetry() {
     Locator locator = new KeyValueLocator();
 
@@ -140,12 +143,11 @@ class KeyValueLocatorTest {
       Collections.EMPTY_MAP, null);
     NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
       Collections.EMPTY_MAP, null);
-    List<Node> nodes = new ArrayList<Node>();
     Node node1Mock = mock(Node.class);
     when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
     Node node2Mock = mock(Node.class);
     when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
-    nodes.addAll(Arrays.asList(node1Mock, node2Mock));
+    List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
     ClusterConfig configMock = mock(ClusterConfig.class);

@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -279,8 +280,8 @@ class BuilderPropertySetter {
     @SuppressWarnings("unchecked")
     private Collection<Object> newCollection() {
       try {
-        return collectionClass.newInstance();
-      } catch (InstantiationException | IllegalAccessException e) {
+        return collectionClass.getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
         throw new RuntimeException(e);
       }
     }

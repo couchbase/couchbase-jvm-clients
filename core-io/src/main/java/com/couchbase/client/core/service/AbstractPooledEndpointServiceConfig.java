@@ -83,6 +83,7 @@ abstract class AbstractPooledEndpointServiceConfig implements ServiceConfig {
       return self();
     }
 
+    @SuppressWarnings("unchecked")
     private SELF self() {
       return (SELF) this;
     }

@@ -31,8 +31,12 @@ import java.util.concurrent.TimeUnit;
  * The {@link Timer} acts as the main timing facility for various operations, for
  * example to track and time out requests if they run for too long.
  *
+ * <p>This is an internal class, so its API or behavior might change at any point in the future. It might even
+ * go away!</p>
+ *
  * @since 2.0.0
  */
+@Stability.Internal
 public class Timer {
 
   /**
@@ -40,7 +44,10 @@ public class Timer {
    */
   private HashedWheelTimer wheelTimer;
 
-  private volatile boolean stoppped = false;
+  /**
+   * Set to true once stopped.
+   */
+  private volatile boolean stopped = false;
 
   /**
    * Creates a new {@link Timer} with default values.
@@ -72,9 +79,8 @@ public class Timer {
   /**
    * Schedule an arbitrary task for this timer.
    */
-  @Stability.Internal
   public Timeout schedule(Runnable callback, Duration runAfter) {
-    if (stoppped) {
+    if (stopped) {
       return null;
     }
     return wheelTimer.newTimeout(timeout -> callback.run(), runAfter.toNanos(), TimeUnit.NANOSECONDS);
@@ -85,9 +91,8 @@ public class Timer {
    *
    * @param request the request to track.
    */
-  @Stability.Internal
   public void register(final Request<Response> request) {
-    if (stoppped) {
+    if (stopped) {
       request.cancel(CancellationReason.SHUTDOWN);
       return;
     }
@@ -101,15 +106,6 @@ public class Timer {
   }
 
   /**
-   * Returns the number of currently scheduled tasks.
-   *
-   * @return the number of scheduled tasks.
-   */
-  public long scheduledTasks() {
-    return wheelTimer.pendingTimeouts();
-  }
-
-  /**
    * Starts this timer.
    */
   public void start() {
@@ -120,7 +116,7 @@ public class Timer {
    * Stops this timer.
    */
   public void stop() {
-    stoppped = true;
+    stopped = true;
     wheelTimer.stop();
   }
 

@@ -58,8 +58,6 @@ public class CoreContext extends AbstractContext {
 
   /**
    * A (app local) unique ID per core instance.
-   *
-   * @return the app local id.
    */
   public long id() {
     return id;
@@ -67,13 +65,14 @@ public class CoreContext extends AbstractContext {
 
   /**
    * The attached environment for this core.
-   *
-   * @return the core environment attached.
    */
   public CoreEnvironment environment() {
     return env;
   }
 
+  /**
+   * Returns the core to which this context belongs.
+   */
   public Core core() {
     return core;
   }
@@ -82,4 +81,5 @@ public class CoreContext extends AbstractContext {
   protected void injectExportableParams(final Map<String, Object> input) {
     input.put("coreId", id);
   }
+
 }

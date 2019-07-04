@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.util;
 
+/**
+ * Defines useful constants and methods with regards to bytes.
+ */
 public class Bytes {
 
   /**

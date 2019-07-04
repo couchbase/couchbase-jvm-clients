@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 class RoundRobinSelectionStrategyTest {
 
   @Test
+  @SuppressWarnings("unchecked")
   void testRoundRobinSelectOverIntegerMaxValue() {
     RoundRobinSelectionStrategy strategy = new RoundRobinSelectionStrategy();
     Endpoint a = Mockito.mock(Endpoint.class);

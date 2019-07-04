@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -52,14 +51,14 @@ public class CoreEnvironment {
   /**
    * Holds the default seed nodes (going to localhost) with default ports.
    */
-  public static final Set<SeedNode> DEFAULT_SEED_NODES = new HashSet<>(Collections.singletonList(
+  private static final Set<SeedNode> DEFAULT_SEED_NODES = new HashSet<>(Collections.singletonList(
     SeedNode.create("127.0.0.1")
   ));
 
   /**
    * The default retry strategy used for all ops if not overridden.
    */
-  public static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
+  private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   /**
    * Holds the user agent for this client instance.
@@ -116,7 +115,7 @@ public class CoreEnvironment {
     return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
   }
 
-  @SuppressWarnings( {"unchecked"})
+  @SuppressWarnings("unchecked")
   protected CoreEnvironment(final Builder builder) {
     new SystemPropertyPropertyLoader().load(builder);
 

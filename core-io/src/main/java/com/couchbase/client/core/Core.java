@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
@@ -68,19 +69,37 @@ public class Core {
    */
   private static final AtomicLong CORE_IDS = new AtomicLong();
 
+  /**
+   * Locates the right node for the KV service.
+   */
   private static final KeyValueLocator KEY_VALUE_LOCATOR = new KeyValueLocator();
 
+  /**
+   * Locates the right node for the manager service.
+   */
   private static final ManagerLocator MANAGER_LOCATOR = new ManagerLocator();
 
+  /**
+   * Locates the right node for the query service.
+   */
   private static final RoundRobinLocator QUERY_LOCATOR =
     new RoundRobinLocator(ServiceType.QUERY);
 
+  /**
+   * Locates the right node for the analytics service.
+   */
   private static final RoundRobinLocator ANALYTICS_LOCATOR =
     new RoundRobinLocator(ServiceType.ANALYTICS);
 
+  /**
+   * Locates the right node for the search service.
+   */
   private static final RoundRobinLocator SEARCH_LOCATOR =
     new RoundRobinLocator(ServiceType.SEARCH);
 
+  /**
+   * Locates the right node for the view service.
+   */
   private static final RoundRobinLocator VIEWS_LOCATOR =
     new RoundRobinLocator(ServiceType.VIEWS);
 
@@ -104,6 +123,9 @@ public class Core {
    */
   private final CopyOnWriteArrayList<Node> nodes;
 
+  /**
+   * If a reconfiguration is in process, this will be set to true and prevent concurrent reconfig attempts.
+   */
   private final AtomicBoolean reconfigureInProgress = new AtomicBoolean(false);
 
   /**
@@ -112,23 +134,47 @@ public class Core {
    */
   private final AtomicBoolean moreConfigsPending = new AtomicBoolean(false);
 
+  /**
+   * Once shutdown, this will be set to true and as a result no further ops are allowed to go through.
+   */
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
+  /**
+   * Reference to the event bus on the environment.
+   */
+  private final EventBus eventBus;
+
+  /**
+   * Holds a reference to the timer used for timeout registration.
+   */
+  private final Timer timer;
+
+  /**
+   * Creates a new {@link Core} with the given environment.
+   *
+   * @param environment the environment for this core.
+   * @return the created {@link Core}.
+   */
   public static Core create(final CoreEnvironment environment) {
     return new Core(environment);
   }
 
+  /**
+   * Creates a new Core.
+   *
+   * @param environment the environment for this core.
+   */
   protected Core(final CoreEnvironment environment) {
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
-    currentConfig = configurationProvider.config();
-    configurationProvider
-      .configs()
-      .subscribe(c -> {
-        currentConfig = c;
-        reconfigure();
-      });
+    this.eventBus = environment.eventBus();
+    this.timer = environment.timer();
+    this.currentConfig = configurationProvider.config();
+    this.configurationProvider.configs().subscribe(c -> {
+      currentConfig = c;
+      reconfigure();
+    });
   }
 
   /**
@@ -141,15 +187,34 @@ public class Core {
     return new DefaultConfigurationProvider(this);
   }
 
+  /**
+   * Returns the attached configuration provider.
+   *
+   * <p>Internal API, use with care!</p>
+   */
   @Stability.Internal
   public ConfigurationProvider configurationProvider() {
     return configurationProvider;
   }
 
+  /**
+   * Sends a command into the core layer and registers the request with the timeout timer.
+   *
+   * @param request the request to dispatch.
+   */
   public <R extends Response> void send(final Request<R> request) {
     send(request, true);
   }
 
+  /**
+   * Sends a command into the core layer and allows to avoid timeout registration.
+   *
+   * <p>Usually you want to use {@link #send(Request)} instead, this method should only be used during
+   * retry situations where the request has already been registered with a timeout timer before.</p>
+   *
+   * @param request the request to dispatch.
+   * @param registerForTimeout if the request should be registered with a timeout.
+   */
   @Stability.Internal
   @SuppressWarnings({"unchecked"})
   public <R extends Response> void send(final Request<R> request, final boolean registerForTimeout) {
@@ -159,7 +224,7 @@ public class Core {
     }
 
     if (registerForTimeout) {
-      context().environment().timer().register((Request<Response>) request);
+      timer.register((Request<Response>) request);
     }
 
     locator(request.serviceType()).dispatch(request, nodes, currentConfig, context());
@@ -167,8 +232,6 @@ public class Core {
 
   /**
    * Returns the {@link CoreContext} of this core instance.
-   *
-   * @return the core context.
    */
   public CoreContext context() {
     return coreContext;
@@ -184,14 +247,11 @@ public class Core {
       long start = System.nanoTime();
       return configurationProvider
         .openBucket(name)
-        .doOnSuccess(ignored -> {
-          BucketOpenedEvent event = new BucketOpenedEvent(
-            Duration.ofNanos(System.nanoTime() - start),
-            coreContext,
-            name
-          );
-          coreContext.environment().eventBus().publish(event);
-        });
+        .doOnSuccess(ignored -> eventBus.publish(new BucketOpenedEvent(
+          Duration.ofNanos(System.nanoTime() - start),
+          coreContext,
+          name
+        )));
     });
   }
 
@@ -209,20 +269,16 @@ public class Core {
    * Attempts to close a bucket and fails the {@link Mono} if there is a persistent error
    * as the reason.
    */
-  @Stability.Internal
-  public Mono<Void> closeBucket(final String name) {
+  private Mono<Void> closeBucket(final String name) {
     return Mono.defer(() -> {
       long start = System.nanoTime();
       return configurationProvider
         .closeBucket(name)
-        .doOnSuccess(ignored -> {
-          BucketClosedEvent event = new BucketClosedEvent(
-            Duration.ofNanos(System.nanoTime() - start),
-            coreContext,
-            name
-          );
-          coreContext.environment().eventBus().publish(event);
-        });
+        .doOnSuccess(ignored -> eventBus.publish(new BucketClosedEvent(
+          Duration.ofNanos(System.nanoTime() - start),
+          coreContext,
+          name
+        )));
     });
   }
 
@@ -252,6 +308,14 @@ public class Core {
       .then();
   }
 
+  /**
+   * Create a {@link Node} from the given identifier.
+   *
+   * <p>This method is here so it can be overridden in tests.</p>
+   *
+   * @param identifier the identifier for the node.
+   * @return the created node instance.
+   */
   protected Node createNode(final NodeIdentifier identifier) {
     return Node.create(coreContext, identifier);
   }
@@ -264,19 +328,21 @@ public class Core {
    * @return a mono once disconnected (or completes immediately if there is no need to do so).
    */
   private Mono<Void> maybeRemoveNode(final Node node, final ClusterConfig config) {
-    boolean stillPresent = config
-      .bucketConfigs()
-      .values()
-      .stream()
-      .flatMap(bc -> bc.nodes().stream())
-      .anyMatch(ni -> ni.identifier().equals(node.identifier()));
+    return Mono.defer(() -> {
+      boolean stillPresent = config
+        .bucketConfigs()
+        .values()
+        .stream()
+        .flatMap(bc -> bc.nodes().stream())
+        .anyMatch(ni -> ni.identifier().equals(node.identifier()));
 
-    if (!stillPresent || !node.hasServicesEnabled()) {
-      nodes.remove(node);
-      return node.disconnect();
-    }
+      if (!stillPresent || !node.hasServicesEnabled()) {
+        nodes.remove(node);
+        return node.disconnect();
+      }
 
-    return Mono.empty();
+      return Mono.empty();
+    });
   }
 
   /**
@@ -308,7 +374,7 @@ public class Core {
           .fromIterable(currentConfig.bucketConfigs().keySet())
           .flatMap(this::closeBucket)
           .then(configurationProvider.shutdown())
-          .doOnTerminate(() -> coreContext.environment().eventBus().publish(
+          .doOnTerminate(() -> eventBus.publish(
             new ShutdownCompletedEvent(Duration.ofNanos(System.nanoTime() - start), coreContext)
           ))
           .then();
@@ -342,20 +408,14 @@ public class Core {
             v -> {},
             e -> {
               clearReconfigureInProgress();
-              coreContext
-                .environment()
-                .eventBus()
-                .publish(new ReconfigurationErrorDetectedEvent(context(), e));
+              eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
             },
             () -> {
               clearReconfigureInProgress();
-              coreContext
-                .environment()
-                .eventBus()
-                .publish(new ReconfigurationCompletedEvent(
-                  Duration.ofNanos(System.nanoTime() - start),
-                  coreContext
-                ));
+              eventBus.publish(new ReconfigurationCompletedEvent(
+                Duration.ofNanos(System.nanoTime() - start),
+                coreContext
+              ));
             }
           );
 
@@ -377,28 +437,19 @@ public class Core {
         v -> {},
         e -> {
           clearReconfigureInProgress();
-          coreContext
-            .environment()
-            .eventBus()
-            .publish(new ReconfigurationErrorDetectedEvent(context(), e));
+          eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
         },
         () -> {
           clearReconfigureInProgress();
-          coreContext
-            .environment()
-            .eventBus()
-            .publish(new ReconfigurationCompletedEvent(
-              Duration.ofNanos(System.nanoTime() - start),
-              coreContext
-            ));
+          eventBus.publish(new ReconfigurationCompletedEvent(
+            Duration.ofNanos(System.nanoTime() - start),
+            coreContext
+          ));
         }
       );
     } else {
       moreConfigsPending.set(true);
-      coreContext
-        .environment()
-        .eventBus()
-        .publish(new ReconfigurationIgnoredEvent(coreContext));
+      eventBus.publish(new ReconfigurationIgnoredEvent(coreContext));
     }
   }
 
@@ -443,7 +494,7 @@ public class Core {
               s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
                 throwable.printStackTrace();
-                coreContext.environment().eventBus().publish(new ServiceReconfigurationFailedEvent(
+                eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
                   ni.hostname(),
                   s,
@@ -462,7 +513,7 @@ public class Core {
               s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
                 throwable.printStackTrace();
-                coreContext.environment().eventBus().publish(new ServiceReconfigurationFailedEvent(
+                eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
                   ni.hostname(),
                   s.getKey(),
@@ -477,6 +528,12 @@ public class Core {
     ).then();
   }
 
+  /**
+   * Helper method to match the right locator to the given service type.
+   *
+   * @param serviceType the service type for which a locator should be returned.
+   * @return the locator for the service type, or an exception if unknown.
+   */
   private static Locator locator(final ServiceType serviceType) {
     switch (serviceType) {
       case KV:
