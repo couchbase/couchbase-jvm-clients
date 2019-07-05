@@ -61,6 +61,22 @@ public class PortInfo {
     }
 
     /**
+     * Alternate constructor, used from the global config usually.
+     *
+     * @param ports the parsed ports.
+     * @param sslPorts the parsed ssl ports.
+     * @param alternateAddresses the parsed alternate addresses.
+     * @param hostname the hostname of the port info (node).
+     */
+    PortInfo(final Map<ServiceType, Integer> ports, final Map<ServiceType, Integer> sslPorts,
+                     final Map<String, AlternateAddress> alternateAddresses, final String hostname) {
+      this.ports = ports;
+      this.sslPorts = sslPorts;
+      this.alternateAddresses = alternateAddresses;
+      this.hostname = hostname;
+    }
+
+    /**
      * Helper method to extract ports from the raw services port mapping.
      *
      * @param input the raw input ports

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Collections;
@@ -23,7 +24,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * The {@link ClusterConfig} holds bucket and global configurations in a central place.
+ */
 public class ClusterConfig {
 
   /**
@@ -32,20 +37,28 @@ public class ClusterConfig {
   private final Map<String, BucketConfig> bucketConfigs;
 
   /**
+   * Holds a global configuration if present.
+   */
+  private final AtomicReference<GlobalConfig> globalConfig;
+
+  /**
    * Creates a new {@link ClusterConfig}.
    */
   public ClusterConfig() {
     bucketConfigs = new ConcurrentHashMap<>();
+    globalConfig = new AtomicReference<>();
   }
 
   public BucketConfig bucketConfig(final String bucketName) {
     return bucketConfigs.get(bucketName);
   }
 
+  @Stability.Internal
   public void setBucketConfig(final BucketConfig config) {
     bucketConfigs.put(config.name(), config);
   }
 
+  @Stability.Internal
   public void deleteBucketConfig(String bucketName) {
     bucketConfigs.remove(bucketName);
   }
@@ -56,6 +69,15 @@ public class ClusterConfig {
 
   public Map<String, BucketConfig> bucketConfigs() {
     return bucketConfigs;
+  }
+
+  public GlobalConfig globalConfig() {
+    return globalConfig.get();
+  }
+
+  @Stability.Internal
+  public void setGlobalConfig(final GlobalConfig config) {
+    globalConfig.set(config);
   }
 
   public Set<String> allNodeAddresses() {
@@ -72,6 +94,7 @@ public class ClusterConfig {
   public String toString() {
     return "ClusterConfig{" +
       "bucketConfigs=" + bucketConfigs +
+      ", globalConfig=" + globalConfig +
       '}';
   }
 

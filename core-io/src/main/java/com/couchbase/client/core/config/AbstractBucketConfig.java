@@ -67,7 +67,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.enabledServices = es;
     }
 
-    private Map<ServiceType, Set<ClusterCapabilities>> convertClusterCapabilities(
+    static Map<ServiceType, Set<ClusterCapabilities>> convertClusterCapabilities(
       final Map<String, Set<ClusterCapabilities>> input) {
 
         Map<ServiceType, Set<ClusterCapabilities>> result = new HashMap<>();
