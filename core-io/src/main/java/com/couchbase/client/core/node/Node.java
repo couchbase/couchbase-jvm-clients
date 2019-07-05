@@ -64,6 +64,14 @@ public class Node implements Stateful<NodeState> {
    */
   private static final String GLOBAL_SCOPE = "_$GLOBAL$_";
 
+  /**
+   * When a bucket-scoped request/service is used but it is not tied to a specific bucket yet.
+   *
+   * <p>Yep this is weird, it is basically used for "gcccp" requests, so config requests when they
+   * are not tied to an actual bucket name.</p>
+   */
+  private static final String BUCKET_GLOBAL_SCOPE = "_$BUCKET_GLOBAL$_";
+
   private final NodeIdentifier identifier;
   private final NodeContext ctx;
   private final Credentials credentials;
@@ -204,7 +212,7 @@ public class Node implements Stateful<NodeState> {
         return Mono.empty();
       }
 
-      String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.get();
+      String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
       Map<ServiceType, Service> localMap = services.get(name);
       if (localMap == null) {
         localMap = new ConcurrentHashMap<>();
@@ -258,7 +266,7 @@ public class Node implements Stateful<NodeState> {
         return Mono.empty();
       }
 
-      String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.get();
+      String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
       Map<ServiceType, Service> localMap = services.get(name);
       if (localMap == null || !localMap.containsKey(type)) {
         ctx.environment().eventBus().publish(new ServiceRemoveIgnoredEvent(
@@ -302,9 +310,17 @@ public class Node implements Stateful<NodeState> {
    * @param request the request to send.
    */
   public <R extends Request<? extends Response>> void send(final R request) {
-    String bucket = request.serviceType().scope() == ServiceScope.BUCKET
-      ? ((ScopedRequest) request).bucket()
-      : GLOBAL_SCOPE;
+    String bucket;
+    if (request.serviceType().scope() == ServiceScope.BUCKET) {
+      bucket = ((ScopedRequest) request).bucket();
+      if (bucket == null) {
+        // no bucket name present so this is a kv request that is not attached
+        // to a specific bucket
+        bucket = BUCKET_GLOBAL_SCOPE;
+      }
+     } else {
+      bucket = GLOBAL_SCOPE;
+    }
 
     Map<ServiceType, Service> scope = services.get(bucket);
     if (scope == null) {
@@ -370,13 +386,7 @@ public class Node implements Stateful<NodeState> {
 
     switch (serviceType) {
       case KV:
-        if (bucket.isPresent()) {
-          return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port,
-            bucket, credentials);
-        } else {
-          throw new IllegalStateException("Bucket needs to be present when the " +
-            "KeyValueService is created, this is a bug!");
-        }
+        return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port, bucket, credentials);
       case MANAGER:
         return new ManagerService(ctx, address, port);
       case QUERY:

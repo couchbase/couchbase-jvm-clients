@@ -35,5 +35,9 @@ public enum Capabilities {
   /**
    * This cluster is able to handle Search queries.
    */
-  SEARCH
+  SEARCH,
+  /**
+   * This cluster is able to give us a config without opening a bucket.
+   */
+  GLOBAL_CONFIG
 }

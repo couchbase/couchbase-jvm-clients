@@ -181,6 +181,12 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         }
       }
     }
+    List<String> bucketCapabilities = (List<String>) decoded.get("bucketCapabilities");
+    if (bucketCapabilities.contains("durableWrite")) {
+      capabilities.add(Capabilities.SYNC_REPLICATION);
+      /// GCCCP was also added in 6.5 when sync replication was added, so we can assume the same.
+      capabilities.add(Capabilities.GLOBAL_CONFIG);
+    }
     return capabilities;
   }
 
