@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -66,11 +67,8 @@ public class Cluster {
    * @param password the password of the user with appropriate permissions on the cluster.
    * @return if properly connected, returns a {@link Cluster}.
    */
-  public static Cluster connect(final String connectionString, final String username,
-                                final String password) {
-    return new Cluster(new OwnedSupplier<>(
-      ClusterEnvironment.create(connectionString, username, password)
-    ));
+  public static Cluster connect(final String connectionString, final String username, final String password) {
+    return connect(connectionString, new RoleBasedCredentials(username, password));
   }
 
   /**
@@ -81,9 +79,11 @@ public class Cluster {
    * @return if properly connected, returns a {@link Cluster}.
    */
   public static Cluster connect(final String connectionString, final Credentials credentials) {
-    return new Cluster(new OwnedSupplier<>(
+    Cluster cluster = new Cluster(new OwnedSupplier<>(
       ClusterEnvironment.create(connectionString, credentials)
     ));
+    cluster.async().performGlobalConnect().block();
+    return cluster;
   }
 
   /**
@@ -93,7 +93,9 @@ public class Cluster {
    * @return if properly connected, returns a {@link Cluster}.
    */
   public static Cluster connect(final ClusterEnvironment environment) {
-    return new Cluster(() -> environment);
+    Cluster cluster = new Cluster(() -> environment);
+    cluster.async().performGlobalConnect().block();
+    return cluster;
   }
 
   /**

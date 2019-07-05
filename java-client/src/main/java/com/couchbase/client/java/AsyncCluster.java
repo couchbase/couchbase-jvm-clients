@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.env.RoleBasedCredentials;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -82,11 +83,9 @@ public class AsyncCluster {
    * @param password the password of the user with appropriate permissions on the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static AsyncCluster connect(final String connectionString, final String username,
-                                     final String password) {
-    return new AsyncCluster(new OwnedSupplier<>(
-      ClusterEnvironment.create(connectionString, username, password)
-    ));
+  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final String username,
+                                                        final String password) {
+    return connect(connectionString, new RoleBasedCredentials(username, password));
   }
 
   /**
@@ -96,10 +95,13 @@ public class AsyncCluster {
    * @param credentials custom credentials used when connecting to the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static AsyncCluster connect(final String connectionString, final Credentials credentials) {
-    return new AsyncCluster(new OwnedSupplier<>(
-      ClusterEnvironment.create(connectionString, credentials)
-    ));
+  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final Credentials credentials) {
+    return Mono.defer(() -> {
+      AsyncCluster cluster = new AsyncCluster(new OwnedSupplier<>(
+        ClusterEnvironment.create(connectionString, credentials)
+      ));
+      return cluster.performGlobalConnect().then(Mono.just(cluster));
+    }).toFuture();
   }
 
   /**
@@ -108,8 +110,24 @@ public class AsyncCluster {
    * @param environment the custom environment with its properties used to connect to the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static AsyncCluster connect(final ClusterEnvironment environment) {
-    return new AsyncCluster(() -> environment);
+  public static CompletableFuture<AsyncCluster> connect(final ClusterEnvironment environment) {
+    return Mono.defer(() -> {
+      AsyncCluster cluster = new AsyncCluster(() -> environment);
+      return cluster.performGlobalConnect().then(Mono.just(cluster));
+    }).toFuture();
+  }
+
+  /**
+   * Tries to set up the global connect ("gcccp") if possible.
+   *
+   * @return once this setup is completed, will return.
+   */
+  Mono<Void> performGlobalConnect() {
+    // TODO: this will be implemented in a follow-up commit.
+    return Mono
+      .empty()
+      .timeout(environment.get().timeoutConfig().connectTimeout())
+      .then();
   }
 
   /**
