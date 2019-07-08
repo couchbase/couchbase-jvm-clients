@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigUpdatedEvent;
+import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.config.loader.KeyValueLoader;
 import com.couchbase.client.core.config.loader.ClusterManagerLoader;
 import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
@@ -188,6 +189,30 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
+  public void proposeGlobalConfig(final ProposedGlobalConfigContext ctx) {
+    if (!shutdown.get()) {
+      try {
+        GlobalConfig config = GlobalConfigParser.parse(ctx.config(), ctx.origin());
+        checkAndApplyConfig(config);
+      } catch (Exception ex) {
+        eventBus.publish(new ConfigIgnoredEvent(
+          core.context(),
+          ConfigIgnoredEvent.Reason.PARSE_FAILURE,
+          Optional.of(ex),
+          Optional.of(ctx.config())
+        ));
+      }
+    } else {
+      eventBus.publish(new ConfigIgnoredEvent(
+        core.context(),
+        ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
+        Optional.empty(),
+        Optional.of(ctx.config())
+      ));
+    }
+  }
+
+  @Override
   public Mono<Void> closeBucket(final String name) {
     return Mono.defer(() -> shutdown.get()
       ? Mono.error(new AlreadyShutdownException())
@@ -322,6 +347,29 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new ConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setBucketConfig(newConfig);
+    pushConfig();
+  }
+
+  /**
+   * Analyzes the given config and decides if to apply it (and does so if needed).
+   *
+   * @param newConfig the config to apply.
+   */
+  private void checkAndApplyConfig(final GlobalConfig newConfig) {
+    final GlobalConfig oldConfig = currentConfig.globalConfig();
+
+    if (newConfig.rev() > 0 && oldConfig != null && newConfig.rev() <= oldConfig.rev()) {
+      eventBus.publish(new ConfigIgnoredEvent(
+        core.context(),
+        ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+        Optional.empty(),
+        Optional.empty()
+      ));
+      return;
+    }
+
+    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), newConfig));
+    currentConfig.setGlobalConfig(newConfig);
     pushConfig();
   }
 

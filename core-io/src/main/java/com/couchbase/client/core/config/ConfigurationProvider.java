@@ -88,6 +88,13 @@ public interface ConfigurationProvider  {
   void proposeBucketConfig(ProposedBucketConfigContext ctx);
 
   /**
+   * Allows to propose a global config to the provider from an external context.
+   *
+   * @param ctx the context with the global config.
+   */
+  void proposeGlobalConfig(ProposedGlobalConfigContext ctx);
+
+  /**
    * Returns the attached collection map.
    */
   CollectionMap collectionMap();

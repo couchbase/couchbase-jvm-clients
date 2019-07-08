@@ -71,7 +71,7 @@ public class KeyValueLocator implements Locator {
                                        final CoreContext ctx) {
     for (Node node : nodes) {
       if (node.state() == NodeState.CONNECTED || node.state() == NodeState.DEGRADED) {
-        if (!request.target().equals(node.identifier())) {
+        if (!request.target().address().equals(node.identifier().address())) {
           continue;
         }
         node.send((Request) request);

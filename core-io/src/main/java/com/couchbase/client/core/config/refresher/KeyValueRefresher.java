@@ -63,12 +63,12 @@ public class KeyValueRefresher implements Refresher {
    * those are checked individually based on the configuration applied (but it specifies the
    * minimum interval possible).</p>
    */
-  private static final Duration POLLER_INTERVAL = Duration.ofSeconds(1);
+  static final Duration POLLER_INTERVAL = Duration.ofSeconds(1);
 
   /**
    * The number of config fetches in parallel at maximum per interval.
    */
-  private static final int MAX_PARALLEL_FETCH = 3;
+  static final int MAX_PARALLEL_FETCH = 3;
 
   /**
    * Holds the core as a reference.
@@ -149,7 +149,7 @@ public class KeyValueRefresher implements Refresher {
    * @param configPollIntervalNanos the config poll interval is used to determine the bounds.
    * @return the duration for the config request timeout.
    */
-  private Duration clampConfigRequestTimeout(final long configPollIntervalNanos) {
+  static Duration clampConfigRequestTimeout(final long configPollIntervalNanos) {
     if (configPollIntervalNanos > TimeUnit.SECONDS.toNanos(5)) {
       return Duration.ofSeconds(5);
     } else if (configPollIntervalNanos < TimeUnit.SECONDS.toNanos(1)) {
