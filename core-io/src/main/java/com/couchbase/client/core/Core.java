@@ -17,10 +17,12 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
 import com.couchbase.client.core.cnc.events.core.CoreCreatedEvent;
+import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
@@ -30,7 +32,9 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
+import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -240,6 +244,35 @@ public class Core {
   }
 
   /**
+   * Instructs the client to, if possible, load and initialize the global config.
+   *
+   * <p>Since global configs are an "optional" feature depending on the cluster version, if an error happens
+   * this method will not fail. Rather it will log the exception (with some logic dependent on the type of error)
+   * and will allow the higher level components to move on where possible.</p>
+   */
+  @Stability.Internal
+  public Mono<Void> initGlobalConfig() {
+    long start = System.nanoTime();
+    return configurationProvider
+      .loadAndRefreshGlobalConfig()
+      .onErrorResume(throwable -> {
+        if (throwable instanceof UnsupportedConfigMechanismException) {
+          // this is expected, looks like global configs are not supported by this cluster version
+          eventBus.publish(new InitGlobalConfigFailedEvent(
+            Event.Severity.DEBUG,
+            Duration.ofNanos(start - System.nanoTime()),
+            context(),
+            InitGlobalConfigFailedEvent.Reason.UNSUPPORTED
+          ));
+          return Mono.empty();
+        } else {
+          // all other are forwarded
+          return Mono.error(throwable);
+        }
+      });
+  }
+
+  /**
    * Attempts to open a bucket and fails the {@link Mono} if there is a persistent error
    * as the reason.
    */
@@ -331,14 +364,26 @@ public class Core {
    */
   private Mono<Void> maybeRemoveNode(final Node node, final ClusterConfig config) {
     return Mono.defer(() -> {
-      boolean stillPresent = config
+      boolean stillPresentInBuckets = config
         .bucketConfigs()
         .values()
         .stream()
         .flatMap(bc -> bc.nodes().stream())
         .anyMatch(ni -> ni.identifier().equals(node.identifier()));
 
-      if (!stillPresent || !node.hasServicesEnabled()) {
+
+      boolean stillPresentInGlobal;
+      if (config.globalConfig() != null) {
+        stillPresentInGlobal = config
+          .globalConfig()
+          .portInfos()
+          .stream()
+          .anyMatch(ni -> ni.identifier().equals(node.identifier()));
+      } else {
+        stillPresentInGlobal = false;
+      }
+
+      if ((!stillPresentInBuckets && !stillPresentInGlobal) || !node.hasServicesEnabled()) {
         nodes.remove(node);
         return node.disconnect();
       }
@@ -399,36 +444,18 @@ public class Core {
     if (reconfigureInProgress.compareAndSet(false, true)) {
       final ClusterConfig configForThisAttempt = currentConfig;
 
-      long start = System.nanoTime();
-
-      if (configForThisAttempt.bucketConfigs().isEmpty()) {
-        Flux
-          .fromIterable(new ArrayList<>(nodes))
-          .flatMap(Node::disconnect)
-          .doOnComplete(nodes::clear)
-          .subscribe(
-            v -> {},
-            e -> {
-              clearReconfigureInProgress();
-              eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
-            },
-            () -> {
-              clearReconfigureInProgress();
-              eventBus.publish(new ReconfigurationCompletedEvent(
-                Duration.ofNanos(System.nanoTime() - start),
-                coreContext
-              ));
-            }
-          );
-
+      if (configForThisAttempt.bucketConfigs().isEmpty() && configForThisAttempt.globalConfig() == null) {
+        reconfigureDisconnectAll();
         return;
       }
 
+      final long start = System.nanoTime();
       Flux<BucketConfig> bucketConfigFlux = Flux
         .just(configForThisAttempt)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
 
       reconfigureBuckets(bucketConfigFlux)
+        .then(reconfigureGlobal(configForThisAttempt.globalConfig()))
         .then(Mono.defer(() ->
           Flux
             .fromIterable(new ArrayList<>(nodes))
@@ -456,6 +483,34 @@ public class Core {
   }
 
   /**
+   * This reconfiguration sequence takes all nodes and disconnects them.
+   *
+   * <p>This is usually called by the parent {@link #reconfigure()} when all buckets are closed which
+   * points to a shutdown/all buckets closed disconnect phase.</p>
+   */
+  private void reconfigureDisconnectAll() {
+    long start = System.nanoTime();
+    Flux
+      .fromIterable(new ArrayList<>(nodes))
+      .flatMap(Node::disconnect)
+      .doOnComplete(nodes::clear)
+      .subscribe(
+        v -> {},
+        e -> {
+          clearReconfigureInProgress();
+          eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
+        },
+        () -> {
+          clearReconfigureInProgress();
+          eventBus.publish(new ReconfigurationCompletedEvent(
+            Duration.ofNanos(System.nanoTime() - start),
+            coreContext
+          ));
+        }
+      );
+  }
+
+  /**
    * Clean reconfiguration in progress and check if there is a new one we need to try.
    */
   private void clearReconfigureInProgress() {
@@ -463,6 +518,70 @@ public class Core {
     if (moreConfigsPending.compareAndSet(true, false)) {
       reconfigure();
     }
+  }
+
+  private Mono<Void> reconfigureGlobal(final GlobalConfig config) {
+    return Mono.defer(() -> {
+      if (config == null) {
+        return Mono.empty();
+      }
+
+      return Flux
+        .fromIterable(config.portInfos())
+        .flatMap(ni -> {
+          boolean tls = coreContext.environment().securityConfig().tlsEnabled();
+          Set<Map.Entry<ServiceType, Integer>> services = tls
+            ? ni.sslPorts().entrySet()
+            : ni.ports().entrySet();
+
+          Flux<Void> serviceRemoveFlux = Flux
+            .fromIterable(Arrays.asList(ServiceType.values()))
+            .filter(s -> {
+              for (Map.Entry<ServiceType, Integer> inConfig : services) {
+                if (inConfig.getKey() == s) {
+                  return false;
+                }
+              }
+              return true;
+            })
+            .flatMap(s -> removeServiceFrom(
+              ni.identifier(),
+              s,
+              Optional.empty())
+              .onErrorResume(throwable -> {
+                eventBus.publish(new ServiceReconfigurationFailedEvent(
+                  coreContext,
+                  ni.hostname(),
+                  s,
+                  throwable
+                ));
+                return Mono.empty();
+              })
+            );
+
+
+          Flux<Void> serviceAddFlux = Flux
+            .fromIterable(services)
+            .flatMap(s -> ensureServiceAt(
+              ni.identifier(),
+              s.getKey(),
+              s.getValue(),
+              Optional.empty())
+              .onErrorResume(throwable -> {
+                eventBus.publish(new ServiceReconfigurationFailedEvent(
+                  coreContext,
+                  ni.hostname(),
+                  s.getKey(),
+                  throwable
+                ));
+                return Mono.empty();
+              })
+            );
+
+          return Flux.merge(serviceAddFlux, serviceRemoveFlux);
+        })
+        .then();
+    });
   }
 
   /**
@@ -495,7 +614,6 @@ public class Core {
               s,
               s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
-                throwable.printStackTrace();
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
                   ni.hostname(),
@@ -514,7 +632,6 @@ public class Core {
               s.getValue(),
               s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
-                throwable.printStackTrace();
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
                   ni.hostname(),

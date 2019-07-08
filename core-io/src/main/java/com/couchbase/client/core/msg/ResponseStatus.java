@@ -75,6 +75,10 @@ public enum ResponseStatus {
    */
   UNSUPPORTED,
   /**
+   * The server indicates that no bucket is selected.
+   */
+  NO_BUCKET,
+  /**
    * In a kv request, signaling that the vbucket is on a different node.
    */
   NOT_MY_VBUCKET,

@@ -76,7 +76,7 @@ public class GlobalLoader {
     }).map(response -> {
       if (response.status().success()) {
         return response.content();
-      } else if (response.status() == ResponseStatus.UNSUPPORTED) {
+      } else if (response.status() == ResponseStatus.UNSUPPORTED || response.status() == ResponseStatus.NO_BUCKET) {
         throw new UnsupportedConfigMechanismException();
       } else {
         throw new ConfigException("Received error status from GlobalLoader: " + response);

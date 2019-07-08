@@ -95,6 +95,11 @@ public interface ConfigurationProvider  {
   void proposeGlobalConfig(ProposedGlobalConfigContext ctx);
 
   /**
+   * Instructs the provider to try and load the global config, and then manage it.
+   */
+  Mono<Void> loadAndRefreshGlobalConfig();
+
+  /**
    * Returns the attached collection map.
    */
   CollectionMap collectionMap();

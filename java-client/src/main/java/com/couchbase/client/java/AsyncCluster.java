@@ -123,9 +123,8 @@ public class AsyncCluster {
    * @return once this setup is completed, will return.
    */
   Mono<Void> performGlobalConnect() {
-    // TODO: this will be implemented in a follow-up commit.
-    return Mono
-      .empty()
+    return core
+      .initGlobalConfig()
       .timeout(environment.get().timeoutConfig().connectTimeout())
       .then();
   }

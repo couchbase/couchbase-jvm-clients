@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -74,6 +75,10 @@ public class PortInfo {
       this.sslPorts = sslPorts;
       this.alternateAddresses = alternateAddresses;
       this.hostname = hostname;
+    }
+
+    public NodeIdentifier identifier() {
+      return new NodeIdentifier(hostname, ports.get(ServiceType.MANAGER));
     }
 
     /**

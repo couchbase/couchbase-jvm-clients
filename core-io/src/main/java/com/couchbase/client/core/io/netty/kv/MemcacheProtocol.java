@@ -443,6 +443,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.SUBDOC_FAILURE;
     } else if (status == Status.UNKNOWN_COLLECTION.status) {
       return ResponseStatus.UNKNOWN_COLLECTION;
+    } else if (status == Status.NO_BUCKET.status) {
+      return ResponseStatus.NO_BUCKET;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -827,6 +829,10 @@ public enum MemcacheProtocol {
      * Not my vbucket.
      */
     NOT_MY_VBUCKET((short) 0x07),
+    /**
+     * No bucket selected.
+     */
+    NO_BUCKET((short) 0x08),
     /**
      * Resource is locked.
      */

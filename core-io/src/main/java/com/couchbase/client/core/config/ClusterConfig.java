@@ -80,6 +80,11 @@ public class ClusterConfig {
     globalConfig.set(config);
   }
 
+  @Stability.Internal
+  public void deleteGlobalConfig() {
+    globalConfig.set(null);
+  }
+
   public Set<String> allNodeAddresses() {
     Set<String> nodes = new HashSet<>();
     for (BucketConfig bc : bucketConfigs().values()) {

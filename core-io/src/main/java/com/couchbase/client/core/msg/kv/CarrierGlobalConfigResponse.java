@@ -38,7 +38,7 @@ public class CarrierGlobalConfigResponse extends BaseResponse {
   public String toString() {
     return "CarrierGlobalConfigResponse{" +
       "status=" + status() +
-      "content=" + new String(content, UTF_8) +
+      ", content=" + new String(content, UTF_8) +
       '}';
   }
 }

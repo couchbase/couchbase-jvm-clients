@@ -23,9 +23,11 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEv
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
+import com.couchbase.client.core.config.loader.GlobalLoader;
 import com.couchbase.client.core.config.loader.KeyValueLoader;
 import com.couchbase.client.core.config.loader.ClusterManagerLoader;
 import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
+import com.couchbase.client.core.config.refresher.GlobalRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueRefresher;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.CollectionsNotAvailableException;
@@ -85,6 +87,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final ClusterManagerLoader clusterManagerLoader;
   private final KeyValueRefresher keyValueRefresher;
   private final ClusterManagerRefresher clusterManagerRefresher;
+  private final GlobalLoader globalLoader;
+  private final GlobalRefresher globalRefresher;
 
   private final DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
   private final FluxSink<ClusterConfig> configsSink = configs.sink();
@@ -101,6 +105,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     clusterManagerLoader = new ClusterManagerLoader(core);
     keyValueRefresher = new KeyValueRefresher(this, core);
     clusterManagerRefresher = new ClusterManagerRefresher(this, core);
+    globalLoader = new GlobalLoader(core);
+    globalRefresher = new GlobalRefresher(this, core);
     this.collectionMap = new CollectionMap();
 
     configsSink.next(currentConfig);
@@ -154,6 +160,37 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .then(registerRefresher(name))
           .then()
           .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));
+      } else {
+        return Mono.error(new AlreadyShutdownException());
+      }
+    });
+  }
+
+  @Override
+  public Mono<Void> loadAndRefreshGlobalConfig() {
+    return Mono.defer(() -> {
+      if (!shutdown.get()) {
+
+        boolean tls = core.context().environment().securityConfig().tlsEnabled();
+        int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
+
+        return Flux
+          .fromIterable(core.context().environment().seedNodes())
+          .take(MAX_PARALLEL_LOADERS)
+          .flatMap(seed -> {
+            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
+            return globalLoader.load(identifier, seed.kvPort().orElse(kvPort));
+          })
+          .take(1)
+          .switchIfEmpty(Mono.error(
+            new ConfigException("Could not locate a single global configuration")
+          ))
+          .map(ctx -> {
+            proposeGlobalConfig(ctx);
+            return ctx;
+          })
+          .then(globalRefresher.start())
+          .then();
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -249,6 +286,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Flux
           .fromIterable(currentConfig.bucketConfigs().values())
           .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name()))
+          .flatMap(ign -> disableAndClearGlobalConfig())
           .doOnComplete(() -> {
             // make sure to push a final, empty config before complete to give downstream
             // consumers a chance to clean up
@@ -257,11 +295,20 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
+          .then(globalRefresher.shutdown())
           .then();
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
     });
+  }
+
+  private Mono<Void> disableAndClearGlobalConfig() {
+    return globalRefresher.stop().then(Mono.defer(() -> {
+      currentConfig.deleteGlobalConfig();
+      pushConfig();
+      return Mono.empty();
+    }));
   }
 
   @Override

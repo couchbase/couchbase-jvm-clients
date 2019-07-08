@@ -113,7 +113,7 @@ public class GlobalRefresher {
         configRequestTimeout,
         ctx,
         FailFastRetryStrategy.INSTANCE,
-        new NodeIdentifier(nodeInfo.hostname(), nodeInfo.ports().get(ServiceType.MANAGER))
+        nodeInfo.identifier()
       );
       core.send(request);
       return Reactor
@@ -178,12 +178,12 @@ public class GlobalRefresher {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.defer(() -> {
+    return stop().then(Mono.defer(() -> {
       if (!pollRegistration.isDisposed()) {
         pollRegistration.dispose();
       }
       return Mono.empty();
-    });
+    }));
   }
 
 }
