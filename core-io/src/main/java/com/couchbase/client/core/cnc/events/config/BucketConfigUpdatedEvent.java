@@ -22,11 +22,14 @@ import com.couchbase.client.core.config.BucketConfig;
 
 import java.time.Duration;
 
-public class ConfigUpdatedEvent extends AbstractEvent {
+/**
+ * This event is raised when a bucket config has been updated.
+ */
+public class BucketConfigUpdatedEvent extends AbstractEvent {
 
   private final BucketConfig config;
 
-  public ConfigUpdatedEvent(final Context context, final BucketConfig config) {
+  public BucketConfigUpdatedEvent(final Context context, final BucketConfig config) {
     super(Severity.DEBUG, Category.CONFIG, Duration.ZERO, context);
     this.config = config;
   }

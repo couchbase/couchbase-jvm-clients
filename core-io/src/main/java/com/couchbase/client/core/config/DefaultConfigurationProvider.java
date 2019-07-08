@@ -21,7 +21,7 @@ import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
-import com.couchbase.client.core.cnc.events.config.ConfigUpdatedEvent;
+import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.config.loader.GlobalLoader;
 import com.couchbase.client.core.config.loader.KeyValueLoader;
@@ -392,7 +392,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       clusterManagerRefresher.markUntainted(name);
     }
 
-    eventBus.publish(new ConfigUpdatedEvent(core.context(), newConfig));
+    eventBus.publish(new BucketConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setBucketConfig(newConfig);
     pushConfig();
   }
