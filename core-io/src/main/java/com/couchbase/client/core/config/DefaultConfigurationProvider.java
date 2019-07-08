@@ -29,6 +29,7 @@ import com.couchbase.client.core.config.loader.ClusterManagerLoader;
 import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
 import com.couchbase.client.core.config.refresher.GlobalRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueRefresher;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.CollectionsNotAvailableException;
 import com.couchbase.client.core.error.ConfigException;
@@ -41,14 +42,20 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
@@ -97,9 +104,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private final CollectionMap collectionMap;
 
+  /**
+   * Stores the current seed nodes used to bootstrap buckets and global configs.
+   */
+  private final AtomicReference<Set<SeedNode>> seedNodes;
+
   public DefaultConfigurationProvider(final Core core) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
+    seedNodes = new AtomicReference<>(new HashSet<>(core.context().environment().seedNodes()));
 
     keyValueLoader = new KeyValueLoader(core);
     clusterManagerLoader = new ClusterManagerLoader(core);
@@ -139,7 +152,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
 
         return Flux
-          .fromIterable(core.context().environment().seedNodes())
+          .fromIterable(seedNodes.get())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
@@ -175,7 +188,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
 
         return Flux
-          .fromIterable(core.context().environment().seedNodes())
+          .fromIterable(seedNodes.get())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
@@ -394,6 +407,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new BucketConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setBucketConfig(newConfig);
+    updateSeedNodeList();
     pushConfig();
   }
 
@@ -417,7 +431,54 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setGlobalConfig(newConfig);
+    updateSeedNodeList();
     pushConfig();
+  }
+
+  /**
+   * Helper method to take the current config and update the seed node list with the latest topology.
+   *
+   * <p>If we have a global config it is used for simplicity reasons. Otherwise we iterate the configs ad collect
+   * all the nodes to build the list.</p>
+   */
+  private void updateSeedNodeList() {
+    ClusterConfig config = currentConfig;
+
+    boolean tlsEnabled = core.context().environment().securityConfig().tlsEnabled();
+
+    if (config.globalConfig() != null) {
+      Set<SeedNode> seedNodes = config.globalConfig().portInfos().stream().map(ni -> {
+        Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslPorts() : ni.ports();
+        return SeedNode.create(
+          ni.hostname(),
+          Optional.ofNullable(ports.get(ServiceType.KV)),
+          Optional.ofNullable(ports.get(ServiceType.MANAGER))
+        );
+      }).collect(Collectors.toSet());
+      if (!seedNodes.isEmpty()) {
+        this.seedNodes.set(seedNodes);
+      }
+
+      return;
+    }
+
+    Set<SeedNode> seedNodes = config
+      .bucketConfigs()
+      .values()
+      .stream()
+      .flatMap(bc -> bc.nodes().stream())
+      .map(ni -> {
+        Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslServices() : ni.services();
+        return SeedNode.create(
+          ni.hostname(),
+          Optional.ofNullable(ports.get(ServiceType.KV)),
+          Optional.ofNullable(ports.get(ServiceType.MANAGER))
+        );
+      }).collect(Collectors.toSet());
+
+    if (!seedNodes.isEmpty()) {
+      this.seedNodes.set(seedNodes);
+    }
   }
 
   /**
@@ -458,4 +519,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     });
   }
 
+  /**
+   * Method for tests to get the current seed nodes.
+   */
+  Set<SeedNode> seedNodes() {
+    return seedNodes.get();
+  }
 }

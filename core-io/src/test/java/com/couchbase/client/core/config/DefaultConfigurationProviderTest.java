@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -63,6 +64,7 @@ class DefaultConfigurationProviderTest {
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
+    assertEquals(1, provider.seedNodes().size());
 
     String bucket = "default";
     String config = Utils.readResource(
@@ -73,6 +75,12 @@ class DefaultConfigurationProviderTest {
     assertEquals(1, configsPushed.get());
     assertFalse(provider.config().bucketConfigs().isEmpty());
     assertEquals(1073, provider.config().bucketConfig("default").rev());
+
+    assertEquals(3, provider.seedNodes().size());
+    for (SeedNode node : provider.seedNodes()) {
+      assertEquals(11210, node.kvPort().get());
+      assertEquals(8091, node.httpPort().get());
+    }
   }
 
   @Test
@@ -168,6 +176,32 @@ class DefaultConfigurationProviderTest {
     assertEquals(3, configsPushed.get());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
+  }
+
+  /**
+   * Makes sure that even if we only get a global config the seed nodes are properly updated from
+   * that config.
+   */
+  @Test
+  void updatesSeedNodesFromGlobalConfig() {
+    Core core = mock(Core.class);
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+
+    String newConfig = Utils.readResource(
+      "global_config_mad_hatter_multi_node.json",
+      DefaultConfigurationProviderTest.class
+    );
+
+    provider.proposeGlobalConfig(new ProposedGlobalConfigContext(newConfig, "127.0.0.1"));
+
+    assertEquals(2, provider.seedNodes().size());
+    for (SeedNode sn : provider.seedNodes()) {
+      assertEquals(11210, sn.kvPort().get());
+      assertEquals(8091, sn.httpPort().get());
+      assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
+    }
   }
 
 }

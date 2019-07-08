@@ -1,5 +1,6 @@
 package com.couchbase.client.core.env;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public class SeedNode {
@@ -42,5 +43,20 @@ public class SeedNode {
       ", kvPort=" + kvPort +
       ", httpPort=" + httpPort +
       '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    SeedNode seedNode = (SeedNode) o;
+    return Objects.equals(address, seedNode.address) &&
+      Objects.equals(kvPort, seedNode.kvPort) &&
+      Objects.equals(httpPort, seedNode.httpPort);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(address, kvPort, httpPort);
   }
 }
