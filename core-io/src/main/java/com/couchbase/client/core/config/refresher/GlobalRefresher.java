@@ -24,7 +24,6 @@ import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.Disposable;
@@ -36,9 +35,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.couchbase.client.core.config.refresher.KeyValueRefresher.MAX_PARALLEL_FETCH;
-import static com.couchbase.client.core.config.refresher.KeyValueRefresher.POLLER_INTERVAL;
-import static com.couchbase.client.core.config.refresher.KeyValueRefresher.clampConfigRequestTimeout;
+import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.MAX_PARALLEL_FETCH;
+import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.POLLER_INTERVAL;
+import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.clampConfigRequestTimeout;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**

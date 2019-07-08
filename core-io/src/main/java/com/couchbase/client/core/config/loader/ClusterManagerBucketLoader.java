@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
  * This loader is responsible for loading a config from the cluster manager.
  *
  * <p>While one might think always going to the cluster manager is the best option, there is a
- * reason why this loader is only a fallback to the {@link KeyValueLoader}. At scale, talking to
+ * reason why this loader is only a fallback to the {@link KeyValueBucketLoader}. At scale, talking to
  * KV engine for a config is much more efficient than talking to the cluster manager. But there
  * are times where the carrier loader cannot do its job and then this fallback is a safe
  * alternative.</p>
@@ -44,9 +44,9 @@ import reactor.core.publisher.Mono;
  *
  * @since 1.0.0
  */
-public class ClusterManagerLoader extends BaseLoader {
+public class ClusterManagerBucketLoader extends BaseBucketLoader {
 
-  public ClusterManagerLoader(final Core core) {
+  public ClusterManagerBucketLoader(final Core core) {
     super(core, ServiceType.MANAGER);
   }
 
@@ -69,7 +69,7 @@ public class ClusterManagerLoader extends BaseLoader {
       if (response.status().success()) {
         return response.config();
       } else {
-        throw new ConfigException("Received error status from ClusterManagerLoader: " + response);
+        throw new ConfigException("Received error status from ClusterManagerBucketLoader: " + response);
       }
     });
   }

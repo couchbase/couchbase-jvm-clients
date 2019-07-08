@@ -24,14 +24,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
-public class ClusterManagerRefresher implements Refresher {
+public class ClusterManagerBucketRefresher implements BucketRefresher {
 
   private final DirectProcessor<ProposedBucketConfigContext> configs = DirectProcessor.create();
   private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
 
   private final Core core;
 
-  public ClusterManagerRefresher(final ConfigurationProvider provider, final Core core) {
+  public ClusterManagerBucketRefresher(final ConfigurationProvider provider, final Core core) {
     this.core = core;
   }
 

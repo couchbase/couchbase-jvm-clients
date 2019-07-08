@@ -38,19 +38,19 @@ import java.util.Optional;
  * protocol with a special command, since those connections need to be open anyways and it
  * is more efficient at large scale than the cluster manager (who is the authority).</p>
  *
- * <p>Note that this loader can fail (hence the {@link ClusterManagerLoader} as a backup), either because
+ * <p>Note that this loader can fail (hence the {@link ClusterManagerBucketLoader} as a backup), either because
  * the current seed node does not have the data service enabled or it is a memcached bucket which
  * does not support the special command.</p>
  *
- * <p>In 1.x this loader used to be called Carrier Loader (from CCCP "couchbase carrier config
+ * <p>In 1.x this loader used to be called Carrier BucketLoader (from CCCP "couchbase carrier config
  * publication"), but the new name more accurately reflects from which service it is loading it
  * rather than how.</p>
  *
  * @since 1.0.0
  */
-public class KeyValueLoader extends BaseLoader {
+public class KeyValueBucketLoader extends BaseBucketLoader {
 
-  public KeyValueLoader(final Core core) {
+  public KeyValueBucketLoader(final Core core) {
     super(core, ServiceType.KV);
   }
 
@@ -75,7 +75,7 @@ public class KeyValueLoader extends BaseLoader {
       } else if (response.status() == ResponseStatus.UNSUPPORTED) {
         throw new UnsupportedConfigMechanismException();
       } else {
-        throw new ConfigException("Received error status from KeyValueLoader: " + response);
+        throw new ConfigException("Received error status from KeyValueBucketLoader: " + response);
       }
     });
   }

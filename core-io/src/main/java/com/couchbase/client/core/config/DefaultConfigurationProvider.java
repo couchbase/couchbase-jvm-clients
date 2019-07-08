@@ -23,12 +23,12 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEv
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
+import com.couchbase.client.core.config.loader.ClusterManagerBucketLoader;
 import com.couchbase.client.core.config.loader.GlobalLoader;
-import com.couchbase.client.core.config.loader.KeyValueLoader;
-import com.couchbase.client.core.config.loader.ClusterManagerLoader;
-import com.couchbase.client.core.config.refresher.ClusterManagerRefresher;
+import com.couchbase.client.core.config.loader.KeyValueBucketLoader;
+import com.couchbase.client.core.config.refresher.ClusterManagerBucketRefresher;
 import com.couchbase.client.core.config.refresher.GlobalRefresher;
-import com.couchbase.client.core.config.refresher.KeyValueRefresher;
+import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.CollectionsNotAvailableException;
@@ -90,10 +90,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final Core core;
   private final EventBus eventBus;
 
-  private final KeyValueLoader keyValueLoader;
-  private final ClusterManagerLoader clusterManagerLoader;
-  private final KeyValueRefresher keyValueRefresher;
-  private final ClusterManagerRefresher clusterManagerRefresher;
+  private final KeyValueBucketLoader keyValueLoader;
+  private final ClusterManagerBucketLoader clusterManagerLoader;
+  private final KeyValueBucketRefresher keyValueRefresher;
+  private final ClusterManagerBucketRefresher clusterManagerRefresher;
   private final GlobalLoader globalLoader;
   private final GlobalRefresher globalRefresher;
 
@@ -114,10 +114,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     eventBus = core.context().environment().eventBus();
     seedNodes = new AtomicReference<>(new HashSet<>(core.context().environment().seedNodes()));
 
-    keyValueLoader = new KeyValueLoader(core);
-    clusterManagerLoader = new ClusterManagerLoader(core);
-    keyValueRefresher = new KeyValueRefresher(this, core);
-    clusterManagerRefresher = new ClusterManagerRefresher(this, core);
+    keyValueLoader = new KeyValueBucketLoader(core);
+    clusterManagerLoader = new ClusterManagerBucketLoader(core);
+    keyValueRefresher = new KeyValueBucketRefresher(this, core);
+    clusterManagerRefresher = new ClusterManagerBucketRefresher(this, core);
     globalLoader = new GlobalLoader(core);
     globalRefresher = new GlobalRefresher(this, core);
     this.collectionMap = new CollectionMap();

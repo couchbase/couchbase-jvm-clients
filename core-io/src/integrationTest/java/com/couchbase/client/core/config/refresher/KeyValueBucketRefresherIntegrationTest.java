@@ -38,12 +38,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Verifies the functionality of the {@link KeyValueRefresher}.
+ * Verifies the functionality of the {@link KeyValueBucketRefresher}.
  *
  * <p>Note that the unit test covers the different error cases. In here we just make sure
  * that configs are loaded in the "good" cases.</p>
  */
-class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
+class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
@@ -67,7 +67,7 @@ class KeyValueRefresherIntegrationTest extends CoreIntegrationTest {
   void pollsForNewConfigs() throws Exception {
     Core core = Core.create(env);
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
-    KeyValueRefresher refresher = new KeyValueRefresher(provider, core);
+    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(provider, core);
 
     provider.openBucket(config().bucketname()).block();
 

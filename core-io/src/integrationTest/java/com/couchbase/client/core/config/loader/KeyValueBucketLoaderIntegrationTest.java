@@ -31,9 +31,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Verifies the functionality of the {@link KeyValueLoader}.
+ * Verifies the functionality of the {@link KeyValueBucketLoader}.
  */
-class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
+class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
@@ -49,14 +49,14 @@ class KeyValueLoaderIntegrationTest extends CoreIntegrationTest {
 
   /**
    * This is a very simplistic test that makes sure that we can "round trip" in the
-   * {@link KeyValueLoader} by grabbing a JSON decodable config through the full stack.
+   * {@link KeyValueBucketLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
   void loadConfigViaCarrierPublication() {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     Core core = Core.create(env);
-    KeyValueLoader loader = new KeyValueLoader(core);
+    KeyValueBucketLoader loader = new KeyValueBucketLoader(core);
     ProposedBucketConfigContext loaded = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV),

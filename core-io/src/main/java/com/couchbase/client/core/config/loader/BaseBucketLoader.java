@@ -28,7 +28,7 @@ import java.util.Optional;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * The {@link BaseLoader} contains all common functionality needed for the actual loader
+ * The {@link BaseBucketLoader} contains all common functionality needed for the actual loader
  * implementations.
  *
  * <p>This abstract parent class basically ensures that the service and node needed to possibly
@@ -40,7 +40,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  *
  * @since 2.0.0
  */
-public abstract class BaseLoader implements Loader {
+public abstract class BaseBucketLoader implements BucketLoader {
 
   /**
    * Holds the core attached to send actual commands into.
@@ -52,7 +52,7 @@ public abstract class BaseLoader implements Loader {
    */
   private final ServiceType serviceType;
 
-  BaseLoader(final Core core, final ServiceType serviceType) {
+  BaseBucketLoader(final Core core, final ServiceType serviceType) {
     this.core = core;
     this.serviceType = serviceType;
   }

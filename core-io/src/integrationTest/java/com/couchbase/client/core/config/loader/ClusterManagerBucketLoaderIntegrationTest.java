@@ -34,9 +34,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Verifies the functionality of the {@link ClusterManagerLoader}.
+ * Verifies the functionality of the {@link ClusterManagerBucketLoader}.
  */
-class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
+class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
@@ -52,7 +52,7 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
 
   /**
    * This is a very simplistic test that makes sure that we can "round trip" in the
-   * {@link ClusterManagerLoader} by grabbing a JSON decodable config through the full stack.
+   * {@link ClusterManagerBucketLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
   //@Disabled
@@ -60,7 +60,7 @@ class ClusterManagerLoaderIntegrationTest extends CoreIntegrationTest {
     TestNodeConfig config = config().firstNodeWith(Services.MANAGER).get();
 
     Core core = Core.create(env);
-    ClusterManagerLoader loader = new ClusterManagerLoader(core);
+    ClusterManagerBucketLoader loader = new ClusterManagerBucketLoader(core);
     int port = config.ports().get(Services.MANAGER);
     ProposedBucketConfigContext ctx = loader.load(
       new NodeIdentifier(config.hostname(), port),

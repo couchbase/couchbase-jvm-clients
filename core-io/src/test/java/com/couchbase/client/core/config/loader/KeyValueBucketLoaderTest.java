@@ -32,7 +32,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
 
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -46,14 +45,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the functionality of the {@link KeyValueLoader}.
+ * Verifies the functionality of the {@link KeyValueBucketLoader}.
  */
-class KeyValueLoaderTest {
+class KeyValueBucketLoaderTest {
 
   private static final NodeIdentifier SEED = mock(NodeIdentifier.class);
   private static final String BUCKET = "bucket";
 
-  private KeyValueLoader loader;
+  private KeyValueBucketLoader loader;
   private Core core;
 
   @BeforeEach
@@ -65,7 +64,7 @@ class KeyValueLoaderTest {
     core = mock(Core.class);
     CoreContext ctx = new CoreContext(core, 1, env);
     when(core.context()).thenReturn(ctx);
-    loader = new KeyValueLoader(core);
+    loader = new KeyValueBucketLoader(core);
   }
 
   @Test

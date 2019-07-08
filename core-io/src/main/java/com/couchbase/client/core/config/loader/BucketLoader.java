@@ -21,12 +21,12 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
 /**
- * The {@link Loader} is responsible for initially loading a fresh configuration from the
+ * The {@link BucketLoader} is responsible for initially loading a fresh configuration from the
  * cluster.
  *
  * @since 1.0.0
  */
-public interface Loader {
+public interface BucketLoader {
 
   /**
    * Attempts to load a config for the given seed node.

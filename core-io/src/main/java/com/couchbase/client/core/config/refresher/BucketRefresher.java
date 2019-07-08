@@ -21,12 +21,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * The {@link Refresher} is responsible to keep the configurations up to date after the initial
+ * The {@link BucketRefresher} is responsible to keep the configurations up to date after the initial
  * bootstrap/load.
  *
  * @since 1.0.0
  */
-public interface Refresher {
+public interface BucketRefresher {
 
   /**
    * Whenever a new config is loaded, it is pushed through this stream to be consumed.

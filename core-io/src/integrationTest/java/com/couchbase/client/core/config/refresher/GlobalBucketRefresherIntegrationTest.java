@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @IgnoreWhen(missesCapabilities = Capabilities.GLOBAL_CONFIG)
-class GlobalRefresherIntegrationTest extends CoreIntegrationTest {
+class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
   private Core core;
   private CoreEnvironment env;

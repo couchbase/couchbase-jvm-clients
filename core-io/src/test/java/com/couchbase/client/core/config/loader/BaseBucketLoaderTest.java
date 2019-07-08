@@ -41,11 +41,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the functionality of the surrounding code in the {@link BaseLoader}.
+ * Verifies the functionality of the surrounding code in the {@link BaseBucketLoader}.
  *
  * @since 2.0.0
  */
-class BaseLoaderTest {
+class BaseBucketLoaderTest {
 
   private static final NodeIdentifier SEED = new NodeIdentifier("127.0.0.1", 8091);
   private static final String BUCKET = "bucket";
@@ -64,12 +64,12 @@ class BaseLoaderTest {
 
   @Test
   void loadsAndParsesConfig() {
-    Loader loader = new BaseLoader(core, SERVICE) {
+    BucketLoader loader = new BaseBucketLoader(core, SERVICE) {
       @Override
       protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.just(Utils.readResource(
           "../config_with_external.json",
-          BaseLoaderTest.class
+          BaseBucketLoaderTest.class
         ).getBytes(UTF_8));
       }
     };
@@ -85,7 +85,7 @@ class BaseLoaderTest {
 
   @Test
   void failsWhenServiceCannotBeEnabled() {
-    Loader loader = new BaseLoader(core, SERVICE) {
+    BucketLoader loader = new BaseBucketLoader(core, SERVICE) {
       @Override
       protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.error(new IllegalStateException("Not expected to be called!"));
@@ -99,7 +99,7 @@ class BaseLoaderTest {
 
   @Test
   void failsWhenChildDiscoverFails() {
-    Loader loader = new BaseLoader(core, SERVICE) {
+    BucketLoader loader = new BaseBucketLoader(core, SERVICE) {
       @Override
       protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
         return Mono.error(new CouchbaseException("Failed discovering for some reason"));

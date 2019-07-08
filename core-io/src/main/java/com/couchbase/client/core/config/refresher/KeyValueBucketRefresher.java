@@ -49,12 +49,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * The {@link KeyValueRefresher} keeps configs up-to-date through the KV service.
+ * The {@link KeyValueBucketRefresher} keeps configs up-to-date through the KV service.
  *
  * @since 1.0.0
  */
 @Stability.Internal
-public class KeyValueRefresher implements Refresher {
+public class KeyValueBucketRefresher implements BucketRefresher {
 
   /**
    * The interval at which the poller fires.
@@ -124,7 +124,7 @@ public class KeyValueRefresher implements Refresher {
   private final Duration configRequestTimeout;
 
 
-  public KeyValueRefresher(final ConfigurationProvider provider, final Core core) {
+  public KeyValueBucketRefresher(final ConfigurationProvider provider, final Core core) {
     this.core = core;
     this.provider = provider;
     this.configPollIntervalNanos = core.context().environment().ioConfig().configPollInterval().toNanos();
@@ -135,7 +135,7 @@ public class KeyValueRefresher implements Refresher {
       .filter(v -> !registrations.isEmpty())
       .flatMap(ignored -> Flux
         .fromIterable(registrations.keySet())
-        .flatMap(KeyValueRefresher.this::maybeUpdateBucket)
+        .flatMap(KeyValueBucketRefresher.this::maybeUpdateBucket)
       )
       .subscribe(configsSink::next);
   }

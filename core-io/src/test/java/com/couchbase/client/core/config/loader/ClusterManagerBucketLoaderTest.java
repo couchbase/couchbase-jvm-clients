@@ -44,14 +44,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the functionality of the {@link ClusterManagerLoader}.
+ * Verifies the functionality of the {@link ClusterManagerBucketLoader}.
  */
-class ClusterManagerLoaderTest {
+class ClusterManagerBucketLoaderTest {
 
   private static final NodeIdentifier SEED = mock(NodeIdentifier.class);
   private static final String BUCKET = "bucket";
 
-  private ClusterManagerLoader loader;
+  private ClusterManagerBucketLoader loader;
   private Core core;
 
   @BeforeEach
@@ -63,7 +63,7 @@ class ClusterManagerLoaderTest {
     core = mock(Core.class);
     CoreContext ctx = new CoreContext(core, 1, env);
     when(core.context()).thenReturn(ctx);
-    loader = new ClusterManagerLoader(core);
+    loader = new ClusterManagerBucketLoader(core);
   }
 
   @Test
