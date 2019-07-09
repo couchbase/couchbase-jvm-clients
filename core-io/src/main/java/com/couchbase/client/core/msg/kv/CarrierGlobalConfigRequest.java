@@ -79,8 +79,4 @@ public class CarrierGlobalConfigRequest
     return new CarrierGlobalConfigResponse(decodeStatus(response), content);
   }
 
-  @Override
-  public String bucket() {
-    return null;
-  }
 }

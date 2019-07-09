@@ -20,6 +20,7 @@ import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.GlobalConfig;
+import com.couchbase.client.core.logging.RedactableArgument;
 
 import java.time.Duration;
 
@@ -38,6 +39,6 @@ public class GlobalConfigUpdatedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Global configuration updated: " + config;
+    return "Global configuration updated: " + RedactableArgument.redactSystem(config);
   }
 }

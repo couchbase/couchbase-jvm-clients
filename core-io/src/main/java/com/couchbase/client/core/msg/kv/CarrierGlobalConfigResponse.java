@@ -20,6 +20,7 @@ import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 public class CarrierGlobalConfigResponse extends BaseResponse {
 
@@ -27,7 +28,7 @@ public class CarrierGlobalConfigResponse extends BaseResponse {
 
   CarrierGlobalConfigResponse(final ResponseStatus status, final byte[] content) {
     super(status);
-    this.content = content;
+    this.content = requireNonNull(content);
   }
 
   public byte[] content() {

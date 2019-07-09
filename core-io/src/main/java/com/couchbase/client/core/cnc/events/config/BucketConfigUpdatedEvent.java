@@ -19,6 +19,7 @@ package com.couchbase.client.core.cnc.events.config;
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.logging.RedactableArgument;
 
 import java.time.Duration;
 
@@ -40,6 +41,6 @@ public class BucketConfigUpdatedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Bucket configuration updated: " + config;
+    return "Bucket configuration updated: " + RedactableArgument.redactSystem(config);
   }
 }

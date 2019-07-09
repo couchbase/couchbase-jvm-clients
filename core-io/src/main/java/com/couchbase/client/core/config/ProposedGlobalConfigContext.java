@@ -16,9 +16,9 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.deps.io.netty.util.internal.ObjectUtil;
-
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This context keeps together a bunch of related information needed to turn a raw
@@ -39,7 +39,7 @@ public class ProposedGlobalConfigContext {
    * @param origin the origin of the config, can be null.
    */
   public ProposedGlobalConfigContext(final String config, final String origin) {
-    ObjectUtil.checkNotNull(config, "the raw config cannot be null!");
+    requireNonNull(config, "the raw config cannot be null!");
     this.config = config.replace("$HOST", origin);
     this.origin = origin;
   }

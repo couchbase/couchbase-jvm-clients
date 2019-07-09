@@ -42,7 +42,6 @@ class GlobalConfigTest {
       config.clusterCapabilities().get(ServiceType.QUERY)
     );
     assertTrue(config.clusterCapabilities().get(ServiceType.KV).isEmpty());
-
   }
 
   @Test

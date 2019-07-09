@@ -123,10 +123,7 @@ public class AsyncCluster {
    * @return once this setup is completed, will return.
    */
   Mono<Void> performGlobalConnect() {
-    return core
-      .initGlobalConfig()
-      .timeout(environment.get().timeoutConfig().connectTimeout())
-      .then();
+    return core.initGlobalConfig().timeout(environment.get().timeoutConfig().connectTimeout());
   }
 
   /**

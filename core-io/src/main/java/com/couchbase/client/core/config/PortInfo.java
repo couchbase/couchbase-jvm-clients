@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
@@ -26,6 +25,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PortInfo {
@@ -52,11 +53,7 @@ public class PortInfo {
         ports = new HashMap<>();
         sslPorts = new HashMap<>();
         alternateAddresses = aa == null ? Collections.emptyMap() : aa;
-        try {
-            this.hostname = hostname;
-        } catch (Exception e) {
-            throw new CouchbaseException("Could not analyze hostname from config.", e);
-        }
+        this.hostname = hostname; // might be null when decoded from JSON, covered at a higher level
 
         extractPorts(services, ports, sslPorts);
     }
@@ -71,10 +68,10 @@ public class PortInfo {
      */
     PortInfo(final Map<ServiceType, Integer> ports, final Map<ServiceType, Integer> sslPorts,
                      final Map<String, AlternateAddress> alternateAddresses, final String hostname) {
-      this.ports = ports;
-      this.sslPorts = sslPorts;
-      this.alternateAddresses = alternateAddresses;
-      this.hostname = hostname;
+      this.ports = requireNonNull(ports);
+      this.sslPorts = requireNonNull(sslPorts);
+      this.alternateAddresses = requireNonNull(alternateAddresses);
+      this.hostname = requireNonNull(hostname);
     }
 
     public NodeIdentifier identifier() {

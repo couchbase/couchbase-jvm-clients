@@ -171,7 +171,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             return ctx;
           })
           .then(registerRefresher(name))
-          .then()
           .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));
       } else {
         return Mono.error(new AlreadyShutdownException());
@@ -202,8 +201,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             proposeGlobalConfig(ctx);
             return ctx;
           })
-          .then(globalRefresher.start())
-          .then();
+          .then(globalRefresher.start());
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -308,8 +306,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
-          .then(globalRefresher.shutdown())
-          .then();
+          .then(globalRefresher.shutdown());
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -348,8 +345,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                 return Mono.error(new CouchbaseException(response.toString()));
               }
             }
-          })
-          .then();
+          });
       });
     } else {
       return Mono.empty();

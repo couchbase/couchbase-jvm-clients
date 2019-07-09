@@ -139,7 +139,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
 
   @Override
   public String bucket() {
-    return collectionIdentifier.bucket();
+    return collectionIdentifier == null ? null : collectionIdentifier.bucket();
   }
 
   @Override

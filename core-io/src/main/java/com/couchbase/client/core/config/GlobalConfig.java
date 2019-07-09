@@ -58,7 +58,7 @@ public class GlobalConfig {
   /**
    * Helper method to enrich the port infos with a synthetic origin host if not present.
    *
-   * <p>In a single nod cluster or if the node does not include the hostname, this method enriches the port config
+   * <p>In a single node cluster or if the node does not include the hostname, this method enriches the port config
    * with the hostname it got the config from. This will make sure we can still bootstrap and assemble it as a valid
    * configuration.</p>
    *
