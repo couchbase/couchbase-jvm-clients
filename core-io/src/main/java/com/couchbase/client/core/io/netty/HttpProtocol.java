@@ -16,9 +16,6 @@
 
 package com.couchbase.client.core.io.netty;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.base64.Base64;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
@@ -27,6 +24,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Base64;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -54,14 +52,8 @@ public class HttpProtocol {
     }
 
     final String pw = password == null ? "" : password;
-    final int userLength = user == null ? 0 : user.length();
-    ByteBuf raw = Unpooled.buffer(userLength + pw.length() + 1);
-    raw.writeBytes((user + ":" + pw).getBytes(UTF_8));
-    ByteBuf encoded = Base64.encode(raw, false);
-    request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic "
-      + encoded.toString(UTF_8));
-    encoded.release();
-    raw.release();
+    final String encoded = Base64.getEncoder().encodeToString((user + ":" + pw).getBytes(UTF_8));
+    request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic " + encoded);
   }
 
   /**
