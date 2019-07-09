@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
-import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UsernameAndPassword;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -68,7 +68,7 @@ public class Cluster {
    * @return if properly connected, returns a {@link Cluster}.
    */
   public static Cluster connect(final String connectionString, final String username, final String password) {
-    return connect(connectionString, new RoleBasedCredentials(username, password));
+    return connect(connectionString, new UsernameAndPassword(username, password));
   }
 
   /**

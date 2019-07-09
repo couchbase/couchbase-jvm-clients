@@ -16,7 +16,7 @@ package com.couchbase.client.scala.util
  * limitations under the License.
  */
 
-import com.couchbase.client.scala.env.{ClusterEnvironment, RoleBasedCredentials, SeedNode}
+import com.couchbase.client.scala.env.{ClusterEnvironment, UsernameAndPassword, SeedNode}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services}
 
 import scala.collection.JavaConverters._
@@ -44,7 +44,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
       .toSet
 
     ClusterEnvironment
-      .builder(RoleBasedCredentials(config.adminUsername, config.adminPassword))
+      .builder(UsernameAndPassword(config.adminUsername, config.adminPassword))
       .seedNodes(seeds)
   }
 }

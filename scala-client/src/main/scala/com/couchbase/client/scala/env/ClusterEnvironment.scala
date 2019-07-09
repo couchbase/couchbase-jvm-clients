@@ -158,7 +158,7 @@ object ClusterEnvironment {
 
   private[scala] def create(connectionString: String, username: String, password: String, owned: Boolean)
   : ClusterEnvironment = {
-    create(connectionString, RoleBasedCredentials(username, password), owned)
+    create(connectionString, UsernameAndPassword(username, password), owned)
   }
 
   /** Creates a ClusterEnvironment to connect to a Couchbase cluster with custom [[Credentials]].
@@ -195,7 +195,7 @@ object ClusterEnvironment {
     * @return a `ClusterEnvironment.Builder`
     */
   def builder(connectionString: String, username: String, password: String): ClusterEnvironment.Builder = {
-    builder(connectionString, RoleBasedCredentials(username, password))
+    builder(connectionString, UsernameAndPassword(username, password))
   }
 
 

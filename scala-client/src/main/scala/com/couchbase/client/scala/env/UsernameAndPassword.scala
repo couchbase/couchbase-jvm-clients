@@ -17,6 +17,6 @@ package com.couchbase.client.scala.env
 
 import com.couchbase.client.core.env.Credentials
 
-case class RoleBasedCredentials(username: String, password: String) extends Credentials {
+case class UsernameAndPassword(username: String, password: String) extends Credentials {
 
 }

@@ -19,7 +19,7 @@ package com.couchbase.client.java.env;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UsernameAndPassword;
 
 public class ClusterEnvironment extends CoreEnvironment {
 
@@ -49,7 +49,7 @@ public class ClusterEnvironment extends CoreEnvironment {
   }
 
   public static ClusterEnvironment.Builder builder(final String username, final String password) {
-    return builder(new RoleBasedCredentials(username, password));
+    return builder(new UsernameAndPassword(username, password));
   }
 
   public static ClusterEnvironment.Builder builder(final Credentials credentials) {
@@ -57,7 +57,7 @@ public class ClusterEnvironment extends CoreEnvironment {
   }
 
   public static ClusterEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, new RoleBasedCredentials(username, password));
+    return builder(connectionString, new UsernameAndPassword(username, password));
   }
 
   public static ClusterEnvironment.Builder builder(final String connectionString, final Credentials credentials) {

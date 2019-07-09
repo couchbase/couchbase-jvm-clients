@@ -138,7 +138,7 @@ public class CoreEnvironment {
   }
 
   public static CoreEnvironment.Builder builder(final String username, final String password) {
-    return builder(new RoleBasedCredentials(username, password));
+    return builder(new UsernameAndPassword(username, password));
   }
 
   public static CoreEnvironment.Builder builder(final Credentials credentials) {
@@ -146,7 +146,7 @@ public class CoreEnvironment {
   }
 
   public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, new RoleBasedCredentials(username, password));
+    return builder(connectionString, new UsernameAndPassword(username, password));
   }
 
   public static CoreEnvironment.Builder builder(final String connectionString, final Credentials credentials) {

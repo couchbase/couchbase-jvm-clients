@@ -20,7 +20,7 @@ package com.couchbase.client.core.env;
  * The {@link Credentials} encapsulate different ways of carrying credentials throughout
  * the client.
  *
- * <p>Usually this will be username and password for RBAC, but other means are possible (like
+ * <p>Usually this will be username and password, but other means are possible (like
  * X.509 client certificate authentication or legacy per-bucket credentials).</p>
  *
  * @since 2.0.0

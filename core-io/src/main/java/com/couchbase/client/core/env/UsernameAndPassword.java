@@ -16,12 +16,12 @@
 
 package com.couchbase.client.core.env;
 
-public class RoleBasedCredentials implements Credentials {
+public class UsernameAndPassword implements Credentials {
 
   private final String username;
   private final String password;
 
-  public RoleBasedCredentials(String username, String password) {
+  public UsernameAndPassword(String username, String password) {
     this.username = username;
     this.password = password;
   }

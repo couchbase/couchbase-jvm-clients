@@ -42,7 +42,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UsernameAndPassword;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -77,7 +77,7 @@ class QueryMessageHandlerBackpressureTest {
   void beforeEach() {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
-    environment = CoreEnvironment.create(new RoleBasedCredentials("admin", "password"));
+    environment = CoreEnvironment.create(new UsernameAndPassword("admin", "password"));
     core = Core.create(environment);
   }
 

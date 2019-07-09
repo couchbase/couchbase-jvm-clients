@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
-import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UsernameAndPassword;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -85,7 +85,7 @@ public class AsyncCluster {
    */
   public static CompletableFuture<AsyncCluster> connect(final String connectionString, final String username,
                                                         final String password) {
-    return connect(connectionString, new RoleBasedCredentials(username, password));
+    return connect(connectionString, new UsernameAndPassword(username, password));
   }
 
   /**

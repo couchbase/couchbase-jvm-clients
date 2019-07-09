@@ -18,7 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
-import com.couchbase.client.core.env.RoleBasedCredentials;
+import com.couchbase.client.core.env.UsernameAndPassword;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -65,7 +65,7 @@ public class ReactiveCluster {
    */
   public static Mono<ReactiveCluster> connect(final String connectionString, final String username,
                                         final String password) {
-    return connect(connectionString, new RoleBasedCredentials(username, password));
+    return connect(connectionString, new UsernameAndPassword(username, password));
   }
 
   /**
