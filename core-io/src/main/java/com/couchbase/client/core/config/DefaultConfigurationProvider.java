@@ -77,13 +77,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   private static final int DEFAULT_MANAGER_PORT = 8091;
 
+  /**
+   * The default port used for kv bootstrap if encryption is enabled.
+   */
   private static final int DEFAULT_KV_TLS_PORT = 11207;
 
+  /**
+   * The default port used for manager bootstrap if encryption is enabled.
+   */
   private static final int DEFAULT_MANAGER_TLS_PORT = 18091;
 
   /**
-   * The number of loaders which will (at maximum) try to load a config
-   * in parallel.
+   * The number of loaders which will (at maximum) try to load a config in parallel.
    */
   private static final int MAX_PARALLEL_LOADERS = 5;
 
@@ -102,13 +107,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final ClusterConfig currentConfig = new ClusterConfig();
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
-  private final CollectionMap collectionMap;
+  private final CollectionMap collectionMap = new CollectionMap();
 
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
    */
   private final AtomicReference<Set<SeedNode>> seedNodes;
 
+  /**
+   * Creates a new configuration provider.
+   *
+   * @param core the core against which all ops are executed.
+   */
   public DefaultConfigurationProvider(final Core core) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
@@ -120,11 +130,9 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     clusterManagerRefresher = new ClusterManagerBucketRefresher(this, core);
     globalLoader = new GlobalLoader(core);
     globalRefresher = new GlobalRefresher(this, core);
-    this.collectionMap = new CollectionMap();
 
+    // Start with pushing the current config into the sink for all subscribers currently attached.
     configsSink.next(currentConfig);
-    keyValueRefresher.configs().subscribe(this::proposeBucketConfig);
-    clusterManagerRefresher.configs().subscribe(this::proposeBucketConfig);
   }
 
   @Override

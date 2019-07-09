@@ -29,9 +29,7 @@ import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.Disposable;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -104,16 +102,6 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   private final Set<String> tainted = Collections.synchronizedSet(new HashSet<>());
 
   /**
-   * Holds the config stream to be subscribed to for the config events on this refresher.
-   */
-  private final DirectProcessor<ProposedBucketConfigContext> configs = DirectProcessor.create();
-
-  /**
-   * This sink should be used to push configs out to subscribers to be thread-safe.
-   */
-  private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
-
-  /**
    * Holds the allowable config poll interval in nanoseconds.
    */
   private final long configPollIntervalNanos;
@@ -137,7 +125,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         .fromIterable(registrations.keySet())
         .flatMap(KeyValueBucketRefresher.this::maybeUpdateBucket)
       )
-      .subscribe(configsSink::next);
+      .subscribe(provider::proposeBucketConfig);
   }
 
   /**
@@ -157,11 +145,6 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     } else {
       return Duration.ofNanos(configPollIntervalNanos);
     }
-  }
-
-  @Override
-  public Flux<ProposedBucketConfigContext> configs() {
-    return configs;
   }
 
   /**
@@ -300,7 +283,6 @@ public class KeyValueBucketRefresher implements BucketRefresher {
       if (!pollRegistration.isDisposed()) {
         pollRegistration.dispose();
       }
-      configsSink.complete();
       return Mono.empty();
     });
   }

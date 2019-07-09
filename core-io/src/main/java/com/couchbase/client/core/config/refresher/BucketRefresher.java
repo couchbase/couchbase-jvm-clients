@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.config.refresher;
 
-import com.couchbase.client.core.config.ProposedBucketConfigContext;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -27,13 +25,6 @@ import reactor.core.publisher.Mono;
  * @since 1.0.0
  */
 public interface BucketRefresher {
-
-  /**
-   * Whenever a new config is loaded, it is pushed through this stream to be consumed.
-   *
-   * @return the stream of proposed configs.
-   */
-  Flux<ProposedBucketConfigContext> configs();
 
   /**
    * Registers a bucket for refreshing.

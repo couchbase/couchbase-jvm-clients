@@ -26,9 +26,6 @@ import reactor.core.publisher.Mono;
 
 public class ClusterManagerBucketRefresher implements BucketRefresher {
 
-  private final DirectProcessor<ProposedBucketConfigContext> configs = DirectProcessor.create();
-  private final FluxSink<ProposedBucketConfigContext> configsSink = configs.sink();
-
   private final Core core;
 
   public ClusterManagerBucketRefresher(final ConfigurationProvider provider, final Core core) {
@@ -51,11 +48,6 @@ public class ClusterManagerBucketRefresher implements BucketRefresher {
   public Mono<Void> shutdown() {
     // TODO
     return Mono.empty();
-  }
-
-  @Override
-  public Flux<ProposedBucketConfigContext> configs() {
-    return configs;
   }
 
   /**
