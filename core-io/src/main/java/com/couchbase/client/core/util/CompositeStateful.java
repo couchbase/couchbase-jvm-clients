@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
@@ -99,11 +100,15 @@ public class CompositeStateful<T, IN, OUT> implements Stateful<OUT> {
   /**
    * Deregisters a stateful element from the composite.
    *
+   * <p>Note that it might be possible that the passed in identifier is already deregistered (for example if
+   * the upstream flux already completed or failed). In this case, this is essentially a "noop" since the target state,
+   * the identifier not being part of the stateful component, is already reached.</p>
+   *
    * @param identifier the unique identifier to use.
    */
   public synchronized void deregister(final T identifier) {
     Disposable subscription = subscriptions.remove(identifier);
-    if (!subscription.isDisposed()) {
+    if (subscription != null && !subscription.isDisposed()) {
       subscription.dispose();
       states.remove(identifier);
       transition(transformer.apply(states.values()));

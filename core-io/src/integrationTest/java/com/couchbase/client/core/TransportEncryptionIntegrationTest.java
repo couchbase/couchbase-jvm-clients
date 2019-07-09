@@ -16,6 +16,10 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
+import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
@@ -29,6 +33,7 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -42,6 +47,7 @@ import java.util.stream.Collectors;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
@@ -61,17 +67,20 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
    * @param config the security config to use.
    * @return a core environment, set up for encrypted networking.
    */
-  private CoreEnvironment secureEnvironment(final SecurityConfig.Builder config) {
+  private CoreEnvironment secureEnvironment(final SecurityConfig.Builder config, EventBus customEventBus) {
     Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV_TLS)),
       Optional.of(cfg.ports().get(Services.MANAGER_TLS))
     )).collect(Collectors.toSet());
 
-    return environment()
-      .securityConfig(config)
-      .seedNodes(seeds)
-      .build();
+    CoreEnvironment.Builder builder = environment().securityConfig(config).seedNodes(seeds);
+
+    if (customEventBus != null) {
+      builder.eventBus(customEventBus);
+    }
+
+    return builder.build();
   }
 
   @Test
@@ -79,7 +88,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   void performsKeyValueIgnoringServerCert() throws Exception {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE));
+      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
     Core core = Core.create(env);
     core.openBucket(config().bucketname()).block();
 
@@ -111,9 +120,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueWithServerCert() throws Exception {
+    if (!config().clusterCert().isPresent()) {
+      fail("Cluster Certificate must be present for this test!");
+    }
+
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(config().clusterCert().get()));
+      .trustCertificates(config().clusterCert().get()), null);
     Core core = Core.create(env);
     core.openBucket(config().bucketname()).block();
 
@@ -145,7 +158,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfNoTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.tlsEnabled(true)));
+    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.tlsEnabled(true), null));
   }
 
   @Test
@@ -154,23 +167,40 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustManagerFactory(mock(TrustManagerFactory.class))
-      .trustCertificates(mock(X509Certificate.class)))
+      .trustCertificates(mock(X509Certificate.class)), null)
     );
   }
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfWrongCertPresent() {
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(mock(X509Certificate.class)));
+      .trustCertificates(mock(X509Certificate.class)), eventBus);
     Core core = Core.create(env);
 
-    // Todo: this must not throw, but the op underneath timeout! .. also assert based
-    // on status of the bucket...
-    assertThrows(Exception.class, () -> core.openBucket(config().bucketname()).block());
-
     try {
+      // Todo: this must not throw, but the op underneath timeout! .. also assert based
+      // on status of the bucket...
+      assertThrows(Exception.class, () -> core.openBucket(config().bucketname()).block());
+
+      assertTrue(eventBus.publishedEvents().size() > 0);
+      boolean hasEndpointConnectFailedEvent = false;
+      boolean hasSecureConnectionFailedEvent = false;
+      for (Event event : eventBus.publishedEvents()) {
+        if (event instanceof EndpointConnectionFailedEvent) {
+          hasEndpointConnectFailedEvent = true;
+        }
+        if (event instanceof SecureConnectionFailedEvent) {
+          hasSecureConnectionFailedEvent = true;
+        }
+      }
+
+      assertTrue(hasEndpointConnectFailedEvent);
+      assertTrue(hasSecureConnectionFailedEvent);
+
+
       /*String id = UUID.randomUUID().toString();
       byte[] content = "hello, world".getBytes(UTF_8);
 
@@ -184,6 +214,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       core.shutdown().block();
       env.shutdown();
     }
+
+
   }
 
 }

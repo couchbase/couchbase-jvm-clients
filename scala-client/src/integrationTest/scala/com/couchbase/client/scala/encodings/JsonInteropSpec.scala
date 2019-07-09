@@ -377,7 +377,6 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   private def compare(source: Source, sink: Sink): Unit = {
-    println(s"Source = ${source} sink = ${sink}")
     val docId = TestUtils.docId()
 
     source.insert(docId)

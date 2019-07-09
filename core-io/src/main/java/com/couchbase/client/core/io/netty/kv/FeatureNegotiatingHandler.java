@@ -316,4 +316,21 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     return String.format("%016X", input);
   }
 
+  /**
+   * If there is an exception raised while we are waiting for our connect phase to complete, the error
+   * should be propagated as a cause up the pipeline.
+   *
+   * <p>One reason for example could be TLS problems that need to be surfaced up the stack properly.</p>
+   *
+   * @param ctx the channel handler context.
+   * @param cause the cause of the problem.
+   */
+  @Override
+  public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
+    if (!interceptedConnectPromise.isDone()) {
+      interceptedConnectPromise.tryFailure(cause);
+    }
+    ctx.fireExceptionCaught(cause);
+  }
+
 }
