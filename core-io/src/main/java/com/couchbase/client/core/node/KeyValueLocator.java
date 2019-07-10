@@ -184,7 +184,7 @@ public class KeyValueLocator implements Locator {
    */
   private static int partitionForKey(final byte[] id, final int numPartitions) {
     CRC32 crc32 = new CRC32();
-    crc32.update(id);
+    crc32.update(id, 0, id.length);
     long rv = (crc32.getValue() >> 16) & 0x7fff;
     return (int) rv &numPartitions - 1;
   }
