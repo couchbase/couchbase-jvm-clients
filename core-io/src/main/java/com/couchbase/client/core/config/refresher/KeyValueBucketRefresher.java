@@ -20,6 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.config.BucketConfigRefreshFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
@@ -118,9 +120,15 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    */
   private final Duration configRequestTimeout;
 
+  /**
+   * Holds the event bus to send events to.
+   */
+  private final EventBus eventBus;
+
 
   public KeyValueBucketRefresher(final ConfigurationProvider provider, final Core core) {
     this.core = core;
+    this.eventBus = core.context().environment().eventBus();
     this.provider = provider;
     this.configPollIntervalNanos = core.context().environment().ioConfig().configPollInterval().toNanos();
     this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
@@ -188,7 +196,12 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     return Flux.defer(() -> {
       BucketConfig config = provider.config().bucketConfig(name);
       if (config == null) {
-        // todo: log debug that no node found to refresh a config from
+        eventBus.publish(new BucketConfigRefreshFailedEvent(
+          core.context(),
+          BucketConfigRefreshFailedEvent.RefresherType.KV,
+          BucketConfigRefreshFailedEvent.Reason.NO_BUCKET_FOUND,
+          Optional.empty()
+        ));
         return Flux.empty();
       }
 
@@ -232,13 +245,25 @@ public class KeyValueBucketRefresher implements BucketRefresher {
       return Reactor
         .wrap(request, request.response(), true)
         .filter(response -> {
-          // TODO: debug event that it got ignored.
+          if (!response.status().success()) {
+            eventBus.publish(new BucketConfigRefreshFailedEvent(
+              core.context(),
+              BucketConfigRefreshFailedEvent.RefresherType.KV,
+              BucketConfigRefreshFailedEvent.Reason.INDIVIDUAL_REQUEST_FAILED,
+              Optional.of(response)
+            ));
+          }
           return response.status().success();
         })
         .map(response ->
           new ProposedBucketConfigContext(name, new String(response.content(), UTF_8), nodeInfo.hostname())
         ).onErrorResume(t -> {
-          // TODO: raise a warning that fetching a config individual failed.
+          eventBus.publish(new BucketConfigRefreshFailedEvent(
+            core.context(),
+            BucketConfigRefreshFailedEvent.RefresherType.KV,
+            BucketConfigRefreshFailedEvent.Reason.INDIVIDUAL_REQUEST_FAILED,
+            Optional.of(t)
+          ));
           return Mono.empty();
         });
     });
