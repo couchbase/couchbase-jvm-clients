@@ -37,13 +37,23 @@ public enum AsyncUtils {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } catch (ExecutionException e) {
-      if (e.getCause() != null && e.getCause() instanceof RuntimeException) {
-        throw (RuntimeException) e.getCause();
-      } else if (e.getCause() != null && e.getCause() instanceof TimeoutException) {
-        throw new RuntimeException(e.getCause());
-      } else {
-        throw new RuntimeException(e);
+      final Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException) {
+        // Rethrow the cause but first adjust the stack trace to point HERE instead of
+        // the thread where the exception was actually thrown, otherwise the stack trace
+        // does not include the context of the blocking call.
+        // Preserve the original async stack trace as a suppressed exception.
+        Exception suppressed = new Exception(
+            "The above exception was originally thrown by another thread at the following location.");
+        suppressed.setStackTrace(cause.getStackTrace());
+        cause.fillInStackTrace();
+        cause.addSuppressed(suppressed);
+        throw (RuntimeException) cause;
       }
+      if (cause instanceof TimeoutException) {
+        throw new RuntimeException(cause);
+      }
+      throw new RuntimeException(e);
     }
   }
 
