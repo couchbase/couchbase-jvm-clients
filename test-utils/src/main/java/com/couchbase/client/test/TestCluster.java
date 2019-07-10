@@ -22,16 +22,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -186,6 +182,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       capabilities.add(Capabilities.SYNC_REPLICATION);
       /// GCCCP was also added in 6.5 when sync replication was added, so we can assume the same.
       capabilities.add(Capabilities.GLOBAL_CONFIG);
+      // same for user groups
+      capabilities.add(Capabilities.USER_GROUPS);
     }
     return capabilities;
   }

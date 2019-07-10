@@ -31,6 +31,7 @@ import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.AsyncSearchIndexManager;
+import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -74,6 +75,8 @@ public class AsyncCluster {
   private final AsyncSearchIndexManager searchIndexManager;
 
   private final QueryAccessor queryAccessor;
+
+  private final AsyncUserManager userManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -136,6 +139,7 @@ public class AsyncCluster {
     this.core = Core.create(environment.get());
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.queryAccessor = new QueryAccessor(core);
+    this.userManager = new AsyncUserManager(core);
   }
 
   /**
@@ -160,6 +164,13 @@ public class AsyncCluster {
    */
   public AsyncSearchIndexManager searchIndexes() {
     return searchIndexManager;
+  }
+
+  /**
+   * Provides access to the user management capabilities.
+   */
+  public AsyncUserManager users() {
+    return userManager;
   }
 
   /**

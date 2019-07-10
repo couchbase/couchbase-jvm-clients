@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Stability.Internal
 public class UrlQueryStringBuilder {
   private final Map<String, List<String>> params = new LinkedHashMap<>();
 
@@ -50,12 +53,12 @@ public class UrlQueryStringBuilder {
   private UrlQueryStringBuilder setSafeValue(String name, String value) {
     final List<String> values = new ArrayList<>(1);
     values.add(value);
-    params.put(encodeNames ? encode(name) : name, values);
+    params.put(encodeNames ? urlEncode(name) : name, values);
     return this;
   }
 
   public UrlQueryStringBuilder set(String name, String value) {
-    setSafeValue(name, encode(value));
+    setSafeValue(name, urlEncode(value));
     return this;
   }
 
@@ -72,12 +75,12 @@ public class UrlQueryStringBuilder {
   }
 
   private UrlQueryStringBuilder addSafeValue(String name, String value) {
-    params.computeIfAbsent(encodeNames ? encode(name) : name, k -> new ArrayList<>()).add(value);
+    params.computeIfAbsent(encodeNames ? urlEncode(name) : name, k -> new ArrayList<>()).add(value);
     return this;
   }
 
   public UrlQueryStringBuilder add(String name, String value) {
-    return addSafeValue(name, encode(value));
+    return addSafeValue(name, urlEncode(value));
   }
 
   public UrlQueryStringBuilder add(String name, int value) {
@@ -107,14 +110,17 @@ public class UrlQueryStringBuilder {
     return sb.toString();
   }
 
-  private static String encode(String s) {
+  public static String urlEncode(String s) {
     try {
-      return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
+      return URLEncoder.encode(s, StandardCharsets.UTF_8.name())
+          .replace("+", "%20"); // Make sure spaces are encoded as "%20"
+      // so the result can be used in path components and with "application/x-www-form-urlencoded"
     } catch (UnsupportedEncodingException inconceivable) {
       throw new AssertionError("UTF-8 not supported", inconceivable);
     }
   }
 
+  @Override
   public String toString() {
     return build();
   }

@@ -39,5 +39,9 @@ public enum Capabilities {
   /**
    * This cluster is able to give us a config without opening a bucket.
    */
-  GLOBAL_CONFIG
+  GLOBAL_CONFIG,
+  /**
+   * This cluster is able to assign users to groups.
+   */
+  USER_GROUPS
 }

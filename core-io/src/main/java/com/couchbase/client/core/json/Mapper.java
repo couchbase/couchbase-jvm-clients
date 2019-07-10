@@ -151,6 +151,22 @@ public class Mapper {
   }
 
   /**
+   * Converts an object to the requested type using
+   * {@link ObjectMapper#convertValue(Object, Class)}.
+   */
+  public static <T> T convertValue(Object fromValue, Class<T> toValueType) {
+    return mapper.convertValue(fromValue, toValueType);
+  }
+
+  /**
+   * Converts an object to the requested type using
+   * {@link ObjectMapper#convertValue(Object, TypeReference)}.
+   */
+  public static <T> T convertValue(Object fromValue, TypeReference<T> toValueTypeRef) {
+    return mapper.convertValue(fromValue, toValueTypeRef);
+  }
+
+  /**
    * Returns an ObjectReader for advanced use cases.
    */
   public static ObjectReader reader() {

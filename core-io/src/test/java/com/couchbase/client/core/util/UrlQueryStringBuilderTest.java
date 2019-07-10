@@ -34,4 +34,12 @@ class UrlQueryStringBuilderTest {
     assertEquals("col%C3%B6r=r%C3%A9d", builder.build());
   }
 
+  @Test
+  void spacesArePercentEncodedInsteadOfPlus() {
+    UrlQueryStringBuilder builder = UrlQueryStringBuilder.create()
+        .add("x", "a b");
+    // important because it's required by the "application/x-www-form-urlencoded" content type
+    assertEquals("x=a%20b", builder.build());
+  }
+
 }
