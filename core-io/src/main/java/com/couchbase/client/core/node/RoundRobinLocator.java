@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -68,9 +69,30 @@ public class RoundRobinLocator implements Locator {
       return;
     }
 
-    int nodeSize = filteredNodes.size();
+    if (request instanceof TargetedRequest) {
+      dispatchTargeted(request, filteredNodes, ctx);
+    } else {
+      dispatchUntargeted(request, filteredNodes, ctx);
+    }
+  }
+
+  private void dispatchTargeted(final Request<? extends Response> request, final List<Node> nodes,
+                                final CoreContext ctx) {
+    for (Node n : nodes) {
+      if (n.identifier().equals(((TargetedRequest) request).target())) {
+        n.send(request);
+        return;
+      }
+    }
+
+    RetryOrchestrator.maybeRetry(ctx, request);
+  }
+
+  private void dispatchUntargeted(final Request<? extends Response> request, final List<Node> nodes,
+                                  final CoreContext ctx) {
+    int nodeSize = nodes.size();
     int offset = (int) Math.floorMod(counter.getAndIncrement(), (long) nodeSize);
-    Node node = filteredNodes.get(offset);
+    Node node = nodes.get(offset);
     if (node != null) {
       node.send(request);
     } else {

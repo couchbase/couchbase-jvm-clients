@@ -23,13 +23,17 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
+import java.util.concurrent.ExecutorService;
+
 public class BucketConfigStreamingResponse extends BaseResponse {
 
   private final DirectProcessor<String> configs = DirectProcessor.create();
   private final FluxSink<String> configsSink = configs.sink();
+  private final String address;
 
-  BucketConfigStreamingResponse(final ResponseStatus status) {
+  BucketConfigStreamingResponse(final ResponseStatus status, final String address) {
     super(status);
+    this.address = address;
   }
 
   @Stability.Internal
@@ -42,8 +46,17 @@ public class BucketConfigStreamingResponse extends BaseResponse {
     configsSink.complete();
   }
 
+  @Stability.Internal
+  public void failStream(final Throwable e) {
+    configsSink.error(e);
+  }
+
   public Flux<String> configs() {
     return configs;
+  }
+
+  public String address() {
+    return address;
   }
 
 }

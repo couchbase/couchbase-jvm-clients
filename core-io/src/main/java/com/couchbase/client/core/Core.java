@@ -40,7 +40,6 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
-import com.couchbase.client.core.node.ManagerLocator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
@@ -82,7 +81,8 @@ public class Core {
   /**
    * Locates the right node for the manager service.
    */
-  private static final ManagerLocator MANAGER_LOCATOR = new ManagerLocator();
+  private static final RoundRobinLocator MANAGER_LOCATOR =
+    new RoundRobinLocator(ServiceType.MANAGER);
 
   /**
    * Locates the right node for the query service.

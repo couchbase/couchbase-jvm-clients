@@ -19,26 +19,19 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Util;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
-import java.time.Duration;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
- * Verifies the functionality of the {@link KeyValueBucketRefresher}.
- *
- * <p>Note that the unit test covers the different error cases. In here we just make sure
- * that configs are loaded in the "good" cases.</p>
+ * Makes sure that the cluster manager refresher streams new configurations from the cluster.
  */
-class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
+class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
 
@@ -48,9 +41,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
    */
   @BeforeEach
   void beforeEach() {
-    env = environment()
-      .ioConfig(IoConfig.configPollInterval(Duration.ofSeconds(1)))
-      .build();
+    env = environment().build();
   }
 
   @AfterEach
@@ -59,35 +50,21 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  void pollsForNewConfigs() throws Exception {
+  void streamsNewConfigurations() {
     Core core = Core.create(env);
 
     ProposedBucketConfigInspectingProvider inspectingProvider = new ProposedBucketConfigInspectingProvider(core.configurationProvider());
-    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(inspectingProvider, core);
+    ClusterManagerBucketRefresher refresher = new ClusterManagerBucketRefresher(inspectingProvider, core);
 
     core.openBucket(config().bucketname()).block();
 
     refresher.register(config().bucketname()).block();
 
-    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 2);
+    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 1);
 
-    long expected = env.ioConfig().configPollInterval().toNanos();
-
-    assertTrue((inspectingProvider.proposedTimings().get(1) - inspectingProvider.proposedTimings().get(0)) > expected);
-
-    refresher.deregister(config().bucketname()).block();
-
-    long size = inspectingProvider.proposedTimings().size();
-    Thread.sleep(env.ioConfig().configPollInterval().toMillis());
-    assertEquals(size, inspectingProvider.proposedTimings().size());
-
-    for (ProposedBucketConfigContext config : inspectingProvider.proposedConfigs()) {
-      assertEquals(config().bucketname(), config.bucketName());
-      assertNotNull(config.config());
-    }
-
-    refresher.shutdown().block();
-    inspectingProvider.shutdown().block();
+    ProposedBucketConfigContext proposed = inspectingProvider.proposedConfigs().get(0);
+    assertEquals(config().bucketname(), proposed.bucketName());
+    assertNotNull(proposed.config());
   }
 
 }

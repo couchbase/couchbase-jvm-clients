@@ -49,6 +49,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * The {@link KeyValueBucketRefresher} keeps configs up-to-date through the KV service.
  *
+ * <p>The KV refresher works by proactively polling for new configurations against all open, registered
+ * buckets. It tries to iterate through all available KV nodes so that even if one or more are not available
+ * we'll eventually are able to get a proper, good config to work with.</p>
+ *
+ * <p>Once a config is retrieved it is sent to the config manager which then decides if it is going to apply
+ * or discard the config.</p>
+ *
  * @since 1.0.0
  */
 @Stability.Internal
@@ -211,8 +218,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @param nodes the flux of nodes that can be used to fetch a config.
    * @return returns configs for each node if found.
    */
-  private Flux<ProposedBucketConfigContext> fetchConfigPerNode(final String name,
-                                                               final Flux<NodeInfo> nodes) {
+  private Flux<ProposedBucketConfigContext> fetchConfigPerNode(final String name, final Flux<NodeInfo> nodes) {
     return nodes.flatMap(nodeInfo -> {
       CoreContext ctx = core.context();
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
