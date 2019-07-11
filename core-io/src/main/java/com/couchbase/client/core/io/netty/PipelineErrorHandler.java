@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -29,13 +30,15 @@ import javax.net.ssl.SSLException;
 
 public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
 
+  private final BaseEndpoint endpoint;
   private final EventBus eventBus;
   private final EndpointContext endpointContext;
   private IoContext ioContext;
 
-  public PipelineErrorHandler(final EndpointContext endpointContext) {
+  public PipelineErrorHandler(final BaseEndpoint endpoint) {
+    this.endpoint = endpoint;
+    this.endpointContext = endpoint.endpointContext();
     this.eventBus = endpointContext.environment().eventBus();
-    this.endpointContext = endpointContext;
   }
 
   @Override
@@ -54,6 +57,12 @@ public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
     } else {
       eventBus.publish(new GenericFailureDetectedEvent(ioContext, cause));
     }
+  }
+
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) {
+    endpoint.notifyChannelInactive();
+    ctx.fireChannelActive();
   }
 
   /**

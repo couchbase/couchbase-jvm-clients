@@ -25,6 +25,9 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
+import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
@@ -50,12 +53,13 @@ import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
 import com.couchbase.client.core.util.SingleStateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -187,6 +191,9 @@ public abstract class BaseEndpoint implements Endpoint {
       return EpollSocketChannel.class;
     } else if (eventLoopGroup instanceof NioEventLoopGroup) {
       return NioSocketChannel.class;
+    } else if (eventLoopGroup instanceof DefaultEventLoopGroup) {
+      // Used for testing!
+      return LocalChannel.class;
     } else {
       throw new IllegalArgumentException("Unknown EventLoopGroup Type: "
         + eventLoopGroup.getClass().getSimpleName());
@@ -209,6 +216,16 @@ public abstract class BaseEndpoint implements Endpoint {
     if (state.compareAndTransition(EndpointState.DISCONNECTED, EndpointState.CONNECTING)) {
       reconnect();
     }
+  }
+
+  /**
+   * Helper method to create the remote address this endpoint will (re)connect to.
+   *
+   * <p>Note that this method has been refactored out so it can be overridden for local testing.</p>
+   */
+  protected SocketAddress remoteAddress() {
+    final EndpointContext ctx = endpointContext.get();
+    return InetSocketAddress.createUnresolved(ctx.remoteHostname(), ctx.remotePort());
   }
 
   /**
@@ -237,13 +254,13 @@ public abstract class BaseEndpoint implements Endpoint {
         }
 
         final Bootstrap channelBootstrap = new Bootstrap()
-          .remoteAddress(endpointContext.remoteHostname(), endpointContext.remotePort())
+          .remoteAddress(remoteAddress())
           .group(eventLoopGroup)
           .channel(channelFrom(eventLoopGroup))
           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
-          .handler(new ChannelInitializer<SocketChannel>() {
+          .handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(SocketChannel ch) {
+            protected void initChannel(final Channel ch) {
               ChannelPipeline pipeline = ch.pipeline();
 
               SecurityConfig config = endpointContext.environment().securityConfig();
@@ -258,7 +275,7 @@ public abstract class BaseEndpoint implements Endpoint {
                 pipeline.addLast(new TrafficCaptureHandler(endpointContext));
               }
               pipelineInitializer().init(BaseEndpoint.this, pipeline);
-              pipeline.addLast(new PipelineErrorHandler(endpointContext));
+              pipeline.addLast(new PipelineErrorHandler(BaseEndpoint.this));
             }
           });
 
@@ -340,6 +357,29 @@ public abstract class BaseEndpoint implements Endpoint {
     if (disconnect.compareAndSet(false, true)) {
       state.transition(EndpointState.DISCONNECTING);
       closeChannel(this.channel);
+    }
+  }
+
+  /**
+   * This method is called from inside the channel to tell the endpoint hat it got inactive.
+   *
+   * <p>The endpoint needs to perform certain steps when the channel is inactive so that it quickly tries
+   * to reconnect, as long as it should (i.e. don't do it if already disconnected)</p>
+   */
+  @Stability.Internal
+  public void notifyChannelInactive() {
+    if (disconnect.get()) {
+      // We don't need to do anything if we've been already instructed to disconnect.
+      return;
+    }
+
+    if (state() == EndpointState.CONNECTED) {
+      endpointContext.get().environment().eventBus().publish(
+        new UnexpectedEndpointDisconnectedEvent(endpointContext.get())
+      );
+
+      state.transition(EndpointState.DISCONNECTED);
+      connect();
     }
   }
 
