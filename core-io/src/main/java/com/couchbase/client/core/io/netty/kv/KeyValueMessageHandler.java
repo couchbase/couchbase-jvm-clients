@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
+import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
@@ -47,6 +48,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -109,6 +114,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private ChannelContext channelContext;
 
   /**
+   * If present, holds the error map negotiated on this connection.
+   */
+  private ErrorMap errorMap;
+
+  /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
    * @param endpointContext the parent core context.
@@ -143,6 +153,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     );
 
     opaque = Utils.opaque(ctx.channel(), false);
+
+    errorMap = ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).get();
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     boolean compression = features != null && features.contains(ServerFeature.SNAPPY);
@@ -200,7 +212,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof ByteBuf) {
-      decode((ByteBuf) msg);
+      decode(ctx, (ByteBuf) msg);
     } else {
       ioContext.environment().eventBus().publish(
         new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
@@ -214,7 +226,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param response the response to decode and handle.
    */
-  private void decode(final ByteBuf response) {
+  private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
     int opaque = MemcacheProtocol.opaque(response);
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
     long start = writtenRequestDispatchTimings.remove(opaque);
@@ -228,11 +240,17 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else {
       request.context().dispatchLatency(System.nanoTime() - start);
 
-      short encodedStatus = MemcacheProtocol.status(response);
-      ResponseStatus status = MemcacheProtocol.decodeStatus(encodedStatus);
+      short statusCode = MemcacheProtocol.status(response);
+      ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
+      ErrorMap.ErrorCode errorCode = status == ResponseStatus.UNKNOWN ? decodeErrorCode(statusCode) : null;
+
+      if (errorCode != null) {
+        ioContext.environment().eventBus().publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
+        status = handleErrorCode(ctx, errorCode);
+      }
 
       if (status == ResponseStatus.UNKNOWN) {
-        ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, encodedStatus));
+        ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
       }
 
       if (status == ResponseStatus.NOT_MY_VBUCKET) {
@@ -253,6 +271,45 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       endpoint.markRequestCompletion();
     }
     ReferenceCountUtil.release(response);
+  }
+
+  /**
+   * If an error code has been found, this method tries to analyze it and perform the right
+   * side effects.
+   *
+   * @param ctx the channel context.
+   * @param errorCode the error code to handle
+   * @return the new status code for the client to use.
+   */
+  private ResponseStatus handleErrorCode(final ChannelHandlerContext ctx, final ErrorMap.ErrorCode errorCode) {
+    if (errorCode.attributes().contains(CONN_STATE_INVALIDATED)) {
+      ctx.channel().close();
+      return ResponseStatus.UNKNOWN;
+    }
+
+    if (errorCode.attributes().contains(TEMP)) {
+      return ResponseStatus.TEMPORARY_FAILURE;
+    }
+
+    if (errorCode.attributes().contains(AUTH)) {
+      return ResponseStatus.NO_ACCESS;
+    }
+
+    if (errorCode.attributes().contains(ITEM_LOCKED)) {
+      return ResponseStatus.LOCKED;
+    }
+
+    return ResponseStatus.UNKNOWN;
+  }
+
+  /**
+   * Helper method to try to decode the status code into the error map code if possible.
+   *
+   * @param statusCode the status code to decode.
+   * @return the error code if found, null otherwise.
+   */
+  private ErrorMap.ErrorCode decodeErrorCode(final short statusCode) {
+    return errorMap != null ? errorMap.errors().get(statusCode) : null;
   }
 
   /**
