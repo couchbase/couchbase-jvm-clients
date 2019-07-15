@@ -31,6 +31,7 @@ import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.AsyncSearchIndexManager;
+import com.couchbase.client.java.manager.bucket.AsyncBucketManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -77,6 +78,8 @@ public class AsyncCluster {
   private final QueryAccessor queryAccessor;
 
   private final AsyncUserManager userManager;
+
+  private final AsyncBucketManager bucketManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -140,6 +143,7 @@ public class AsyncCluster {
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.queryAccessor = new QueryAccessor(core);
     this.userManager = new AsyncUserManager(core);
+    this.bucketManager = new AsyncBucketManager(core);
   }
 
   /**
@@ -171,6 +175,10 @@ public class AsyncCluster {
    */
   public AsyncUserManager users() {
     return userManager;
+  }
+
+  public AsyncBucketManager buckets() {
+    return bucketManager;
   }
 
   /**

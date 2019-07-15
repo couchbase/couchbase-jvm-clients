@@ -71,6 +71,7 @@ public class UnmanagedTestCluster extends TestCluster {
         .add("bucketType", "membase")
         .add("ramQuotaMB", "100")
         .add("replicaNumber", Integer.toString(numReplicas))
+        .add("flushEnabled", "1")
         .build())
       .build())
       .execute();

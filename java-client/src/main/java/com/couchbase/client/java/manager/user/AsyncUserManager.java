@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
+import com.couchbase.client.java.manager.ManagerSupport;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

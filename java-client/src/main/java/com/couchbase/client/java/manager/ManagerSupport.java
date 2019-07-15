@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.user;
+package com.couchbase.client.java.manager;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
@@ -36,7 +36,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-abstract class ManagerSupport {
+public abstract class ManagerSupport {
 
   final Core core;
 
@@ -64,7 +64,7 @@ abstract class ManagerSupport {
     }));
   }
 
-  static void checkStatus(GenericManagerResponse response, String action) {
+  protected static void checkStatus(GenericManagerResponse response, String action) {
     if (response.status() != ResponseStatus.SUCCESS) {
       throw new CouchbaseException("Failed to " + action + "; response status=" + response.status() + "; response body=" + new String(response.content(), UTF_8));
     }

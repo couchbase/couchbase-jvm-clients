@@ -19,6 +19,9 @@ package com.couchbase.client.core.msg.manager;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 import static java.util.Objects.requireNonNull;
 
 public class GenericManagerResponse extends BaseResponse {
@@ -31,5 +34,13 @@ public class GenericManagerResponse extends BaseResponse {
 
   public byte[] content() {
     return content;
+  }
+
+  @Override
+  public String toString() {
+    return "GenericManagerResponse{" +
+      "status=" + status() +
+      ", content=" + new String(content, StandardCharsets.UTF_8) +
+      '}';
   }
 }

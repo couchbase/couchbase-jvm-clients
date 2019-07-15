@@ -26,6 +26,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.SearchIndexManager;
+import com.couchbase.client.java.manager.bucket.BucketManager;
 import com.couchbase.client.java.manager.user.UserManager;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -62,6 +63,8 @@ public class Cluster {
 
 
   private final UserManager userManager;
+
+  private final BucketManager bucketManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -112,6 +115,7 @@ public class Cluster {
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());
+    this.bucketManager = new BucketManager(asyncCluster.buckets());
   }
 
   /**
@@ -147,6 +151,10 @@ public class Cluster {
 
   public UserManager users() {
     return userManager;
+  }
+
+  public BucketManager buckets() {
+    return bucketManager;
   }
 
   /**
