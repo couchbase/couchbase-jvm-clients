@@ -131,7 +131,7 @@ class BaseEndpointIntegrationTest {
     waitUntilCondition(() -> transitions.size() == expectedTransitions.size());
 
     assertEquals(expectedTransitions, transitions);
-    assertEquals(2, localServerController.connectAttempts.get());
+    waitUntilCondition(() -> localServerController.connectAttempts.get() >= 2);
 
     endpoint.disconnect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
