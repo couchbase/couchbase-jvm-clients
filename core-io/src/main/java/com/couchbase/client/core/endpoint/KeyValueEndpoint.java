@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
@@ -38,6 +39,11 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
   private final Optional<String> bucketname;
   private final Credentials credentials;
+
+  private static final int FLUSH_CONSOLIDATION_LIMIT = Integer.parseInt(System.getProperty(
+    "com.couchbase.experimental.flushConsolidationLimit",
+    Integer.toString(FlushConsolidationHandler.DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES)
+  ));
 
   public KeyValueEndpoint(final ServiceContext ctx, final String hostname,
                           final int port, final Optional<String> bucketname, final Credentials credentials) {
@@ -66,6 +72,10 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
     @Override
     public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
+      if (FLUSH_CONSOLIDATION_LIMIT > 0) {
+        pipeline.addLast(new FlushConsolidationHandler(FLUSH_CONSOLIDATION_LIMIT, true));
+      }
+
       pipeline.addLast(new MemcacheProtocolDecodeHandler());
       pipeline.addLast(new MemcacheProtocolVerificationHandler(ctx));
 
