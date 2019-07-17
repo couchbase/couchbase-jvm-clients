@@ -43,7 +43,7 @@ public class AsyncGroupManager extends ManagerSupport {
   }
 
   private static String pathForGroups() {
-    return "/settings/rbac/groups/";
+    return "/settings/rbac/groups";
   }
 
   private static String pathForGroup(String name) {
