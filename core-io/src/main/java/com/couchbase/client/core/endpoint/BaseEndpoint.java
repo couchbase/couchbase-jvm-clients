@@ -236,6 +236,9 @@ public abstract class BaseEndpoint implements Endpoint {
    * unsuccessful.</p>
    */
   private void reconnect() {
+    if (disconnect.get()) {
+      return;
+    }
     state.transition(EndpointState.CONNECTING);
 
     final EndpointContext endpointContext = this.endpointContext.get();

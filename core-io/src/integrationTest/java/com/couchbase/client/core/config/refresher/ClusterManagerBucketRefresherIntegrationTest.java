@@ -65,6 +65,9 @@ class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
     ProposedBucketConfigContext proposed = inspectingProvider.proposedConfigs().get(0);
     assertEquals(config().bucketname(), proposed.bucketName());
     assertNotNull(proposed.config());
+
+    refresher.shutdown().block();
+    core.shutdown().block();
   }
 
 }
