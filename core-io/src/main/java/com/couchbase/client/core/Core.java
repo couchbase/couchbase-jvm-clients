@@ -384,8 +384,7 @@ public class Core {
       }
 
       if ((!stillPresentInBuckets && !stillPresentInGlobal) || !node.hasServicesEnabled()) {
-        nodes.remove(node);
-        return node.disconnect();
+        return node.disconnect().doOnTerminate(() -> nodes.remove(node));
       }
 
       return Mono.empty();
@@ -421,6 +420,9 @@ public class Core {
           .fromIterable(currentConfig.bucketConfigs().keySet())
           .flatMap(this::closeBucket)
           .then(configurationProvider.shutdown())
+          // every 10ms check if all nodes have been cleared, and then move on.
+          // this links the config provider shutdown with our core reconfig logic
+          .then(Flux.interval(Duration.ofMillis(10)).takeUntil(i -> nodes.isEmpty()).then())
           .doOnTerminate(() -> eventBus.publish(
             new ShutdownCompletedEvent(Duration.ofNanos(System.nanoTime() - start), coreContext)
           ))

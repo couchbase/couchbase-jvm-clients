@@ -305,8 +305,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Flux
           .fromIterable(currentConfig.bucketConfigs().values())
           .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name()))
-          .flatMap(ign -> disableAndClearGlobalConfig())
-          .doOnComplete(() -> {
+          .then(Mono.defer(this::disableAndClearGlobalConfig))
+          .doOnTerminate(() -> {
             // make sure to push a final, empty config before complete to give downstream
             // consumers a chance to clean up
             pushConfig();
@@ -324,7 +324,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private Mono<Void> disableAndClearGlobalConfig() {
     return globalRefresher.stop().then(Mono.defer(() -> {
       currentConfig.deleteGlobalConfig();
-      pushConfig();
       return Mono.empty();
     }));
   }
