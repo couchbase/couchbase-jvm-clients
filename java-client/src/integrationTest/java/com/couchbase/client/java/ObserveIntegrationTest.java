@@ -69,8 +69,8 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
     @AfterEach
     void afterEach() {
-      environment.shutdown();
       cluster.shutdown();
+      environment.shutdown();
     }
 
     @Test
@@ -197,8 +197,8 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
     @AfterEach
     void afterEach() {
-      environment.shutdown();
       cluster.shutdown();
+      environment.shutdown();
     }
 
     @Test
