@@ -189,7 +189,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     FutureConversions.javaMonoToScalaMono(core.shutdown())
       .flatMap(_ => {
         if (env.owned) {
-          Mono.fromRunnable(() => env.shutdown())
+          env.shutdownReactive()
         }
         else {
           Mono.empty[Unit]

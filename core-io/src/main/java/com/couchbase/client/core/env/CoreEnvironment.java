@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
@@ -334,15 +335,47 @@ public class CoreEnvironment {
   }
 
   /**
-   * Shuts down this Environment.
+   * Shuts down this Environment with the default disconnect timeout.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   */
+  public CompletableFuture<Void> shutdownAsync() {
+    return shutdownAsync(timeoutConfig.disconnectTimeout());
+  }
+
+  /**
+   * Shuts down this Environment with a custom timeout.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
    * at the very last operation in the SDK shutdown process.</p>
    *
    * @param timeout the timeout to wait maximum.
    */
-  public void shutdown(final Duration timeout) {
-    diagnosticsMonitor.stop()
+  public CompletableFuture<Void> shutdownAsync(final Duration timeout) {
+    return shutdownReactive(timeout).toFuture();
+  }
+
+  /**
+   * Shuts down this Environment with the default disconnect timeout.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   */
+  public Mono<Void> shutdownReactive() {
+    return shutdownReactive(timeoutConfig.disconnectTimeout());
+  }
+
+  /**
+   * Shuts down this Environment with a custom timeout.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   *
+   * @param timeout the timeout to wait maximum.
+   */
+  public Mono<Void> shutdownReactive(final Duration timeout) {
+    return diagnosticsMonitor.stop()
       .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop() : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
@@ -355,10 +388,27 @@ public class CoreEnvironment {
         }
         return Mono.<Void>empty();
       }))
-      .timeout(timeout)
-      .block();
+      .timeout(timeout);
   }
 
+  /**
+   * Shuts down this Environment with a custom timeout.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   *
+   * @param timeout the timeout to wait maximum.
+   */
+  public void shutdown(final Duration timeout) {
+    shutdownReactive(timeout).block();
+  }
+
+  /**
+   * Shuts down this Environment with the default disconnect timeout.
+   *
+   * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
+   * at the very last operation in the SDK shutdown process.</p>
+   */
   public void shutdown() {
     shutdown(timeoutConfig.disconnectTimeout());
   }

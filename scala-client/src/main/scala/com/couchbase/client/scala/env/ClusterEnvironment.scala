@@ -309,24 +309,19 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     *
     * @param timeout the timeout to wait maximum.
     */
-  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = {
-    Mono.fromRunnable(new Runnable {
-      override def run(): Unit = {
-        coreEnv.shutdown(timeout)
-      }
-    })
+  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = shutdownReactive(timeout).block()
 
-      .then(Mono.fromRunnable(new Runnable {
-        override def run(): Unit = {
-          threadPool.shutdownNow()
-          defaultScheduler.dispose()
-        }
+  def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Mono[Unit] = {
+    FutureConversions.javaMonoToScalaMono(coreEnv
+      .shutdownReactive(timeout))
+      .then(Mono.defer[Unit](() => {
+        threadPool.shutdownNow()
+        defaultScheduler.dispose()
+        Mono.empty
       }))
-
       .timeout(timeout)
-
-      .block()
   }
+
 }
 
 

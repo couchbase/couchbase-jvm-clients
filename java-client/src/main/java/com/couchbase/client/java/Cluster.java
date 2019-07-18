@@ -34,6 +34,7 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 
+import java.time.Duration;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -246,6 +247,15 @@ public class Cluster {
    */
   public void shutdown() {
     block(asyncCluster.shutdown());
+  }
+
+  /**
+   * Performs a non-reversible shutdown of this {@link Cluster}.
+   *
+   * @param timeout overriding the default disconnect timeout if needed.
+   */
+  public void shutdown(final Duration timeout) {
+    block(asyncCluster.shutdown(timeout));
   }
 
 }

@@ -35,6 +35,7 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
@@ -240,7 +241,16 @@ public class ReactiveCluster {
    * Performs a non-reversible shutdown of this {@link ReactiveCluster}.
    */
   public Mono<Void> shutdown() {
-    return Mono.fromFuture(asyncCluster.shutdown());
+    return shutdown(environment().timeoutConfig().disconnectTimeout());
+  }
+
+  /**
+   * Performs a non-reversible shutdown of this {@link ReactiveCluster}.
+   *
+   * @param timeout overriding the default disconnect timeout if needed.
+   */
+  public Mono<Void> shutdown(final Duration timeout) {
+    return asyncCluster.shutdownInternal(timeout);
   }
 
 }
