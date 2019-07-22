@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.java.search.facet.NumericRangeFacet;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.search.facet.DateRangeFacet;
 
 import java.util.List;
 
 /**
- * Represents the result of a {@link NumericRangeFacet}.
+ * Represents the result for a {@link DateRangeFacet}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public interface NumericRangeFacetResult extends FacetResult {
+@Stability.Volatile
+public interface DateRangeFacetResult extends FacetResult {
 
-    List<NumericRange> numericRanges();
+    List<DateRange> dateRanges();
 }

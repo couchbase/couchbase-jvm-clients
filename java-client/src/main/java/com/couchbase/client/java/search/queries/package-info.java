@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2018 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
-
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.search.facet.DateRangeFacet;
-
-import java.util.List;
 
 /**
- * Represents the result for a {@link DateRangeFacet}.
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
+ * Contains the various APIs for search queries.
  */
-@Stability.Volatile
-public interface DateRangeFacetResult extends FacetResult {
-
-    List<DateRange> dateRanges();
-}
+package com.couchbase.client.java.search.queries;

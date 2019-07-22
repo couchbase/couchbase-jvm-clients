@@ -49,7 +49,6 @@ public class SearchIndexManager {
    * a UUID is present which uniquely identifies an index definition on the cluster.</p>
    *
    * @param index the name of the index.
-   * @return once the index definition is inserted.
    */
   public void insert(final SearchIndex index) {
     block(asyncIndexManager.insert(index));
@@ -63,7 +62,6 @@ public class SearchIndexManager {
    * you just want to create a new one, use {@link #insert(SearchIndex)} instead.</p>
    *
    * @param index the index previously loaded via {@link #get(String)}.
-   * @return once the index definition is updated.
    */
   public void replace(final SearchIndex index) {
     block(asyncIndexManager.replace(index));
@@ -73,7 +71,6 @@ public class SearchIndexManager {
    * Removes a search index from the cluster.
    *
    * @param name the name of the index.
-   * @return once the index is removed.
    */
   public void remove(final String name) {
     block(asyncIndexManager.remove(name));

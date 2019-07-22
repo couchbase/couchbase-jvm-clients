@@ -13,44 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
-
-import com.couchbase.client.core.annotation.Stability;
+package com.couchbase.client.java.search.result;
 
 import java.util.List;
 
 /**
- * Implementation of a {@link DateRangeFacetResult}.
+ * Implementation of a {@link TermFacetResult}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@Stability.Volatile
-public class DefaultDateRangeFacetResult extends AbstractFacetResult implements DateRangeFacetResult {
+public class DefaultTermFacetResult extends AbstractFacetResult implements TermFacetResult {
 
-    private final List<DateRange> dateRanges;
+    private final List<TermRange> terms;
 
-    public DefaultDateRangeFacetResult(String name, String field, long total, long missing, long other,
-                                       List<DateRange> dateRanges) {
+    public DefaultTermFacetResult(String name, String field, long total, long missing, long other,
+            List<TermRange> terms) {
         super(name, field, total, missing, other);
-        this.dateRanges = dateRanges;
+        this.terms = terms;
     }
 
     @Override
-    public List<DateRange> dateRanges() {
-        return this.dateRanges;
+    public List<TermRange> terms() {
+        return this.terms;
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("DateRangeFacetResult{")
+        final StringBuilder sb = new StringBuilder("TermFacetResult{")
                 .append("name='").append(name).append('\'')
                 .append(", field='").append(field).append('\'')
                 .append(", total=").append(total)
                 .append(", missing=").append(missing)
                 .append(", other=").append(other)
-                .append(", ranges=").append(dateRanges)
+                .append(", terms=").append(terms)
                 .append('}');
         return sb.toString();
     }

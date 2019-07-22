@@ -13,35 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.search.facet.TermFacet;
+
+import java.util.List;
+
 /**
- * Represents the status of a FTS query.
+ * Represents the result for a {@link TermFacet}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public interface SearchStatus {
+@Stability.Volatile
+public interface TermFacetResult extends FacetResult {
 
-    /**
-     * the total number of FTS pindexes that were queried.
-     */
-    long totalCount();
-
-    /**
-     * the number of FTS pindexes queried that successfully answered.
-     */
-    long successCount();
-
-    /**
-     * the number of FTS pindexes queried that gave an error.
-     */
-    long errorCount();
-
-    /**
-     * @return true if all FTS indexes answered successfully.
-     */
-    boolean isSuccess();
+    List<TermRange> terms();
 }

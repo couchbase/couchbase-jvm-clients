@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2018 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
-
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.search.facet.TermFacet;
-
-import java.util.List;
 
 /**
- * Represents the result for a {@link TermFacet}.
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
+ * Holds classes related to search sorting.
  */
-@Stability.Volatile
-public interface TermFacetResult extends FacetResult {
-
-    List<TermRange> terms();
-}
+package com.couchbase.client.java.search.sort;

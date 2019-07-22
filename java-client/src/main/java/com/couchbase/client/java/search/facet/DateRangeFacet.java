@@ -17,7 +17,7 @@ package com.couchbase.client.java.search.facet;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.util.SearchUtils;
+import com.couchbase.client.java.search.SearchUtils;
 
 import java.util.Date;
 import java.util.HashMap;

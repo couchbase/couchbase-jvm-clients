@@ -13,44 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
 
 import com.couchbase.client.core.annotation.Stability;
 
 import java.util.List;
 
 /**
- * Implementation of a {@link NumericRangeFacetResult}.
+ * Implementation of a {@link DateRangeFacetResult}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
 @Stability.Volatile
-public class DefaultNumericRangeFacetResult extends AbstractFacetResult implements NumericRangeFacetResult {
+public class DefaultDateRangeFacetResult extends AbstractFacetResult implements DateRangeFacetResult {
 
-    private final List<NumericRange> numericRanges;
+    private final List<DateRange> dateRanges;
 
-    public DefaultNumericRangeFacetResult(String name, String field, long total, long missing, long other,
-            List<NumericRange> numericRanges) {
+    public DefaultDateRangeFacetResult(String name, String field, long total, long missing, long other,
+                                       List<DateRange> dateRanges) {
         super(name, field, total, missing, other);
-        this.numericRanges = numericRanges;
+        this.dateRanges = dateRanges;
     }
 
     @Override
-    public List<NumericRange> numericRanges() {
-        return this.numericRanges;
+    public List<DateRange> dateRanges() {
+        return this.dateRanges;
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("NumericRangeFacetResult{")
+        final StringBuilder sb = new StringBuilder("DateRangeFacetResult{")
                 .append("name='").append(name).append('\'')
                 .append(", field='").append(field).append('\'')
                 .append(", total=").append(total)
                 .append(", missing=").append(missing)
                 .append(", other=").append(other)
-                .append(", ranges=").append(numericRanges)
+                .append(", ranges=").append(dateRanges)
                 .append('}');
         return sb.toString();
     }

@@ -13,45 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
-
-import com.couchbase.client.java.search.util.SearchUtils;
-
-import java.util.Date;
+package com.couchbase.client.java.search.result;
 
 /**
- * A range (or bucket) for a {@link DateRangeFacetResult}. Counts the number of matches
- * that fall into the named range (which can overlap with other user-defined ranges).
+ * A range (or bucket) for a {@link NumericRangeFacetResult}. Counts the number of matches
+ * that fall into the named range (which can overlap with other user-defined ranges in the facet).
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class DateRange {
+public class NumericRange {
 
     private final String name;
-    private final Date start;
-    private final Date end;
+    private final Double min;
+    private final Double max;
     private final long count;
 
-    public DateRange(String name, String start, String end, long count) {
+    public NumericRange(String name, Double min, Double max, long count) {
         this.name = name;
+        this.min = min;
+        this.max = max;
         this.count = count;
-
-        this.start = SearchUtils.fromFtsString(start);
-        this.end = SearchUtils.fromFtsString(end);
     }
 
     public String name() {
         return name;
     }
 
-    public Date start() {
-        return start;
+    public Double min() {
+        return min;
     }
 
-    public Date end() {
-        return end;
+    public Double max() {
+        return max;
     }
 
     public long count() {
@@ -62,11 +57,11 @@ public class DateRange {
     public String toString() {
         final StringBuilder sb = new StringBuilder("{");
         sb.append("name='").append(name).append('\'');
-        if (start != null) {
-            sb.append(", start='").append(start).append('\'');
+        if (min != null) {
+            sb.append(", min=").append(min);
         }
-        if (end != null) {
-            sb.append(", end='").append(end).append('\'');
+        if (max != null) {
+            sb.append(", max=").append(max);
         }
         sb.append(", count=").append(count);
         sb.append('}');
@@ -82,26 +77,26 @@ public class DateRange {
             return false;
         }
 
-        DateRange dateRange = (DateRange) o;
+        NumericRange that = (NumericRange) o;
 
-        if (count != dateRange.count) {
+        if (count != that.count) {
             return false;
         }
-        if (!name.equals(dateRange.name)) {
+        if (!name.equals(that.name)) {
             return false;
         }
-        if (start != null ? !start.equals(dateRange.start) : dateRange.start != null) {
+        if (min != null ? !min.equals(that.min) : that.min != null) {
             return false;
         }
-        return end != null ? end.equals(dateRange.end) : dateRange.end == null;
+        return max != null ? max.equals(that.max) : that.max == null;
 
     }
 
     @Override
     public int hashCode() {
         int result = name.hashCode();
-        result = 31 * result + (start != null ? start.hashCode() : 0);
-        result = 31 * result + (end != null ? end.hashCode() : 0);
+        result = 31 * result + (min != null ? min.hashCode() : 0);
+        result = 31 * result + (max != null ? max.hashCode() : 0);
         result = 31 * result + (int) (count ^ (count >>> 32));
         return result;
     }

@@ -341,7 +341,7 @@ public class SearchQuery {
      * This is an additive operation (the given facets are added to any facet previously requested),
      * but if an existing facet has the same name it will be replaced.
      *
-     * This drives the inclusion of the {@link SearchRequest#facets()} facets} in the {@link SearchResult}.
+     * This drives the inclusion of the facets in the {@link SearchResult}.
      *
      * Note that to be faceted, a field's value must be stored in the FTS index.
      *
@@ -482,7 +482,7 @@ public class SearchQuery {
     }
 
     /**
-     * @return the value of the {@link #serverSideTimeout(long, TimeUnit)} parameter, or null if it was not set.
+     * @return the value of the server side timeout parameter, or null if it was not set.
      */
     public Long getServerSideTimeout() {
         return serverSideTimeout.toNanos();

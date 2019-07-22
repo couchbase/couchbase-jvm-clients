@@ -16,7 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.util.SearchUtils;
+import com.couchbase.client.java.search.SearchUtils;
 
 import java.util.Date;
 

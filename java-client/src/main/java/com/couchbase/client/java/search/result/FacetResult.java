@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
 
 import com.couchbase.client.java.search.facet.SearchFacet;
 

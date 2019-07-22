@@ -13,31 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.search.SearchUtils;
+
+import java.util.Date;
 
 /**
- * A range (or bucket) for a {@link TermFacetResult}.
- * Counts the number of occurrences of a given term.
+ * A range (or bucket) for a {@link DateRangeFacetResult}. Counts the number of matches
+ * that fall into the named range (which can overlap with other user-defined ranges).
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@Stability.Volatile
-public class TermRange {
+public class DateRange {
 
     private final String name;
+    private final Date start;
+    private final Date end;
     private final long count;
 
-    public TermRange(String name, long count) {
+    public DateRange(String name, String start, String end, long count) {
         this.name = name;
         this.count = count;
+
+        this.start = SearchUtils.fromFtsString(start);
+        this.end = SearchUtils.fromFtsString(end);
     }
 
     public String name() {
         return name;
+    }
+
+    public Date start() {
+        return start;
+    }
+
+    public Date end() {
+        return end;
     }
 
     public long count() {
@@ -48,6 +62,12 @@ public class TermRange {
     public String toString() {
         final StringBuilder sb = new StringBuilder("{");
         sb.append("name='").append(name).append('\'');
+        if (start != null) {
+            sb.append(", start='").append(start).append('\'');
+        }
+        if (end != null) {
+            sb.append(", end='").append(end).append('\'');
+        }
         sb.append(", count=").append(count);
         sb.append('}');
         return sb.toString();
@@ -62,18 +82,26 @@ public class TermRange {
             return false;
         }
 
-        TermRange termRange = (TermRange) o;
+        DateRange dateRange = (DateRange) o;
 
-        if (count != termRange.count) {
+        if (count != dateRange.count) {
             return false;
         }
-        return name.equals(termRange.name);
+        if (!name.equals(dateRange.name)) {
+            return false;
+        }
+        if (start != null ? !start.equals(dateRange.start) : dateRange.start != null) {
+            return false;
+        }
+        return end != null ? end.equals(dateRange.end) : dateRange.end == null;
 
     }
 
     @Override
     public int hashCode() {
         int result = name.hashCode();
+        result = 31 * result + (start != null ? start.hashCode() : 0);
+        result = 31 * result + (end != null ? end.hashCode() : 0);
         result = 31 * result + (int) (count ^ (count >>> 32));
         return result;
     }

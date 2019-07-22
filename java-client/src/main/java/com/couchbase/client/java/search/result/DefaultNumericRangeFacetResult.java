@@ -13,41 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
+
+import com.couchbase.client.core.annotation.Stability;
 
 import java.util.List;
 
 /**
- * Implementation of a {@link TermFacetResult}.
+ * Implementation of a {@link NumericRangeFacetResult}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class DefaultTermFacetResult extends AbstractFacetResult implements TermFacetResult {
+@Stability.Volatile
+public class DefaultNumericRangeFacetResult extends AbstractFacetResult implements NumericRangeFacetResult {
 
-    private final List<TermRange> terms;
+    private final List<NumericRange> numericRanges;
 
-    public DefaultTermFacetResult(String name, String field, long total, long missing, long other,
-            List<TermRange> terms) {
+    public DefaultNumericRangeFacetResult(String name, String field, long total, long missing, long other,
+            List<NumericRange> numericRanges) {
         super(name, field, total, missing, other);
-        this.terms = terms;
+        this.numericRanges = numericRanges;
     }
 
     @Override
-    public List<TermRange> terms() {
-        return this.terms;
+    public List<NumericRange> numericRanges() {
+        return this.numericRanges;
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("TermFacetResult{")
+        final StringBuilder sb = new StringBuilder("NumericRangeFacetResult{")
                 .append("name='").append(name).append('\'')
                 .append(", field='").append(field).append('\'')
                 .append(", total=").append(total)
                 .append(", missing=").append(missing)
                 .append(", other=").append(other)
-                .append(", terms=").append(terms)
+                .append(", ranges=").append(numericRanges)
                 .append('}');
         return sb.toString();
     }

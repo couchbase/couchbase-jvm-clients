@@ -13,40 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result.facets;
+package com.couchbase.client.java.search.result;
+
+import com.couchbase.client.core.annotation.Stability;
 
 /**
- * A range (or bucket) for a {@link NumericRangeFacetResult}. Counts the number of matches
- * that fall into the named range (which can overlap with other user-defined ranges in the facet).
+ * A range (or bucket) for a {@link TermFacetResult}.
+ * Counts the number of occurrences of a given term.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class NumericRange {
+@Stability.Volatile
+public class TermRange {
 
     private final String name;
-    private final Double min;
-    private final Double max;
     private final long count;
 
-    public NumericRange(String name, Double min, Double max, long count) {
+    public TermRange(String name, long count) {
         this.name = name;
-        this.min = min;
-        this.max = max;
         this.count = count;
     }
 
     public String name() {
         return name;
-    }
-
-    public Double min() {
-        return min;
-    }
-
-    public Double max() {
-        return max;
     }
 
     public long count() {
@@ -57,12 +48,6 @@ public class NumericRange {
     public String toString() {
         final StringBuilder sb = new StringBuilder("{");
         sb.append("name='").append(name).append('\'');
-        if (min != null) {
-            sb.append(", min=").append(min);
-        }
-        if (max != null) {
-            sb.append(", max=").append(max);
-        }
         sb.append(", count=").append(count);
         sb.append('}');
         return sb.toString();
@@ -77,26 +62,18 @@ public class NumericRange {
             return false;
         }
 
-        NumericRange that = (NumericRange) o;
+        TermRange termRange = (TermRange) o;
 
-        if (count != that.count) {
+        if (count != termRange.count) {
             return false;
         }
-        if (!name.equals(that.name)) {
-            return false;
-        }
-        if (min != null ? !min.equals(that.min) : that.min != null) {
-            return false;
-        }
-        return max != null ? max.equals(that.max) : that.max == null;
+        return name.equals(termRange.name);
 
     }
 
     @Override
     public int hashCode() {
         int result = name.hashCode();
-        result = 31 * result + (min != null ? min.hashCode() : 0);
-        result = 31 * result + (max != null ? max.hashCode() : 0);
         result = 31 * result + (int) (count ^ (count >>> 32));
         return result;
     }

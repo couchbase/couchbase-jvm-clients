@@ -22,8 +22,6 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.HighlightStyle;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.result.rows.DefaultRowLocations;
-import com.couchbase.client.java.search.result.rows.RowLocations;
 
 import java.io.IOException;
 import java.util.ArrayList;

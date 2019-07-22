@@ -30,8 +30,8 @@ import com.couchbase.client.java.search.result.SearchMetrics;
 import com.couchbase.client.java.search.result.SearchQueryRow;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchStatus;
-import com.couchbase.client.java.search.result.impl.DefaultSearchMetrics;
-import com.couchbase.client.java.search.result.impl.DefaultSearchStatus;
+import com.couchbase.client.java.search.result.DefaultSearchMetrics;
+import com.couchbase.client.java.search.result.DefaultSearchStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
