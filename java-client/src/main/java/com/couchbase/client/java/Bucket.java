@@ -84,7 +84,7 @@ public class Bucket {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return asyncBucket.core();
   }
@@ -95,6 +95,7 @@ public class Bucket {
    * @param name the name of the scope.
    * @return the {@link Scope} once opened.
    */
+  @Stability.Volatile
   public Scope scope(final String name) {
     return block(asyncBucket.scope(name)
       .thenApply(Scope::new)
@@ -115,6 +116,7 @@ public class Bucket {
    *
    * @return the {@link Collection} once opened.
    */
+  @Stability.Volatile
   public Collection collection(final String name) {
     return scope(CollectionIdentifier.DEFAULT_SCOPE).collection(name);
   }

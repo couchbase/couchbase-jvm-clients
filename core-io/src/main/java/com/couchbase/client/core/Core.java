@@ -66,6 +66,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @since 2.0.0
  */
+@Stability.Volatile
 public class Core {
 
   /**

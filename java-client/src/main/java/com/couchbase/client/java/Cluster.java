@@ -137,7 +137,7 @@ public class Cluster {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return asyncCluster.core();
   }
@@ -145,14 +145,17 @@ public class Cluster {
   /**
    * Provides access to the index management capabilities.
    */
+  @Stability.Volatile
   public SearchIndexManager searchIndexes() {
     return searchIndexManager;
   }
 
+  @Stability.Volatile
   public UserManager users() {
     return userManager;
   }
 
+  @Stability.Volatile
   public BucketManager buckets() {
     return bucketManager;
   }

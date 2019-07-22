@@ -91,7 +91,7 @@ public class AsyncScope {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return core;
   }
@@ -118,6 +118,7 @@ public class AsyncScope {
    * @param name the collection name.
    * @return the requested collection if successful.
    */
+  @Stability.Volatile
   public CompletableFuture<AsyncCollection> collection(final String name) {
     notNullOrEmpty(name, "Name");
 

@@ -31,6 +31,7 @@ import static com.couchbase.client.java.AsyncUtils.block;
  *
  * @since 3.0.0
  */
+@Stability.Volatile
 public class Scope {
 
   /**
@@ -76,7 +77,7 @@ public class Scope {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return asyncScope.core();
   }
@@ -103,6 +104,7 @@ public class Scope {
    * @param name the collection name.
    * @return the requested collection if successful.
    */
+  @Stability.Volatile
   public Collection collection(final String name) {
     return new Collection(block(asyncScope.collection(name)));
   }

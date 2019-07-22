@@ -67,7 +67,7 @@ public class ReactiveBucket {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return asyncBucket.core();
   }
@@ -85,6 +85,7 @@ public class ReactiveBucket {
    * @param name the name of the scope.
    * @return the {@link ReactiveScope} once opened.
    */
+  @Stability.Volatile
   public Mono<ReactiveScope> scope(final String name) {
     return Mono
       .fromFuture(asyncBucket.scope(name))
@@ -105,6 +106,7 @@ public class ReactiveBucket {
    *
    * @return the {@link ReactiveCollection} once opened.
    */
+  @Stability.Volatile
   public Mono<ReactiveCollection> collection(final String name) {
     return scope(CollectionIdentifier.DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
   }

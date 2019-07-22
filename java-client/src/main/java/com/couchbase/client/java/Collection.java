@@ -128,7 +128,7 @@ public class Collection {
   /**
    * Provides access to the underlying {@link Core}.
    */
-  @Stability.Internal
+  @Stability.Volatile
   public Core core() {
     return asyncCollection.core();
   }

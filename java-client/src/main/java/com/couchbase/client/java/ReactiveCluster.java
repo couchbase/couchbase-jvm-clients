@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.UsernameAndPassword;
@@ -117,6 +119,17 @@ public class ReactiveCluster {
     this.searchIndexManager = new ReactiveSearchIndexManager(asyncCluster.searchIndexes());
   }
 
+
+  /**
+   * Provides access to the underlying {@link Core}.
+   *
+   * <p>This is advanced API, use with care!</p>
+   */
+  @Stability.Volatile
+  public Core core() {
+    return asyncCluster.core();
+  }
+
   /**
    * Provides access to the underlying {@link AsyncCluster}.
    */
@@ -134,6 +147,7 @@ public class ReactiveCluster {
   /**
    * Provides access to the index management capabilities.
    */
+  @Stability.Volatile
   public ReactiveSearchIndexManager searchIndexes() {
     return searchIndexManager;
   }

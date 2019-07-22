@@ -81,7 +81,7 @@ public class ReactiveScope {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return asyncScope.core();
   }
@@ -108,6 +108,7 @@ public class ReactiveScope {
    * @param name the collection name.
    * @return the requested collection if successful.
    */
+  @Stability.Volatile
   public Mono<ReactiveCollection> collection(final String name) {
     return Mono
       .fromFuture(asyncScope.collection(name))

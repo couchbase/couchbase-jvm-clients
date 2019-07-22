@@ -88,7 +88,7 @@ public class AsyncBucket {
    *
    * <p>This is advanced API, use with care!</p>
    */
-  @Stability.Uncommitted
+  @Stability.Volatile
   public Core core() {
     return core;
   }
@@ -99,6 +99,7 @@ public class AsyncBucket {
    * @param name the name of the scope.
    * @return the {@link AsyncScope} once opened.
    */
+  @Stability.Volatile
   public CompletableFuture<AsyncScope> scope(final String name) {
     notNullOrEmpty(name, "Scope");
     return CompletableFuture.completedFuture(
@@ -120,6 +121,7 @@ public class AsyncBucket {
    *
    * @return the {@link AsyncCollection} once opened.
    */
+  @Stability.Volatile
   public CompletableFuture<AsyncCollection> collection(final String collection) {
     notNullOrEmpty(collection, "Collection");
     return new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment).collection(collection);
