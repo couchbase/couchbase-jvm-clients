@@ -23,7 +23,6 @@ import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.ExistsResult
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.util.{Success, Try}
 
@@ -36,13 +35,11 @@ import scala.util.{Success, Try}
 private[scala] class ExistsHandler(hp: HandlerParams)
   extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
   def request(id: String,
-              parentSpan: Option[Span],
               timeout: java.time.Duration,
               retryStrategy: RetryStrategy
              ): Try[ObserveViaCasRequest] = {
     val validations: Try[ObserveViaCasRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

@@ -23,7 +23,6 @@ import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, Credential
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
-import io.opentracing.Tracer
 import reactor.core.scala.publisher.Mono
 import reactor.core.scala.scheduler.ExecutionContextScheduler
 
@@ -50,7 +49,6 @@ object ClusterEnvironment {
                      private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
                      private[scala] val serviceConfig: Option[ServiceConfig] = None,
                      private[scala] val loggerConfig: Option[LoggerConfig] = None,
-                     private[scala] val tracer: Option[Tracer] = None,
                      private[scala] val seedNodes: Option[Set[SeedNode]] = None,
                      private[scala] val retryStrategy: Option[RetryStrategy] = None) {
 
@@ -118,14 +116,6 @@ object ClusterEnvironment {
       */
     def loggerConfig(config: LoggerConfig): ClusterEnvironment.Builder = {
       copy(loggerConfig = Some(config))
-    }
-
-    /** Sets the [[Tracer]] OpenTracing tracer.
-      *
-      * @return this, for chaining
-      */
-    def tracer(tracer: Tracer): ClusterEnvironment.Builder = {
-      copy(tracer = Some(tracer))
     }
 
     def seedNodes(nodes: Set[SeedNode]): ClusterEnvironment.Builder = {
@@ -293,7 +283,6 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.serviceConfig.foreach(v => coreBuilder.serviceConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
   builder.seedNodes.foreach(sn => coreBuilder.seedNodes(sn.map(_.toCore).asJava))
-  builder.tracer.foreach(t => coreBuilder.tracer(t))
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)

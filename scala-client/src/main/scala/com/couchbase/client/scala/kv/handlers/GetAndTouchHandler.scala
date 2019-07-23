@@ -24,7 +24,6 @@ import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv.{DefaultErrors, GetResult}
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.util.{Success, Try}
 
@@ -40,14 +39,12 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
 
   def request[T](id: String,
                  expiration: java.time.Duration,
-                 parentSpan: Option[Span] = None,
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[GetAndTouchRequest] = {
     val validations: Try[GetAndTouchRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(expiration, "expiration")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

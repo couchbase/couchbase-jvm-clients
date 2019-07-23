@@ -25,7 +25,6 @@ import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -46,7 +45,6 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                  document: DocumentCreation = DocumentCreation.DoNothing,
                  durability: Durability,
                  expiration: java.time.Duration,
-                 parentSpan: Option[Span],
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[SubdocMutateRequest] = {
@@ -55,7 +53,6 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(expiration, "expiration")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

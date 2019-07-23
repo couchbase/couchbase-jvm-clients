@@ -23,7 +23,6 @@ import com.couchbase.client.scala.api.MutationResult
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try}
@@ -41,7 +40,6 @@ private[scala] class RemoveHandler(hp: HandlerParams)
   def request[T](id: String,
                  cas: Long,
                  durability: Durability,
-                 parentSpan: Option[Span],
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[RemoveRequest] = {
@@ -49,7 +47,6 @@ private[scala] class RemoveHandler(hp: HandlerParams)
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(durability, "durability")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

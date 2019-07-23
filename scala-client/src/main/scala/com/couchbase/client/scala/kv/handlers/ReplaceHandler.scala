@@ -25,7 +25,6 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
@@ -45,7 +44,6 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
                  cas: Long,
                  durability: Durability,
                  expiration: java.time.Duration,
-                 parentSpan: Option[Span],
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
                 (implicit ev: Conversions.Encodable[T])
@@ -56,7 +54,6 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(expiration, "expiration")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

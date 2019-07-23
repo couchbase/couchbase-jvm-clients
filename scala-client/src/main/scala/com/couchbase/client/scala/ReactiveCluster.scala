@@ -27,7 +27,6 @@ import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMeta}
 import com.couchbase.client.scala.util.FutureConversions
-import io.opentracing.Span
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
 import scala.compat.java8.OptionConverters._
@@ -117,14 +116,6 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
-    * @param parentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a
-    *                        way of
-    *                        tracing complex distributed systems.  This field allows an OpenTracing parent span to be
-    *                        provided, which will become the parent of any spans created by the SDK as a result of this
-    *                        operation.  Note that if a span is not provided then the SDK will try to access any
-    *                        thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
-    *                        recommended to provide the parentSpan explicitly if possible, as thread-local is not a
-    *                        100% reliable way of passing parameters.
     * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
     *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
     * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
@@ -134,10 +125,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     *         returned rows
     */
   def searchQuery(query: SearchQuery,
-                  parentSpan: Option[Span] = None,
                   timeout: Duration = async.searchTimeout,
                   retryStrategy: RetryStrategy = async.retryStrategy): ScalaMono[ReactiveSearchResult] = {
-    async.searchHandler.request(query, parentSpan, timeout, retryStrategy, async.core, async.env) match {
+    async.searchHandler.request(query, timeout, retryStrategy, async.core, async.env) match {
       case Success(request) =>
 
         async.core.send(request)

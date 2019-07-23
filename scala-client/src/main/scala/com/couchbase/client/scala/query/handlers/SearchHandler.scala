@@ -27,7 +27,6 @@ import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchMeta, SearchMetrics, SearchStatus}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
-import io.opentracing.Span
 
 import scala.collection.GenSeq
 import scala.concurrent.duration.Duration
@@ -44,7 +43,6 @@ private[scala] class SearchHandler() {
   import DurationConversions._
 
   def request[T](query: SearchQuery,
-                 parentSpan: Option[Span],
                  timeout: Duration,
                  retryStrategy: RetryStrategy,
                  core: Core, environment: ClusterEnvironment)
@@ -52,7 +50,6 @@ private[scala] class SearchHandler() {
 
     val validations: Try[SearchRequest] = for {
       _ <- Validate.notNull(query, "query")
-      _ <- Validate.optNotNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

@@ -27,7 +27,6 @@ import com.couchbase.client.scala.codec.DocumentFlags
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
-import io.opentracing.Span
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -47,14 +46,12 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   def request[T](id: String,
                  spec: Seq[LookupInSpec],
                  withExpiration: Boolean,
-                 parentSpan: Option[Span],
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[SubdocGetRequest] = {
     val validations: Try[SubdocGetRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(spec, "spec")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null
@@ -96,7 +93,6 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
 
   def requestProject[T](id: String,
                  project: Seq[String],
-                 parentSpan: Option[Span],
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[SubdocGetRequest] = {
@@ -113,7 +109,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     else {
       val spec = project.map(v => LookupInSpec.get(v))
 
-      request(id, spec, false, parentSpan, timeout, retryStrategy)
+      request(id, spec, false, timeout, retryStrategy)
     }
   }
 

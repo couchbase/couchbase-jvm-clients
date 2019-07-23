@@ -22,7 +22,6 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
-import io.opentracing.Span
 
 import scala.util.{Success, Try}
 
@@ -38,14 +37,12 @@ private[scala] class UnlockHandler(hp: HandlerParams)
 
   def request[T](id: String,
                  cas: Long,
-                 parentSpan: Option[Span] = None,
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
   : Try[UnlockRequest] = {
     val validations: Try[UnlockRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
-      _ <- Validate.notNull(parentSpan, "parentSpan")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null

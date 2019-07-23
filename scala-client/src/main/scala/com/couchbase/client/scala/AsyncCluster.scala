@@ -35,7 +35,6 @@ import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
-import io.opentracing.Span
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
 import reactor.core.scala.publisher.{Flux, Mono}
 
@@ -153,14 +152,6 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     * [[Cluster]] for a blocking version.
     *
     * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
-    * @param parentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a
-    *                        way of
-    *                        tracing complex distributed systems.  This field allows an OpenTracing parent span to be
-    *                        provided, which will become the parent of any spans created by the SDK as a result of this
-    *                        operation.  Note that if a span is not provided then the SDK will try to access any
-    *                        thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
-    *                        recommended to provide the parentSpan explicitly if possible, as thread-local is not a
-    *                        100% reliable way of passing parameters.
     * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
     *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
     * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
@@ -170,11 +161,10 @@ class AsyncCluster(environment: => ClusterEnvironment) {
     *         else a `Failure`
     */
   def searchQuery(query: SearchQuery,
-                  parentSpan: Option[Span] = None,
                   timeout: Duration = searchTimeout,
                   retryStrategy: RetryStrategy = retryStrategy): Future[SearchResult] = {
 
-    searchHandler.request(query, parentSpan, timeout, retryStrategy, core, environment) match {
+    searchHandler.request(query, timeout, retryStrategy, core, environment) match {
       case Success(request) => AsyncCluster.searchQuery(request, core)
       case Failure(err) => Future.failed(err)
     }

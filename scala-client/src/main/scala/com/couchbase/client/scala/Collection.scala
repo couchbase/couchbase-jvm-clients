@@ -24,7 +24,6 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
-import io.opentracing.Span
 import reactor.core.scala.publisher.Mono
 //import com.couchbase.client.scala.query.N1qlQueryResult
 
@@ -75,13 +74,6 @@ object Collection {
   *                        will be removed and the document will never expire.  If the application wants to preserve
   *                        expiration then they should use the `withExpiration` parameter on any gets, and provide
   *                        the returned expiration parameter to any mutations.
-  * @define ParentSpan     this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a way of
-  *                        tracing complex distributed systems.  This field allows an OpenTracing parent span to be
-  *                        provided, which will become the parent of any spans created by the SDK as a result of this
-  *                        operation.  Note that if a span is not provided then the SDK will try to access any
-  *                        thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
-  *                        recommended to provide the parentSpan explicitly if possible, as thread-local is not a
-  *                        100% reliable way of passing parameters.
   * @define Timeout        when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
   *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
@@ -134,7 +126,6 @@ class Collection(
     *                       document, and the results
     *                       combined into a [[com.couchbase.client.scala.json.JsonObject]] result.  By default this
     *                       is set to None, meaning a normal full document fetch will be performed.
-    * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -145,13 +136,12 @@ class Collection(
            id: String,
            withExpiration: Boolean = false,
            project: Seq[String] = Seq.empty,
-           parentSpan: Option[Span] = None,
            timeout: Duration = kvTimeout,
            retryStrategy: RetryStrategy = retryStrategy
          ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiration, project, parentSpan, timeout, retryStrategy),
+        .get(id, withExpiration, project, timeout, retryStrategy),
       timeout
     )
 
@@ -161,7 +151,6 @@ class Collection(
     * @param content       $SupportedTypes
     * @param durability    $Durability
     * @param expiration    $Expiration
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -173,7 +162,6 @@ class Collection(
                  content: T,
                  durability: Durability = Disabled,
                  expiration: Duration = 0.seconds,
-                 parentSpan: Option[Span] = None,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -183,7 +171,6 @@ class Collection(
         content,
         durability,
         expiration,
-        parentSpan,
         timeout,
         retryStrategy
       ),
@@ -197,7 +184,6 @@ class Collection(
     * @param cas           $CAS
     * @param durability    $Durability
     * @param expiration    $Expiration
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -210,7 +196,6 @@ class Collection(
                   cas: Long = 0,
                   durability: Durability = Disabled,
                   expiration: Duration = 0.seconds,
-                  parentSpan: Option[Span] = None,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = retryStrategy
                 )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -221,7 +206,6 @@ class Collection(
         cas,
         durability,
         expiration,
-        parentSpan,
         timeout,
         retryStrategy
       ),
@@ -236,7 +220,6 @@ class Collection(
     * @param content       $SupportedTypes
     * @param durability    $Durability
     * @param expiration    $Expiration
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
@@ -246,7 +229,6 @@ class Collection(
                  content: T,
                  durability: Durability = Disabled,
                  expiration: Duration = 0.seconds,
-                 parentSpan: Option[Span] = None,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -256,7 +238,6 @@ class Collection(
         content,
         durability,
         expiration,
-        parentSpan,
         timeout,
         retryStrategy
       ),
@@ -268,7 +249,6 @@ class Collection(
     * @param id            $Id
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -279,12 +259,11 @@ class Collection(
               id: String,
               cas: Long = 0,
               durability: Durability = Disabled,
-              parentSpan: Option[Span] = None,
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = retryStrategy
             ): Try[MutationResult] =
     block(
-      async.remove(id, cas, durability, parentSpan, timeout, retryStrategy),
+      async.remove(id, cas, durability, timeout, retryStrategy),
       timeout
     )
 
@@ -301,7 +280,6 @@ class Collection(
     *                      [[DocumentCreation]] for details.
     * @param durability    $Durability
     * @param expiration    $Expiration
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -314,7 +292,6 @@ class Collection(
                 cas: Long = 0,
                 document: DocumentCreation = DocumentCreation.DoNothing,
                 durability: Durability = Disabled,
-                parentSpan: Option[Span] = None,
                 expiration: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
@@ -326,7 +303,6 @@ class Collection(
         cas,
         document,
         durability,
-        parentSpan,
         expiration,
         timeout,
         retryStrategy
@@ -341,7 +317,6 @@ class Collection(
     *
     * @param id             $Id
     * @param lockFor        how long to lock the document for
-    * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -350,11 +325,10 @@ class Collection(
     **/
   def getAndLock(id: String,
                  lockFor: Duration = 30.seconds,
-                 parentSpan: Option[Span] = None,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
-      async.getAndLock(id, lockFor, parentSpan, timeout, retryStrategy),
+      async.getAndLock(id, lockFor, timeout, retryStrategy),
       timeout
     )
 
@@ -363,7 +337,6 @@ class Collection(
     * @param id             $Id
     * @param cas            must match the CAS value return from a previous [[Collection.getAndLock]] to successfully
     *                       unlock the document
-    * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -373,17 +346,15 @@ class Collection(
   def unlock(
               id: String,
               cas: Long,
-              parentSpan: Option[Span] = None,
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = retryStrategy
             ): Try[Unit] =
-    block(async.unlock(id, cas, parentSpan, timeout, retryStrategy), timeout)
+    block(async.unlock(id, cas, timeout, retryStrategy), timeout)
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
     * @param id             $Id
     * @param expiration     $Expiration
-    * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -392,14 +363,12 @@ class Collection(
     **/
   def getAndTouch(id: String,
                   expiration: Duration,
-                  parentSpan: Option[Span] = None,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
       async.getAndTouch(
         id,
         expiration,
-        parentSpan,
         timeout,
         retryStrategy
       ),
@@ -415,7 +384,6 @@ class Collection(
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
     *                      [[LookupInSpec]] for more details.
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -425,11 +393,10 @@ class Collection(
   def lookupIn(
                 id: String,
                 spec: Seq[LookupInSpec],
-                parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
               ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, parentSpan, timeout, retryStrategy), timeout)
+    block(async.lookupIn(id, spec, timeout, retryStrategy), timeout)
 
   /** Retrieves any available version of the document.
     *
@@ -441,7 +408,6 @@ class Collection(
     * whichever returns first is returned.
     *
     * @param id            $Id
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -449,11 +415,10 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def getAnyReplica(id: String,
-                    parentSpan: Option[Span] = None,
                     timeout: Duration = kvTimeout,
                     retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     Try(reactive
-      .getAnyReplica(id, parentSpan, timeout, retryStrategy)
+      .getAnyReplica(id, timeout, retryStrategy)
       .block(Collection.SafetyTimeout + timeout))
 
   /** Retrieves all available versions of the document.
@@ -465,7 +430,6 @@ class Collection(
     * The returned `Iterable` will block on each call to `next` until the next replica has responded.
     *
     * @param id            $Id
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
@@ -473,10 +437,9 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def getAllReplicas(id: String,
-                     parentSpan: Option[Span] = None,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = retryStrategy): Iterable[GetResult] =
-    reactive.getAllReplicas(id, parentSpan, timeout, retryStrategy).toIterable()
+    reactive.getAllReplicas(id, timeout, retryStrategy).toIterable()
 
   /** Checks if a document exists.
     *
@@ -484,7 +447,6 @@ class Collection(
     * most efficient method.
     *
     * @param id             $Id
-    * @param parentSpan     $ParentSpan
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
@@ -493,11 +455,10 @@ class Collection(
     **/
   def exists[T](
                  id: String,
-                 parentSpan: Option[Span] = None,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                ): Try[ExistsResult] =
-    block(async.exists(id, parentSpan, timeout, retryStrategy), timeout)
+    block(async.exists(id, timeout, retryStrategy), timeout)
 }
 
 

@@ -19,7 +19,6 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
-import io.opentracing.Span
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, _}
@@ -96,7 +95,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param content       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     *
@@ -108,10 +106,9 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
              content: Array[Byte],
              cas: Long = 0,
              durability: Durability = Disabled,
-             parentSpan: Option[Span] = None,
              timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.append(id, content, cas, durability, parentSpan, timeout, retryStrategy), timeout)
+    Collection.block(async.append(id, content, cas, durability, timeout, retryStrategy), timeout)
 
   }
 
@@ -123,7 +120,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param content       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     *
@@ -135,10 +131,9 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
               content: Array[Byte],
               cas: Long = 0,
               durability: Durability = Disabled,
-              parentSpan: Option[Span] = None,
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.prepend(id, content, cas, durability, parentSpan, timeout, retryStrategy), timeout)
+    Collection.block(async.prepend(id, content, cas, durability, timeout, retryStrategy), timeout)
   }
 
   /** Increment a Couchbase 'counter' document.  $CounterDoc
@@ -152,7 +147,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *                      returned
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     *
@@ -166,10 +160,9 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 cas: Long = 0,
                 durability: Durability = Disabled,
                 expiration: Duration = 0.seconds,
-                parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.increment(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
+    Collection.block(async.increment(id, delta, initial, cas, durability, expiration, timeout,
       retryStrategy), timeout)
   }
 
@@ -184,7 +177,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *                      returned
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param parentSpan    $ParentSpan
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     *
@@ -198,10 +190,9 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 cas: Long = 0,
                 durability: Durability = Disabled,
                 expiration: Duration = 0.seconds,
-                parentSpan: Option[Span] = None,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, parentSpan, timeout,
+    Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, timeout,
       retryStrategy), timeout)
   }
 
