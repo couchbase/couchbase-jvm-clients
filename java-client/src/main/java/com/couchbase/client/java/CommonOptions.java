@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.retry.RetryStrategy;
-import io.opentracing.Span;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -38,11 +37,6 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
    * The custom retry strategy, if set.
    */
   private Optional<RetryStrategy> retryStrategy = Optional.empty();
-
-  /**
-   * The OpenTracing span to be used as a parent.
-   */
-  private Optional<Span> parentSpan = Optional.empty();
 
   /**
    * Allows to return the right options builder instance for child implementations.
@@ -80,28 +74,7 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
     return self();
   }
 
-  /**
-   * Specifies a parent OpenTracing {@link Span} for this operation.
-   *
-   * <p>If no parent span is provided, depending on the tracer implementation used, a new one might be created
-   * which is not associated to any other parent.</p>
-   *
-   * @param span the parent span to use for this operation.
-   * @return this options builder for chaining purposes.
-   */
-  public SELF parentSpan(final Span span) {
-    this.parentSpan = Optional.ofNullable(span);
-    return self();
-  }
-
   public abstract class BuiltCommonOptions {
-
-    /**
-     * Returns the parent span if provided.
-     */
-    public Optional<Span> parentSpan() {
-      return parentSpan;
-    }
 
     /**
      * Returns the custom retry strategy if provided.

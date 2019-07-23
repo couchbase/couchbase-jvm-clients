@@ -21,7 +21,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.CommonOptions;
-import io.opentracing.Span;
 
 import java.time.Duration;
 
@@ -57,15 +56,6 @@ public class OperationOptions {
     collection.get(
       "airline_10",
       getOptions().retryStrategy(BestEffortRetryStrategy.INSTANCE)
-    );
-
-    /*
-     * Finally, you can set an OpenTracing span as a parent for the operation.
-     */
-    Span parent = null; // this would be your parent span
-    collection.get(
-      "airline_10",
-      getOptions().parentSpan(parent)
     );
   }
 }

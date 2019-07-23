@@ -24,8 +24,6 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
-
 public class ExistsAccessor {
 
   public static CompletableFuture<Optional<ExistsResult>> exists(final String key,
@@ -45,7 +43,6 @@ public class ExistsAccessor {
         } else {
           throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
-      })
-      .whenComplete((r, t) -> completeSpan(request));
+      });
   }
 }

@@ -25,7 +25,6 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
-import io.opentracing.Tracer;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -119,7 +118,6 @@ public class CoreEnvironment {
   private final Credentials credentials;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
-  private final Tracer tracer;
 
 
   public static CoreEnvironment create(final String username, final String password) {
@@ -179,7 +177,6 @@ public class CoreEnvironment {
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
     this.seedNodes = Optional.ofNullable(builder.seedNodes).orElse(DEFAULT_SEED_NODES);
-    this.tracer = Optional.ofNullable(builder.tracer).orElse(null); // TODO fixme default
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -306,14 +303,6 @@ public class CoreEnvironment {
 
   public Scheduler scheduler() {
     return scheduler.get();
-  }
-
-  public Tracer tracer() {
-    return tracer;
-  }
-
-  public boolean operationTracingEnabled() {
-    return tracer != null;
   }
 
   /**
@@ -447,7 +436,6 @@ public class CoreEnvironment {
 
     input.put("credentials", credentials.getClass().getSimpleName());
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
-    input.put("tracer", tracer != null ? tracer.getClass().getSimpleName() : null);
 
     return format.apply(input);
   }
@@ -468,7 +456,6 @@ public class CoreEnvironment {
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
-    private Tracer tracer;
 
     private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
@@ -547,11 +534,6 @@ public class CoreEnvironment {
 
     public LoggerConfig.Builder loggerConfig() {
       return loggerConfig;
-    }
-
-    public SELF tracer(final Tracer tracer) {
-      this.tracer = tracer;
-      return self();
     }
 
     @Stability.Uncommitted

@@ -47,13 +47,6 @@ import scala.util.Try
   *                         optimistic concurrency - e.g. it can detect if another agent has modified a document
   *                         in-between this agent getting and modifying the document.  See **CHANGEME** for a full
   *                        description.  The default is 0, which disables CAS checking.
-  * @define ParentSpan      this SDK supports the [[https://opentracing.io/ Open Tracing]] initiative, which is a way of
-  *                         tracing complex distributed systems.  This field allows an OpenTracing parent span to be
-  *                         provided, which will become the parent of any spans created by the SDK as a result of this
-  *                        operation.  Note that if a span is not provided then the SDK will try to access any
-  *                         thread-local parent span setup by a Scope.  Much of time this will `just work`, but it's
-  *                         recommended to provide the parentSpan explicitly if possible, as thread-local is not a
-  *                         100% reliable way of passing parameters.
   * @define Timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
   *                         provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`

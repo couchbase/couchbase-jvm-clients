@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.cnc.tracing.TracingUtils.completeSpan;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Stability.Internal
@@ -66,8 +65,7 @@ public enum GetAccessor {
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
-    })
-    .whenComplete((r, t) -> completeSpan(request));
+    });
   }
 
   public static CompletableFuture<Optional<GetResult>> getAndLock(final Core core, final String id,
@@ -91,8 +89,7 @@ public enum GetAccessor {
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
-      })
-      .whenComplete((r, t) -> completeSpan(request));
+      });
   }
 
   public static CompletableFuture<Optional<GetResult>> getAndTouch(final Core core,
@@ -114,8 +111,7 @@ public enum GetAccessor {
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
         }
-      })
-      .whenComplete((r, t) -> completeSpan(request));
+      });
   }
 
   public static CompletableFuture<Optional<GetResult>> subdocGet(final Core core, final String id,

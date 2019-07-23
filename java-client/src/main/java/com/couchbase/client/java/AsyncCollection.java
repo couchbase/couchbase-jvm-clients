@@ -19,7 +19,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.tracing.TracingUtils;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
@@ -83,7 +82,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.couchbase.client.core.cnc.tracing.TracingUtils.attachSpan;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
@@ -274,7 +272,6 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
-    attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
   }
 
@@ -328,7 +325,6 @@ public class AsyncCollection {
     SubdocGetRequest request = new SubdocGetRequest(
       timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0, commands
     );
-    attachSpan(TracingUtils.OpName.GET, environment, opts.parentSpan(), request);
     return request;
   }
 
@@ -380,7 +376,6 @@ public class AsyncCollection {
     GetAndLockRequest request = new GetAndLockRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, lockFor
     );
-    attachSpan(TracingUtils.OpName.GET_AND_LOCK, environment, opts.parentSpan(), request);
     return request;
   }
 
@@ -432,7 +427,6 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetAndTouchRequest request = new GetAndTouchRequest(id, timeout, coreContext,
       collectionIdentifier, retryStrategy, expiration);
-    attachSpan(TracingUtils.OpName.GET_AND_TOUCH, environment, opts.parentSpan(), request);
     return request;
   }
 
@@ -544,7 +538,6 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, collectionIdentifier,
       retryStrategy, id, true, 0);
-    attachSpan(TracingUtils.OpName.EXISTS, environment, opts.parentSpan(), request);
     return request;
   }
 
