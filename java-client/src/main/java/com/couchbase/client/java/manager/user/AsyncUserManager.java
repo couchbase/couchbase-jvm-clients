@@ -101,10 +101,15 @@ public class AsyncUserManager extends ManagerSupport {
 
     final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
         .add("name", user.displayName())
-        .add("groups", String.join(",", user.groups()))
         .add("roles", user.roles().stream()
             .map(Role::format)
             .collect(Collectors.joining(",")));
+
+    // Omit empty group list for compatibility with Couchbase Server versions < 6.5.
+    // Versions >= 6.5 treat the absent parameter just like an empty list.
+    if (!user.groups().isEmpty()) {
+      params.add("groups", String.join(",", user.groups()));
+    }
 
     // Password is required when creating user, but optional when updating existing user.
     options.password().ifPresent(pwd -> params.add("password", pwd));

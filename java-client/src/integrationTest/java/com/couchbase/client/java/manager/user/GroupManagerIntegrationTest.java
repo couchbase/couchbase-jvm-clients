@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.UserManagerIntegrationTest.checkRoleOrigins;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -140,6 +141,22 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     String name = "doesnotexist";
     GroupNotFoundException e = assertThrows(GroupNotFoundException.class, () -> groups.drop(name));
     assertEquals(name, e.groupName());
+  }
+
+  @Test
+  void removeUserFromAllGroups() {
+    // exercise the special-case code for upserting an empty group list.
+
+    groups.upsert(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
+    users.create(new User(USERNAME).groups(GROUP_A), "password");
+
+    UserAndMetadata userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    assertEquals(setOf(READ_ONLY_ADMIN), userMeta.effectiveRoles());
+
+    users.upsert(userMeta.user().groups(emptySet()));
+
+    userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    assertEquals(emptySet(), userMeta.effectiveRoles());
   }
 
   private static void dropUserQuietly(String name) {
