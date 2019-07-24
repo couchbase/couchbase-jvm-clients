@@ -39,6 +39,8 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCodec;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
+import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -61,6 +63,8 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * These tests make sure that explicit backpressure is handled from the {@link QueryMessageHandler},
@@ -105,6 +109,8 @@ class QueryMessageHandlerBackpressureTest {
       Optional.empty(),
       Optional.empty()
     );
+    BaseEndpoint endpoint = mock(BaseEndpoint.class);
+    when(endpoint.pipelined()).thenReturn(false);
     Bootstrap client = new Bootstrap()
       .channel(LocalChannel.class)
       .group(new DefaultEventLoopGroup())
@@ -114,7 +120,7 @@ class QueryMessageHandlerBackpressureTest {
         protected void initChannel(LocalChannel ch) {
           ch.pipeline()
             .addLast(new HttpClientCodec())
-            .addLast(new QueryMessageHandler(null, endpointContext));
+            .addLast(new QueryMessageHandler(endpoint, endpointContext));
         }
       });
 

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.netty.chunk.ChunkResponseParser;
@@ -48,6 +49,7 @@ class ChunkedHandlerSwitcherTest {
 
   private EmbeddedChannel channel;
   private EndpointContext endpointContext;
+  private BaseEndpoint endpoint;
   private CoreEnvironment env;
 
 
@@ -56,6 +58,8 @@ class ChunkedHandlerSwitcherTest {
     env = CoreEnvironment.create("user", "pass");
     endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(env);
+    endpoint = mock(BaseEndpoint.class);
+    when(endpoint.pipelined()).thenReturn(false);
     channel = setupChannel();
   }
 
@@ -156,7 +160,7 @@ class ChunkedHandlerSwitcherTest {
 
     @SuppressWarnings({"unchecked"})
     TestChunkedMessageHandler() {
-      super(null, endpointContext, mock(ChunkResponseParser.class));
+      super(endpoint, endpointContext, mock(ChunkResponseParser.class));
     }
   }
 

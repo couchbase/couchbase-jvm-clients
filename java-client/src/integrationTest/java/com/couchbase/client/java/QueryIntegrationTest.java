@@ -75,14 +75,8 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
-        QueryResult result = cluster.query(
-          "create primary index on `" + config().bucketname() + "`"
-        );
-        if (result.meta().status() != QueryStatus.SUCCESS) {
-            throw new IllegalStateException("Could not create primary index for " +
-              "query integration test!");
-        }
         bucketName = "`" + config().bucketname() + "`";
+        createPrimaryIndex(cluster, bucketName);
     }
 
     @AfterAll

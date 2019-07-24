@@ -469,7 +469,8 @@ public abstract class BaseEndpoint implements Endpoint {
     return state.state() == EndpointState.CONNECTED
       && channel.isActive()
       && channel.isWritable()
-      && circuitBreaker.allowsRequest();
+      && circuitBreaker.allowsRequest()
+      && free();
   }
 
   @Override
@@ -508,6 +509,13 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   public EndpointContext endpointContext() {
     return endpointContext.get();
+  }
+
+  /**
+   * Returns true if this endpoint is pipelined, false otherwise.
+   */
+  public boolean pipelined() {
+    return pipelined;
   }
 
   /**

@@ -28,7 +28,7 @@ import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
 import com.couchbase.client.core.deps.io.netty.util.concurrent.EventExecutor
 import com.couchbase.client.core.deps.io.netty.util.{Attribute, AttributeKey}
-import com.couchbase.client.core.endpoint.EndpointContext
+import com.couchbase.client.core.endpoint.{BaseEndpoint, EndpointContext}
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
@@ -100,8 +100,11 @@ object SearchMock {
       val endpointContext = new EndpointContext(ctx, null, 0, null, null, null, Optional.of
       ("bucket"), null)
 
+      val endpoint = mock(classOf[BaseEndpoint])
+      when(endpoint.pipelined).thenReturn(false)
+
       // ChunkedSearchMessageHandler does most of the work in handling responses from the service
-      val handler = new ChunkedSearchMessageHandler(null, endpointContext)
+      val handler = new ChunkedSearchMessageHandler(endpoint, endpointContext)
 
       // Netty's EmbeddedChannel lets us test ChannelHandlers like ChunkedSearchMessageHandler.  It's a Netty Channel
       // that doesn't touch the network at all.

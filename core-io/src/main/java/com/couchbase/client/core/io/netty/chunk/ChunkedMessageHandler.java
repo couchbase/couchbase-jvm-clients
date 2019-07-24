@@ -37,6 +37,7 @@ import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
@@ -65,6 +66,11 @@ public abstract class ChunkedMessageHandler
    * Holds the surrounding endpoint.
    */
   private final BaseEndpoint endpoint;
+
+  /**
+   * If this message handler supports pipelining.
+   */
+  private final boolean pipelined;
 
   /**
    * The IO context once connected.
@@ -109,12 +115,23 @@ public abstract class ChunkedMessageHandler
     this.endpoint = endpoint;
     this.endpointContext = endpointContext;
     this.chunkResponseParser = chunkResponseParser;
+    this.pipelined = endpoint.pipelined();
+
+    if (pipelined) {
+      throw new UnsupportedOperationException("The ChunkedMessageHandler does not support pipelining, this is a bug!");
+    }
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public void write(final ChannelHandlerContext ctx, final Object msg,
-                    final ChannelPromise promise) {
+  public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    // We still have a request in-flight so we need to reschedule it in order to not let it trip on each others
+    // toes.
+    if (!pipelined && currentRequest != null) {
+      RetryOrchestrator.retryImmediately(endpointContext, (REQ) msg);
+      return;
+    }
+
     try {
       currentRequest = (REQ) msg;
       FullHttpRequest encoded = currentRequest.encode();

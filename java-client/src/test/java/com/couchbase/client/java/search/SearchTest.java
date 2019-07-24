@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class SearchTest {
+
     static {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }

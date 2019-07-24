@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.util.Attribute;
 import com.couchbase.client.core.deps.io.netty.util.AttributeKey;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.EventExecutor;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -114,8 +115,11 @@ public class SearchMock {
             EndpointContext endpointContext = new EndpointContext(ctx, null, 0, null, null, null,
                     Optional.of("bucket"), null);
 
+            BaseEndpoint endpoint = mock(BaseEndpoint.class);
+            when(endpoint.pipelined()).thenReturn(false);
+
             // ChunkedSearchMessageHandler does most of the work in handling responses from the service
-            ChunkedSearchMessageHandler handler = new ChunkedSearchMessageHandler(null, endpointContext);
+            ChunkedSearchMessageHandler handler = new ChunkedSearchMessageHandler(endpoint, endpointContext);
 
             // Netty's EmbeddedChannel lets us test ChannelHandlers like ChunkedSearchMessageHandler.  It's a Netty Channel
             // that doesn't touch the network at all.
