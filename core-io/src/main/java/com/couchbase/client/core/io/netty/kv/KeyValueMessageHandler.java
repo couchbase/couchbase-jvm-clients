@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEve
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
+import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -227,7 +228,13 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else {
       request.context().dispatchLatency(System.nanoTime() - start);
 
-      ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+      short encodedStatus = MemcacheProtocol.status(response);
+      ResponseStatus status = MemcacheProtocol.decodeStatus(encodedStatus);
+
+      if (status == ResponseStatus.UNKNOWN) {
+        ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, encodedStatus));
+      }
+
       if (status == ResponseStatus.NOT_MY_VBUCKET) {
         handleNotMyVbucket(request, response);
       } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
