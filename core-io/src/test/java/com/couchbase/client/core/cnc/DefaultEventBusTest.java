@@ -18,7 +18,9 @@ package com.couchbase.client.core.cnc;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.util.Assertions.assertThreadNotRunning;
@@ -50,7 +52,7 @@ class DefaultEventBusTest {
     assertTrue(eventBus.isRunning());
     assertThreadRunning(threadName);
 
-    eventBus.stop().block();
+    eventBus.stop(Duration.ofSeconds(5)).block();
     waitUntilCondition(() -> !threadRunning(threadName));
     assertFalse(eventBus.isRunning());
     assertThreadNotRunning(threadName);
@@ -84,6 +86,33 @@ class DefaultEventBusTest {
 
     waitUntilCondition(() -> eventsReceived.get() == 3);
 
-    eventBus.stop().block();
+    eventBus.stop(Duration.ofSeconds(5)).block();
   }
+
+  @Test
+  void shutsDownOnlyOnceAllEventsConsumed() {
+    DefaultEventBus eventBus = DefaultEventBus.create();
+
+    eventBus.start().block();
+
+    AtomicInteger eventsReceived = new AtomicInteger();
+    eventBus.subscribe(event -> {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        // ignored on purpose!
+      }
+      eventsReceived.incrementAndGet();
+    });
+
+    for (int i = 0; i < 20; i++) {
+      eventBus.publish(mock(Event.class));
+    }
+
+    long start = System.nanoTime();
+    eventBus.stop(Duration.ofSeconds(5)).block();
+    long end = System.nanoTime();
+    assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 1000);
+  }
+
 }

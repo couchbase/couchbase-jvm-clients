@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.EventSubscription;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -105,7 +106,8 @@ public class SimpleEventBus implements EventBus {
   }
 
   @Override
-  public Mono<Void> stop() {
+  public Mono<Void> stop(final Duration timeout) {
     return Mono.empty();
   }
+
 }

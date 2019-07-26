@@ -365,7 +365,7 @@ public class CoreEnvironment {
    */
   public Mono<Void> shutdownReactive(final Duration timeout) {
     return diagnosticsMonitor.stop()
-      .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop() : Mono.empty()))
+      .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
         return Mono.<Void>empty();

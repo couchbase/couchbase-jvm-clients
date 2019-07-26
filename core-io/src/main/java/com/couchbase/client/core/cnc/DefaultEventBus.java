@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.deps.org.jctools.queues.QueueFactory;
 import com.couchbase.client.core.deps.org.jctools.queues.spec.ConcurrentQueueSpec;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.PrintStream;
@@ -38,7 +39,7 @@ import java.util.function.Consumer;
  * <p>Subscribers of this API are considered to be non-blocking and if they have to blocking
  * tasks need to fan them out into their own thread pool.</p>
  *
- * <p>Keep in mind to properly {@link #start()} and {@link #stop()} since it runs in its
+ * <p>Keep in mind to properly {@link #start()} and {@link #stop(Duration)} since it runs in its
  * own thread!</p>
  */
 public class DefaultEventBus implements EventBus {
@@ -124,7 +125,9 @@ public class DefaultEventBus implements EventBus {
 
   @Override
   public PublishResult publish(final Event event) {
-    if (eventQueue.offer(event)) {
+    if (!isRunning()) {
+      return PublishResult.SHUTDOWN;
+    } else if (eventQueue.offer(event)) {
       return PublishResult.SUCCESS;
     } else {
       if (errorLogging != null) {
@@ -143,7 +146,7 @@ public class DefaultEventBus implements EventBus {
       if (running.compareAndSet(false, true)) {
         runningThread = new Thread(() -> {
           long idleSleepTime = idleSleepDuration.toMillis();
-          while (isRunning()) {
+          while (isRunning() || !eventQueue.isEmpty()) {
             Event event = eventQueue.poll();
             while (event != null) {
               for (Consumer<Event> subscriber : subscribers) {
@@ -155,6 +158,7 @@ public class DefaultEventBus implements EventBus {
                   // event bus thread!
                   if (errorLogging != null) {
                     errorLogging.println("Exception caught in EventBus Consumer: " + t);
+                    t.printStackTrace();
                   }
                 }
               }
@@ -162,7 +166,9 @@ public class DefaultEventBus implements EventBus {
             }
 
             try {
-              Thread.sleep(idleSleepTime);
+              if (isRunning()) {
+                Thread.sleep(idleSleepTime);
+              }
             } catch (InterruptedException e) {
               // If this thread is interrupted, we continue
               // into the loop early. so if interrupted for
@@ -183,13 +189,16 @@ public class DefaultEventBus implements EventBus {
    * Stops the {@link DefaultEventBus} from running.
    */
   @Override
-  public Mono<Void> stop() {
-    return Mono.defer(() -> {
-      if(running.compareAndSet(true, false)) {
-        runningThread.interrupt();
-      }
-      return Mono.empty();
-    });
+  public Mono<Void> stop(final Duration timeout) {
+    return Mono
+      .defer(() -> {
+        if(running.compareAndSet(true, false)) {
+          runningThread.interrupt();
+        }
+        return Mono.empty();
+      })
+      .then(Flux.interval(Duration.ofMillis(10)).takeUntil(i -> !runningThread.isAlive()).then())
+      .timeout(timeout);
   }
 
   /**

@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc;
 
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.function.Consumer;
 
 /**
@@ -52,9 +53,15 @@ public interface EventBus {
    */
   void unsubscribe(EventSubscription subscription);
 
+  /**
+   * Starts the event bus if it hasn't been started yet.
+   */
   Mono<Void> start();
 
-  Mono<Void> stop();
+  /**
+   * Stops the event bus if it hasn't been stopped already.
+   */
+  Mono<Void> stop(Duration timeout);
 
   /**
    * Signals if a publish call was successful and if not why.
@@ -69,5 +76,10 @@ public interface EventBus {
      * Could not publish because the event bus is overloaded temporarily.
      */
     OVERLOADED,
+
+    /**
+     * If the event bus is already shut down, the msg won't be published.
+     */
+    SHUTDOWN
   }
 }
