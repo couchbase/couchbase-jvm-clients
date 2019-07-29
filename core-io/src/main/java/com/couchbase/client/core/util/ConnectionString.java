@@ -168,6 +168,30 @@ public class ConnectionString {
         return params;
     }
 
+    /**
+     * Returns true if this connection string qualifies for DNS SRV resolving per spec.
+     *
+     * <p>To be valid, the following criteria have to be met: only couchbase(s) schema, single host with no port
+     * specified and no IP address.</p>
+     */
+    public boolean isValidDnsSrv() {
+        if (scheme != Scheme.COUCHBASE && scheme != Scheme.COUCHBASES) {
+            return false;
+        }
+
+        if (hosts.size() > 1) {
+            return false;
+        }
+
+        for (UnresolvedSocket socket : hosts) {
+            if (socket.port > 0) {
+                return false;
+            }
+        }
+
+        return !InetAddresses.isInetAddress(hosts.get(0).hostname);
+    }
+
     public enum Scheme {
         HTTP,
         COUCHBASE,

@@ -17,7 +17,10 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.DnsSrv;
 
+import javax.naming.NamingException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,16 +47,21 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
 
   @Override
   public void load(final CoreEnvironment.Builder builder) {
-    final boolean schemeIsHttp = ConnectionString.Scheme.HTTP == connectionString.scheme();
-    Set<SeedNode> seeds = connectionString
-      .hosts()
-      .stream()
-      .map(a -> SeedNode.create(
-          a.hostname(),
-          !schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
-          schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty()
-      ))
-      .collect(Collectors.toSet());
+    if (connectionString.isValidDnsSrv()) {
+      boolean isEncrypted = connectionString.scheme() == ConnectionString.Scheme.COUCHBASES;
+      String dnsHostname = connectionString.hosts().get(0).hostname();
+      try {
+        List<String> foundNodes = DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname);
+        if (foundNodes.isEmpty()) {
+          throw new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!");
+        }
+        builder.seedNodes(foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet()));
+      } catch (Exception ex) {
+        builder.seedNodes(populateSeedsFromConnectionString());
+      }
+    } else {
+      builder.seedNodes(populateSeedsFromConnectionString());
+    }
 
     for (Map.Entry<String, String> entry : connectionString.params().entrySet()) {
       try {
@@ -63,8 +71,19 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
           "Failed to apply connection string property \"" + entry.getKey() + "\". " + e.getMessage(), e);
       }
     }
+  }
 
-    builder.seedNodes(seeds);
+  private Set<SeedNode> populateSeedsFromConnectionString() {
+    final boolean schemeIsHttp = ConnectionString.Scheme.HTTP == connectionString.scheme();
+    return connectionString
+      .hosts()
+      .stream()
+      .map(a -> SeedNode.create(
+        a.hostname(),
+        !schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
+        schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty()
+      ))
+      .collect(Collectors.toSet());
   }
 
 }
