@@ -51,10 +51,6 @@ public class UserManager {
     return block(async.getAll());
   }
 
-  public void create(User user, String userPassword) {
-    block(async.create(user, userPassword));
-  }
-
   public void upsert(User user) {
     block(async.upsert(user));
   }

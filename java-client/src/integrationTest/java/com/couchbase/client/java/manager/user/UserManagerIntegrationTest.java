@@ -46,7 +46,6 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
-import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -101,9 +100,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void getAll() {
-    users.create(new User(USERNAME)
+    users.upsert(new User(USERNAME)
+        .password("password")
         .displayName("Integration Test User")
-        .roles(ADMIN), "password");
+        .roles(ADMIN));
 
     assertTrue(users.getAll().stream()
         .anyMatch(meta -> meta.user().username().equals(USERNAME)));
@@ -112,9 +112,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void createWithBadRole() {
     assertThrows(CouchbaseException.class, () -> {
-      users.create(new User(USERNAME)
+      users.upsert(new User(USERNAME)
+          .password("password")
           .displayName("Integration Test User")
-          .roles(new Role("bogus")), "password");
+          .roles(new Role("bogus")));
     });
   }
 
@@ -123,9 +124,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     final String origPassword = "password";
     final String newPassword = "newpassword";
 
-    users.create(new User(USERNAME)
+    users.upsert(new User(USERNAME)
+        .password(origPassword)
         .displayName("Integration Test User")
-        .roles(ADMIN), origPassword);
+        .roles(ADMIN));
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
     assertCanAuthenticate(USERNAME, origPassword);
@@ -149,8 +151,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     users.upsert(
         new User(USERNAME)
             .displayName("Renamed")
-            .roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD),
-        upsertUserOptions().password(newPassword));
+            .roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
+            .password(newPassword));
 
     assertCanAuthenticate(USERNAME, newPassword);
 

@@ -88,10 +88,6 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> create(User user, String userPassword) {
-    return upsert(user, upsertUserOptions().password(userPassword));
-  }
-
   public CompletableFuture<Void> upsert(User user) {
     return upsert(user, upsertUserOptions());
   }
@@ -112,7 +108,7 @@ public class AsyncUserManager extends ManagerSupport {
     }
 
     // Password is required when creating user, but optional when updating existing user.
-    options.password().ifPresent(pwd -> params.add("password", pwd));
+    user.password().ifPresent(pwd -> params.add("password", pwd));
 
     return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params).thenApply(response -> {
       checkStatus(response, "create user [" + redactUser(username) + "]");

@@ -113,14 +113,14 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(setOf(READ_ONLY_ADMIN), groups.get(GROUP_A).roles());
     assertEquals(setOf(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), groups.get(GROUP_B).roles());
 
-    users.create(new User(USERNAME)
-            .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
-            .groups(GROUP_A, GROUP_B),
-        "password");
+    users.upsert(new User(USERNAME)
+        .password("password")
+        .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
+        .groups(GROUP_A, GROUP_B));
 
     UserAndMetadata userMeta = users.get(AuthDomain.LOCAL, USERNAME);
 
-    assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.innateRoles());
+    assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.user().roles());
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD, READ_ONLY_ADMIN), userMeta.effectiveRoles());
 
     // xxx possibly flaky, depends on order of origins reported by server?
@@ -148,7 +148,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     // exercise the special-case code for upserting an empty group list.
 
     groups.upsert(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
-    users.create(new User(USERNAME).groups(GROUP_A), "password");
+    users.upsert(new User(USERNAME).password("password").groups(GROUP_A));
 
     UserAndMetadata userMeta = users.get(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(READ_ONLY_ADMIN), userMeta.effectiveRoles());

@@ -27,14 +27,4 @@ public class UpsertUserOptions {
     return new UpsertUserOptions();
   }
 
-  private Optional<String> password = Optional.empty();
-
-  public UpsertUserOptions password(String password) {
-    this.password = Optional.ofNullable(password);
-    return this;
-  }
-
-  public Optional<String> password() {
-    return password;
-  }
 }

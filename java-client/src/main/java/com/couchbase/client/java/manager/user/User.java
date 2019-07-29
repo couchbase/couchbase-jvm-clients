@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
@@ -32,6 +33,7 @@ public class User {
   private String displayName = "";
   private Set<String> groups = new HashSet<>();
   private Set<Role> innateRoles = new HashSet<>();
+  private Optional<String> password = Optional.empty();
 
   public User(String username) {
     this.username = requireNonNull(username);
@@ -39,6 +41,15 @@ public class User {
 
   public String username() {
     return username;
+  }
+
+  Optional<String> password() {
+    return password;
+  }
+
+  public User password(String newPassword) {
+    this.password = Optional.of(newPassword);
+    return this;
   }
 
   public String displayName() {
