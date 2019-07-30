@@ -17,12 +17,16 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,10 +34,14 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KeyValueIntegrationTest extends CoreIntegrationTest {
 
@@ -76,6 +84,21 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     assertTrue(getResponse.status().success());
     assertArrayEquals(content, getResponse.content());
     assertTrue(getResponse.cas() != 0);
+  }
+
+  @Test
+  @IgnoreWhen(hasCapabilities = { Capabilities.SYNC_REPLICATION })
+  void failFastIfSyncReplicationNotAvailable() {
+    String id = UUID.randomUUID().toString();
+    byte[] content = "hello, world".getBytes(UTF_8);
+
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0, Duration.ofSeconds(1),
+      core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
+      Optional.of(DurabilityLevel.MAJORITY));
+    core.send(insertRequest);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());
+    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
   }
 
 }

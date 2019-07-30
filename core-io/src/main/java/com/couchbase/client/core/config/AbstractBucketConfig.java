@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.CbCollections;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +29,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+
 public abstract class AbstractBucketConfig implements BucketConfig {
 
     private final String uuid;
@@ -37,7 +40,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final String streamingUri;
     private final List<NodeInfo> nodeInfo;
     private final int enabledServices;
-    private final List<BucketCapabilities> bucketCapabilities;
+    private final Set<BucketCapabilities> bucketCapabilities;
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final String origin;
 
@@ -51,7 +54,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.locator = locator;
         this.uri = uri;
         this.streamingUri = streamingUri;
-        this.bucketCapabilities = bucketCapabilities;
+        this.bucketCapabilities = convertBucketCapabilities(bucketCapabilities);
         this.clusterCapabilities = convertClusterCapabilities(clusterCapabilities);
         this.origin = origin;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
@@ -65,6 +68,13 @@ public abstract class AbstractBucketConfig implements BucketConfig {
             }
         }
         this.enabledServices = es;
+    }
+
+    static Set<BucketCapabilities> convertBucketCapabilities(final List<BucketCapabilities> input) {
+        if (isNullOrEmpty(input)) {
+            return Collections.emptySet();
+        }
+        return EnumSet.copyOf(input.stream().filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
     static Map<ServiceType, Set<ClusterCapabilities>> convertClusterCapabilities(
@@ -216,5 +226,10 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     @Override
     public Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities() {
         return clusterCapabilities;
+    }
+
+    @Override
+    public Set<BucketCapabilities> bucketCapabilities() {
+        return bucketCapabilities;
     }
 }

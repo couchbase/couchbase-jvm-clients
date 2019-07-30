@@ -13,6 +13,8 @@ public @interface IgnoreWhen {
 
   Capabilities[] missesCapabilities() default {};
 
+  Capabilities[] hasCapabilities() default {};
+
   int nodesLessThan() default 0;
 
   int nodesGreaterThan() default Integer.MAX_VALUE;

@@ -40,7 +40,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
+public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;
@@ -118,6 +118,11 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> {
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 
 }

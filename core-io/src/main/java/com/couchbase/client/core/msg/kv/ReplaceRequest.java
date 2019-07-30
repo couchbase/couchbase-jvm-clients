@@ -41,7 +41,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyn
  *
  * @since 2.0.0
  */
-public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
+public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;
@@ -121,4 +121,10 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> {
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
+  }
+
 }

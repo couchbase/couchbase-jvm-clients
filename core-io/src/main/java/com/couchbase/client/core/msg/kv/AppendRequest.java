@@ -33,7 +33,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
-public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
+public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long cas;
@@ -102,4 +102,10 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> {
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
+  }
+
 }

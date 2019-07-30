@@ -39,7 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
+public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;
@@ -119,6 +119,11 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> {
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 
 }

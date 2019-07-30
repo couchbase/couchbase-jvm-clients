@@ -124,4 +124,9 @@ public interface BucketConfig {
    */
   Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities();
 
+  /**
+   * Returns all the capabilities that are enabled and recognized on this bucket.
+   */
+  Set<BucketCapabilities> bucketCapabilities();
+
 }

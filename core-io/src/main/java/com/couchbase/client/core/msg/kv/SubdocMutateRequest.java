@@ -40,7 +40,7 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> {
+public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
@@ -277,6 +277,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
       return buffer;
     }
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 
 }

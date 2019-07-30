@@ -18,21 +18,26 @@ package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodePartitionLengthNotEqualEvent;
+import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
+import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.CRC32;
 
 /**
@@ -84,6 +89,10 @@ public class KeyValueLocator implements Locator {
 
   private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,
                                       final CouchbaseBucketConfig config, CoreContext ctx) {
+    if(!precheckCouchbaseBucket(request, config)) {
+      return;
+    }
+
     int partitionId = partitionForKey(request.key(), config.numberOfPartitions());
     request.partition((short) partitionId);
 
@@ -107,6 +116,19 @@ public class KeyValueLocator implements Locator {
     }
 
     throw new IllegalStateException("Node not found for request" + request);
+  }
+
+  private static boolean precheckCouchbaseBucket(final KeyValueRequest<?> request, final CouchbaseBucketConfig config) {
+    if (request instanceof SyncDurabilityRequest) {
+      Optional<DurabilityLevel> level = ((SyncDurabilityRequest) request).durabilityLevel();
+      if (level.isPresent()
+        && level.get() != DurabilityLevel.NONE
+        && !config.bucketCapabilities().contains(BucketCapabilities.DURABLE_WRITE)) {
+        request.fail(new FeatureNotAvailableException("Synchronous Durability is currently not available on this bucket"));
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -141,6 +163,10 @@ public class KeyValueLocator implements Locator {
    */
   private static void memcacheBucket(final KeyValueRequest<?> request, final List<Node> nodes,
                                      final MemcachedBucketConfig config, final CoreContext ctx) {
+    if(!precheckMemcacheBucket(request, config)) {
+      return;
+    }
+
     NodeIdentifier identifier = config.nodeForId(request.key());
     request.partition((short) 0);
 
@@ -158,6 +184,20 @@ public class KeyValueLocator implements Locator {
 
     throw new IllegalStateException("Node not found for request" + request);
   }
+
+  private static boolean precheckMemcacheBucket(final KeyValueRequest<?> request, final MemcachedBucketConfig config) {
+    if (request instanceof SyncDurabilityRequest) {
+      Optional<DurabilityLevel> level = ((SyncDurabilityRequest) request).durabilityLevel();
+      if (level.isPresent()
+        && level.get() != DurabilityLevel.NONE
+        && !config.bucketCapabilities().contains(BucketCapabilities.DURABLE_WRITE)) {
+        request.fail(new FeatureNotAvailableException("Synchronous Durability is not available for memcache buckets"));
+        return false;
+      }
+    }
+    return true;
+  }
+
 
   /**
    * Helper method to handle potentially different node sizes in the actual list and in the config.

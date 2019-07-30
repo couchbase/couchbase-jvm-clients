@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
-public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
+public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> implements SyncDurabilityRequest {
 
   public static final int COUNTER_NOT_EXISTS_EXPIRY = 0xffffffff;
 
@@ -105,5 +105,10 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> {
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 }

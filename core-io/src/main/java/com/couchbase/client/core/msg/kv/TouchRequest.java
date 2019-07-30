@@ -25,7 +25,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -38,7 +37,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 
-public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
+public class TouchRequest extends BaseKeyValueRequest<TouchResponse> implements SyncDurabilityRequest {
 
   private final long expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
@@ -93,4 +92,10 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
   }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
+  }
+
 }

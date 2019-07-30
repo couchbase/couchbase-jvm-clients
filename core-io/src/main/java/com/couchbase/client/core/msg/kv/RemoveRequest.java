@@ -26,7 +26,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -38,11 +37,10 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
+public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
 
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
-
 
   public RemoveRequest(final String key, final long cas, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,
@@ -92,6 +90,11 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> {
       ctx.bucket().get()
     );
     return new RemoveResponse(status, cas(response), mutationToken);
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 
 }

@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
-public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
+public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
 
   private final long delta;
   private final Optional<Long> initial;
@@ -104,6 +104,11 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> {
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
+  }
+
+  @Override
+  public Optional<DurabilityLevel> durabilityLevel() {
+    return syncReplicationType;
   }
 
 }

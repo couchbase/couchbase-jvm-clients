@@ -108,6 +108,12 @@ public class ClusterInvocationProvider
             neededCapability + " is missing on cluster based on @IgnoreWhen");
         }
       }
+      for (Capabilities unwantedCapability : found.hasCapabilities()) {
+        if (testCluster.config().capabilities().contains(unwantedCapability)) {
+          return ConditionEvaluationResult.disabled("Test disabled because capability of " +
+            unwantedCapability + " is present on cluster based on @IgnoreWhen");
+        }
+      }
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
   }
