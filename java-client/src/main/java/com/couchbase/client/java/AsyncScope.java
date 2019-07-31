@@ -106,10 +106,14 @@ public class AsyncScope {
   /**
    * Opens the default collection for this scope.
    *
+   * <p>Note that this method is package private because it is called from the bucket class only!</p>
+   *
    * @return the default collection once opened.
    */
-  public CompletableFuture<AsyncCollection> defaultCollection() {
-    return collection(CollectionIdentifier.DEFAULT_COLLECTION);
+  CompletableFuture<AsyncCollection> defaultCollection() {
+    return CompletableFuture.completedFuture(
+      new AsyncCollection(CollectionIdentifier.DEFAULT_COLLECTION, scopeName, bucketName, core, environment)
+    );
   }
 
   /**
@@ -122,15 +126,16 @@ public class AsyncScope {
   public CompletableFuture<AsyncCollection> collection(final String name) {
     notNullOrEmpty(name, "Name");
 
-    if (CollectionIdentifier.DEFAULT_COLLECTION.equals(name) && CollectionIdentifier.DEFAULT_SCOPE.equals(scopeName)) {
-      return CompletableFuture.completedFuture(new AsyncCollection(name, scopeName, bucketName, core, environment));
-    } else {
-      return core
-        .configurationProvider()
-        .refreshCollectionMap(bucketName, false)
-        .then(Mono.defer(() -> Mono.just(new AsyncCollection(name, scopeName, bucketName, core, environment))))
-        .toFuture();
+    if (name.equals(CollectionIdentifier.DEFAULT_COLLECTION)) {
+      throw new IllegalArgumentException("Referencing the default collection by name is not allowed, please use the" +
+        " provided explicit methods instead");
     }
+
+    return core
+      .configurationProvider()
+      .refreshCollectionMap(bucketName, false)
+      .then(Mono.defer(() -> Mono.just(new AsyncCollection(name, scopeName, bucketName, core, environment))))
+      .toFuture();
   }
 
 }

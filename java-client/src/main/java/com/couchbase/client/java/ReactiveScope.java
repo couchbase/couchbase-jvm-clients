@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import reactor.core.publisher.Mono;
 
@@ -33,11 +32,6 @@ import reactor.core.publisher.Mono;
 public class ReactiveScope {
 
   /**
-   * The name of the bucket at which this scope belongs.
-   */
-  private final String bucketName;
-
-  /**
    * The underlying async scope which actually performs the actions.
    */
   private final AsyncScope asyncScope;
@@ -46,11 +40,9 @@ public class ReactiveScope {
    * Creates a new {@link ReactiveScope}.
    *
    * @param asyncScope the underlying async scope.
-   * @param bucketName the name of the bucket this scope belongs to.
    */
-  ReactiveScope(final AsyncScope asyncScope, final String bucketName) {
+  ReactiveScope(final AsyncScope asyncScope) {
     this.asyncScope = asyncScope;
-    this.bucketName = bucketName;
   }
 
   /**
@@ -66,7 +58,7 @@ public class ReactiveScope {
    * The name of the bucket this scope is attached to.
    */
   public String bucketName() {
-    return bucketName;
+    return asyncScope.bucketName();
   }
 
   /**
@@ -98,8 +90,8 @@ public class ReactiveScope {
    *
    * @return the default collection once opened.
    */
-  public Mono<ReactiveCollection> defaultCollection() {
-    return collection(CollectionIdentifier.DEFAULT_COLLECTION);
+  Mono<ReactiveCollection> defaultCollection() {
+    return Mono.fromFuture(asyncScope.defaultCollection()).map(ReactiveCollection::new);
   }
 
   /**
@@ -110,9 +102,7 @@ public class ReactiveScope {
    */
   @Stability.Volatile
   public Mono<ReactiveCollection> collection(final String name) {
-    return Mono
-      .fromFuture(asyncScope.collection(name))
-      .map(ReactiveCollection::new);
+    return Mono.fromFuture(asyncScope.collection(name)).map(ReactiveCollection::new);
   }
 
 }

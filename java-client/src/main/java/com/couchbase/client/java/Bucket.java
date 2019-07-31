@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
@@ -97,9 +96,17 @@ public class Bucket {
    */
   @Stability.Volatile
   public Scope scope(final String name) {
-    return block(asyncBucket.scope(name)
-      .thenApply(Scope::new)
-    );
+    return block(asyncBucket.scope(name).thenApply(Scope::new));
+  }
+
+  /**
+   * Opens the default {@link Scope}.
+   *
+   * @return the {@link Scope} once opened.
+   */
+  @Stability.Volatile
+  public Scope defaultScope() {
+    return block(asyncBucket.defaultScope().thenApply(Scope::new));
   }
 
   /**
@@ -108,7 +115,7 @@ public class Bucket {
    * @return the {@link Collection} once opened.
    */
   public Collection defaultCollection() {
-    return scope(CollectionIdentifier.DEFAULT_SCOPE).defaultCollection();
+    return defaultScope().defaultCollection();
   }
 
   /**
@@ -118,7 +125,7 @@ public class Bucket {
    */
   @Stability.Volatile
   public Collection collection(final String name) {
-    return scope(CollectionIdentifier.DEFAULT_SCOPE).collection(name);
+    return defaultScope().collection(name);
   }
 
   public ViewResult viewQuery(final String designDoc, final String viewName) {

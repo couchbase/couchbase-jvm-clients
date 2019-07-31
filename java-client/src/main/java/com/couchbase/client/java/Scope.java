@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -94,8 +93,8 @@ public class Scope {
    *
    * @return the default collection once opened.
    */
-  public Collection defaultCollection() {
-    return collection(CollectionIdentifier.DEFAULT_COLLECTION);
+  Collection defaultCollection() {
+    return new Collection(block(asyncScope.defaultCollection()));
   }
 
   /**

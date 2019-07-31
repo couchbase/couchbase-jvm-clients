@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.ViewAccessor;
@@ -87,9 +86,17 @@ public class ReactiveBucket {
    */
   @Stability.Volatile
   public Mono<ReactiveScope> scope(final String name) {
-    return Mono
-      .fromFuture(asyncBucket.scope(name))
-      .map(asyncScope -> new ReactiveScope(asyncScope, asyncBucket.name()));
+    return Mono.fromFuture(asyncBucket.scope(name)).map(ReactiveScope::new);
+  }
+
+  /**
+   * Opens the default {@link ReactiveScope}.
+   *
+   * @return the {@link ReactiveScope} once opened.
+   */
+  @Stability.Volatile
+  public Mono<ReactiveScope> defaultScope() {
+    return Mono.fromFuture(asyncBucket.defaultScope()).map(ReactiveScope::new);
   }
 
   /**
@@ -98,7 +105,7 @@ public class ReactiveBucket {
    * @return the {@link ReactiveCollection} once opened.
    */
   public Mono<ReactiveCollection> defaultCollection() {
-    return scope(CollectionIdentifier.DEFAULT_SCOPE).flatMap(ReactiveScope::defaultCollection);
+    return defaultScope().flatMap(ReactiveScope::defaultCollection);
   }
 
   /**
@@ -108,7 +115,7 @@ public class ReactiveBucket {
    */
   @Stability.Volatile
   public Mono<ReactiveCollection> collection(final String name) {
-    return scope(CollectionIdentifier.DEFAULT_SCOPE).flatMap(reactiveScope -> reactiveScope.collection(name));
+    return defaultScope().flatMap(reactiveScope -> reactiveScope.collection(name));
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {
