@@ -24,10 +24,12 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableList;
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -43,6 +45,8 @@ public class RoleAndOrigins {
    * An origin of type {@code "group"} means the role is inherited from the group identified by the {@code name} field.
    */
   public static class Origin {
+    private static final Origin USER = new Origin("user", null);
+
     private final String type;
     private final Optional<String> name;
 
@@ -79,7 +83,11 @@ public class RoleAndOrigins {
 
   public RoleAndOrigins(Role role, List<Origin> origins) {
     this.role = requireNonNull(role);
-    this.origins = copyToUnmodifiableList(origins);
+
+    // Couchbase versions prior to 6.5 do not return origins since all roles are implicitly innate to the user.
+    this.origins = isNullOrEmpty(origins)
+        ? Collections.singletonList(Origin.USER)
+        : copyToUnmodifiableList(origins);
   }
 
   /**
