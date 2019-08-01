@@ -116,6 +116,14 @@ public enum ResponseStatus {
   SYNC_WRITE_IN_PROGRESS,
 
   /**
+   * Returned if the requested key has a SyncWrite which is being re-committed.
+   *
+   * <p>Transient, the client would typically retry (possibly with backoff). Similar to
+   * ELOCKED.</p>
+   */
+  SYNC_WRITE_RE_COMMIT_IN_PROGRESS,
+
+  /**
    * The SyncWrite request has not completed in the specified time and has ambiguous result.
    *
    * <p>it may Succeed or Fail; but the final value is not yet known.</p>

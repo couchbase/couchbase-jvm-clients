@@ -436,6 +436,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.SYNC_WRITE_AMBIGUOUS;
     } else if (status == Status.SYNC_WRITE_IN_PROGRESS.status) {
       return ResponseStatus.SYNC_WRITE_IN_PROGRESS;
+    } else if (status == Status.SYNC_WRITE_RE_COMMIT_IN_PROGRESS.status) {
+      return ResponseStatus.SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
             || status == Status.SUBDOC_DOC_NOT_JSON.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
@@ -951,6 +953,14 @@ public enum MemcacheProtocol {
      * ELOCKED.</p>
      */
     SYNC_WRITE_IN_PROGRESS((short) 0xa2),
+
+    /**
+     * Returned if the requested key has a SyncWrite which is being re-committed.
+     *
+     * <p>Transient, the client would typically retry (possibly with backoff). Similar to
+     * ELOCKED.</p>
+     */
+    SYNC_WRITE_RE_COMMIT_IN_PROGRESS((short) 0xa4),
 
     /**
      * The SyncWrite request has not completed in the specified time and has ambiguous result.

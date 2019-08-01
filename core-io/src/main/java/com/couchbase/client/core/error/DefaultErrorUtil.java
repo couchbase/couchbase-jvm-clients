@@ -40,6 +40,7 @@ public class DefaultErrorUtil {
             case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException();
             case SYNC_WRITE_AMBIGUOUS: return new DurabilityAmbiguousException();
             case SYNC_WRITE_IN_PROGRESS: return new DurableWriteInProgressException();
+            case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: return new DurableWriteReCommitInProgressException();
 
                 // Any other error should not make it to this generic error handling
                 // NOT_MY_VBUCKET - handled at a lower level by retrying the request
