@@ -16,7 +16,7 @@
     <description>The official Couchbase JVM Core IO Library</description>
 
     <properties>
-        <core-io-deps.version>1.0.0-alpha.6</core-io-deps.version>
+        <core-io-deps.version>1.0.0-alpha.7-SNAPSHOT</core-io-deps.version>
     </properties>
 
     <dependencies>

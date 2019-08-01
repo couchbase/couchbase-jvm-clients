@@ -21,8 +21,10 @@
         <!--Can override this with mvn -Dscala.compat.version=2.11-->
         <scala.compat.version>2.12</scala.compat.version>
         <scala.compat.library.version>2.12.8</scala.compat.library.version>
+        <gpg.keyname></gpg.keyname>
+        <gpg.passphrase></gpg.passphrase>
     </properties>
-    
+
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -30,7 +32,7 @@
         </snapshotRepository>
         <repository>
             <id>ossrh</id>
-            <url>//oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 
@@ -133,6 +135,7 @@
                     <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 
@@ -162,5 +165,37 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>CI</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <keyname>${gpg.keyname}</keyname>
+                                    <passphraseServerId>${gpg.keyname}</passphraseServerId>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
