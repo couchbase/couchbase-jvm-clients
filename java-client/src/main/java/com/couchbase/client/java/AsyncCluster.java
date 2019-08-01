@@ -30,7 +30,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.manager.AsyncSearchIndexManager;
+import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
 import com.couchbase.client.java.manager.bucket.AsyncBucketManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;

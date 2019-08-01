@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager;
+package com.couchbase.client.java.manager.search;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 

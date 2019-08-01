@@ -18,8 +18,8 @@ package com.couchbase.client.java.examples.manage;
 
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.manager.SearchIndexManager;
-import com.couchbase.client.java.manager.SearchIndex;
+import com.couchbase.client.java.manager.search.SearchIndexManager;
+import com.couchbase.client.java.manager.search.SearchIndex;
 
 /**
  * This example shows how to load, create, update and remove search indexes.

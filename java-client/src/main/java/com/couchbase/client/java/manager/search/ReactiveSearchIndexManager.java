@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager;
+package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.search.GetSearchIndexRequest;

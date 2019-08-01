@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.manager.SearchIndex;
+import com.couchbase.client.java.manager.search.SearchIndex;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;

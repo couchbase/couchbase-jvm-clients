@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager;
+package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;

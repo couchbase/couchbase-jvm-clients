@@ -25,7 +25,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.manager.SearchIndexManager;
+import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
 import com.couchbase.client.java.manager.user.UserManager;
 import com.couchbase.client.java.query.QueryOptions;
