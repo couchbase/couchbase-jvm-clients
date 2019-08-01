@@ -43,5 +43,9 @@ public enum Capabilities {
   /**
    * This cluster is able to assign users to groups.
    */
-  USER_GROUPS
+  USER_GROUPS,
+  /**
+   * The cluster has collections enabled.
+   */
+  COLLECTIONS
 }

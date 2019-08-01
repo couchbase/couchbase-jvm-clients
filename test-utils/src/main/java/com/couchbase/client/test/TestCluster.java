@@ -185,6 +185,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       // same for user groups
       capabilities.add(Capabilities.USER_GROUPS);
     }
+    if (bucketCapabilities.contains("collections")) {
+      capabilities.add(Capabilities.COLLECTIONS);
+    }
     return capabilities;
   }
 
