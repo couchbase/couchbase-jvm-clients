@@ -19,15 +19,16 @@ package com.couchbase.client.core.service;
 import java.time.Duration;
 
 public class KeyValueServiceConfig implements ServiceConfig {
+
   public static final int DEFAULT_ENDPOINTS = 1;
 
   private final int endpoints;
 
-  public static KeyValueServiceConfig.Builder builder() {
+  public static Builder builder() {
     return new Builder().endpoints(DEFAULT_ENDPOINTS);
   }
 
-  public static KeyValueServiceConfig.Builder endpoints(int endpoints) {
+  public static Builder endpoints(int endpoints) {
     return builder().endpoints(endpoints);
   }
 

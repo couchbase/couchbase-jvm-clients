@@ -17,6 +17,7 @@ package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
 import com.couchbase.client.core.service
+import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
@@ -93,9 +94,9 @@ case class KeyValueServiceConfig(private[scala] val endpoints: Option[Int] = Non
   }
 }
 
-case class QueryServiceConfig(private[scala] val minEndpoints: Int = core.service.QueryServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                              private[scala] val maxEndpoints: Int = core.service.QueryServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                              private[scala] val idleTime: Duration = core.service.QueryServiceConfig.DEFAULT_IDLE_TIME) {
+case class QueryServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+                              private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+                              private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
 
   private[scala] def toCore: service.QueryServiceConfig.Builder = {
     service.QueryServiceConfig.builder()
@@ -115,9 +116,9 @@ case class QueryServiceConfig(private[scala] val minEndpoints: Int = core.servic
   }
 }
 
-case class ViewServiceConfig(private[scala] val minEndpoints: Int = core.service.ViewServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                             private[scala] val maxEndpoints: Int = core.service.ViewServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                             private[scala] val idleTime: Duration = core.service.ViewServiceConfig.DEFAULT_IDLE_TIME) {
+case class ViewServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+                             private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+                             private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
 
   private[scala] def toCore: service.ViewServiceConfig.Builder = {
     service.ViewServiceConfig.builder()
@@ -137,9 +138,9 @@ case class ViewServiceConfig(private[scala] val minEndpoints: Int = core.service
   }
 }
 
-case class SearchServiceConfig(private[scala] val minEndpoints: Int = core.service.SearchServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                               private[scala] val maxEndpoints: Int = core.service.SearchServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                               private[scala] val idleTime: Duration = core.service.SearchServiceConfig.DEFAULT_IDLE_TIME) {
+case class SearchServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+                               private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+                               private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
 
   private[scala] def toCore: service.SearchServiceConfig.Builder = {
     service.SearchServiceConfig.builder()
@@ -159,9 +160,9 @@ case class SearchServiceConfig(private[scala] val minEndpoints: Int = core.servi
   }
 }
 
-case class AnalyticsServiceConfig(private[scala] val minEndpoints: Int = core.service.AnalyticsServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                                  private[scala] val maxEndpoints: Int = core.service.AnalyticsServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                                  private[scala] val idleTime: Duration = core.service.AnalyticsServiceConfig.DEFAULT_IDLE_TIME) {
+case class AnalyticsServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+                                  private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+                                  private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
 
   private[scala] def toCore: service.AnalyticsServiceConfig.Builder = {
     service.AnalyticsServiceConfig.builder()

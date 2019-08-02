@@ -20,10 +20,6 @@ import java.time.Duration;
 
 public class ViewServiceConfig extends AbstractPooledEndpointServiceConfig {
 
-  public static final int DEFAULT_MAX_ENDPOINTS = 12;
-  public static final int DEFAULT_MIN_ENDPOINTS = 0;
-  public static final Duration DEFAULT_IDLE_TIME = Duration.ofMinutes(5);
-
   public static Builder builder() {
     return new Builder()
       .minEndpoints(DEFAULT_MIN_ENDPOINTS)

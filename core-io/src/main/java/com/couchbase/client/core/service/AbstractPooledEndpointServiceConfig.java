@@ -20,7 +20,12 @@ import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractPooledEndpointServiceConfig implements ServiceConfig {
+public abstract class AbstractPooledEndpointServiceConfig implements ServiceConfig {
+
+  public static final int DEFAULT_MAX_ENDPOINTS = 12;
+  public static final int DEFAULT_MIN_ENDPOINTS = 0;
+  public static final Duration DEFAULT_IDLE_TIME = Duration.ofMinutes(5);
+
   private final int minEndpoints;
   private final int maxEndpoints;
   private final Duration idleTime;
