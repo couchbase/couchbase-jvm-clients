@@ -64,6 +64,8 @@ class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
 
     assertNotNull(globalConfigContext);
     assertNotNull(globalConfigContext.config());
+
+    core.shutdown().block();
   }
 
 }

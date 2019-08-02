@@ -71,6 +71,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   static void setup() {
     environment = environment().build();
     cluster = Cluster.connect(environment);
+    cluster.bucket(config().bucketname());
     users = cluster.users();
     groups = cluster.users().groups();
   }

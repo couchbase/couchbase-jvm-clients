@@ -97,7 +97,7 @@ public class SimpleEventBus implements EventBus {
   }
 
   public synchronized List<Event> publishedEvents() {
-    return publishedEvents;
+    return new ArrayList<>(publishedEvents);
   }
 
   @Override
