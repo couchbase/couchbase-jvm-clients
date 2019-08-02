@@ -72,8 +72,6 @@ public class ConnectionString {
             return Scheme.COUCHBASE;
         } else if (input.startsWith("couchbases://")) {
             return Scheme.COUCHBASES;
-        } else if (input.startsWith("http://")) {
-            return Scheme.HTTP;
         } else {
             throw new CouchbaseException("Could not parse Scheme of connection string: " + input);
         }
@@ -193,7 +191,6 @@ public class ConnectionString {
     }
 
     public enum Scheme {
-        HTTP,
         COUCHBASE,
         COUCHBASES
     }

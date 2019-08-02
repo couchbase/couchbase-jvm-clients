@@ -38,11 +38,6 @@ class ConnectionStringTest {
     assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
     assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
-
-    parsed = ConnectionString.create("http://");
-    assertEquals(ConnectionString.Scheme.HTTP, parsed.scheme());
-    assertTrue(parsed.hosts().isEmpty());
-    assertTrue(parsed.params().isEmpty());
   }
 
   @Test

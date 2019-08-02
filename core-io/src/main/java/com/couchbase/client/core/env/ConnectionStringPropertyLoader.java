@@ -19,7 +19,6 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.DnsSrv;
 
-import javax.naming.NamingException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,14 +73,13 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
   }
 
   private Set<SeedNode> populateSeedsFromConnectionString() {
-    final boolean schemeIsHttp = ConnectionString.Scheme.HTTP == connectionString.scheme();
     return connectionString
       .hosts()
       .stream()
       .map(a -> SeedNode.create(
         a.hostname(),
-        !schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
-        schemeIsHttp && a.port() > 0 ? Optional.of(a.port()) : Optional.empty()
+        a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
+        Optional.empty()
       ))
       .collect(Collectors.toSet());
   }
