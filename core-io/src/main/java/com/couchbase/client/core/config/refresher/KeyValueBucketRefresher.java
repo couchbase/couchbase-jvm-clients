@@ -134,13 +134,22 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
 
     pollRegistration = Flux
-      .interval(POLLER_INTERVAL)
+      .interval(pollerInterval())
       .filter(v -> !registrations.isEmpty())
       .flatMap(ignored -> Flux
         .fromIterable(registrations.keySet())
         .flatMap(KeyValueBucketRefresher.this::maybeUpdateBucket)
       )
       .subscribe(provider::proposeBucketConfig);
+  }
+
+  /**
+   * Allows to override the default poller interval in tests to speed them up.
+   *
+   * @return the poller interval as a duration.
+   */
+  protected Duration pollerInterval() {
+    return POLLER_INTERVAL;
   }
 
   /**

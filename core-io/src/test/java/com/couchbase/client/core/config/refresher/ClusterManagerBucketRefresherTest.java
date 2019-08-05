@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,10 +48,12 @@ class ClusterManagerBucketRefresherTest {
   private CoreEnvironment env;
   private Core core;
   private ClusterManagerBucketRefresher refresher;
+  private SimpleEventBus eventBus;
 
   @BeforeEach
   void beforeEach() {
-    env = CoreEnvironment.create("username", "password");
+    eventBus = new SimpleEventBus(true);
+    env = CoreEnvironment.builder("username", "password").eventBus(eventBus).build();
 
     CoreContext coreContext = mock(CoreContext.class);
     core = mock(Core.class);

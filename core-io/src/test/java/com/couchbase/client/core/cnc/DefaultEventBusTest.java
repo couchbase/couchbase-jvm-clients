@@ -92,27 +92,18 @@ class DefaultEventBusTest {
   @Test
   void shutsDownOnlyOnceAllEventsConsumed() {
     DefaultEventBus eventBus = DefaultEventBus.create();
-
     eventBus.start().block();
 
+    int eventsSent = 1000;
     AtomicInteger eventsReceived = new AtomicInteger();
-    eventBus.subscribe(event -> {
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        // ignored on purpose!
-      }
-      eventsReceived.incrementAndGet();
-    });
+    eventBus.subscribe(event -> eventsReceived.incrementAndGet());
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < eventsSent; i++) {
       eventBus.publish(mock(Event.class));
     }
 
-    long start = System.nanoTime();
     eventBus.stop(Duration.ofSeconds(5)).block();
-    long end = System.nanoTime();
-    assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 1000);
+    assertEquals(eventsReceived.get(), eventsSent);
   }
 
 }

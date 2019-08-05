@@ -43,12 +43,12 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
   private static final Duration MAX_WAIT = Duration.ofSeconds(10);
 
-  private Core core;
-  private CoreEnvironment env;
-  private CollectionIdentifier cid;
+  private static Core core;
+  private static CoreEnvironment env;
+  private static CollectionIdentifier cid;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     env = environment()
       .ioConfig(IoConfig.mutationTokensEnabled(true))
       .build();
@@ -57,8 +57,8 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
     cid = CollectionIdentifier.fromDefault(config().bucketname());
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     core.shutdown().block();
     env.shutdown();
   }
@@ -147,7 +147,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
       String id = UUID.randomUUID().toString();
       InsertResponse insertResponse = performInsert(id);
 
-      Duration timeout = Duration.ofSeconds(1);
+      Duration timeout = Duration.ofMillis(100);
       ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
         Observe.ObserveReplicateTo.ONE, Optional.empty(), insertResponse.cas(), cid,
         id, false, timeout);

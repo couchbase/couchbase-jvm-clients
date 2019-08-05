@@ -49,7 +49,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .ioConfig(IoConfig.configPollInterval(Duration.ofSeconds(1)))
+      .ioConfig(IoConfig.configPollInterval(Duration.ofMillis(100)))
       .build();
   }
 
@@ -59,11 +59,17 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  void pollsForNewConfigs() throws Exception {
+  void pollsForNewConfigs() {
     Core core = Core.create(env);
 
-    ProposedBucketConfigInspectingProvider inspectingProvider = new ProposedBucketConfigInspectingProvider(core.configurationProvider());
-    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(inspectingProvider, core);
+    ProposedBucketConfigInspectingProvider inspectingProvider =
+      new ProposedBucketConfigInspectingProvider(core.configurationProvider());
+    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(inspectingProvider, core) {
+      @Override
+      protected Duration pollerInterval() {
+        return Duration.ofMillis(10); // fire quickly to speed up the integration test.
+      }
+    };
 
     core.openBucket(config().bucketname()).block();
 
@@ -73,13 +79,14 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
     long expected = env.ioConfig().configPollInterval().toNanos();
 
-    assertTrue((inspectingProvider.proposedTimings().get(1) - inspectingProvider.proposedTimings().get(0)) > expected);
+    assertTrue(
+      (inspectingProvider.proposedTimings().get(1) - inspectingProvider.proposedTimings().get(0)) > expected
+    );
 
     refresher.deregister(config().bucketname()).block();
 
     long size = inspectingProvider.proposedTimings().size();
-    Thread.sleep(env.ioConfig().configPollInterval().toMillis());
-    assertEquals(size, inspectingProvider.proposedTimings().size());
+    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() == size);
 
     for (ProposedBucketConfigContext config : inspectingProvider.proposedConfigs()) {
       assertEquals(config().bucketname(), config.bucketName());

@@ -44,7 +44,7 @@ class DiagnosticsMonitorTest {
 
     SimpleEventBus eventBus = new SimpleEventBus(false);
     DiagnosticsMonitor monitor = DiagnosticsMonitor.builder(eventBus)
-      .emitInterval(Duration.ofSeconds(2))
+      .emitInterval(Duration.ofMillis(100))
       .build();
 
     monitor.start().block();

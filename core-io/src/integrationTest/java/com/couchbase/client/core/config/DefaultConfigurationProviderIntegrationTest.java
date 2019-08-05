@@ -17,6 +17,8 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.env.TimeoutConfig;
@@ -25,6 +27,7 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -151,11 +154,13 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
   void propagateErrorFromInvalidSeedHostname() {
     Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create("1.2.3.4")));
 
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
       .seedNodes(seeds)
+      .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig
-        .kvTimeout(Duration.ofMillis(500))
-        .managerTimeout(Duration.ofMillis(500))
+        .kvTimeout(Duration.ofMillis(100))
+        .managerTimeout(Duration.ofMillis(100))
       )
       .build();
     core = Core.create(environment);
@@ -167,8 +172,16 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
     long end = System.nanoTime();
 
-    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 1);
+    assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 200);
     provider.shutdown().block();
+
+    int remoteSideDisconnectedEvents = 0;
+    for (Event event : eventBus.publishedEvents()) {
+      if (event instanceof UnexpectedEndpointDisconnectedEvent) {
+        remoteSideDisconnectedEvents++;
+      }
+    }
+    assertTrue(remoteSideDisconnectedEvents > 0);
   }
 
   /**

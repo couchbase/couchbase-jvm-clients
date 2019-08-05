@@ -24,12 +24,13 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import org.junit.Ignore;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,18 +41,18 @@ import static org.junit.Assert.*;
 
 class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
 
-  private Core core;
-  private CoreEnvironment env;
+  private static Core core;
+  private static CoreEnvironment env;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     env = environment().build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     core.shutdown().block();
     env.shutdown();
   }
@@ -80,7 +81,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
    */
   private void checkExpectedFailure(String input, List<SubdocGetRequest.Command> commands, Class<?> expected) {
     String id = UUID.randomUUID().toString();
-    byte[] content = insertContent(id, input);
+    insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
       CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
@@ -104,7 +105,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
    */
   private SubdocGetResponse checkExpectedSuccess(String input, List<SubdocGetRequest.Command> commands) {
     String id = UUID.randomUUID().toString();
-    byte[] content = insertContent(id, input);
+    insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
       CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
@@ -125,8 +126,9 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
    * Perform a single get subdoc operation and assert the result is the expected exception
    */
   private void singleGetOpCheckExpectedFailure(String input, String path, Class<?> expected) {
-    List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false));
+    List<SubdocGetRequest.Command> commands = Collections.singletonList(
+      new SubdocGetRequest.Command(SubdocCommandType.GET, path, false)
+    );
 
     checkExpectedFailure(input, commands, expected);
   }
@@ -142,8 +144,9 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Ignore
   void notJsonMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "bar",  false));
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "bar",  false)
+    );
 
     checkExpectedFailure("I am not json!", commands, DocumentNotJsonException.class);
   }
@@ -156,11 +159,11 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   @Test
   void pathMismatchMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo.bar[0].baz",  false));
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "foo.bar[0].baz",  false)
+    );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
-
     assertTrue(response.values().get(0).status().success());
     assertEquals(SubDocumentOpResponseStatus.PATH_MISMATCH, response.values().get(1).status());
     assertTrue(response.values().get(1).error().get() instanceof PathMismatchException);
@@ -171,15 +174,14 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     singleGetOpCheckExpectedFailure("{\"foo\":\"bar\"}", "no_exist", PathNotFoundException.class);
   }
 
-
   @Test
   void pathNotFoundMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "no_exist",  false));
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false),
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "no_exist",  false)
+    );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
-
     assertTrue(response.values().get(0).status().success());
     assertEquals(SubDocumentOpResponseStatus.PATH_NOT_FOUND, response.values().get(1).status());
     assertTrue(response.values().get(1).error().get() instanceof PathNotFoundException);
@@ -189,31 +191,32 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void existsDoesExistSingle() {
-    List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "foo",  false));
+    List<SubdocGetRequest.Command> commands = Collections.singletonList(
+      new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "foo", false)
+    );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
-
     assertTrue(response.values().get(0).status().success());
-
   }
 
   @Test
   void existsDoesNotExistSingle() {
-    List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false));
+    List<SubdocGetRequest.Command> commands = Collections.singletonList(
+      new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat", false)
+    );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
     assertFalse(response.values().get(0).status().success());
-    assertEquals(SubdocCommandType.EXISTS, response.values().get(0).type());  }
+    assertEquals(SubdocCommandType.EXISTS, response.values().get(0).type());
+  }
 
 
   @Test
   void existsDoesNotExistMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false),
-            new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false)
-            );
+      new SubdocGetRequest.Command(SubdocCommandType.EXISTS, "cat",  false),
+      new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false)
+    );
 
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
     assertFalse(response.values().get(0).status().success());

@@ -21,8 +21,8 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -37,20 +37,20 @@ import static org.junit.Assert.assertTrue;
 
 class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
-  private Core core;
-  private CoreEnvironment env;
-  private CollectionIdentifier collectionIdentifier;
+  private static Core core;
+  private static CoreEnvironment env;
+  private static CollectionIdentifier collectionIdentifier;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     env = environment().ioConfig(IoConfig.mutationTokensEnabled(true)).build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
     collectionIdentifier = CollectionIdentifier.fromDefault(config().bucketname());
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     core.shutdown().block();
     env.shutdown();
   }
