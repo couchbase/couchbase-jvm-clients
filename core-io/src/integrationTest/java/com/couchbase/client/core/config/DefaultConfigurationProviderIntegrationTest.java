@@ -44,6 +44,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.util.Utils.waitUntilCondition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -174,14 +175,6 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 200);
     provider.shutdown().block();
-
-    int remoteSideDisconnectedEvents = 0;
-    for (Event event : eventBus.publishedEvents()) {
-      if (event instanceof UnexpectedEndpointDisconnectedEvent) {
-        remoteSideDisconnectedEvents++;
-      }
-    }
-    assertTrue(remoteSideDisconnectedEvents > 0);
   }
 
   /**
