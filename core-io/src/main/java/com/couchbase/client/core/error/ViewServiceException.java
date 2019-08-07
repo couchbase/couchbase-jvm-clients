@@ -16,35 +16,26 @@
 
 package com.couchbase.client.core.error;
 
-import java.nio.charset.StandardCharsets;
-
 /**
  * There was a problem fulfilling the view request.
- *
+ * <p>
  * Check <code>content()</code> for further details.
  *
- * @author Graham Pople
  * @since 2.0.0
  */
 public class ViewServiceException extends CouchbaseException {
-    private final String message;
+  private final String content;
 
-    public ViewServiceException(byte[] message) {
-        super();
-        this.message = new String(message, StandardCharsets.UTF_8);
-    }
+  public ViewServiceException(String message) {
+    this(message, null);
+  }
 
-    public ViewServiceException(String message) {
-        super();
-        this.message = message;
-    }
+  public ViewServiceException(String message, Throwable cause) {
+    super("View Query Failed: " + message, cause);
+    this.content = message;
+  }
 
-    public String content() {
-        return message;
-    }
-
-    @Override
-    public String getMessage() {
-        return "View Query Failed: " + message;
-    }
+  public String content() {
+    return content;
+  }
 }

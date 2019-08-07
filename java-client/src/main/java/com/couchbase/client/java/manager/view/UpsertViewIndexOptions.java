@@ -14,32 +14,24 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.util;
+package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
 
-@Stability.Internal
-public class CbStrings {
-  private CbStrings() {
-    throw new AssertionError("not instantiable");
+public class UpsertViewIndexOptions extends CommonOptions<UpsertViewIndexOptions> {
+  private UpsertViewIndexOptions() {
   }
 
-  public static String nullToEmpty(String s) {
-    return s == null ? "" : s;
+  public static UpsertViewIndexOptions upsertDesignDocumentOptions() {
+    return new UpsertViewIndexOptions();
   }
 
-  public static String emptyToNull(String s) {
-    return isNullOrEmpty(s) ? null : s;
+  @Stability.Internal
+  public Built build() {
+    return new Built();
   }
 
-  public static boolean isNullOrEmpty(String s) {
-    return s == null || s.isEmpty();
-  }
-
-  public static String removeStart(String s, String removeMe) {
-    if (s == null || removeMe == null) {
-      return s;
-    }
-    return s.startsWith(removeMe) ? s.substring(removeMe.length()) : s;
+  public class Built extends BuiltCommonOptions {
   }
 }

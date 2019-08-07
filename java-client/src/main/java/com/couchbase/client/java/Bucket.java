@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.CollectionManager;
+import com.couchbase.client.java.manager.view.ViewIndexManager;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
@@ -43,6 +44,8 @@ public class Bucket {
 
   private final CollectionManager collectionManager;
 
+  private final ViewIndexManager viewManager;
+
   /**
    * Constructs a new {@link Bucket}.
    *
@@ -52,6 +55,7 @@ public class Bucket {
     this.asyncBucket = asyncBucket;
     this.reactiveBucket = new ReactiveBucket(asyncBucket);
     this.collectionManager = new CollectionManager(asyncBucket.collections());
+    this.viewManager = new ViewIndexManager(asyncBucket.views());
   }
 
   /**
@@ -86,6 +90,11 @@ public class Bucket {
   @Stability.Volatile
   public CollectionManager collections() {
     return collectionManager;
+  }
+
+  @Stability.Volatile
+  public ViewIndexManager views() {
+    return viewManager;
   }
 
   /**

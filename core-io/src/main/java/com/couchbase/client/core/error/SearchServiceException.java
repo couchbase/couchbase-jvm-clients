@@ -16,40 +16,26 @@
 
 package com.couchbase.client.core.error;
 
-import java.nio.charset.StandardCharsets;
-
 /**
  * There was a problem fulfilling the search request.
- *
+ * <p>
  * Check <code>content()</code> for further details.
  *
- * @author Graham Pople
  * @since 2.0.0
  */
 public class SearchServiceException extends CouchbaseException {
-    private final byte[] content;
+  private final String content;
 
-    public SearchServiceException(String message) {
-        super();
-        this.content = message.getBytes(StandardCharsets.UTF_8);
-    }
+  public SearchServiceException(String message) {
+    this(message, null);
+  }
 
-    public SearchServiceException(String message, Throwable cause) {
-        super(message, cause);
-        this.content = message.getBytes(StandardCharsets.UTF_8);
-    }
+  public SearchServiceException(String message, Throwable cause) {
+    super("Search Query Failed: " + message, cause);
+    this.content = message;
+  }
 
-    public SearchServiceException(byte[] content) {
-        super();
-        this.content = content;
-    }
-
-    public byte[] content() {
-        return content;
-    }
-
-    @Override
-    public String getMessage() {
-        return "Search Query Failed: " + new String(content, StandardCharsets.UTF_8);
-    }
+  public String content() {
+    return content;
+  }
 }

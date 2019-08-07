@@ -145,7 +145,7 @@ class NonChunkedHttpMessageHandlerTest {
     }
 
     @Override
-    protected Exception failRequestWith(String content) {
+    protected Exception failRequestWith(HttpResponseStatus status, String content) {
       return new Exception(content);
     }
 

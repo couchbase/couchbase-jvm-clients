@@ -41,11 +41,11 @@ public class ViewError {
   }
 
   @Stability.Internal
-  public byte[] reassemble() {
+  public String reassemble() {
     Map<String, String> converted = new HashMap<>(2);
     converted.put("error", error);
     converted.put("reason", reason);
-    return Mapper.encodeAsBytes(converted);
+    return Mapper.encodeAsString(converted);
   }
 
 }

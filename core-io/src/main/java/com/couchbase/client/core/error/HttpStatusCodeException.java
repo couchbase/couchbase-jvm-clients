@@ -14,32 +14,25 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.util;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 
 @Stability.Internal
-public class CbStrings {
-  private CbStrings() {
-    throw new AssertionError("not instantiable");
+public class HttpStatusCodeException extends RuntimeException {
+  private final int code;
+
+  public HttpStatusCodeException(int code) {
+    super("Unexpected HTTP status code " + code);
+    this.code = code;
   }
 
-  public static String nullToEmpty(String s) {
-    return s == null ? "" : s;
+  public HttpStatusCodeException(HttpResponseStatus status) {
+    this(status.code());
   }
 
-  public static String emptyToNull(String s) {
-    return isNullOrEmpty(s) ? null : s;
-  }
-
-  public static boolean isNullOrEmpty(String s) {
-    return s == null || s.isEmpty();
-  }
-
-  public static String removeStart(String s, String removeMe) {
-    if (s == null || removeMe == null) {
-      return s;
-    }
-    return s.startsWith(removeMe) ? s.substring(removeMe.length()) : s;
+  public int code() {
+    return code;
   }
 }

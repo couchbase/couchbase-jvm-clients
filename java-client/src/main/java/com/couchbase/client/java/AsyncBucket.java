@@ -23,6 +23,7 @@ import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
+import com.couchbase.client.java.manager.view.AsyncViewIndexManager;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
@@ -59,6 +60,8 @@ public class AsyncBucket {
 
   private final AsyncCollectionManager collectionManager;
 
+  private final AsyncViewIndexManager viewManager;
+
   /**
    * Creates a new {@link AsyncBucket}.
    *
@@ -71,6 +74,7 @@ public class AsyncBucket {
     this.environment = environment;
     this.name = name;
     this.collectionManager = new AsyncCollectionManager(core, name);
+    this.viewManager = new AsyncViewIndexManager(core, name);
   }
 
   /**
@@ -100,6 +104,11 @@ public class AsyncBucket {
   @Stability.Volatile
   public AsyncCollectionManager collections() {
     return collectionManager;
+  }
+
+  @Stability.Volatile
+  public AsyncViewIndexManager views() {
+    return viewManager;
   }
 
   /**

@@ -25,6 +25,8 @@ import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 
 import java.util.Optional;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class SearchChunkResponseParser
   extends BaseChunkResponseParser<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer> {
 
@@ -48,7 +50,7 @@ public class SearchChunkResponseParser
     .doOnValue("/status", v -> status = v.readBytes())
     .doOnValue("/error", v -> {
       error = v.readBytes();
-      failRows(new SearchServiceException(error));
+      failRows(new SearchServiceException(new String(error, UTF_8)));
     })
     .doOnValue("/hits/-", v -> emitRow(new SearchChunkRow(v.readBytes())))
     .doOnValue("/total_rows", v -> totalRows = v.readLong())
@@ -67,7 +69,7 @@ public class SearchChunkResponseParser
 
   @Override
   public Optional<Throwable> error() {
-    return Optional.ofNullable(error).map(SearchServiceException::new);
+    return Optional.ofNullable(error).map(e -> new SearchServiceException(new String(e, UTF_8)));
   }
 
     @Override

@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggregator;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -103,7 +104,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @param content the raw full content body of the response if not successful.
    * @return the exception with which the request will be failed.
    */
-  protected abstract Exception failRequestWith(final String content);
+  protected abstract Exception failRequestWith(HttpResponseStatus status, String content);
 
   /**
    * Writes a given request and encodes it.
@@ -167,7 +168,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
             currentRequest.succeed(response);
           } else {
             String body = httpResponse.content().toString(StandardCharsets.UTF_8);
-            currentRequest.fail(failRequestWith(body));
+            currentRequest.fail(failRequestWith(httpResponse.status(), body));
           }
         } catch (Throwable ex) {
           currentRequest.fail(ex);
