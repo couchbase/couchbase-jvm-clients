@@ -11,4 +11,6 @@ public enum Services {
   ANALYTICS_TLS,
   SEARCH,
   SEARCH_TLS,
+  VIEW,
+  VIEW_TLS
 }

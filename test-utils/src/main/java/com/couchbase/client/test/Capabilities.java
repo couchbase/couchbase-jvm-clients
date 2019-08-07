@@ -47,5 +47,9 @@ public enum Capabilities {
   /**
    * The cluster has collections enabled.
    */
-  COLLECTIONS
+  COLLECTIONS,
+  /**
+   * The cluster has views enabled.
+   */
+  VIEWS
 }

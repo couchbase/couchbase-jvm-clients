@@ -24,7 +24,9 @@ import com.couchbase.mock.memcached.MemcachedServer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,6 +87,7 @@ public class MockTestCluster extends TestCluster {
         Map<Services, Integer> ports = new HashMap<>();
         ports.put(Services.KV, server.getPort());
         ports.put(Services.MANAGER, mock.getHttpPort());
+        ports.put(Services.VIEW, mock.getHttpPort()); // mock has views on the same http port
 
         nodeConfigs.add(new TestNodeConfig(
           server.getHostname(),
@@ -100,7 +103,7 @@ public class MockTestCluster extends TestCluster {
       nodeConfigs,
       bucketConfig.numReplicas,
       Optional.empty(), // mock does not support certs
-      Collections.emptySet() // no supported capabilities right now
+      EnumSet.of(Capabilities.VIEWS) // mock only has a limited set of capabilities we can utilize
     );
   }
 

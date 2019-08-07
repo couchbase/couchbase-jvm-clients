@@ -25,10 +25,12 @@ import com.couchbase.client.core.msg.view.ViewChunkTrailer;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.msg.view.ViewResponse;
 
-public class ViewMessageHandler extends ChunkedMessageHandler<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse, ViewRequest> {
+class ChunkedViewMessageHandler
+        extends ChunkedMessageHandler<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse, ViewRequest> {
 
-  public ViewMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
-    super(endpoint, endpointContext, new ViewChunkResponseParser());
-  }
+    ChunkedViewMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
+        super(endpoint, endpointContext, new ViewChunkResponseParser());
+    }
 
 }
+

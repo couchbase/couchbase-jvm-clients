@@ -136,6 +136,12 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       if (services.containsKey("ftsSSL")) {
         ports.put(Services.SEARCH_TLS, services.get("ftsSSL"));
       }
+      if (services.containsKey("capi")) {
+        ports.put(Services.VIEW, services.get("capi"));
+      }
+      if (services.containsKey("capiSSL")) {
+        ports.put(Services.VIEW_TLS, services.get("capiSSL"));
+      }
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
@@ -163,6 +169,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       throw new RuntimeException("Error decoding, raw: " + config, e);
     }
     List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
+
     for (Map<String, Object> node : ext) {
       Map<String, Integer> services = (Map<String, Integer>) node.get("services");
       for (String name : services.keySet()) {
@@ -174,6 +181,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         }
         if (name.equals("fts") || name.equals("ftsSSL")) {
           capabilities.add(Capabilities.SEARCH);
+        }
+        if (name.equals("capi") || name.equals("capiSSL")) {
+          capabilities.add(Capabilities.VIEWS);
         }
       }
     }

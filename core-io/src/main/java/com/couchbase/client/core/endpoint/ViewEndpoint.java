@@ -16,13 +16,11 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.netty.view.ViewMessageHandler;
+import com.couchbase.client.core.io.netty.view.ViewHandlerSwitcher;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LogLevel;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LoggingHandler;
 
 public class ViewEndpoint extends BaseEndpoint {
 
@@ -48,7 +46,7 @@ public class ViewEndpoint extends BaseEndpoint {
     @Override
     public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new ViewMessageHandler(endpoint, endpointContext));
+      pipeline.addLast(ViewHandlerSwitcher.SWITCHER_IDENTIFIER, new ViewHandlerSwitcher(endpoint, endpointContext));
     }
   }
 
