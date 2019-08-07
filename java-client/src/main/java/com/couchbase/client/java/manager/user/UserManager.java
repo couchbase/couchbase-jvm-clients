@@ -21,45 +21,54 @@ import com.couchbase.client.core.annotation.Stability;
 import java.util.List;
 
 import static com.couchbase.client.java.AsyncUtils.block;
-import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
 public class UserManager {
 
   private final AsyncUserManager async;
-  private final GroupManager groups;
 
   public UserManager(AsyncUserManager async) {
     this.async = requireNonNull(async);
-    this.groups = new GroupManager(async.groups());
   }
 
-  public GroupManager groups() {
-    return groups;
-  }
-
-  public UserAndMetadata get(AuthDomain domain, String username) {
-    return block(async.get(domain, username));
+  public UserAndMetadata getUser(AuthDomain domain, String username) {
+    return block(async.getUser(domain, username));
   }
 
   public List<RoleAndDescription> availableRoles() {
     return block(async.availableRoles());
   }
 
-  public List<UserAndMetadata> getAll() {
-    return block(async.getAll());
+  public List<UserAndMetadata> getAllUsers() {
+    return block(async.getAllUsers());
   }
 
-  public void upsert(User user) {
-    block(async.upsert(user));
+  public void upsertUser(User user) {
+    block(async.upsertUser(user));
   }
 
-  public void upsert(User user, UpsertUserOptions options) {
-    block(async.upsert(user, options));
+  public void upsertUser(User user, UpsertUserOptions options) {
+    block(async.upsertUser(user, options));
   }
 
-  public void drop(String username) {
-    block(async.drop(username));
+  public void dropUser(String username) {
+    block(async.dropUser(username));
+  }
+
+  public Group getGroup(String name) {
+    return block(async.getGroup(name));
+  }
+
+  public List<Group> getAllGroups() {
+    return block(async.getAllGroups());
+  }
+
+  public void upsertGroup(Group group) {
+    block(async.upsertGroup(group));
+  }
+
+  public void dropGroup(String name) {
+    block(async.dropGroup(name));
   }
 }

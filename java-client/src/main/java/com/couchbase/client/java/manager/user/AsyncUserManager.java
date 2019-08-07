@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
@@ -39,15 +41,8 @@ import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUse
 public class AsyncUserManager extends ManagerSupport {
   // https://docs.couchbase.com/server/5.5/rest-api/rbac.html
 
-  private final AsyncGroupManager groups;
-
   public AsyncUserManager(Core core) {
     super(core);
-    groups = new AsyncGroupManager(core);
-  }
-
-  public AsyncGroupManager groups() {
-    return groups;
   }
 
   private static String pathForUsers() {
@@ -61,8 +56,15 @@ public class AsyncUserManager extends ManagerSupport {
   private static String pathForUser(AuthDomain domain, String username) {
     return pathForUsers() + "/" + urlEncode(domain.alias()) + "/" + urlEncode(username);
   }
+  private static String pathForGroups() {
+    return "/settings/rbac/groups";
+  }
 
-  public CompletableFuture<UserAndMetadata> get(AuthDomain domain, String username) {
+  private static String pathForGroup(String name) {
+    return pathForGroups() + "/" + urlEncode(name);
+  }
+
+  public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username) {
     return sendRequest(GET, pathForUser(domain, username)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain, username);
@@ -72,7 +74,7 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<List<UserAndMetadata>> getAll() {
+  public CompletableFuture<List<UserAndMetadata>> getAllUsers() {
     return sendRequest(GET, pathForUsers()).thenApply(response -> {
       checkStatus(response, "get all users");
       return Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
@@ -88,11 +90,11 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> upsert(User user) {
-    return upsert(user, upsertUserOptions());
+  public CompletableFuture<Void> upsertUser(User user) {
+    return upsertUser(user, upsertUserOptions());
   }
 
-  public CompletableFuture<Void> upsert(User user, UpsertUserOptions options) {
+  public CompletableFuture<Void> upsertUser(User user, UpsertUserOptions options) {
     final String username = user.username();
 
     final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
@@ -116,7 +118,7 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> drop(String username) {
+  public CompletableFuture<Void> dropUser(String username) {
     final AuthDomain domain = AuthDomain.LOCAL;
 
     return sendRequest(DELETE, pathForUser(domain, username)).thenApply(response -> {
@@ -124,6 +126,48 @@ public class AsyncUserManager extends ManagerSupport {
         throw UserNotFoundException.forUser(domain, username);
       }
       checkStatus(response, "drop user [" + redactUser(username) + "]");
+      return null;
+    });
+  }
+
+  public CompletableFuture<Group> getGroup(String name) {
+    return sendRequest(GET, pathForGroup(name)).thenApply(response -> {
+      if (response.status() == ResponseStatus.NOT_FOUND) {
+        throw GroupNotFoundException.forGroup(name);
+      }
+      checkStatus(response, "get group [" + redactMeta(name) + "]");
+      return Mapper.decodeInto(response.content(), Group.class);
+    });
+  }
+
+  public CompletableFuture<List<Group>> getAllGroups() {
+    return sendRequest(GET, pathForGroups()).thenApply(response -> {
+      checkStatus(response, "get all groups");
+      return Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
+      });
+    });
+  }
+
+  public CompletableFuture<Void> upsertGroup(Group group) {
+    final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
+        .add("description", group.description())
+        .add("ldap_group_ref", group.ldapGroupReference().orElse(""))
+        .add("roles", group.roles().stream()
+            .map(Role::format)
+            .collect(Collectors.joining(",")));
+
+    return sendRequest(PUT, pathForGroup(group.name()), params).thenApply(response -> {
+      checkStatus(response, "create group [" + redactSystem(group.name()) + "]");
+      return null;
+    });
+  }
+
+  public CompletableFuture<Void> dropGroup(String name) {
+    return sendRequest(DELETE, pathForGroup(name)).thenApply(response -> {
+      if (response.status() == ResponseStatus.NOT_FOUND) {
+        throw GroupNotFoundException.forGroup(name);
+      }
+      checkStatus(response, "drop group [" + redactSystem(name) + "]");
       return null;
     });
   }

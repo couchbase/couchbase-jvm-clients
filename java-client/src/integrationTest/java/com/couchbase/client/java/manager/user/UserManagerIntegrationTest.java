@@ -59,7 +59,6 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   private static ClusterEnvironment environment;
 
   private static UserManager users;
-  private static GroupManager groups;
 
   private static final String USERNAME = "integration-test-user";
 
@@ -73,7 +72,6 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(environment);
     cluster.bucket(config().bucketname());
     users = cluster.users();
-    groups = cluster.users().groups();
   }
 
   @AfterAll
@@ -101,23 +99,22 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void getAll() {
-    users.upsert(new User(USERNAME)
+    users.upsertUser(new User(USERNAME)
         .password("password")
         .displayName("Integration Test User")
         .roles(ADMIN));
 
-    assertTrue(users.getAll().stream()
+    assertTrue(users.getAllUsers().stream()
         .anyMatch(meta -> meta.user().username().equals(USERNAME)));
   }
 
   @Test
   void createWithBadRole() {
-    assertThrows(CouchbaseException.class, () -> {
-      users.upsert(new User(USERNAME)
-          .password("password")
-          .displayName("Integration Test User")
-          .roles(new Role("bogus")));
-    });
+    assertThrows(CouchbaseException.class, () ->
+        users.upsertUser(new User(USERNAME)
+            .password("password")
+            .displayName("Integration Test User")
+            .roles(new Role("bogus"))));
   }
 
   @Test
@@ -125,7 +122,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     final String origPassword = "password";
     final String newPassword = "newpassword";
 
-    users.upsert(new User(USERNAME)
+    users.upsertUser(new User(USERNAME)
         .password(origPassword)
         .displayName("Integration Test User")
         .roles(ADMIN));
@@ -133,7 +130,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     // must be a specific kind of admin for this to succeed (not exactly sure which)
     assertCanAuthenticate(USERNAME, origPassword);
 
-    UserAndMetadata userMeta = users.get(LOCAL, USERNAME);
+    UserAndMetadata userMeta = users.getUser(LOCAL, USERNAME);
     assertEquals(LOCAL, userMeta.domain());
     assertEquals("Integration Test User", userMeta.user().displayName());
     Set<Role> expectedRoles = singleton(ADMIN);
@@ -143,13 +140,13 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
     checkRoleOrigins(userMeta, "admin<-[user]");
 
-    users.upsert(new User(USERNAME)
+    users.upsertUser(new User(USERNAME)
         .displayName("Renamed")
         .roles(ADMIN));
 
     assertCanAuthenticate(USERNAME, origPassword);
 
-    users.upsert(
+    users.upsertUser(
         new User(USERNAME)
             .displayName("Renamed")
             .roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
@@ -157,7 +154,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
     assertCanAuthenticate(USERNAME, newPassword);
 
-    userMeta = users.get(LOCAL, USERNAME);
+    userMeta = users.getUser(LOCAL, USERNAME);
     assertEquals("Renamed", userMeta.user().displayName());
     assertEquals(setOf(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.innateRoles());
 
@@ -193,16 +190,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private static void dropUserQuietly(String name) {
     try {
-      users.drop(name);
+      users.dropUser(name);
     } catch (UserNotFoundException e) {
-      // that's fine!
-    }
-  }
-
-  private static void dropGroupQuietly(String name) {
-    try {
-      groups.drop(name);
-    } catch (GroupNotFoundException e) {
       // that's fine!
     }
   }
@@ -210,17 +199,17 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   private static void assertUserAbsent(String username) {
     // there are two ways to do this!
 
-    assertFalse(users.getAll().stream()
+    assertFalse(users.getAllUsers().stream()
         .map(UserAndMetadata::user)
         .anyMatch(user -> user.username().equals(username)));
 
-    assertThrows(UserNotFoundException.class, () -> users.get(LOCAL, username));
+    assertThrows(UserNotFoundException.class, () -> users.getUser(LOCAL, username));
   }
 
   @Test
   void dropAbsentUser() {
     String name = "doesnotexist";
-    UserNotFoundException e = assertThrows(UserNotFoundException.class, () -> users.drop(name));
+    UserNotFoundException e = assertThrows(UserNotFoundException.class, () -> users.dropUser(name));
     assertEquals(name, e.username());
     assertEquals(LOCAL, e.domain());
   }

@@ -48,7 +48,6 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   private static ClusterEnvironment environment;
 
   private static UserManager users;
-  private static GroupManager groups;
 
   private static final Role READ_ONLY_ADMIN = new Role("ro_admin");
   private static final Role BUCKET_FULL_ACCESS_WILDCARD = new Role("bucket_full_access", "*");
@@ -63,7 +62,6 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     environment = environment().build();
     cluster = Cluster.connect(environment);
     users = cluster.users();
-    groups = cluster.users().groups();
   }
 
   @AfterAll
@@ -82,18 +80,18 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void getAll() {
-    groups.upsert(new Group(GROUP_A));
-    groups.upsert(new Group(GROUP_B));
+    users.upsertGroup(new Group(GROUP_A));
+    users.upsertGroup(new Group(GROUP_B));
 
-    Set<String> actualNames = groups.getAll().stream()
+    Set<String> actualNames = users.getAllGroups().stream()
         .map(Group::name)
         .collect(Collectors.toSet());
 
     assertTrue(actualNames.containsAll(setOf(GROUP_A, GROUP_B)));
 
-    groups.drop(GROUP_B);
+    users.dropGroup(GROUP_B);
 
-    assertFalse(groups.getAll().stream()
+    assertFalse(users.getAllGroups().stream()
         .map(Group::name)
         .anyMatch(name -> name.equals(GROUP_B)));
   }
@@ -101,24 +99,24 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void create() {
     final String fakeLdapRef = "ou=Users";
-    groups.upsert(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
-    groups.upsert(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
+    users.upsertGroup(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
+    users.upsertGroup(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
 
-    assertEquals("a", groups.get(GROUP_A).description());
-    assertEquals("b", groups.get(GROUP_B).description());
+    assertEquals("a", users.getGroup(GROUP_A).description());
+    assertEquals("b", users.getGroup(GROUP_B).description());
 
-    assertEquals(Optional.of(fakeLdapRef), groups.get(GROUP_A).ldapGroupReference());
-    assertEquals(Optional.empty(), groups.get(GROUP_B).ldapGroupReference());
+    assertEquals(Optional.of(fakeLdapRef), users.getGroup(GROUP_A).ldapGroupReference());
+    assertEquals(Optional.empty(), users.getGroup(GROUP_B).ldapGroupReference());
 
-    assertEquals(setOf(READ_ONLY_ADMIN), groups.get(GROUP_A).roles());
-    assertEquals(setOf(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), groups.get(GROUP_B).roles());
+    assertEquals(setOf(READ_ONLY_ADMIN), users.getGroup(GROUP_A).roles());
+    assertEquals(setOf(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), users.getGroup(GROUP_B).roles());
 
-    users.upsert(new User(USERNAME)
+    users.upsertUser(new User(USERNAME)
         .password("password")
         .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
         .groups(GROUP_A, GROUP_B));
 
-    UserAndMetadata userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
 
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.user().roles());
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD, READ_ONLY_ADMIN), userMeta.effectiveRoles());
@@ -129,17 +127,17 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
         "ro_admin<-[group:group-a, group:group-b]",
         "bucket_full_access[*]<-[group:group-b, user]");
 
-    groups.upsert(groups.get(GROUP_A).roles(SECURITY_ADMIN));
-    groups.upsert(groups.get(GROUP_B).roles(SECURITY_ADMIN));
+    users.upsertGroup(users.getGroup(GROUP_A).roles(SECURITY_ADMIN));
+    users.upsertGroup(users.getGroup(GROUP_B).roles(SECURITY_ADMIN));
 
-    userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.effectiveRoles());
   }
 
   @Test
   void dropAbsentGroup() {
     String name = "doesnotexist";
-    GroupNotFoundException e = assertThrows(GroupNotFoundException.class, () -> groups.drop(name));
+    GroupNotFoundException e = assertThrows(GroupNotFoundException.class, () -> users.dropGroup(name));
     assertEquals(name, e.groupName());
   }
 
@@ -147,21 +145,21 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   void removeUserFromAllGroups() {
     // exercise the special-case code for upserting an empty group list.
 
-    groups.upsert(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
-    users.upsert(new User(USERNAME).password("password").groups(GROUP_A));
+    users.upsertGroup(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
+    users.upsertUser(new User(USERNAME).password("password").groups(GROUP_A));
 
-    UserAndMetadata userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(READ_ONLY_ADMIN), userMeta.effectiveRoles());
 
-    users.upsert(userMeta.user().groups(emptySet()));
+    users.upsertUser(userMeta.user().groups(emptySet()));
 
-    userMeta = users.get(AuthDomain.LOCAL, USERNAME);
+    userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(emptySet(), userMeta.effectiveRoles());
   }
 
   private static void dropUserQuietly(String name) {
     try {
-      users.drop(name);
+      users.dropUser(name);
     } catch (UserNotFoundException e) {
       // that's fine!
     }
@@ -169,7 +167,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
   private static void dropGroupQuietly(String name) {
     try {
-      groups.drop(name);
+      users.dropGroup(name);
     } catch (GroupNotFoundException e) {
       // that's fine!
     }
