@@ -19,7 +19,12 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 
 import javax.net.ssl.TrustManagerFactory;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -50,6 +55,10 @@ public class SecurityConfig {
   }
 
   public static Builder trustCertificates(final X509Certificate... certificates) {
+    return builder().trustCertificates(certificates);
+  }
+
+  public static Builder trustCertificates(final String... certificates) {
     return builder().trustCertificates(certificates);
   }
 
@@ -141,6 +150,25 @@ public class SecurityConfig {
     public Builder trustCertificates(final X509Certificate... certificates) {
       this.trustCertificates = certificates;
       return this;
+    }
+
+    public Builder trustCertificates(final String... certificates) {
+      final CertificateFactory cf;
+      try {
+        cf = CertificateFactory.getInstance("X.509");
+      } catch (CertificateException e) {
+        throw new IllegalStateException("Could not instantiate X.509 CertificateFactory", e);
+      }
+
+      return trustCertificates(Arrays.stream(certificates).map(c -> {
+        try {
+          return (X509Certificate) cf.generateCertificate(
+            new ByteArrayInputStream(c.getBytes(StandardCharsets.UTF_8))
+          );
+        } catch (CertificateException e) {
+          throw new IllegalArgumentException("Could not generate certificate from raw input: \"" + c + "\"", e);
+        }
+      }).toArray(X509Certificate[]::new));
     }
 
     public Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
