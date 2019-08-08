@@ -19,13 +19,15 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,7 +58,8 @@ class DefaultConfigurationProviderTest {
   @Test
   void canProposeNewBucketConfig() {
     Core core = mock(Core.class);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT);
+    when(core.context()).thenReturn(ctx);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
@@ -81,6 +84,8 @@ class DefaultConfigurationProviderTest {
       assertEquals(11210, node.kvPort().get());
       assertEquals(8091, node.httpPort().get());
     }
+
+    assertEquals(Optional.empty(), ctx.alternateAddress());
   }
 
   @Test
@@ -202,6 +207,63 @@ class DefaultConfigurationProviderTest {
       assertEquals(8091, sn.httpPort().get());
       assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
     }
+  }
+
+  @Test
+  void externalModeSelectedIfAuto() {
+    Core core = mock(Core.class);
+    CoreEnvironment environment = CoreEnvironment.create("192.168.132.234", "user", "pw");
+
+    CoreContext ctx = new CoreContext(core, 1, environment);
+    when(core.context()).thenReturn(ctx);
+
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+
+    final AtomicInteger configsPushed = new AtomicInteger(0);
+    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+
+    assertTrue(provider.config().bucketConfigs().isEmpty());
+    assertEquals(1, provider.seedNodes().size());
+
+    String bucket = "default";
+    String config = Utils.readResource(
+      "config_with_external.json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
+
+    assertEquals("external", ctx.alternateAddress().get());
+    environment.shutdown();
+  }
+
+  @Test
+  void forceDefaultModeIfDefault() {
+    Core core = mock(Core.class);
+    CoreEnvironment environment = CoreEnvironment
+      .builder("192.168.132.234", "user", "pw")
+      .ioConfig(IoConfig.networkResolution(NetworkResolution.DEFAULT))
+      .build();
+
+    CoreContext ctx = new CoreContext(core, 1, environment);
+    when(core.context()).thenReturn(ctx);
+
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+
+    final AtomicInteger configsPushed = new AtomicInteger(0);
+    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+
+    assertTrue(provider.config().bucketConfigs().isEmpty());
+    assertEquals(1, provider.seedNodes().size());
+
+    String bucket = "default";
+    String config = Utils.readResource(
+      "config_with_external.json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
+
+    assertEquals(Optional.empty(), ctx.alternateAddress());
+    environment.shutdown();
   }
 
 }

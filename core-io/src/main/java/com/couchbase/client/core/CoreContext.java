@@ -16,10 +16,14 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 
 import java.util.Map;
+import java.util.Optional;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * The {@link CoreContext} is bound to a core and provides both exportable and
@@ -43,6 +47,11 @@ public class CoreContext extends AbstractContext {
    * Back reference to the core itself.
    */
   private final Core core;
+
+  /**
+   * If present, contains the alternate address identifier that is used.
+   */
+  private volatile Optional<String> alternateAddress = Optional.empty();
 
   /**
   * Creates a new {@link CoreContext}.
@@ -71,6 +80,29 @@ public class CoreContext extends AbstractContext {
   }
 
   /**
+   * Returns the alternate address identifier, if present.
+   */
+  public Optional<String> alternateAddress() {
+    return alternateAddress;
+  }
+
+  /**
+   * Sets the alternate address on this context.
+   *
+   * <p>This is internal API and will alter the behavior of the system. Do not call this API if you
+   * are not 100% sure what you are doing!</p>
+   *
+   * @param alternateAddress the alternate address identifier, or empty if none available.
+   * @return the same {@link CoreContext} for chaining purposes.
+   */
+  @Stability.Internal
+  public CoreContext alternateAddress(final Optional<String> alternateAddress) {
+    notNull(alternateAddress, "Alternate Address Identifier");
+    this.alternateAddress = alternateAddress;
+    return this;
+  }
+
+  /**
    * Returns the core to which this context belongs.
    */
   public Core core() {
@@ -80,6 +112,7 @@ public class CoreContext extends AbstractContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     input.put("coreId", id);
+    alternateAddress.ifPresent(a -> input.put("alternateIdentifier", a));
   }
 
 }

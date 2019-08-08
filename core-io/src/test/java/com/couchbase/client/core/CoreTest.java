@@ -102,7 +102,7 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NodeIdentifier target) {
+      protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
     };
@@ -198,7 +198,7 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NodeIdentifier target) {
+      protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
     };
@@ -298,7 +298,7 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NodeIdentifier target) {
+      protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
     };
@@ -381,7 +381,7 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NodeIdentifier target) {
+      protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
     };
@@ -468,7 +468,7 @@ class CoreTest {
       }
 
       @Override
-      protected Node createNode(final NodeIdentifier target) {
+      protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address() + ":" + target.managerPort());
       }
     };

@@ -57,6 +57,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+
 public class Node implements Stateful<NodeState> {
 
   /**
@@ -77,6 +79,7 @@ public class Node implements Stateful<NodeState> {
   private final Credentials credentials;
   private final Map<String, Map<ServiceType, Service>> services;
   private final AtomicBoolean disconnect;
+  private final Optional<String> alternateAddress;
 
   /**
    * Holds the endpoint states and as a result the internal service state.
@@ -88,16 +91,18 @@ public class Node implements Stateful<NodeState> {
    */
   private final AtomicInteger enabledServices = new AtomicInteger(0);
 
-  public static Node create(final CoreContext ctx, final NodeIdentifier identifier) {
-    return new Node(ctx, identifier);
+  public static Node create(final CoreContext ctx, final NodeIdentifier identifier,
+                            final Optional<String> alternateAddress) {
+    return new Node(ctx, identifier, alternateAddress);
   }
 
-  protected Node(final CoreContext ctx, final NodeIdentifier identifier) {
+  protected Node(final CoreContext ctx, final NodeIdentifier identifier, final Optional<String> alternateAddress) {
     this.identifier = identifier;
-    this.ctx = new NodeContext(ctx, identifier);
+    this.ctx = new NodeContext(ctx, identifier, alternateAddress);
     this.credentials = ctx.environment().credentials();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
+    this.alternateAddress = alternateAddress;
     this.serviceStates = CompositeStateful.create(NodeState.DISCONNECTED, serviceStates -> {
       if (serviceStates.isEmpty()) {
         return NodeState.DISCONNECTED;
@@ -382,7 +387,7 @@ public class Node implements Stateful<NodeState> {
                                   final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
     ServiceConfig sc = env.serviceConfig();
-    String address = identifier.address();
+    String address = alternateAddress.orElseGet(identifier::address);
 
     switch (serviceType) {
       case KV:
@@ -415,4 +420,16 @@ public class Node implements Stateful<NodeState> {
     return Objects.hash(identifier);
   }
 
+  @Override
+  public String toString() {
+    return "Node{" +
+      "identifier=" + redactSystem(identifier) +
+      ", ctx=" + ctx +
+      ", services=" + services +
+      ", disconnect=" + disconnect +
+      ", alternateAddress=" + redactSystem(alternateAddress) +
+      ", serviceStates=" + serviceStates +
+      ", enabledServices=" + enabledServices +
+      '}';
+  }
 }

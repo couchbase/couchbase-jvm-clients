@@ -19,6 +19,7 @@ package com.couchbase.client.core.node;
 import com.couchbase.client.core.CoreContext;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
@@ -28,14 +29,20 @@ public class NodeContext extends CoreContext {
    * The hostname of this node.
    */
   private final NodeIdentifier nodeIdentifier;
+  private final Optional<String> alternateAddress;
 
-  public NodeContext(CoreContext ctx, NodeIdentifier nodeIdentifier) {
+  public NodeContext(CoreContext ctx, NodeIdentifier nodeIdentifier, Optional<String> alternateAddress) {
     super(ctx.core(), ctx.id(), ctx.environment());
     this.nodeIdentifier = nodeIdentifier;
+    this.alternateAddress = alternateAddress;
   }
 
   public String remoteHostname() {
     return nodeIdentifier.address();
+  }
+
+  public Optional<String> alternateAddress() {
+    return alternateAddress;
   }
 
   @Override
@@ -43,6 +50,7 @@ public class NodeContext extends CoreContext {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteHostname()));
     input.put("managerPort", redactSystem(nodeIdentifier.managerPort()));
+    alternateAddress.ifPresent(a -> input.put("alternateRemote", a));
   }
 
 

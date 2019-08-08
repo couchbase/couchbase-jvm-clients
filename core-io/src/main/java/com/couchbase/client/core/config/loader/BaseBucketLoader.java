@@ -79,15 +79,20 @@ public abstract class BaseBucketLoader implements BucketLoader {
    * all non-config exceptions into config exceptions so that the upper level only needs to handle
    * one specific exception type.</p>
    *
+   * <p>At this point, we are passing an {@link Optional#empty()} for alternate addresses when the
+   * service is created, since we do not have a config to check against at this point. The config provider
+   * will take care of this at a later point in time, before the rest of the bootstrap happens.</p>
+   *
    * @param seed the seed node to attempt loading from.
    * @param port the port to use when enabling the service.
    * @param bucket the name of the bucket.
    * @return if successful, returns a config. It fails the mono otherwise.
    */
   @Override
-  public Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, final int port, final String bucket) {
+  public Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, final int port, final String bucket,
+                                                final Optional<String> alternateAddress) {
     return core
-      .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
+      .ensureServiceAt(seed, serviceType, port, Optional.of(bucket), alternateAddress)
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))

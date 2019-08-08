@@ -35,6 +35,7 @@ public class IoConfig {
 
   public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = false;
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
+  public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
 
   private final Set<SaslMechanism> allowedSaslMechanisms;
   private final boolean mutationTokensEnabled;
@@ -46,6 +47,7 @@ public class IoConfig {
   private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
   private final Set<ServiceType> captureTraffic;
+  private final NetworkResolution networkResolution;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -64,6 +66,7 @@ public class IoConfig {
     captureTraffic = Optional
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
+    networkResolution = builder.networkResolution;
   }
 
   public static IoConfig create() {
@@ -114,6 +117,10 @@ public class IoConfig {
     return builder().captureTraffic(serviceTypes);
   }
 
+  public static Builder networkResolution(final NetworkResolution networkResolution) {
+    return builder().networkResolution(networkResolution);
+  }
+
   public Set<SaslMechanism> allowedSaslMechanisms() {
     return allowedSaslMechanisms;
   }
@@ -154,6 +161,10 @@ public class IoConfig {
     return captureTraffic;
   }
 
+  public NetworkResolution networkResolution() {
+    return networkResolution;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -163,6 +174,7 @@ public class IoConfig {
     export.put("allowedSaslMechs", allowedSaslMechanisms);
     export.put("captureTraffic", captureTraffic);
     export.put("mutationTokensEnabled", mutationTokensEnabled);
+    export.put("networkResolution", networkResolution.name());
     export.put("configPollIntervalMillis", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -185,6 +197,7 @@ public class IoConfig {
     private CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
+    private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -300,6 +313,10 @@ public class IoConfig {
         : EnumSet.copyOf(Arrays.asList(serviceTypes));
       return this;
     }
-  }
 
+    public Builder networkResolution(final NetworkResolution networkResolution) {
+      this.networkResolution = networkResolution;
+      return this;
+    }
+  }
 }

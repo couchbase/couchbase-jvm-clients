@@ -30,6 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 
+import java.util.Optional;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -65,7 +67,8 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
     ProposedBucketConfigContext ctx = loader.load(
       new NodeIdentifier(config.hostname(), port),
       port,
-      config().bucketname()
+      config().bucketname(),
+      Optional.empty()
     ).block();
 
     BucketConfig loaded = BucketConfigParser.parse(ctx.config(), env, ctx.origin());

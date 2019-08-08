@@ -48,9 +48,20 @@ public class GlobalLoader {
     this.core = core;
   }
 
+  /**
+   * Tries to load the global configuration.
+   *
+   * <p>Please note that at this point, we are passing an {@link Optional#empty()} for alternate addresses when the
+   * service is created, since we do not have a config to check against at this point. The config provider
+   * will take care of this at a later point in time, before the rest of the bootstrap happens.</p>
+   *
+   * @param seed the seed node to load from.
+   * @param port the port number for the KV service.
+   * @return once complete a proposed global config context to update.
+   */
   public Mono<ProposedGlobalConfigContext> load(final NodeIdentifier seed, final int port) {
     return core
-      .ensureServiceAt(seed, ServiceType.KV, port, Optional.empty())
+      .ensureServiceAt(seed, ServiceType.KV, port, Optional.empty(), Optional.empty())
       .then(discoverConfig(seed))
       .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))

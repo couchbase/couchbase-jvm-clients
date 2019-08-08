@@ -20,6 +20,8 @@ import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.node.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 /**
  * The {@link BucketLoader} is responsible for initially loading a fresh configuration from the
  * cluster.
@@ -39,6 +41,7 @@ public interface BucketLoader {
    * @param bucket the name of the bucket.
    * @return a {@link Mono} eventually completing with a config or failing.
    */
-  Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, int port, final String bucket);
+  Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, int port, final String bucket,
+                                         final Optional<String> alternateAddress);
 
 }

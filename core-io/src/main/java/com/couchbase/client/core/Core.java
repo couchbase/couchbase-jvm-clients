@@ -28,6 +28,7 @@ import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEve
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
+import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
@@ -57,6 +58,8 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 /**
  * The main entry point into the core layer.
@@ -327,16 +330,20 @@ public class Core {
    *
    * @param identifier the node to check.
    * @param serviceType the service type to enable if not enabled already.
+   * @param port the port where the service is listening on.
+   * @param bucket if the service is bound to a bucket, it needs to be provided.
+   * @param alternateAddress if an alternate address is present, needs to be provided since it is passed down
+   *                         to the node and its services.
    * @return a {@link Mono} which completes once initiated.
    */
   @Stability.Internal
-  public Mono<Void> ensureServiceAt(final NodeIdentifier identifier, final ServiceType serviceType,
-                                    final int port, final Optional<String> bucket) {
+  public Mono<Void> ensureServiceAt(final NodeIdentifier identifier, final ServiceType serviceType, final int port,
+                                    final Optional<String> bucket, final Optional<String> alternateAddress) {
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.identifier().equals(identifier))
       .switchIfEmpty(Mono.defer(() -> {
-        Node node = createNode(identifier);
+        Node node = createNode(identifier, alternateAddress);
         nodes.add(node);
         return Mono.just(node);
       }))
@@ -350,10 +357,11 @@ public class Core {
    * <p>This method is here so it can be overridden in tests.</p>
    *
    * @param identifier the identifier for the node.
+   * @param alternateAddress the alternate address if present.
    * @return the created node instance.
    */
-  protected Node createNode(final NodeIdentifier identifier) {
-    return Node.create(coreContext, identifier);
+  protected Node createNode(final NodeIdentifier identifier, final Optional<String> alternateAddress) {
+    return Node.create(coreContext, identifier, alternateAddress);
   }
 
   /**
@@ -533,9 +541,22 @@ public class Core {
         .fromIterable(config.portInfos())
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
-          Set<Map.Entry<ServiceType, Integer>> services = tls
-            ? ni.sslPorts().entrySet()
-            : ni.ports().entrySet();
+
+          Set<Map.Entry<ServiceType, Integer>> aServices = null;
+          Optional<String> alternateAddress = coreContext.alternateAddress();
+          String aHost = null;
+          if (alternateAddress.isPresent()) {
+            AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
+            aHost = aa.hostname();
+            aServices = tls ? aa.sslServices().entrySet() : aa.services().entrySet();
+          }
+
+          if (aServices == null || aServices.isEmpty()) {
+            aServices = tls ? ni.sslPorts().entrySet() : ni.ports().entrySet();
+          }
+
+          final String alternateHost = aHost;
+          final Set<Map.Entry<ServiceType, Integer>> services = aServices;
 
           Flux<Void> serviceRemoveFlux = Flux
             .fromIterable(Arrays.asList(ServiceType.values()))
@@ -569,7 +590,8 @@ public class Core {
               ni.identifier(),
               s.getKey(),
               s.getValue(),
-              Optional.empty())
+              Optional.empty(),
+              Optional.ofNullable(alternateHost))
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
@@ -598,9 +620,23 @@ public class Core {
       Flux.fromIterable(bc.nodes())
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
-          Set<Map.Entry<ServiceType, Integer>> services = tls
-            ? ni.sslServices().entrySet()
-            : ni.services().entrySet();
+
+          Set<Map.Entry<ServiceType, Integer>> aServices = null;
+          Optional<String> alternateAddress = coreContext.alternateAddress();
+          String aHost = null;
+          if (alternateAddress.isPresent()) {
+            AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
+            aHost = aa.hostname();
+            aServices = tls ? aa.sslServices().entrySet() : aa.services().entrySet();
+          }
+
+
+          if (isNullOrEmpty(aServices)) {
+            aServices = tls ? ni.sslServices().entrySet() : ni.services().entrySet();
+          }
+
+          final String alternateHost = aHost;
+          final Set<Map.Entry<ServiceType, Integer>> services = aServices;
 
           Flux<Void> serviceRemoveFlux = Flux
             .fromIterable(Arrays.asList(ServiceType.values()))
@@ -633,7 +669,8 @@ public class Core {
               ni.identifier(),
               s.getKey(),
               s.getValue(),
-              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
+              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty(),
+              Optional.ofNullable(alternateHost))
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,

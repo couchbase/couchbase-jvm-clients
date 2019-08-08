@@ -74,10 +74,10 @@ class BaseBucketLoaderTest {
       }
     };
 
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
       .thenReturn(Mono.empty());
 
-    ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET).block();
+    ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET, Optional.empty()).block();
     BucketConfig config = BucketConfigParser.parse(ctx.config(), core.context().environment(), ctx.origin());
     assertEquals("default", config.name());
     assertEquals(1073, config.rev());
@@ -91,10 +91,10 @@ class BaseBucketLoaderTest {
         return Mono.error(new IllegalStateException("Not expected to be called!"));
       }
     };
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
       .thenReturn(Mono.error(new CouchbaseException("Some error during service ensure")));
 
-    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET).block());
+    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET, Optional.empty()).block());
   }
 
   @Test
@@ -106,10 +106,10 @@ class BaseBucketLoaderTest {
       }
     };
 
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
       .thenReturn(Mono.empty());
 
-    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET).block());
+    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET, Optional.empty()).block());
   }
 
 }
