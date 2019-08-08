@@ -34,6 +34,7 @@ import java.util.Set;
 public class IoConfig {
 
   public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = false;
+  public static final boolean DEFAULT_DNS_SRV_ENABLED = true;
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
 
@@ -48,9 +49,11 @@ public class IoConfig {
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
   private final Set<ServiceType> captureTraffic;
   private final NetworkResolution networkResolution;
+  private final boolean dnsSrvEnabled;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
+    dnsSrvEnabled = builder.dnsSrvEnabled;
     configPollInterval = Optional
       .ofNullable(builder.configPollInterval)
       .orElse(DEFAULT_CONFIG_POLL_INTERVAL);
@@ -79,6 +82,10 @@ public class IoConfig {
 
   public static Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
     return builder().mutationTokensEnabled(mutationTokensEnabled);
+  }
+
+  public static Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
+    return builder().dnsSrvEnabled(dnsSrvEnabled);
   }
 
   public static Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
@@ -153,6 +160,10 @@ public class IoConfig {
     return mutationTokensEnabled;
   }
 
+  public boolean dnsSrvEnabled() {
+    return dnsSrvEnabled;
+  }
+
   public Duration configPollInterval() {
     return configPollInterval;
   }
@@ -175,6 +186,7 @@ public class IoConfig {
     export.put("captureTraffic", captureTraffic);
     export.put("mutationTokensEnabled", mutationTokensEnabled);
     export.put("networkResolution", networkResolution.name());
+    export.put("dnsSrvEnabled", dnsSrvEnabled);
     export.put("configPollIntervalMillis", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -198,6 +210,7 @@ public class IoConfig {
     private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
     private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
+    private boolean dnsSrvEnabled;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -221,6 +234,15 @@ public class IoConfig {
     public Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
       this.mutationTokensEnabled = mutationTokensEnabled;
       return this;
+    }
+
+    public Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
+      this.dnsSrvEnabled = dnsSrvEnabled;
+      return this;
+    }
+
+    boolean dnsSrvEnabled() {
+      return dnsSrvEnabled;
     }
 
     /**

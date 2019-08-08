@@ -46,7 +46,7 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
 
   @Override
   public void load(final CoreEnvironment.Builder builder) {
-    if (connectionString.isValidDnsSrv()) {
+    if (builder.ioConfig().dnsSrvEnabled() && connectionString.isValidDnsSrv()) {
       boolean isEncrypted = connectionString.scheme() == ConnectionString.Scheme.COUCHBASES;
       String dnsHostname = connectionString.hosts().get(0).hostname();
       try {
