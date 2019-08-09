@@ -50,7 +50,7 @@ class Scope private[scala] (val async: AsyncScope,
   }
 
   /** Opens and returns the default collection on this scope. */
-  def defaultCollection = {
+  private[scala] def defaultCollection = {
     collection(DefaultResources.DefaultCollection)
   }
 }

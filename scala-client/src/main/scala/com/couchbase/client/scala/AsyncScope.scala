@@ -45,7 +45,7 @@ class AsyncScope private[scala] (scopeName: String,
   def name = scopeName
 
   /** Opens and returns the default collection on this scope. */
-  def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
+  private[scala] def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Future[AsyncCollection] = {

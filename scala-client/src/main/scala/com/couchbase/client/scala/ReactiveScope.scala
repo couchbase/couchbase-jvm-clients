@@ -41,7 +41,7 @@ class ReactiveScope(async: AsyncScope,
   def name = async.name
 
   /** Opens and returns the default collection on this scope. */
-  def defaultCollection: Mono[ReactiveCollection] = {
+  private[scala] def defaultCollection: Mono[ReactiveCollection] = {
     collection(DefaultResources.DefaultCollection)
   }
 
