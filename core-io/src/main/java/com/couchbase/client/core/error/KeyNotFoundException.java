@@ -26,7 +26,7 @@ public class KeyNotFoundException extends CouchbaseException {
   private final String key;
 
   private KeyNotFoundException(String key) {
-    super("Document with key [" + redactUser(key) + " does not exist");
+    super("Document with key [" + redactUser(key) + "] does not exist");
     this.key = key;
   }
 

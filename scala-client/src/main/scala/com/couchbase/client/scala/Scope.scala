@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.ExecutionContext
@@ -32,6 +33,7 @@ import scala.concurrent.ExecutionContext
   * @author Graham Pople
   * @since 1.0.0
   */
+@Volatile
 class Scope private[scala] (val async: AsyncScope,
             bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec

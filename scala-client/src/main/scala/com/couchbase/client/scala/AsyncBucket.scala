@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
@@ -44,6 +45,7 @@ class AsyncBucket private[scala](val name: String,
     *
     * @param scope the name of the scope
     */
+  @Stability.Volatile
   def scope(scope: String): Future[AsyncScope] = {
     Future {
       new AsyncScope(scope, name, core, environment)
@@ -51,6 +53,7 @@ class AsyncBucket private[scala](val name: String,
   }
 
   /** Opens and returns the default Couchbase scope. */
+  @Stability.Volatile
   def defaultScope: Future[AsyncScope] = {
     scope(DefaultResources.DefaultScope)
   }
@@ -66,6 +69,7 @@ class AsyncBucket private[scala](val name: String,
     *
     * @return a created collection resource
     */
+  @Stability.Volatile
   def collection(collection: String): Future[AsyncCollection] = {
     scope(DefaultResources.DefaultScope).flatMap(_.collection(collection))
   }

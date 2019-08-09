@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.error.ViewServiceException
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.scala.query.handlers.ViewHandler
@@ -48,11 +49,13 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     *
     * @param name the name of the scope
     */
+  @Stability.Volatile
   def scope(name: String): Mono[ReactiveScope] = {
     Mono.fromFuture(async.scope(name)).map(v => new ReactiveScope(v, async.name))
   }
 
   /** Opens and returns the default Couchbase scope. */
+  @Stability.Volatile
   def defaultScope: Mono[ReactiveScope] = {
     scope(DefaultResources.DefaultScope)
   }
@@ -68,6 +71,7 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     *
     * @return a created collection resource
     */
+  @Stability.Volatile
   def collection(name: String): Mono[ReactiveCollection] = {
     scope(DefaultResources.DefaultScope).flatMap(v => v.collection(name))
   }

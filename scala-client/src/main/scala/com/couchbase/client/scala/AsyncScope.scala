@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.env.ClusterEnvironment
 
@@ -35,6 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author Graham Pople
   * @since 1.0.0
   */
+@Volatile
 class AsyncScope private[scala] (scopeName: String,
                  bucketName: String,
                  private val core: Core,

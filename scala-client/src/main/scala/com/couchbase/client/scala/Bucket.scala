@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.scala.util.AsyncUtils
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
@@ -46,6 +47,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * @param collection the name of the collection
     * @return a created collection resource
     */
+  @Stability.Volatile
   def collection(collection: String): Collection = {
     scope(DefaultResources.DefaultScope).collection(collection)
   }
@@ -59,6 +61,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     *
     * @param name the name of the scope
     */
+  @Stability.Volatile
   def scope(name: String): Scope = {
     AsyncUtils.block(async.scope(name))
       .map(asyncScope => new Scope(asyncScope, async.name))
@@ -66,6 +69,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
   }
 
   /** Opens and returns the default Couchbase scope. */
+  @Stability.Volatile
   def defaultScope: Scope = {
     scope(DefaultResources.DefaultScope)
   }
