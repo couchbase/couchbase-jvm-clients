@@ -265,6 +265,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+    request.context().clientContext(opts.clientContext());
     return request;
   }
 

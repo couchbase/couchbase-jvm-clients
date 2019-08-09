@@ -41,9 +41,9 @@ public class RequestContext extends CoreContext {
   private final Request<? extends Response> request;
 
   /**
-   * Allows to attach a custom payload to the request for the user.
+   * User-attached domain specific diagnostic information.
    */
-  private volatile Map<String, Object> payload;
+  private volatile Map<String, Object> clientContext;
 
   private volatile String dispatchedTo;
 
@@ -109,17 +109,19 @@ public class RequestContext extends CoreContext {
    *
    * @return the payload if set.
    */
-  public Map<String, Object> payload() {
-    return payload;
+  public Map<String, Object> clientContext() {
+    return clientContext;
   }
 
   /**
    * Allows to set a custom payload for this request.
    *
-   * @param payload the payload to set.
+   * @param clientContext the payload to set.
    */
-  public RequestContext payload(final Map<String, Object> payload) {
-    this.payload = payload;
+  public RequestContext clientContext(final Map<String, Object> clientContext) {
+    if (clientContext != null) {
+      this.clientContext = clientContext;
+    }
     return this;
   }
 
@@ -134,8 +136,8 @@ public class RequestContext extends CoreContext {
       input.put("cancelled", true);
       input.put("reason", request.cancellationReason());
     }
-    if (payload != null) {
-      input.put("payload", payload);
+    if (clientContext != null) {
+      input.put("clientContext", clientContext);
     }
     Map<String, Object> serviceContext = request.serviceContext();
     if (serviceContext != null) {

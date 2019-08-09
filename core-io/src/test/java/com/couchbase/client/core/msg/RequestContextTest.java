@@ -51,13 +51,13 @@ class RequestContextTest {
     Request<?> request = mock(Request.class);
     Core core = mock(Core.class);
     RequestContext ctx = new RequestContext(new CoreContext(core, 1, null), request);
-    assertNull(ctx.payload());
+    assertNull(ctx.clientContext());
 
     Map<String, Object> payload = new HashMap<>();
     payload.put("foo", true);
-    ctx.payload(payload);
+    ctx.clientContext(payload);
 
-    assertEquals(payload, ctx.payload());
+    assertEquals(payload, ctx.clientContext());
   }
 
 }

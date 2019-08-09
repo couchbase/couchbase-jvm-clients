@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -37,6 +38,11 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
    * The custom retry strategy, if set.
    */
   private Optional<RetryStrategy> retryStrategy = Optional.empty();
+
+  /**
+   * The client context data, if set.
+   */
+  private Map<String, Object> clientContext = null;
 
   /**
    * Allows to return the right options builder instance for child implementations.
@@ -74,6 +80,17 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
     return self();
   }
 
+  /**
+   * Specifies custom, client domain specific context metadata with this operation.
+   *
+   * @param clientContext the client context information as a map.
+   * @return this options builder for chaining purposes.
+   */
+  public SELF clientContext(final Map<String, Object> clientContext) {
+    this.clientContext = clientContext;
+    return self();
+  }
+
   public abstract class BuiltCommonOptions {
 
     /**
@@ -89,6 +106,14 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
     public Optional<Duration> timeout() {
       return timeout;
     }
+
+    /**
+     * Returns the client context, or null if not present.
+     */
+    public Map<String, Object> clientContext() {
+      return clientContext;
+    }
+
   }
 
 }
