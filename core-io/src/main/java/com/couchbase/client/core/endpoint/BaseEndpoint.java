@@ -37,6 +37,7 @@ import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -432,7 +433,7 @@ public abstract class BaseEndpoint implements Endpoint {
         }
         channel.writeAndFlush(request);
     } else {
-      RetryOrchestrator.maybeRetry(endpointContext.get(), request);
+      RetryOrchestrator.maybeRetry(endpointContext.get(), request, RetryReason.ENDPOINT_NOT_WRITABLE);
     }
   }
 

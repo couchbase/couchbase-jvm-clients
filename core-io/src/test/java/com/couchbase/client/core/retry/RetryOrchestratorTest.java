@@ -55,7 +55,7 @@ class RetryOrchestratorTest {
     Request<?> request = mock(Request.class);
     when(request.completed()).thenReturn(true);
 
-    RetryOrchestrator.maybeRetry(null, request);
+    RetryOrchestrator.maybeRetry(null, request, RetryReason.UNKNOWN);
 
     verify(request, times(1)).completed();
     verifyNoMoreInteractions(request);
@@ -76,7 +76,7 @@ class RetryOrchestratorTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     when(env.eventBus()).thenReturn(eventBus);
     CoreContext context = new CoreContext(mock(Core.class), 1, env);
-    RetryOrchestrator.maybeRetry(context, request);
+    RetryOrchestrator.maybeRetry(context, request, RetryReason.UNKNOWN);
 
     verify(request, times(1)).cancel(CancellationReason.NO_MORE_RETRIES);
 
@@ -111,7 +111,7 @@ class RetryOrchestratorTest {
     CoreContext ctx = new CoreContext(core, 1, env);
 
     long start = System.nanoTime();
-    RetryOrchestrator.maybeRetry(ctx, request);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);
 
     verify(requestContext, times(1)).incrementRetryAttempt();
     verify(request, never()).cancel(CancellationReason.NO_MORE_RETRIES);
@@ -129,6 +129,7 @@ class RetryOrchestratorTest {
     assertEquals(Event.Severity.DEBUG, retryEvent.severity());
     assertEquals(Event.Category.REQUEST.path(), retryEvent.category());
     assertEquals(requestContext, retryEvent.context());
+    assertEquals(RetryReason.UNKNOWN, retryEvent.retryReason());
   }
 
 }

@@ -33,6 +33,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.AnalyticsService;
 import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.ManagerService;
@@ -346,12 +347,12 @@ public class Node implements Stateful<NodeState> {
   /**
    * Retries the request.
    *
-   * <p>This is a separate method because in test it is overriden to do easy assertions.</p>
+   * <p>This is a separate method because in test it is overridden to do easy assertions.</p>
    *
    * @param request the request to retry.
    */
   protected <R extends Request<? extends Response>> void sendIntoRetry(final R request) {
-    RetryOrchestrator.maybeRetry(ctx, request);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_SERVICE_AVAILBLE);
   }
 
   /**

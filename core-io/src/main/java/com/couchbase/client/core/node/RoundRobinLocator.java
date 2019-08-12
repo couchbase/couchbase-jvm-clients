@@ -23,6 +23,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public class RoundRobinLocator implements Locator {
                        final ClusterConfig config, final CoreContext ctx) {
     List<Node> filteredNodes = filterNodes(nodes);
     if (filteredNodes.isEmpty()) {
-      RetryOrchestrator.maybeRetry(ctx, request);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
     }
 
@@ -85,7 +86,7 @@ public class RoundRobinLocator implements Locator {
       }
     }
 
-    RetryOrchestrator.maybeRetry(ctx, request);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
   }
 
   private void dispatchUntargeted(final Request<? extends Response> request, final List<Node> nodes,
@@ -96,7 +97,7 @@ public class RoundRobinLocator implements Locator {
     if (node != null) {
       node.send(request);
     } else {
-      RetryOrchestrator.maybeRetry(ctx, request);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       ctx.environment().eventBus().publish(new NodeLocatorBugIdentifiedEvent(ctx));
     }
   }

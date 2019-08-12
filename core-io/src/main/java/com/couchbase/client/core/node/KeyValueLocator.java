@@ -35,6 +35,7 @@ import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.List;
 import java.util.Optional;
@@ -84,7 +85,7 @@ public class KeyValueLocator implements Locator {
       }
     }
 
-    RetryOrchestrator.maybeRetry(ctx, (Request) request);
+    RetryOrchestrator.maybeRetry(ctx, (Request) request, RetryReason.NO_NODE_AVAILABLE);
   }
 
   private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,
@@ -98,7 +99,7 @@ public class KeyValueLocator implements Locator {
 
     int nodeId = calculateNodeId(partitionId, request, config);
     if (nodeId < 0) {
-      RetryOrchestrator.maybeRetry(ctx, request);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
     }
 
@@ -111,7 +112,7 @@ public class KeyValueLocator implements Locator {
     }
 
     if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
-      RetryOrchestrator.maybeRetry(ctx, request);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
     }
 
@@ -178,7 +179,7 @@ public class KeyValueLocator implements Locator {
     }
 
     if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
-      RetryOrchestrator.maybeRetry(ctx, request);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
     }
 

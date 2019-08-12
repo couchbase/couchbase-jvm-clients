@@ -40,37 +40,39 @@ import java.util.Optional;
 public class RetryOrchestrator {
 
   /**
-   * Retries the given request immediatly, unless it is already completed.
+   * Retries the given request immediately, unless it is already completed.
    *
    * <p>This method is usually used in contexts like "not my vbucket" where we need to retry
    * completely transparently and not based on the retry strategy configured.</p>
    *
    * @param ctx the core context into which timer the request is submitted.
    * @param request the request in question.
+   * @param reason the reason why the request is being retried.
    */
-  public static void retryImmediately(final CoreContext ctx,
-                                      final Request<? extends Response> request) {
+  public static void retryImmediately(final CoreContext ctx, final Request<? extends Response> request,
+                                      final RetryReason reason) {
     if (request.completed()) {
       return;
     }
-    retryWithDuration(ctx, request, Duration.ofMillis(1));
+    retryWithDuration(ctx, request, Duration.ofMillis(1), reason);
   }
 
   /**
-   * Retry or cancel the given request, depending on its state and the configured
-   * {@link RetryStrategy}.
+   * Retry or cancel the given request, depending on its state and the configured {@link RetryStrategy}.
    *
    * @param ctx the core context into which timer the request is submitted.
    * @param request the request in question.
+   * @param reason the reason why the request is being retried.
    */
-  public static void maybeRetry(final CoreContext ctx, final Request<? extends Response> request) {
+  public static void maybeRetry(final CoreContext ctx, final Request<? extends Response> request,
+                                final RetryReason reason) {
     if (request.completed()) {
       return;
     }
 
     Optional<Duration> duration = request.retryStrategy().shouldRetry(request);
     if (duration.isPresent()) {
-      retryWithDuration(ctx, request, duration.get());
+      retryWithDuration(ctx, request, duration.get(), reason);
     } else {
       ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.getClass(), request.context()));
       request.cancel(CancellationReason.NO_MORE_RETRIES);
@@ -83,12 +85,12 @@ public class RetryOrchestrator {
    * @param ctx the core context into which timer the request is submitted.
    * @param request the request in question.
    * @param duration the duration when to retry.
+   * @param reason the reason why the request is being retried.
    */
-  private static void retryWithDuration(final CoreContext ctx,
-                                        final Request<? extends Response> request,
-                                        final Duration duration) {
+  private static void retryWithDuration(final CoreContext ctx, final Request<? extends Response> request,
+                                        final Duration duration, final RetryReason reason) {
     ctx.environment().eventBus().publish(
-      new RequestRetriedEvent(duration, request.context(), request.getClass())
+      new RequestRetriedEvent(duration, request.context(), request.getClass(), reason)
     );
     request.context().incrementRetryAttempt();
     ctx.environment().timer().schedule(

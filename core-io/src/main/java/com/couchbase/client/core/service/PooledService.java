@@ -24,6 +24,7 @@ import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.CompositeStateful;
 import reactor.core.publisher.Flux;
 
@@ -230,9 +231,9 @@ abstract class PooledService implements Service {
           endpoints.add(endpoint);
         }
       }
-      RetryOrchestrator.retryImmediately(serviceContext, request);
+      RetryOrchestrator.retryImmediately(serviceContext, request, RetryReason.NO_ENDPOINT_AVAILABLE);
     } else {
-      RetryOrchestrator.maybeRetry(serviceContext, request);
+      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.NO_ENDPOINT_AVAILABLE);
     }
   }
 

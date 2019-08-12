@@ -38,6 +38,7 @@ import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
@@ -128,7 +129,7 @@ public abstract class ChunkedMessageHandler
     // We still have a request in-flight so we need to reschedule it in order to not let it trip on each others
     // toes.
     if (!pipelined && currentRequest != null) {
-      RetryOrchestrator.retryImmediately(endpointContext, (REQ) msg);
+      RetryOrchestrator.retryImmediately(endpointContext, (REQ) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
       return;
     }
 

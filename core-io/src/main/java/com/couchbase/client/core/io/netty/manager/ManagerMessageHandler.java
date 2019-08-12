@@ -36,6 +36,7 @@ import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
@@ -92,7 +93,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof ManagerRequest) {
       if (currentRequest != null) {
-        RetryOrchestrator.maybeRetry(coreContext, (ManagerRequest<Response>) msg);
+        RetryOrchestrator.retryImmediately(coreContext, (ManagerRequest<Response>) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
         return;
       }
 

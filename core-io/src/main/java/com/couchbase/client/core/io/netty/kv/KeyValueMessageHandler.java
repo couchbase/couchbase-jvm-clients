@@ -42,6 +42,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
@@ -320,7 +321,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
     final String origin = request.context().dispatchedTo();
-    RetryOrchestrator.retryImmediately(ioContext, request);
+    RetryOrchestrator.retryImmediately(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
     body(response)
       .map(b -> b.toString(UTF_8).trim())
@@ -341,7 +342,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       Duration duration = Duration.ofNanos(System.nanoTime() - start);
       eventBus.publish(new CollectionMapRefreshFailedEvent(duration, ioContext, err));
     });
-    RetryOrchestrator.retryImmediately(ioContext, request);
+    RetryOrchestrator.retryImmediately(ioContext, request, RetryReason.KV_COLLECTION_OUTDATED);
   }
 
 }

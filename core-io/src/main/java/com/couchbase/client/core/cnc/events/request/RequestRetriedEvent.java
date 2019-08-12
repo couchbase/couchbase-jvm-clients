@@ -18,20 +18,31 @@ package com.couchbase.client.core.cnc.events.request;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.retry.RetryReason;
 
 import java.time.Duration;
 
 public class RequestRetriedEvent extends AbstractEvent {
 
   private final Class<?> request;
+  private final RetryReason retryReason;
 
-  public RequestRetriedEvent(Duration duration, RequestContext context, Class<?> request) {
+  public RequestRetriedEvent(Duration duration, RequestContext context, Class<?> request, final RetryReason reason) {
     super(Severity.DEBUG, Category.REQUEST, duration, context);
     this.request = request;
+    this.retryReason = reason;
+  }
+
+  public Class<?> requestClass() {
+    return request;
+  }
+
+  public RetryReason retryReason() {
+    return retryReason;
   }
 
   @Override
   public String description() {
-    return "Request " + request.getSimpleName() + " retried per RetryStrategy";
+    return "Request " + request.getSimpleName() + " retried per RetryStrategy (Reason: " + retryReason + ")";
   }
 }
