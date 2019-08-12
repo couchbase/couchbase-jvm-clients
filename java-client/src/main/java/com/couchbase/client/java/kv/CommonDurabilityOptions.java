@@ -48,19 +48,19 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
   /**
    * Allows to customize the poll-based durability requirements for this operation.
    *
-   * <p>Note: it is not possible to set this option and {@link #durabilityLevel(DurabilityLevel)} at
-   * the same time.</p>
+   * <p><strong>Note:</strong> if a {@link #durability(DurabilityLevel)} has been set beforehand it will be set back to
+   * {@link DurabilityLevel#NONE}, since it is not allowed to use both mechanisms at the same time.</p>
    *
    * @param persistTo the durability persistence requirement.
    * @param replicateTo the durability replication requirement.
    * @return this options builder for chaining purposes.
    */
   public SELF durability(final PersistTo persistTo, final ReplicateTo replicateTo) {
-    notNull(persistTo, "ObservePersistTo");
-    notNull(replicateTo, "ObserveReplicateTo");
+    notNull(persistTo, "PersistTo");
+    notNull(replicateTo, "ReplicateTo");
+
     if (durabilityLevel.isPresent()) {
-      throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-        "the same time!");
+      durabilityLevel = Optional.empty();
     }
 
     this.persistTo = persistTo;
@@ -71,26 +71,22 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
   /**
    * Allows to customize the enhanced durability requirements for this operation.
    *
-   * <p>Note: it is not possible to set this option and {@link #durabilityLevel(DurabilityLevel)} at
+   * <p><strong>Note:</strong> if a {@link #durability(PersistTo, ReplicateTo)} has been set beforehand it will be set
+   * back to {@link PersistTo#NONE} and {@link ReplicateTo#NONE}, since it is not allowed to use both mechanisms at
    * the same time.</p>
    *
    * @param durabilityLevel the enhanced durability requirement.
    * @return this options builder for chaining purposes.
    */
-  public SELF durabilityLevel(final DurabilityLevel durabilityLevel) {
+  public SELF durability(final DurabilityLevel durabilityLevel) {
     notNull(durabilityLevel, "DurabilityLevel");
 
-    // DurabilityLevel.NONE is provided as a convenience so that apps don't have to do branching logic when they're
-    // constructing options blocks
-    if (durabilityLevel != DurabilityLevel.NONE) {
-      if (persistTo != PersistTo.NONE || replicateTo != ReplicateTo.NONE) {
-        throw new IllegalStateException("Durability and DurabilityLevel cannot be set both at " +
-          "the same time!");
-      }
+    this.persistTo = PersistTo.NONE;
+    this.replicateTo = ReplicateTo.NONE;
 
+    if (durabilityLevel != DurabilityLevel.NONE) {
       this.durabilityLevel = Optional.of(durabilityLevel);
-    }
-    else {
+    } else {
       this.durabilityLevel = Optional.empty();
     }
 
@@ -119,7 +115,6 @@ abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF
     public Optional<DurabilityLevel> durabilityLevel() {
       return durabilityLevel;
     }
-
 
   }
 

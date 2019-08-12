@@ -16,10 +16,33 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+
+/**
+ * Specifies enhanced durability options for the mutation.
+ */
 public enum DurabilityLevel {
+  /**
+   * No enhanced durability configured for the mutation.
+   */
   NONE((byte) 0x00),
+  /**
+   * The mutation must be replicated to (that is, held in the memory allocated to the bucket on) a majority of
+   * the Data Service nodes.
+   */
   MAJORITY((byte) 0x01),
+  /**
+   * The mutation must be replicated to a majority of the Data Service nodes.
+   *
+   * <p>Additionally, it must be persisted (that is, written and synchronised to disk) on the
+   * node hosting the active vBucket for the data.</p>
+   */
   MAJORITY_AND_PERSIST_ON_MASTER((byte) 0x02),
+  /**
+   * The mutation must be persisted to a majority of the Data Service nodes.
+   *
+   * <p>Accordingly, it will be written to disk on those nodes.</p>
+   */
   PERSIST_TO_MAJORITY((byte) 0x03);
 
   private final byte code;
@@ -28,7 +51,9 @@ public enum DurabilityLevel {
     this.code = code;
   }
 
+  @Stability.Internal
   public byte code() {
     return code;
   }
+
 }
