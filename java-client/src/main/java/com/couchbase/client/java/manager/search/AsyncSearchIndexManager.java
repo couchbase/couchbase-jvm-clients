@@ -17,14 +17,36 @@
 package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.msg.search.GetSearchIndexRequest;
-import com.couchbase.client.core.msg.search.RemoveSearchIndexRequest;
-import com.couchbase.client.core.msg.search.UpsertSearchIndexRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.search.GenericSearchRequest;
+import com.couchbase.client.java.json.JsonObject;
 
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * The {@link AsyncSearchIndexManager} allows to manage search index structures in a couchbase cluster.
@@ -41,100 +63,376 @@ public class AsyncSearchIndexManager {
     this.environment = core.context().environment();
   }
 
+  private static String indexesPath() {
+    return "/api/index";
+  }
+
+  private static String indexPath(final String indexName) {
+    return indexesPath() + "/" + urlEncode(indexName);
+  }
+
+  private static String indexCountPath(final String indexName) {
+    return indexPath(indexName) + "/count";
+  }
+
+  private static String analyzeDocumentPath(final String indexName) {
+    return indexPath(indexName) + "/analyzeDoc";
+  }
+
+  private static String pauseIngestPath(final String indexName) {
+    return indexPath(indexName) + "/ingestControl/pause";
+  }
+
+  private static String resumeIngestPath(final String indexName) {
+    return indexPath(indexName) + "/ingestControl/resume";
+  }
+
+  private static String allowQueryingPath(final String indexName) {
+    return indexPath(indexName) + "/queryControl/allow";
+  }
+
+  private static String disallowQueryingPath(final String indexName) {
+    return indexPath(indexName) + "/queryControl/disallow";
+  }
+
+  private static String freezePlanPath(final String indexName) {
+    return indexPath(indexName) + "/planFreezeControl/freeze";
+  }
+
+  private static String unfreezePlanPath(final String indexName) {
+    return indexPath(indexName) + "/planFreezeControl/unfreeze";
+  }
+
   /**
-   * Fetches an already created index from the server.
+   * Fetches an index from the server if it exists.
    *
    * @param name the name of the search index.
-   * @return a {@link CompletableFuture} that will complete once the index definition is loaded.
+   * @return a {@link CompletableFuture} the found index once complete.
    */
-  public CompletableFuture<SearchIndex> get(final String name) {
-    GetSearchIndexRequest request = getRequest(name);
+  public CompletableFuture<SearchIndex> getIndex(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = getIndexRequest(name);
     core.send(request);
-    return request.response().thenApply(response -> SearchIndex.fromJson(response.content()));
+    return getAllIndexes().thenApply(indexes -> {
+      Optional<SearchIndex> found = indexes.stream().filter(i -> i.name().equals(name)).findFirst();
+      if (found.isPresent()) {
+        return found.get();
+      }
+      throw SearchIndexNotFoundException.forIndex(name);
+    });
   }
 
-  GetSearchIndexRequest getRequest(final String name) {
-    Duration timeout = environment.timeoutConfig().managementTimeout();
-    RetryStrategy retryStrategy = environment.retryStrategy();
-
-    return new GetSearchIndexRequest(timeout, core.context(), retryStrategy,
-      environment.credentials(), name);
+  GenericSearchRequest getIndexRequest(final String name) {
+    return searchRequest(HttpMethod.GET, indexPath(name));
   }
 
   /**
-   * Inserts a search index which does not exist already.
+   * Fetches all indexes from the server.
    *
-   * <p>Note that you must create a new index with a new name using {@link SearchIndex#from(String, SearchIndex)} when
-   * fetching an index definition via {@link #get(String)}. Otherwise only replace can be used since
-   * a UUID is present which uniquely identifies an index definition on the cluster.</p>
-   *
-   * @param index the name of the index.
-   * @return a {@link CompletableFuture} that will complete once the index definition is inserted.
+   * @return a {@link CompletableFuture} with all index definitions once complete.
    */
-  public CompletableFuture<Void> insert(final SearchIndex index) {
-    UpsertSearchIndexRequest request = insertRequest(index);
+  public CompletableFuture<List<SearchIndex>> getAllIndexes() {
+    GenericSearchRequest request = getAllIndexesRequest();
     core.send(request);
-    return request.response().thenApply(response -> null);
+    return request.response().thenApply(response -> {
+      JsonNode rootNode = Mapper.decodeIntoTree(response.content());
+      JsonNode indexDefs = rootNode.get("indexDefs").get("indexDefs");
+      Map<String, SearchIndex> indexes = Mapper.convertValue(
+        indexDefs,
+        new TypeReference<Map<String, SearchIndex>>() {}
+      );
+      return new ArrayList<>(indexes.values());
+    });
   }
 
-  UpsertSearchIndexRequest insertRequest(final SearchIndex index) {
-    if (index.uuid().isPresent()) {
-      throw new IllegalArgumentException("No UUID in the index must be present to insert it.");
-    }
-
-    Duration timeout = environment.timeoutConfig().managementTimeout();
-    RetryStrategy retryStrategy = environment.retryStrategy();
-
-    return new UpsertSearchIndexRequest(timeout, core.context(), retryStrategy,
-      environment.credentials(), index.name(), index.toJson());
-  }
-
-    /**
-     * Updates a previously loaded index with new params.
-     *
-     * <p>It is important that the index needs to be loaded from the server when calling this method, since a
-     * UUID is present in the response and needs to be subsequently sent to the server on an update request. If
-     * you just want to create a new one, use {@link #insert(SearchIndex)} instead.</p>
-     *
-     * @param index the index previously loaded via {@link #get(String)}.
-     * @return a {@link CompletableFuture} that will complete once the index definition is updated.
-     */
-  public CompletableFuture<Void> replace(final SearchIndex index) {
-    UpsertSearchIndexRequest request = replaceRequest(index);
-    core.send(request);
-    return request.response().thenApply(response -> null);
-  }
-
-  UpsertSearchIndexRequest replaceRequest(final SearchIndex index) {
-    if (!index.uuid().isPresent()) {
-      throw new IllegalArgumentException("A UUID in the index must be present to replace it.");
-    }
-
-    Duration timeout = environment.timeoutConfig().managementTimeout();
-    RetryStrategy retryStrategy = environment.retryStrategy();
-
-    return new UpsertSearchIndexRequest(timeout, core.context(), retryStrategy,
-      environment.credentials(), index.name(), index.toJson());
+  GenericSearchRequest getAllIndexesRequest() {
+    return searchRequest(HttpMethod.GET, indexesPath());
   }
 
   /**
-   * Removes a search index from the cluster.
+   * Retrieves the number of documents that have been indexed for an index.
    *
-   * @param name the name of the index.
-   * @return a {@link CompletableFuture} that completes once the index is removed.
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} with the indexed documents count once complete.
    */
-  public CompletableFuture<Void> remove(final String name) {
-    RemoveSearchIndexRequest request = removeRequest(name);
+  public CompletableFuture<Long> getIndexedDocumentsCount(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = getIndexedDocumentsCountRequest(name);
+    core.send(request);
+    return request
+      .response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to get indexed documents count search index", throwable);
+      })
+      .thenApply(response -> {
+        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
+        return rootNode.get("count").asLong();
+      });
+  }
+
+  GenericSearchRequest getIndexedDocumentsCountRequest(final String name) {
+    return searchRequest(HttpMethod.GET, indexCountPath(name));
+  }
+
+  /**
+   * Creates, or updates, an index.
+   *
+   * @param index the index definition to upsert.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> upsertIndex(final SearchIndex index) {
+    notNull(index, "Search Index");
+    GenericSearchRequest request = upsertIndexRequest(index);
     core.send(request);
     return request.response().thenApply(response -> null);
   }
 
-  RemoveSearchIndexRequest removeRequest(final String name) {
-    Duration timeout = environment.timeoutConfig().managementTimeout();
-    RetryStrategy retryStrategy = environment.retryStrategy();
+  GenericSearchRequest upsertIndexRequest(final SearchIndex index) {
+    return searchRequest(() -> {
+      ByteBuf payload = Unpooled.wrappedBuffer(index.toJson().getBytes(StandardCharsets.UTF_8));
+      DefaultFullHttpRequest request = new DefaultFullHttpRequest(
+        HttpVersion.HTTP_1_1,
+        HttpMethod.PUT,
+        indexPath(index.name()),
+        payload
+      );
+      request.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-cache");
+      request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+      request.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
+      return request;
+    });
+  }
 
-    return new RemoveSearchIndexRequest(timeout, core.context(), retryStrategy,
-      environment.credentials(), name);
+  /**
+   * Drops an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> dropIndex(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = dropIndexRequest(name);
+    core.send(request);
+    return request
+      .response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to drop search index", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest dropIndexRequest(final String name) {
+    return searchRequest(HttpMethod.DELETE, indexPath(name));
+  }
+
+  /**
+   * Allows to see how a document is analyzed against a specific index.
+   *
+   * @param name the name of the search index.
+   * @param document the document to analyze.
+   * @return a {@link CompletableFuture} with analyzed document parts once complete.
+   */
+  public CompletableFuture<List<JsonObject>> analyzeDocument(final String name, final JsonObject document) {
+    notNullOrEmpty(name, "Search Index Name");
+    notNull(document, "Document");
+    GenericSearchRequest request = analyzeDocumentRequest(name, document);
+    core.send(request);
+    return request
+      .response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("Page not found")) {
+          throw new FeatureNotAvailableException("Document analysis is not available on this server version!");
+        } else if (throwable.getMessage().contains("no indexName:")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to analyze search document", throwable);
+      })
+      .thenApply(response -> {
+        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
+        List<Map<String, Object>> analyzed = Mapper.convertValue(
+          rootNode.get("analyzed"),
+          new TypeReference<List<Map<String, Object>>>() {}
+        );
+        return analyzed.stream().filter(Objects::nonNull).map(JsonObject::from).collect(Collectors.toList());
+      });
+  }
+
+  GenericSearchRequest analyzeDocumentRequest(final String name, final JsonObject document) {
+    return searchRequest(() -> {
+      ByteBuf content = Unpooled.wrappedBuffer(Mapper.encodeAsBytes(document.toMap()));
+      FullHttpRequest request = new DefaultFullHttpRequest(
+        HttpVersion.HTTP_1_1,
+        HttpMethod.POST,
+        analyzeDocumentPath(name),
+        content
+      );
+      request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+      request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+      return request;
+    });
+  }
+
+  /**
+   * Pauses updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> pauseIngest(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = pauseIngestRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to pause search index ingest", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest pauseIngestRequest(final String name) {
+    return searchRequest(HttpMethod.POST, pauseIngestPath(name));
+  }
+
+  /**
+   * Resumes updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> resumeIngest(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = resumeIngestRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to resume search index ingest", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest resumeIngestRequest(final String name) {
+    return searchRequest(HttpMethod.POST, resumeIngestPath(name));
+  }
+
+  /**
+   * Allows querying against an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> allowQuerying(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = allowQueryingRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to allow querying on the search index", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest allowQueryingRequest(final String name) {
+    return searchRequest(HttpMethod.POST, allowQueryingPath(name));
+  }
+
+  /**
+   * Disallows querying against an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> disallowQuerying(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = disallowQueryingRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to disallow querying on the search index", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest disallowQueryingRequest(final String name) {
+    return searchRequest(HttpMethod.POST, disallowQueryingPath(name));
+  }
+
+  /**
+   * Freeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> freezePlan(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = freezePlanRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to freeze plan on the search index", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest freezePlanRequest(final String name) {
+    return searchRequest(HttpMethod.POST, freezePlanPath(name));
+  }
+
+  /**
+   * Unfreeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> unfreezePlan(final String name) {
+    notNullOrEmpty(name, "Search Index Name");
+    GenericSearchRequest request = unfreezePlanRequest(name);
+    core.send(request);
+    return request.response()
+      .exceptionally(throwable -> {
+        if (throwable.getMessage().contains("index not found")) {
+          throw SearchIndexNotFoundException.forIndex(name);
+        }
+        throw new CouchbaseException("Failed to unfreeze plan on the search index", throwable);
+      })
+      .thenApply(response -> null);
+  }
+
+  GenericSearchRequest unfreezePlanRequest(final String name) {
+    return searchRequest(HttpMethod.POST, unfreezePlanPath(name));
+  }
+
+  private GenericSearchRequest searchRequest(final HttpMethod method, final String path) {
+    return searchRequest(() -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path));
+  }
+
+  private GenericSearchRequest searchRequest(final Supplier<FullHttpRequest> httpRequest) {
+    return new GenericSearchRequest(
+      environment.timeoutConfig().managementTimeout(),
+      core.context(),
+      environment.retryStrategy(),
+      httpRequest
+    );
   }
 
 }

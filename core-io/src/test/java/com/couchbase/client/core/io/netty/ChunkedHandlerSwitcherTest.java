@@ -30,8 +30,8 @@ import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
+import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
-import com.couchbase.client.core.msg.search.UpsertSearchIndexRequest;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -96,7 +96,7 @@ class ChunkedHandlerSwitcherTest {
   @Test
   void switchesToNonChunkIfNeeded() {
     assertChunkedInPipeline(channel);
-    channel.write(mock(UpsertSearchIndexRequest.class));
+    channel.write(mock(GenericSearchRequest.class));
     assertNonChunkedInPipeline(channel);
   }
 
@@ -108,7 +108,7 @@ class ChunkedHandlerSwitcherTest {
     assertChunkedInPipeline(channel);
 
     for (int i = 0; i < 2; i++) {
-      channel.write(mock(UpsertSearchIndexRequest.class));
+      channel.write(mock(GenericSearchRequest.class));
       assertNonChunkedInPipeline(channel);
 
       channel.write(mock(SearchRequest.class));

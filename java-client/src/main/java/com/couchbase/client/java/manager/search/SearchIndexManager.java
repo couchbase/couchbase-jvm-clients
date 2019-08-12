@@ -16,6 +16,10 @@
 
 package com.couchbase.client.java.manager.search;
 
+import com.couchbase.client.java.json.JsonObject;
+
+import java.util.List;
+
 import static com.couchbase.client.java.AsyncUtils.block;
 
 /**
@@ -32,48 +36,115 @@ public class SearchIndexManager {
   }
 
   /**
-   * Fetches an already created index from the server.
+   * Fetches an index from the server if it exists.
    *
    * @param name the name of the search index.
-   * @return once the index definition is loaded.
+   * @return the index definition if it exists.
    */
-  public SearchIndex get(final String name) {
-    return block(asyncIndexManager.get(name));
+  public SearchIndex getIndex(final String name) {
+    return block(asyncIndexManager.getIndex(name));
   }
 
   /**
-   * Inserts a search index which does not exist already.
+   * Fetches all indexes from the server.
    *
-   * <p>Note that you must create a new index with a new name using {@link SearchIndex#from(String, SearchIndex)} when
-   * fetching an index definition via {@link #get(String)}. Otherwise only replace can be used since
-   * a UUID is present which uniquely identifies an index definition on the cluster.</p>
-   *
-   * @param index the name of the index.
+   * @return all currently present indexes.
    */
-  public void insert(final SearchIndex index) {
-    block(asyncIndexManager.insert(index));
+  public List<SearchIndex> getAllIndexes() {
+    return block(asyncIndexManager.getAllIndexes());
   }
 
   /**
-   * Updates a previously loaded index with new params.
+   * Retrieves the number of documents that have been indexed for an index.
    *
-   * <p>It is important that the index needs to be loaded from the server when calling this method, since a
-   * UUID is present in the response and needs to be subsequently sent to the server on an update request. If
-   * you just want to create a new one, use {@link #insert(SearchIndex)} instead.</p>
-   *
-   * @param index the index previously loaded via {@link #get(String)}.
+   * @param name the name of the search index.
+   * @return the number of indexed documents.
    */
-  public void replace(final SearchIndex index) {
-    block(asyncIndexManager.replace(index));
+  public long getIndexedDocumentsCount(final String name) {
+    return block(asyncIndexManager.getIndexedDocumentsCount(name));
   }
 
   /**
-   * Removes a search index from the cluster.
+   * Allows to see how a document is analyzed against a specific index.
    *
-   * @param name the name of the index.
+   * @param name the name of the search index.
+   * @param document the document to be analyzed.
+   * @return the analyzed sections for the document.
    */
-  public void remove(final String name) {
-    block(asyncIndexManager.remove(name));
+  public List<JsonObject> analyzeDocument(final String name, final JsonObject document) {
+    return block(asyncIndexManager.analyzeDocument(name, document));
+  }
+
+  /**
+   * Creates, or updates, an index.
+   *
+   * @param index the index definition including name and settings.
+   */
+  public void upsertIndex(final SearchIndex index) {
+    block(asyncIndexManager.upsertIndex(index));
+  }
+
+  /**
+   * Drops an index.
+   *
+   * @param name the name of the search index.
+   */
+  public void dropIndex(final String name) {
+    block(asyncIndexManager.dropIndex(name));
+  }
+
+  /**
+   * Pauses updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   */
+  public void pauseIngest(final String name) {
+    block(asyncIndexManager.pauseIngest(name));
+  }
+
+  /**
+   * Resumes updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   */
+  public void resumeIngest(final String name) {
+    block(asyncIndexManager.resumeIngest(name));
+  }
+
+  /**
+   * Allows querying against an index.
+   *
+   * @param name the name of the search index.
+   */
+  public void allowQuerying(final String name) {
+    block(asyncIndexManager.allowQuerying(name));
+  }
+
+  /**
+   * Disallows querying against an index.
+   *
+   * @param name the name of the search index.
+   */
+  public void disallowQuerying(final String name) {
+    block(asyncIndexManager.disallowQuerying(name));
+  }
+
+  /**
+   * Freeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   */
+  public void freezePlan(final String name) {
+    block(asyncIndexManager.freezePlan(name));
+  }
+
+  /**
+   * Unfreeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   */
+  public void unfreezePlan(final String name) {
+    block(asyncIndexManager.unfreezePlan(name));
   }
 
 }

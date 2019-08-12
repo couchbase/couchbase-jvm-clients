@@ -16,94 +16,144 @@
 
 package com.couchbase.client.java.manager.search;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.SearchServiceException;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.json.JacksonTransformers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchIndex {
 
-  private final ObjectNode rootNode;
+  private final String name;
+  private final String sourceName;
 
-  /**
-   * Creates another index from the given one with its properties, but clears out all state like the
-   * UUID so it can be used to create a new one.
-   *
-   * @param name the new name of the index
-   * @param index the original index to copy the properties over
-   * @return a new index that can be used
-   */
-  public static SearchIndex from(final String name, final SearchIndex index) {
-    return new SearchIndex(index).name(name).clearUuid();
+  private String uuid;
+  private String type;
+  private Map<String, Object> params;
+  private String sourceUuid;
+  private Map<String, Object> sourceParams;
+  private String sourceType;
+  private Map<String, Object> planParams;
+
+  public SearchIndex(final String name, final String sourceName) {
+    this.name = name;
+    this.sourceName = sourceName;
   }
 
-  private SearchIndex(SearchIndex other) {
-    this.rootNode = other.rootNode.deepCopy();
-  }
-
-  private SearchIndex(byte[] raw) {
-    try {
-
-      JsonNode node = JacksonTransformers.MAPPER.readTree(raw);
-      if (node.has("indexDef")) {
-        node = node.path("indexDef");
-      }
-      this.rootNode = (ObjectNode) node;
-    } catch (IOException e) {
-      throw new SearchServiceException("Could not decode index definition!", e);
-    }
-  }
-
-  private  SearchIndex name(final String name) {
-    rootNode.put("name", name);
-    return this;
-  }
-
-  private SearchIndex clearUuid() {
-    rootNode.remove("uuid");
-    return this;
-  }
-
-  public Optional<String> uuid() {
-    try {
-      if (!rootNode.has("uuid")) {
-        return Optional.empty();
-      }
-      return Optional.of(JacksonTransformers.MAPPER.treeToValue(rootNode.path("uuid"), String.class));
-    } catch (JsonProcessingException e) {
-      throw new SearchServiceException("Could not decode index definition!", e);
-    }
-  }
-
-  public static SearchIndex fromJson(byte[] raw) {
-    return new SearchIndex(raw);
-  }
-
-  public byte[] toJson() {
-    try {
-      return JacksonTransformers.MAPPER.writeValueAsBytes(rootNode);
-    } catch (JsonProcessingException e) {
-      throw new SearchServiceException("Could not encode index definition!", e);
-    }
+  @JsonCreator
+  public SearchIndex(
+    @JsonProperty("uuid") String uuid,
+    @JsonProperty("name") String name,
+    @JsonProperty("type") String type,
+    @JsonProperty("params") Map<String, Object> params,
+    @JsonProperty("sourceUUID") String sourceUuid,
+    @JsonProperty("sourceName") String sourceName,
+    @JsonProperty("sourceParams") Map<String, Object> sourceParams,
+    @JsonProperty("sourceType") String sourceType,
+    @JsonProperty("planParams") Map<String, Object> planParams) {
+    this.uuid = uuid;
+    this.name = name;
+    this.sourceName = sourceName;
+    this.type = type;
+    this.params = params;
+    this.sourceUuid = sourceUuid;
+    this.sourceParams = sourceParams;
+    this.sourceType = sourceType;
+    this.planParams = planParams;
   }
 
   public String name() {
-    try {
-      return JacksonTransformers.MAPPER.treeToValue(rootNode.path("name"), String.class);
-    } catch (JsonProcessingException e) {
-      throw new SearchServiceException("Could not decode index definition!", e);
-    }
+    return name;
+  }
+
+  public String uuid() {
+    return uuid;
+  }
+
+  public void uuid(String uuid) {
+    this.uuid = uuid;
+  }
+
+  public String sourceName() {
+    return sourceName;
+  }
+
+  public String type() {
+    return type;
+  }
+
+  public Map<String, Object> params() {
+    return params;
+  }
+
+  public void params(Map<String, Object> params) {
+    this.params = params;
+  }
+
+  public String sourceUuid() {
+    return sourceUuid;
+  }
+
+  public void sourceUuid(String sourceUuid) {
+    this.sourceUuid = sourceUuid;
+  }
+
+  public Map<String, Object> sourceParams() {
+    return sourceParams;
+  }
+
+  public void sourceParams(Map<String, Object> sourceParams) {
+    this.sourceParams = sourceParams;
+  }
+
+  public String sourceType() {
+    return sourceType;
+  }
+
+  public void sourceType(String sourceType) {
+    this.sourceType = sourceType;
+  }
+
+  public Map<String, Object> planParams() {
+    return planParams;
+  }
+
+  public void planParams(Map<String, Object> planParams) {
+    this.planParams = planParams;
+  }
+
+  public String toJson() {
+    Map<String, Object> output = new HashMap<>();
+    output.put("name", name);
+    output.put("sourceName", sourceName);
+    output.put("type", type == null ? "fulltext-index" : type);
+    output.put("sourceType", sourceType == null ? "couchbase" : sourceType);
+    return Mapper.encodeAsString(output);
   }
 
   @Override
   public String toString() {
     return "SearchIndex{" +
-      "raw=" + new String(toJson(), StandardCharsets.UTF_8) +
+      "uuid='" + uuid + '\'' +
+      ", name='" + name + '\'' +
+      ", sourceName='" + sourceName + '\'' +
+      ", type='" + type + '\'' +
+      ", params=" + params +
+      ", sourceUuid='" + sourceUuid + '\'' +
+      ", sourceParams=" + sourceParams +
+      ", sourceType='" + sourceType + '\'' +
+      ", planParams=" + planParams +
       '}';
   }
 }

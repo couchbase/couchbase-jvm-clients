@@ -19,11 +19,13 @@ package com.couchbase.client.core.msg.search;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
-public class UpsertSearchIndexResponse extends BaseResponse {
+import java.nio.charset.StandardCharsets;
+
+public class GenericSearchResponse extends BaseResponse {
 
   private final byte[] content;
 
-  UpsertSearchIndexResponse(ResponseStatus status, final byte[] content) {
+  GenericSearchResponse(ResponseStatus status, byte[] content) {
     super(status);
     this.content = content;
   }
@@ -32,4 +34,11 @@ public class UpsertSearchIndexResponse extends BaseResponse {
     return content;
   }
 
+  @Override
+  public String toString() {
+    return "GenericSearchResponse{" +
+      "status=" + status() +
+      ", content=" + new String(content, StandardCharsets.UTF_8) +
+      '}';
+  }
 }

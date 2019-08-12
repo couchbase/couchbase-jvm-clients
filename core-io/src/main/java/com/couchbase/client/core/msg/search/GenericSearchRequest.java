@@ -17,53 +17,48 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
+import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
+import static java.util.Objects.requireNonNull;
 
-public class RemoveSearchIndexRequest extends BaseRequest<RemoveSearchIndexResponse>
-  implements NonChunkedHttpRequest<RemoveSearchIndexResponse> {
+public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
+  implements NonChunkedHttpRequest<GenericSearchResponse> {
 
-  private static final String PATH = "/api/index/";
+  private final Supplier<FullHttpRequest> requestSupplier;
 
-  private final String name;
-  private final Credentials credentials;
-
-  public RemoveSearchIndexRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                                  Credentials credentials, String name) {
+  public GenericSearchRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+                              final Supplier<FullHttpRequest> requestSupplier) {
     super(timeout, ctx, retryStrategy);
-    this.name = name;
-    this.credentials = credentials;
+    this.requestSupplier = requireNonNull(requestSupplier);
+  }
+
+  @Override
+  public GenericSearchResponse decode(final FullHttpResponse response) {
+    byte[] dst = new byte[response.content().readableBytes()];
+    response.content().readBytes(dst);
+    return new GenericSearchResponse(decodeStatus(response.status()), dst);
   }
 
   @Override
   public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, PATH + name);
-    addHttpBasicAuth(request, credentials);
+    FullHttpRequest request = requestSupplier.get();
+    addHttpBasicAuth(request, context().environment().credentials());
     return request;
-  }
-
-  @Override
-  public RemoveSearchIndexResponse decode(final FullHttpResponse response) {
-    byte[] dst = new byte[response.content().readableBytes()];
-    response.content().readBytes(dst);
-    return new RemoveSearchIndexResponse(HttpProtocol.decodeStatus(response.status()), dst);
   }
 
   @Override
   public ServiceType serviceType() {
     return ServiceType.SEARCH;
   }
+
 }

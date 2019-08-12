@@ -40,23 +40,17 @@ public class SearchIndexManagement {
     /*
      * Loads an index from cluster if it exists (will fail otherwise).
      */
-    SearchIndex index = manager.get("ts");
+    SearchIndex index = manager.getIndex("ts");
 
     /*
-     * Replaces the loaded index on the server.
+     * Replaces or inserts the loaded index on the server.
      */
-    manager.replace(index);
+    manager.upsertIndex(index);
 
     /*
-     * Creates a new index with a new name and inserts it on the server.
+     * Drops an index.
      */
-    manager.insert(SearchIndex.from("ts2", index));
-
-    /*
-     * Creates an index and removes it from the server.
-     */
-    manager.insert(SearchIndex.from("ts3", index));
-    manager.remove("ts3");
+    manager.dropIndex("ts");
   }
 
 }

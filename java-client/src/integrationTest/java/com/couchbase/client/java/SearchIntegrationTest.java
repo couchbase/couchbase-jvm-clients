@@ -91,7 +91,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
           .replace("$BUCKET$", config().bucketname())
           .replace("$NAME$", "idx-" + config().bucketname());
 
-        cluster.searchIndexes().insert(SearchIndex.fromJson(indexDef.getBytes(StandardCharsets.UTF_8)));
+        // cluster.searchIndexes().upsertIndex(SearchIndex.fromJson(indexDef.getBytes(StandardCharsets.UTF_8)));
     }
 
     @AfterAll
