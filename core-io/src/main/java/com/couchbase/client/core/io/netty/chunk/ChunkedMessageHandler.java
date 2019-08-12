@@ -184,7 +184,6 @@ public abstract class ChunkedMessageHandler
   @Override
   public void handlerRemoved(final ChannelHandlerContext ctx) {
     cleanupState();
-    ctx.fireChannelInactive();
   }
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
