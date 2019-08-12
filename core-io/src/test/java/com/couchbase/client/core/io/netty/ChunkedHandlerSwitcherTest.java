@@ -31,7 +31,9 @@ import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.UpsertSearchIndexRequest;
 import com.couchbase.client.core.service.ServiceType;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,26 +49,35 @@ import static org.mockito.Mockito.when;
  */
 class ChunkedHandlerSwitcherTest {
 
+  private static CoreEnvironment env;
+
   private EmbeddedChannel channel;
   private EndpointContext endpointContext;
   private BaseEndpoint endpoint;
-  private CoreEnvironment env;
 
+  @BeforeAll
+  static void beforeAll() {
+    env = CoreEnvironment.create("user", "pass");
+  }
+
+  @AfterAll
+  static void afterAll() {
+    env.shutdown();
+  }
 
   @BeforeEach
-  private void setup() {
-    env = CoreEnvironment.create("user", "pass");
+  void setup() {
     endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(env);
     endpoint = mock(BaseEndpoint.class);
+    when(endpoint.endpointContext()).thenReturn(endpointContext);
     when(endpoint.pipelined()).thenReturn(false);
     channel = setupChannel();
   }
 
   @AfterEach
-  private void teardown() {
+  void teardown() {
     channel.finishAndReleaseAll();
-    env.shutdown();
   }
 
   /**
@@ -166,7 +177,7 @@ class ChunkedHandlerSwitcherTest {
 
   class TestNonChunkedMessageHandler extends NonChunkedHttpMessageHandler {
     TestNonChunkedMessageHandler() {
-      super(endpointContext, ServiceType.SEARCH);
+      super(endpoint, ServiceType.SEARCH);
     }
 
     @Override

@@ -29,11 +29,13 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRespon
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggregator;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
@@ -78,13 +80,19 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   private IoContext ioContext;
 
   /**
+   * The upper endpoint.
+   */
+  private final BaseEndpoint endpoint;
+
+  /**
    * The query endpoint context.
    */
   private final EndpointContext endpointContext;
 
-  protected NonChunkedHttpMessageHandler(final EndpointContext endpointContext, final ServiceType serviceType) {
+  protected NonChunkedHttpMessageHandler(final BaseEndpoint endpoint, final ServiceType serviceType) {
     this.httpAggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
-    this.endpointContext = endpointContext;
+    this.endpoint = endpoint;
+    this.endpointContext = endpoint.endpointContext();
     this.eventBus = endpointContext.environment().eventBus();
     this.serviceType = serviceType;
   }
@@ -151,12 +159,20 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     try {
       if (msg instanceof FullHttpResponse) {
-        if (((FullHttpResponse) msg).status().code() == 200) {
-          Response response = currentRequest.decode((FullHttpResponse) msg);
-          currentRequest.succeed(response);
-        } else {
-          String body = ((FullHttpResponse) msg).content().toString(StandardCharsets.UTF_8);
-          currentRequest.fail(failRequestWith(body));
+        try {
+          FullHttpResponse httpResponse = (FullHttpResponse) msg;
+          ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
+          if (responseStatus == ResponseStatus.SUCCESS) {
+            Response response = currentRequest.decode(httpResponse);
+            currentRequest.succeed(response);
+          } else {
+            String body = httpResponse.content().toString(StandardCharsets.UTF_8);
+            currentRequest.fail(failRequestWith(body));
+          }
+        } catch (Throwable ex) {
+          currentRequest.fail(ex);
+        } finally {
+          endpoint.markRequestCompletion();
         }
       } else {
         ioContext.environment().eventBus().publish(

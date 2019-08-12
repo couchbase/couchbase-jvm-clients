@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.search;
 
-import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.SearchServiceException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.service.ServiceType;
@@ -25,8 +25,8 @@ import java.nio.charset.StandardCharsets;
 
 class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
 
-  NonChunkedSearchMessageHandler(EndpointContext endpointContext) {
-    super(endpointContext, ServiceType.SEARCH);
+  NonChunkedSearchMessageHandler(BaseEndpoint endpoint) {
+    super(endpoint, ServiceType.SEARCH);
   }
 
   @Override

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.view;
 
-import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.service.ServiceType;
@@ -25,8 +25,8 @@ import java.nio.charset.StandardCharsets;
 
 class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
 
-  NonChunkedViewMessageHandler(EndpointContext endpointContext) {
-    super(endpointContext, ServiceType.VIEWS);
+  NonChunkedViewMessageHandler(BaseEndpoint endpoint) {
+    super(endpoint, ServiceType.VIEWS);
   }
 
   @Override

@@ -26,7 +26,7 @@ public class ViewHandlerSwitcher extends ChunkedHandlerSwitcher {
   public ViewHandlerSwitcher(final BaseEndpoint endpoint, final EndpointContext context) {
     super(
       new ChunkedViewMessageHandler(endpoint, context),
-      new NonChunkedViewMessageHandler(context),
+      new NonChunkedViewMessageHandler(endpoint),
       ViewRequest.class
     );
   }

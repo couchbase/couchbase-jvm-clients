@@ -26,7 +26,7 @@ public class SearchHandlerSwitcher extends ChunkedHandlerSwitcher {
   public SearchHandlerSwitcher(final BaseEndpoint endpoint, final EndpointContext context) {
     super(
       new ChunkedSearchMessageHandler(endpoint, context),
-      new NonChunkedSearchMessageHandler(context),
+      new NonChunkedSearchMessageHandler(endpoint),
       SearchRequest.class
     );
   }
