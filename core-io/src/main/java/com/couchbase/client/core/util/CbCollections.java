@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.emptyList;
@@ -56,6 +57,10 @@ public class CbCollections {
 
   public static boolean isNullOrEmpty(Collection<?> c) {
     return c == null || c.isEmpty();
+  }
+
+  public static boolean isNullOrEmpty(Map<?, ?> m) {
+    return m == null || m.isEmpty();
   }
 
   @SafeVarargs

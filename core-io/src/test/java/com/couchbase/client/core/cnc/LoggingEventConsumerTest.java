@@ -17,10 +17,16 @@
 package com.couchbase.client.core.cnc;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.couchbase.client.core.cnc.events.request.RequestRetriedEvent;
 import com.couchbase.client.core.env.LoggerConfig;
+import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.retry.RetryReason;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +45,7 @@ class LoggingEventConsumerTest {
   @BeforeEach
   void setup() {
     logger = mock(LoggingEventConsumer.Logger.class);
-    loggingEventConsumer = LoggingEventConsumer.create(LoggerConfig.builder().customLogger(logger).build());
+    loggingEventConsumer = LoggingEventConsumer.create(LoggerConfig.customLogger(logger).build());
   }
 
   @Test
@@ -82,6 +88,36 @@ class LoggingEventConsumerTest {
     loggingEventConsumer.accept(event);
     verify(logger, times(1))
       .debug("[com.couchbase.io][EventWithDescription][3600000000µs] some text");
+  }
+
+  @Test
+  void attachesClientContextIfEnabled() {
+    LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer.create(
+      LoggerConfig.diagnosticContextEnabled(true).customLogger(logger).build()
+    );
+
+    RequestContext context = mock(RequestContext.class);
+    Map<String, Object> userContext = new HashMap<>();
+    userContext.put("hello", "world");
+    when(context.clientContext()).thenReturn(userContext);
+
+    RequestRetriedEvent retryEvent = new RequestRetriedEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
+    loggingEventConsumer.accept(retryEvent);
+
+    verify(logger, times(1)).attachContext(userContext);
+  }
+
+  @Test
+  void doesNotAttachClientContextByDefault() {
+    RequestContext context = mock(RequestContext.class);
+    Map<String, Object> userContext = new HashMap<>();
+    userContext.put("hello", "world");
+    when(context.clientContext()).thenReturn(userContext);
+
+    RequestRetriedEvent retryEvent = new RequestRetriedEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
+    loggingEventConsumer.accept(retryEvent);
+
+    verify(logger, never()).attachContext(userContext);
   }
 
   static class MyEvent extends AbstractEvent {

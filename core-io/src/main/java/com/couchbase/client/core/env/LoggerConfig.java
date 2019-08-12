@@ -28,12 +28,14 @@ public class LoggerConfig {
   private final boolean fallbackToConsole;
   private final boolean disableSlf4J;
   private final String loggerName;
+  private final boolean diagnosticContextEnabled;
 
   private LoggerConfig(final Builder builder) {
     customLogger = builder.customLogger;
     disableSlf4J = builder.disableSlf4J;
     loggerName = builder.loggerName;
     fallbackToConsole = builder.fallbackToConsole;
+    diagnosticContextEnabled = builder.diagnosticContextEnabled;
   }
 
   public static Builder builder() {
@@ -56,6 +58,14 @@ public class LoggerConfig {
     return builder().loggerName(loggerName);
   }
 
+  public static Builder diagnosticContextEnabled(boolean diagnosticContextEnabled) {
+    return builder().diagnosticContextEnabled(diagnosticContextEnabled);
+  }
+
+  public static Builder customLogger(LoggingEventConsumer.Logger customLogger) {
+    return builder().customLogger(customLogger);
+  }
+
   public LoggingEventConsumer.Logger customLogger() {
     return customLogger;
   }
@@ -72,6 +82,10 @@ public class LoggerConfig {
     return loggerName;
   }
 
+  public boolean diagnosticContextEnabled() {
+    return diagnosticContextEnabled;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -82,6 +96,7 @@ public class LoggerConfig {
     export.put("fallbackToConsole", fallbackToConsole);
     export.put("disableSlf4j", disableSlf4J);
     export.put("loggerName", loggerName);
+    export.put("diagnosticContextEnabled", diagnosticContextEnabled);
     return export;
   }
 
@@ -91,6 +106,7 @@ public class LoggerConfig {
     private boolean fallbackToConsole = false;
     private boolean disableSlf4J = false;
     private String loggerName = "CouchbaseLogger";
+    private boolean diagnosticContextEnabled = false;
 
     /**
      * Allows to specify a custom logger. This is used for testing only.
@@ -116,6 +132,11 @@ public class LoggerConfig {
 
     public Builder loggerName(String loggerName) {
       this.loggerName = loggerName;
+      return this;
+    }
+
+    public Builder diagnosticContextEnabled(boolean diagnosticContextEnabled) {
+      this.diagnosticContextEnabled = diagnosticContextEnabled;
       return this;
     }
 

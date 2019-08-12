@@ -18,6 +18,8 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.LoggerConfig;
+import com.couchbase.client.core.msg.RequestContext;
+import org.slf4j.MDC;
 
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -26,6 +28,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 /**
  * Consumes {@link Event Events} and logs them per configuration.
@@ -119,6 +125,12 @@ public class LoggingEventConsumer implements Consumer<Event> {
       loggers.put(event.category(), logger);
     }
 
+    boolean diagnosticContext = loggerConfig.diagnosticContextEnabled() && event.context() instanceof RequestContext;
+
+    if (diagnosticContext) {
+      logger.attachContext(((RequestContext) event.context()).clientContext());
+    }
+
     switch (event.severity()) {
       case VERBOSE:
         logger.trace(logLine);
@@ -135,6 +147,10 @@ public class LoggingEventConsumer implements Consumer<Event> {
       case ERROR:
       default:
         logger.error(logLine);
+    }
+
+    if (diagnosticContext) {
+      logger.clearContext();
     }
   }
 
@@ -352,6 +368,23 @@ public class LoggingEventConsumer implements Consumer<Event> {
      * @param t   the exception (throwable) to log
      */
     void error(String msg, Throwable t);
+
+    /**
+     * Writes a diagnostics key/value pair.
+     *
+     * <p>note that this feature might not be supported by all implementations.</p>
+     *
+     * @param context the context to attach
+     */
+    default void attachContext(Map<String, Object> context) {}
+
+    /**
+     * Clears the diagnostics context for this thread.
+     *
+     * <p>note that this feature might not be supported by all implementations.</p>
+     */
+    default void clearContext() {}
+
   }
 
   static class Slf4JLogger implements Logger {
@@ -466,6 +499,28 @@ public class LoggingEventConsumer implements Consumer<Event> {
     public void error(String msg, Throwable t) {
       logger.error(msg, t);
     }
+
+    @Override
+    public void attachContext(final Map<String, Object> context) {
+      if (isNullOrEmpty(context)) {
+        return;
+      }
+
+      MDC.setContextMap(
+        context.entrySet().stream().collect(Collectors.toMap(
+          e -> redactUser(e.getKey()).toString(),
+          e -> {
+            Object v = e.getValue();
+            return v == null ? "" : redactUser(v.toString()).toString();
+        }))
+      );
+    }
+
+    @Override
+    public void clearContext() {
+      MDC.clear();
+    }
+
   }
 
   static class JdkLogger implements Logger {
