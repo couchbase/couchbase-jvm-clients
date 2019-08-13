@@ -2,11 +2,13 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
+import com.couchbase.client.scala.codec.{Conversions, DocumentFlags, EncodeParams}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.util.RowTraversalUtil
 
-import scala.util.Try
+import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success, Try}
 
 /** Methods to allow constructing a sequence of `MutateInSpec`s.
   *
@@ -89,16 +91,59 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to append the value.
-    * @param value      the value to append.  $SupportedTypes
+    * @param value      the value(s) to append.  $SupportedTypes
     * @param ev         $Encodable
     */
-  def arrayAppend[T](path: String, value: T)
+  def arrayAppend[T](path: String, values: T*)
                     (implicit ev: Encodable[T]): ArrayAppend = {
-    val expandMacro = value match {
-      case v: MutateInMacro => true
-      case _ => false
+    if (values.size == 1) {
+      val value = values(0)
+      val expandMacro = value match {
+        case v: MutateInMacro => true
+        case _ => false
+      }
+      ArrayAppend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
     }
-    ArrayAppend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    else {
+      encodeMulti(ev, values: _*) match {
+        case Success(ret) =>
+          ArrayAppend(path, Success(ret, EncodeParams(DocumentFlags.Json)))
+        case Failure(err) =>
+          ArrayAppend(path, Failure(err))
+      }
+    }
+  }
+
+  /** Encode all provided values into one, comma-separated, Array[Byte] */
+  private def encodeMulti[T](ev: Encodable[T], values: T*): Try[Array[Byte]] = {
+    if (values.isEmpty) {
+      Failure(new IllegalArgumentException("Empty set of values provided"))
+    }
+    else {
+      val encoded = values.map(value => {
+        ev.encodeSubDocumentField(value)
+      })
+
+      // Turn Seq[Try] to Try[Seq]
+      val traversed = RowTraversalUtil.traverse(encoded.iterator)
+
+      traversed.map(v => {
+        val out = new ArrayBuffer[Byte]()
+
+        v.foreach(value => {
+          val bytes = value._1
+          out.append(bytes: _*)
+          out.append(',') // multiple values are comma separated
+        })
+
+        // Should be covered by values.isEmpty check, but to be safe
+        if (out.nonEmpty) {
+          out.remove(out.size - 1) // remove the trailing ','
+        }
+
+        out.toArray
+      })
+    }
   }
 
   /** Returns a `MutateInSpec` with the intent of prepending a value to an existing JSON array.
@@ -106,16 +151,27 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to prepend the value.
-    * @param value      the value to append.  $SupportedTypes
+    * @param value      the value(s) to prepend.  $SupportedTypes
     * @param ev         $Encodable
     */
-  def arrayPrepend[T](path: String, value: T)
+  def arrayPrepend[T](path: String, values: T*)
                      (implicit ev: Encodable[T]): ArrayPrepend = {
-    val expandMacro = value match {
-      case v: MutateInMacro => true
-      case _ => false
+    if (values.size == 1) {
+      val value = values(0)
+      val expandMacro = value match {
+        case v: MutateInMacro => true
+        case _ => false
+      }
+      ArrayPrepend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
     }
-    ArrayPrepend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    else {
+      encodeMulti(ev, values: _*) match {
+        case Success(ret) =>
+          ArrayPrepend(path, Success(ret, EncodeParams(DocumentFlags.Json)))
+        case Failure(err) =>
+          ArrayPrepend(path, Failure(err))
+      }
+    }
   }
 
   /** Returns a `MutateInSpec` with the intent of inserting a value into an existing JSON array.
@@ -123,18 +179,29 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
-    * @param value      the value to insert.  $SupportedTypes
+    * @param value      the value(s) to insert.  $SupportedTypes
     * @param xattr      $Xattr
     * @param createPath $CreatePath
     * @param ev         $Encodable
     */
-  def arrayInsert[T](path: String, value: T)
+  def arrayInsert[T](path: String, values: T*)
                     (implicit ev: Encodable[T]): ArrayInsert = {
-    val expandMacro = value match {
-      case v: MutateInMacro => true
-      case _ => false
+    if (values.size == 1) {
+      val value = values(0)
+      val expandMacro = value match {
+        case v: MutateInMacro => true
+        case _ => false
+      }
+      ArrayInsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
     }
-    ArrayInsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    else {
+      encodeMulti(ev, values: _*) match {
+        case Success(ret) =>
+          ArrayInsert(path, Success(ret, EncodeParams(DocumentFlags.Json)))
+        case Failure(err) =>
+          ArrayInsert(path, Failure(err))
+      }
+    }
   }
 
   /** Returns a `MutateInSpec` with the intent of inserting a value into an existing JSON array, but only if the value

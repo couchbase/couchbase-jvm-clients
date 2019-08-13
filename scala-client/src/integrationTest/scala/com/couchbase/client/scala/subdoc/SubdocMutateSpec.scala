@@ -338,6 +338,13 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def array_append_multi() {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
+      Array(arrayAppend("foo", "cruel", "world")))
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
+  }
+
+  @Test
   def array_prepend() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
       Array(arrayPrepend("foo", "world")))
@@ -345,10 +352,24 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def array_prepend_multi() {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello")),
+      Array(arrayPrepend("foo", "cruel", "world")))
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel", "world", "hello"))
+  }
+
+  @Test
   def array_insert() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
       Array(arrayInsert("foo[1]", "cruel")))
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world"))
+  }
+
+  @Test
+  def array_insert_multi() {
+    val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> ujson.Arr("hello", "world")),
+      Array(arrayInsert("foo[1]", "cruel", "world2")))
+    assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("hello", "cruel", "world2", "world"))
   }
 
   @Test

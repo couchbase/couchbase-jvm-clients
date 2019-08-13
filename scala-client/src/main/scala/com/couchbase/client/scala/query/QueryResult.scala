@@ -48,7 +48,9 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
     **/
   def rowsAs[T]
   (implicit ev: Conversions.Decodable[T]): Iterator[Try[T]] = {
-    rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+    rows.iterator.map(row => {
+      ev.decode(row.data(), Conversions.JsonFlags)
+    })
   }
 
   /** All returned rows.  All rows are buffered from the query service first.
