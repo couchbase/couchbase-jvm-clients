@@ -17,7 +17,7 @@
 package com.couchbase.client.scala.query
 
 import java.util
-import java.util.List
+import java.util.{List, UUID}
 
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
@@ -287,7 +287,11 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     })
     profile.foreach(v => out.put("profile", v.toString.toLowerCase))
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
-    clientContextId.foreach(v => out.put("client_context_id", v))
+    val cciOut = clientContextId match {
+      case Some(cci) => cci
+      case _ => UUID.randomUUID().toString
+    }
+    out.put("client_context_id", cciOut)
     maxParallelism.foreach(v => out.put("max_parallelism", v.toString))
     pipelineCap.foreach(v => out.put("pipeline_cap", v.toString))
     pipelineBatch.foreach(v => out.put("pipeline_batch", v.toString))
