@@ -319,6 +319,7 @@ public class AsyncCollection {
     SubdocGetRequest request = new SubdocGetRequest(
       timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0, commands
     );
+    request.context().clientContext(opts.clientContext());
     return request;
   }
 
@@ -364,6 +365,7 @@ public class AsyncCollection {
     GetAndLockRequest request = new GetAndLockRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, lockFor
     );
+    request.context().clientContext(opts.clientContext());
     return request;
   }
 
@@ -415,6 +417,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetAndTouchRequest request = new GetAndTouchRequest(id, timeout, coreContext,
       collectionIdentifier, retryStrategy, expiration);
+    request.context().clientContext(opts.clientContext());
     return request;
   }
 
@@ -437,8 +440,7 @@ public class AsyncCollection {
    * @return a list of results from the active and the replica.
    */
   // TODO sync with RFC changes
-  public List<CompletableFuture<GetResult>> getFromReplica(final String id,
-                                                                     final GetFromReplicaOptions options) {
+  public List<CompletableFuture<GetResult>> getFromReplica(final String id, final GetFromReplicaOptions options) {
     return getFromReplicaRequests(id, options)
       .map(request -> GetAccessor.get(core, id, request))
       .collect(Collectors.toList());
@@ -470,18 +472,26 @@ public class AsyncCollection {
       if (opts.replicaMode() == ReplicaMode.ALL) {
         int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
         List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
-        requests.add(new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy));
+
+        GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+        activeRequest.context().clientContext(opts.clientContext());
+        requests.add(activeRequest);
+
         for (int i = 0; i < numReplicas; i++) {
-          requests.add(new ReplicaGetRequest(
+          ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
             id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1)
-          ));
+          );
+          replicaRequest.context().clientContext(opts.clientContext());
+          requests.add(replicaRequest);
         }
         return requests.stream();
       } else {
-        return Stream.of(new ReplicaGetRequest(
+        ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
           id, timeout, coreContext, collectionIdentifier, retryStrategy,
           (short) opts.replicaMode().ordinal()
-        ));
+        );
+        replicaRequest.context().clientContext(opts.clientContext());
+        return Stream.of(replicaRequest);
       }
     } else {
       throw CommonExceptions.getFromReplicaNotCouchbaseBucket();
@@ -525,6 +535,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, collectionIdentifier,
       retryStrategy, id, true, 0);
+    request.context().clientContext(opts.clientContext());
     return request;
   }
 
@@ -566,8 +577,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new RemoveRequest(id, opts.cas(), timeout,
+    RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
       coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -614,8 +627,10 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    return new InsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
+    InsertRequest request = new InsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
       encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -666,8 +681,10 @@ public class AsyncCollection {
     EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new UpsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
+    UpsertRequest request = new UpsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
       encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -720,10 +737,12 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    return new ReplaceRequest(id, encoded.content(), opts.expiry().getSeconds(),
+    ReplaceRequest request = new ReplaceRequest(id, encoded.content(), opts.expiry().getSeconds(),
       encoded.flags(), timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy,
       opts.durabilityLevel()
     );
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -772,8 +791,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
+    TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       expiry.getSeconds(), opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -815,7 +836,9 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas);
+    UnlockRequest request = new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas);
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -866,8 +889,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
+    SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       (byte) 0, commands);
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -932,11 +957,13 @@ public class AsyncCollection {
         .map(v -> v.encode())
         .collect(Collectors.toList());
 
-      return new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
+      SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.insertDocument(), opts.upsertDocument(),
         commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );
+      request.context().clientContext(opts.clientContext());
+      return request;
     }
   }
 

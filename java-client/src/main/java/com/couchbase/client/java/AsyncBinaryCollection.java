@@ -83,8 +83,10 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
+    AppendRequest request = new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content) {
@@ -111,8 +113,10 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
+    PrependRequest request = new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   public CompletableFuture<CounterResult> increment(final String id) {
@@ -137,8 +141,10 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
+    IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   public CompletableFuture<CounterResult> decrement(final String id) {
@@ -163,7 +169,9 @@ public class AsyncBinaryCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    return new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
+    DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 }

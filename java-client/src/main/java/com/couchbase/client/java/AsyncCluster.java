@@ -225,8 +225,10 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     options.injectParams(query);
 
-    return new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
       statement, query.toString().getBytes(StandardCharsets.UTF_8));
+    request.context().clientContext(options.clientContext());
+    return request;
   }
 
   /**
@@ -273,9 +275,11 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     opts.injectParams(query);
 
-    return new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
         query.toString().getBytes(StandardCharsets.UTF_8), opts.priority()
     );
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
@@ -309,8 +313,10 @@ public class AsyncCluster {
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-    return new SearchRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
       query.indexName(), bytes);
+    request.context().clientContext(opts.clientContext());
+    return request;
   }
 
   /**
