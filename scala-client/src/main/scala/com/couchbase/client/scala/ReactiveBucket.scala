@@ -79,9 +79,9 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     *
     * @param designDoc the view design document to use
     * @param viewName  the view to use
-    * @param options   any view query options - see [[ViewOptions]] for documentation
+    * @param options   any view query options - see [[view.ViewOptions]] for documentation
     *
-    * @return a `Mono` containing a [[ViewResult]] (which includes any returned rows)
+    * @return a `Mono` containing a [[view.ViewResult]] (which includes any returned rows)
     */
   def viewQuery(designDoc: String,
                 viewName: String,

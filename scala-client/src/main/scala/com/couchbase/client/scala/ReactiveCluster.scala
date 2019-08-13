@@ -23,6 +23,7 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query._
+import com.couchbase.client.scala.query.ReactiveQueryResult
 import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMeta}
@@ -57,9 +58,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * @param statement the N1QL statement to execute
-    * @param options   any query options - see [[QueryOptions]] for documentation
+    * @param options   any query options - see [[query.QueryOptions]] for documentation
     *
-    * @return a `Mono` containing a [[ReactiveQueryResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     **/
   def query(statement: String, options: QueryOptions = QueryOptions()): ScalaMono[ReactiveQueryResult] = {
@@ -72,9 +73,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * @param statement the Analytics query to execute
-    * @param options   any query options - see [[AnalyticsOptions]] for documentation
+    * @param options   any query options - see [[analytics.AnalyticsOptions]] for documentation
     *
-    * @return a `Mono` containing a [[ReactiveAnalyticsResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[analytics.ReactiveAnalyticsResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
   def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions())
@@ -115,13 +116,13 @@ class ReactiveCluster(val async: AsyncCluster) {
     * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
     * [[Cluster]] for a blocking version.
     *
-    * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
+    * @param query           the FTS query to execute.  See [[search.SearchQuery]] for how to construct
     * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
     *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
     * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
     *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
     *
-    * @return a `Mono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
   def searchQuery(query: SearchQuery,
@@ -206,7 +207,7 @@ object ReactiveCluster {
     ScalaMono.just(new ReactiveCluster(cluster.async))
   }
 
-  /** Connect to a Couchbase cluster with custom [[Credentials]].
+  /** Connect to a Couchbase cluster with custom `com.couchbase.client.core.env.Credentials`.
     *
     * $DeferredErrors
     *
@@ -221,7 +222,7 @@ object ReactiveCluster {
     ScalaMono.just(new ReactiveCluster(cluster.async))
   }
 
-  /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
+  /** Connect to a Couchbase cluster with a custom [[env.ClusterEnvironment]].
     *
     * $DeferredErrors
     *

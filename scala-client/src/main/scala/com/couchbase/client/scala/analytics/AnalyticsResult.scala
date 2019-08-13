@@ -34,7 +34,8 @@ import scala.util.{Failure, Success, Try}
   * @param meta            any additional information related to the Analytics query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
-  *                        implicit `Decodable[T]` can be found, and can include [[JsonObject]], a case class, String,
+  *                        implicit `Decodable[T]` can be found, and can include
+  *                        [[com.couchbase.client.scala.json.JsonObject]], a case class, String,
   *                        or one of a number of supported third-party JSON libraries.
   *
   * @author Graham Pople
@@ -42,7 +43,7 @@ import scala.util.{Failure, Success, Try}
   */
 case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
                            meta: AnalyticsMeta) {
-  /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the analytics service first.
+  /** Returns an `Iterator` of any returned rows.  All rows are buffered from the analytics service first.
     *
     * $SupportedTypes
     *
@@ -118,7 +119,8 @@ case class AnalyticsSignature(private val _content: Array[Byte]) {
 
   /** Return the content, converted into the application's preferred representation.
     *
-    * The content is a JSON object, so a suitable default representation would be [[JsonObject]].
+    * The content is a JSON object, so a suitable default representation would be
+    * [[com.couchbase.client.scala.json.JsonObject]].
     *
     * @tparam T $SupportedTypes
     */

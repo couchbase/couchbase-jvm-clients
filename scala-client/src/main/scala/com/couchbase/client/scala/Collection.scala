@@ -78,9 +78,9 @@ object Collection {
   *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-  * @define ErrorHandling  any [[scala.util.control.NonFatal]] error returned will derive ultimately from
-  *                        [[com.couchbase.client.core.error.CouchbaseException]].  If the exception also derives from
-  *                        [[com.couchbase.client.core.error.RetryableOperationException]]
+  * @define ErrorHandling  any `scala.util.control.NonFatal` error returned will derive ultimately from
+  *                        `com.couchbase.client.core.error.CouchbaseException`.  If the exception also derives from
+  *                        `com.couchbase.client.core.error.RetryableOperationException`.
   *                        then the failure was most likely temporary and may succeed if the application tries it
   *                        again.  (Though note that, in some cases, the operation may have in fact succeeded, and
   *                        the server was unable to report this to the SDK.  So the application should consider
@@ -88,11 +88,11 @@ object Collection {
   *                        error handling logic, possibly including the use of
   *                        [[Collection.getAllReplicas]]).  If the exception
   *                        does not derive from
-  *                        [[com.couchbase.client.core.error.RetryableOperationException]]
+  *                        `com.couchbase.client.core.error.RetryableOperationException`
   *                        then this is indicative of a more
   *                        permanent error or an application bug, that probably needs human review.
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.Conversions.Encodable]] can be found: a list
+  *                        `com.couchbase.client.scala.codec.Conversions.Encodable` can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @define Durability     writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                        take care of sending that mutation to any configured replicas.  This parameter provides
@@ -124,12 +124,12 @@ class Collection(
     * @param withExpiration $WithExpiration
     * @param project        projection is an advanced feature allowing one or more fields to be fetched from a JSON
     *                       document, and the results
-    *                       combined into a [[com.couchbase.client.scala.json.JsonObject]] result.  By default this
+    *                       combined into a [[json.JsonObject]] result.  By default this
     *                       is set to None, meaning a normal full document fetch will be performed.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
-    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
   def get(
@@ -153,8 +153,8 @@ class Collection(
     * @param expiration    $Expiration
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentAlreadyExistsException]], indicating the document already exists.
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
     *         $ErrorHandling
     **/
   def insert[T](
@@ -186,8 +186,8 @@ class Collection(
     * @param expiration    $Expiration
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def replace[T](
@@ -251,8 +251,8 @@ class Collection(
     * @param durability    $Durability
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def remove(
@@ -274,16 +274,16 @@ class Collection(
     *
     * @param id            $Id
     * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
-    *                      [[MutateInSpec]] for more details.
+    *                      [[kv.MutateInSpec]] for more details.
     * @param cas           $CAS
     * @param document      controls whether the document should be inserted, upserted, or not touched.  See
-    *                      [[DocumentCreation]] for details.
+    *                      [[kv.DocumentCreation]] for details.
     * @param durability    $Durability
     * @param expiration    $Expiration
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def mutateIn(
@@ -312,15 +312,15 @@ class Collection(
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * The CAS value returned in the [[GetResult]] is the document's 'key': during the locked period, the document
+    * The CAS value returned in the [[kv.GetResult]] is the document's 'key': during the locked period, the document
     * may only be modified by providing this CAS.
     *
     * @param id             $Id
     * @param lockFor        how long to lock the document for
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
-    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
   def getAndLock(id: String,
@@ -339,8 +339,8 @@ class Collection(
     *                       unlock the document
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
-    * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
   def unlock(
@@ -357,8 +357,8 @@ class Collection(
     * @param expiration     $Expiration
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
-    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
   def getAndTouch(id: String,
@@ -378,16 +378,16 @@ class Collection(
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * Individual operations can succeed or fail without affecting the others.  See [[LookupInResult]] for details on
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInResult]] for details on
     * how to process the results.
     *
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
-    *                      [[LookupInSpec]] for more details.
+    *                      [[kv.LookupInSpec]] for more details.
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def lookupIn(
@@ -410,8 +410,8 @@ class Collection(
     * @param id            $Id
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def getAnyReplica(id: String,
@@ -433,7 +433,7 @@ class Collection(
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
-    *         [[com.couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def getAllReplicas(id: String,
@@ -449,8 +449,8 @@ class Collection(
     * @param id             $Id
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
-    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
   def exists[T](

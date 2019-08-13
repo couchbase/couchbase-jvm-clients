@@ -78,7 +78,7 @@ $ mvn -Dscala.compat.version=2.12 -Dscala.compat.library.version=2.12.8 clean in
 $ mvn -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean install
 ```
 
-(The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11 and 2.12.  Though note that the 2.11 build is not quite working yet.)
+(The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11 and 2.12.
 
 (You can always go into one of the sub-directories like `core-io` to only build or test an 
 individual project.)
