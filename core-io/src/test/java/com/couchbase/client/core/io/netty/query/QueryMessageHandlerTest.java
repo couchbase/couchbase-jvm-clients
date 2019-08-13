@@ -37,13 +37,13 @@ import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,7 +101,7 @@ class QueryMessageHandlerTest {
 
 
     ByteBuf fullResponse = Unpooled.copiedBuffer(
-      Utils.readResource("success_response.json", QueryMessageHandlerTest.class),
+      readResource("success_response.json", QueryMessageHandlerTest.class),
       CharsetUtil.UTF_8
     );
 

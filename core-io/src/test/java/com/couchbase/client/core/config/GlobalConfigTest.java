@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-import static com.couchbase.client.util.Utils.readResource;
+import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

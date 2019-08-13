@@ -26,13 +26,13 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
+import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,7 +67,7 @@ class BaseBucketLoaderTest {
     BucketLoader loader = new BaseBucketLoader(core, SERVICE) {
       @Override
       protected Mono<byte[]> discoverConfig(NodeIdentifier seed, String bucket) {
-        return Mono.just(Utils.readResource(
+        return Mono.just(readResource(
           "../config_with_external.json",
           BaseBucketLoaderTest.class
         ).getBytes(UTF_8));

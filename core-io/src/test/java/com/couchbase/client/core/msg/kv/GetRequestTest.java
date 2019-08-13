@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
-import static com.couchbase.client.util.Utils.readResource;
+import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;

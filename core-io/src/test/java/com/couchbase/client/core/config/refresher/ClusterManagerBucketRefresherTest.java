@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.couchbase.client.util.Utils.waitUntilCondition;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -48,11 +48,10 @@ class ClusterManagerBucketRefresherTest {
   private CoreEnvironment env;
   private Core core;
   private ClusterManagerBucketRefresher refresher;
-  private SimpleEventBus eventBus;
 
   @BeforeEach
   void beforeEach() {
-    eventBus = new SimpleEventBus(true);
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     env = CoreEnvironment.builder("username", "password").eventBus(eventBus).build();
 
     CoreContext coreContext = mock(CoreContext.class);

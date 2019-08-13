@@ -16,6 +16,7 @@
 
 package com.couchbase.client.util;
 
+import static com.couchbase.client.test.Util.threadRunning;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,7 +31,7 @@ public class Assertions {
    * @param name the name of the thread
    */
   public static void assertThreadRunning(final String name) {
-    assertTrue(Utils.threadRunning(name), "Thread with name \"" + name + "\" not running");
+    assertTrue(threadRunning(name), "Thread with name \"" + name + "\" not running");
   }
 
   /**
@@ -39,6 +40,6 @@ public class Assertions {
    * @param name the name of the thread
    */
   public static void assertThreadNotRunning(final String name) {
-    assertFalse(Utils.threadRunning(name), "Thread with name \"" + name + "\" running");
+    assertFalse(threadRunning(name), "Thread with name \"" + name + "\" running");
   }
 }

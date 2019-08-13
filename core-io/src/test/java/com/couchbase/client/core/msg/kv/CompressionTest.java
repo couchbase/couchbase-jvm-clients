@@ -25,7 +25,6 @@ import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.util.Utils;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -37,6 +36,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
+import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,7 +60,7 @@ class CompressionTest {
   private final CollectionIdentifier cid = new CollectionIdentifier("b", Optional.of("s"), Optional.of("c"));
 
   private final byte[] shortContent = "short".getBytes(UTF_8);
-  private final byte[] longContent = Utils.readResource(
+  private final byte[] longContent = readResource(
     "dummy.json",
     CompressionTest.class
   ).getBytes(UTF_8);

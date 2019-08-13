@@ -22,7 +22,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
-import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -30,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,7 +70,7 @@ class DefaultConfigurationProviderTest {
     assertEquals(1, provider.seedNodes().size());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
@@ -101,7 +101,7 @@ class DefaultConfigurationProviderTest {
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
@@ -129,7 +129,7 @@ class DefaultConfigurationProviderTest {
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
@@ -137,7 +137,7 @@ class DefaultConfigurationProviderTest {
     provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
-    String newConfig = Utils.readResource(
+    String newConfig = readResource(
       "config_with_external_higher_rev.json",
       DefaultConfigurationProviderTest.class
     );
@@ -162,7 +162,7 @@ class DefaultConfigurationProviderTest {
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
@@ -170,7 +170,7 @@ class DefaultConfigurationProviderTest {
     provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
 
-    String newConfig = Utils.readResource(
+    String newConfig = readResource(
       "config_with_external_higher_rev.json",
       DefaultConfigurationProviderTest.class
     );
@@ -194,7 +194,7 @@ class DefaultConfigurationProviderTest {
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
-    String newConfig = Utils.readResource(
+    String newConfig = readResource(
       "global_config_mad_hatter_multi_node.json",
       DefaultConfigurationProviderTest.class
     );
@@ -226,7 +226,7 @@ class DefaultConfigurationProviderTest {
     assertEquals(1, provider.seedNodes().size());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );
@@ -256,7 +256,7 @@ class DefaultConfigurationProviderTest {
     assertEquals(1, provider.seedNodes().size());
 
     String bucket = "default";
-    String config = Utils.readResource(
+    String config = readResource(
       "config_with_external.json",
       DefaultConfigurationProviderTest.class
     );

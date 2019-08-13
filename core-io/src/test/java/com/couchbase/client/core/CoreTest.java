@@ -25,7 +25,6 @@ import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.util.Utils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.test.Util.readResource;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
@@ -109,7 +109,7 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
-      Utils.readResource("one_node_config.json", CoreTest.class),
+      readResource("one_node_config.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -132,7 +132,7 @@ class CoreTest {
     verify(mock102, never()).addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
     BucketConfig twoNodeConfig = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config.json", CoreTest.class),
+      readResource("two_nodes_config.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -205,7 +205,7 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config.json", CoreTest.class),
+      readResource("two_nodes_config.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -231,7 +231,7 @@ class CoreTest {
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
     BucketConfig twoNodesConfigMore = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
+      readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -305,7 +305,7 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
+      readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -333,7 +333,7 @@ class CoreTest {
       .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config.json", CoreTest.class),
+      readResource("two_nodes_config.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -388,7 +388,7 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
-      Utils.readResource("two_nodes_config_more_services.json", CoreTest.class),
+      readResource("two_nodes_config_more_services.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -416,7 +416,7 @@ class CoreTest {
       .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
-      Utils.readResource("one_node_config.json", CoreTest.class),
+      readResource("one_node_config.json", CoreTest.class),
       ENV,
       LOCALHOST
     );
@@ -475,7 +475,7 @@ class CoreTest {
     configs.onNext(clusterConfig);
 
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
-      Utils.readResource("cluster_run_two_nodes.json", CoreTest.class),
+      readResource("cluster_run_two_nodes.json", CoreTest.class),
       ENV,
       LOCALHOST
     );

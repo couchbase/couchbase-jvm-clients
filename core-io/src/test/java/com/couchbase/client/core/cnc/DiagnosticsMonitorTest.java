@@ -26,8 +26,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.util.Utils.waitUntilCondition;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
