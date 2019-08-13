@@ -256,7 +256,7 @@ class ReactiveCollection(async: AsyncCollection) {
   def getAnyReplica(id: String,
                     timeout: Duration = kvTimeout,
                     retryStrategy: RetryStrategy = environment.retryStrategy
-                   ): Mono[GetResult] = {
+                   ): Mono[GetFromReplicaResult] = {
     getAllReplicas(id, timeout, retryStrategy).next()
   }
 
@@ -266,21 +266,25 @@ class ReactiveCollection(async: AsyncCollection) {
   def getAllReplicas(id: String,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = environment.retryStrategy
-                    ): Flux[GetResult] = {
+                    ): Flux[GetFromReplicaResult] = {
     val reqsTry: Try[Seq[GetRequest]] = async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy)
 
     reqsTry match {
       case Failure(err) => Flux.error(err)
 
       case Success(reqs: Seq[GetRequest]) =>
-        val monos: Seq[Mono[GetResult]] = reqs.map(request => {
+        val monos: Seq[Mono[GetFromReplicaResult]] = reqs.map(request => {
           core.send(request)
 
           FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
             .flatMap(r => {
-              async.getFullDocHandler.response(id, r) match {
+              val isMaster = request match {
+                case _: GetRequest => true
+                case _ => false
+              }
+              async.getFromReplicaHandler.response(id, r, isMaster) match {
                 case Some(getResult) => Mono.just(getResult)
-                case _ => Mono.empty[GetResult]
+                case _ => Mono.empty[GetFromReplicaResult]
               }
             })
         })

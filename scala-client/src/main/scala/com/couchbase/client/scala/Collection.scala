@@ -416,7 +416,7 @@ class Collection(
     **/
   def getAnyReplica(id: String,
                     timeout: Duration = kvTimeout,
-                    retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
+                    retryStrategy: RetryStrategy = retryStrategy): Try[GetFromReplicaResult] =
     Try(reactive
       .getAnyReplica(id, timeout, retryStrategy)
       .block(Collection.SafetyTimeout + timeout))
@@ -438,7 +438,7 @@ class Collection(
     **/
   def getAllReplicas(id: String,
                      timeout: Duration = kvTimeout,
-                     retryStrategy: RetryStrategy = retryStrategy): Iterable[GetResult] =
+                     retryStrategy: RetryStrategy = retryStrategy): Iterable[GetFromReplicaResult] =
     reactive.getAllReplicas(id, timeout, retryStrategy).toIterable()
 
   /** Checks if a document exists.

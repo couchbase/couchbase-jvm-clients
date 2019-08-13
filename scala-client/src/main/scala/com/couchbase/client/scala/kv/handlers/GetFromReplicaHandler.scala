@@ -18,9 +18,11 @@ package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.config.CouchbaseBucketConfig
 import com.couchbase.client.core.error.CommonExceptions
-import com.couchbase.client.core.msg.kv.{GetRequest, ReplicaGetRequest}
+import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, ReplicaGetRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
+import com.couchbase.client.scala.kv.{DefaultErrors, GetFromReplicaResult, GetResult}
 import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Failure, Success, Try}
@@ -75,4 +77,16 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
       }
     }
   }
+
+  def response(id: String, response: GetResponse, isMaster: Boolean): Option[GetFromReplicaResult] = {
+    response.status() match {
+      case ResponseStatus.SUCCESS =>
+        Some(new GetFromReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isMaster))
+
+      case ResponseStatus.NOT_FOUND => None
+
+      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+    }
+  }
+
 }
