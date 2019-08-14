@@ -19,6 +19,7 @@ package com.couchbase.client.core.node;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -64,13 +65,20 @@ public class RoundRobinLocator implements Locator {
   @Override
   public void dispatch(final Request<? extends Response> request, final List<Node> nodes,
                        final ClusterConfig config, final CoreContext ctx) {
+    boolean isTargeted = request instanceof TargetedRequest;
+
+    if (!isTargeted && !config.hasClusterOrBucketConfig()) {
+      request.fail(FeatureNotAvailableException.clusterLevelQuery(serviceType));
+      return;
+    }
+
     List<Node> filteredNodes = filterNodes(nodes);
     if (filteredNodes.isEmpty()) {
       RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
     }
 
-    if (request instanceof TargetedRequest) {
+    if (isTargeted) {
       dispatchTargeted(request, filteredNodes, ctx);
     } else {
       dispatchUntargeted(request, filteredNodes, ctx);

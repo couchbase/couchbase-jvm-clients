@@ -17,6 +17,7 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class RoundRobinLocatorTest {
 
     QueryRequest request = mock(QueryRequest.class);
     ClusterConfig configMock = mock(ClusterConfig.class);
+    when(configMock.hasClusterOrBucketConfig()).thenReturn(true);
 
     Node node1Mock = mock(Node.class);
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
@@ -70,6 +72,7 @@ class RoundRobinLocatorTest {
 
     QueryRequest request = mock(QueryRequest.class);
     ClusterConfig configMock = mock(ClusterConfig.class);
+    when(configMock.hasClusterOrBucketConfig()).thenReturn(true);
 
     Node node1Mock = mock(Node.class);
     when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
@@ -109,6 +112,7 @@ class RoundRobinLocatorTest {
 
     QueryRequest request = mock(QueryRequest.class);
     ClusterConfig configMock = mock(ClusterConfig.class);
+    when(configMock.hasClusterOrBucketConfig()).thenReturn(true);
 
     Node node1Mock = mock(Node.class);
     when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));

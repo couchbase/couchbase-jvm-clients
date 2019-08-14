@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.service.ServiceType;
+
 /**
  * Exception which states that the feature is not available for the bucket.
  */
@@ -31,5 +33,11 @@ public class FeatureNotAvailableException extends CouchbaseException {
 
   public FeatureNotAvailableException(Throwable cause) {
     super(cause);
+  }
+
+  public static FeatureNotAvailableException clusterLevelQuery(final ServiceType serviceType) {
+    return new FeatureNotAvailableException("The cluster does not support cluster-level queries " +
+      "(only Couchbase Server 6.5 and later) and no bucket is open. If an older Couchbase Server version " +
+      "is used, at least one bucket needs to be opened to dispatch this " + serviceType.ident() + " request!");
   }
 }

@@ -85,6 +85,10 @@ public class ClusterConfig {
     globalConfig.set(null);
   }
 
+  public boolean hasClusterOrBucketConfig() {
+    return !bucketConfigs.isEmpty() || globalConfig() != null;
+  }
+
   public Set<String> allNodeAddresses() {
     Set<String> nodes = new HashSet<>();
     for (BucketConfig bc : bucketConfigs().values()) {
