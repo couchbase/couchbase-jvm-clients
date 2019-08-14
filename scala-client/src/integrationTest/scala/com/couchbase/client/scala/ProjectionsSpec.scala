@@ -21,8 +21,8 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     val config = ClusterAwareIntegrationTest.config()
     val x: ClusterEnvironment.Builder = environment
-    env = x.build
-    cluster = Cluster.connect(env)
+    env = x.build.get
+    cluster = Cluster.connect(env).get
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 

@@ -10,17 +10,17 @@ import scala.util.Success
 class EnvironmentSpec {
   @Test
   def basic() {
-    val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build
-    val cluster = Cluster.connect(env)
+    val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build.get
+    val cluster = Cluster.connect(env).get
     cluster.shutdown()
     env.shutdown()
   }
 
   @Test
   def buildSafe() {
-    ClusterEnvironment.builder("localhost", "Administrator", "password").buildSafe match {
+    ClusterEnvironment.builder("localhost", "Administrator", "password").build match {
       case Success(env) =>
-        val cluster = Cluster.connect(env)
+        val cluster = Cluster.connect(env).get
         cluster.shutdown()
         env.shutdown()
       case _ => assert(false)
@@ -29,7 +29,7 @@ class EnvironmentSpec {
 
   @Test
   def badConnstrReturnsErr() {
-    ClusterEnvironment.builder("not:a:valid:conn:str", "", "").buildSafe match {
+    ClusterEnvironment.builder("not:a:valid:conn:str", "", "").build match {
       case Success(env) => assert(false)
       case _ =>
     }
@@ -44,8 +44,8 @@ class EnvironmentSpec {
 
   @Test
   def basic_unowned() {
-    val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build
-    val cluster = Cluster.connect(env)
+    val env = ClusterEnvironment.builder("localhost", "Administrator", "password").build.get
+    val cluster = Cluster.connect(env).get
     assert(!env.owned)
     cluster.shutdown()
     env.shutdown()
@@ -55,7 +55,7 @@ class EnvironmentSpec {
 
   @Test
   def basic_owned() {
-    val cluster = Cluster.connect("localhost", "Administrator", "password")
+    val cluster = Cluster.connect("localhost", "Administrator", "password").get
     val env = cluster.async.env
     assert(env.owned)
     cluster.shutdown()
@@ -69,7 +69,7 @@ class EnvironmentSpec {
       .ioEnvironment(IoEnvironment()
         .managerEventLoopGroup(null)
         .analyticsEventLoopGroup(null))
-      .build
+      .build.get
     env.shutdown()
   }
 
@@ -86,8 +86,7 @@ class EnvironmentSpec {
           .sleepWindow(Duration("10 seconds"))
         )
       )
-
-      .build
+      .build.get
     env.shutdown()
   }
 
@@ -101,7 +100,7 @@ class EnvironmentSpec {
           .maxEndpoints(10)
           .minEndpoints(3))
       )
-      .build
+      .build.get
     env.shutdown()
   }
 
@@ -113,7 +112,7 @@ class EnvironmentSpec {
         .fallbackToConsole(true)
         .disableSlf4J(true)
       )
-      .build
+      .build.get
     env.shutdown()
   }
 }

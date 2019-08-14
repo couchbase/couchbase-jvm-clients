@@ -207,10 +207,13 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
-    val cluster = Cluster.connect(connectionString, username, password)
-    implicit val ec = cluster.ec
-    Future {
-      cluster.async
+    Cluster.connect(connectionString, username, password) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
+        Future {
+          cluster.async
+        }
+      case Failure(err) => Future.failed(err)
     }
   }
 
@@ -224,10 +227,14 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
-    val env = ClusterEnvironment.create(connectionString, credentials, true)
-    implicit val ec = env.ec
-    Future {
-      Cluster.connect(env).async
+    ClusterEnvironment.create(connectionString, credentials, true)
+      .flatMap(env => Cluster.connect(env)) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
+        Future {
+          cluster.async
+        }
+      case Failure(err) => Future.failed(err)
     }
   }
 
@@ -240,10 +247,13 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(environment: ClusterEnvironment): Future[AsyncCluster] = {
-    val cluster = Cluster.connect(environment)
-    implicit val ec = cluster.ec
-    Future {
-      cluster.async
+    Cluster.connect(environment) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
+        Future {
+          cluster.async
+        }
+      case Failure(err) => Future.failed(err)
     }
   }
 

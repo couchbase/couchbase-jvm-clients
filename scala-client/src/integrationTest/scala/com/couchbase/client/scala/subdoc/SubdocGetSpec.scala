@@ -25,8 +25,8 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   @BeforeAll
   def beforeAll(): Unit = {
     val config = ClusterAwareIntegrationTest.config()
-    env = environment.build
-    cluster = Cluster.connect(env)
+    env = environment.build.get
+    cluster = Cluster.connect(env).get
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
   }

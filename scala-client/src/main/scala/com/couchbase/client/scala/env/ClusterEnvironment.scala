@@ -52,11 +52,7 @@ object ClusterEnvironment {
                      private[scala] val seedNodes: Option[Set[SeedNode]] = None,
                      private[scala] val retryStrategy: Option[RetryStrategy] = None) {
 
-    def build: ClusterEnvironment = {
-      new ClusterEnvironment(this)
-    }
-
-    def buildSafe = Try(build)
+    def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
 
     def connectionString(value: String): ClusterEnvironment.Builder = {
       copy(connectionString = Some(value))
@@ -142,12 +138,12 @@ object ClusterEnvironment {
     *
     * @return a constructed `ClusterEnvironment`
     */
-  def create(connectionString: String, username: String, password: String): ClusterEnvironment = {
+  def create(connectionString: String, username: String, password: String): Try[ClusterEnvironment] = {
     create(connectionString, username, password, true)
   }
 
   private[scala] def create(connectionString: String, username: String, password: String, owned: Boolean)
-  : ClusterEnvironment = {
+  : Try[ClusterEnvironment] = {
     create(connectionString, UsernameAndPassword(username, password), owned)
   }
 
@@ -161,14 +157,14 @@ object ClusterEnvironment {
     *
     * @return a constructed `ClusterEnvironment`
     */
-  def create(connectionString: String, credentials: Credentials): ClusterEnvironment = {
+  def create(connectionString: String, credentials: Credentials): Try[ClusterEnvironment] = {
     create(connectionString, credentials, true)
   }
 
 
-  private[scala] def create(connectionString: String, credentials: Credentials, owned: Boolean): ClusterEnvironment = {
-    new ClusterEnvironment(Builder(credentials, owned)
-      .connectionString(connectionString))
+  private[scala] def create(connectionString: String, credentials: Credentials, owned: Boolean): Try[ClusterEnvironment] = {
+    Try(new ClusterEnvironment(Builder(credentials, owned)
+      .connectionString(connectionString)))
   }
 
   /** Creates a `ClusterEnvironment.Builder` setup to connect to a Couchbase cluster with a username and password as

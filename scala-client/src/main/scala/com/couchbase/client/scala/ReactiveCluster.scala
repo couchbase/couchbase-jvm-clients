@@ -201,10 +201,13 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): ScalaMono[ReactiveCluster] = {
-    val cluster = Cluster.connect(connectionString, username, password)
-    implicit val ec = cluster.ec
+    Cluster.connect(connectionString, username, password) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
 
-    ScalaMono.just(new ReactiveCluster(cluster.async))
+        ScalaMono.just(new ReactiveCluster(cluster.async))
+      case Failure(err) => ScalaMono.error(err)
+    }
   }
 
   /** Connect to a Couchbase cluster with custom `com.couchbase.client.core.env.Credentials`.
@@ -217,9 +220,12 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, credentials: Credentials): ScalaMono[ReactiveCluster] = {
-    val cluster = Cluster.connect(connectionString, credentials)
-    implicit val ec = cluster.ec
-    ScalaMono.just(new ReactiveCluster(cluster.async))
+    Cluster.connect(connectionString, credentials) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
+        ScalaMono.just(new ReactiveCluster(cluster.async))
+      case Failure(err) => ScalaMono.error(err)
+    }
   }
 
   /** Connect to a Couchbase cluster with a custom [[env.ClusterEnvironment]].
@@ -231,8 +237,11 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(environment: ClusterEnvironment): ScalaMono[ReactiveCluster] = {
-    val cluster = Cluster.connect(environment)
-    implicit val ec = cluster.ec
-    ScalaMono.just(new ReactiveCluster(cluster.async))
+    Cluster.connect(environment) match {
+      case Success(cluster) =>
+        implicit val ec = cluster.ec
+        ScalaMono.just(new ReactiveCluster(cluster.async))
+      case Failure(err) => ScalaMono.error(err)
+    }
   }
 }

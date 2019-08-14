@@ -37,8 +37,8 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     val config = ClusterAwareIntegrationTest.config()
     val x: ClusterEnvironment.Builder = environment
-    env = x.build
-    cluster = Cluster.connect(env)
+    env = x.build.get
+    cluster = Cluster.connect(env).get
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.async

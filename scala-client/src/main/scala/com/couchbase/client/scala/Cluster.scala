@@ -28,7 +28,7 @@ import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import scala.util.Try
+import scala.util.{Success, Try}
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -148,9 +148,9 @@ object Cluster {
     * @param password         the password of a user with appropriate permissions on the cluster.
     * @return a [[Cluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, username: String, password: String): Cluster = {
-    val env = ClusterEnvironment.create(connectionString, username, password, true)
-    new Cluster(env)
+  def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
+    ClusterEnvironment.create(connectionString, username, password, true)
+      .map(env => new Cluster(env))
   }
 
   /** Connect to a Couchbase cluster with custom [[Credentials]].
@@ -161,8 +161,9 @@ object Cluster {
     * @param credentials      custom credentials used when connecting to the cluster.
     * @return a [[Cluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Credentials) = {
-    new Cluster(ClusterEnvironment.create(connectionString, credentials))
+  def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
+    ClusterEnvironment.create(connectionString, credentials)
+      .map(env => new Cluster(env))
   }
 
   /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
@@ -173,5 +174,5 @@ object Cluster {
     *
     * @return a [[Cluster]] representing a connection to the cluster
     */
-  def connect(environment: ClusterEnvironment) = new Cluster(environment)
+  def connect(environment: ClusterEnvironment): Try[Cluster] = Success(new Cluster(environment))
 }

@@ -31,8 +31,8 @@ class QuerySpec extends ScalaIntegrationTest {
   @BeforeAll
   def beforeAll(): Unit = {
     val config = ClusterAwareIntegrationTest.config()
-    env = environment.ioConfig(IoConfig().mutationTokensEnabled(true)).build
-    cluster = Cluster.connect(env)
+    env = environment.ioConfig(IoConfig().mutationTokensEnabled(true)).build.get
+    cluster = Cluster.connect(env).get
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
