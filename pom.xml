@@ -107,6 +107,7 @@
         <module>scala-implicits</module>
         <module>scala-client</module>
         <module>test-utils</module>
+        <module>benchmarks</module>
     </modules>
 
     <build>
