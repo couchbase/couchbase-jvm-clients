@@ -127,7 +127,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         if (ctx.syncReplicationEnabled()) {
           flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
           request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-            noCas(), flexibleExtras, extras, key, content);
+            cas, flexibleExtras, extras, key, content);
         }
         else {
           throw new DurabilityLevelNotAvailableException(syncReplicationType.get());

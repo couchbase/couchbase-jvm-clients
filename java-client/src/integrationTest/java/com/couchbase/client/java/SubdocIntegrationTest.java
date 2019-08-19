@@ -16,14 +16,18 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -292,4 +296,42 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     assertEquals(1, result.contentAs(0, Integer.class));
   }
+
+  // JVMCBC-728
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.SYNC_REPLICATION)
+  void subdocCASWithDurability() {
+    JsonObject initial = JsonObject.create().put("mutated", 0);
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, initial);
+
+    GetResult gr = collection.get(id);
+
+    int errorCount = 0;
+
+    try {
+      MutateInResult result = collection.mutateIn(id,
+              Arrays.asList(MutateInSpec.upsert("mutated", 1)),
+              MutateInOptions.mutateInOptions()
+                      .cas(gr.cas())
+                      .durability(DurabilityLevel.MAJORITY));
+    }
+    catch (CASMismatchException err) {
+      errorCount += 1;
+    }
+
+    try {
+      MutateInResult result = collection.mutateIn(id,
+              Arrays.asList(MutateInSpec.upsert("mutated", 2)),
+              MutateInOptions.mutateInOptions()
+                      .cas(gr.cas())
+                      .durability(DurabilityLevel.MAJORITY));
+    }
+    catch (CASMismatchException err) {
+      errorCount += 1;
+    }
+
+    assertEquals(1, errorCount);
+  }
+
 }
