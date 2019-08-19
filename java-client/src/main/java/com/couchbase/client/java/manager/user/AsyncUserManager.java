@@ -130,12 +130,12 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Group> getGroup(String name) {
-    return sendRequest(GET, pathForGroup(name)).thenApply(response -> {
+  public CompletableFuture<Group> getGroup(String groupName) {
+    return sendRequest(GET, pathForGroup(groupName)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw GroupNotFoundException.forGroup(name);
+        throw GroupNotFoundException.forGroup(groupName);
       }
-      checkStatus(response, "get group [" + redactMeta(name) + "]");
+      checkStatus(response, "get group [" + redactMeta(groupName) + "]");
       return Mapper.decodeInto(response.content(), Group.class);
     });
   }
@@ -162,12 +162,12 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> dropGroup(String name) {
-    return sendRequest(DELETE, pathForGroup(name)).thenApply(response -> {
+  public CompletableFuture<Void> dropGroup(String groupName) {
+    return sendRequest(DELETE, pathForGroup(groupName)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw GroupNotFoundException.forGroup(name);
+        throw GroupNotFoundException.forGroup(groupName);
       }
-      checkStatus(response, "drop group [" + redactSystem(name) + "]");
+      checkStatus(response, "drop group [" + redactSystem(groupName) + "]");
       return null;
     });
   }

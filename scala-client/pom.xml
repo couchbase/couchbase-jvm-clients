@@ -84,14 +84,6 @@
             <groupId>com.lihaoyi</groupId>
             <artifactId>upickle_${scala.compat.version}</artifactId>
             <version>0.7.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.lihaoyi</groupId>
-            <artifactId>upickle_${scala.compat.version}</artifactId>
-            <version>0.7.1</version>
-            <optional>true</optional>
         </dependency>
 
         <dependency>
