@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.MapperException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
@@ -236,33 +237,43 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @return the loaded manifest.
    */
-  @SuppressWarnings("unchecked")
   private CompletableFuture<CollectionsManifest> loadManifest() {
-    // TODO: we can get rid of this if  MB-35386 is solved before MH is released.
-    // Note to my future self: if you stumble across this TODO and it is later than 2019, looks like we have
-    // failed and this code will live forever.
-
     return sendRequest(HttpMethod.GET, pathForManifest(bucketName)).thenApply(response -> {
-
-      Map<String, Object> decoded = Mapper.decodeInto(response.content(), new TypeReference<Map<String, Object>>() {});
-      int uid = (int) decoded.get("uid");
-
-      List<CollectionsManifestScope> scopes = new ArrayList<>();
-      for (Map.Entry<String, Map<String, Object>> scope : ((Map<String, Map<String, Object>>) decoded.get("scopes")).entrySet()) {
-        String name = scope.getKey();
-        int scopeUid = (int) scope.getValue().get("uid");
-
-        List<CollectionsManifestCollection> collections = new ArrayList<>();
-        for (Map.Entry<String, Map<String, Object>> collection : ((Map<String, Map<String, Object>>) scope.getValue().get("collections")).entrySet()) {
-          String collectionName = collection.getKey();
-          int collectionUid = (int) collection.getValue().get("uid");
-          collections.add(new CollectionsManifestCollection(collectionName, Long.toString(collectionUid)));
-        }
-        scopes.add(new CollectionsManifestScope(name, Long.toString(scopeUid), collections));
+      try {
+        return Mapper.decodeInto(response.content(), CollectionsManifest.class);
+      } catch (MapperException ex) {
+        // TODO: this needs to go away after mad hatter beta 2 is released.
+        return decodeBetaFallback(response.content());
       }
-
-      return new CollectionsManifest(Long.toString(uid), scopes);
     });
+  }
+
+  /**
+   * This needs to go away after we ship Mad Hatter Beta 2, since this code is purely here so that the
+   * client keeps working with beta 1.
+   *
+   * <p>TODO: Remove me</p>
+   */
+  @SuppressWarnings("unchecked")
+  private CollectionsManifest decodeBetaFallback(final byte[] content) {
+    Map<String, Object> decoded = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
+    int uid = (int) decoded.get("uid");
+
+    List<CollectionsManifestScope> scopes = new ArrayList<>();
+    for (Map.Entry<String, Map<String, Object>> scope : ((Map<String, Map<String, Object>>) decoded.get("scopes")).entrySet()) {
+      String name = scope.getKey();
+      int scopeUid = (int) scope.getValue().get("uid");
+
+      List<CollectionsManifestCollection> collections = new ArrayList<>();
+      for (Map.Entry<String, Map<String, Object>> collection : ((Map<String, Map<String, Object>>) scope.getValue().get("collections")).entrySet()) {
+        String collectionName = collection.getKey();
+        int collectionUid = (int) collection.getValue().get("uid");
+        collections.add(new CollectionsManifestCollection(collectionName, Long.toString(collectionUid)));
+      }
+      scopes.add(new CollectionsManifestScope(name, Long.toString(scopeUid), collections));
+    }
+
+    return new CollectionsManifest(Long.toString(uid), scopes);
   }
 
 }
