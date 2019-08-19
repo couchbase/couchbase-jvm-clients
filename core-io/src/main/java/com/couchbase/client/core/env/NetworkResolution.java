@@ -16,87 +16,90 @@
 
 package com.couchbase.client.core.env;
 
+import java.util.Objects;
+
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Configuration options for the network resolution setting.
  *
- * @author Michael Nitschinger
  * @since 1.6.0
  */
 public class NetworkResolution {
 
-    /**
-     * Pick whatever the server returns in the config, this is the
-     * old and backwards compatible mode (server default).
-     */
-    public static NetworkResolution DEFAULT = new NetworkResolution("default");
+  /**
+   * Pick whatever the server returns in the config, this is the
+   * old and backwards compatible mode (server default).
+   */
+  public static final NetworkResolution DEFAULT = new NetworkResolution("default");
 
-    /**
-     * Based on heuristics discovers if internal or
-     * external resolution will be used.
-     *
-     * This is the default setting (not to be confused with
-     * the default mode)!
-     */
-    public static NetworkResolution AUTO = new NetworkResolution("auto");
+  /**
+   * Based on heuristics discovers if internal or
+   * external resolution will be used.
+   * <p>
+   * This is the default setting (not to be confused with
+   * the default mode)!
+   */
+  public static final NetworkResolution AUTO = new NetworkResolution("auto");
 
-    /**
-     * Pins it to external resolution.
-     */
-    public static NetworkResolution EXTERNAL = new NetworkResolution("external");
+  /**
+   * Pins it to external resolution.
+   */
+  public static final NetworkResolution EXTERNAL = new NetworkResolution("external");
 
-    /**
-     * Stores the internal name.
-     */
-    private final String name;
+  /**
+   * Stores the internal name.
+   */
+  private final String name;
 
-    /**
-     * Provide a network resolution option which is not covered by the statics defined
-     * in this class.
-     *
-     * @param name the name to use.
-     * @return a new {@link NetworkResolution}.
-     */
-    public static NetworkResolution custom(final String name) {
-        return new NetworkResolution(name);
+  /**
+   * Returns a network resolution option with the given name. This allows creating custom
+   * values not covered by the statics defined in this class, and also
+   * provides a default value of {@link #AUTO} if the given name is empty or null
+   * (useful for parsing config properties).
+   *
+   * @param name the name to use. May be null.
+   * @return a {@link NetworkResolution} with the given name, or {@link #AUTO}
+   * if the given name is null or empty.
+   */
+  public static NetworkResolution valueOf(final String name) {
+    return isNullOrEmpty(name) ? AUTO : new NetworkResolution(name);
+  }
+
+  /**
+   * Creates a new network resolution option.
+   */
+  private NetworkResolution(final String name) {
+    this.name = requireNonNull(name);
+  }
+
+  /**
+   * Returns the wire representation of the network resolution setting.
+   */
+  public String name() {
+    return name;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
-
-    /**
-     * Creates a new network resolution option.
-     */
-    private NetworkResolution(final String name) {
-        this.name = name;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
+    NetworkResolution that = (NetworkResolution) o;
+    return name.equals(that.name);
+  }
 
-    /**
-     * Returns the wire representation of the network resolution setting.
-     */
-    public String name() {
-        return name;
-    }
+  @Override
+  public int hashCode() {
+    return Objects.hash(name);
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        NetworkResolution that = (NetworkResolution) o;
-
-        return name != null ? name.equals(that.name) : that.name == null;
-    }
-
-    @Override
-    public int hashCode() {
-        return name != null ? name.hashCode() : 0;
-    }
-
-    @Override
-    public String toString() {
-        return "NetworkResolution{" +
-            "name='" + name + '\'' +
-            '}';
-    }
+  @Override
+  public String toString() {
+    return name();
+  }
 }
