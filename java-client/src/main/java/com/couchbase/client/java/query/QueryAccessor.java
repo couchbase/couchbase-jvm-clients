@@ -21,6 +21,7 @@ import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.service.ServiceType;
@@ -31,6 +32,7 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -169,15 +171,30 @@ public class QueryAccessor {
 
         if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
             return queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true);
+        } else if (enhancedEnabled) {
+            return queryInternal(buildPrepareRequest(request, options), options, true)
+              .flatMap(qr -> {
+                  Optional<String> preparedName = qr.header().prepared();
+                  if (!preparedName.isPresent()) {
+                      return Mono.error(
+                        new CouchbaseException("No prepared name present but must be, this is a query bug!")
+                      );
+                  }
+                  queryCache.put(
+                    request.statement(),
+                    new QueryCacheEntry(false, null, preparedName.get())
+                  );
+                  return Mono.just(qr);
+              });
         } else {
-            return queryReactive(buildPrepareRequest(request), queryOptions().build())
+            return queryReactive(buildPrepareRequest(request, options), queryOptions().build())
               .flatMap(result -> result.rowsAsObject().next())
               .map(row -> {
                   queryCache.put(
                     request.statement(),
                     new QueryCacheEntry(
-                      !enhancedEnabled,
-                      row.getString(enhancedEnabled ? null : "encoded_plan"),
+                      true,
+                      row.getString("encoded_plan"),
                       row.getString("name")
                     )
                   );
@@ -193,12 +210,17 @@ public class QueryAccessor {
      * @param original the original request from which params are extracted.
      * @return the created request, ready to be sent over the wire.
      */
-    private QueryRequest buildPrepareRequest(final QueryRequest original) {
+    private QueryRequest buildPrepareRequest(final QueryRequest original, final QueryOptions.Built options) {
         String statement = "PREPARE " + original.statement();
 
         JsonObject query = JsonObject.create();
         query.put("statement", statement);
         query.put("timeout", encodeDurationToMs(original.timeout()));
+
+        if (enhancedPreparedEnabled) {
+            query.put("auto_execute", true);
+            options.injectParams(query);
+        }
 
         return new QueryRequest(
           original.timeout(),

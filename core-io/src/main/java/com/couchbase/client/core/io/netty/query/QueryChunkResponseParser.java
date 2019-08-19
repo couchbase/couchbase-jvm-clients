@@ -31,6 +31,7 @@ public class QueryChunkResponseParser
   private String requestId;
   private Optional<byte[]> signature;
   private Optional<String> clientContextId;
+  private Optional<String> prepared;
 
   private String status;
   private byte[] metrics;
@@ -43,6 +44,7 @@ public class QueryChunkResponseParser
     requestId = null;
     signature = Optional.empty();
     clientContextId = Optional.empty();
+    prepared = Optional.empty();
 
     status = null;
     metrics = null;
@@ -55,6 +57,7 @@ public class QueryChunkResponseParser
     .doOnValue("/requestID", v -> requestId = v.readString())
     .doOnValue("/signature", v -> signature = Optional.of(v.readBytes()))
     .doOnValue("/clientContextID", v -> clientContextId = Optional.of(v.readString()))
+    .doOnValue("/prepared", v -> prepared = Optional.of(v.readString()))
     .doOnValue("/results/-", v -> {
       markHeaderComplete();
       emitRow(new QueryChunkRow(v.readBytes()));
@@ -79,7 +82,7 @@ public class QueryChunkResponseParser
   @Override
   public Optional<QueryChunkHeader> header() {
     return isHeaderComplete()
-      ? Optional.of(new QueryChunkHeader(requestId, clientContextId, signature))
+      ? Optional.of(new QueryChunkHeader(requestId, clientContextId, signature, prepared))
       : Optional.empty();
   }
 

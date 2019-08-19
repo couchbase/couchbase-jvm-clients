@@ -17,7 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.error.QueryException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -69,7 +71,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @BeforeAll
     static void setup() {
         environment = environment()
-                .ioConfig(IoConfig.mutationTokensEnabled(true))
+                .ioConfig(IoConfig.mutationTokensEnabled(true).captureTraffic(ServiceType.QUERY))
                 .build();
         cluster = Cluster.connect(environment);
         Bucket bucket = cluster.bucket(config().bucketname());

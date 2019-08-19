@@ -26,11 +26,14 @@ public class QueryChunkHeader implements ChunkHeader {
   private final String requestId;
   private final Optional<byte[]> signature;
   private final Optional<String> clientContextId;
+  private final Optional<String> prepared;
 
-  public QueryChunkHeader(String requestId, Optional<String> clientContextId, Optional<byte[]> signature) {
+  public QueryChunkHeader(String requestId, Optional<String> clientContextId, Optional<byte[]> signature,
+                          Optional<String> prepared) {
     this.requestId = requestId;
     this.signature = signature;
     this.clientContextId = clientContextId;
+    this.prepared = prepared;
   }
 
   public String requestId() {
@@ -45,12 +48,17 @@ public class QueryChunkHeader implements ChunkHeader {
     return clientContextId;
   }
 
+  public Optional<String> prepared() {
+    return prepared;
+  }
+
   @Override
   public String toString() {
     return "QueryChunkHeader{" +
       "requestId='" + requestId + '\'' +
       ", signature=" + signature.map(v -> new String(v, StandardCharsets.UTF_8)) +
       ", clientContextId=" + clientContextId +
+      ", prepared=" + prepared +
       '}';
   }
 }
