@@ -122,13 +122,19 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       currentContent.writeBytes(((HttpContent) msg).content());
 
       if (isStreamingConfigRequest()) {
-        String encodedConfig = currentContent.toString(StandardCharsets.UTF_8);
-        int separatorIndex = encodedConfig.indexOf("\n\n\n\n");
-        if (separatorIndex > 0) {
-          String content = encodedConfig.substring(0, separatorIndex);
-          streamingResponse.pushConfig(content.trim());
-          currentContent.clear();
-          currentContent.writeBytes(encodedConfig.substring(separatorIndex + 4).getBytes(StandardCharsets.UTF_8));
+        // there might be more than one config in the full batch, so keep iterating until all are pushed
+        while (true) {
+          String encodedConfig = currentContent.toString(StandardCharsets.UTF_8);
+          int separatorIndex = encodedConfig.indexOf("\n\n\n\n");
+          // if -1 is returned it means that no full config has been located yet, need to wait for more chunks
+          if (separatorIndex >= 0) {
+            String content = encodedConfig.substring(0, separatorIndex);
+            streamingResponse.pushConfig(content.trim());
+            currentContent.clear();
+            currentContent.writeBytes(encodedConfig.substring(separatorIndex + 4).getBytes(StandardCharsets.UTF_8));
+          } else {
+            break;
+          }
         }
       }
 
