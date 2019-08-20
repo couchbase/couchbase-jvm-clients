@@ -19,11 +19,10 @@ package com.couchbase.client.core.service.kv;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
-import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.retry.reactor.Repeat;
@@ -46,48 +45,19 @@ public class Observe {
       return Mono.empty();
     }
 
+    if (!ctx.environment().ioConfig().mutationTokensEnabled() || !ctx.mutationToken().isPresent()) {
+      return Mono.error(
+        new FeatureNotAvailableException("To use PersistTo and/or ReplicateTo, mutation tokens must " +
+          "be enabled on the IO configuration")
+      );
+    }
+
     Flux<ObserveItem> observed = Flux.defer(() -> {
       BucketConfig config = ctx.core().clusterConfig().bucketConfig(ctx.collectionIdentifier().bucket());
       return Flux.just(validateReplicas(config, ctx.persistTo(), ctx.replicateTo()));
     })
-    .flatMap(replicas -> ctx.mutationToken().isPresent() ? viaMutationToken(replicas, ctx) : viaCas(replicas, ctx));
+    .flatMap(replicas -> viaMutationToken(replicas, ctx));
     return maybeRetry(observed, ctx).timeout(ctx.timeout());
-  }
-
-  private static Flux<ObserveItem> viaCas(final int bucketReplicas, final ObserveContext ctx) {
-    final ObserveViaCasResponse.ObserveStatus persistIdentifier;
-    final ObserveViaCasResponse.ObserveStatus replicaIdentifier;
-    if (ctx.remove()) {
-      persistIdentifier = ObserveViaCasResponse.ObserveStatus.NOT_FOUND_PERSISTED;
-      replicaIdentifier = ObserveViaCasResponse.ObserveStatus.NOT_FOUND_NOT_PERSISTED;
-    } else {
-      persistIdentifier = ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED;
-      replicaIdentifier = ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
-    }
-
-    Duration timeout = ctx.timeout();
-    RetryStrategy retryStrategy = ctx.retryStrategy();
-    String id = ctx.key();
-
-    List<ObserveViaCasRequest> requests = new ArrayList<>();
-    // We always need to send the request to the active, otherwise we will not discover if the
-    // CAS changed because of a concurrent modification.
-    requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, true, 0));
-
-    if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
-      for (short i = 1; i <= bucketReplicas; i++) {
-        requests.add(new ObserveViaCasRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, id, false, i));
-      }
-    }
-    return Flux
-      .fromIterable(requests)
-      .flatMap(request -> {
-        ctx.core().send(request);
-        return Reactor
-          .wrap(request, request.response(), true)
-          .onErrorResume(t-> Mono.empty());
-      })
-      .map(response -> ObserveItem.fromCas(id, ctx.cas(), ctx.remove(), response, persistIdentifier, replicaIdentifier));
   }
 
   private static Flux<ObserveItem> viaMutationToken(final int bucketReplicas, final ObserveContext ctx) {

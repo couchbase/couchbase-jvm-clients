@@ -30,7 +30,6 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
@@ -145,8 +144,6 @@ public class KeyValueLocator implements Locator {
     boolean useFastForward = request.context().retryAttempts() > 0 && config.hasFastForwardMap();
     if (request instanceof ReplicaGetRequest) {
       return config.nodeIndexForReplica(partitionId, ((ReplicaGetRequest) request).replica() - 1, useFastForward);
-    } else if (request instanceof ObserveViaCasRequest && ((ObserveViaCasRequest) request).replica() > 0) {
-      return config.nodeIndexForReplica(partitionId, ((ObserveViaCasRequest) request).replica() - 1, useFastForward);
     } else if (request instanceof ObserveViaSeqnoRequest && ((ObserveViaSeqnoRequest) request).replica() > 0) {
       return config.nodeIndexForReplica(partitionId, ((ObserveViaSeqnoRequest) request).replica() - 1, useFastForward);
     } else {

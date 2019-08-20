@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class IoConfig {
 
-  public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = false;
+  public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = true;
   public static final boolean DEFAULT_DNS_SRV_ENABLED = true;
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;

@@ -33,7 +33,6 @@ import org.junit.jupiter.api.*;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertTrue;
@@ -49,9 +48,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    env = environment()
-      .ioConfig(IoConfig.mutationTokensEnabled(true))
-      .build();
+    env = environment().build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
     cid = CollectionIdentifier.fromDefault(config().bucketname());
@@ -75,158 +72,65 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
     Observe.poll(ctx).timeout(MAX_WAIT).block();
   }
 
-  @Nested
-  @DisplayName("Via CAS")
-  class ObserveViaCas {
+  @Test
+  void persistToActive() {
+    String id = UUID.randomUUID().toString();
+    InsertResponse insertResponse = performInsert(id);
+    assertTrue(insertResponse.mutationToken().isPresent());
 
-    @Test
-    void persistToActive() {
-      String id = UUID.randomUUID().toString();
-      InsertResponse insertResponse = performInsert(id);
+    ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
+      Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
+      id, false, env.timeoutConfig().kvTimeout());
 
-      ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      Observe.poll(ctx).timeout(MAX_WAIT).block();
-    }
-
-    @Test
-    void observesRemove() {
-      String id = UUID.randomUUID().toString();
-
-      InsertResponse insertResponse = performInsert(id);
-      ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), cid,
-        id, false, env.timeoutConfig().kvTimeout());
-      Observe.poll(ctx).timeout(MAX_WAIT).block();
-
-      RemoveResponse removeResponse = performRemove(id);
-      ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, Optional.empty(), removeResponse.cas(), cid,
-        id, true, env.timeoutConfig().kvTimeout());
-      Observe.poll(ctx2).timeout(MAX_WAIT).block();
-    }
-
-    @Test
-    @IgnoreWhen(replicasGreaterThan = 1)
-    void failsFastIfTooManyReplicasRequested() {
-      String id = UUID.randomUUID().toString();
-      InsertResponse insertResponse = performInsert(id);
-
-      final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
-        Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
-
-      final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
-        Observe.ObserveReplicateTo.TWO, Optional.empty(), insertResponse.cas(), cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
-
-      final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
-        Observe.ObserveReplicateTo.THREE, Optional.empty(), insertResponse.cas(), cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
-    }
-
-    @Test
-    void observesRemoveOnNotExistentDoc() {
-      ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, Optional.empty(), 12345, cid,
-        "someNotExistentDoc", true, env.timeoutConfig().kvTimeout());
-      Observe.poll(ctx2).timeout(MAX_WAIT).block();
-    }
-
-    @Test
-    @IgnoreWhen(replicasLessThan = 1, nodesGreaterThan = 1)
-    void timesOutIfReplicaNotAvailableWithBestEffort() {
-      String id = UUID.randomUUID().toString();
-      InsertResponse insertResponse = performInsert(id);
-
-      Duration timeout = Duration.ofMillis(100);
-      ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
-        Observe.ObserveReplicateTo.ONE, Optional.empty(), insertResponse.cas(), cid,
-        id, false, timeout);
-
-      try {
-        Observe.poll(ctx).timeout(MAX_WAIT).block();
-      } catch (Exception ex) {
-          assertTrue(ex.getCause() instanceof TimeoutException);
-      }
-    }
-
+    Observe.poll(ctx).timeout(MAX_WAIT).block();
   }
 
-  @Nested
-  @DisplayName("Via MutationToken")
-  class ObserveViaMutationToken {
+  @Test
+  void observesRemove() {
+    String id = UUID.randomUUID().toString();
 
-    @Test
-    void persistToActive() {
-      String id = UUID.randomUUID().toString();
-      InsertResponse insertResponse = performInsert(id);
-      assertTrue(insertResponse.mutationToken().isPresent());
+    InsertResponse insertResponse = performInsert(id);
+    assertTrue(insertResponse.mutationToken().isPresent());
 
-      ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-        id, false, env.timeoutConfig().kvTimeout());
+    ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
+      Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
+      id, false, env.timeoutConfig().kvTimeout());
+    Observe.poll(ctx).timeout(MAX_WAIT).block();
 
-      Observe.poll(ctx).timeout(MAX_WAIT).block();
-    }
+    RemoveResponse removeResponse = performRemove(id);
+    assertTrue(insertResponse.mutationToken().isPresent());
 
-    @Test
-    void observesRemove() {
-      String id = UUID.randomUUID().toString();
-
-      InsertResponse insertResponse = performInsert(id);
-      assertTrue(insertResponse.mutationToken().isPresent());
-
-      ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-        id, false, env.timeoutConfig().kvTimeout());
-      Observe.poll(ctx).timeout(MAX_WAIT).block();
-
-      RemoveResponse removeResponse = performRemove(id);
-      assertTrue(insertResponse.mutationToken().isPresent());
-
-      ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
-        Observe.ObserveReplicateTo.NONE, removeResponse.mutationToken(), 0, cid,
-        id, true, env.timeoutConfig().kvTimeout());
-      Observe.poll(ctx2).timeout(MAX_WAIT).block();
-    }
-
-    @Test
-    @IgnoreWhen(replicasGreaterThan = 1)
-    void failsFastIfTooManyReplicasRequested() {
-      String id = UUID.randomUUID().toString();
-      InsertResponse insertResponse = performInsert(id);
-      assertTrue(insertResponse.mutationToken().isPresent());
-
-      final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
-        Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
-
-      final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
-        Observe.ObserveReplicateTo.TWO, insertResponse.mutationToken(), 0, cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
-
-      final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
-        Observe.ObserveReplicateTo.THREE, insertResponse.mutationToken(), 0, cid,
-        id, false, env.timeoutConfig().kvTimeout());
-
-      assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
-    }
-
+    ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
+      Observe.ObserveReplicateTo.NONE, removeResponse.mutationToken(), 0, cid,
+      id, true, env.timeoutConfig().kvTimeout());
+    Observe.poll(ctx2).timeout(MAX_WAIT).block();
   }
 
+  @Test
+  @IgnoreWhen(replicasGreaterThan = 1)
+  void failsFastIfTooManyReplicasRequested() {
+    String id = UUID.randomUUID().toString();
+    InsertResponse insertResponse = performInsert(id);
+    assertTrue(insertResponse.mutationToken().isPresent());
+
+    final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
+      Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
+      id, false, env.timeoutConfig().kvTimeout());
+
+    assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
+
+    final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
+      Observe.ObserveReplicateTo.TWO, insertResponse.mutationToken(), 0, cid,
+      id, false, env.timeoutConfig().kvTimeout());
+
+    assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
+
+    final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
+      Observe.ObserveReplicateTo.THREE, insertResponse.mutationToken(), 0, cid,
+      id, false, env.timeoutConfig().kvTimeout());
+
+    assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
+  }
   /**
    * Helper method to write a new document which can then be observed.
    *

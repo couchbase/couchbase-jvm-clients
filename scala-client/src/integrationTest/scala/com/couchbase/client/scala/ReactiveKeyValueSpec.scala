@@ -198,7 +198,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     upsertResult match {
       case Success(result) =>
         assert(result.cas != 0)
-        assert(result.mutationToken.isEmpty)
+        assert(result.mutationToken.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
@@ -227,7 +227,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.get.cas)
-        assert(result.mutationToken.isEmpty)
+        assert(result.mutationToken.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
@@ -271,7 +271,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.get.cas)
-        assert(result.mutationToken.isEmpty)
+        assert(result.mutationToken.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
@@ -300,7 +300,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.get.cas)
-        assert(result.mutationToken.isEmpty)
+        assert(result.mutationToken.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 

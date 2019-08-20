@@ -84,7 +84,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult insertResult = collection.insert(id, "Hello, World");
 
     assertTrue(insertResult.cas() != 0);
-    assertFalse(insertResult.mutationToken().isPresent());
+    assertTrue(insertResult.mutationToken().isPresent());
 
     GetResult getResult = collection.get(id);
     assertEquals("Hello, World", getResult.contentAs(String.class));
