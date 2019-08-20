@@ -17,26 +17,73 @@
 package com.couchbase.client.core.retry;
 
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.reactor.Backoff;
+import com.couchbase.client.core.retry.reactor.IterationContext;
 
 import java.time.Duration;
-import java.util.Optional;
 
 public class BestEffortRetryStrategy implements RetryStrategy {
 
-  public static final BestEffortRetryStrategy INSTANCE = new BestEffortRetryStrategy();
+  public static final BestEffortRetryStrategy INSTANCE = BestEffortRetryStrategy
+    .withExponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(500), 1);
 
-  private BestEffortRetryStrategy() { }
+  private final Backoff backoff;
+
+  private BestEffortRetryStrategy(final Backoff backoff) {
+    this.backoff = backoff;
+  }
+
+  public static BestEffortRetryStrategy withExponentialBackoff(final Duration lower, final Duration upper,
+                                                               final int factor) {
+    return new BestEffortRetryStrategy(Backoff.exponential(lower, upper, factor, false));
+  }
 
   @Override
-  public Optional<Duration> shouldRetry(final Request<? extends Response> request) {
-    // todo: fixme with configurable, default delay -- exponential?
-    return Optional.of(Duration.ofMillis(100));
+  public RetryAction shouldRetry(final Request<? extends Response> request, final RetryReason reason) {
+    if (request.idempotent() || reason.allowsNonIdempotentRetry()) {
+      RequestContext ctx = request.context();
+      return RetryAction.withDuration(
+        backoff.apply(new RetryStrategyIterationContext(ctx.retryAttempts(), ctx.lastRetryDuration())).delay()
+      );
+    }
+    return RetryAction.noRetry();
   }
 
   @Override
   public String toString() {
     return "BestEffort";
+  }
+
+  /**
+   * Helper class to make the reactor retry strategies happy we are utilizing internally to avoid code
+   * duplication.
+   */
+  private static class RetryStrategyIterationContext implements IterationContext<Void> {
+
+    private final long iteration;
+    private final Duration lastBackoff;
+
+    RetryStrategyIterationContext(long iteration, Duration lastBackoff) {
+      this.iteration = iteration;
+      this.lastBackoff = lastBackoff;
+    }
+
+    @Override
+    public Void applicationContext() {
+      return null;
+    }
+
+    @Override
+    public long iteration() {
+      return iteration;
+    }
+
+    @Override
+    public Duration backoff() {
+      return lastBackoff;
+    }
   }
 
 }

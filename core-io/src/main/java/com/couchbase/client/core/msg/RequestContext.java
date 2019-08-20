@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +52,8 @@ public class RequestContext extends CoreContext {
    * The number of times the attached request has been retried.
    */
   private final AtomicInteger retryAttempts;
+
+  private volatile Duration lastRetryDuration;
 
   /**
    * Creates a new {@link RequestContext}.
@@ -90,8 +93,13 @@ public class RequestContext extends CoreContext {
     return retryAttempts.get();
   }
 
-  public RequestContext incrementRetryAttempt() {
+  public Duration lastRetryDuration() {
+    return lastRetryDuration;
+  }
+
+  public RequestContext incrementRetryAttempts(final Duration lastRetryDuration) {
     retryAttempts.incrementAndGet();
+    this.lastRetryDuration = lastRetryDuration;
     return this;
   }
 

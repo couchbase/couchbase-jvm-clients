@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc.events.request;
 
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.retry.RetryReason;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,8 +28,8 @@ class RequestNotRetriedEventTest {
 
   @Test
   void verifyDescription() {
-    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class));
-    assertEquals("Request GetRequest not retried per RetryStrategy", event.description());
+    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class), RetryReason.UNKNOWN);
+    assertEquals("Request GetRequest not retried per RetryStrategy (Reason: UNKNOWN)", event.description());
   }
 
 }

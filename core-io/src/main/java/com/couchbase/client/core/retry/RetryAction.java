@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,29 @@
 
 package com.couchbase.client.core.retry;
 
-import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.msg.Response;
-
 import java.time.Duration;
 import java.util.Optional;
 
-public interface RetryStrategy {
+public class RetryAction {
 
-  /**
-   * Checks if the given request should be retried and how long the
-   * retry delay should be.
-   *
-   * @param request the request to be checked.
-   * @return If empty, no retry should be done. If a duration is returned it determines
-   *         the retry delay.
-   */
-  RetryAction shouldRetry(Request<? extends Response> request, RetryReason reason);
+  private static final RetryAction NO_DURATION = new RetryAction(Optional.empty());
+
+  private final Optional<Duration> duration;
+
+  private RetryAction(final Optional<Duration> duration) {
+    this.duration = duration;
+  }
+
+  public static RetryAction withDuration(final Duration duration) {
+    return new RetryAction(Optional.of(duration));
+  }
+
+  public static RetryAction noRetry() {
+    return NO_DURATION;
+  }
+
+  public Optional<Duration> duration() {
+    return duration;
+  }
 
 }

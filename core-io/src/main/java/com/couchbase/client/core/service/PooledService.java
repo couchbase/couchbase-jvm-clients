@@ -231,9 +231,9 @@ abstract class PooledService implements Service {
           endpoints.add(endpoint);
         }
       }
-      RetryOrchestrator.retryImmediately(serviceContext, request, RetryReason.NO_ENDPOINT_AVAILABLE);
+      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_TEMPORARILY_NOT_AVAILABLE);
     } else {
-      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.NO_ENDPOINT_AVAILABLE);
+      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
     }
   }
 

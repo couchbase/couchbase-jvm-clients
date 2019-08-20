@@ -19,9 +19,6 @@ package com.couchbase.client.core.retry;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 
-import java.time.Duration;
-import java.util.Optional;
-
 public class FailFastRetryStrategy implements RetryStrategy {
 
   public static final FailFastRetryStrategy INSTANCE = new FailFastRetryStrategy();
@@ -29,8 +26,8 @@ public class FailFastRetryStrategy implements RetryStrategy {
   private FailFastRetryStrategy() { }
 
   @Override
-  public Optional<Duration> shouldRetry(Request<? extends Response> request) {
-    return Optional.empty();
+  public RetryAction shouldRetry(Request<? extends Response> request, RetryReason reason) {
+    return RetryAction.noRetry();
   }
 
   @Override

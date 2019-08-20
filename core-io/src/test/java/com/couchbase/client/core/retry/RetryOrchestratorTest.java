@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -65,7 +64,7 @@ class RetryOrchestratorTest {
   @SuppressWarnings({"unchecked"})
   void cancelIfNoMoreRetriesAllowed() {
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
-    when(retryStrategy.shouldRetry(any(Request.class))).thenReturn(Optional.empty());
+    when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(RetryAction.noRetry());
     Request<?> request = mock(Request.class);
     when(request.completed()).thenReturn(false);
     when(request.retryStrategy()).thenReturn(retryStrategy);
@@ -78,7 +77,7 @@ class RetryOrchestratorTest {
     CoreContext context = new CoreContext(mock(Core.class), 1, env);
     RetryOrchestrator.maybeRetry(context, request, RetryReason.UNKNOWN);
 
-    verify(request, times(1)).cancel(CancellationReason.NO_MORE_RETRIES);
+    verify(request, times(1)).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
 
     assertEquals(1, eventBus.publishedEvents().size());
     RequestNotRetriedEvent retryEvent = (RequestNotRetriedEvent) eventBus.publishedEvents().get(0);
@@ -93,8 +92,8 @@ class RetryOrchestratorTest {
     Timer timer = Timer.createAndStart();
 
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
-    when(retryStrategy.shouldRetry(any(Request.class))).thenReturn(
-      Optional.of(Duration.ofMillis(200))
+    when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(
+      RetryAction.withDuration(Duration.ofMillis(200))
     );
     Request<?> request = mock(Request.class);
     RequestContext requestContext = mock(RequestContext.class);
@@ -113,8 +112,8 @@ class RetryOrchestratorTest {
     long start = System.nanoTime();
     RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);
 
-    verify(requestContext, times(1)).incrementRetryAttempt();
-    verify(request, never()).cancel(CancellationReason.NO_MORE_RETRIES);
+    verify(requestContext, times(1)).incrementRetryAttempts(Duration.ofMillis(200));
+    verify(request, never()).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
 
     waitUntilCondition(() -> !Mockito.mockingDetails(core).getInvocations().isEmpty());
 

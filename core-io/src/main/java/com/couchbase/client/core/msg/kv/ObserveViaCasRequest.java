@@ -96,5 +96,9 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
     );
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
 
 }

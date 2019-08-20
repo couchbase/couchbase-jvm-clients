@@ -55,4 +55,9 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
   public NoopResponse decode(final ByteBuf response, ChannelContext ctx) {
     return new NoopResponse(MemcacheProtocol.decodeStatus(response));
   }
+
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
 }

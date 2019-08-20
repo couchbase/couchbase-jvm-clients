@@ -129,7 +129,7 @@ public abstract class ChunkedMessageHandler
     // We still have a request in-flight so we need to reschedule it in order to not let it trip on each others
     // toes.
     if (!pipelined && currentRequest != null) {
-      RetryOrchestrator.retryImmediately(endpointContext, (REQ) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
+      RetryOrchestrator.maybeRetry(endpointContext, (REQ) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
       return;
     }
 
@@ -185,6 +185,14 @@ public abstract class ChunkedMessageHandler
   @Override
   public void handlerRemoved(final ChannelHandlerContext ctx) {
     cleanupState();
+  }
+
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) {
+    if (currentRequest != null) {
+      RetryOrchestrator.maybeRetry(ioContext, currentRequest, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
+    }
+    ctx.fireChannelInactive();
   }
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {

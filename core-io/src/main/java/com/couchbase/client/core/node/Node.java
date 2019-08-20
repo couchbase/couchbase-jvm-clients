@@ -352,7 +352,7 @@ public class Node implements Stateful<NodeState> {
    * @param request the request to retry.
    */
   protected <R extends Request<? extends Response>> void sendIntoRetry(final R request) {
-    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_SERVICE_AVAILBLE);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.SERVICE_NOT_AVAILABLE);
   }
 
   /**

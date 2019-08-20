@@ -61,4 +61,9 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
     return ServiceType.SEARCH;
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

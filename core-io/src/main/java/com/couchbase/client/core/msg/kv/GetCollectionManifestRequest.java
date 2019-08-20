@@ -66,4 +66,9 @@ public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollect
     return new GetCollectionManifestResponse(status, manifest);
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

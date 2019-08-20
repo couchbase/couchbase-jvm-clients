@@ -74,7 +74,7 @@ public class RoundRobinLocator implements Locator {
 
     List<Node> filteredNodes = filterNodes(nodes, request, config);
     if (filteredNodes.isEmpty()) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       return;
     }
 
@@ -94,7 +94,7 @@ public class RoundRobinLocator implements Locator {
       }
     }
 
-    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
   }
 
   private void dispatchUntargeted(final Request<? extends Response> request, final List<Node> nodes,
@@ -105,7 +105,7 @@ public class RoundRobinLocator implements Locator {
     if (node != null) {
       node.send(request);
     } else {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       ctx.environment().eventBus().publish(new NodeLocatorBugIdentifiedEvent(ctx));
     }
   }

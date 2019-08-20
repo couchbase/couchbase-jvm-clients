@@ -83,4 +83,9 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
     }
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

@@ -74,7 +74,7 @@ class ReactiveUserManager(private val core: Core) {
       timeout,
       core.context,
       retryStrategy,
-      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path)))
+      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET))
   }
 
   private def sendRequest(method: HttpMethod,
@@ -91,7 +91,7 @@ class ReactiveUserManager(private val core: Core) {
         req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
         req.headers.add("Content-Length", content.readableBytes)
         req
-      }))
+      }, method == HttpMethod.GET))
   }
 
   protected def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {

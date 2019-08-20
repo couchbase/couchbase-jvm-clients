@@ -61,4 +61,10 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   public NodeIdentifier target() {
     return target;
   }
+
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

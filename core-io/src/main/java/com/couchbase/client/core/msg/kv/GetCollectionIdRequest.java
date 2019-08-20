@@ -68,4 +68,9 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
     }
     return new GetCollectionIdResponse(status, cid);
   }
+
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
 }

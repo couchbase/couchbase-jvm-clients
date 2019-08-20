@@ -74,4 +74,9 @@ public class SearchRequest extends BaseRequest<SearchResponse>
                                  Mono<SearchChunkTrailer> trailer) {
         return new SearchResponse(status, header, rows, trailer);
     }
+
+    @Override
+    public boolean idempotent() {
+        return true;
+    }
 }

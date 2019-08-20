@@ -51,7 +51,7 @@ public abstract class ManagerSupport {
 
   protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path) {
     return sendRequest(new GenericManagerRequest(core.context(),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path)));
+        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET));
   }
 
   protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, UrlQueryStringBuilder body) {
@@ -61,7 +61,7 @@ public abstract class ManagerSupport {
       req.headers().add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED);
       req.headers().add("Content-Length", content.readableBytes());
       return req;
-    }));
+    }, method == HttpMethod.GET));
   }
 
   protected static void checkStatus(GenericManagerResponse response, String action) {

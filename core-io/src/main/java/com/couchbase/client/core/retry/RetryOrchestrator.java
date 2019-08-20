@@ -40,24 +40,6 @@ import java.util.Optional;
 public class RetryOrchestrator {
 
   /**
-   * Retries the given request immediately, unless it is already completed.
-   *
-   * <p>This method is usually used in contexts like "not my vbucket" where we need to retry
-   * completely transparently and not based on the retry strategy configured.</p>
-   *
-   * @param ctx the core context into which timer the request is submitted.
-   * @param request the request in question.
-   * @param reason the reason why the request is being retried.
-   */
-  public static void retryImmediately(final CoreContext ctx, final Request<? extends Response> request,
-                                      final RetryReason reason) {
-    if (request.completed()) {
-      return;
-    }
-    retryWithDuration(ctx, request, Duration.ofMillis(1), reason);
-  }
-
-  /**
    * Retry or cancel the given request, depending on its state and the configured {@link RetryStrategy}.
    *
    * @param ctx the core context into which timer the request is submitted.
@@ -70,12 +52,42 @@ public class RetryOrchestrator {
       return;
     }
 
-    Optional<Duration> duration = request.retryStrategy().shouldRetry(request);
+    if (reason.alwaysRetry()) {
+      retryWithDuration(ctx, request, controlledBackoff(request.context().retryAttempts()), reason);
+      return;
+    }
+
+    RetryAction retryAction = request.retryStrategy().shouldRetry(request, reason);
+    Optional<Duration> duration = retryAction.duration();
     if (duration.isPresent()) {
       retryWithDuration(ctx, request, duration.get(), reason);
     } else {
-      ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.getClass(), request.context()));
-      request.cancel(CancellationReason.NO_MORE_RETRIES);
+      ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.getClass(), request.context(), reason));
+      request.cancel(CancellationReason.noMoreRetries(reason));
+    }
+  }
+
+  /**
+   * Helper method for a simple, bounded controlled backoff for the "always retry" handler so that it doesn't spam
+   * quickly all the time.
+   *
+   * @param retryAttempt the retry attempts for the request.
+   * @return the retry duration.
+   */
+  private static Duration controlledBackoff(int retryAttempt) {
+    switch (retryAttempt) {
+      case 0:
+        return Duration.ofMillis(1);
+      case 1:
+        return Duration.ofMillis(10);
+      case 2:
+        return Duration.ofMillis(50);
+      case 3:
+        return Duration.ofMillis(100);
+      case 4:
+        return Duration.ofMillis(500);
+      default:
+        return Duration.ofMillis(1000);
     }
   }
 
@@ -92,7 +104,7 @@ public class RetryOrchestrator {
     ctx.environment().eventBus().publish(
       new RequestRetriedEvent(duration, request.context(), request.getClass(), reason)
     );
-    request.context().incrementRetryAttempt();
+    request.context().incrementRetryAttempts(duration);
     ctx.environment().timer().schedule(
       () -> ctx.core().send(request,false),
       duration

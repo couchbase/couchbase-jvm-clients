@@ -52,6 +52,8 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_LATER;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -124,8 +126,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param endpointContext the parent core context.
    */
-  public KeyValueMessageHandler(final BaseEndpoint endpoint,
-                                final EndpointContext endpointContext, final Optional<String> bucketName) {
+  public KeyValueMessageHandler(final BaseEndpoint endpoint, final EndpointContext endpointContext,
+                                final Optional<String> bucketName) {
     this.endpoint = endpoint;
     this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
@@ -222,6 +224,14 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
   }
 
+  @Override
+  public void channelInactive(final ChannelHandlerContext ctx) {
+    for (KeyValueRequest<Response> request : writtenRequests.values()) {
+      RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
+    }
+    ctx.fireChannelInactive();
+  }
+
   /**
    * Main method to start dispatching the decode.
    *
@@ -258,6 +268,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         handleNotMyVbucket(request, response);
       } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
         handleOutdatedCollection(request);
+      } else if (errorMapIndicatesRetry(errorCode)) {
+        RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
       } else {
         try {
           Response decoded = request.decode(response, channelContext);
@@ -304,6 +316,16 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   }
 
   /**
+   * Helper method to check if the consulted kv error map indicates a retry condition.
+   *
+   * @param errorCode the error code to handle
+   * @return true if retry is indicated.
+   */
+  private boolean errorMapIndicatesRetry(final ErrorMap.ErrorCode errorCode) {
+    return errorCode != null && (errorCode.attributes().contains(RETRY_NOW) || errorCode.attributes().contains(RETRY_LATER));
+  }
+
+  /**
    * Helper method to try to decode the status code into the error map code if possible.
    *
    * @param statusCode the status code to decode.
@@ -321,7 +343,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
     final String origin = request.context().dispatchedTo();
-    RetryOrchestrator.retryImmediately(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
+    RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
     body(response)
       .map(b -> b.toString(UTF_8).trim())
@@ -342,7 +364,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       Duration duration = Duration.ofNanos(System.nanoTime() - start);
       eventBus.publish(new CollectionMapRefreshFailedEvent(duration, ioContext, err));
     });
-    RetryOrchestrator.retryImmediately(ioContext, request, RetryReason.KV_COLLECTION_OUTDATED);
+    RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_COLLECTION_OUTDATED);
   }
 
 }

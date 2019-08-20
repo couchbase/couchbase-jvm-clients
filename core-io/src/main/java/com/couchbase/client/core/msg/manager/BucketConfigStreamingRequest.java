@@ -64,4 +64,9 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
     return request;
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

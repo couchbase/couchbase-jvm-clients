@@ -37,6 +37,8 @@ import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.retry.RetryOrchestrator;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
@@ -191,6 +193,14 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   @Override
   public void handlerAdded(final ChannelHandlerContext ctx) {
     ctx.pipeline().addBefore(IDENTIFIER, AGG_IDENTIFIER, new HttpObjectAggregator(Integer.MAX_VALUE));
+  }
+
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) {
+    if (currentRequest != null) {
+      RetryOrchestrator.maybeRetry(ioContext, currentRequest, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
+    }
+    ctx.fireChannelInactive();
   }
 
   /**

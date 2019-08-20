@@ -35,13 +35,15 @@ import static java.util.Objects.requireNonNull;
 public class GenericViewRequest extends BaseRequest<GenericViewResponse>
   implements NonChunkedHttpRequest<GenericViewResponse>, ScopedRequest {
 
-  private final Supplier<FullHttpRequest> requestSupplier;
+  private final Supplier<FullHttpRequest> httpRequest;
+  private final boolean idempotent;
   private final String bucket;
 
   public GenericViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                            final Supplier<FullHttpRequest> requestSupplier, final String bucket) {
+                            final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, final String bucket) {
     super(timeout, ctx, retryStrategy);
-    this.requestSupplier = requireNonNull(requestSupplier);
+    this.httpRequest = requireNonNull(requestSupplier);
+    this.idempotent = idempotent;
     this.bucket = requireNonNull(bucket);
   }
 
@@ -54,7 +56,7 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
 
   @Override
   public FullHttpRequest encode() {
-    FullHttpRequest request = requestSupplier.get();
+    FullHttpRequest request = httpRequest.get();
     addHttpBasicAuth(request, context().environment().credentials());
     return request;
   }
@@ -68,4 +70,10 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
   public String bucket() {
     return bucket;
   }
+
+  @Override
+  public boolean idempotent() {
+    return idempotent;
+  }
+
 }

@@ -19,6 +19,7 @@ package com.couchbase.client.core.cnc.events.request;
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.retry.RetryReason;
 
 import java.time.Duration;
 
@@ -28,15 +29,22 @@ import java.time.Duration;
 public class RequestNotRetriedEvent extends AbstractEvent {
 
   private final Class<? extends Request> clazz;
+  private final RetryReason retryReason;
 
-  public RequestNotRetriedEvent(final Class<? extends Request> clazz, final RequestContext context) {
+  public RequestNotRetriedEvent(final Class<? extends Request> clazz, final RequestContext context,
+                                final RetryReason reason) {
     super(Severity.INFO, Category.REQUEST, Duration.ZERO, context);
     this.clazz = clazz;
+    this.retryReason = reason;
+  }
+
+  public RetryReason retryReason() {
+    return retryReason;
   }
 
   @Override
   public String description() {
-    return "Request " + clazz.getSimpleName() + " not retried per RetryStrategy";
+    return "Request " + clazz.getSimpleName() + " not retried per RetryStrategy (Reason: " + retryReason + ")";
   }
 
 }

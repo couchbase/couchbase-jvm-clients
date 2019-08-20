@@ -23,7 +23,6 @@ import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 
@@ -98,11 +97,10 @@ public enum MemcacheProtocol {
   /**
    * Create a flexible memcached protocol request with all fields necessary.
    */
-  public static ByteBuf flexibleRequest(final ByteBufAllocator alloc, final Opcode opcode,
-                                        final byte datatype, final short partition,
-                                        final int opaque, final long cas,
-                                        final ByteBuf framingExtras, final ByteBuf extras,
-                                        final ByteBuf key, final ByteBuf body) {
+  public static ByteBuf flexibleRequest(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
+                                        final short partition, final int opaque, final long cas,
+                                        final ByteBuf framingExtras, final ByteBuf extras, final ByteBuf key,
+                                        final ByteBuf body) {
     int keySize = key.readableBytes();
     int extrasSize = extras.readableBytes();
     int framingExtrasSize = framingExtras.readableBytes();
@@ -128,9 +126,8 @@ public enum MemcacheProtocol {
   /**
    * Create a regular, non-flexible memcached protocol request with all fields necessary.
    */
-  public static ByteBuf request(final ByteBufAllocator alloc,
-                                final Opcode opcode, final byte datatype, final short partition,
-                                final int opaque, final long cas, final ByteBuf extras,
+  public static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
+                                final short partition, final int opaque, final long cas, final ByteBuf extras,
                                 final ByteBuf key, final ByteBuf body) {
     int keySize = key.readableBytes();
     int extrasSize = extras.readableBytes();
@@ -143,6 +140,33 @@ public enum MemcacheProtocol {
       .writeByte(extrasSize)
       .writeByte(datatype)
       .writeShort(partition)
+      .writeInt(totalBodySize)
+      .writeInt(opaque)
+      .writeLong(cas)
+      .writeBytes(extras)
+      .writeBytes(key)
+      .writeBytes(body);
+  }
+
+  /**
+   * Create a regular, non-flexible memcached protocol response with all fields necessary.
+   *
+   * <p>This method is mostly used for testing purposes.</p>
+   */
+  public static ByteBuf response(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
+                                final short status, final int opaque, final long cas, final ByteBuf extras,
+                                final ByteBuf key, final ByteBuf body) {
+    int keySize = key.readableBytes();
+    int extrasSize = extras.readableBytes();
+    int totalBodySize = extrasSize + keySize + body.readableBytes();
+    return alloc
+      .buffer(HEADER_SIZE + totalBodySize)
+      .writeByte(Magic.RESPONSE.magic())
+      .writeByte(opcode.opcode())
+      .writeShort(keySize)
+      .writeByte(extrasSize)
+      .writeByte(datatype)
+      .writeShort(status)
       .writeInt(totalBodySize)
       .writeInt(opaque)
       .writeLong(cas)

@@ -69,4 +69,9 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
     return new BucketConfigResponse(decodeStatus(response.status()), content);
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
+
 }

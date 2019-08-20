@@ -32,6 +32,7 @@ import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -96,7 +97,9 @@ class ChunkedHandlerSwitcherTest {
   @Test
   void switchesToNonChunkIfNeeded() {
     assertChunkedInPipeline(channel);
-    channel.write(mock(GenericSearchRequest.class));
+    GenericSearchRequest upsertRequest = mock(GenericSearchRequest.class);
+    when(upsertRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
+    channel.write(upsertRequest);
     assertNonChunkedInPipeline(channel);
   }
 
@@ -108,10 +111,14 @@ class ChunkedHandlerSwitcherTest {
     assertChunkedInPipeline(channel);
 
     for (int i = 0; i < 2; i++) {
-      channel.write(mock(GenericSearchRequest.class));
+      GenericSearchRequest genericSearchRequest = mock(GenericSearchRequest.class);
+      when(genericSearchRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
+      channel.write(genericSearchRequest);
       assertNonChunkedInPipeline(channel);
 
-      channel.write(mock(SearchRequest.class));
+      SearchRequest searchRequest = mock(SearchRequest.class);
+      when(searchRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
+      channel.write(searchRequest);
       assertChunkedInPipeline(channel);
     }
   }

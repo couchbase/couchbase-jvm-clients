@@ -31,14 +31,18 @@ import static java.util.Objects.requireNonNull;
 public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResponse> {
 
   private final Supplier<FullHttpRequest> requestSupplier;
+  private final boolean idempotent;
 
-  public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier) {
-    this(ctx.environment().timeoutConfig().managementTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier);
+  public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
+    this(ctx.environment().timeoutConfig().managementTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier,
+      idempotent);
   }
 
-  public GenericManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Supplier<FullHttpRequest> requestSupplier) {
+  public GenericManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
+                               Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
     super(timeout, ctx, retryStrategy);
     this.requestSupplier = requireNonNull(requestSupplier);
+    this.idempotent = idempotent;
   }
 
   @Override
@@ -51,5 +55,10 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
     FullHttpRequest request = requestSupplier.get();
     addHttpBasicAuth(request, context().environment().credentials());
     return request;
+  }
+
+  @Override
+  public boolean idempotent() {
+    return idempotent;
   }
 }

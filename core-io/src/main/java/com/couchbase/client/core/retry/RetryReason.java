@@ -26,34 +26,64 @@ public enum RetryReason {
   /**
    * The reason why it has been retried is unknown.
    */
-  UNKNOWN,
+  UNKNOWN(false, false),
   /**
    * Retried because at the point in time there was no endpoint available to dispatch to.
    */
-  NO_ENDPOINT_AVAILABLE,
+  ENDPOINT_NOT_AVAILABLE(true, false),
+  /**
+   * Retried because no endpoint available, but a new one being opened in parallel.
+   */
+  ENDPOINT_TEMPORARILY_NOT_AVAILABLE(true, true),
   /**
    * Retried because at this point in time there is no service available to dispatch to.
    */
-  NO_SERVICE_AVAILBLE,
+  SERVICE_NOT_AVAILABLE(true, false),
   /**
    * Retried because at this point in time there is no node available to dispatch to.
    */
-  NO_NODE_AVAILABLE,
+  NODE_NOT_AVAILABLE(true, false),
   /**
    * A KV "not my vbucket" response has been received.
    */
-  KV_NOT_MY_VBUCKET,
+  KV_NOT_MY_VBUCKET(true, true),
   /**
    * The collection identifier for the KV service has been outdated.
    */
-  KV_COLLECTION_OUTDATED,
+  KV_COLLECTION_OUTDATED(true, true),
+  /**
+   * The KV error map indicated a retry action on an unknown response code.
+   */
+  KV_ERROR_MAP_INDICATED(true, false),
   /**
    * The request has been dispatched into a non-pipelined handler and a request is currently
    * in-flight so it cannot be dispatched right now onto the same socket.
    */
-  NOT_PIPELINED_REQUEST_IN_FLIGHT,
+  NOT_PIPELINED_REQUEST_IN_FLIGHT(true, true),
   /**
    * The endpoint is connected, but for some reason cannot be written to at the moment.
    */
-  ENDPOINT_NOT_WRITABLE,
+  ENDPOINT_NOT_WRITABLE(true, false),
+  /**
+   * The underlying channel on the endpoint closed while this operation was still in-flight and we
+   * do not have a response yet.
+   */
+  CHANNEL_CLOSED_WHILE_IN_FLIGHT(false, false);
+
+  private final boolean allowsNonIdempotentRetry;
+  private final boolean alwaysRetry;
+
+  RetryReason(boolean allowsNonIdempotentRetry, boolean alwaysRetry) {
+    this.allowsNonIdempotentRetry = allowsNonIdempotentRetry;
+    this.alwaysRetry = alwaysRetry;
+  }
+
+  boolean allowsNonIdempotentRetry() {
+    return allowsNonIdempotentRetry;
+  }
+
+  boolean alwaysRetry() {
+    return alwaysRetry;
+  }
+
 }

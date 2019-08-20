@@ -93,7 +93,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof ManagerRequest) {
       if (currentRequest != null) {
-        RetryOrchestrator.retryImmediately(coreContext, (ManagerRequest<Response>) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
+        RetryOrchestrator.maybeRetry(coreContext, (ManagerRequest<Response>) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
         return;
       }
 
@@ -172,6 +172,9 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     ReferenceCountUtil.release(currentContent);
     if (streamingResponse != null) {
       streamingResponse.completeStream();
+    }
+    if (currentRequest != null) {
+      RetryOrchestrator.maybeRetry(ioContext, currentRequest, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     }
     ctx.fireChannelInactive();
   }

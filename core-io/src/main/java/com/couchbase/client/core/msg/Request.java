@@ -134,4 +134,17 @@ public interface Request<R extends Response> {
    */
   RetryStrategy retryStrategy();
 
+  /**
+   * Returns if the given request is idempotent or not.
+   *
+   * <p>By default, this method always returns false for data consistency reasons. Only specific idempotent operations
+   * should override this default since it impacts retry handling quite a bit. DO NOT SET THIS TO TRUE ON MUTATING
+   * OPERATIONS!</p>
+   *
+   * @return true if idempotent.
+   */
+  default boolean idempotent() {
+    return false;
+  }
+
 }

@@ -84,7 +84,7 @@ public class KeyValueLocator implements Locator {
       }
     }
 
-    RetryOrchestrator.maybeRetry(ctx, (Request) request, RetryReason.NO_NODE_AVAILABLE);
+    RetryOrchestrator.maybeRetry(ctx, (Request) request, RetryReason.NODE_NOT_AVAILABLE);
   }
 
   private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,
@@ -98,7 +98,7 @@ public class KeyValueLocator implements Locator {
 
     int nodeId = calculateNodeId(partitionId, request, config);
     if (nodeId < 0) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       return;
     }
 
@@ -111,7 +111,7 @@ public class KeyValueLocator implements Locator {
     }
 
     if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       return;
     }
 
@@ -176,7 +176,7 @@ public class KeyValueLocator implements Locator {
     }
 
     if(handleNotEqualNodeSizes(config.nodes().size(), nodes.size(), ctx)) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       return;
     }
 

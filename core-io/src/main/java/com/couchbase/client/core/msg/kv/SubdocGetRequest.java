@@ -196,4 +196,9 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       return buffer;
     }
   }
+
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
 }

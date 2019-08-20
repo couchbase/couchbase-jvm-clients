@@ -16,47 +16,102 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
+import com.couchbase.client.core.retry.RetryReason;
+
+import java.util.Objects;
+
 /**
  * Describes the reason why a {@link Request} has been cancelled.
  *
  * @since 2.0.0
  */
-public enum CancellationReason {
+public class CancellationReason {
 
   /**
    * The downstream consumer stopped listening for a result and therefore any further
    * processing is a waste of resources.
    */
-  STOPPED_LISTENING,
+  public static final CancellationReason STOPPED_LISTENING =
+    new CancellationReason("STOPPED_LISTENING", null);
 
   /**
    * The request ran into a timeout and is therefore cancelled before it got a chance
    * to complete.
    */
-  TIMEOUT,
+  public static final CancellationReason TIMEOUT =
+    new CancellationReason("TIMEOUT", null);
 
   /**
    * The user or some other code proactively cancelled the request by cancelling
    * it through its attached context.
    */
-  CANCELLED_VIA_CONTEXT,
+  public static final CancellationReason CANCELLED_VIA_CONTEXT =
+    new CancellationReason("CANCELLED_VIA_CONTEXT", null);
 
-  /**
-   * The retry strategy decided that no more retries were allowed/possible.
-   */
-  NO_MORE_RETRIES,
-  /**
-   * The request was in-flight on the socket and the socket got closed.
-   */
-  IO_CLOSED_WHILE_IN_FLIGHT,
   /**
    * The SDK has been shut down already when this request is dispatched.
    */
-  SHUTDOWN,
+  public static final CancellationReason SHUTDOWN =
+    new CancellationReason("SHUTDOWN", null);
+
   /**
    * For a different reason. Make sure to emit an event so that debugging provides
    * further context.
    */
-  OTHER
+  public static final CancellationReason OTHER =
+    new CancellationReason("OTHER", null);
 
+  private final String identifier;
+  private final Object innerReason;
+
+  private CancellationReason(final String identifier, final Object innerReason) {
+    this.innerReason = innerReason;
+    this.identifier = identifier;
+  }
+
+  /**
+   * This cancellation reason indicates that no more retries were allowed based on the retry strategy.
+   *
+   * @param retryReason the retry reason why it got sent into retry.
+   * @return the cancellation reason instance.
+   */
+  public static CancellationReason noMoreRetries(final RetryReason retryReason) {
+    return new CancellationReason("NO_MORE_RETRIES", retryReason);
+  }
+
+  /**
+   * If applicable, returns an inner reason for the cancellation for additional context.
+   */
+  public Object innerReason() {
+    return innerReason;
+  }
+
+  /**
+   * Returns the identifier for this reason.
+   */
+  public String identifier() {
+    return identifier;
+  }
+
+  @Override
+  @JsonValue
+  public String toString() {
+    String inner = innerReason != null ? (" (" + innerReason.toString()+ ")") : "";
+    return identifier + inner;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CancellationReason that = (CancellationReason) o;
+    return Objects.equals(identifier, that.identifier) &&
+      Objects.equals(innerReason, that.innerReason);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(identifier, innerReason);
+  }
 }
