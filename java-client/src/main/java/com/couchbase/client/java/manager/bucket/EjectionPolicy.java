@@ -19,14 +19,19 @@ package com.couchbase.client.java.manager.bucket;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Locale;
-
 @Stability.Volatile
-public enum AuthType {
-  @JsonProperty("sasl") SASL;
+public enum EjectionPolicy {
+  @JsonProperty("valueOnly") VALUE_ONLY("valueOnly"),
+  @JsonProperty("fullEviction") FULL("fullEviction");
+
+  private final String alias;
+
+  EjectionPolicy(String alias) {
+    this.alias = alias;
+  }
 
   public String alias() {
-    return name().toLowerCase(Locale.ROOT);
+    return alias;
   }
 
 }

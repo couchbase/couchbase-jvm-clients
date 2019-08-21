@@ -107,8 +107,7 @@ public class AsyncBucketManager extends ManagerSupport {
     params.add("replicaNumber", settings.numReplicas());
     params.add("flushEnabled", settings.flushEnabled() ? 1 : 0);
     params.add("maxTTL", settings.maxTTL());
-    params.add("authType", settings.authType().alias());
-    params.add("evictionPolicy", settings.evictionPolicy().alias());
+    params.add("evictionPolicy", settings.ejectionPolicy().alias());
     params.add("compressionMode", settings.compressionMode().alias());
 
     // The following values must not be changed on update
@@ -118,12 +117,6 @@ public class AsyncBucketManager extends ManagerSupport {
       params.add("conflictResolutionType", settings.conflictResolutionType().alias());
       params.add("replicaIndex", settings.replicaIndexes() ? 1 : 0);
     }
-
-    if (settings.proxyPort() > 0) {
-      params.add("proxyPort", settings.proxyPort());
-    }
-
-    settings.saslPassword().ifPresent(pw -> params.add("saslPassword", pw));
 
     return params;
   }

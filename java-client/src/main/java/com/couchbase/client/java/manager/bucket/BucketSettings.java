@@ -22,7 +22,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnor
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,24 +29,16 @@ import static java.util.Objects.requireNonNull;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BucketSettings {
 
-  /**
-   * Static to convert from bytes to megabytes.
-   */
-  private final long MEGABYTES = 1024 * 1024;
-
   private final String name;
   private boolean flushEnabled = false;
   private long ramQuotaMB = 100;
   private int numReplicas = 1;
   private boolean replicaIndexes = false;
-  private Optional<String> saslPassword = Optional.empty();
-  private int proxyPort = 0;
   private int maxTTL = 0;
   private CompressionMode compressionMode = CompressionMode.PASSIVE;
   private BucketType bucketType = BucketType.COUCHBASE;
-  private AuthType authType = AuthType.SASL;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
-  private EvictionPolicy evictionPolicy = EvictionPolicy.VALUE_ONLY;
+  private EjectionPolicy evictionPolicy = EjectionPolicy.VALUE_ONLY;
 
   public static BucketSettings create(final String name) {
     return new BucketSettings(name);
@@ -64,25 +55,20 @@ public class BucketSettings {
     @JsonProperty("quota") final Map<String, Long> quota,
     @JsonProperty("numReplicas") final int numReplicas,
     @JsonProperty("replicaIndex") final boolean replicaIndex,
-    @JsonProperty("proxyPort") final int proxyPort,
     @JsonProperty("maxTTL") final int maxTTL,
     @JsonProperty("compressionMode") final CompressionMode compressionMode,
     @JsonProperty("bucketType") final BucketType bucketType,
-    @JsonProperty("authType") final AuthType authType,
     @JsonProperty("conflictResolutionType") final ConflictResolutionType conflictResolutionType,
-    @JsonProperty("evictionPolicy") final EvictionPolicy evictionPolicy
+    @JsonProperty("evictionPolicy") final EjectionPolicy evictionPolicy
   ) {
     this.name = name;
     this.flushEnabled = controllers.containsKey("flush");
     this.ramQuotaMB = ramQuotaToMB(quota.get("rawRAM"));
     this.numReplicas = numReplicas;
     this.replicaIndexes = replicaIndex;
-    this.saslPassword = Optional.empty();
-    this.proxyPort = proxyPort;
     this.maxTTL = maxTTL;
     this.compressionMode = compressionMode;
     this.bucketType = bucketType;
-    this.authType = authType;
     this.conflictResolutionType = conflictResolutionType;
     this.evictionPolicy = evictionPolicy;
   }
@@ -94,7 +80,8 @@ public class BucketSettings {
    * @return converted to megabytes
    */
   private long ramQuotaToMB(long ramQuotaBytes) {
-    return ramQuotaBytes == 0 ? 0 : ramQuotaBytes / MEGABYTES;
+    final long BYTES_PER_MEGABYTE = 1024 * 1024;
+    return ramQuotaBytes == 0 ? 0 : ramQuotaBytes / BYTES_PER_MEGABYTE;
   }
 
   public String name() {
@@ -117,14 +104,6 @@ public class BucketSettings {
     return replicaIndexes;
   }
 
-  public Optional<String> saslPassword() {
-    return saslPassword;
-  }
-
-  public int proxyPort() {
-    return proxyPort;
-  }
-
   public int maxTTL() {
     return maxTTL;
   }
@@ -137,15 +116,11 @@ public class BucketSettings {
     return bucketType;
   }
 
-  public AuthType authType() {
-    return authType;
-  }
-
   public ConflictResolutionType conflictResolutionType() {
     return conflictResolutionType;
   }
 
-  public EvictionPolicy evictionPolicy() {
+  public EjectionPolicy ejectionPolicy() {
     return evictionPolicy;
   }
 
@@ -169,48 +144,28 @@ public class BucketSettings {
     return this;
   }
 
-  public BucketSettings saslPassword(String saslPassword) {
-    this.saslPassword = Optional.ofNullable(saslPassword);
-    return this;
-  }
-
-  public BucketSettings proxyPort(int proxyPort) {
-    this.proxyPort = proxyPort;
-    return this;
-  }
-
   public BucketSettings maxTTL(int maxTTL) {
     this.maxTTL = maxTTL;
     return this;
   }
 
   public BucketSettings compressionMode(CompressionMode compressionMode) {
-    requireNonNull(compressionMode);
-    this.compressionMode = compressionMode;
+    this.compressionMode = requireNonNull(compressionMode);
     return this;
   }
 
   public BucketSettings bucketType(BucketType bucketType) {
-    requireNonNull(bucketType);
-    this.bucketType = bucketType;
-    return this;
-  }
-
-  public BucketSettings authType(AuthType authType) {
-    requireNonNull(authType);
-    this.authType = authType;
+    this.bucketType = requireNonNull(bucketType);
     return this;
   }
 
   public BucketSettings conflictResolutionType(ConflictResolutionType conflictResolutionType) {
-    requireNonNull(conflictResolutionType);
-    this.conflictResolutionType = conflictResolutionType;
+    this.conflictResolutionType = requireNonNull(conflictResolutionType);
     return this;
   }
 
-  public BucketSettings evictionPolicy(EvictionPolicy evictionPolicy) {
-    requireNonNull(evictionPolicy);
-    this.evictionPolicy = evictionPolicy;
+  public BucketSettings ejectionPolicy(EjectionPolicy ejectionPolicy) {
+    this.evictionPolicy = requireNonNull(ejectionPolicy);
     return this;
   }
 
@@ -222,12 +177,9 @@ public class BucketSettings {
       ", ramQuotaMB=" + ramQuotaMB +
       ", numReplicas=" + numReplicas +
       ", replicaIndexes=" + replicaIndexes +
-      ", saslPassword=" + saslPassword +
-      ", proxyPort=" + proxyPort +
       ", maxTTL=" + maxTTL +
       ", compressionMode=" + compressionMode +
       ", bucketType=" + bucketType +
-      ", authType=" + authType +
       ", conflictResolutionType=" + conflictResolutionType +
       ", evictionPolicy=" + evictionPolicy +
       '}';

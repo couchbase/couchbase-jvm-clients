@@ -31,7 +31,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilThrows;
@@ -110,7 +109,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     collection.exists(id);
 
     buckets.flushBucket(config().bucketname());
-    
+
     waitUntilThrows(KeyNotFoundException.class, () -> collection.exists(id));
   }
 
@@ -147,7 +146,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   private void assertCreatedBucket(final BucketSettings settings) {
     assertEquals(config().bucketname(), settings.name());
     assertTrue(settings.ramQuotaMB() > 0);
-    assertEquals(Optional.empty(), settings.saslPassword());
   }
 
 }
