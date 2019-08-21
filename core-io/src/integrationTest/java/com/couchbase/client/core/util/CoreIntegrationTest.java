@@ -21,9 +21,11 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
  *
  * @since 2.0.0
  */
+@Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
 
   static {

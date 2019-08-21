@@ -16,8 +16,11 @@ package com.couchbase.client.scala.util
  * limitations under the License.
  */
 
-import com.couchbase.client.scala.env.{ClusterEnvironment, UsernameAndPassword, SeedNode}
+import java.util.concurrent.TimeUnit
+
+import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode, UsernameAndPassword}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services}
+import org.junit.jupiter.api.Timeout
 
 import scala.collection.JavaConverters._
 
@@ -30,6 +33,7 @@ object ScalaIntegrationTest {
 
 }
 
+@Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
   /**
     * Creates a {@link ClusterEnvironment.Builder} which already has the seed nodes and
