@@ -113,6 +113,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     wrap(coll.get(docId)) match {
       case Success(Some(result)) => assert(result.expiration.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -127,6 +128,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     wrap(coll.get(docId, withExpiration = true)) match {
       case Success(Some(result)) => assert(result.expiration.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -144,12 +146,14 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas != insertResult.cas)
         assert(result.contentAs[ujson.Obj].get == content)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
 
     wrap(coll.getAndLock(docId)) match {
       case Success(Some(result)) => assert(false, "should not have been able to relock locked doc")
       case Failure(err: LockException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -169,6 +173,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas != insertResult.cas)
         assert(result.contentAs[ujson.Obj].get == content)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -207,6 +212,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas == upsertResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -236,6 +242,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas == upsertResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -280,6 +287,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas == replaceResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 
@@ -309,6 +317,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         assert(result.cas == replaceResult.get.cas)
         assert(result.contentAs[ujson.Obj].get == content2)
       case Failure(err) => assert(false, s"unexpected error $err")
+      case _ => assert(false, s"unexpected error")
     }
   }
 }
