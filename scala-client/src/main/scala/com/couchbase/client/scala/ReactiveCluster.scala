@@ -23,6 +23,7 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
+import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.ReactiveQueryResult
 import com.couchbase.client.scala.query.handlers.SearchHandler
@@ -55,6 +56,10 @@ class ReactiveCluster(val async: AsyncCluster) {
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
   val users = new ReactiveUserManager(async.core)
+
+  /** The ReactiveBucketManager provides access to creating and getting buckets. */
+  val buckets = new ReactiveBucketManager(async.core)
+
 
   /** Performs a N1QL query against the cluster.
     *

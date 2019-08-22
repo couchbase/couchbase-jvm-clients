@@ -25,6 +25,7 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
+import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
 import com.couchbase.client.scala.search.SearchQuery
@@ -69,8 +70,11 @@ class AsyncCluster(environment: => ClusterEnvironment) {
   private[scala] val queryHandler = new QueryHandler(core)
   private[scala] val analyticsHandler = new AnalyticsHandler()
   private[scala] val searchHandler = new SearchHandler()
-
   private[scala] val reactiveUserManager = new ReactiveUserManager(core)
+  private val reactiveBucketManager = new ReactiveBucketManager(core)
+
+  /** The AsyncBucketManager provides access to creating and getting buckets. */
+  val buckets = new AsyncBucketManager(reactiveBucketManager)
 
   /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
   val users = new AsyncUserManager(reactiveUserManager)

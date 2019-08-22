@@ -19,7 +19,7 @@ import reactor.core.scala.publisher.Mono
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-class UserManagerIntegrationTest extends ScalaIntegrationTest {
+class UserManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
   private var env: ClusterEnvironment = _
   private var users: ReactiveUserManager = _

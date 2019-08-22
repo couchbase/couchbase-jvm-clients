@@ -31,6 +31,7 @@ import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericMana
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
+import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.{CouchbasePickler, FutureConversions}
 import reactor.core.scala.publisher.{Flux, Mono}
@@ -75,21 +76,14 @@ class ReactiveUserManager(private val core: Core) {
   private def pathForGroup(name: String) = pathForGroups + "/" + urlEncode(name)
 
   private def sendRequest(request: GenericManagerRequest): Mono[GenericManagerResponse] = {
-    core.send(request)
-    FutureConversions.javaCFToScalaMono(request, request.response, true)
+    ManagerUtil.sendRequest(core, request)
   }
 
   private def sendRequest(method: HttpMethod,
                           path: String,
                           timeout: Duration,
                           retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
-    val idempotent = method == HttpMethod.GET
-    sendRequest(new GenericManagerRequest(
-      timeout,
-      core.context,
-      retryStrategy,
-      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-      idempotent))
+    ManagerUtil.sendRequest(core, method, path, timeout, retryStrategy)
   }
 
   private def sendRequest(method: HttpMethod,
@@ -97,26 +91,12 @@ class ReactiveUserManager(private val core: Core) {
                           body: UrlQueryStringBuilder,
                           timeout: Duration,
                           retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
-    val idempotent = method == HttpMethod.GET
-    sendRequest(new GenericManagerRequest(timeout,
-      core.context,
-      retryStrategy,
-      () => {
-        val content = Unpooled.copiedBuffer(body.build, UTF_8)
-        val req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-        req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
-        req.headers.add("Content-Length", content.readableBytes)
-        req
-      },
-      idempotent))
+    ManagerUtil.sendRequest(core, method, path, body, timeout, retryStrategy)
   }
 
+
   protected def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {
-    if (response.status != ResponseStatus.SUCCESS) {
-      Failure(new CouchbaseException("Failed to " + action + "; response status=" + response.status + "; response " +
-        "body=" + new String(response.content, UTF_8)))
-    }
-    else Success()
+    ManagerUtil.checkStatus(response, action)
   }
 
   // TODO check 'If the server response does not include an “origins” field for a role' logic
@@ -181,7 +161,7 @@ class ReactiveUserManager(private val core: Core) {
 
         checkStatus(response, "create user [" + redactUser(user.username) + "]") match {
           case Failure(err) => Mono.error(err)
-          case _ => Mono.empty
+          case _ => Mono.just(0)
         }
       })
   }
@@ -201,7 +181,7 @@ class ReactiveUserManager(private val core: Core) {
         else {
           checkStatus(response, "drop user [" + redactUser(username) + "]") match {
             case Failure(err) => Mono.error(err)
-            case _ => Mono.empty
+            case _ => Mono.just(0)
           }
         }
       })
@@ -276,7 +256,7 @@ class ReactiveUserManager(private val core: Core) {
 
         checkStatus(response, "create group [" + redactSystem(group.name) + "]") match {
           case Failure(err) => Mono.error(err)
-          case _ => Mono.empty
+          case _ => Mono.just(0)
         }
       })
   }
@@ -295,7 +275,7 @@ class ReactiveUserManager(private val core: Core) {
         else {
           checkStatus(response, "drop group [" + redactUser(groupName) + "]") match {
             case Failure(err) => Mono.error(err)
-            case _ => Mono.empty
+            case _ => Mono.just(0)
           }
         }
       })

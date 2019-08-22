@@ -35,13 +35,13 @@ class UserManager(val async: AsyncUserManager,
               domain: AuthDomain = AuthDomain.Local,
               timeout: Duration = defaultManagerTimeout,
               retryStrategy: RetryStrategy = defaultRetryStrategy): Try[UserAndMetadata] = {
-    Collection.blockForver(async.getUser(username, domain, timeout, retryStrategy))
+    Collection.blockForever(async.getUser(username, domain, timeout, retryStrategy))
   }
 
   def getAllUsers(domain: AuthDomain = AuthDomain.Local,
                   timeout: Duration = defaultManagerTimeout,
                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[UserAndMetadata]] = {
-    Collection.blockForver(async.getAllUsers(domain, timeout, retryStrategy))
+    Collection.blockForever(async.getAllUsers(domain, timeout, retryStrategy))
   }
 
 
@@ -49,41 +49,41 @@ class UserManager(val async: AsyncUserManager,
                  domain: AuthDomain = AuthDomain.Local,
                  timeout: Duration = defaultManagerTimeout,
                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForver(async.upsertUser(user, domain, timeout, retryStrategy))
+    Collection.blockForever(async.upsertUser(user, domain, timeout, retryStrategy))
   }
 
   def dropUser(username: String,
                domain: AuthDomain = AuthDomain.Local,
                timeout: Duration = defaultManagerTimeout,
                retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForver(async.dropUser(username, domain, timeout, retryStrategy))
+    Collection.blockForever(async.dropUser(username, domain, timeout, retryStrategy))
   }
 
   def availableRoles(timeout: Duration = defaultManagerTimeout,
                      retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[RoleAndDescription]] = {
-    Collection.blockForver(async.availableRoles(timeout, retryStrategy))
+    Collection.blockForever(async.availableRoles(timeout, retryStrategy))
   }
 
   def getGroup(groupName: String,
                timeout: Duration = defaultManagerTimeout,
                retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Group] = {
-    Collection.blockForver(async.getGroup(groupName, timeout, retryStrategy))
+    Collection.blockForever(async.getGroup(groupName, timeout, retryStrategy))
   }
 
   def getAllGroups(timeout: Duration = defaultManagerTimeout,
                    retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[Group]] = {
-    Collection.blockForver(async.getAllGroups(timeout, retryStrategy))
+    Collection.blockForever(async.getAllGroups(timeout, retryStrategy))
   }
 
   def upsertGroup(group: Group,
                   timeout: Duration = defaultManagerTimeout,
                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForver(async.upsertGroup(group, timeout, retryStrategy))
+    Collection.blockForever(async.upsertGroup(group, timeout, retryStrategy))
   }
 
   def dropGroup(groupName: String,
                 timeout: Duration = defaultManagerTimeout,
                 retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForver(async.dropGroup(groupName, timeout, retryStrategy))
+    Collection.blockForever(async.dropGroup(groupName, timeout, retryStrategy))
   }
 }
