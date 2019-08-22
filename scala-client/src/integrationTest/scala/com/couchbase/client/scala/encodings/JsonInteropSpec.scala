@@ -6,7 +6,7 @@ import com.couchbase.client.scala.kv.GetResult
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala._
 import com.couchbase.client.scala.codec.Conversions.Codec
-import com.couchbase.client.scala.implicits.Codecs
+import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.test.ClusterAwareIntegrationTest
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
@@ -58,7 +58,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   case class User(name: String, age: Int, addresses: Seq[Address])
 
   object User {
-    implicit val codec: Codec[User] = Codecs.codec[User]
+    implicit val codec: Codec[User] = Codec.codec[User]
     implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
 
     import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec

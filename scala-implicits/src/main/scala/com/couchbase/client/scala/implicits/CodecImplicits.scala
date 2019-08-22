@@ -29,7 +29,7 @@ import scala.language.experimental.macros
   * @author Graham Pople
   * @since 1.0.0
   */
-object Codecs {
+object Codec {
 
   /** Creates a `Codec` for the given type `T`, which is both a `Decodable[T]` and `Encodable[T]`.  This is everything
     * required to send a case class directly to the Scala SDK, and retrieve results as it.

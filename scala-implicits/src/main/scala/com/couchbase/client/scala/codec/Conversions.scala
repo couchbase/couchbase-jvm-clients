@@ -127,7 +127,7 @@ object Conversions {
   }
 
   /** A Codec conveniently combines an [[com.couchbase.client.scala.codec.Conversions.Encodable]] and
-    * [[Decodable]] so that they can be created by [[com.couchbase.client.scala.implicits.Codecs.codec]] on the same line.
+    * [[Decodable]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
     */
   trait Codec[T] extends Encodable[T] with Decodable[T]
 
