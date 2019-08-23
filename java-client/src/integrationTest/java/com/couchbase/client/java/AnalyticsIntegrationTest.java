@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.AnalyticsServiceException;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
+import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -47,7 +47,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
     static void setup() {
         environment = environment().build();
         cluster = Cluster.connect(environment);
-        Bucket bucket = cluster.bucket(config().bucketname());
+        cluster.bucket(config().bucketname());
     }
 
     @AfterAll
@@ -87,7 +87,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failsOnError() {
-        assertThrows(AnalyticsServiceException.class, () -> cluster.analyticsQuery("SELECT 1="));
+        assertThrows(AnalyticsException.class, () -> cluster.analyticsQuery("SELECT 1="));
     }
 
     @Test

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
-import com.couchbase.client.core.error.AnalyticsServiceException;
+import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
@@ -64,7 +64,7 @@ public class AnalyticsChunkResponseParser
     .doOnValue("/metrics", v -> metrics = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(new AnalyticsServiceException(errors));
+      failRows(new AnalyticsException(errors));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -82,7 +82,7 @@ public class AnalyticsChunkResponseParser
 
   @Override
   public Optional<Throwable> error() {
-    return Optional.ofNullable(errors).map(AnalyticsServiceException::new);
+    return Optional.ofNullable(errors).map(AnalyticsException::new);
   }
 
   @Override

@@ -16,13 +16,11 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.netty.analytics.AnalyticsMessageHandler;
-import com.couchbase.client.core.service.ServiceContext;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LogLevel;
-import com.couchbase.client.core.deps.io.netty.handler.logging.LoggingHandler;
+import com.couchbase.client.core.io.netty.analytics.AnalyticsHandlerSwitcher;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 
 public class AnalyticsEndpoint extends BaseEndpoint {
 
@@ -48,7 +46,7 @@ public class AnalyticsEndpoint extends BaseEndpoint {
     @Override
     public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new AnalyticsMessageHandler(endpoint, endpointContext));
+      pipeline.addLast(AnalyticsHandlerSwitcher.SWITCHER_IDENTIFIER, new AnalyticsHandlerSwitcher(endpoint, endpointContext));
     }
   }
 

@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.Credentials
-import com.couchbase.client.core.error.{AnalyticsServiceException, QueryException}
+import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics._

@@ -19,17 +19,20 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CbCollections {
@@ -65,6 +68,77 @@ public class CbCollections {
 
   @SafeVarargs
   public static <T> Set<T> setOf(T... items) {
-    return new HashSet<>(Arrays.asList(items));
+    Set<T> result = new HashSet<>();
+    for (T item : items) {
+      if (!result.add(requireNonNull(item))) {
+        throw new IllegalArgumentException("Duplicate item: " + item);
+      }
+    }
+    return unmodifiableSet(result);
+  }
+
+  public static <K, V> Map<K, V> mapOf() {
+    return emptyMap();
+  }
+
+  public static <K, V> Map<K, V> mapOf(K key1, V value1) {
+    Map<K, V> result = new HashMap<>();
+    putUniqueKey(result, key1, value1);
+    return unmodifiableMap(result);
+  }
+
+  public static <K, V> Map<K, V> mapOf(K key1, V value1,
+                                       K key2, V value2) {
+    Map<K, V> result = new HashMap<>();
+    putUniqueKey(result, key1, value1);
+    putUniqueKey(result, key2, value2);
+    return unmodifiableMap(result);
+  }
+
+  public static <K, V> Map<K, V> mapOf(K key1, V value1,
+                                       K key2, V value2,
+                                       K key3, V value3) {
+    Map<K, V> result = new HashMap<>();
+    putUniqueKey(result, key1, value1);
+    putUniqueKey(result, key2, value2);
+    putUniqueKey(result, key3, value3);
+    return unmodifiableMap(result);
+  }
+
+  @SuppressWarnings("Duplicates")
+  public static <K, V> Map<K, V> mapOf(K key1, V value1,
+                                       K key2, V value2,
+                                       K key3, V value3,
+                                       K key4, V value4) {
+    Map<K, V> result = new HashMap<>();
+    putUniqueKey(result, key1, value1);
+    putUniqueKey(result, key2, value2);
+    putUniqueKey(result, key3, value3);
+    putUniqueKey(result, key4, value4);
+    return unmodifiableMap(result);
+  }
+
+  @SuppressWarnings("Duplicates")
+  public static <K, V> Map<K, V> mapOf(K key1, V value1,
+                                       K key2, V value2,
+                                       K key3, V value3,
+                                       K key4, V value4,
+                                       K key5, V value5) {
+    Map<K, V> result = new HashMap<>();
+    putUniqueKey(result, key1, value1);
+    putUniqueKey(result, key2, value2);
+    putUniqueKey(result, key3, value3);
+    putUniqueKey(result, key4, value4);
+    putUniqueKey(result, key5, value5);
+    return unmodifiableMap(result);
+  }
+
+  private static <K, V> void putUniqueKey(Map<K, V> map, K key, V value) {
+    requireNonNull(key, "Key may not be null.");
+    requireNonNull(value, "Value may not be null.");
+
+    if (map.put(key, value) != null) {
+      throw new IllegalArgumentException("Duplicate key: " + key);
+    }
   }
 }

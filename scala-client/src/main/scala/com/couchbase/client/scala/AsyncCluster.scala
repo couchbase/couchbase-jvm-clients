@@ -18,7 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
-import com.couchbase.client.core.error.{AnalyticsServiceException, QueryException}
+import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
@@ -133,7 +133,7 @@ class AsyncCluster(environment: => ClusterEnvironment) {
           )
           .onErrorResume(err => {
             err match {
-              case e: AnalyticsServiceException => ScalaMono.error(AnalyticsError(e.content))
+              case e: AnalyticsException => ScalaMono.error(AnalyticsError(e.content))
               case _ => ScalaMono.error(err)
             }
           }).toFuture

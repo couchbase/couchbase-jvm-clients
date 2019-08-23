@@ -25,6 +25,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
 import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
 import com.couchbase.client.java.manager.user.UserManager;
@@ -187,6 +188,13 @@ public class Cluster {
    */
   public QueryResult query(final String statement, final QueryOptions options) {
     return block(async().query(statement, options));
+  }
+
+  /**
+   * Returns a manager for Analytics services.
+   */
+  public AnalyticsIndexManager analyticsIndexes() {
+    return new AnalyticsIndexManager(this);
   }
 
   /**

@@ -26,6 +26,7 @@ import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
@@ -161,6 +162,13 @@ public class ReactiveCluster {
       asyncCluster.queryRequest(statement, opts),
       opts
     );
+  }
+
+  /**
+   * Returns a manager for Analytics services.
+   */
+  public ReactiveAnalyticsIndexManager analyticsIndexes() {
+    return new ReactiveAnalyticsIndexManager(this.asyncCluster);
   }
 
   /**

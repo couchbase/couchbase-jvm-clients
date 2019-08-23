@@ -30,8 +30,9 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
+import com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.AsyncBucketManager;
+import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -229,6 +230,13 @@ public class AsyncCluster {
       statement, query.toString().getBytes(StandardCharsets.UTF_8));
     request.context().clientContext(options.clientContext());
     return request;
+  }
+
+  /**
+   * Returns a manager for Analytics services.
+   */
+  public AsyncAnalyticsIndexManager analyticsIndexes() {
+    return new AsyncAnalyticsIndexManager(this);
   }
 
   /**
