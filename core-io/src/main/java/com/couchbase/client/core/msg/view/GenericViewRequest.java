@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -32,14 +33,16 @@ import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static java.util.Objects.requireNonNull;
 
 public class GenericViewRequest extends BaseRequest<GenericViewResponse>
-  implements NonChunkedHttpRequest<GenericViewResponse> {
+  implements NonChunkedHttpRequest<GenericViewResponse>, ScopedRequest {
 
   private final Supplier<FullHttpRequest> requestSupplier;
+  private final String bucket;
 
   public GenericViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                            final Supplier<FullHttpRequest> requestSupplier) {
+                            final Supplier<FullHttpRequest> requestSupplier, final String bucket) {
     super(timeout, ctx, retryStrategy);
     this.requestSupplier = requireNonNull(requestSupplier);
+    this.bucket = requireNonNull(bucket);
   }
 
   @Override
@@ -61,4 +64,8 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
     return ServiceType.VIEWS;
   }
 
+  @Override
+  public String bucket() {
+    return bucket;
+  }
 }

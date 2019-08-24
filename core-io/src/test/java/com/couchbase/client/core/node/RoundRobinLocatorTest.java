@@ -17,7 +17,6 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;

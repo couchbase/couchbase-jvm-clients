@@ -72,7 +72,7 @@ public class RoundRobinLocator implements Locator {
       return;
     }
 
-    List<Node> filteredNodes = filterNodes(nodes);
+    List<Node> filteredNodes = filterNodes(nodes, request, config);
     if (filteredNodes.isEmpty()) {
       RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NO_NODE_AVAILABLE);
       return;
@@ -114,16 +114,36 @@ public class RoundRobinLocator implements Locator {
    * Filters the list of nodes by the {@link ServiceType}.
    *
    * @param allNodes all nodes as a source.
+   * @param request the request in scope.
+   * @param config the cluster-level config.
    * @return the list of filtered nodes.
    */
-  private List<Node> filterNodes(final List<Node> allNodes) {
+  private List<Node> filterNodes(final List<Node> allNodes, final Request<? extends Response> request,
+                                 final ClusterConfig config) {
     List<Node> result = new ArrayList<>(allNodes.size());
     for (Node n : allNodes) {
-      if (n.serviceEnabled(serviceType)) {
+      if (n.serviceEnabled(serviceType) && nodeCanBeUsed(n, request, config)) {
         result.add(n);
       }
     }
     return result;
+  }
+
+  /**
+   * This method can be overridden for additional per-node checks in addition to the service-type
+   * based check already performed in {@link #filterNodes(List, Request, ClusterConfig)}.
+   *
+   * <p>This method will be called for each node in the list to find out if it can be used in principle
+   * for dispatching the request.</p>
+   *
+   * @param node the node to check against.
+   * @param request the request in scope.
+   * @param config the cluster-level config.
+   * @return true if it can be used.
+   */
+  protected boolean nodeCanBeUsed(final Node node, final Request<? extends Response> request,
+                                  final ClusterConfig config) {
+    return true;
   }
 
 }

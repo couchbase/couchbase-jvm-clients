@@ -32,6 +32,7 @@ import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -39,11 +40,13 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
+import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -110,7 +113,7 @@ public class Core {
    * Locates the right node for the view service.
    */
   private static final RoundRobinLocator VIEWS_LOCATOR =
-    new RoundRobinLocator(ServiceType.VIEWS);
+    new ViewLocator();
 
   /**
    * Holds the current core context.

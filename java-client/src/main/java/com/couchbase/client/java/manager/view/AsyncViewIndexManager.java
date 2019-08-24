@@ -276,7 +276,7 @@ public class AsyncViewIndexManager {
 
   private CompletableFuture<GenericViewResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
     return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path)));
+        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), bucket));
   }
 
   private CompletableFuture<GenericViewResponse> sendJsonRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options, Object body) {
@@ -286,7 +286,7 @@ public class AsyncViewIndexManager {
       req.headers().add("Content-Type", HttpHeaderValues.APPLICATION_JSON);
       req.headers().add("Content-Length", content.readableBytes());
       return req;
-    }));
+    }, bucket));
   }
 
   private Duration timeout(CommonOptions<?>.BuiltCommonOptions options) {

@@ -29,6 +29,7 @@ import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -38,9 +39,10 @@ import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
+import static java.util.Objects.requireNonNull;
 
 public class ViewRequest extends BaseRequest<ViewResponse>
-  implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse> {
+  implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse>, ScopedRequest {
 
   private final Credentials credentials;
   private final String bucket;
@@ -55,13 +57,13 @@ public class ViewRequest extends BaseRequest<ViewResponse>
                      final String view, final String query, Optional<byte[]> keysJson,
                      final boolean development) {
     super(timeout, ctx, retryStrategy);
-    this.credentials = credentials;
-    this.bucket = bucket;
-    this.design = design;
-    this.view = view;
+    this.credentials = requireNonNull(credentials);
+    this.bucket = requireNonNull(bucket);
+    this.design = requireNonNull(design);
+    this.view = requireNonNull(view);
     this.development = development;
-    this.query = query;
-    this.keysJson = keysJson;
+    this.query = requireNonNull(query);
+    this.keysJson = requireNonNull(keysJson);
   }
 
   @Override
@@ -101,6 +103,12 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   public ViewResponse decode(final ResponseStatus status, final ViewChunkHeader header,
                              final Flux<ViewChunkRow> rows, final Mono<ViewChunkTrailer> trailer) {
     return new ViewResponse(status, header, rows, trailer);
+  }
+
+
+  @Override
+  public String bucket() {
+    return bucket;
   }
 
 }

@@ -96,7 +96,8 @@ class ViewEndpointIntegrationTest extends CoreIntegrationTest {
       Duration.ofSeconds(5),
       serviceContext,
       env.retryStrategy(),
-      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")
+      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
+      config().bucketname()
     );
     endpoint.send(request);
 
