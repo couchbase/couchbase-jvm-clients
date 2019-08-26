@@ -60,7 +60,6 @@ public class ViewExample {
             System.out.println("ID: " + r.id());
             System.out.println("Key: " + r.keyAs(JsonArray.class));
             System.out.println("Value: " + r.valueAs(JsonObject.class));
-            System.out.println("Geometry: " + r.geometry());
         });
     }
 }

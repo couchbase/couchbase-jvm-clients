@@ -66,7 +66,6 @@ case class ViewRow(private val _content: Array[Byte]) {
     * "id" - the document's ID
     * "key" - the key emitted from the view
     * "value" - the value emitted from the view
-    * "geometry" - only present on geometric views, will be the geometric results as a JSON object
     *
     * @tparam T $SupportedTypes
     */

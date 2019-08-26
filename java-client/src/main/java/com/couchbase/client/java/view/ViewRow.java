@@ -86,15 +86,6 @@ public class ViewRow {
   }
 
   /**
-   * Returns the geometry of your result if present in the response.
-   *
-   * @return the geometry if present.
-   */
-  public Optional<JsonObject> geometry() {
-    return decode(JsonObject.class, "geometry");
-  }
-
-  /**
    * Helper method to turn a given path of the raw data into the target class.
    *
    * @param target the target class to decode into.
