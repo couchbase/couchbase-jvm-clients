@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggregator;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -105,10 +106,14 @@ class ChunkedHandlerSwitcherTest {
   @Test
   void switchesToChunkIfNeeded() {
     assertChunkedInPipeline(channel);
-    channel.write(mock(UpsertSearchIndexRequest.class));
-    assertNonChunkedInPipeline(channel);
-    channel.write(mock(SearchRequest.class));
-    assertChunkedInPipeline(channel);
+
+    for (int i = 0; i < 2; i++) {
+      channel.write(mock(UpsertSearchIndexRequest.class));
+      assertNonChunkedInPipeline(channel);
+
+      channel.write(mock(SearchRequest.class));
+      assertChunkedInPipeline(channel);
+    }
   }
 
   /**
@@ -140,6 +145,7 @@ class ChunkedHandlerSwitcherTest {
     assertNotNull(channel.pipeline().get(TestChunkedHandlerSwitcher.class));
     assertNotNull(channel.pipeline().get(ChunkedMessageHandler.class));
     assertNull(channel.pipeline().get(NonChunkedHttpMessageHandler.class));
+    assertNull(channel.pipeline().get(HttpObjectAggregator.class));
   }
 
   /**
@@ -151,6 +157,7 @@ class ChunkedHandlerSwitcherTest {
     assertNotNull(channel.pipeline().get(TestChunkedHandlerSwitcher.class));
     assertNull(channel.pipeline().get(ChunkedMessageHandler.class));
     assertNotNull(channel.pipeline().get(NonChunkedHttpMessageHandler.class));
+    assertNotNull(channel.pipeline().get(HttpObjectAggregator.class));
   }
 
 

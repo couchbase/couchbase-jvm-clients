@@ -50,7 +50,7 @@ import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
  * aggregator and sends full http requests / receives full http responses.</p>
  *
  * <p>You usually want to add this handler for non-perf critical messages like creating indexes and similar, so
- * their encoder and decoder implementations are considerably simpler than having to deal with cunking and a
+ * their encoder and decoder implementations are considerably simpler than having to deal with chunking and a
  * streaming parser.</p>
  *
  * @since 2.0.0
@@ -61,7 +61,6 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   static final String IDENTIFIER = NonChunkedHttpMessageHandler.class.getSimpleName();
   private static final String AGG_IDENTIFIER = HttpObjectAggregator.class.getSimpleName();
 
-  private final HttpObjectAggregator httpAggregator;
   private final EventBus eventBus;
   private final ServiceType serviceType;
 
@@ -91,7 +90,6 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   private final EndpointContext endpointContext;
 
   protected NonChunkedHttpMessageHandler(final BaseEndpoint endpoint, final ServiceType serviceType) {
-    this.httpAggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
     this.endpoint = endpoint;
     this.endpointContext = endpoint.endpointContext();
     this.eventBus = endpointContext.environment().eventBus();
@@ -114,7 +112,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @param promise the promise that will be passed along.
    */
   @Override
-  @SuppressWarnings({"unchecked"})
+  @SuppressWarnings("unchecked")
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof NonChunkedHttpRequest) {
       currentRequest = (NonChunkedHttpRequest<Response>) msg;
@@ -146,7 +144,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
     );
 
     remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
-    httpAggregator.channelActive(ctx);
+    ctx.pipeline().get(HttpObjectAggregator.class).channelActive(ctx);
     ctx.fireChannelActive();
   }
 
@@ -192,7 +190,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    */
   @Override
   public void handlerAdded(final ChannelHandlerContext ctx) {
-    ctx.pipeline().addBefore(IDENTIFIER, AGG_IDENTIFIER, httpAggregator);
+    ctx.pipeline().addBefore(IDENTIFIER, AGG_IDENTIFIER, new HttpObjectAggregator(Integer.MAX_VALUE));
   }
 
   /**
@@ -202,7 +200,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    */
   @Override
   public void handlerRemoved(final ChannelHandlerContext ctx) {
-    ctx.pipeline().remove(AGG_IDENTIFIER);
+    ctx.pipeline().remove(HttpObjectAggregator.class);
   }
 
 }
