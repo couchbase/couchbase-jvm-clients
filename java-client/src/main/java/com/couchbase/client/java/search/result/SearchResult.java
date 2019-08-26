@@ -17,7 +17,7 @@
 package com.couchbase.client.java.search.result;
 
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.SearchMeta;
+import com.couchbase.client.java.search.SearchMetaData;
 
 import java.util.List;
 
@@ -35,11 +35,11 @@ public class SearchResult {
 
     private final List<SearchQueryRow> rows;
     private final List<RuntimeException> errors;
-    private final SearchMeta meta;
+    private final SearchMetaData meta;
 
     public SearchResult(List<SearchQueryRow> rows,
                         List<RuntimeException> errors,
-                        SearchMeta meta) {
+                        SearchMetaData meta) {
         this.rows = rows;
         this.errors = errors;
         this.meta = meta;
@@ -48,7 +48,7 @@ public class SearchResult {
     /**
      * Any additional meta information associated with the FTS query.
      */
-    public SearchMeta meta() {
+    public SearchMetaData metaData() {
         return meta;
     }
 

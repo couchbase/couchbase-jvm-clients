@@ -21,17 +21,13 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
-import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.couchbase.client.java.AsyncUtils.block;
 
 /**
  * Holds the results (including metadata) of an analytics query.
@@ -84,8 +80,8 @@ public class AnalyticsResult {
     return allRowsAs(JsonObject.class);
   }
 
-  public AnalyticsMeta meta() {
-    return AnalyticsMeta.from(header, trailer);
+  public AnalyticsMetaData metaData() {
+    return AnalyticsMetaData.from(header, trailer);
   }
 
   @Override

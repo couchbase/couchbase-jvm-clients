@@ -53,7 +53,7 @@ public class ReactiveAnalyticsResult {
         });
     }
 
-    public Mono<AnalyticsMeta> meta() {
-        return response.trailer().map(t -> AnalyticsMeta.from(response.header(), t));
+    public Mono<AnalyticsMetaData> metaData() {
+        return response.trailer().map(t -> AnalyticsMetaData.from(response.header(), t));
     }
 }

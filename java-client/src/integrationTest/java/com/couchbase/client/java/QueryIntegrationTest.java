@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -91,14 +90,14 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void simpleBlockingSelect() {
         QueryResult result = cluster.query("select 'hello world' as Greeting");
 
-        assertNotNull(result.meta().requestId());
-        assertTrue(result.meta().clientContextId().isPresent());
-        assertEquals(QueryStatus.SUCCESS, result.meta().status());
-        assertFalse(result.meta().warnings().isPresent());
+        assertNotNull(result.metaData().requestId());
+        assertTrue(result.metaData().clientContextId().isPresent());
+        assertEquals(QueryStatus.SUCCESS, result.metaData().status());
+        assertFalse(result.metaData().warnings().isPresent());
         assertEquals(1, result.allRowsAs(JsonObject.class).size());
-        assertTrue(result.meta().signature().isPresent());
+        assertTrue(result.metaData().signature().isPresent());
 
-        QueryMetrics metrics = result.meta().metrics().get();
+        QueryMetrics metrics = result.metaData().metrics().get();
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
@@ -114,14 +113,14 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           options
         );
 
-        assertNotNull(result.meta().requestId());
-        assertTrue(result.meta().clientContextId().isPresent());
-        assertEquals(QueryStatus.SUCCESS, result.meta().status());
-        assertFalse(result.meta().warnings().isPresent());
+        assertNotNull(result.metaData().requestId());
+        assertTrue(result.metaData().clientContextId().isPresent());
+        assertEquals(QueryStatus.SUCCESS, result.metaData().status());
+        assertFalse(result.metaData().warnings().isPresent());
         assertEquals(1, result.allRowsAs(JsonObject.class).size());
-        assertTrue(result.meta().signature().isPresent());
+        assertTrue(result.metaData().signature().isPresent());
 
-        QueryMetrics metrics = result.meta().metrics().get();
+        QueryMetrics metrics = result.metaData().metrics().get();
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
@@ -167,7 +166,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        assertFalse(result.meta().profileInfo().isPresent());
+        assertFalse(result.metaData().profileInfo().isPresent());
     }
 
     @Test
@@ -179,7 +178,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id +"\"",
           options
         );
-        JsonObject profile = result.meta().profileInfo().get();
+        JsonObject profile = result.metaData().profileInfo().get();
         assertTrue(profile.size() > 0);
     }
 

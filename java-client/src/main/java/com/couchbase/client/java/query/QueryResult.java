@@ -86,10 +86,10 @@ public class QueryResult {
     }
 
     /**
-     * Returns a {@link QueryMeta} giving access to the additional metadata associated with this query.
+     * Returns a {@link QueryMetaData} giving access to the additional metadata associated with this query.
      */
-    public QueryMeta meta() {
-        return QueryMeta.from(header, trailer);
+    public QueryMetaData metaData() {
+        return QueryMetaData.from(header, trailer);
     }
 
     @Override

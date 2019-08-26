@@ -40,10 +40,10 @@ class SearchTest {
         SearchResult result = SearchMock.loadSearchTestCase(json);
 
         assertEquals(6, result.errors().size());
-        assertEquals(6, result.meta().status().errorCount());
-        assertEquals(6, result.meta().status().totalCount());
-        assertEquals(0, result.meta().status().successCount());
-        assertFalse(result.meta().status().isSuccess());
+        assertEquals(6, result.metaData().status().errorCount());
+        assertEquals(6, result.metaData().status().totalCount());
+        assertEquals(0, result.metaData().status().successCount());
+        assertFalse(result.metaData().status().isSuccess());
     }
 
 }

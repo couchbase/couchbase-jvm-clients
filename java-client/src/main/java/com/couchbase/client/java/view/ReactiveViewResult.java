@@ -55,8 +55,8 @@ public class ReactiveViewResult {
      *
      * @return the metadata associated.
      */
-    public Mono<ViewMeta> meta() {
-        return Mono.just(ViewMeta.from(response.header()));
+    public Mono<ViewMetaData> metaData() {
+        return Mono.just(ViewMetaData.from(response.header()));
     }
 
 }

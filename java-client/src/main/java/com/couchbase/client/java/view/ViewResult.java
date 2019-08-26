@@ -66,8 +66,8 @@ public class ViewResult {
    *
    * @return the metadata associated.
    */
-  public ViewMeta meta() {
-    return ViewMeta.from(header);
+  public ViewMetaData metaData() {
+    return ViewMetaData.from(header);
   }
 
   @Override

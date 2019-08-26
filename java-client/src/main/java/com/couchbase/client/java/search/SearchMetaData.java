@@ -4,12 +4,12 @@ import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.result.SearchMetrics;
 import com.couchbase.client.java.search.result.SearchStatus;
 
-public class SearchMeta {
+public class SearchMetaData {
     private final SearchStatus status;
     private final SearchMetrics metrics;
 
-    public SearchMeta(SearchStatus status,
-                      SearchMetrics metrics) {
+    public SearchMetaData(SearchStatus status,
+                          SearchMetrics metrics) {
         this.status = status;
         this.metrics = metrics;
     }

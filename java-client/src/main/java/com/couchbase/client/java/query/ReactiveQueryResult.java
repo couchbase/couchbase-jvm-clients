@@ -17,12 +17,10 @@
 package com.couchbase.client.java.query;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailedException;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
@@ -75,14 +73,14 @@ public class ReactiveQueryResult {
 	}
 
 	/**
-	 * Returns a {@link Mono} containing a {@link QueryMeta},  giving access to the additional metadata associated with
+	 * Returns a {@link Mono} containing a {@link QueryMetaData},  giving access to the additional metadata associated with
 	 * this query.
 	 *
 	 * Note that the metadata will only be available once all rows have been received, so it is recommended that you
 	 * first handle the rows in your code, and then the metadata.  This will avoid buffering all the rows in-memory.
 	 */
-	public Mono<QueryMeta> meta() {
-		return response.trailer().map(t -> QueryMeta.from(response.header(), t));
+	public Mono<QueryMetaData> metaData() {
+		return response.trailer().map(t -> QueryMetaData.from(response.header(), t));
 	}
 
 }

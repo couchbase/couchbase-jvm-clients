@@ -27,7 +27,7 @@ import java.util.Optional;
  *
  * @since 3.0.0
  */
-public class ViewMeta {
+public class ViewMetaData {
 
     /**
      * If present, holds debug information for the response.
@@ -40,24 +40,24 @@ public class ViewMeta {
     private final long totalRows;
 
     /**
-     * Creates a new {@link ViewMeta}.
+     * Creates a new {@link ViewMetaData}.
      *
      * @param debug debug information if available.
      * @param totalRows the total number of rows in the view.
      */
-    ViewMeta(final Optional<JsonObject> debug, final long totalRows) {
+    ViewMetaData(final Optional<JsonObject> debug, final long totalRows) {
         this.debug = debug;
         this.totalRows = totalRows;
     }
 
     /**
-     * Creates the {@link ViewMeta} from the chunk header.
+     * Creates the {@link ViewMetaData} from the chunk header.
      *
      * @param header the chunk header.
-     * @return the initialized {@link ViewMeta}.
+     * @return the initialized {@link ViewMetaData}.
      */
-    static ViewMeta from(final ViewChunkHeader header) {
-        return new ViewMeta(
+    static ViewMetaData from(final ViewChunkHeader header) {
+        return new ViewMetaData(
             header.debug().map(bytes -> Mapper.decodeInto(bytes, JsonObject.class)),
             header.totalRows()
         );

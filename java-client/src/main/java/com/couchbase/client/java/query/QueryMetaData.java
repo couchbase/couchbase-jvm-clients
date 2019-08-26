@@ -33,19 +33,19 @@ import java.util.Optional;
  * @author Graham Pople
  * @since 1.0.0
  */
-public class QueryMeta {
+public class QueryMetaData {
     private final QueryChunkHeader header;
     private final QueryChunkTrailer trailer;
 
     @Stability.Internal
-    private QueryMeta(QueryChunkHeader header, QueryChunkTrailer trailer) {
+    private QueryMetaData(QueryChunkHeader header, QueryChunkTrailer trailer) {
         this.header = header;
         this.trailer = trailer;
     }
 
     @Stability.Internal
-    static QueryMeta from(final QueryChunkHeader header, final QueryChunkTrailer trailer) {
-        return new QueryMeta(header, trailer);
+    static QueryMetaData from(final QueryChunkHeader header, final QueryChunkTrailer trailer) {
+        return new QueryMetaData(header, trailer);
     }
 
     /**

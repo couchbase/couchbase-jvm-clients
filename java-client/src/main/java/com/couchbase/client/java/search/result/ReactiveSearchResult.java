@@ -16,17 +16,17 @@
 
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.java.search.SearchMeta;
+import com.couchbase.client.java.search.SearchMetaData;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class ReactiveSearchResult {
 
     private final Flux<SearchQueryRow> rows;
-    private final Mono<SearchMeta> meta;
+    private final Mono<SearchMetaData> meta;
 
     public ReactiveSearchResult(Flux<SearchQueryRow> rows,
-                                Mono<SearchMeta> meta) {
+                                Mono<SearchMetaData> meta) {
         this.rows = rows;
         this.meta = meta;
     }
@@ -43,7 +43,7 @@ public class ReactiveSearchResult {
     /**
      * Any additional meta information associated with the FTS query, in the form of a reactive {@link Mono} publisher.
      */
-    public Mono<SearchMeta> meta() {
+    public Mono<SearchMetaData> metaData() {
         return meta;
     }
 }

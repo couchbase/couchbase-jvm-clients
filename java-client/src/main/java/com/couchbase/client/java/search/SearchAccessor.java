@@ -64,7 +64,7 @@ public class SearchAccessor {
                                 .map(trailer -> {
                                     byte[] rawStatus = response.header().getStatus();
                                     List<RuntimeException> errors = SearchAccessor.parseErrors(rawStatus);
-                                    SearchMeta meta = parseMeta(response, trailer);
+                                    SearchMetaData meta = parseMeta(response, trailer);
 
                                     return new SearchResult(rows, errors, meta);
                                 })
@@ -74,11 +74,11 @@ public class SearchAccessor {
                 .toFuture();
     }
 
-    static SearchMeta parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
+    static SearchMetaData parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
         byte[] rawStatus = response.header().getStatus();
         SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
         SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
-        SearchMeta meta = new SearchMeta(status, metrics);
+        SearchMetaData meta = new SearchMetaData(status, metrics);
         return meta;
     }
 
@@ -95,11 +95,11 @@ public class SearchAccessor {
                     Flux<SearchQueryRow> rows = response.rows()
                             .map(row -> SearchQueryRow.fromResponse(row));
 
-                    Mono<SearchMeta> meta = response.trailer()
+                    Mono<SearchMetaData> meta = response.trailer()
                             .map(trailer -> {
                                 SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
 
-                                return new SearchMeta(status, metrics);
+                                return new SearchMetaData(status, metrics);
                             });
 
                     return new ReactiveSearchResult(rows, meta);

@@ -29,19 +29,19 @@ import java.util.Optional;
 /**
  * Holds associated metadata returned by the server for the performed analytics request.
  */
-public class AnalyticsMeta {
+public class AnalyticsMetaData {
 
     private final AnalyticsChunkHeader header;
     private final AnalyticsChunkTrailer trailer;
 
-    private AnalyticsMeta(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
+    private AnalyticsMetaData(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
         this.header = header;
         this.trailer = trailer;
     }
 
     @Stability.Internal
-    static AnalyticsMeta from(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
-        return new AnalyticsMeta(header, trailer);
+    static AnalyticsMetaData from(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
+        return new AnalyticsMetaData(header, trailer);
     }
 
     /**

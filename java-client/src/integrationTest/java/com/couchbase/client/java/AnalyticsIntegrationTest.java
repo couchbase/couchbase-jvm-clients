@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.AnalyticsServiceException;
-import com.couchbase.client.java.analytics.AnalyticsMeta;
+import com.couchbase.client.java.analytics.AnalyticsMetaData;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -66,7 +66,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
             assertNotNull(row.get("DataverseName"));
         }
 
-        AnalyticsMeta meta = result.meta();
+        AnalyticsMetaData meta = result.metaData();
         assertFalse(meta.clientContextId().isEmpty());
         assertTrue(meta.signatureAs(JsonObject.class).isPresent());
         assertFalse(meta.requestId().isEmpty());
@@ -97,7 +97,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
                 "SELECT DataverseName FROM Metadata.`Dataverse`",
                 analyticsOptions().clientContextId(contextId)
         );
-        assertEquals(result.meta().clientContextId(), contextId);
+        assertEquals(result.metaData().clientContextId(), contextId);
     }
 
 }

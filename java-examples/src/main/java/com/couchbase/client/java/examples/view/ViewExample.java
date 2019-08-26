@@ -49,7 +49,7 @@ public class ViewExample {
         /*
          * Prints metadata like the total number of rows.
          */
-        System.err.println(result.meta());
+        System.err.println(result.metaData());
 
         /*
          * Iterates the rows and prints the information from each row

@@ -63,7 +63,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   protected static void createPrimaryIndex(final Cluster cluster, final String bucketName) {
     try {
       QueryResult result = cluster.query("create primary index on " + bucketName);
-      if (result.meta().status() != QueryStatus.SUCCESS) {
+      if (result.metaData().status() != QueryStatus.SUCCESS) {
         throw new IllegalStateException("Could not create primary index for " +
           "query integration test!");
       }
