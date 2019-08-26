@@ -76,11 +76,11 @@ public class SecurityConfig {
     if (tlsEnabled) {
       if (trustCertificates != null && trustManagerFactory != null) {
         throw new IllegalArgumentException("Either trust certificates or a trust manager factory" +
-          "can be provided, but not both!");
+          " can be provided, but not both!");
       }
       if ((trustCertificates == null || trustCertificates.length == 0) && trustManagerFactory == null) {
         throw new IllegalArgumentException("Either a trust certificate or a trust manager factory" +
-          "must be provided when TLS is enabled!");
+          " must be provided when TLS is enabled!");
       }
     }
   }
