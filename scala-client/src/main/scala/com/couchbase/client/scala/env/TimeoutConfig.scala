@@ -23,7 +23,7 @@ import scala.concurrent.duration.Duration
 /** Configures all default timeouts.
   *
   * @param kvTimeout         the default timeout to use for key-value operations
-  * @param managerTimeout    the default timeout to use for key-value operations
+  * @param managementTimeout the default timeout to use for management operations
   * @param queryTimeout      the default timeout to use for query operations
   * @param viewTimeout       the default timeout to use for view operations
   * @param searchTimeout     the default timeout to use for search operations
@@ -32,7 +32,7 @@ import scala.concurrent.duration.Duration
   * @param disconnectTimeout the default timeout to use for disconnection operations
   */
 case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.TimeoutConfig.DEFAULT_KV_TIMEOUT,
-                         private[scala] val managerTimeout: Duration = core.env.TimeoutConfig.DEFAULT_MANAGER_TIMEOUT,
+                         private[scala] val managementTimeout: Duration = core.env.TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT,
                          private[scala] val queryTimeout: Duration = core.env.TimeoutConfig.DEFAULT_QUERY_TIMEOUT,
                          private[scala] val viewTimeout: Duration = core.env.TimeoutConfig.DEFAULT_VIEW_TIMEOUT,
                          private[scala] val searchTimeout: Duration = core.env.TimeoutConfig.DEFAULT_SEARCH_TIMEOUT,
@@ -44,7 +44,7 @@ case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.Timeo
     val builder = new core.env.TimeoutConfig.Builder
 
     builder.kvTimeout(kvTimeout)
-    builder.managerTimeout(managerTimeout)
+    builder.managementTimeout(managementTimeout)
     builder.queryTimeout(queryTimeout)
     builder.viewTimeout(viewTimeout)
     builder.searchTimeout(searchTimeout)
@@ -66,14 +66,14 @@ case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.Timeo
     copy(kvTimeout = value)
   }
 
-  /** Sets the timeout to use for manager operations.
+  /** Sets the timeout to use for management operations.
     *
-    * The default is 5 seconds.
+    * The default is 75 seconds.
     *
     * @return this, for chaining
     */
-  def managerTimeout(value: Duration): TimeoutConfig = {
-    copy(managerTimeout = value)
+  def managementTimeout(value: Duration): TimeoutConfig = {
+    copy(managementTimeout = value)
   }
 
   /** Sets the timeout to use for query operations.
@@ -118,7 +118,7 @@ case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.Timeo
 
   /** Sets the timeout to use for connection operations.
     *
-    * The default is 5 seconds.
+    * The default is 10 seconds.
     *
     * @return this, for chaining
     */
@@ -128,7 +128,7 @@ case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.Timeo
 
   /** Sets the timeout to use for disconnection operations.
     *
-    * The default is 5 seconds.
+    * The default is 10 seconds.
     *
     * @return this, for chaining
     */

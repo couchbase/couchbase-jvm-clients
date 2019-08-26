@@ -54,7 +54,7 @@ public class AsyncSearchIndexManager {
   }
 
   GetSearchIndexRequest getRequest(final String name) {
-    Duration timeout = environment.timeoutConfig().managerTimeout();
+    Duration timeout = environment.timeoutConfig().managementTimeout();
     RetryStrategy retryStrategy = environment.retryStrategy();
 
     return new GetSearchIndexRequest(timeout, core.context(), retryStrategy,
@@ -82,7 +82,7 @@ public class AsyncSearchIndexManager {
       throw new IllegalArgumentException("No UUID in the index must be present to insert it.");
     }
 
-    Duration timeout = environment.timeoutConfig().managerTimeout();
+    Duration timeout = environment.timeoutConfig().managementTimeout();
     RetryStrategy retryStrategy = environment.retryStrategy();
 
     return new UpsertSearchIndexRequest(timeout, core.context(), retryStrategy,
@@ -110,7 +110,7 @@ public class AsyncSearchIndexManager {
       throw new IllegalArgumentException("A UUID in the index must be present to replace it.");
     }
 
-    Duration timeout = environment.timeoutConfig().managerTimeout();
+    Duration timeout = environment.timeoutConfig().managementTimeout();
     RetryStrategy retryStrategy = environment.retryStrategy();
 
     return new UpsertSearchIndexRequest(timeout, core.context(), retryStrategy,
@@ -130,7 +130,7 @@ public class AsyncSearchIndexManager {
   }
 
   RemoveSearchIndexRequest removeRequest(final String name) {
-    Duration timeout = environment.timeoutConfig().managerTimeout();
+    Duration timeout = environment.timeoutConfig().managementTimeout();
     RetryStrategy retryStrategy = environment.retryStrategy();
 
     return new RemoveSearchIndexRequest(timeout, core.context(), retryStrategy,

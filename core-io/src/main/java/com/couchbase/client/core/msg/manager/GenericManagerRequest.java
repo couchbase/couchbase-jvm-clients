@@ -33,7 +33,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
   private final Supplier<FullHttpRequest> requestSupplier;
 
   public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier) {
-    this(ctx.environment().timeoutConfig().managerTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier);
+    this(ctx.environment().timeoutConfig().managementTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier);
   }
 
   public GenericManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Supplier<FullHttpRequest> requestSupplier) {

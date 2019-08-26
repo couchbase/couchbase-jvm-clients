@@ -292,7 +292,7 @@ public class AsyncViewIndexManager {
   private Duration timeout(CommonOptions<?>.BuiltCommonOptions options) {
     // Even though most of the requests are dispatched to the view service,
     // these are management operations so use the manager timeout.
-    return options.timeout().orElse(core.context().environment().timeoutConfig().managerTimeout());
+    return options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
   }
 
   private RetryStrategy retryStrategy(CommonOptions<?>.BuiltCommonOptions options) {

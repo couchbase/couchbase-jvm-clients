@@ -46,7 +46,7 @@ object ReactiveUserManager {
 
 @Volatile
 class ReactiveUserManager(private val core: Core) {
-  private val defaultManagerTimeout = core.context().environment().timeoutConfig().managerTimeout()
+  private val defaultManagerTimeout = core.context().environment().timeoutConfig().managementTimeout()
   private val defaultRetryStrategy = core.context().environment().retryStrategy()
 
   private def pathForUsers = "/settings/rbac/users"

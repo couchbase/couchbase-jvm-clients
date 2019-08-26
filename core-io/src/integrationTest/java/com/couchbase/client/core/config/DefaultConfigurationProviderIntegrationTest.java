@@ -158,7 +158,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(100))
-        .managerTimeout(Duration.ofMillis(100))
+        .managementTimeout(Duration.ofMillis(100))
       )
       .build();
     core = Core.create(environment);
@@ -190,7 +190,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(500))
-        .managerTimeout(Duration.ofMillis(500))
+        .managementTimeout(Duration.ofMillis(500))
       )
       .build();
     core = Core.create(environment);
@@ -222,7 +222,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofSeconds(1))
-        .managerTimeout(Duration.ofSeconds(1))
+        .managementTimeout(Duration.ofSeconds(1))
       )
       .build();
     core = Core.create(environment);

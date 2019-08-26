@@ -26,16 +26,16 @@ import java.util.Optional;
 public class TimeoutConfig {
 
   public static final Duration DEFAULT_KV_TIMEOUT = Duration.ofMillis(2500);
-  public static final Duration DEFAULT_MANAGER_TIMEOUT = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_MANAGEMENT_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_VIEW_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_SEARCH_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_ANALYTICS_TIMEOUT = Duration.ofSeconds(75);
-  public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
-  public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(5);
+  public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+  public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(10);
 
   private final Duration kvTimeout;
-  private final Duration managerTimeout;
+  private final Duration managementTimeout;
   private final Duration queryTimeout;
   private final Duration viewTimeout;
   private final Duration searchTimeout;
@@ -45,7 +45,7 @@ public class TimeoutConfig {
 
   private TimeoutConfig(final Builder builder) {
     kvTimeout = Optional.ofNullable(builder.kvTimeout).orElse(DEFAULT_KV_TIMEOUT);
-    managerTimeout = Optional.ofNullable(builder.managerTimeout).orElse(DEFAULT_MANAGER_TIMEOUT);
+    managementTimeout = Optional.ofNullable(builder.managementTimeout).orElse(DEFAULT_MANAGEMENT_TIMEOUT);
     queryTimeout = Optional.ofNullable(builder.queryTimeout).orElse(DEFAULT_QUERY_TIMEOUT);
     viewTimeout = Optional.ofNullable(builder.viewTimeout).orElse(DEFAULT_VIEW_TIMEOUT);
     searchTimeout = Optional.ofNullable(builder.searchTimeout).orElse(DEFAULT_SEARCH_TIMEOUT);
@@ -66,8 +66,8 @@ public class TimeoutConfig {
     return builder().kvTimeout(kvTimeout);
   }
 
-  public static Builder managerTimeout(Duration managerTimeout) {
-    return builder().managerTimeout(managerTimeout);
+  public static Builder managementTimeout(Duration managementTimeout) {
+    return builder().managementTimeout(managementTimeout);
   }
 
   public static Builder queryTimeout(Duration queryTimeout) {
@@ -100,8 +100,8 @@ public class TimeoutConfig {
     return kvTimeout;
   }
 
-  public Duration managerTimeout() {
-    return managerTimeout;
+  public Duration managementTimeout() {
+    return managementTimeout;
   }
 
   public Duration queryTimeout() {
@@ -136,7 +136,7 @@ public class TimeoutConfig {
     Map<String, Object> export = new LinkedHashMap<>();
 
     export.put("kvMs", kvTimeout.toMillis());
-    export.put("managerMs", managerTimeout.toMillis());
+    export.put("managementMs", managementTimeout.toMillis());
     export.put("queryMs", queryTimeout.toMillis());
     export.put("viewMs", viewTimeout.toMillis());
     export.put("searchMs", searchTimeout.toMillis());
@@ -151,7 +151,7 @@ public class TimeoutConfig {
   public static class Builder {
 
     private Duration kvTimeout = null;
-    private Duration managerTimeout = null;
+    private Duration managementTimeout = null;
     private Duration queryTimeout = null;
     private Duration viewTimeout = null;
     private Duration searchTimeout = null;
@@ -178,12 +178,12 @@ public class TimeoutConfig {
     /**
      * Sets the timeout to use for manager operations.
      *
-     * <p>The default is 5 seconds.</p>
+     * <p>The default is 75 seconds.</p>
      *
      * @return this, for chaining
      */
-    public Builder managerTimeout(Duration managerTimeout) {
-      this.managerTimeout = managerTimeout;
+    public Builder managementTimeout(Duration managementTimeout) {
+      this.managementTimeout = managementTimeout;
       return this;
     }
 
@@ -238,7 +238,7 @@ public class TimeoutConfig {
     /**
      * Sets the timeout to use for connection operations.
      *
-     * <p>The default is 5 seconds.</p>
+     * <p>The default is 10 seconds.</p>
      *
      * @return this, for chaining
      */
@@ -250,7 +250,7 @@ public class TimeoutConfig {
     /**
      * Sets the timeout to use for disconnection operations.
      *
-     * <p>The default is 5 seconds.</p>
+     * <p>The default is 10 seconds.</p>
      *
      * @return this, for chaining
      */

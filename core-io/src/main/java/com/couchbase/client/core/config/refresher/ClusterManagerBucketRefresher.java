@@ -97,7 +97,7 @@ public class ClusterManagerBucketRefresher implements BucketRefresher {
   private Disposable registerStream(final CoreContext ctx, final String name) {
     return Mono.defer(() -> {
       BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(
-        ctx.environment().timeoutConfig().managerTimeout(),
+        ctx.environment().timeoutConfig().managementTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
         name,
