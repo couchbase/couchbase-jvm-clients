@@ -55,7 +55,7 @@ public class Bucket {
     this.asyncBucket = asyncBucket;
     this.reactiveBucket = new ReactiveBucket(asyncBucket);
     this.collectionManager = new CollectionManager(asyncBucket.collections());
-    this.viewManager = new ViewIndexManager(asyncBucket.views());
+    this.viewManager = new ViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**
@@ -93,7 +93,7 @@ public class Bucket {
   }
 
   @Stability.Volatile
-  public ViewIndexManager views() {
+  public ViewIndexManager viewIndexes() {
     return viewManager;
   }
 

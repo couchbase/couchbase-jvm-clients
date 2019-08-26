@@ -107,7 +107,7 @@ public class AsyncBucket {
   }
 
   @Stability.Volatile
-  public AsyncViewIndexManager views() {
+  public AsyncViewIndexManager viewIndexes() {
     return viewManager;
   }
 

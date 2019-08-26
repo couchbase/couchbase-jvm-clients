@@ -52,7 +52,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     environment = environment().build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
-    views = bucket.views();
+    views = bucket.viewIndexes();
   }
 
   @AfterAll
