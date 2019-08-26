@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.couchbase.client.test.Util.waitUntilCondition;
 import static com.couchbase.client.test.Util.waitUntilThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -71,7 +70,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
    */
   @Test
   void getBucket() {
-    assertCreatedBucket(buckets.get(config().bucketname()));
+    assertCreatedBucket(buckets.getBucket(config().bucketname()));
   }
 
   /**
@@ -80,7 +79,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
    */
   @Test
   void getAllBuckets() {
-    Map<String, BucketSettings> allBucketSettings = buckets.getAll();
+    Map<String, BucketSettings> allBucketSettings = buckets.getAllBuckets();
     assertFalse(allBucketSettings.isEmpty());
 
     for (Map.Entry<String, BucketSettings> entry : allBucketSettings.entrySet()) {
@@ -94,11 +93,11 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void createAndDropBucket() {
     String name = UUID.randomUUID().toString();
 
-    buckets.create(BucketSettings.create(name));
-    assertTrue(buckets.getAll().containsKey(name));
+    buckets.createBucket(BucketSettings.create(name));
+    assertTrue(buckets.getAllBuckets().containsKey(name));
 
-    buckets.drop(name);
-    assertFalse(buckets.getAll().containsKey(name));
+    buckets.dropBucket(name);
+    assertFalse(buckets.getAllBuckets().containsKey(name));
   }
 
   @Test
@@ -110,7 +109,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, "value");
     collection.exists(id);
 
-    buckets.flush(config().bucketname());
+    buckets.flushBucket(config().bucketname());
     
     waitUntilThrows(KeyNotFoundException.class, () -> collection.exists(id));
   }
@@ -119,22 +118,27 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void createShouldFailWhenPresent() {
     assertThrows(
       BucketAlreadyExistsException.class,
-      () -> buckets.create(BucketSettings.create(config().bucketname()))
+      () -> buckets.createBucket(BucketSettings.create(config().bucketname()))
     );
   }
 
   @Test
-  void upsertShouldOverrideWhenPresent() {
-    BucketSettings loaded = buckets.get(config().bucketname());
+  void updateShouldOverrideWhenPresent() {
+    BucketSettings loaded = buckets.getBucket(config().bucketname());
 
     long oldQuota = loaded.ramQuotaMB();
     long newQuota = oldQuota + 10;
 
     loaded.ramQuotaMB(newQuota);
-    buckets.upsert(loaded);
+    buckets.updateBucket(loaded);
 
-    BucketSettings modified = buckets.get(config().bucketname());
+    BucketSettings modified = buckets.getBucket(config().bucketname());
     assertEquals(newQuota, modified.ramQuotaMB());
+  }
+
+  @Test
+  void updateShouldFailIfNotPresent() {
+    assertThrows(BucketNotFoundException.class, () -> buckets.updateBucket(BucketSettings.create("foobar")));
   }
 
   /**

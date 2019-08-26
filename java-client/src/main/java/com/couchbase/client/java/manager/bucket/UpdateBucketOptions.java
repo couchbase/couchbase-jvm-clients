@@ -16,10 +16,10 @@
 
 package com.couchbase.client.java.manager.bucket;
 
-public class UpsertBucketOptions {
+public class UpdateBucketOptions {
 
-  public static UpsertBucketOptions upsertBucketOptions() {
-    return new UpsertBucketOptions();
+  public static UpdateBucketOptions updateBucketOptions() {
+    return new UpdateBucketOptions();
   }
 
 }

@@ -31,52 +31,52 @@ public class BucketManager {
     this.async = async;
   }
 
-  public void create(final BucketSettings settings) {
-    block(async.create(settings));
+  public void createBucket(final BucketSettings settings) {
+    block(async.createBucket(settings));
   }
 
-  public void create(final BucketSettings settings, final CreateBucketOptions options) {
-    block(async.create(settings, options));
+  public void createBucket(final BucketSettings settings, final CreateBucketOptions options) {
+    block(async.createBucket(settings, options));
   }
 
-  public void upsert(final BucketSettings settings) {
-    block(async.upsert(settings));
+  public void updateBucket(final BucketSettings settings) {
+    block(async.updateBucket(settings));
   }
 
-  public void upsert(final BucketSettings settings, final UpsertBucketOptions options) {
-    block(async.upsert(settings, options));
+  public void updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
+    block(async.updateBucket(settings, options));
   }
 
-  public void drop(final String bucketName) {
-    block(async.drop(bucketName));
+  public void dropBucket(final String bucketName) {
+    block(async.dropBucket(bucketName));
   }
 
-  public void drop(final String bucketName, final DropBucketOptions options) {
-    block(async.drop(bucketName, options));
+  public void dropBucket(final String bucketName, final DropBucketOptions options) {
+    block(async.dropBucket(bucketName, options));
   }
 
-  public BucketSettings get(final String bucketName) {
-    return block(async.get(bucketName));
+  public BucketSettings getBucket(final String bucketName) {
+    return block(async.getBucket(bucketName));
   }
 
-  public BucketSettings get(final String bucketName, final GetBucketOptions options) {
-    return block(async.get(bucketName, options));
+  public BucketSettings getBucket(final String bucketName, final GetBucketOptions options) {
+    return block(async.getBucket(bucketName, options));
   }
 
-  public Map<String, BucketSettings> getAll() {
-    return block(async.getAll());
+  public Map<String, BucketSettings> getAllBuckets() {
+    return block(async.getAllBuckets());
   }
 
-  public Map<String, BucketSettings> getAll(final GetAllBucketOptions options) {
-    return block(async.getAll(options));
+  public Map<String, BucketSettings> getAllBuckets(final GetAllBucketOptions options) {
+    return block(async.getAllBuckets(options));
   }
 
-  public void flush(final String bucketName) {
-    block(async.flush(bucketName));
+  public void flushBucket(final String bucketName) {
+    block(async.flushBucket(bucketName));
   }
 
-  public void flush(final String bucketName, final FlushBucketOptions options) {
-    block(async.flush(bucketName, options));
+  public void flushBucket(final String bucketName, final FlushBucketOptions options) {
+    block(async.flushBucket(bucketName, options));
   }
 
 }

@@ -41,7 +41,7 @@ import static com.couchbase.client.java.manager.bucket.DropBucketOptions.dropBuc
 import static com.couchbase.client.java.manager.bucket.FlushBucketOptions.flushBucketOptions;
 import static com.couchbase.client.java.manager.bucket.GetAllBucketOptions.getAllBucketOptions;
 import static com.couchbase.client.java.manager.bucket.GetBucketOptions.getBucketOptions;
-import static com.couchbase.client.java.manager.bucket.UpsertBucketOptions.upsertBucketOptions;
+import static com.couchbase.client.java.manager.bucket.UpdateBucketOptions.updateBucketOptions;
 
 @Stability.Volatile
 public class AsyncBucketManager extends ManagerSupport {
@@ -62,11 +62,11 @@ public class AsyncBucketManager extends ManagerSupport {
     return "/pools/default/buckets/" + urlEncode(bucketName) + "/controller/doFlush";
   }
 
-  public CompletableFuture<Void> create(final BucketSettings settings) {
-    return create(settings, createBucketOptions());
+  public CompletableFuture<Void> createBucket(final BucketSettings settings) {
+    return createBucket(settings, createBucketOptions());
   }
 
-  public CompletableFuture<Void> create(final BucketSettings settings, final CreateBucketOptions options) {
+  public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
     return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false)).thenApply(response -> {
       if (response.status() == ResponseStatus.INVALID_ARGS && response.content() != null) {
         String content = new String(response.content(), StandardCharsets.UTF_8);
@@ -79,20 +79,23 @@ public class AsyncBucketManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> upsert(final BucketSettings settings) {
-    return upsert(settings, upsertBucketOptions());
+  public CompletableFuture<Void> updateBucket(final BucketSettings settings) {
+    return updateBucket(settings, updateBucketOptions());
   }
 
-  public CompletableFuture<Void> upsert(final BucketSettings settings, final UpsertBucketOptions options) {
+  public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
     return Mono
-      .fromFuture(this::getAll)
+      .fromFuture(this::getAllBuckets)
       .map(buckets -> buckets.containsKey(settings.name()))
-      .flatMap(bucketExists ->
-        Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, bucketExists)).thenApply(response -> {
-          checkStatus(response, "upsert bucket [" + redactMeta(settings) + "]");
+      .flatMap(bucketExists -> {
+        if (!bucketExists) {
+          return Mono.error(BucketNotFoundException.forBucket(settings.name()));
+        }
+        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true)).thenApply(response -> {
+          checkStatus(response, "update bucket [" + redactMeta(settings) + "]");
           return null;
-        }))
-      )
+        }));
+      })
       .then()
       .toFuture();
   }
@@ -125,11 +128,11 @@ public class AsyncBucketManager extends ManagerSupport {
     return params;
   }
 
-  public CompletableFuture<Void> drop(final String bucketName) {
-    return drop(bucketName, dropBucketOptions());
+  public CompletableFuture<Void> dropBucket(final String bucketName) {
+    return dropBucket(bucketName, dropBucketOptions());
   }
 
-  public CompletableFuture<Void> drop(final String bucketName, final DropBucketOptions options) {
+  public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
     return sendRequest(DELETE, pathForBucket(bucketName)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
@@ -139,11 +142,11 @@ public class AsyncBucketManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<BucketSettings> get(final String bucketName) {
-    return get(bucketName, getBucketOptions());
+  public CompletableFuture<BucketSettings> getBucket(final String bucketName) {
+    return getBucket(bucketName, getBucketOptions());
   }
 
-  public CompletableFuture<BucketSettings> get(final String bucketName, final GetBucketOptions options) {
+  public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
     return sendRequest(GET, pathForBucket(bucketName)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
@@ -153,11 +156,11 @@ public class AsyncBucketManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Map<String, BucketSettings>> getAll() {
-    return getAll(getAllBucketOptions());
+  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets() {
+    return getAllBuckets(getAllBucketOptions());
   }
 
-  public CompletableFuture<Map<String, BucketSettings>> getAll(final GetAllBucketOptions options) {
+  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
     return sendRequest(GET, pathForBuckets()).thenApply(response -> {
       checkStatus(response, "get all buckets");
       return Mapper
@@ -167,11 +170,11 @@ public class AsyncBucketManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<Void> flush(final String bucketName) {
-    return flush(bucketName, flushBucketOptions());
+  public CompletableFuture<Void> flushBucket(final String bucketName) {
+    return flushBucket(bucketName, flushBucketOptions());
   }
 
-  public CompletableFuture<Void> flush(final String bucketName, final FlushBucketOptions options) {
+  public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
     return sendRequest(POST, pathForBucketFlush(bucketName)).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
