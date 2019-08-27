@@ -18,6 +18,10 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.datastructures.CouchbaseArrayList;
+import com.couchbase.client.java.datastructures.CouchbaseArraySet;
+import com.couchbase.client.java.datastructures.CouchbaseMap;
+import com.couchbase.client.java.datastructures.CouchbaseQueue;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
@@ -42,6 +46,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -443,6 +448,48 @@ public class Collection {
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs,
                                  final MutateInOptions options) {
     return block(async().mutateIn(id, specs, options));
+  }
+
+  /**
+   * Returns a {@link CouchbaseArrayList<T>} backed by this collection, creating a
+   * new empty one if none exists already
+   *
+   * @param id the list's document id.
+   * @param entityType the class for values contained in the list.
+   * @return a {@link CouchbaseArrayList<T>}.
+   */
+  public <T> CouchbaseArrayList<T> list(final String id, final Class<T> entityType) {
+    return new CouchbaseArrayList<>(id, this, entityType);
+  }
+
+  /**
+   *
+   * @param id
+   * @param entityType
+   * @return
+   */
+  public <T> CouchbaseArraySet<T> set(final String id, final Class<T> entityType) {
+    return new CouchbaseArraySet<>(id, this, entityType);
+  }
+
+  /**
+   *
+   * @param id
+   * @param entityType
+   * @return
+   */
+  public <T> CouchbaseMap<T> map(final String id, final Class<T> entityType) {
+    return new CouchbaseMap<>(id, this, entityType);
+  }
+
+  /**
+   *
+   * @param id
+   * @param entityType
+   * @return
+   */
+  public <T> CouchbaseQueue<T> queue(final String id, final Class<T> entityType) {
+    return new CouchbaseQueue<>(id, this, entityType);
   }
 
 }
