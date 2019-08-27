@@ -28,13 +28,12 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.GetResponse;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -64,7 +65,7 @@ class KeyValueMessageHandlerTest {
 
   @BeforeAll
   static void setup() {
-    ENV = CoreEnvironment.create("foo", "bar");
+    ENV = CoreEnvironment.builder("foo", "bar").eventBus(new SimpleEventBus(true)).build();
     Core core = mock(Core.class);
     CoreContext coreContext = new CoreContext(core, 1, ENV);
     ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
@@ -171,6 +172,36 @@ class KeyValueMessageHandlerTest {
       RequestCanceledException reason = assertThrows(RequestCanceledException.class, () -> request.response().get());
       assertEquals("NO_MORE_RETRIES", request.cancellationReason().identifier());
       assertEquals(RetryReason.KV_ERROR_MAP_INDICATED, request.cancellationReason().innerReason());
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * If a response is received with an invalid opaque that the channel knows nothing about, it should be
+   * closed to bring it back to a valid state eventually.
+   */
+  @Test
+  void shouldCloseChannelWithInvalidCas() {
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+
+    try {
+      GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+      GetRequest request2 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+      channel.writeOutbound(request1, request2);
+
+      assertTrue(channel.isOpen());
+
+      ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
+        (short) 0xFF, 1234, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+      channel.writeInbound(getResponse);
+
+      assertThrows(RequestCanceledException.class, () -> request1.response().get());
+      assertEquals(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT, request1.cancellationReason().innerReason());
+      assertThrows(RequestCanceledException.class, () -> request2.response().get());
+      assertEquals(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT, request2.cancellationReason().innerReason());
+
+      assertFalse(channel.isOpen());
     } finally {
       channel.finishAndReleaseAll();
     }

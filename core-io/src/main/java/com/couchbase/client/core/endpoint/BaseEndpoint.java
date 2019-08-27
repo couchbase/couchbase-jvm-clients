@@ -372,6 +372,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Stability.Internal
   public void notifyChannelInactive() {
+    outstandingRequests.set(0);
     if (disconnect.get()) {
       // We don't need to do anything if we've been already instructed to disconnect.
       return;

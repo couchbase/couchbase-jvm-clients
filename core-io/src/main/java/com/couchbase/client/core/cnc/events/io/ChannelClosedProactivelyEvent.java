@@ -55,6 +55,10 @@ public class ChannelClosedProactivelyEvent extends AbstractEvent {
     /**
      * We detected an invalid request coming in from the upper layers.
      */
-    INVALID_REQUEST_DETECTED
+    INVALID_REQUEST_DETECTED,
+    /**
+     * We detected an invalid response coming from the lower layers.
+     */
+    INVALID_RESPONSE_DETECTED
   }
 }

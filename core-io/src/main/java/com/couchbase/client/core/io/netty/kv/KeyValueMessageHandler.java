@@ -240,7 +240,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
     int opaque = MemcacheProtocol.opaque(response);
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
-    long start = writtenRequestDispatchTimings.remove(opaque);
 
     if (request == null) {
       byte[] packet = new byte[response.readableBytes()];
@@ -248,7 +247,16 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ioContext.environment().eventBus().publish(
         new UnknownResponseReceivedEvent(ioContext, packet)
       );
+      // We got a response with an opaque value that we know nothing about. There is clearly something weird
+      // going on so to be sure we close the connection to avoid any further weird situations.
+      ctx.channel().close().addListener(v -> {
+        ioContext.environment().eventBus().publish(new ChannelClosedProactivelyEvent(
+          ioContext,
+          ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_DETECTED
+        ));
+      });
     } else {
+      long start = writtenRequestDispatchTimings.remove(opaque);
       request.context().dispatchLatency(System.nanoTime() - start);
 
       short statusCode = MemcacheProtocol.status(response);
