@@ -27,11 +27,13 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
@@ -149,6 +151,40 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     assertEquals("bar", result.contentAs(1, String.class));
   }
 
+
+  @Test
+  void doNotFetchExpiration() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", "bar"),
+            UpsertOptions.upsertOptions()
+                    .expiry(Duration.ofSeconds(60)));
+
+    LookupInResult result = collection.lookupIn(id,
+            Arrays.asList(
+                    LookupInSpec.get("not_exist"),
+                    LookupInSpec.get("foo")));
+
+    assertFalse(result.expiration().isPresent());
+  }
+
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  void fetchExpiration() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", "bar"),
+            UpsertOptions.upsertOptions()
+                    .expiry(Duration.ofSeconds(60)));
+
+    LookupInResult result = collection.lookupIn(id,
+            Arrays.asList(
+                    LookupInSpec.get("not_exist"),
+                    LookupInSpec.get("foo")),
+            LookupInOptions.lookupInOptions().withExpiration(true));
+
+    assertTrue(result.expiration().isPresent());
+  }
 
   // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder
 //  @Test

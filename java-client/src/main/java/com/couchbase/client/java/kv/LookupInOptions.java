@@ -21,8 +21,25 @@ import com.couchbase.client.java.CommonOptions;
 
 public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
+  /**
+   * If the expiration should also be fetched.
+   */
+  private boolean withExpiration = false;
+
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
+  }
+
+  /**
+   * If set to true, the get will fetch the expiration for the document as well and return
+   * it as part of the {@link LookupInResult}.
+   *
+   * @param expiration true if it should be fetched.
+   * @return the {@link LookupInOptions} to allow method chaining.
+   */
+  public LookupInOptions withExpiration(boolean expiration) {
+    withExpiration = expiration;
+    return this;
   }
 
   private LookupInOptions() {
@@ -34,7 +51,9 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
-
+    public boolean withExpiration() {
+      return withExpiration;
+    }
   }
 
 }

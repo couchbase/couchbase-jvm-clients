@@ -556,7 +556,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
       return Reactor
-        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request), true);
+        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request, options.build().withExpiration()), true);
     });
   }
 

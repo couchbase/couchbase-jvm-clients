@@ -22,7 +22,9 @@ import com.couchbase.client.java.codec.DefaultDecoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This result is returned from successful KeyValue subdocument lookup responses.
@@ -42,14 +44,30 @@ public class LookupInResult {
   private final long cas;
 
   /**
+   * The expiration if fetched and present.
+   */
+  private final Optional<Duration> expiration;
+
+  /**
    * Creates a new {@link LookupInResult}.
    *
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas) {
+  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiration) {
     this.cas = cas;
     this.encoded = encoded;
+    this.expiration = expiration;
+  }
+
+  /**
+   * If present, returns the expiration of the loaded document.
+   *
+   * <p>Note that the duration represents the time when the document has been loaded and can only
+   * ever be an approximation.</p>
+   */
+  public Optional<Duration> expiration() {
+    return expiration;
   }
 
   /**

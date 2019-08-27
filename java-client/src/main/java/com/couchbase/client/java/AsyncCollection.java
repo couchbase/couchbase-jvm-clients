@@ -864,7 +864,7 @@ public class AsyncCollection {
   public CompletableFuture<LookupInResult> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options));
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiration());
   }
 
   /**
@@ -882,10 +882,16 @@ public class AsyncCollection {
     notNull(options, "LookupInOptions");
     LookupInOptions.Built opts = options.build();
 
-    List<SubdocGetRequest.Command> commands = specs
-      .stream()
-      .map(LookupInSpec::export)
-      .collect(Collectors.toList());
+    ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>();
+
+    if (options.build().withExpiration()) {
+      // Xattr commands have to go first
+      commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, EXPIRATION_MACRO, true));
+    }
+
+    for (LookupInSpec spec : specs) {
+      commands.add(spec.export());
+    }
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
