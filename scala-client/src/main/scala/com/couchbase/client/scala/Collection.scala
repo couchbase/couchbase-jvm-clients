@@ -384,19 +384,21 @@ class Collection(
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
     *                      [[kv.LookupInSpec]] for more details.
+    * @param withExpiration $WithExpiration
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
-    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
   def lookupIn(
                 id: String,
                 spec: Seq[LookupInSpec],
+                withExpiration: Boolean = false,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
               ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, timeout, retryStrategy), timeout)
+    block(async.lookupIn(id, spec, withExpiration, timeout, retryStrategy), timeout)
 
   /** Retrieves any available version of the document.
     *

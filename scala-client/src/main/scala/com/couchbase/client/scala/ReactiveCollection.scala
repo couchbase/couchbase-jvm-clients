@@ -169,7 +169,7 @@ class ReactiveCollection(async: AsyncCollection) {
         core.send(request)
 
         FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.getSubDocHandler.response(id, r))
+          .map(r => async.getSubDocHandler.response(id, r, withExpiration))
 
       case Failure(err) => Mono.error(err)
     }
@@ -242,12 +242,11 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
+               withExpiration: Boolean = false,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy
               ): Mono[Option[LookupInResult]] = {
-    // Set withExpiration to false as it makes all subdoc lookups multi operations, which changes semantics - app
-    // may expect error to be raised and it won't
-    getSubDoc(id, spec, withExpiration = false, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiration, timeout, retryStrategy)
   }
 
   /** Retrieves any available version of the document.

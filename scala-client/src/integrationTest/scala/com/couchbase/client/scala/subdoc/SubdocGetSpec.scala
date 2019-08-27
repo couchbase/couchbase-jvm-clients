@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.subdoc
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
@@ -9,10 +11,11 @@ import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.ClusterAwareIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -56,7 +59,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
-    val insertResult = coll.insert(docId, content).get
+    val insertResult = coll.insert(docId, content, expiration = Duration(60, TimeUnit.SECONDS)).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age"))) match {
       case Success(result) =>
@@ -64,10 +67,31 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         assert(result.cas == insertResult.cas)
         assert(result.contentAs[String](0).get == "bar")
         assert(result.contentAs[Int](1).get == 22)
+        assert(result.expiration.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
+  @Test
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  def lookupInWithExpiration() {
+    val docId = TestUtils.docId()
+    val content = ujson.Obj("hello" -> "world",
+      "foo" -> "bar",
+      "age" -> 22)
+    val insertResult = coll.upsert(docId, content, expiration = Duration(60, TimeUnit.SECONDS)).get
+
+    coll.lookupIn(docId, Array(get("foo"), get("age")), withExpiration = true) match {
+      case Success(result) =>
+        assert(result.cas != 0)
+        assert(result.cas == insertResult.cas)
+        assert(result.contentAs[String](0).get == "bar")
+        assert(result.contentAs[Int](1).get == 22)
+        assert(!result.exists(2))
+        assert(result.expiration.isDefined)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
 
   @Test
   def get_array() {

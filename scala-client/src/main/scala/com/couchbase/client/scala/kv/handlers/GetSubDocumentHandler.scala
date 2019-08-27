@@ -63,8 +63,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
       // Put expiration on the end so it doesn't mess up indexing
-      // Update: no, all xattr commands need to at start. But only support expiration with full doc anyway (to avoid
-      // app accidentally going over 16 subdoc commands), so can put it here
+      // Update: no, all xattr commands need to go at start
       if (withExpiration) {
         commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
       }
@@ -113,21 +112,28 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: SubdocGetResponse): Option[LookupInResult] = {
+  def response(id: String, response: SubdocGetResponse, withExpiration: Boolean): Option[LookupInResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
 
-        var exptime: Option[Duration] = None
+        if (withExpiration) {
+          var exptime: Option[Duration] = None
 
-        values.foreach(value => {
-          if (value.path() == ExpTime) {
-            val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-            exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
-          }
-        })
+          val removingExpTime = values.filter(value => {
+            if (value.path() == ExpTime) {
+              val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
+              exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
+              false
+            }
+            else true
+          })
 
-        Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), exptime))
+          Some(LookupInResult(id, removingExpTime, DocumentFlags.Json, response.cas(), exptime))
+        }
+        else {
+          Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), None))
+        }
 
 
       case ResponseStatus.NOT_FOUND => None
