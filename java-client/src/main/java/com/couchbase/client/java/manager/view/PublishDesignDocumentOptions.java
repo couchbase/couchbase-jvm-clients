@@ -19,16 +19,16 @@ package com.couchbase.client.java.manager.view;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
-public class DropViewIndexOptions extends CommonOptions<DropViewIndexOptions> {
-  private DropViewIndexOptions() {
+public class PublishDesignDocumentOptions extends CommonOptions<PublishDesignDocumentOptions> {
+  private PublishDesignDocumentOptions() {
   }
 
-  public static DropViewIndexOptions dropDesignDocumentOptions() {
-    return new DropViewIndexOptions();
+  public static PublishDesignDocumentOptions publishDesignDocumentOptions() {
+    return new PublishDesignDocumentOptions();
   }
 
   @Stability.Internal
-  public DropViewIndexOptions.Built build() {
+  public Built build() {
     return new Built();
   }
 

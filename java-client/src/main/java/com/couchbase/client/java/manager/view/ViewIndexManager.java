@@ -50,7 +50,7 @@ public class ViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public DesignDocument getDesignDocument(String name, DesignDocumentNamespace namespace, GetViewIndexOptions options) {
+  public DesignDocument getDesignDocument(String name, DesignDocumentNamespace namespace, GetDesignDocumentOptions options) {
     return block(async.getDesignDocument(name, namespace, options));
   }
 
@@ -73,7 +73,7 @@ public class ViewIndexManager {
    * @param namespace namespace to store it in
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public void upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace, UpsertViewIndexOptions options) {
+  public void upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace, UpsertDesignDocumentOptions options) {
     block(async.upsertDesignDocument(designDocument, namespace, options));
   }
 
@@ -96,7 +96,7 @@ public class ViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
    */
-  public void publishDesignDocument(String name, PublishViewIndexOptions options) {
+  public void publishDesignDocument(String name, PublishDesignDocumentOptions options) {
     block(async.publishDesignDocument(name, options));
   }
 
@@ -119,7 +119,7 @@ public class ViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public void dropDesignDocument(String name, DesignDocumentNamespace namespace, DropViewIndexOptions options) {
+  public void dropDesignDocument(String name, DesignDocumentNamespace namespace, DropDesignDocumentOptions options) {
     block(async.dropDesignDocument(name, namespace, options));
   }
 
@@ -138,7 +138,7 @@ public class ViewIndexManager {
    * @param namespace namespace to query
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public List<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllViewIndexesOptions options) {
+  public List<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
     return block(async.getAllDesignDocuments(namespace, options));
   }
 }

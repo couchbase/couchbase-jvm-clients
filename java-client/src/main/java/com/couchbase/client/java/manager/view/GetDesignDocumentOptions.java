@@ -19,12 +19,12 @@ package com.couchbase.client.java.manager.view;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
-public class GetAllViewIndexesOptions extends CommonOptions<GetAllViewIndexesOptions> {
-  private GetAllViewIndexesOptions() {
+public class GetDesignDocumentOptions extends CommonOptions<GetDesignDocumentOptions> {
+  private GetDesignDocumentOptions() {
   }
 
-  public static GetAllViewIndexesOptions getAllDesignDocumentsOptions() {
-    return new GetAllViewIndexesOptions();
+  public static GetDesignDocumentOptions getDesignDocumentOptions() {
+    return new GetDesignDocumentOptions();
   }
 
   @Stability.Internal

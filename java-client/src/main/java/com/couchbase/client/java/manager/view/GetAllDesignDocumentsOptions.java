@@ -19,12 +19,12 @@ package com.couchbase.client.java.manager.view;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
-public class UpsertViewIndexOptions extends CommonOptions<UpsertViewIndexOptions> {
-  private UpsertViewIndexOptions() {
+public class GetAllDesignDocumentsOptions extends CommonOptions<GetAllDesignDocumentsOptions> {
+  private GetAllDesignDocumentsOptions() {
   }
 
-  public static UpsertViewIndexOptions upsertDesignDocumentOptions() {
-    return new UpsertViewIndexOptions();
+  public static GetAllDesignDocumentsOptions getAllDesignDocumentsOptions() {
+    return new GetAllDesignDocumentsOptions();
   }
 
   @Stability.Internal

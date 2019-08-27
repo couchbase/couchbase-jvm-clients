@@ -55,11 +55,11 @@ import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.DEVELOPMENT;
 import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.PRODUCTION;
 import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.requireUnqualified;
-import static com.couchbase.client.java.manager.view.DropViewIndexOptions.dropDesignDocumentOptions;
-import static com.couchbase.client.java.manager.view.GetAllViewIndexesOptions.getAllDesignDocumentsOptions;
-import static com.couchbase.client.java.manager.view.GetViewIndexOptions.getDesignDocumentOptions;
-import static com.couchbase.client.java.manager.view.PublishViewIndexOptions.publishDesignDocumentOptions;
-import static com.couchbase.client.java.manager.view.UpsertViewIndexOptions.upsertDesignDocumentOptions;
+import static com.couchbase.client.java.manager.view.DropDesignDocumentOptions.dropDesignDocumentOptions;
+import static com.couchbase.client.java.manager.view.GetAllDesignDocumentsOptions.getAllDesignDocumentsOptions;
+import static com.couchbase.client.java.manager.view.GetDesignDocumentOptions.getDesignDocumentOptions;
+import static com.couchbase.client.java.manager.view.PublishDesignDocumentOptions.publishDesignDocumentOptions;
+import static com.couchbase.client.java.manager.view.UpsertDesignDocumentOptions.upsertDesignDocumentOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -108,7 +108,7 @@ public class AsyncViewIndexManager {
    * @param namespace namespace to query
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllViewIndexesOptions options) {
+  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
     return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments()).thenApply(response -> {
       // Unlike the other view management requests, this request goes through the config manager endpoint.
       // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
@@ -151,7 +151,7 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public CompletableFuture<DesignDocument> getDesignDocument(String name, DesignDocumentNamespace namespace, GetViewIndexOptions options) {
+  public CompletableFuture<DesignDocument> getDesignDocument(String name, DesignDocumentNamespace namespace, GetDesignDocumentOptions options) {
     return sendRequest(GET, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
           throw notFound(t)
@@ -188,7 +188,7 @@ public class AsyncViewIndexManager {
    * @param namespace namespace to store it in
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public CompletableFuture<Void> upsertDesignDocument(DesignDocument doc, DesignDocumentNamespace namespace, UpsertViewIndexOptions options) {
+  public CompletableFuture<Void> upsertDesignDocument(DesignDocument doc, DesignDocumentNamespace namespace, UpsertDesignDocumentOptions options) {
     final ObjectNode body = toJson(doc);
     return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), options.build(), body)
         .thenApply(response -> null);
@@ -213,7 +213,7 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> publishDesignDocument(String name, PublishViewIndexOptions options) {
+  public CompletableFuture<Void> publishDesignDocument(String name, PublishDesignDocumentOptions options) {
     return getDesignDocument(name, DEVELOPMENT)
         .thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION));
   }
@@ -237,7 +237,7 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace, DropViewIndexOptions options) {
+  public CompletableFuture<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace, DropDesignDocumentOptions options) {
     return sendRequest(DELETE, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
           throw notFound(t)
