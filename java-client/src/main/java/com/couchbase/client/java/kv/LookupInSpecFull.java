@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,25 +20,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
-public abstract class LookupInSpec {
+public class LookupInSpecFull extends LookupInSpec {
   @Stability.Internal
-  abstract public SubdocGetRequest.Command export();
-
-  public static LookupInSpecStandard get(final String path) {
-    return new LookupInSpecStandard(SubdocCommandType.GET, path);
+  public SubdocGetRequest.Command export() {
+    return new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false);
   }
-
-  public static LookupInSpecFull getFullDocument() {
-    return new LookupInSpecFull();
-  }
-
-  public static LookupInSpecStandard exists(final String path) {
-    return new LookupInSpecStandard(SubdocCommandType.EXISTS, path);
-  }
-
-  public static LookupInSpecStandard count(final String path) {
-    return new LookupInSpecStandard(SubdocCommandType.COUNT, path);
-  }
-
 }
-
