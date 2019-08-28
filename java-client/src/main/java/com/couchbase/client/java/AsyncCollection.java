@@ -242,7 +242,7 @@ public class AsyncCollection {
     notNull(options, "GetOptions");
     GetOptions.Built opts = options.build();
 
-    if (opts.projections() == null && !opts.withExpiration()) {
+    if (opts.projections().isEmpty() && !opts.withExpiration()) {
       return GetAccessor.get(core, id, fullGetRequest(id, options));
     } else {
       return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options));
@@ -295,7 +295,7 @@ public class AsyncCollection {
       ));
     }
 
-    if (opts.projections() != null && !opts.projections().isEmpty()) {
+    if (!opts.projections().isEmpty()) {
       if (opts.projections().size() > 16) {
         throw new UnsupportedOperationException("Only a maximum of 16 fields can be "
           + "projected per request.");
@@ -304,7 +304,6 @@ public class AsyncCollection {
       commands.addAll(opts
         .projections()
         .stream()
-        .filter(s -> s != null && !s.isEmpty())
         .map(s -> new SubdocGetRequest.Command(SubdocCommandType.GET, s, false))
         .collect(Collectors.toList())
       );

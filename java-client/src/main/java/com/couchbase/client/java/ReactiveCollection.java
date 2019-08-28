@@ -215,7 +215,7 @@ public class ReactiveCollection {
   public Mono<GetResult> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
       GetOptions.Built opts = options.build();
-      if (opts.projections() == null && !opts.withExpiration()) {
+      if (opts.projections().isEmpty() && !opts.withExpiration()) {
         GetRequest request = asyncCollection.fullGetRequest(id, options);
         return Reactor.wrap(request, GetAccessor.get(core, id, request), true);
       } else {

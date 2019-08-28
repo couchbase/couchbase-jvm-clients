@@ -20,9 +20,13 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
 
 /**
  * Allows to customize a get request.
@@ -39,7 +43,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Holds a possible projection.
    */
-  private List<String> projections;
+  private Set<String> projections;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
@@ -69,14 +73,32 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Allows to specify a custom list paths to fetch from the document instead of the whole.
    *
+   * @param path a path that should be loaded if present.
+   * @param morePaths additional paths that should be loaded if present.
+   * @return the {@link GetOptions} to allow method chaining.
+   */
+  public GetOptions project(final String path, final String... morePaths) {
+    return project(singletonList(path))
+        .project(Arrays.asList(morePaths));
+  }
+
+  /**
+   * Allows to specify a custom list paths to fetch from the document instead of the whole.
+   *
    * @param paths each individual path that should be loaded if present.
    * @return the {@link GetOptions} to allow method chaining.
    */
-  public GetOptions project(final String... paths) {
+  public GetOptions project(final Iterable<String> paths) {
     if (projections == null) {
-      projections = new ArrayList<>(paths.length);
+      projections = new HashSet<>();
     }
-    Collections.addAll(projections, paths);
+
+    for (String path : paths) {
+      if (!isNullOrEmpty(path)) {
+        projections.add(path);
+      }
+    }
+
     return this;
   }
 
@@ -91,8 +113,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
       return withExpiration;
     }
 
-    public List<String> projections() {
-      return projections;
+    public Set<String> projections() {
+      return projections == null ? emptySet() : projections;
     }
 
   }
