@@ -9,7 +9,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.scala.codec.Conversions.Codec
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
-import com.couchbase.client.scala.implicits.Codecs
+import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
@@ -405,7 +405,7 @@ class QuerySpec extends ScalaIntegrationTest {
     case class Address(line1: String)
     case class User(name: String, age: Int, addresses: Seq[Address])
     object User {
-      implicit val codec: Codec[User] = Codecs.codec[User]
+      implicit val codec: Codec[User] = Codec.codec[User]
     }
 
     val user = User("user1", 21, Seq(Address("address1")))
