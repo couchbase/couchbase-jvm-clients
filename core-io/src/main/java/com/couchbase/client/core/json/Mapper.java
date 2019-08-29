@@ -25,7 +25,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectWrite
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.util.Arrays;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Provides utilities for encoding and decoding JSON data.
@@ -57,7 +58,7 @@ public class Mapper {
     try {
       return mapper.writeValueAsBytes(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not encode into JSON: " + input, ex);
+      throw new MapperException("Could not encode into JSON: " + redactUser(input), ex);
     }
   }
 
@@ -71,7 +72,7 @@ public class Mapper {
     try {
       return mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not encode into JSON: " + input, ex);
+      throw new MapperException("Could not encode into JSON: " + redactUser(input), ex);
     }
   }
 
@@ -85,7 +86,7 @@ public class Mapper {
     try {
       return mapper.writeValueAsString(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not encode into JSON: " + input, ex);
+      throw new MapperException("Could not encode into JSON: " + redactUser(input), ex);
     }
   }
 
@@ -99,7 +100,7 @@ public class Mapper {
     try {
       return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not encode into JSON: " + input, ex);
+      throw new MapperException("Could not encode into JSON: " + redactUser(input), ex);
     }
   }
 
@@ -115,7 +116,23 @@ public class Mapper {
     try {
       return mapper.readValue(input, clazz);
     } catch (Exception ex) {
-      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
+      throw new MapperException("Could not decode from JSON: " + redactUser(new String(input, UTF_8)), ex);
+    }
+  }
+
+  /**
+   * Decodes a String into the given class.
+   *
+   * @param input the input byte array.
+   * @param clazz the clazz which should be decoded into.
+   * @param <T> generic type used for inference.
+   * @return the created instance.
+   */
+  public static <T> T decodeInto(String input, Class<T> clazz) {
+    try {
+      return mapper.readValue(input, clazz);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + redactUser(input), ex);
     }
   }
 
@@ -132,7 +149,24 @@ public class Mapper {
     try {
       return mapper.readValue(input, type);
     } catch (Exception ex) {
-      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
+      throw new MapperException("Could not decode from JSON: " + redactUser(new String(input, UTF_8)), ex);
+    }
+  }
+
+  /**
+   * Decodes a String into the given type.
+   *
+   * @param input the input byte array.
+   * @param type the type which should be decoded into.
+   * @param <T> generic type used for inference.
+   * @return the created instance.
+   */
+
+  public static <T> T decodeInto(String input, TypeReference<T> type) {
+    try {
+      return mapper.readValue(input, type);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + redactUser(input), ex);
     }
   }
 
@@ -146,7 +180,7 @@ public class Mapper {
     try {
       return mapper.readTree(input);
     } catch (Exception ex) {
-      throw new MapperException("Could not decode from JSON: " + Arrays.toString(input), ex);
+      throw new MapperException("Could not decode from JSON: " + redactUser(new String(input, UTF_8)), ex);
     }
   }
 

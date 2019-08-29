@@ -23,14 +23,17 @@ import reactor.core.publisher.SignalType;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 
 /**
  * This class provides utility methods when working with reactor.
  *
  * @since 2.0.0
  */
-public enum Reactor {
-  ;
+public class Reactor {
+  private Reactor() {
+    throw new AssertionError("not instantiable");
+  }
 
   /**
    * Wraps a {@link Request} and returns it in a {@link Mono}.
@@ -61,4 +64,15 @@ public enum Reactor {
     });
   }
 
+  /**
+   * Helper method to wrap an async call into a reactive one and translate
+   * exceptions appropriately.
+   *
+   * @param input a supplier that will be called on every subscription.
+   * @return a mono that invokes the given supplier on each subscription.
+   */
+  public static <T> Mono<T> toMono(Supplier<CompletableFuture<T>> input) {
+    return Mono.fromFuture(input)
+        .onErrorMap(t -> t instanceof CompletionException ? t.getCause() : t);
+  }
 }

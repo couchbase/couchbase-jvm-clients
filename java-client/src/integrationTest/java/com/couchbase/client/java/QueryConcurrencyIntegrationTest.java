@@ -64,7 +64,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     Collection collection = bucket.defaultCollection();
 
     bucketName = "`" + config().bucketname() + "`";
-    createPrimaryIndex(cluster, bucketName);
+    createPrimaryIndex(cluster, config().bucketname());
 
     for (int i = 0; i < numDocsInserted; i++) {
       collection.insert("doc-"+i, FOO_CONTENT);

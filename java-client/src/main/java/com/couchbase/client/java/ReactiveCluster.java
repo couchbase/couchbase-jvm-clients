@@ -27,6 +27,8 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
+import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
+import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
@@ -126,6 +128,22 @@ public class ReactiveCluster {
   }
 
   /**
+   * Provides access to the Analytics index management services.
+   */
+  @Stability.Volatile
+  public ReactiveAnalyticsIndexManager analyticsIndexes() {
+    return new ReactiveAnalyticsIndexManager(async());
+  }
+
+  /**
+   * Provides access to the N1QL index management services.
+   */
+  @Stability.Volatile
+  public ReactiveQueryIndexManager queryIndexes() {
+    return new ReactiveQueryIndexManager(new AsyncQueryIndexManager(async()));
+  }
+
+  /**
    * Provides access to the underlying {@link AsyncCluster}.
    */
   public AsyncCluster async() {
@@ -162,13 +180,6 @@ public class ReactiveCluster {
       asyncCluster.queryRequest(statement, opts),
       opts
     );
-  }
-
-  /**
-   * Returns a manager for Analytics services.
-   */
-  public ReactiveAnalyticsIndexManager analyticsIndexes() {
-    return new ReactiveAnalyticsIndexManager(this.asyncCluster);
   }
 
   /**

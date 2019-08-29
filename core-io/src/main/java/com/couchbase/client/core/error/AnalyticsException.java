@@ -16,26 +16,22 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.annotation.Stability;
 
 import java.util.List;
 
-import static com.couchbase.client.core.error.AnalyticsError.FAILED_TO_PARSE_ERRORS;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
-import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 
 /**
  * There was a problem fulfilling the analytics request.
  * <p>
- * Check <code>errors()</code> for further details.
+ * Check {@link #errors()} for further details.
  *
  * @since 2.0.0
  */
 public class AnalyticsException extends CouchbaseException {
-  private final List<AnalyticsError> errors;
+  private final List<ErrorCodeAndMessage> errors;
   private final byte[] content;
 
   protected AnalyticsException(AnalyticsException cause) {
@@ -52,23 +48,21 @@ public class AnalyticsException extends CouchbaseException {
     super("Analytics Query Failed: " + new String(content, UTF_8), cause);
 
     this.content = requireNonNull(content);
-
-    List<AnalyticsError> tempErrors;
-    try {
-      tempErrors = unmodifiableList(Mapper.decodeInto(content, new TypeReference<List<AnalyticsError>>() {
-      }));
-    } catch (Exception e) {
-      tempErrors = singletonList(new AnalyticsError(FAILED_TO_PARSE_ERRORS, new String(content, UTF_8), null));
-    }
-
-    this.errors = tempErrors;
+    this.errors = ErrorCodeAndMessage.fromJsonArray(content);
   }
 
+  @Stability.Internal
   public byte[] content() {
     return content;
   }
 
-  public List<AnalyticsError> errors() {
+  /**
+   * Returns the full list of errors and warnings associated with the exception.
+   * Possible error codes are detailed in the
+   * <a href="https://docs.couchbase.com/server/current/analytics/error-codes.html">
+   * Analytics Error Codes documentation</a>.
+   */
+  public List<ErrorCodeAndMessage> errors() {
     return errors;
   }
 

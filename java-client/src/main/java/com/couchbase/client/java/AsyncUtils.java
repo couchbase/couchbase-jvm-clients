@@ -20,8 +20,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-public enum AsyncUtils {
-  ;
+public class AsyncUtils {
+  private AsyncUtils() {
+    throw new AssertionError("not instantiable");
+  }
 
   /**
    * Helper method to wrap an async call into a blocking one and make sure to
@@ -56,5 +58,4 @@ public enum AsyncUtils {
       throw new RuntimeException(e);
     }
   }
-
 }

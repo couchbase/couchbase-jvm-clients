@@ -14,12 +14,25 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.analytics;
+package com.couchbase.client.java.manager.query;
 
-import com.couchbase.client.core.error.AnalyticsException;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
 
-public class IndexNotFoundException extends AnalyticsException {
-  public IndexNotFoundException(AnalyticsException cause) {
-    super(cause);
+public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesOptions> {
+
+  private GetAllQueryIndexesOptions() {
+  }
+
+  public static GetAllQueryIndexesOptions getAllQueryIndexesOptions() {
+    return new GetAllQueryIndexesOptions();
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
   }
 }

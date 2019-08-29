@@ -32,7 +32,7 @@ class CbThrowablesTest {
    */
   @Test
   void findsNearestCause() {
-    Optional<IllegalArgumentException> result = CbThrowables.findNearest(
+    Optional<IllegalArgumentException> result = CbThrowables.findCause(
         new RuntimeException(
             new IllegalArgumentException("foo",
                 new IllegalArgumentException("bar"))),
@@ -48,7 +48,7 @@ class CbThrowablesTest {
    */
   @Test
   void findRoot() {
-    Optional<IllegalArgumentException> result = CbThrowables.findNearest(
+    Optional<IllegalArgumentException> result = CbThrowables.findCause(
         new IllegalArgumentException("foo",
             new IllegalArgumentException("bar")),
         IllegalArgumentException.class);
@@ -59,7 +59,7 @@ class CbThrowablesTest {
 
   @Test
   void findBySuperclass() {
-    Optional<RuntimeException> result = CbThrowables.findNearest(
+    Optional<RuntimeException> result = CbThrowables.findCause(
         new Exception("foo",
             new IllegalArgumentException("foo")),
         RuntimeException.class);

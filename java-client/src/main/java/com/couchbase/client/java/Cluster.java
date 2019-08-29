@@ -26,8 +26,9 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
-import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
+import com.couchbase.client.java.manager.query.QueryIndexManager;
+import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.user.UserManager;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -67,6 +68,10 @@ public class Cluster {
   private final UserManager userManager;
 
   private final BucketManager bucketManager;
+
+  private final QueryIndexManager queryIndexManager;
+
+  private final AnalyticsIndexManager analyticsIndexManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -118,6 +123,8 @@ public class Cluster {
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());
     this.bucketManager = new BucketManager(asyncCluster.buckets());
+    this.queryIndexManager = new QueryIndexManager(asyncCluster.queryIndexes());
+    this.analyticsIndexManager = new AnalyticsIndexManager(this);
   }
 
   /**
@@ -145,21 +152,43 @@ public class Cluster {
   }
 
   /**
-   * Provides access to the index management capabilities.
+   * Provides access to the user management services.
    */
-  @Stability.Volatile
-  public SearchIndexManager searchIndexes() {
-    return searchIndexManager;
-  }
-
   @Stability.Volatile
   public UserManager users() {
     return userManager;
   }
 
+  /**
+   * Provides access to the bucket management services.
+   */
   @Stability.Volatile
   public BucketManager buckets() {
     return bucketManager;
+  }
+
+  /**
+   * Provides access to the Analytics index management services.
+   */
+  @Stability.Volatile
+  public AnalyticsIndexManager analyticsIndexes() {
+    return analyticsIndexManager;
+  }
+
+  /**
+   * Provides access to the N1QL index management services.
+   */
+  @Stability.Volatile
+  public QueryIndexManager queryIndexes() {
+    return queryIndexManager;
+  }
+
+  /**
+   * Provides access to the Full Text Search index management services.
+   */
+  @Stability.Volatile
+  public SearchIndexManager searchIndexes() {
+    return searchIndexManager;
   }
 
   /**
@@ -188,13 +217,6 @@ public class Cluster {
    */
   public QueryResult query(final String statement, final QueryOptions options) {
     return block(async().query(statement, options));
-  }
-
-  /**
-   * Returns a manager for Analytics services.
-   */
-  public AnalyticsIndexManager analyticsIndexes() {
-    return new AnalyticsIndexManager(this);
   }
 
   /**

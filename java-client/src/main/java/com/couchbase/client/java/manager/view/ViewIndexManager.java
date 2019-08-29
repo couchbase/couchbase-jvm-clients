@@ -31,6 +31,10 @@ public class ViewIndexManager {
     this.async = requireNonNull(async);
   }
 
+  public AsyncViewIndexManager async() {
+    return async;
+  }
+
   /**
    * Returns the named design document from the specified namespace.
    *

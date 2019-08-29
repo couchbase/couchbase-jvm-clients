@@ -28,8 +28,8 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -284,7 +284,4 @@ public class JsonStreamParser implements Closeable {
     }
   }
 
-  private static <T> T defaultIfNull(T value, Supplier<T> defaultValueSupplier) {
-    return value == null ? defaultValueSupplier.get() : value;
-  }
 }

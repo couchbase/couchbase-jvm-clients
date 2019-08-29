@@ -30,13 +30,20 @@ public class CbThrowables {
    * Walks the causal chain of the given throwable (starting with the given throwable itself)
    * and returns the first throwable that is an instance of the specified type.
    */
-  public static <T extends Throwable> Optional<T> findNearest(Throwable t, final Class<T> type) {
+  public static <T extends Throwable> Optional<T> findCause(Throwable t, final Class<T> type) {
     for (; t != null; t = t.getCause()) {
       if (type.isAssignableFrom(t.getClass())) {
         return Optional.of(type.cast(t));
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Returns true if the given throwable or any throwable in its causal chain is an instance of the given type.
+   */
+  public static boolean hasCause(Throwable t, final Class<? extends Throwable> type) {
+    return findCause(t, type).isPresent();
   }
 
   /**

@@ -66,27 +66,62 @@ public class CbCollections {
     return m == null || m.isEmpty();
   }
 
+  /**
+   * Returns an unmodifiable set containing the given items.
+   *
+   * @throws NullPointerException     if any item is null
+   * @throws IllegalArgumentException if there are duplicate items
+   */
   @SafeVarargs
   public static <T> Set<T> setOf(T... items) {
     Set<T> result = new HashSet<>();
     for (T item : items) {
-      if (!result.add(requireNonNull(item))) {
+      if (!result.add(requireNonNull(item, "Set may not contain null"))) {
         throw new IllegalArgumentException("Duplicate item: " + item);
       }
     }
     return unmodifiableSet(result);
   }
 
+  /**
+   * Returns an unmodifiable list containing the given items.
+   *
+   * @throws NullPointerException if any item is null
+   */
+  @SafeVarargs
+  public static <T> List<T> listOf(T... items) {
+    List<T> result = new ArrayList<>(items.length);
+    for (T item : items) {
+      result.add(requireNonNull(item, "List may not contain null"));
+    }
+    return unmodifiableList(result);
+  }
+
+  /**
+   * Returns an unmodifiable empty map.
+   */
   public static <K, V> Map<K, V> mapOf() {
     return emptyMap();
   }
 
+  /**
+   * Returns an unmodifiable map containing the given key/value pairs.
+   *
+   * @throws NullPointerException     if any key or value is null
+   * @throws IllegalArgumentException if there are duplicate keys
+   */
   public static <K, V> Map<K, V> mapOf(K key1, V value1) {
     Map<K, V> result = new HashMap<>();
     putUniqueKey(result, key1, value1);
     return unmodifiableMap(result);
   }
 
+  /**
+   * Returns an unmodifiable map containing the given key/value pairs.
+   *
+   * @throws NullPointerException     if any key or value is null
+   * @throws IllegalArgumentException if there are duplicate keys
+   */
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2) {
     Map<K, V> result = new HashMap<>();
@@ -95,6 +130,12 @@ public class CbCollections {
     return unmodifiableMap(result);
   }
 
+  /**
+   * Returns an unmodifiable map containing the given key/value pairs.
+   *
+   * @throws NullPointerException     if any key or value is null
+   * @throws IllegalArgumentException if there are duplicate keys
+   */
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2,
                                        K key3, V value3) {
@@ -105,6 +146,12 @@ public class CbCollections {
     return unmodifiableMap(result);
   }
 
+  /**
+   * Returns an unmodifiable map containing the given key/value pairs.
+   *
+   * @throws NullPointerException     if any key or value is null
+   * @throws IllegalArgumentException if there are duplicate keys
+   */
   @SuppressWarnings("Duplicates")
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2,
@@ -118,6 +165,12 @@ public class CbCollections {
     return unmodifiableMap(result);
   }
 
+  /**
+   * Returns an unmodifiable map containing the given key/value pairs.
+   *
+   * @throws NullPointerException     if any key or value is null
+   * @throws IllegalArgumentException if there are duplicate keys
+   */
   @SuppressWarnings("Duplicates")
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2,

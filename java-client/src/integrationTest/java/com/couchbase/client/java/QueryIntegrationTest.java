@@ -79,7 +79,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         collection = bucket.defaultCollection();
 
         bucketName = "`" + config().bucketname() + "`";
-        createPrimaryIndex(cluster, bucketName);
+        createPrimaryIndex(cluster, config().bucketname());
     }
 
     @AfterAll

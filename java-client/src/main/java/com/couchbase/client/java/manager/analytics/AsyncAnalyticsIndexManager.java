@@ -44,15 +44,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.error.AnalyticsError.DATASET_ALREADY_EXISTS;
-import static com.couchbase.client.core.error.AnalyticsError.DATASET_NOT_FOUND;
-import static com.couchbase.client.core.error.AnalyticsError.DATAVERSE_ALREADY_EXISTS;
-import static com.couchbase.client.core.error.AnalyticsError.DATAVERSE_NOT_FOUND;
-import static com.couchbase.client.core.error.AnalyticsError.INDEX_ALREADY_EXISTS;
-import static com.couchbase.client.core.error.AnalyticsError.INDEX_NOT_FOUND;
-import static com.couchbase.client.core.error.AnalyticsError.LINK_NOT_FOUND;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.util.CbThrowables.findNearest;
+import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.manager.analytics.ConnectLinkAnalyticsOptions.connectLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalyticsOptions.createDatasetAnalyticsOptions;
@@ -70,6 +63,14 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class AsyncAnalyticsIndexManager {
+  private static final int DATAVERSE_NOT_FOUND = 24034;
+  private static final int DATAVERSE_ALREADY_EXISTS = 24039;
+  private static final int DATASET_NOT_FOUND = 24025;
+  private static final int DATASET_ALREADY_EXISTS = 24040;
+  private static final int INDEX_NOT_FOUND = 24047;
+  private static final int INDEX_ALREADY_EXISTS = 24048;
+  private static final int LINK_NOT_FOUND = 24006;
+
   private final AsyncCluster cluster;
   private final Core core;
 
@@ -233,7 +234,7 @@ public class AsyncAnalyticsIndexManager {
 
   private static String formatIndexFields(Map<String, AnalyticsDataType> fields) {
     List<String> result = new ArrayList<>();
-    fields.forEach((k, v) -> result.add(quote(k) + ":" + v.value()));
+    fields.forEach((k, v) -> result.add(k + ":" + v.value()));
     return "(" + String.join(",", result) + ")";
   }
 
@@ -342,12 +343,12 @@ public class AsyncAnalyticsIndexManager {
     errorMap.put(DATASET_NOT_FOUND, DatasetNotFoundException::new);
     errorMap.put(DATASET_ALREADY_EXISTS, DatasetAlreadyExistsException::new);
     errorMap.put(LINK_NOT_FOUND, AnalyticsLinkNotFoundException::new);
-    errorMap.put(INDEX_NOT_FOUND, IndexNotFoundException::new);
-    errorMap.put(INDEX_ALREADY_EXISTS, IndexAlreadyExistsException::new);
+    errorMap.put(INDEX_NOT_FOUND, AnalyticsIndexNotFoundException::new);
+    errorMap.put(INDEX_ALREADY_EXISTS, AnalyticsIndexAlreadyExistsException::new);
   }
 
   private RuntimeException translateException(Throwable t) {
-    final HttpStatusCodeException httpException = findNearest(t, HttpStatusCodeException.class).orElse(null);
+    final HttpStatusCodeException httpException = findCause(t, HttpStatusCodeException.class).orElse(null);
     if (httpException != null && httpException.code() == HttpResponseStatus.NOT_FOUND.code()) {
       return new FeatureNotAvailableException(t);
     }

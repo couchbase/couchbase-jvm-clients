@@ -16,61 +16,67 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.util.CbCollections;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.List;
 
-import static java.util.Objects.requireNonNull;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * There was a problem fulfilling the query request.
+ * <p>
+ * Check {@link #errors()} for further details.
  *
- * Check <code>msg()</code> for further details.
- *
- * @author Graham Pople
  * @since 2.0.0
  */
 public class QueryException extends CouchbaseException {
-    private final byte[] content;
-    private int code;
-    private String msg;
+  private final List<ErrorCodeAndMessage> errors;
 
-    public QueryException(final byte[] content) {
-        this.content = requireNonNull(content);
+  public QueryException(QueryException cause) {
+    super(cause);
+    this.errors = cause.errors();
+  }
 
-        try {
-            final JsonNode node = Mapper.decodeIntoTree(content).path(0);
-            code = node.path("code").asInt();
-            msg = node.path("msg").asText();
-        }
-        catch (Exception e) {
-            code = 0;
-            msg = new String(content, StandardCharsets.UTF_8);
-        }
-    }
+  public QueryException(final byte[] content) {
+    super("Query Failed: " + new String(content, UTF_8));
+    this.errors = ErrorCodeAndMessage.fromJsonArray(content);
+  }
 
-    /**
-     * Returns a human-readable description of the error, as reported by the query service.
-     */
-    public String msg() {
-        return msg;
-    }
+  public QueryException(String message, Collection<ErrorCodeAndMessage> errors) {
+    super("Query Failed: " + message);
+    this.errors = CbCollections.copyToUnmodifiableList(errors);
+  }
 
-    /**
-     * Returns the raw error code from the query service.
-     * <p>
-     * These are detailed in the
-     * <a href="https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/n1ql-error-codes.html">
-     * N1QL query codes documentation</a>.
-     */
-    public int code() {
-        return code;
-    }
+  /**
+   * Returns a human-readable description of the error, as reported by the query service.
+   */
+  public String msg() {
+    return errors.isEmpty() ? getMessage() : errors.get(0).message();
+  }
 
-    @Override
-    public String getMessage() {
-        return "Query Failed: " + new String(content, StandardCharsets.UTF_8);
-    }
+  /**
+   * Returns the numeric error code from the query service.
+   * <p>
+   * These are detailed in the
+   * <a href="https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/n1ql-error-codes.html">
+   * N1QL Error Codes documentation</a>.
+   */
+  public int code() {
+    return errors.isEmpty() ? 0 : errors().get(0).code();
+  }
+
+  /**
+   * Returns the full list of errors and warnings associated with the exception.
+   * Possible error codes are detailed in the
+   * <a href="https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/n1ql-error-codes.html">
+   * N1QL Error Codes documentation</a>.
+   */
+  public List<ErrorCodeAndMessage> errors() {
+    return errors;
+  }
+
+  public boolean hasErrorCode(int code) {
+    return errors.stream().anyMatch(e -> e.code() == code);
+  }
 }

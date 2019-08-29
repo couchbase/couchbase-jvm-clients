@@ -18,23 +18,30 @@ package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.java.json.JsonObject;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 public class AnalyticsIndex {
   private final String name;
+  private final boolean primary;
   private final String datasetName;
   private final String dataverseName;
-  private final JsonObject json;
+  private final JsonObject raw;
 
-  public AnalyticsIndex(JsonObject json) {
-    this.json = requireNonNull(json);
-    this.name = requireNonNull(json.getString("IndexName"));
-    this.datasetName = requireNonNull(json.getString("DatasetName"));
-    this.dataverseName = requireNonNull(json.getString("DataverseName"));
+  public AnalyticsIndex(JsonObject raw) {
+    this.raw = requireNonNull(raw);
+    this.name = raw.getString("IndexName");
+    this.datasetName = raw.getString("DatasetName");
+    this.dataverseName = raw.getString("DataverseName");
+    this.primary = Boolean.TRUE.equals(raw.getBoolean("IsPrimary"));
   }
 
   public String name() {
     return name;
+  }
+
+  public boolean primary() {
+    return primary;
   }
 
   public String datasetName() {
@@ -45,17 +52,12 @@ public class AnalyticsIndex {
     return dataverseName;
   }
 
-  public JsonObject json() {
-    return json;
+  public JsonObject raw() {
+    return raw;
   }
 
   @Override
   public String toString() {
-    return "AnalyticsIndex{" +
-        "name='" + name + '\'' +
-        ", datasetName='" + datasetName + '\'' +
-        ", dataverseName='" + dataverseName + '\'' +
-        ", json=" + json +
-        '}';
+    return redactMeta(raw).toString();
   }
 }

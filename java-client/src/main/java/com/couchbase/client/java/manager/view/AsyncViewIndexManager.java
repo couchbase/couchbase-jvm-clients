@@ -50,7 +50,7 @@ import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMet
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
-import static com.couchbase.client.core.util.CbThrowables.findNearest;
+import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.DEVELOPMENT;
 import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.PRODUCTION;
@@ -252,7 +252,7 @@ public class AsyncViewIndexManager {
   }
 
   private static int getHttpStatusCode(Throwable t) {
-    return findNearest(t, HttpStatusCodeException.class)
+    return findCause(t, HttpStatusCodeException.class)
         .map(HttpStatusCodeException::code)
         .orElse(0);
   }

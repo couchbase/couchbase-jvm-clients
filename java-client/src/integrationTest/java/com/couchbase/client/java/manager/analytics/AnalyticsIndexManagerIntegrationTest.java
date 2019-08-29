@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -29,10 +31,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.analytics.ConnectLinkAnalyticsOptions.connectLinkAnalyticsOptions;
@@ -82,9 +86,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     getAllDataverseNames().stream()
         .filter(name -> !builtIns.contains(name))
-        .forEach(name -> {
-          analytics.dropDataverse(name);
-        });
+        .forEach(name -> analytics.dropDataverse(name));
 
     // clean up the Default dataverse
     dropAllDatasets();
@@ -226,10 +228,12 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         String.join("::", dataverse, dataset, dataset));
 
     assertEquals(primaryIndexes, getIndexIds());
+    assertTrue(getIndex("Default", dataset).primary());
+    assertTrue(getIndex(dataverse, dataset).primary());
 
     final Map<String, AnalyticsDataType> fields = mapOf(
-        "a", AnalyticsDataType.INT64,
-        "b", AnalyticsDataType.DOUBLE,
+        "a.foo", AnalyticsDataType.INT64,
+        "`b`.`bar`", AnalyticsDataType.DOUBLE,
         "c", AnalyticsDataType.STRING);
 
     analytics.createIndex(index, dataset, fields);
@@ -237,11 +241,30 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createIndexAnalyticsOptions()
             .dataverseName(dataverse));
 
+    assertFalse(getIndex("Default", index).primary());
+    assertFalse(getIndex(dataverse, index).primary());
+
     Set<String> expectedIndexIds = new HashSet<>(primaryIndexes);
     expectedIndexIds.addAll(setOf(
         String.join("::", "Default", dataset, index),
         String.join("::", dataverse, dataset, index)));
     assertEquals(expectedIndexIds, getIndexIds());
+
+    Set<List<String>> expectedSearchKey = setOf(listOf("a", "foo"), listOf("b", "bar"), listOf("c"));
+    assertEquals(expectedSearchKey, getSearchKeys(getIndex("Default", index)));
+  }
+
+  private Set<List<String>> getSearchKeys(AnalyticsIndex i) {
+    String json = i.raw().getArray("SearchKey").toString();
+    return Mapper.decodeInto(json, new TypeReference<Set<List<String>>>() {
+    });
+  }
+
+  private AnalyticsIndex getIndex(String dataverseName, String indexName) {
+    return analytics.getAllIndexes().stream()
+        .filter(idx -> indexName.equals(idx.name()))
+        .filter(idx -> dataverseName.equals(idx.dataverseName()))
+        .findAny().orElseThrow(() -> new AssertionError("index " + indexName + " not found"));
   }
 
   private Set<String> getIndexIds() {
@@ -264,8 +287,8 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
 
-    assertThrows(IndexNotFoundException.class, () -> analytics.dropIndex(index, dataset));
-    assertThrows(IndexNotFoundException.class, () -> analytics.dropIndex(index, dataset,
+    assertThrows(AnalyticsIndexNotFoundException.class, () -> analytics.dropIndex(index, dataset));
+    assertThrows(AnalyticsIndexNotFoundException.class, () -> analytics.dropIndex(index, dataset,
         dropIndexAnalyticsOptions()
             .dataverseName(dataverse)));
   }
@@ -304,7 +327,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     analytics.createIndex(index, dataset, fields);
 
-    assertThrows(IndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields));
+    assertThrows(AnalyticsIndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields));
 
     // do the ignoreIfExists check here to, since the setup is a pain
     analytics.createIndex(index, dataset, fields,
@@ -316,7 +339,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createIndexAnalyticsOptions()
             .dataverseName(dataverse));
 
-    assertThrows(IndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields,
+    assertThrows(AnalyticsIndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields,
         createIndexAnalyticsOptions()
             .dataverseName(dataverse)));
 

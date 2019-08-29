@@ -25,9 +25,19 @@ import static com.couchbase.client.java.AsyncUtils.block;
 
 public class AnalyticsIndexManager {
   private final AsyncAnalyticsIndexManager async;
+  private final ReactiveAnalyticsIndexManager reactive;
 
   public AnalyticsIndexManager(Cluster cluster) {
     this.async = new AsyncAnalyticsIndexManager(cluster.async());
+    this.reactive = new ReactiveAnalyticsIndexManager(cluster.async());
+  }
+
+  public AsyncAnalyticsIndexManager async() {
+    return async;
+  }
+
+  public ReactiveAnalyticsIndexManager reactive() {
+    return reactive;
   }
 
   /**
@@ -128,11 +138,11 @@ public class AnalyticsIndexManager {
     block(async.disconnectLink(options));
   }
 
-  public Map<String,Long> getPendingMutations() {
+  public Map<String, Long> getPendingMutations() {
     return block(async.getPendingMutations());
   }
 
-  public Map<String,Long> getPendingMutations(GetPendingMutationsAnalyticsOptions options) {
+  public Map<String, Long> getPendingMutations(GetPendingMutationsAnalyticsOptions options) {
     return block(async.getPendingMutations(options));
   }
 }
