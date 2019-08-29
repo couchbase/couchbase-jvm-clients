@@ -111,4 +111,8 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     return bucket;
   }
 
+  @Override
+  public boolean idempotent() {
+    return true;
+  }
 }

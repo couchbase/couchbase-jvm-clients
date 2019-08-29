@@ -133,7 +133,8 @@ class QueryMessageHandlerBackpressureTest {
       BestEffortRetryStrategy.INSTANCE,
       environment.credentials(),
       "select 1=1",
-      "myquery".getBytes(UTF_8)
+      "myquery".getBytes(UTF_8),
+      true
     );
     channel.writeAndFlush(request);
 

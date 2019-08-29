@@ -227,7 +227,7 @@ public class AsyncCluster {
     options.injectParams(query);
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
-      statement, query.toString().getBytes(StandardCharsets.UTF_8));
+      statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly());
     request.context().clientContext(options.clientContext());
     return request;
   }

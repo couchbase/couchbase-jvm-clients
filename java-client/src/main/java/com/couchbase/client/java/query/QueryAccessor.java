@@ -228,7 +228,8 @@ public class QueryAccessor {
           original.retryStrategy(),
           original.credentials(),
           statement,
-          query.toString().getBytes(StandardCharsets.UTF_8)
+          query.toString().getBytes(StandardCharsets.UTF_8),
+          true
         );
     }
 
@@ -252,7 +253,8 @@ public class QueryAccessor {
           original.retryStrategy(),
           original.credentials(),
           original.statement(),
-          query.toString().getBytes(StandardCharsets.UTF_8)
+          query.toString().getBytes(StandardCharsets.UTF_8),
+          originalOptions.readonly()
         );
     }
 

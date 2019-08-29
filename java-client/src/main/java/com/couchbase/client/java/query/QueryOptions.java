@@ -304,6 +304,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       return adhoc.orElse(true);
     }
 
+    public boolean readonly() {
+      return readonly.orElse(false);
+    }
+
     @Stability.Internal
     public void injectParams(JsonObject queryJson) {
       queryJson.put("client_context_id", clientContextId.orElse(UUID.randomUUID().toString()));

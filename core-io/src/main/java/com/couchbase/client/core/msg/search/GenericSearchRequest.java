@@ -35,11 +35,13 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
   implements NonChunkedHttpRequest<GenericSearchResponse> {
 
   private final Supplier<FullHttpRequest> requestSupplier;
+  private final boolean idempotent;
 
   public GenericSearchRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                              final Supplier<FullHttpRequest> requestSupplier) {
+                              final Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
     super(timeout, ctx, retryStrategy);
     this.requestSupplier = requireNonNull(requestSupplier);
+    this.idempotent = idempotent;
   }
 
   @Override
@@ -63,7 +65,7 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
 
   @Override
   public boolean idempotent() {
-    return true;
+    return idempotent;
   }
 
 }

@@ -62,7 +62,8 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
       env.retryStrategy(),
       env.credentials(),
       "select 1=1",
-      query.getBytes(StandardCharsets.UTF_8)
+      query.getBytes(StandardCharsets.UTF_8),
+      true
     );
     core.send(request);
 

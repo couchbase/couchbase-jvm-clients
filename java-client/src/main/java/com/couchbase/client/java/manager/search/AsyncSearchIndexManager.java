@@ -203,7 +203,7 @@ public class AsyncSearchIndexManager {
       request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
       request.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
       return request;
-    });
+    }, false);
   }
 
   /**
@@ -275,7 +275,7 @@ public class AsyncSearchIndexManager {
       request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
       request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
       return request;
-    });
+    }, true);
   }
 
   /**
@@ -423,15 +423,16 @@ public class AsyncSearchIndexManager {
   }
 
   private GenericSearchRequest searchRequest(final HttpMethod method, final String path) {
-    return searchRequest(() -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path));
+    return searchRequest(() -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET);
   }
 
-  private GenericSearchRequest searchRequest(final Supplier<FullHttpRequest> httpRequest) {
+  private GenericSearchRequest searchRequest(final Supplier<FullHttpRequest> httpRequest, boolean idempotent) {
     return new GenericSearchRequest(
       environment.timeoutConfig().managementTimeout(),
       core.context(),
       environment.retryStrategy(),
-      httpRequest
+      httpRequest,
+      idempotent
     );
   }
 

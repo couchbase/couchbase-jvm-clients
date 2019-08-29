@@ -128,7 +128,8 @@ private[scala] class QueryHandler(core: Core) {
           retryStrategy,
           environment.credentials,
           statement,
-          queryBytes)
+          queryBytes,
+          options.readonly.getOrElse(false))
 
         request
       })
@@ -287,7 +288,7 @@ private[scala] class QueryHandler(core: Core) {
     }
 
     new QueryRequest(original.timeout, original.context, original.retryStrategy, original.credentials,
-      statement, query.toString.getBytes(StandardCharsets.UTF_8))
+      statement, query.toString.getBytes(StandardCharsets.UTF_8), true)
   }
 
   /**
@@ -312,7 +313,8 @@ private[scala] class QueryHandler(core: Core) {
       original.retryStrategy,
       original.credentials,
       original.statement,
-      query.toString.getBytes(StandardCharsets.UTF_8))
+      query.toString.getBytes(StandardCharsets.UTF_8),
+      originalOptions.readonly.getOrElse(false))
   }
 
   /**
