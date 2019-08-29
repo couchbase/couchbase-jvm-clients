@@ -37,13 +37,20 @@ class UserManagerIntegrationTest extends ScalaIntegrationTest {
     cluster = Cluster.connect(env).get
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    users = new ReactiveUserManager(cluster.async.core)
+    users = cluster.reactive.users
   }
 
   @AfterAll
   def tearDown(): Unit = {
     cluster.shutdown()
     env.shutdown()
+  }
+
+  @Test
+  def access(): Unit = {
+    val users: UserManager = cluster.users
+    val usersAsync: AsyncUserManager = cluster.async.users
+    val usersReactive: ReactiveUserManager = cluster.reactive.users
   }
 
   def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {
@@ -192,7 +199,7 @@ class UserManagerIntegrationTest extends ScalaIntegrationTest {
 
     userMeta = users.getUser(Username, AuthDomain.Local).block()
     assertEquals("Renamed", userMeta.user.displayName)
-    assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), userMeta.innateRoles)
+    assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), userMeta.innateRoles.toSet)
 
     checkRoleOrigins(userMeta, "ro_admin<-[user]", "bucket_full_access[*]<-[user]")
   }

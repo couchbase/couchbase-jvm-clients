@@ -21,6 +21,7 @@ import com.couchbase.client.core.env.Credentials
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -46,7 +47,13 @@ class Cluster private[scala](env: => ClusterEnvironment) {
   private[scala] implicit val ec: ExecutionContext = env.ec
 
   /** Access an asynchronous version of this API. */
-  lazy val async = new AsyncCluster(env)
+  val async = new AsyncCluster(env)
+
+  private[scala] val reactiveUserManager = new ReactiveUserManager(async.core)
+  private[scala] val asyncUserManager = new AsyncUserManager(reactiveUserManager)
+
+  /** The UserManager provides programmatic access to and creation of users and groups. */
+  val users = new UserManager(asyncUserManager, reactiveUserManager)
 
   /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)

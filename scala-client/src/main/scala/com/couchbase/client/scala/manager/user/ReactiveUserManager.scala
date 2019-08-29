@@ -1,6 +1,21 @@
+/*
+ * Copyright (c) 2019 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.couchbase.client.scala.manager.user
 
-import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.Core
@@ -10,7 +25,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.{DefaultFullHttpRequest, HttpHeaderValues, HttpMethod, HttpVersion}
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.{redactMeta, redactSystem, redactUser}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
@@ -21,7 +35,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.{CouchbasePickler, FutureConversions}
 import reactor.core.scala.publisher.{Flux, Mono}
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -46,8 +59,8 @@ object ReactiveUserManager {
 
 @Volatile
 class ReactiveUserManager(private val core: Core) {
-  private val defaultManagerTimeout = core.context().environment().timeoutConfig().managementTimeout()
-  private val defaultRetryStrategy = core.context().environment().retryStrategy()
+  private[scala] val defaultManagerTimeout = core.context().environment().timeoutConfig().managementTimeout()
+  private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
 
   private def pathForUsers = "/settings/rbac/users"
 
@@ -70,11 +83,13 @@ class ReactiveUserManager(private val core: Core) {
                           path: String,
                           timeout: Duration,
                           retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
+    val idempotent = method == HttpMethod.GET
     sendRequest(new GenericManagerRequest(
       timeout,
       core.context,
       retryStrategy,
-      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET))
+      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
+      idempotent))
   }
 
   private def sendRequest(method: HttpMethod,
@@ -82,6 +97,7 @@ class ReactiveUserManager(private val core: Core) {
                           body: UrlQueryStringBuilder,
                           timeout: Duration,
                           retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
+    val idempotent = method == HttpMethod.GET
     sendRequest(new GenericManagerRequest(timeout,
       core.context,
       retryStrategy,
@@ -91,7 +107,8 @@ class ReactiveUserManager(private val core: Core) {
         req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
         req.headers.add("Content-Length", content.readableBytes)
         req
-      }, method == HttpMethod.GET))
+      },
+      idempotent))
   }
 
   protected def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {

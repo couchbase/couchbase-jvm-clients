@@ -36,6 +36,10 @@ import scala.reflect.runtime.universe._
 object Collection {
   private[scala] val SafetyTimeout = 1.second
 
+  private[scala] def blockForver[T](in: Future[T]): Try[T] = {
+    block(in, Duration.Inf)
+  }
+
   private[scala] def block[T](in: Future[T], timeout: Duration): Try[T] = {
     try {
       Try(Await.result(in, timeout + SafetyTimeout))
