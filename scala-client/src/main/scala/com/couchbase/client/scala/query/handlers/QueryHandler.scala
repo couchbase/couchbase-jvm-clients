@@ -23,7 +23,7 @@ import java.util.{Collections, Map, Set}
 import com.couchbase.client.core.{Core, Reactor}
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.QueryException
+import com.couchbase.client.core.error.{CouchbaseException, QueryException}
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
@@ -202,10 +202,25 @@ private[scala] class QueryHandler(core: Core) {
     if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
       queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true)
     }
-
+    else if (enhancedEnabled) {
+      queryInternal(buildPrepareRequest(request, options), options, true)
+        .flatMap((qr: QueryResponse) => {
+          val preparedName = qr.header().prepared()
+          if (!preparedName.isPresent) {
+            Mono.error(new CouchbaseException("No prepared name present but must be, this is a query bug!"))
+          }
+          else {
+            queryCache.put(
+              request.statement(),
+              QueryCacheEntry(preparedName.get(), fullPlan = false, None)
+            )
+            return Mono.just(qr)
+          }
+        })
+    }
     else {
       Mono.defer(() => {
-        val req = buildPrepareRequest(request)
+        val req = buildPrepareRequest(request, options)
         core.send(req)
         FutureConversions.javaMonoToScalaMono(Reactor.wrap(req, req.response, true))
       })
@@ -259,11 +274,18 @@ private[scala] class QueryHandler(core: Core) {
     *
     * @return the created request, ready to be sent over the wire.
     */
-  private def buildPrepareRequest(original: QueryRequest) = {
+  private def buildPrepareRequest(original: QueryRequest, options: QueryOptions) = {
     val statement = "PREPARE " + original.statement
+
     val query = JsonObject.create
     query.put("statement", statement)
     query.put("timeout", encodeDurationToMs(original.timeout))
+
+    if (enhancedPreparedEnabled) {
+      query.put("auto_execute", true)
+      options.encode(query)
+    }
+
     new QueryRequest(original.timeout, original.context, original.retryStrategy, original.credentials,
       statement, query.toString.getBytes(StandardCharsets.UTF_8))
   }
