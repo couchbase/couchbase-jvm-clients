@@ -44,7 +44,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0-alpha.6</version>
+        <version>3.0.0-alpha.7</version>
     </dependency>
 </dependencies>
 ```
@@ -56,7 +56,7 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.0-alpha.6</version>
+        <version>1.0.0-alpha.7</version>
     </dependency>
 </dependencies>
 ```
