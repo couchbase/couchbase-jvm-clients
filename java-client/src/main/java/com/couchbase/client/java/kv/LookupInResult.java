@@ -17,8 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.SubdocField;
-import com.couchbase.client.java.codec.Decoder;
-import com.couchbase.client.java.codec.DefaultDecoder;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -88,7 +88,7 @@ public class LookupInResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    return contentAs(index, target, (Decoder<T>) DefaultDecoder.INSTANCE);
+    return contentAs(index, target, JsonSerializer.INSTANCE);
   }
 
   /**
@@ -96,16 +96,16 @@ public class LookupInResult {
    *
    * @param index the index of the subdoc value to decode.
    * @param target the target type to decode into.
-   * @param decoder the custom decoder that will be used.
+   * @param serializer the custom serializer that will be used.
    * @return the decoded content into the generic type requested.
    */
-  public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
+  public <T> T contentAs(int index, final Class<T> target, final Serializer serializer) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
       value.error().map(err -> {
         throw err;
       });
-      return decoder.decode(target, EncodedDocument.of(0, value.value()));
+      return serializer.deserialize(target, value.value());
     } else {
       throw new IllegalArgumentException("Index " + index + " is invalid");
     }

@@ -23,6 +23,7 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.java.codec.DataFormat;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -55,7 +56,8 @@ public enum GetAccessor {
       .thenApply(getResponse -> {
         if (getResponse.status() == ResponseStatus.SUCCESS) {
           return new GetResult(
-            EncodedDocument.of(getResponse.flags(), getResponse.content()),
+            getResponse.content(),
+            DataFormat.fromCommonFlag(getResponse.flags()),
             getResponse.cas(),
             Optional.empty()
           );
@@ -73,7 +75,8 @@ public enum GetAccessor {
         switch (getResponse.status()) {
           case SUCCESS:
             return new GetResult(
-              EncodedDocument.of(getResponse.flags(), getResponse.content()),
+              getResponse.content(),
+              DataFormat.fromCommonFlag(getResponse.flags()),
               getResponse.cas(),
               Optional.empty()
             );
@@ -94,7 +97,8 @@ public enum GetAccessor {
       .thenApply(getResponse -> {
         if (getResponse.status() == ResponseStatus.SUCCESS) {
           return new GetResult(
-            EncodedDocument.of(getResponse.flags(), getResponse.content()),
+            getResponse.content(),
+            DataFormat.fromCommonFlag(getResponse.flags()),
             getResponse.cas(),
             Optional.empty()
           );
@@ -145,9 +149,7 @@ public enum GetAccessor {
     Optional<Duration> expiration = exptime == null
       ? Optional.empty()
       : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
-
-    // TODO: optimize the subdoc holder
-    return new GetResult(EncodedDocument.of(0, content), cas, expiration);
+    return new GetResult(content, DataFormat.JSON, cas, expiration);
   }
 
   /**

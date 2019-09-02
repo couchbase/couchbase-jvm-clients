@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,36 +22,22 @@ import com.couchbase.client.core.error.EncodingFailedException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.ObjectInputStream;
 
-public class SerializableContent<T extends Serializable> extends TypedContent<T> {
+/**
+ * This serializer handles encoding and decoding from/to java object serialization.
+ */
+public class JavaObjectSerializer implements Serializer {
 
-  static Serializable decode(final byte[] serialized) {
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(serialized);
-         ObjectInput in = new ObjectInputStream(bis)) {
-      return (Serializable) in.readObject();
-    } catch (Exception ex) {
-      throw new DecodingFailedException(ex);
-    }
-  }
-
-  @SuppressWarnings({"unchecked"})
-  public static <T extends Serializable> SerializableContent wrap(final T content) {
-    return new SerializableContent(content);
-  }
-
-  private SerializableContent(T content) {
-    super(content);
-  }
+  public static final JavaObjectSerializer INSTANCE = new JavaObjectSerializer();
 
   @Override
-  public byte[] encoded() {
+  public byte[] serialize(final Object input) {
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
          ObjectOutput out = new ObjectOutputStream(bos)) {
-      out.writeObject(content());
+      out.writeObject(input);
       return bos.toByteArray();
     } catch (Exception e) {
       throw new EncodingFailedException(e);
@@ -59,7 +45,14 @@ public class SerializableContent<T extends Serializable> extends TypedContent<T>
   }
 
   @Override
-  public int flags() {
-    return Encoder.SERIALIZED_FLAGS;
+  @SuppressWarnings("unchecked")
+  public <T> T deserialize(final Class<T> target, final byte[] input) {
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(input);
+         ObjectInput in = new ObjectInputStream(bis)) {
+      return (T) in.readObject();
+    } catch (Exception ex) {
+      throw new DecodingFailedException(ex);
+    }
   }
+
 }

@@ -16,13 +16,18 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.java.codec.Decoder;
-import com.couchbase.client.java.codec.DefaultDecoder;
+import com.couchbase.client.java.codec.DataFormat;
+import com.couchbase.client.java.codec.DefaultTranscoder;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
  * Returned from all kinds of KeyValue Get operation to fetch a document or a subset of it.
@@ -32,9 +37,14 @@ import java.util.Optional;
 public class GetResult {
 
   /**
-   * Holds the fetched document in an encoded form.
+   * The encoded content when loading the document.
    */
-  private final EncodedDocument encoded;
+  private final byte[] content;
+
+  /**
+   * The data format loaded from the common flags.
+   */
+  private final DataFormat format;
 
   /**
    * The CAS of the fetched document.
@@ -49,13 +59,13 @@ public class GetResult {
   /**
    * Creates a new {@link GetResult}.
    *
-   * @param encoded the loaded document in encoded form.
    * @param cas the cas from the doc.
    * @param expiration the expiration if fetched from the doc.
    */
-  GetResult(final EncodedDocument encoded, final long cas, final Optional<Duration> expiration) {
+  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiration) {
     this.cas = cas;
-    this.encoded = encoded;
+    this.content = content;
+    this.format = format;
     this.expiration = expiration;
   }
 
@@ -100,23 +110,34 @@ public class GetResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
-    return contentAs(target, (Decoder<T>) DefaultDecoder.INSTANCE);
+    return contentAs(target, DefaultTranscoder.INSTANCE);
   }
 
   /**
    * Decodes the content of the document into a the target class using a custom decoder.
    *
    * @param target the target class to decode the encoded content into.
-   * @param decoder the decoder that should be used to decode the content.
+   * @param transcoder the transcoder that should be used to decode the content.
    */
-  public <T> T contentAs(final Class<T> target, final Decoder<T> decoder) {
-    return decoder.decode(target, encoded);
+  public <T> T contentAs(final Class<T> target, final Transcoder transcoder) {
+    return transcoder.decode(target, content, format);
+  }
+
+  /**
+   * Decodes the content of the document into a the target class using the default transcoder and a custom data format.
+   *
+   * @param target the target class to decode the encoded content into.
+   * @param format the custom data format that should be used.
+   */
+  public <T> T contentAs(final Class<T> target, final DataFormat format) {
+    return DefaultTranscoder.INSTANCE.decode(target, content, format);
   }
 
   @Override
   public String toString() {
     return "GetResult{" +
-      "encoded=" + encoded +
+      "content=" + redactUser(Arrays.toString(content)) +
+      ", format=" + format +
       ", cas=" + cas +
       ", expiration=" + expiration +
       '}';
@@ -126,20 +147,17 @@ public class GetResult {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
     GetResult getResult = (GetResult) o;
-
-    if (cas != getResult.cas) return false;
-    if (encoded != null ? !encoded.equals(getResult.encoded) : getResult.encoded != null)
-      return false;
-    return expiration != null ? expiration.equals(getResult.expiration) : getResult.expiration == null;
+    return cas == getResult.cas &&
+      Arrays.equals(content, getResult.content) &&
+      format == getResult.format &&
+      Objects.equals(expiration, getResult.expiration);
   }
 
   @Override
   public int hashCode() {
-    int result = encoded != null ? encoded.hashCode() : 0;
-    result = 31 * result + (int) (cas ^ (cas >>> 32));
-    result = 31 * result + (expiration != null ? expiration.hashCode() : 0);
+    int result = Objects.hash(format, cas, expiration);
+    result = 31 * result + Arrays.hashCode(content);
     return result;
   }
 

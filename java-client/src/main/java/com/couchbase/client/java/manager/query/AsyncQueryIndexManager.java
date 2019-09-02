@@ -135,7 +135,7 @@ public class AsyncQueryIndexManager {
         " ORDER BY is_primary DESC, name ASC";
 
     return exec(READ_ONLY, statement, builtOpts)
-        .thenApply(result -> result.allRowsAsObject().stream()
+        .thenApply(result -> result.rowsAsObject().stream()
             .map(QueryIndex::new)
             .collect(toList()));
   }

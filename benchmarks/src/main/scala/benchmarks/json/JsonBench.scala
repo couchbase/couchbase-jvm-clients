@@ -25,8 +25,7 @@
 package benchmarks.json
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.java.codec.{Decoder, DefaultDecoder, DefaultEncoder}
-import com.couchbase.client.java.kv.EncodedDocument
+import com.couchbase.client.java.codec.JsonSerializer
 import com.couchbase.client.scala.codec.Conversions.{Decodable, Encodable, JsonFlags}
 import com.couchbase.client.scala.codec.EncodeParams
 import org.scalameter
@@ -91,8 +90,6 @@ object Jackson {
 
   val json = """{"name":"John Smith","age":29,"address":[{"address":"123 Fake Street"}]}"""
   val encoded = json.getBytes(CharsetUtil.UTF_8)
-
-  val doc = EncodedDocument.of(0, encoded)
 }
 
 // Change this to LocalTime for a fast result
@@ -122,10 +119,9 @@ object JsonBench extends Bench.LocalTime {
 
       using(gen) in {
         r => {
-          val decoded = DefaultDecoder.INSTANCE.asInstanceOf[Decoder[JsonObject]].decode(classOf[JsonObject], Jackson.doc)
+          val decoded = JsonSerializer.INSTANCE.deserialize(classOf[JsonObject], Jackson.encoded)
           val hello = decoded.getString("name")
           val age = decoded.getInt("age")
-
         }
       }
     }
@@ -415,7 +411,7 @@ object JsonBench extends Bench.LocalTime {
             .put("name", FieldName)
             .put("address", JsonArray.from(JsonObject.create().put("address", FieldAddress)))
             .put("age", 29)
-          val encoded: Array[Byte] = DefaultEncoder.INSTANCE.encode(json).content()
+          val encoded: Array[Byte] = JsonSerializer.INSTANCE.serialize(json)
         }
       }
     }

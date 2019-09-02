@@ -17,10 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.java.codec.DefaultEncoder;
-import com.couchbase.client.java.codec.Encoder;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 public abstract class MutateInSpec {
     @Stability.Internal
@@ -143,8 +143,7 @@ public abstract class MutateInSpec {
      * @param delta      the value to increment the field by.
      */
     public static <T> Increment increment(final String path, final long delta) {
-        EncodedDocument doc = EncoderUtil.ENCODER.encode(delta);
-        return new Increment(path, doc.content());
+        return new Increment(path, JsonSerializer.INSTANCE.serialize(delta));
     }
 
     /**
@@ -156,8 +155,7 @@ public abstract class MutateInSpec {
      * @param delta      the value to increment the field by.
      */
     public static <T> Increment decrement(final String path, final long delta) {
-        EncodedDocument doc = EncoderUtil.ENCODER.encode(delta * -1);
-        return new Increment(path, doc.content());
+        return new Increment(path, JsonSerializer.INSTANCE.serialize(delta * -1));
     }
 }
 

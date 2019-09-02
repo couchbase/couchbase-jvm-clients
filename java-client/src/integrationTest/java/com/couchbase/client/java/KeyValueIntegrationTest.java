@@ -21,7 +21,7 @@ import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.java.codec.BinaryContent;
+import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
@@ -457,11 +457,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       () -> collection.binary().append(id, helloBytes)
     );
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
 
     MutationResult append = collection.binary().append(id, worldBytes);
@@ -470,7 +470,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       helloWorldBytes,
-      collection.get(id).contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
   }
 
@@ -487,11 +487,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
             () -> collection.reactive().binary().append(id, helloBytes).block()
     );
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
 
     MutationResult append = collection.reactive().binary().append(id, worldBytes).block();
@@ -501,7 +501,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
   }
 
@@ -518,11 +518,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
             () -> collection.async().binary().append(id, helloBytes).get()
     );
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
 
     MutationResult append = collection.async().binary().append(id, worldBytes).get();
@@ -531,7 +531,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).contentAs(BinaryContent.class).content()
+            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
   }
 
@@ -548,11 +548,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       () -> collection.binary().prepend(id, helloBytes)
     );
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
 
     MutationResult append = collection.binary().prepend(id, worldBytes);
@@ -561,7 +561,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       worldHelloBytes,
-      collection.get(id).contentAs(BinaryContent.class).content()
+      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
     );
   }
 

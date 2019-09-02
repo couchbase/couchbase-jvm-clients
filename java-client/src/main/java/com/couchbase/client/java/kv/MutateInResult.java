@@ -18,8 +18,8 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubdocField;
-import com.couchbase.client.java.codec.Decoder;
-import com.couchbase.client.java.codec.DefaultDecoder;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,8 +43,7 @@ public class MutateInResult extends MutationResult {
    * @param cas the cas of the outer doc.
    * @param mutationToken the mutation token of the doc, if present.
    */
-  MutateInResult(final List<SubdocField> encoded, final long cas,
-                 final Optional<MutationToken> mutationToken) {
+  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken) {
     super(cas, mutationToken);
     this.encoded = encoded;
   }
@@ -58,7 +57,7 @@ public class MutateInResult extends MutationResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    return contentAs(index, target, (Decoder<T>) DefaultDecoder.INSTANCE);
+    return contentAs(index, target, JsonSerializer.INSTANCE);
   }
 
   /**
@@ -69,13 +68,13 @@ public class MutateInResult extends MutationResult {
    * @param decoder the custom decoder that will be used.
    * @return the decoded content into the generic type requested.
    */
-  public <T> T contentAs(int index, final Class<T> target, final Decoder<T> decoder) {
+  public <T> T contentAs(int index, final Class<T> target, final Serializer serializer) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
       value.error().map(err -> {
         throw err;
       });
-      return decoder.decode(target, EncodedDocument.of(0, value.value()));
+      return serializer.deserialize(target, value.value());
     }
     else {
       throw new IllegalArgumentException("Index " + index + " is invalid");

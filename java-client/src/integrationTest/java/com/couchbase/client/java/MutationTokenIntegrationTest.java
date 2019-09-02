@@ -18,7 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.java.codec.BinaryContent;
+import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.CounterResult;
@@ -36,6 +36,7 @@ import java.util.UUID;
 
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
+import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,7 +68,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     byte[] helloBytes = "Hello, ".getBytes(UTF_8);
     byte[] worldBytes = "World!".getBytes(UTF_8);
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertMutationToken(upsert.mutationToken());
 
     MutationResult append = collection.binary().append(id, worldBytes);
@@ -81,7 +82,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     byte[] helloBytes = "Hello, ".getBytes(UTF_8);
     byte[] worldBytes = "World!".getBytes(UTF_8);
 
-    MutationResult upsert = collection.upsert(id, BinaryContent.wrap(helloBytes));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
     assertMutationToken(upsert.mutationToken());
 
     MutationResult prepend = collection.binary().prepend(id, worldBytes);

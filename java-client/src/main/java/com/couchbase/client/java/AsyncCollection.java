@@ -39,8 +39,8 @@ import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.EncodedDocument;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
@@ -622,12 +622,13 @@ public class AsyncCollection {
     notNull(options, "InsertOptions");
     InsertOptions.Built opts = options.build();
 
-    EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    DataFormat dataFormat = opts.dataFormat();
 
-    InsertRequest request = new InsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    InsertRequest request = new InsertRequest(id, opts.transcoder().encode(content, dataFormat),
+      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
+      retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -677,11 +678,13 @@ public class AsyncCollection {
     notNull(options, "UpsertOptions");
     UpsertOptions.Built opts = options.build();
 
-    EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    UpsertRequest request = new UpsertRequest(id, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    DataFormat dataFormat = opts.dataFormat();
+
+    UpsertRequest request = new UpsertRequest(id, opts.transcoder().encode(content, dataFormat),
+      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
+      retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -732,14 +735,13 @@ public class AsyncCollection {
     notNull(options, "ReplaceOptions");
     ReplaceOptions.Built opts = options.build();
 
-    EncodedDocument encoded = opts.encoder().encode(content);
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    DataFormat dataFormat = opts.dataFormat();
 
-    ReplaceRequest request = new ReplaceRequest(id, encoded.content(), opts.expiry().getSeconds(),
-      encoded.flags(), timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy,
-      opts.durabilityLevel()
-    );
+    ReplaceRequest request = new ReplaceRequest(id,  opts.transcoder().encode(content, dataFormat),
+      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, opts.cas(), coreContext,
+      collectionIdentifier, retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }

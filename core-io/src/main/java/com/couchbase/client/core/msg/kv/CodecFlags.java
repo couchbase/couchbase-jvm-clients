@@ -126,4 +126,5 @@ public enum CodecFlags {
     BINARY,
     STRING
   }
+
 }
