@@ -39,13 +39,11 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import org.junit.internal.runners.statements.Fail;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -149,10 +147,12 @@ class QueryMessageHandlerTest {
 
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request1 = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query,
+      true
     );
     QueryRequest request2 = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query,
+      true
     );
     channel.writeAndFlush(request1);
     channel.writeAndFlush(request2);
