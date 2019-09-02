@@ -130,15 +130,20 @@ public enum ResponseStatus {
    */
   SYNC_WRITE_AMBIGUOUS,
 
-  INTERNAL_ERROR,
+  /**
+   * The server indicated an internal error.
+   */
+  INTERNAL_SERVER_ERROR,
 
   TOO_MANY_REQUESTS,
 
   INVALID_ARGS,
 
-  UNKNOWN_COLLECTION;
-
-
+  UNKNOWN_COLLECTION,
+  /**
+   * The server reports that it is not initialized yet.
+   */
+  NOT_INITIALIZED;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

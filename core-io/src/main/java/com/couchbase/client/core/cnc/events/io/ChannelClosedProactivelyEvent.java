@@ -57,8 +57,16 @@ public class ChannelClosedProactivelyEvent extends AbstractEvent {
      */
     INVALID_REQUEST_DETECTED,
     /**
-     * We detected an invalid response coming from the lower layers.
+     * We got a KV response which contained an opaque value that the client has no idea about.
      */
-    INVALID_RESPONSE_DETECTED
+    KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE,
+    /**
+     * We got a KV response which was not successful and indicated that the socket/channel needs to be reset.
+     */
+    KV_RESPONSE_CONTAINED_CLOSE_INDICATION,
+    /**
+     * Got a response format the decoder didn't expect.
+     */
+    INVALID_RESPONSE_FORMAT_DETECTED
   }
 }

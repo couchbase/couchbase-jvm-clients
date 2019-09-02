@@ -93,7 +93,7 @@ public class HttpProtocol {
     } else if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
       return ResponseStatus.INVALID_ARGS;
     } else if (status.equals(HttpResponseStatus.INTERNAL_SERVER_ERROR)) {
-      return ResponseStatus.INTERNAL_ERROR;
+      return ResponseStatus.INTERNAL_SERVER_ERROR;
     } else if (status.equals(HttpResponseStatus.UNAUTHORIZED)) {
       return ResponseStatus.NO_ACCESS;
     } else if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {

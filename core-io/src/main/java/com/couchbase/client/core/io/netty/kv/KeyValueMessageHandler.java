@@ -214,12 +214,19 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
-    if (msg instanceof ByteBuf) {
-      decode(ctx, (ByteBuf) msg);
-    } else {
-      ioContext.environment().eventBus().publish(
-        new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
-      );
+    try {
+      if (msg instanceof ByteBuf) {
+        decode(ctx, (ByteBuf) msg);
+      } else {
+        ioContext.environment().eventBus().publish(
+          new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
+        );
+        closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_FORMAT_DETECTED);
+      }
+    } finally {
+      if (endpoint != null) {
+        endpoint.markRequestCompletion();
+      }
       ReferenceCountUtil.release(msg);
     }
   }
@@ -235,6 +242,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * Main method to start dispatching the decode.
    *
+   * @param ctx the channel handler context from netty.
    * @param response the response to decode and handle.
    */
   private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
@@ -242,56 +250,85 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
 
     if (request == null) {
-      byte[] packet = new byte[response.readableBytes()];
-      response.readBytes(packet);
-      ioContext.environment().eventBus().publish(
-        new UnknownResponseReceivedEvent(ioContext, packet)
-      );
-      // We got a response with an opaque value that we know nothing about. There is clearly something weird
-      // going on so to be sure we close the connection to avoid any further weird situations.
-      ctx.channel().close().addListener(v -> {
-        ioContext.environment().eventBus().publish(new ChannelClosedProactivelyEvent(
-          ioContext,
-          ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_DETECTED
-        ));
-      });
+      handleUnknownResponseReceived(ctx, response);
+      return;
+    }
+
+    long start = writtenRequestDispatchTimings.remove(opaque);
+    request.context().dispatchLatency(System.nanoTime() - start);
+
+    short statusCode = MemcacheProtocol.status(response);
+    ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
+    ErrorMap.ErrorCode errorCode = status == ResponseStatus.UNKNOWN ? decodeErrorCode(statusCode) : null;
+
+    if (errorCode != null) {
+      ioContext.environment().eventBus().publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
+      status = handleErrorCode(ctx, errorCode);
+    }
+
+    if (status == ResponseStatus.UNKNOWN) {
+      ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
+    }
+
+    if (status == ResponseStatus.NOT_MY_VBUCKET) {
+      handleNotMyVbucket(request, response);
+    } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
+      handleOutdatedCollection(request);
+    } else if (errorMapIndicatesRetry(errorCode)) {
+      RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
+    } else if (statusIndicatesInvalidChannel(status)) {
+      closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
-      long start = writtenRequestDispatchTimings.remove(opaque);
-      request.context().dispatchLatency(System.nanoTime() - start);
-
-      short statusCode = MemcacheProtocol.status(response);
-      ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
-      ErrorMap.ErrorCode errorCode = status == ResponseStatus.UNKNOWN ? decodeErrorCode(statusCode) : null;
-
-      if (errorCode != null) {
-        ioContext.environment().eventBus().publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
-        status = handleErrorCode(ctx, errorCode);
-      }
-
-      if (status == ResponseStatus.UNKNOWN) {
-        ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
-      }
-
-      if (status == ResponseStatus.NOT_MY_VBUCKET) {
-        handleNotMyVbucket(request, response);
-      } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
-        handleOutdatedCollection(request);
-      } else if (errorMapIndicatesRetry(errorCode)) {
-        RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
-      } else {
-        try {
-          Response decoded = request.decode(response, channelContext);
-          request.succeed(decoded);
-        } catch (Throwable t) {
-          request.fail(new DecodingFailedException(t));
-        }
+      try {
+        Response decoded = request.decode(response, channelContext);
+        request.succeed(decoded);
+      } catch (Throwable t) {
+        request.fail(new DecodingFailedException(t));
       }
     }
+  }
 
-    if (endpoint != null) {
-      endpoint.markRequestCompletion();
-    }
-    ReferenceCountUtil.release(response);
+  /**
+   * If certain status codes are returned from the server, there is a clear indication that the channel is
+   * invalid and needs to be closed in order to avoid any further trouble.
+   *
+   * @param status the status code to check.
+   * @return true if it indicates an invalid channel that needs to be closed.
+   */
+  private boolean statusIndicatesInvalidChannel(final ResponseStatus status) {
+    return status == ResponseStatus.INTERNAL_SERVER_ERROR
+      || status == ResponseStatus.NO_BUCKET
+      || status == ResponseStatus.NOT_INITIALIZED;
+  }
+
+  /**
+   * Helper method to perform some debug and cleanup logic if a response is received which we didn't expect.
+   *
+   * @param ctx the channel handler context from netty.
+   * @param response the response to decode and handle.
+   */
+  private void handleUnknownResponseReceived(final ChannelHandlerContext ctx, final ByteBuf response) {
+    byte[] packet = new byte[response.readableBytes()];
+    response.readBytes(packet);
+    ioContext.environment().eventBus().publish(
+      new UnknownResponseReceivedEvent(ioContext, packet)
+    );
+    // We got a response with an opaque value that we know nothing about. There is clearly something weird
+    // going on so to be sure we close the connection to avoid any further weird situations.
+    closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE);
+  }
+
+  /**
+   * Proactively close this channel with the given reason.
+   *
+   * @param ctx the channel context.
+   * @param reason the reason why the channel is closed.
+   */
+  private void closeChannelWithReason(final ChannelHandlerContext ctx,
+                                      final ChannelClosedProactivelyEvent.Reason reason) {
+    ctx.channel().close().addListener(v ->
+      ioContext.environment().eventBus().publish(new ChannelClosedProactivelyEvent(ioContext, reason))
+    );
   }
 
   /**
@@ -304,7 +341,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private ResponseStatus handleErrorCode(final ChannelHandlerContext ctx, final ErrorMap.ErrorCode errorCode) {
     if (errorCode.attributes().contains(CONN_STATE_INVALIDATED)) {
-      ctx.channel().close();
+      closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
       return ResponseStatus.UNKNOWN;
     }
 

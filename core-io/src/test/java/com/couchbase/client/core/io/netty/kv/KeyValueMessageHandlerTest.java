@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -52,6 +53,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Verifies the basic functionality of the {@link KeyValueMessageHandler}.
+ */
 class KeyValueMessageHandlerTest {
 
   static {
@@ -146,7 +150,7 @@ class KeyValueMessageHandlerTest {
    * the retry orchestrator for correct handling.
    */
   @Test
-  void shouldAttemptRetryIfInstructedByErrorMap() {
+  void attemptsRetryIfInstructedByErrorMap() {
     EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     ErrorMap errorMap = mock(ErrorMap.class);
@@ -169,9 +173,10 @@ class KeyValueMessageHandlerTest {
         (short) 0xFF, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
       channel.writeInbound(getResponse);
 
-      RequestCanceledException reason = assertThrows(RequestCanceledException.class, () -> request.response().get());
+      assertThrows(RequestCanceledException.class, () -> request.response().get());
       assertEquals("NO_MORE_RETRIES", request.cancellationReason().identifier());
       assertEquals(RetryReason.KV_ERROR_MAP_INDICATED, request.cancellationReason().innerReason());
+      assertEquals(0, getResponse.refCnt());
     } finally {
       channel.finishAndReleaseAll();
     }
@@ -182,7 +187,7 @@ class KeyValueMessageHandlerTest {
    * closed to bring it back to a valid state eventually.
    */
   @Test
-  void shouldCloseChannelWithInvalidCas() {
+  void closesChannelWithInvalidOpaque() {
     EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
@@ -202,8 +207,41 @@ class KeyValueMessageHandlerTest {
       assertEquals(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT, request2.cancellationReason().innerReason());
 
       assertFalse(channel.isOpen());
+      assertEquals(0, getResponse.refCnt());
     } finally {
       channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * As part of the KV error map, certain status codes have been identified as "must close" on the channel
+   * to avoid further problems.
+   *
+   * <p>This test makes sure that on all of those codes, the channel gets closed accordingly.</p>
+   */
+  @Test
+  void closesChannelOnCertainStatusCodes() {
+    Set<MemcacheProtocol.Status> closeOnThese = EnumSet.of(
+      MemcacheProtocol.Status.INTERNAL_SERVER_ERROR,
+      MemcacheProtocol.Status.NO_BUCKET,
+      MemcacheProtocol.Status.NOT_INITIALIZED
+    );
+
+    for (MemcacheProtocol.Status status : closeOnThese) {
+      EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+      try {
+        GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+        channel.writeOutbound(request1);
+
+        ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
+          status.status(), 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+        channel.writeInbound(getResponse);
+
+        assertFalse(channel.isOpen());
+        assertEquals(0, getResponse.refCnt());
+      } finally {
+        channel.finishAndReleaseAll();
+      }
     }
   }
 

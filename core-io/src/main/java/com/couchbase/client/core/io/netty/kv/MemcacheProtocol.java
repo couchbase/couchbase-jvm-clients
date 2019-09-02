@@ -471,6 +471,10 @@ public enum MemcacheProtocol {
       return ResponseStatus.UNKNOWN_COLLECTION;
     } else if (status == Status.NO_BUCKET.status) {
       return ResponseStatus.NO_BUCKET;
+    } else if (status == Status.INTERNAL_SERVER_ERROR.status) {
+      return ResponseStatus.INTERNAL_SERVER_ERROR;
+    } else if (status == Status.NOT_INITIALIZED.status) {
+      return ResponseStatus.NOT_INITIALIZED;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -867,6 +871,14 @@ public enum MemcacheProtocol {
      * Access problem.
      */
     ACCESS_ERROR((short) 0x24),
+    /**
+     * The server/kv engine is not initialized yet.
+     */
+    NOT_INITIALIZED((byte) 0x25),
+    /**
+     * A server-internal error has been reported.
+     */
+    INTERNAL_SERVER_ERROR((short) 0x84),
     /**
      * The server could temporarily not fulfill the requrst.
      */
