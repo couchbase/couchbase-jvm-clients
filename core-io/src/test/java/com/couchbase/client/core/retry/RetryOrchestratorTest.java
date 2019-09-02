@@ -112,7 +112,7 @@ class RetryOrchestratorTest {
     long start = System.nanoTime();
     RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);
 
-    verify(requestContext, times(1)).incrementRetryAttempts(Duration.ofMillis(200));
+    verify(requestContext, times(1)).incrementRetryAttempts(Duration.ofMillis(200), RetryReason.UNKNOWN);
     verify(request, never()).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
 
     waitUntilCondition(() -> !Mockito.mockingDetails(core).getInvocations().isEmpty());

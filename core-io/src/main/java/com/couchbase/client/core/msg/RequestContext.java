@@ -18,11 +18,18 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.retry.RetryReason;
 
 import java.time.Duration;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Additional context which might be attached to an individual {@link Request}.
@@ -46,13 +53,24 @@ public class RequestContext extends CoreContext {
    */
   private volatile Map<String, Object> clientContext;
 
+  /**
+   * The hostname/ip where this request got last dispatched to.
+   */
   private volatile String dispatchedTo;
+
+  /**
+   * Holds a set of retry reasons.
+   */
+  private volatile AtomicReference<Set<RetryReason>> retryReasons = new AtomicReference<>(null);
 
   /**
    * The number of times the attached request has been retried.
    */
   private final AtomicInteger retryAttempts;
 
+  /**
+   * The last retry duration for this request.
+   */
   private volatile Duration lastRetryDuration;
 
   /**
@@ -93,11 +111,27 @@ public class RequestContext extends CoreContext {
     return retryAttempts.get();
   }
 
+  public Set<RetryReason> retryReasons() {
+    return retryReasons.get();
+  }
+
   public Duration lastRetryDuration() {
     return lastRetryDuration;
   }
 
-  public RequestContext incrementRetryAttempts(final Duration lastRetryDuration) {
+  @Stability.Internal
+  public RequestContext incrementRetryAttempts(final Duration lastRetryDuration, final RetryReason reason) {
+    notNull(lastRetryDuration, "Retry Duration");
+    notNull(reason, "Retry Reason");
+
+    retryReasons.getAndUpdate(retryReasons -> {
+      if (retryReasons == null) {
+        retryReasons = EnumSet.of(reason);
+      } else {
+        retryReasons.add(reason);
+      }
+      return retryReasons;
+    });
     retryAttempts.incrementAndGet();
     this.lastRetryDuration = lastRetryDuration;
     return this;
@@ -107,6 +141,7 @@ public class RequestContext extends CoreContext {
     return dispatchedTo;
   }
 
+  @Stability.Internal
   public RequestContext dispatchedTo(String dispatchedTo) {
     this.dispatchedTo = dispatchedTo;
     return this;
@@ -126,6 +161,7 @@ public class RequestContext extends CoreContext {
    *
    * @param clientContext the payload to set.
    */
+  @Stability.Internal
   public RequestContext clientContext(final Map<String, Object> clientContext) {
     if (clientContext != null) {
       this.clientContext = clientContext;
@@ -150,6 +186,10 @@ public class RequestContext extends CoreContext {
     Map<String, Object> serviceContext = request.serviceContext();
     if (serviceContext != null) {
       input.put("service", serviceContext);
+    }
+    Set<RetryReason> retryReasons = retryReasons();
+    if (retryReasons != null) {
+      input.put("retryReasons", retryReasons);
     }
     if (dispatchLatency != 0) {
       input.put("timings", new HashMap<>().put("dispatch", dispatchLatency));

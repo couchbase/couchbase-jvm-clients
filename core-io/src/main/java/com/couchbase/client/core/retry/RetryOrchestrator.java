@@ -104,7 +104,7 @@ public class RetryOrchestrator {
     ctx.environment().eventBus().publish(
       new RequestRetriedEvent(duration, request.context(), request.getClass(), reason)
     );
-    request.context().incrementRetryAttempts(duration);
+    request.context().incrementRetryAttempts(duration, reason);
     ctx.environment().timer().schedule(
       () -> ctx.core().send(request,false),
       duration
