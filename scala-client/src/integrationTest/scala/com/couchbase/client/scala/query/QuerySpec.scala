@@ -1,20 +1,16 @@
 package com.couchbase.client.scala.query
 
-import java.util
-import java.util.{List, UUID}
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.QueryException
-import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.scala.codec.Conversions.Codec
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
-import org.junit.jupiter.api.Assertions.assertEquals
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 

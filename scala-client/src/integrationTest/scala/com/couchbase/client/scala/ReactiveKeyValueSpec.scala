@@ -2,6 +2,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle

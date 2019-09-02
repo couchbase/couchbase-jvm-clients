@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.implicits
 
-import com.couchbase.client.scala.codec.Conversions.{Codec, Decodable, Encodable}
+import com.couchbase.client.scala.codec.Conversions.{Decodable, Encodable}
 
 import scala.language.experimental.macros
 
@@ -36,6 +36,11 @@ object Codec {
     */
   def codec[T]: Codec[T] = macro CodecImplicits.makeCodec[T]
 }
+
+/** A Codec conveniently combines an [[com.couchbase.client.scala.codec.Conversions.Encodable]] and
+  * [[Decodable]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
+  */
+trait Codec[T] extends Encodable[T] with Decodable[T]
 
 private[scala] object CodecImplicits {
   // Implementation detail: the excellent JSON library Jsoniter, with the extensions from com.github.plokhotnyuk.jsoniter_scala,

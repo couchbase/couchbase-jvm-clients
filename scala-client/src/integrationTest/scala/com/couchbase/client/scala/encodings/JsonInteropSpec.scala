@@ -1,18 +1,14 @@
 package com.couchbase.client.scala.encodings
 
+import com.couchbase.client.scala._
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.kv.GetResult
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.scala._
-import com.couchbase.client.scala.codec.Conversions.Codec
-import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.test.ClusterAwareIntegrationTest
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
-import org.scalacheck.{Arbitrary, Gen, Prop}
-
-import scala.util.{Failure, Success}
 
 
 /**
@@ -62,7 +58,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
 
     import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
-    import com.github.plokhotnyuk.jsoniter_scala.macros.{JsonCodecMaker, CodecMakerConfig}
+    import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
     implicit val codecJsoniter: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
 
     implicit val decoder: io.circe.Decoder[User] = io.circe.generic.semiauto.deriveDecoder[User]
