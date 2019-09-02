@@ -27,7 +27,7 @@ import java.time.Duration;
 public class BestEffortRetryStrategy implements RetryStrategy {
 
   public static final BestEffortRetryStrategy INSTANCE = BestEffortRetryStrategy
-    .withExponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(500), 1);
+    .withExponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(500), 2);
 
   private final Backoff backoff;
 

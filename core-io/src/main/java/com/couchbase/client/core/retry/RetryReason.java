@@ -56,6 +56,22 @@ public enum RetryReason {
    */
   KV_ERROR_MAP_INDICATED(true, false),
   /**
+   * Server response indicates a locked document.
+   */
+  KV_LOCKED(true, false),
+  /**
+   * Server response indicates a temporary failure.
+   */
+  KV_TEMPORARY_FAILURE(true, false),
+  /**
+   * Server response indicates a sync write in progress.
+   */
+  KV_SYNC_WRITE_IN_PROGRESS(true, false),
+  /**
+   * Server response a sync write re-commit in progress.
+   */
+  KV_SYNC_WRITE_RE_COMMIT_IN_PROGRESS(true, false),
+  /**
    * The request has been dispatched into a non-pipelined handler and a request is currently
    * in-flight so it cannot be dispatched right now onto the same socket.
    */

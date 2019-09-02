@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
@@ -39,9 +40,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -239,6 +243,46 @@ class KeyValueMessageHandlerTest {
 
         assertFalse(channel.isOpen());
         assertEquals(0, getResponse.refCnt());
+      } finally {
+        channel.finishAndReleaseAll();
+      }
+    }
+  }
+
+  /**
+   * Certain status codes are identified that should be passed to the retry orchestrator rathen than complete
+   * the response right away.
+   */
+  @Test
+  void retriesCertainResponseStatusCodes() {
+    List<MemcacheProtocol.Status> retryOnThese = Arrays.asList(
+      MemcacheProtocol.Status.LOCKED,
+      MemcacheProtocol.Status.TEMPORARY_FAILURE,
+      MemcacheProtocol.Status.SYNC_WRITE_IN_PROGRESS,
+      MemcacheProtocol.Status.SYNC_WRITE_RE_COMMIT_IN_PROGRESS
+    );
+
+    List<RetryReason> retryReasons = Arrays.asList(
+      RetryReason.KV_LOCKED,
+      RetryReason.KV_TEMPORARY_FAILURE,
+      RetryReason.KV_SYNC_WRITE_IN_PROGRESS,
+      RetryReason.KV_SYNC_WRITE_RE_COMMIT_IN_PROGRESS
+    );
+
+    int i = 0;
+    for (MemcacheProtocol.Status status : retryOnThese) {
+      EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+      try {
+        GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+        channel.writeOutbound(request);
+
+        ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
+          status.status(), 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+        channel.writeInbound(getResponse);
+
+        assertEquals(CancellationReason.noMoreRetries(retryReasons.get(i)), request.cancellationReason());
+        assertEquals(0, getResponse.refCnt());
+        i++;
       } finally {
         channel.finishAndReleaseAll();
       }

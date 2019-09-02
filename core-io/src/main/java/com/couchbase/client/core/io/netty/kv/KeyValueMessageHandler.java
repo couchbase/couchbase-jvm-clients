@@ -279,11 +279,16 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else if (statusIndicatesInvalidChannel(status)) {
       closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
-      try {
-        Response decoded = request.decode(response, channelContext);
-        request.succeed(decoded);
-      } catch (Throwable t) {
-        request.fail(new DecodingFailedException(t));
+      RetryReason retryReason = statusCodeIndicatesRetry(status);
+      if (retryReason == null) {
+        try {
+          Response decoded = request.decode(response, channelContext);
+          request.succeed(decoded);
+        } catch (Throwable t) {
+          request.fail(new DecodingFailedException(t));
+        }
+      } else {
+        RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
       }
     }
   }
@@ -297,7 +302,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private boolean statusIndicatesInvalidChannel(final ResponseStatus status) {
     return status == ResponseStatus.INTERNAL_SERVER_ERROR
-      || status == ResponseStatus.NO_BUCKET
+      || (status == ResponseStatus.NO_BUCKET && bucketName.isPresent())
       || status == ResponseStatus.NOT_INITIALIZED;
   }
 
@@ -368,6 +373,27 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private boolean errorMapIndicatesRetry(final ErrorMap.ErrorCode errorCode) {
     return errorCode != null && (errorCode.attributes().contains(RETRY_NOW) || errorCode.attributes().contains(RETRY_LATER));
+  }
+
+  /**
+   * Certain error codes can be transparently retried in the client instead of being raised to the user.
+   *
+   * @param status the status code to check.
+   * @return the retry reason that indicates the retry.
+   */
+  private RetryReason statusCodeIndicatesRetry(final ResponseStatus status) {
+    switch (status) {
+      case LOCKED:
+        return RetryReason.KV_LOCKED;
+      case TEMPORARY_FAILURE:
+        return RetryReason.KV_TEMPORARY_FAILURE;
+      case SYNC_WRITE_IN_PROGRESS:
+        return RetryReason.KV_SYNC_WRITE_IN_PROGRESS;
+      case SYNC_WRITE_RE_COMMIT_IN_PROGRESS:
+        return RetryReason.KV_SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
+      default:
+        return null;
+    }
   }
 
   /**

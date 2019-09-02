@@ -19,7 +19,8 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.KeyNotFoundException;
-import com.couchbase.client.core.error.LockException;
+import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.BinaryContent;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -27,8 +28,8 @@ import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -36,10 +37,12 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
+import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static com.couchbase.client.java.kv.UnlockOptions.unlockOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -47,6 +50,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -60,20 +64,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class KeyValueIntegrationTest extends JavaIntegrationTest {
 
-  private Cluster cluster;
-  private ClusterEnvironment environment;
-  private Collection collection;
+  static private Cluster cluster;
+  static private ClusterEnvironment environment;
+  static private Collection collection;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     environment = environment().build();
     cluster = Cluster.connect(environment);
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     cluster.shutdown();
     environment.shutdown();
   }
@@ -212,7 +216,15 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
   }
 
+  /**
+   * We need to ignore this test on the mock because the mock returns TMPFAIL instead of LOCKED when the
+   * document is locked (which used to be the old functionality but now since XERROR is negotiated it
+   * returns LOCKED properly).
+   *
+   * <p>Once the mock is modified to return LOCKED, this test can also be run on the mock again.</p>
+   */
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   void getAndLock() {
     String id = UUID.randomUUID().toString();
 
@@ -227,7 +239,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertNotEquals(insert.cas(), getAndLock.cas());
     assertEquals(expected, getAndLock.contentAsObject());
 
-    assertThrows(LockException.class, () -> collection.getAndLock(id));
+    RequestTimeoutException exception = assertThrows(
+      RequestTimeoutException.class,
+      () -> collection.getAndLock(id, getAndLockOptions().timeout(Duration.ofMillis(100)))
+    );
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
     assertThrows(KeyNotFoundException.class, () -> collection.getAndLock("some_doc"));
   }
 
@@ -394,7 +410,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     });
   }
 
+  /**
+   * The mock returns TMPFAIL instead of LOCKED, so this test is ignored on the mock.
+   */
   @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
   void unlock() {
     String id = UUID.randomUUID().toString();
 
@@ -403,8 +423,16 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult locked = collection.getAndLock(id);
 
-    assertThrows(LockException.class, () -> collection.upsert(id, JsonObject.empty()));
-    assertThrows(LockException.class, () -> collection.unlock(id, locked.cas() + 1));
+    RequestTimeoutException exception = assertThrows(
+      RequestTimeoutException.class,
+      () -> collection.upsert(id, JsonObject.empty(), upsertOptions().timeout(Duration.ofMillis(100))));
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
+
+    exception = assertThrows(
+      RequestTimeoutException.class,
+      () -> collection.unlock(id, locked.cas() + 1, unlockOptions().timeout(Duration.ofMillis(100)))
+    );
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
 
     collection.unlock(id, locked.cas());
 
@@ -466,6 +494,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
 
     MutationResult append = collection.reactive().binary().append(id, worldBytes).block();
+    assertNotNull(append);
     assertTrue(append.cas() != 0);
     assertNotEquals(append.cas(), upsert.cas());
 
