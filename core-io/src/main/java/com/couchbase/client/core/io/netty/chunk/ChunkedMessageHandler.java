@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.io.netty.chunk;
 
+import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -40,6 +42,7 @@ import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 
+import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
@@ -130,6 +133,9 @@ public abstract class ChunkedMessageHandler
     // toes.
     if (!pipelined && currentRequest != null) {
       RetryOrchestrator.maybeRetry(endpointContext, (REQ) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
+      if (endpoint != null) {
+        endpoint.decrementOutstandingRequests();
+      }
       return;
     }
 
@@ -140,7 +146,10 @@ public abstract class ChunkedMessageHandler
       encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
       ctx.write(encoded, promise);
     } catch (Throwable t) {
-      // TODO: handle encoding/write failures
+      currentRequest.response().completeExceptionally(t);
+      if (endpoint != null) {
+        endpoint.decrementOutstandingRequests();
+      }
     }
   }
 
@@ -157,7 +166,7 @@ public abstract class ChunkedMessageHandler
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) {
+  public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     try {
       if (msg instanceof HttpResponse) {
         handleHttpResponse(ctx, (HttpResponse) msg);
@@ -175,7 +184,10 @@ public abstract class ChunkedMessageHandler
           }
         }
       } else {
-        // todo: error -> unknown response type
+        ioContext.environment().eventBus().publish(
+          new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
+        );
+        closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_FORMAT_DETECTED);
       }
     } finally {
       ReferenceCountUtil.release(msg);

@@ -31,19 +31,24 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import org.junit.internal.runners.statements.Fail;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.readResource;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,6 +61,10 @@ import static org.mockito.Mockito.verify;
  * Verifies the functionality of the {@link QueryMessageHandler}.
  */
 class QueryMessageHandlerTest {
+
+  static {
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+  }
 
   private static CoreEnvironment ENV;
   private static CoreContext CORE_CTX;
@@ -129,6 +138,28 @@ class QueryMessageHandlerTest {
     channel.writeInbound(lastChunk);
 
     verify(endpoint, times(1)).markRequestCompletion();
+
+    channel.finishAndReleaseAll();
+  }
+
+  @Test
+  void handlesConcurrentInFlightRequest() {
+    BaseEndpoint endpoint = mock(BaseEndpoint.class);
+    EmbeddedChannel channel = new EmbeddedChannel(new QueryMessageHandler(endpoint, ENDPOINT_CTX));
+
+    byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
+    QueryRequest request1 = new QueryRequest(
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query
+    );
+    QueryRequest request2 = new QueryRequest(
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.credentials(), "statement", query
+    );
+    channel.writeAndFlush(request1);
+    channel.writeAndFlush(request2);
+
+    waitUntilCondition(() -> request2.context().retryAttempts() > 0);
+    verify(endpoint, times(1)).decrementOutstandingRequests();
+    channel.finishAndReleaseAll();
   }
 
 }

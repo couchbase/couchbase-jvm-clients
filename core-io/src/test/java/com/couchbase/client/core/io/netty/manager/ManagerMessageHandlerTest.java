@@ -32,6 +32,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
@@ -55,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ManagerMessageHandlerTest {
 
@@ -85,7 +87,9 @@ class ManagerMessageHandlerTest {
   void returnsNewConfigsWhenChunked() throws Exception {
     CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV);
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
-
+    EndpointContext endpointContext = mock(EndpointContext.class);
+    when(endpointContext.environment()).thenReturn(ENV);
+    when(endpoint.endpointContext()).thenReturn(endpointContext);
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
@@ -151,7 +155,9 @@ class ManagerMessageHandlerTest {
   void closesStreamIfChannelClosed() throws Exception {
     CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV);
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
-
+    EndpointContext endpointContext = mock(EndpointContext.class);
+    when(endpointContext.environment()).thenReturn(ENV);
+    when(endpoint.endpointContext()).thenReturn(endpointContext);
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,

@@ -111,7 +111,7 @@ object SearchMock {
       val channel = new EmbeddedChannel(handler)
 
       // Writing the request is necessary to estabish some initial state inChunkedSearchMessageHandler
-      channel.writeAndFlush(req)
+      channel.writeAndFlush(spiedReq)
 
       // Finally we can do the interesting bit of passing our fake FTS service response into
       // ChunkedSearchMessageHandler

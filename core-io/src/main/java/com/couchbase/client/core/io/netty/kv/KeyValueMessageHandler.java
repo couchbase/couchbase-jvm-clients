@@ -49,6 +49,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
@@ -221,7 +222,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         ioContext.environment().eventBus().publish(
           new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
         );
-        closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_FORMAT_DETECTED);
+        closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_FORMAT_DETECTED);
       }
     } finally {
       if (endpoint != null) {
@@ -277,7 +278,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else if (errorMapIndicatesRetry(errorCode)) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
     } else if (statusIndicatesInvalidChannel(status)) {
-      closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
+      closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
       RetryReason retryReason = statusCodeIndicatesRetry(status);
       if (retryReason == null) {
@@ -320,20 +321,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     );
     // We got a response with an opaque value that we know nothing about. There is clearly something weird
     // going on so to be sure we close the connection to avoid any further weird situations.
-    closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE);
-  }
-
-  /**
-   * Proactively close this channel with the given reason.
-   *
-   * @param ctx the channel context.
-   * @param reason the reason why the channel is closed.
-   */
-  private void closeChannelWithReason(final ChannelHandlerContext ctx,
-                                      final ChannelClosedProactivelyEvent.Reason reason) {
-    ctx.channel().close().addListener(v ->
-      ioContext.environment().eventBus().publish(new ChannelClosedProactivelyEvent(ioContext, reason))
-    );
+    closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE);
   }
 
   /**
@@ -346,7 +334,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private ResponseStatus handleErrorCode(final ChannelHandlerContext ctx, final ErrorMap.ErrorCode errorCode) {
     if (errorCode.attributes().contains(CONN_STATE_INVALIDATED)) {
-      closeChannelWithReason(ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
+      closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
       return ResponseStatus.UNKNOWN;
     }
 

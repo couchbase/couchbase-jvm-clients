@@ -456,10 +456,18 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Stability.Internal
   public void markRequestCompletion() {
+    decrementOutstandingRequests();
+    lastResponseTimestamp = System.nanoTime();
+  }
+
+  /**
+   * Helper method to decrement outstanding requests, even if they haven't finished yet.
+   */
+  @Stability.Internal
+  public void decrementOutstandingRequests() {
     if (!pipelined) {
       outstandingRequests.decrementAndGet();
     }
-    lastResponseTimestamp = System.nanoTime();
   }
 
   /**

@@ -35,6 +35,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -43,6 +44,7 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
 
+import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
@@ -116,13 +118,33 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
   @Override
   @SuppressWarnings("unchecked")
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    // We still have a request in-flight so we need to reschedule it in order to not let it trip on each others
+    // toes.
+    if (currentRequest != null) {
+      RetryOrchestrator.maybeRetry(endpointContext, (Request<? extends Response>) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
+      if (endpoint != null) {
+        endpoint.decrementOutstandingRequests();
+      }
+      return;
+    }
+
     if (msg instanceof NonChunkedHttpRequest) {
-      currentRequest = (NonChunkedHttpRequest<Response>) msg;
-      FullHttpRequest encoded = ((NonChunkedHttpRequest<Response>) msg).encode();
-      encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
-      encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
-      ctx.write(encoded, promise);
+      try {
+        currentRequest = (NonChunkedHttpRequest<Response>) msg;
+        FullHttpRequest encoded = ((NonChunkedHttpRequest<Response>) msg).encode();
+        encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
+        encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
+        ctx.write(encoded, promise);
+      } catch (Throwable t) {
+        currentRequest.response().completeExceptionally(t);
+        if (endpoint != null) {
+          endpoint.decrementOutstandingRequests();
+        }
+      }
     } else {
+      if (endpoint != null) {
+        endpoint.decrementOutstandingRequests();
+      }
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, serviceType, msg));
       ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(
         ioContext,
@@ -179,6 +201,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         ioContext.environment().eventBus().publish(
           new UnsupportedResponseTypeReceivedEvent(ioContext, msg)
         );
+        closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.INVALID_RESPONSE_FORMAT_DETECTED);
       }
     } finally {
       ReferenceCountUtil.release(msg);

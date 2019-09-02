@@ -25,7 +25,9 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
@@ -41,6 +43,8 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+
+import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
  * This handler dispatches requests and responses against the cluster manager service.
@@ -64,6 +68,11 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
    */
   private BucketConfigStreamingResponse streamingResponse;
 
+  /**
+   * Stores the remote host for caching purposes.
+   */
+  private String remoteHost;
+
   private ByteBuf currentContent;
   private HttpResponse currentResponse;
   private final EventBus eventBus;
@@ -84,6 +93,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       Optional.empty()
     );
 
+    remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
     currentContent = ctx.alloc().buffer();
     ctx.fireChannelActive();
   }
@@ -94,13 +104,29 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     if (msg instanceof ManagerRequest) {
       if (currentRequest != null) {
         RetryOrchestrator.maybeRetry(coreContext, (ManagerRequest<Response>) msg, RetryReason.NOT_PIPELINED_REQUEST_IN_FLIGHT);
+        if (endpoint != null) {
+          endpoint.decrementOutstandingRequests();
+        }
         return;
       }
 
-      currentRequest = (ManagerRequest<Response>) msg;
-      ctx.writeAndFlush(((ManagerRequest) msg).encode());
+      try {
+        currentRequest = (ManagerRequest<Response>) msg;
+        FullHttpRequest encoded = currentRequest.encode();
+        encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
+        encoded.headers().set(HttpHeaderNames.USER_AGENT, endpoint.endpointContext().environment().userAgent().formattedLong());
+        ctx.writeAndFlush(encoded);
+      } catch (Throwable t) {
+        currentRequest.response().completeExceptionally(t);
+        if (endpoint != null) {
+          endpoint.decrementOutstandingRequests();
+        }
+      }
       currentContent.clear();
     } else {
+      if (endpoint != null) {
+        endpoint.decrementOutstandingRequests();
+      }
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.MANAGER, msg));
       ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(
         ioContext,

@@ -116,6 +116,7 @@ public class SearchMock {
                     Optional.of("bucket"), null);
 
             BaseEndpoint endpoint = mock(BaseEndpoint.class);
+            when(endpoint.endpointContext()).thenReturn(endpointContext);
             when(endpoint.pipelined()).thenReturn(false);
 
             // ChunkedSearchMessageHandler does most of the work in handling responses from the service
@@ -126,7 +127,7 @@ public class SearchMock {
             final EmbeddedChannel channel = new EmbeddedChannel(handler);
 
             // Writing the request is necessary to estabish some initial state inChunkedSearchMessageHandler
-            channel.writeAndFlush(req);
+            channel.writeAndFlush(spiedReq);
 
             // Finally we can do the interesting bit of passing our fake FTS service response into
             // ChunkedSearchMessageHandler
