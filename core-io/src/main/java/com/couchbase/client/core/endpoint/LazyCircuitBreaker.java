@@ -114,18 +114,22 @@ class LazyCircuitBreaker implements CircuitBreaker {
 
   @Override
   public void reset() {
+    final long now = System.nanoTime();
     state.set(State.CLOSED);
-    circuitOpened = -1;
+    circuitOpened = now - sleepingWindow;
     totalInWindow.set(0);
     failureInWindow.set(0);
-    windowStartTimestamp = -1;
+    windowStartTimestamp = now - rollingWindow;
   }
 
   @Override
   public boolean allowsRequest() {
     State state = state();
-    boolean sleepingWindowElapsed = System.nanoTime() > (circuitOpened + sleepingWindow);
-    return state == State.CLOSED || (state == State.OPEN && sleepingWindowElapsed);
+    if (state == State.CLOSED) {
+      return true;
+    }
+    boolean sleepingWindowElapsed = (System.nanoTime() - circuitOpened) > sleepingWindow;
+    return state == State.OPEN && sleepingWindowElapsed;
   }
 
   @Override
@@ -138,7 +142,7 @@ class LazyCircuitBreaker implements CircuitBreaker {
    */
   private void cleanRollingWindow() {
     long now = System.nanoTime();
-    if (now > (windowStartTimestamp + rollingWindow)) {
+    if ((now - windowStartTimestamp) > rollingWindow) {
       windowStartTimestamp = now;
       totalInWindow.set(0);
       failureInWindow.set(0);
