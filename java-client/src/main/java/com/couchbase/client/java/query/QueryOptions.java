@@ -387,13 +387,13 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
       scanCap.ifPresent(v -> queryJson.put("scan_cap", v.toString()));
 
-      metricsDisabled.ifPresent(v -> queryJson.put("metrics", v.toString()));
+      metricsDisabled.ifPresent(v -> queryJson.put("metrics", !v));
 
-      readonly.ifPresent(v -> queryJson.put("readonly", v.toString()));
+      readonly.ifPresent(v -> queryJson.put("readonly", v));
 
       boolean autoPrepare = Boolean.parseBoolean(System.getProperty("com.couchbase.client.query.autoprepared", "false"));
       if (autoPrepare) {
-        queryJson.put("auto_prepare", "true");
+        queryJson.put("auto_prepare", true);
       }
 
       rawParams.ifPresent(v -> {

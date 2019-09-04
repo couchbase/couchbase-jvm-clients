@@ -38,7 +38,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -101,6 +103,42 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
+    }
+
+    @Test
+    void exerciseAllOptions() {
+        String id = insertDoc();
+        QueryOptions options = queryOptions()
+            .adhoc(true)
+            .clientContextId("123")
+            .maxParallelism(3)
+            .metricsDisabled(true)
+            .pipelineBatch(1)
+            .pipelineCap(1)
+            .prepared(false)
+            .readonlyEnabled(true)
+            .scanCap(10)
+            .scanConsistency(ScanConsistency.REQUEST_PLUS)
+            .scanWait(Duration.ofMillis(50));
+        QueryResult result = cluster.query(
+            "select * from " + bucketName + " where meta().id=\"" + id + "\"",
+            options
+        );
+
+        assertEquals(QueryStatus.SUCCESS, result.metaData().status());
+        assertEquals(Optional.of("123"), result.metaData().clientContextId());
+        assertFalse(result.metaData().metrics().isPresent());
+    }
+
+    @Test
+    void readOnlyViolation() {
+        QueryOptions options = queryOptions().readonlyEnabled(true);
+        QueryException e = assertThrows(QueryException.class, () ->
+            cluster.query(
+                "INSERT INTO " + bucketName + " (KEY, VALUE) values (\"foo\", \"bar\")",
+                options
+            ));
+        assertEquals(1000, e.code());
     }
 
     @Test
