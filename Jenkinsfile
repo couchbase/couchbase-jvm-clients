@@ -4,6 +4,9 @@ def DEFAULT_PLATFORM = PLATFORMS[0]
 
 pipeline {
     agent none
+    options {
+        timeout(time: 60, unit: 'MINUTES')
+    }
     stages {
         stage('job valid?') {
             when {
