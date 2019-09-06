@@ -34,6 +34,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -120,13 +122,13 @@ public abstract class BaseKeyValueRequest<R extends Response>
     ctx.put("type", serviceType().ident());
 
     if (collectionIdentifier != null) {
-      ctx.put("bucket", collectionIdentifier.bucket());
-      ctx.put("scope", collectionIdentifier.scope());
-      ctx.put("collection", collectionIdentifier.collection());
+      ctx.put("bucket", redactMeta(collectionIdentifier.bucket()));
+      ctx.put("scope", redactMeta(collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE)));
+      ctx.put("collection", redactMeta(collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION)));
     }
 
     if (key != null) {
-      ctx.put("key", new String(key, UTF_8));
+      ctx.put("key", redactUser(new String(key, UTF_8)));
     }
 
     return ctx;
