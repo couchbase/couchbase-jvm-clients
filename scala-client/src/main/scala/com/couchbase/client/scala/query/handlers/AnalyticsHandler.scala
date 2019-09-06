@@ -19,10 +19,8 @@ package com.couchbase.client.scala.query.handlers
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
-import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.scala.analytics.AnalyticsOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
 
@@ -51,6 +49,7 @@ private[scala] class AnalyticsHandler() {
       _ <- Validate.optNotNull(options.serverSideTimeout, "serverSideTimeout")
       _ <- Validate.optNotNull(options.timeout, "timeout")
       _ <- Validate.notNull(options.priority, "priority")
+      _ <- Validate.optNotNull(options.readonly, "readonly")
     } yield null
 
     if (validations.isFailure) {
@@ -71,7 +70,8 @@ private[scala] class AnalyticsHandler() {
           retryStrategy,
           environment.credentials,
           queryBytes,
-          if (options.priority) -1 else 0)
+          if (options.priority) -1 else 0,
+          options.readonly.getOrElse(false))
       })
     }
   }

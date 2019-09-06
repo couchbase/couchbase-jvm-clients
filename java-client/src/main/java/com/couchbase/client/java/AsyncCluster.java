@@ -284,7 +284,7 @@ public class AsyncCluster {
     opts.injectParams(query);
 
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
-        query.toString().getBytes(StandardCharsets.UTF_8), opts.priority()
+        query.toString().getBytes(StandardCharsets.UTF_8), opts.priority(), opts.readonly()
     );
     request.context().clientContext(opts.clientContext());
     return request;

@@ -25,6 +25,7 @@ import com.couchbase.client.java.query.QueryOptions;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
@@ -34,7 +35,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   private Map<String, Object> rawParams;
   private JsonValue parameters;
   private ScanConsistency scanConsistency;
-
+  private Optional<Boolean> readonly = Optional.empty();
 
   public static AnalyticsOptions analyticsOptions() {
     return new AnalyticsOptions();
@@ -49,6 +50,11 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   public AnalyticsOptions clientContextId(final String clientContextId) {
     this.clientContextId = clientContextId;
+    return this;
+  }
+
+  public AnalyticsOptions readonly(boolean readonly) {
+    this.readonly = Optional.of(readonly);
     return this;
   }
 
@@ -100,6 +106,10 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    public boolean readonly() {
+      return readonly.orElse(false);
+    }
+
     public int priority() {
       return priority;
     }
@@ -129,6 +139,8 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
           });
         }
       }
+
+      readonly.ifPresent(v -> input.put("readonly", v));
 
       if (rawParams != null) {
         for (Map.Entry<String, Object> entry : rawParams.entrySet()) {

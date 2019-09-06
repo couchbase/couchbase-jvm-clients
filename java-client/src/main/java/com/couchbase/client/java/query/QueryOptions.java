@@ -195,11 +195,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    *  - UPSERT
    *  - DELETE
    *
-   * @param readonlyEnabled true if readonly should be forced, false is the default and will use the server side default.
+   * @param readonly true if readonly should be forced, false is the default and will use the server side default.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions readonlyEnabled(boolean readonlyEnabled) {
-    this.readonly = Optional.of(readonlyEnabled);
+  public QueryOptions readonly(boolean readonly) {
+    this.readonly = Optional.of(readonly);
     return this;
   }
 

@@ -18,6 +18,7 @@ package com.couchbase.client.scala.analytics
 
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.query.QueryOptions
 
 import scala.concurrent.duration.Duration
 
@@ -33,7 +34,8 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None,
-                        private[scala] val priority: Boolean = false
+                        private[scala] val priority: Boolean = false,
+                        private[scala] val readonly: Option[Boolean] = None
                        ) {
   /** Provides a named parameter for queries parameterised that way.
     *
@@ -100,6 +102,8 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
     copy(priority = value)
   }
 
+  def readonly(readonly: Boolean): AnalyticsOptions = copy(readonly = Option(readonly))
+
   private[scala] def durationToN1qlFormat(duration: Duration) = {
     if (duration.toSeconds > 0) duration.toSeconds + "s"
     else duration.toNanos + "ns"
@@ -123,6 +127,8 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
 
     clientContextId.foreach(v => out.put("client_context_id", v))
+
+    readonly.foreach(v => out.put("readonly", v))
 
     out
   }

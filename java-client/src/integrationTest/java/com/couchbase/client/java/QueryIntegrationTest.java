@@ -116,7 +116,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
             .pipelineBatch(1)
             .pipelineCap(1)
             .prepared(false)
-            .readonlyEnabled(true)
+            .readonly(true)
             .scanCap(10)
             .scanConsistency(ScanConsistency.REQUEST_PLUS)
             .scanWait(Duration.ofMillis(50));
@@ -132,7 +132,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void readOnlyViolation() {
-        QueryOptions options = queryOptions().readonlyEnabled(true);
+        QueryOptions options = queryOptions().readonly(true);
         QueryException e = assertThrows(QueryException.class, () ->
             cluster.query(
                 "INSERT INTO " + bucketName + " (KEY, VALUE) values (\"foo\", \"bar\")",

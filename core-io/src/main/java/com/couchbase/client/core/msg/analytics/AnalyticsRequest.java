@@ -47,15 +47,17 @@ public class AnalyticsRequest
   private static final String URI = "/analytics/service";
   private final byte[] query;
   private final int priority;
+  private final boolean idempotent;
 
   private final Credentials credentials;
 
   public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                          final Credentials credentials, final byte[] query, int priority) {
+                          final Credentials credentials, final byte[] query, int priority, boolean idempotent) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.credentials = credentials;
     this.priority = priority;
+    this.idempotent = idempotent;
   }
 
   @Override
@@ -88,4 +90,8 @@ public class AnalyticsRequest
     return ServiceType.ANALYTICS;
   }
 
+  @Override
+  public boolean idempotent() {
+    return idempotent;
+  }
 }
