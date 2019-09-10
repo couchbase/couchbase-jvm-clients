@@ -17,7 +17,6 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
@@ -32,15 +31,14 @@ import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
@@ -263,19 +261,19 @@ public class Core {
     return configurationProvider
       .loadAndRefreshGlobalConfig()
       .onErrorResume(throwable -> {
+        InitGlobalConfigFailedEvent.Reason reason = InitGlobalConfigFailedEvent.Reason.UNKNOWN;
         if (throwable instanceof UnsupportedConfigMechanismException) {
-          // this is expected, looks like global configs are not supported by this cluster version
-          eventBus.publish(new InitGlobalConfigFailedEvent(
-            Event.Severity.DEBUG,
-            Duration.ofNanos(start - System.nanoTime()),
-            context(),
-            InitGlobalConfigFailedEvent.Reason.UNSUPPORTED
-          ));
-          return Mono.empty();
-        } else {
-          // all other are forwarded
-          return Mono.error(throwable);
+          reason = InitGlobalConfigFailedEvent.Reason.UNSUPPORTED;
+        } else if (throwable instanceof GlobalConfigNotFoundException) {
+          reason = InitGlobalConfigFailedEvent.Reason.NO_CONFIG_FOUND;
         }
+        eventBus.publish(new InitGlobalConfigFailedEvent(
+          reason.severity(),
+          Duration.ofNanos(start - System.nanoTime()),
+          context(),
+          reason
+        ));
+        return Mono.empty();
       });
   }
 

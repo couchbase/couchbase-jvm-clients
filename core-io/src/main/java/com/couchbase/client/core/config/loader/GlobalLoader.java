@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
@@ -89,8 +90,10 @@ public class GlobalLoader {
         return response.content();
       } else if (response.status() == ResponseStatus.UNSUPPORTED || response.status() == ResponseStatus.NO_BUCKET) {
         throw new UnsupportedConfigMechanismException();
+      } else if (response.status() == ResponseStatus.NOT_FOUND) {
+        throw new GlobalConfigNotFoundException();
       } else {
-        throw new ConfigException("Received error status from GlobalLoader: " + response);
+        throw new ConfigException("Received unexpected error status from GlobalLoader: " + response);
       }
     });
   }

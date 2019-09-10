@@ -42,7 +42,19 @@ public class InitGlobalConfigFailedEvent extends AbstractEvent {
    * The reasons why the global config init failed.
    */
   public enum Reason {
-    UNSUPPORTED
+    UNSUPPORTED(Severity.DEBUG),
+    NO_CONFIG_FOUND(Severity.WARN),
+    UNKNOWN(Severity.WARN);
+
+    private final Severity severity;
+
+    Reason(Severity severity) {
+      this.severity = severity;
+    }
+
+    public Severity severity() {
+      return severity;
+    }
   }
 
 }

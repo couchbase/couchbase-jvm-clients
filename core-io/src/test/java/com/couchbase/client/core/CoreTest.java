@@ -16,19 +16,25 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.error.GlobalConfigNotFoundException;
+import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -36,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.client.test.Util.readResource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
@@ -50,9 +57,12 @@ class CoreTest {
 
   private static String LOCALHOST = "127.0.0.1";
 
+  private static SimpleEventBus EVENT_BUS;
+
   @BeforeAll
   static void beforeAll() {
-    ENV = CoreEnvironment.create(mock(Credentials.class));
+    EVENT_BUS = new SimpleEventBus(true);
+    ENV = CoreEnvironment.builder(mock(Credentials.class)).eventBus(EVENT_BUS).build();
   }
 
   @AfterAll
@@ -496,6 +506,33 @@ class CoreTest {
       .addService(ServiceType.MANAGER, 9001, Optional.empty());
     verify(mock102, times(1))
       .addService(ServiceType.KV, 12002, Optional.of("default"));
+  }
+
+  @Test
+  void ignoresFailedGlobalConfigInitAttempt() {
+    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
+    when(configProvider.configs()).thenReturn(Flux.empty());
+
+    Core core = new Core(ENV) {
+      @Override
+      public ConfigurationProvider createConfigurationProvider() {
+        return configProvider;
+      }
+    };
+
+    when(configProvider.loadAndRefreshGlobalConfig()).thenReturn(Mono.error(new GlobalConfigNotFoundException()));
+    core.initGlobalConfig().block();
+
+    when(configProvider.loadAndRefreshGlobalConfig()).thenReturn(Mono.error(new UnsupportedConfigMechanismException()));
+    core.initGlobalConfig().block();
+
+    int numRaised = 0;
+    for (Event event : EVENT_BUS.publishedEvents()) {
+      if (event instanceof InitGlobalConfigFailedEvent) {
+        numRaised++;
+      }
+    }
+    assertEquals(2, numRaised);
   }
 
 }
