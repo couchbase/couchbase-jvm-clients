@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import java.util.Objects;
+
 /**
  * Result returned from an exists KeyValue operation.
  *
@@ -29,25 +31,42 @@ public class ExistsResult {
   private final long cas;
 
   /**
+   * Holds the boolean if the doc actually exists.
+   */
+  private final boolean exists;
+
+  /**
    * Creates a new {@link ExistsResult}.
    *
+   * @param exists if the doc exists or not.
    * @param cas the CAS of the document.
    */
-  ExistsResult(long cas) {
+  ExistsResult(final boolean exists, final long cas) {
+    this.exists = exists;
     this.cas = cas;
   }
 
   /**
    * If the document is present, returns its current CAS value at the time of the exists operation.
+   *
+   * <p>Note that if the document does not exist, this will return 0!</p>
    */
   public long cas() {
     return cas;
+  }
+
+  /**
+   * True if the document exists, false otherwise.
+   */
+  public boolean exists() {
+    return exists;
   }
 
   @Override
   public String toString() {
     return "ExistsResult{" +
       "cas=" + cas +
+      ", exists=" + exists +
       '}';
   }
 
@@ -55,15 +74,13 @@ public class ExistsResult {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
     ExistsResult that = (ExistsResult) o;
-
-    return cas == that.cas;
+    return cas == that.cas &&
+      exists == that.exists;
   }
 
   @Override
   public int hashCode() {
-    return (int) (cas ^ (cas >>> 32));
+    return Objects.hash(cas, exists);
   }
-
 }

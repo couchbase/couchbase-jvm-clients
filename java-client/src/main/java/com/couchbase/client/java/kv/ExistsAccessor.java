@@ -35,9 +35,9 @@ public class ExistsAccessor {
         boolean found = response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
           || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
         if (response.status().success() && found) {
-            return new ExistsResult(response.cas());
+            return new ExistsResult(true, response.cas());
         } else if (!found) {
-          throw KeyNotFoundException.forKey(key);
+          return new ExistsResult(false, 0);
         } else {
           throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

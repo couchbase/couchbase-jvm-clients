@@ -100,7 +100,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void exists() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(KeyNotFoundException.class, () -> collection.exists(id));
+    assertFalse(collection.exists(id).exists());
 
     MutationResult insertResult = collection.insert(id, "Hello, World");
     assertTrue(insertResult.cas() != 0);
@@ -108,7 +108,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     ExistsResult existsResult = collection.exists(id);
 
     assertEquals(insertResult.cas(), existsResult.cas());
-    assertThrows(KeyNotFoundException.class, () -> collection.exists("some_id"));
+    assertTrue(existsResult.exists());
+    assertFalse(collection.exists("some_id").exists());
   }
 
   @Test
