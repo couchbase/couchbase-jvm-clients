@@ -18,9 +18,9 @@ package com.couchbase.client.java.datastructures;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
-import com.couchbase.client.java.datastructures.CouchbaseMap;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +41,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     private static Cluster cluster;
     private static ClusterEnvironment environment;
     private static Collection collection;
+    private static MapOptions options;
 
     private String uuid;
 
@@ -49,6 +50,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         collection = cluster.bucket(config().bucketname()).defaultCollection();
+        options = MapOptions.mapOptions();
     }
 
     @AfterAll
@@ -83,12 +85,12 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
 
     @Test
     void shouldCreateEmptyMap() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         assertEquals(0, map.size());
     }
     @Test
     void shouldPut() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         assertEquals(0, map.size());
         Integer oldVal = map.put("a", 1);
         assertEquals(null, oldVal);
@@ -97,7 +99,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void shouldPutWithUpsertAndReturnOldValue() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(createJavaMap());
         Integer oldVal = map.put("a", 100);
         assertEquals(1, oldVal.intValue());
@@ -105,7 +107,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void shouldRemove() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(createJavaMap());
         Integer oldVal = map.remove("a");
         assertEquals(4, map.size());
@@ -114,7 +116,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void shouldClear() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(createJavaMap());
         assertEquals(5, map.size());
         map.clear();
@@ -122,7 +124,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void shouldEntrySet() {
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(createJavaMap());
         assertEquals(5, map.size());
         assertEquals(5, map.entrySet().size());
@@ -130,7 +132,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     @Test
     void canIterate() {
         HashMap<String, Integer> javaMap = createJavaMap();
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(javaMap);
         map.forEach((key, value) -> {
             assertTrue(javaMap.containsKey(key));
@@ -139,7 +141,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void canRemoveFromIterate() {
-        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class, options);
         map.putAll(createJavaMap());
         assertEquals(5, map.size());
         Iterator<Map.Entry<String, Integer>>  it = map.entrySet().iterator();
@@ -154,7 +156,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     @Test
     void canContainsKey() {
         HashMap<String, Integer> javaMap = createJavaMap();
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(javaMap);
         for(String key: javaMap.keySet()) {
             assertTrue(map.containsKey(key));
@@ -163,7 +165,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     @Test
     void canContainsValue() {
         HashMap<String, Integer> javaMap = createJavaMap();
-        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class);
+        CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(javaMap);
         for(Integer value: javaMap.values()) {
             assertTrue(map.containsValue(value));
@@ -171,7 +173,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void canUseJsonObjects() {
-        CouchbaseMap<JsonObject> map = new CouchbaseMap<>(uuid, collection, JsonObject.class);
+        CouchbaseMap<JsonObject> map = new CouchbaseMap<>(uuid, collection, JsonObject.class, options);
         JsonObject obj1 = JsonObject.fromJson("{\"string\":\"foo\", \"integer\":1}");
         JsonObject obj2 = JsonObject.fromJson("{\"string\":\"bar\", \"integer\":2}");
         map.put("a", obj1);
@@ -182,7 +184,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void canUseObjects() {
-        CouchbaseMap<TestObject> map = new CouchbaseMap<>(uuid, collection, TestObject.class);
+        CouchbaseMap<TestObject> map = new CouchbaseMap<>(uuid, collection, TestObject.class, options);
         TestObject obj1 = new TestObject(1, "foo");
         TestObject obj2 = new TestObject(2, "bar");
         map.put("a", obj1);
@@ -192,11 +194,11 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     }
     @Test
     void canConstructUsingCouchbaseCollection() {
-        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class, options);
         assertTrue(map.isEmpty());
         map.put("a", 1);
         assertFalse(map.isEmpty());
-        CouchbaseMap<Integer> map2 = collection.map(uuid, Integer.class);
+        CouchbaseMap<Integer> map2 = collection.map(uuid, Integer.class, options);
         assertFalse(map.isEmpty());
         assertFalse(map2.isEmpty());
     }

@@ -23,6 +23,8 @@ import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
 import com.couchbase.client.java.datastructures.CouchbaseQueue;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.ArrayListOptions;
+import com.couchbase.client.java.kv.ArraySetOptions;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -34,10 +36,12 @@ import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -46,7 +50,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -455,41 +458,100 @@ public class Collection {
    * new empty one if none exists already
    *
    * @param id the list's document id.
-   * @param entityType the class for values contained in the list.
+   * @param entityType the class of the values contained in the set
+   * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
    * @return a {@link CouchbaseArrayList<T>}.
    */
-  public <T> CouchbaseArrayList<T> list(final String id, final Class<T> entityType) {
+  public <T> CouchbaseArrayList<T> list(final String id, Class<T> entityType, ArrayListOptions options) {
+    return new CouchbaseArrayList<>(id, this, entityType, options);
+  }
+
+  /**
+   * Returns a {@link CouchbaseArrayList<T>} backed by this collection, creating a
+   * new empty one if none exists already
+   *
+   * @param id the list's document id.
+   * @param entityType the class of the values contained in the set
+   * @return a {@link CouchbaseArrayList<T>}.
+\   */
+  public <T> CouchbaseArrayList<T> list(final String id, Class<T> entityType) {
     return new CouchbaseArrayList<>(id, this, entityType);
   }
 
   /**
+   * Returns a {@link CouchbaseArraySet<T>} backed by this collection, create a new
+   * empty one if none exists already.
    *
-   * @param id
-   * @param entityType
-   * @return
+   * @param id the set's document id.
+   * @param entityType the class of the values contained in the set
+   * @param options a {@link ArraySetOptions} to use for all operations on this instance of the set.
+   * @return a {@link CouchbaseArraySet<T>}.
+   */
+  public <T> CouchbaseArraySet<T> set(final String id, final Class<T> entityType, ArraySetOptions options) {
+    return new CouchbaseArraySet<>(id, this, entityType, options);
+  }
+
+  /**
+   * Returns a {@link CouchbaseArraySet<T>} backed by this collection, create a new
+   * empty one if none exists already.
+   *
+   * @param id the set's document id.
+   * @param entityType the class of the values contained in the set
+   * @return a {@link CouchbaseArraySet<T>}.
    */
   public <T> CouchbaseArraySet<T> set(final String id, final Class<T> entityType) {
     return new CouchbaseArraySet<>(id, this, entityType);
   }
 
   /**
+   * Returns a {@link CouchbaseMap<T>} backed by this collection, creating a new
+   * empty one if none exists already.  This map will have {@link String} keys, and
+   * values of Class<T>
    *
-   * @param id
-   * @param entityType
-   * @return
+   * @param id the map's document id.
+   * @param entityType the class of the values contained the map, the keys are {@link String}s.
+   * @param options a {@link MapOptions} to use for all operations on this instance of the map.
+   * @return a {@link CouchbaseMap<T>}.
+   */
+  public <T> CouchbaseMap<T> map(final String id, final Class<T> entityType, MapOptions options) {
+    return new CouchbaseMap<>(id, this, entityType, options);
+  }
+
+  /**
+   * Returns a {@link CouchbaseMap<T>} backed by this collection, creating a new
+   * empty one if none exists already.  This map will have {@link String} keys, and
+   * values of Class<T>
+   *
+   * @param id the map's document id.
+   * @param entityType the class of the values contained the map, the keys are {@link String}s.
+   * @return a {@link CouchbaseMap<T>}.
    */
   public <T> CouchbaseMap<T> map(final String id, final Class<T> entityType) {
     return new CouchbaseMap<>(id, this, entityType);
   }
 
   /**
+   * Returns a {@link CouchbaseQueue<T>} backed by this collection, creating a new
+   * empty one if none exists.
    *
-   * @param id
-   * @param entityType
-   * @return
+   * @param id the queue's document id.
+   * @param entityType the class of the values contained in the queue.
+   * @param options a {@link QueueOptions} to use for all operations on this instance of the queue.
+   * @return a {@link CouchbaseQueue<T>}.
+   */
+  public <T> CouchbaseQueue<T> queue(final String id, final Class<T> entityType, QueueOptions options) {
+    return new CouchbaseQueue<>(id, this, entityType, options);
+  }
+
+  /**
+   * Returns a {@link CouchbaseQueue<T>} backed by this collection, creating a new
+   * empty one if none exists.
+   *
+   * @param id the queue's document id.
+   * @param entityType the class of the values contained in the queue.
+   * @return a {@link CouchbaseQueue<T>}.
    */
   public <T> CouchbaseQueue<T> queue(final String id, final Class<T> entityType) {
     return new CouchbaseQueue<>(id, this, entityType);
   }
-
 }

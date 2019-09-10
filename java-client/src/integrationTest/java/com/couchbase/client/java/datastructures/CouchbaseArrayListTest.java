@@ -19,9 +19,9 @@ package com.couchbase.client.java.datastructures;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
-import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -45,7 +45,8 @@ import static org.junit.Assert.assertFalse;
 public class CouchbaseArrayListTest extends JavaIntegrationTest {
     private static Cluster cluster;
     private static ClusterEnvironment environment;
-    private static Collection collection ;
+    private static Collection collection;
+    private static ArrayListOptions options;
 
     private String uuid;
 
@@ -54,6 +55,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         collection = cluster.bucket(config().bucketname()).defaultCollection();
+        options = ArrayListOptions.arrayListOptions();
     }
 
     @AfterAll
@@ -73,14 +75,14 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
 
     @Test
     void simpleRoundTripWithObject() {
-        CouchbaseArrayList<TestObject> list = new CouchbaseArrayList<>(uuid, collection, TestObject.class);
+        CouchbaseArrayList<TestObject> list = new CouchbaseArrayList<>(uuid, collection, TestObject.class, ArrayListOptions.arrayListOptions());
         TestObject obj = new TestObject(1, "foo");
         list.add(0, obj);
         assertEquals(obj, list.get(0));
     }
     @Test
     void SimpleRoundTripWithJsonObject() {
-        CouchbaseArrayList<JsonObject> list = new CouchbaseArrayList<>(uuid, collection, JsonObject.class);
+        CouchbaseArrayList<JsonObject> list = new CouchbaseArrayList<>(uuid, collection, JsonObject.class, ArrayListOptions.arrayListOptions());
 
         JsonObject thing1 = JsonObject.fromJson("{\"string\":\"foo\", \"integer\":1}");
         JsonObject thing2 = JsonObject.fromJson("{\"string\":\"bar\", \"integer\":2}");
@@ -93,41 +95,41 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     @Test
     void simpleRoundTrip() {
         // put 'em in
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         // now lets find 'em, using a different list instance
-        CouchbaseArrayList<Long> sameList = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> sameList = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         assertEquals(sameList.size(), 5);
         assertTrue(sameList.get(0) == 1L);
     }
 
     @Test
     void sizeWhenEmpty() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         assertEquals(list.size(), 0);
     }
 
     @Test
     void sizeWhenNotEmpty() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertEquals(list.size(), 5);
     }
     @Test
     void testIsEmptyWhenNotEmpty() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.add(1L);
         assertFalse(list.isEmpty());
     }
 
     @Test
     void testIsEmptyWhenEmpty() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         assertTrue(list.isEmpty());
     }
     @Test
     void shouldAddByIndex() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         assertFalse(list.contains(1L));
         list.add(0, 1L);
         assertEquals(list.size(), 1);
@@ -138,33 +140,33 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldPrepend() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         list.add(0, Long.valueOf(6));
         assertEquals(list.get(0).longValue(), 6L);
     }
     @Test
     void shouldAppend() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         list.add(Long.valueOf(6));
         assertEquals(Long.valueOf(6), list.get(5));
     }
     @Test
     void shouldAddByIndexThrowsWhenIndexBeyondEnd() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         assertThrows(IndexOutOfBoundsException.class, () -> list.add(111, 3L));
     }
     @Test
     void shouldAdd() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.add(Long.valueOf(3));
         assertEquals(list.size(), 1);
         assertEquals(list.get(0).longValue(), 3L);
     }
     @Test
     void shouldRemoveByValue() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertEquals(list.size() , 5);
         // Given that jackson converts the longs to ints,
@@ -177,7 +179,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldRemoveByIndex() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertEquals(list.size(), 5);
         Long oldVal = list.remove(3);
@@ -188,13 +190,13 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldThrowOutOfBoundsExceptionRemove() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertThrows(IndexOutOfBoundsException.class, () -> list.remove(111));
     }
     @Test
     void shouldReturnIterator() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         Iterator<Long> it = list.iterator();
         int i = 0;
@@ -208,7 +210,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldClear() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertEquals(list.size(), 5);
         list.clear();
@@ -216,7 +218,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldClearViaIterator() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         Iterator<Long> it = list.iterator();
         while(it.hasNext()) {
@@ -228,7 +230,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldClearViaIteratorInReverse() {
-        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class);
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         ListIterator<Long> it = list.listIterator();
         Object current = null;
@@ -246,16 +248,16 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldCreateDirectlyFromTheCouchbaseCollection() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class, options);
         assertTrue(list.isEmpty());
         list.add(0, 1L);
         assertFalse(list.isEmpty());
-        CouchbaseArrayList<Long> list2 = collection.list(uuid, Long.class);
+        CouchbaseArrayList<Long> list2 = collection.list(uuid, Long.class, options);
         assertFalse(list2.isEmpty());
     }
     @Test
     void shouldAddViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -270,7 +272,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldSetViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -285,7 +287,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldRemoveViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -300,7 +302,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotAddViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -310,7 +312,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotSetViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -323,7 +325,7 @@ public class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotRemoveViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class);
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();

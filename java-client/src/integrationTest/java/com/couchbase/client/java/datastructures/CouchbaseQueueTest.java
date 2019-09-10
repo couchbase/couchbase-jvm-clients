@@ -18,9 +18,9 @@ package com.couchbase.client.java.datastructures;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
-import com.couchbase.client.java.datastructures.CouchbaseQueue;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +39,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     private static Cluster cluster;
     private static ClusterEnvironment environment;
     private static Collection collection;
+    private static QueueOptions options;
 
     private String uuid;
 
@@ -47,6 +48,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         collection = cluster.bucket(config().bucketname()).defaultCollection();
+        options = QueueOptions.queueOptions();
     }
 
     @AfterAll
@@ -67,7 +69,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
 
     @Test
     void canCreateSimpleFifoQueue() {
-        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.offer(5);
         assertEquals(1, queue.size());
         assertEquals(5, queue.poll().intValue());
@@ -75,16 +77,16 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canCreateFromExistingQueue()  {
-        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.addAll(Arrays.asList(1,2,3,4,5));
         assertEquals(5, queue.size());
-        CouchbaseQueue<Integer> sameQueue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> sameQueue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         assertEquals(5, sameQueue.size());
     }
 
     @Test
     void canPeek() {
-        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.addAll(Arrays.asList(1,2,3,4,5));
         // They get pushed in order, so...'
         assertEquals(1, queue.peek().intValue());
@@ -93,7 +95,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canPoll() {
-        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.addAll(Arrays.asList(1,2,3,4,5));
         assertEquals(5, queue.size());
         // end should be first to come out
@@ -103,7 +105,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canOffer() {
-        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class);
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.offer(1);
         queue.offer(2);
         queue.offer(3);
@@ -111,7 +113,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canUseJsonObjects() {
-        CouchbaseQueue<JsonObject> queue = new CouchbaseQueue<>(uuid, collection, JsonObject.class);
+        CouchbaseQueue<JsonObject> queue = new CouchbaseQueue<>(uuid, collection, JsonObject.class, options);
         JsonObject obj1 = JsonObject.fromJson("{\"string\":\"foo\", \"integer\":1}");
         JsonObject obj2 = JsonObject.fromJson("{\"string\":\"bar\", \"integer\":2}");
         queue.offer(obj1);
@@ -122,7 +124,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canUseObjects() {
-        CouchbaseQueue<TestObject> queue = new CouchbaseQueue<>(uuid, collection, TestObject.class);
+        CouchbaseQueue<TestObject> queue = new CouchbaseQueue<>(uuid, collection, TestObject.class, options);
         TestObject obj1 = new TestObject(1, "foo");
         TestObject obj2 = new TestObject(2, "bar");
         queue.offer(obj1);
@@ -133,11 +135,11 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     }
     @Test
     void canConstructUsingCouchbaseCollection() {
-        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class, options);
         assertTrue(queue.isEmpty());
         queue.offer(1);
         assertFalse(queue.isEmpty());
-        CouchbaseQueue<Integer> queue2 = collection.queue(uuid, Integer.class);
+        CouchbaseQueue<Integer> queue2 = collection.queue(uuid, Integer.class, options);
         assertFalse(queue.isEmpty());
         assertFalse(queue2.isEmpty());
     }}

@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.datastructures;
 
+import java.time.Duration;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,14 +28,17 @@ import java.util.ListIterator;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.json.JsonValue;
 import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
+import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
@@ -56,12 +60,14 @@ import com.couchbase.client.java.kv.MutateInSpec;
 @Stability.Volatile
 public class CouchbaseArrayList<E> extends AbstractList<E> {
 
-    private static final int MAX_OPTIMISTIC_LOCKING_ATTEMPTS = Integer.parseInt(System.getProperty("com.couchbase.datastructureCASRetryLimit", "10"));
     private final String id;
     private final Collection collection;
+    private final Duration timeout;
+    private final int casMismatchRetries;
 
     // TODO: perhaps there is a way around type erasure, so that we can eliminate this since it feels redundant?
     private Class<E> entityTypeClass;
+
 
     /**
      * Create a new {@link Collection Couchbase-backed} List, backed by the document identified by <code>id</code>
@@ -73,64 +79,32 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
      * @param entityType a Class<T> describing the type of objects in this Set.
      */
     public CouchbaseArrayList(String id, Collection collection, Class<E> entityType) {
+        this(id, collection, entityType, ArrayListOptions.arrayListOptions());
+    }
+    /**
+     * Create a new {@link Collection Couchbase-backed} List, backed by the document identified by <code>id</code>
+     * in <code>collection</code>. Note that if the document already exists, its content will be used as initial
+     * content for this collection. Otherwise it is created empty.
+     *
+     * @param id the id of the Couchbase document to back the list.
+     * @param collection the {@link Collection} through which to interact with the document.
+     * @param entityType a Class<T> describing the type of objects in this Set.
+     * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
+     */
+    public CouchbaseArrayList(String id, Collection collection, Class<E> entityType, ArrayListOptions options) {
         this.collection = collection;
         this.id = id;
         this.entityTypeClass = entityType;
+        ArrayListOptions.Built opt = options.build();
+        this.casMismatchRetries = opt.casMismatchRetries();
+        this.timeout = opt.timeout().orElse(null);
+
 
         try {
-            collection.insert(id, JsonArray.empty());
+            collection.insert(id, JsonArray.empty(), InsertOptions.insertOptions().timeout(timeout));
         } catch (KeyExistsException ex) {
             // Ignore concurrent creations, keep on moving.
         }
-    }
-
-    /**
-     * Create a new {@link Collection Couchbase-backed} List, backed by the document identified by <code>id</code>
-     * in <code>bucket</code>. Note that if the document already exists, its content is reset to the values
-     * provided.
-     *
-     * Note that if you don't provide any value as a vararg, the {@link #CouchbaseArrayList(String, Collection, Class<E>)}
-     * constructor will be invoked instead, which will use pre-existing values as content. To create a new
-     * List and force it to be empty, use {@link #CouchbaseArrayList(String, Collection, Class<E>, java.util.Collection<E>)}
-     * with an empty java.util.Collection.
-     *
-     * @param id the id of the Couchbase document to back the list.
-     * @param collection the {@link Collection} through which to interact with the document.
-     * @param content vararg of the elements to initially store in the List.
-     */
-    public CouchbaseArrayList(String id, Collection collection, Class<E> entityType,  E... content) {
-        this.collection = collection;
-        this.id = id;
-        this.entityTypeClass = entityType;
-
-        collection.upsert(id, JsonArray.from(content));
-    }
-
-    /**
-     * Create a new {@link Collection Couchbase-backed} List, backed by the document identified by <code>id</code>
-     * in <code>bucket</code>. Note that if the document already exists, its content is reset to the values
-     * provided in the <code>content</code> Collection.
-     *
-     * @param id the id of the Couchbase document to back the list.
-     * @param collection the {@link Collection} through which to interact with the document.
-     * @param content collection of the elements to initially store in the List.
-     */
-    public CouchbaseArrayList(String id, Collection collection, Class<E> entityType, java.util.Collection<? extends E> content) {
-        this.collection = collection;
-        this.id = id;
-        this.entityTypeClass = entityType;
-
-        JsonArray array;
-        if (content instanceof List) {
-            array = JsonArray.from((List) content);
-        } else {
-            array = JsonArray.create();
-            for (E e : content) {
-                array.add(e);
-            }
-        }
-
-        collection.upsert(id, array);
     }
 
     @Override
@@ -140,7 +114,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
         String idx = "[" + index + "]";
-        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)));
+        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
+                LookupInOptions.lookupInOptions().timeout(timeout));
         if (!result.exists(0)) {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
@@ -156,7 +131,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
 
     @Override
     public boolean isEmpty() {
-        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("[0]")));
+        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("[0]")),
+                LookupInOptions.lookupInOptions().timeout(timeout));
         return !current.exists(0);
     }
 
@@ -168,16 +144,17 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         }
         String idx = "[" + index + "]";
 
-        for(int i = 0; i < MAX_OPTIMISTIC_LOCKING_ATTEMPTS; i++) {
+        for(int i = 0; i < casMismatchRetries; i++) {
             try {
-                LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)));
+                LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
+                        LookupInOptions.lookupInOptions().timeout(timeout));
                 long returnCas = current.cas();
                 // this loop ensures we return exactly what we replaced
                 E result = current.contentAs(0, entityTypeClass);
 
                 collection.mutateIn(id,
                         Collections.singletonList(MutateInSpec.replace(idx, element)),
-                        MutateInOptions.mutateInOptions().cas(returnCas));
+                        MutateInOptions.mutateInOptions().cas(returnCas).timeout(timeout));
                 return result;
             } catch (CASMismatchException ex) {
                 //will need to retry get-and-set
@@ -188,7 +165,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 throw ex;
             }
         }
-        throw new ConcurrentModificationException("Couldn't perform set in less than " + MAX_OPTIMISTIC_LOCKING_ATTEMPTS + " iterations");
+        throw new RetryExhaustedException("Couldn't perform set in less than " +  casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
@@ -199,7 +176,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         }
 
         try {
-            collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)));
+            collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)),
+                    MutateInOptions.mutateInOptions().timeout(timeout));
         } catch (PathNotFoundException e) {
             throw new IndexOutOfBoundsException("Index: " + index);
         } catch (MultiMutationException ex) {
@@ -217,14 +195,15 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
         String idx = "[" + index + "]";
-        for(int i = 0; i < MAX_OPTIMISTIC_LOCKING_ATTEMPTS; i++) {
+        for(int i = 0; i < casMismatchRetries; i++) {
             try {
                 // this loop will allow us to _know_ what element we really did remove.
-                LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)));
+                LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
+                        LookupInOptions.lookupInOptions().timeout(timeout));
                 long returnCas = current.cas();
                 E result = current.contentAs(0, entityTypeClass);
                 MutateInResult updated = collection.mutateIn(id, Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(returnCas));
+                        MutateInOptions.mutateInOptions().cas(returnCas).timeout(timeout));
                 return result;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
@@ -237,7 +216,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 throw ex;
             }
         }
-        throw new ConcurrentModificationException("Couldn't perform remove in less than " + MAX_OPTIMISTIC_LOCKING_ATTEMPTS + " iterations");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
@@ -334,7 +313,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(this.cas)
+                        MutateInOptions.mutateInOptions().cas(this.cas).timeout(timeout)
                 );
                 //update the cas so that several removes in a row can work
                 this.cas = updated.cas();
@@ -363,7 +342,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.replace(idx, e)),
-                        MutateInOptions.mutateInOptions().cas(this.cas)
+                        MutateInOptions.mutateInOptions().cas(this.cas).timeout(timeout)
                 );
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();
@@ -387,7 +366,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.arrayInsert(idx, e)),
-                        MutateInOptions.mutateInOptions().cas(this.cas)
+                        MutateInOptions.mutateInOptions().cas(this.cas).timeout(timeout)
                 );
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();

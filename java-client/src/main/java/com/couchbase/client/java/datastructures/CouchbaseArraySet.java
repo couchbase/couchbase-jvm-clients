@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package com.couchbase.client.java.datastructures;
+import java.time.Duration;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,17 +26,23 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValue;
 import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.java.kv.ArraySetOptions;
+import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
  * A CouchbaseArraySet is a {@link Set} backed by a {@link Collection Couchbase} document (more
@@ -52,10 +59,37 @@ import com.couchbase.client.java.kv.MutateInSpec;
 @Stability.Committed
 public class CouchbaseArraySet<T> extends AbstractSet<T> {
 
-    private static final int MAX_OPTIMISTIC_LOCKING_ATTEMPTS = Integer.parseInt(System.getProperty("com.couchbase.datastructureCASRetryLimit", "10"));
     private final String id;
     private final Collection collection;
     private final Class<T> entityTypeClass;
+    private final Duration timeout;
+    private final int casMismatchRetries;
+
+    /**
+     * Create a new {@link CouchbaseArraySet}, backed by the document identified by <code>id</code>
+     * in the given Couchbase <code>bucket</code>. Note that if the document already exists,
+     * its content will be used as initial content for this collection. Otherwise it is created empty.
+     *
+     * @param id the id of the Couchbase document to back the set.
+     * @param collection the {@link Collection} through which to interact with the document.
+     * @param entityType a Class<T> describing the type of objects in this Set.
+     * @param options a {@link ArraySetOptions} to use for all operations on this instance of the list.
+     *
+     **/
+    public CouchbaseArraySet(String id, Collection collection, Class<T> entityType, ArraySetOptions options) {
+        this.id = id;
+        this.collection = collection;
+        this.entityTypeClass = entityType;
+        ArraySetOptions.Built opts = options.build();
+        this.casMismatchRetries = opts.casMismatchRetries();
+        this.timeout = opts.timeout().orElse(null);
+
+        try {
+            this.collection.insert(id, JsonArray.empty(), InsertOptions.insertOptions().timeout(timeout));
+        } catch (KeyExistsException e) {
+            //use a pre-existing document
+        }
+    }
 
     /**
      * Create a new {@link CouchbaseArraySet}, backed by the document identified by <code>id</code>
@@ -68,26 +102,20 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
      *
      **/
     public CouchbaseArraySet(String id, Collection collection, Class<T> entityType) {
-        this.id = id;
-        this.collection = collection;
-        this.entityTypeClass = entityType;
-
-        try {
-            this.collection.insert(id, JsonArray.empty());
-        } catch (KeyExistsException e) {
-            //use a pre-existing document
-        }
+        this(id, collection, entityType, ArraySetOptions.arraySetOptions());
     }
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("")));
+        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("")),
+                LookupInOptions.lookupInOptions().timeout(timeout));
         return result.contentAs(0, Integer.class);
     }
 
     @Override
     public boolean isEmpty() {
-        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("[0]")));
+        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("[0]")),
+                LookupInOptions.lookupInOptions().timeout(timeout));
         return !current.exists(0);
     }
 
@@ -95,7 +123,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
     public boolean contains(Object t) {
         //TODO subpar implementation for a Set, use ARRAY_CONTAINS when available
         enforcePrimitive(t);
-        GetResult result = collection.get(id);
+        GetResult result = collection.get(id, GetOptions.getOptions().timeout(timeout));
         JsonArray current = result.contentAs(JsonArray.class);
         for (Object in : current) {
             if (safeEquals(in, t)) {
@@ -154,7 +182,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(this.cas)
+                        MutateInOptions.mutateInOptions().cas(this.cas).timeout(timeout)
                 );
                 //update the cas so that several removes in a row can work
                 this.cas = updated.cas();
@@ -184,7 +212,8 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         enforcePrimitive(t);
 
         try {
-            collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayAddUnique("", t)));
+            collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
+                    MutateInOptions.mutateInOptions().timeout(timeout));
             return true;
         } catch (MultiMutationException ex) {
             if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) {
@@ -198,7 +227,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
     public boolean remove(Object t) {
         enforcePrimitive(t);
 
-        for (int i = 0; i < MAX_OPTIMISTIC_LOCKING_ATTEMPTS; i++) {
+        for (int i = 0; i < casMismatchRetries; i++) {
             try {
                 GetResult result = collection.get(id);
                 JsonArray current = result.contentAsArray();
@@ -221,19 +250,20 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 } else {
                     collection.mutateIn(id,
                             Collections.singletonList(MutateInSpec.remove(path)),
-                            MutateInOptions.mutateInOptions().cas(cas));
+                            MutateInOptions.mutateInOptions().cas(cas).timeout(timeout));
                     return true;
                 }
             } catch (CASMismatchException e) {
                 //retry
             }
         }
-        throw new ConcurrentModificationException("Couldn't perform remove in less than " + MAX_OPTIMISTIC_LOCKING_ATTEMPTS + " iterations");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
     public void clear() {
-        collection.upsert(id, JsonArray.empty());
+        collection.upsert(id, JsonArray.empty(),
+                UpsertOptions.upsertOptions().timeout(timeout));
     }
 
     /**

@@ -18,9 +18,10 @@ package com.couchbase.client.java.datastructures;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.ArraySetOptions;
+import com.couchbase.client.java.kv.CommonDatastructureOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class CouchbaseArraySetTest extends JavaIntegrationTest {
     private static Cluster cluster;
     private static ClusterEnvironment environment;
-    private static Collection collection ;
+    private static Collection collection;
+    private static ArraySetOptions options;
 
     private String uuid;
 
@@ -51,6 +53,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
         environment = environment().build();
         cluster = Cluster.connect(environment);
         collection = cluster.bucket(config().bucketname()).defaultCollection();
+        options = ArraySetOptions.arraySetOptions();
     }
 
     @AfterAll
@@ -70,7 +73,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     @Test
     void shouldConstructEmptySet() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         assertEquals(0, set.size());
         set.add(5);
         set.add(10);
@@ -78,21 +81,21 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldBuildSetFromAddAll() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         set.addAll(Arrays.asList(1,2,3,4,5));
         assertEquals(5, set.size());
     }
      @Test
     void shouldConstructFromExistingSet() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         set.addAll(Arrays.asList(1,2,3,4,5));
         assertEquals(5, set.size());
-        CouchbaseArraySet<Integer> sameSet = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> sameSet = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         assertEquals(5, set.size());
     }
     @Test
     void shouldIsEmptyLikeYouExpect() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         assertEquals(0, set.size());
         assertTrue(set.isEmpty());
         set.add(3);
@@ -101,7 +104,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldContainsLikeYouExpect() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         set.addAll(Arrays.asList(1,2,3,4,5));
         assertTrue(set.contains(3));
         assertFalse(set.contains(6));
@@ -109,7 +112,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void canAddObjectsThatAreClose()  {
-        CouchbaseArraySet<Object> set = new CouchbaseArraySet<>(uuid, collection, Object.class);
+        CouchbaseArraySet<Object> set = new CouchbaseArraySet<>(uuid, collection, Object.class, options);
         set.add("1");
         set.add(1);
         set.add("foo");
@@ -120,7 +123,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void canRemoveObjectsThatAreClose() {
-        CouchbaseArraySet<Object> set = new CouchbaseArraySet<>(uuid, collection, Object.class);
+        CouchbaseArraySet<Object> set = new CouchbaseArraySet<>(uuid, collection, Object.class, options);
         set.add("1");
         set.add(1);
         set.remove(1);
@@ -129,7 +132,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldClear() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         set.addAll(Arrays.asList(1,2,3,4,5));
         assertFalse(set.isEmpty());
         set.clear();
@@ -137,7 +140,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldIterate() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         HashSet<Integer> javaSet = new HashSet<>(Arrays.asList(1,2,3,4,5));
         Iterator<Integer> it = set.iterator();
         while(it.hasNext()) {
@@ -146,7 +149,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldRemoveViaIterator() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         HashSet<Integer> javaSet = new HashSet<>(Arrays.asList(1,2,3,4,5));
         set.addAll(javaSet);
 
@@ -160,7 +163,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotRemoveViaIteratorIfListChanged() {
-        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class);
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         HashSet<Integer> javaSet = new HashSet<>(Arrays.asList(1,2,3,4,5));
         set.addAll(javaSet);
 
@@ -172,7 +175,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotWorkWithNonJsonValuePrimitives() {
-        CouchbaseArraySet<JsonObject> set = new CouchbaseArraySet<>(uuid, collection, JsonObject.class);
+        CouchbaseArraySet<JsonObject> set = new CouchbaseArraySet<>(uuid, collection, JsonObject.class, options);
         JsonObject obj1 = JsonObject.fromJson("{\"string\":\"foo\", \"integer\":1}");
         assertThrows(ClassCastException.class, () -> {
             set.add(obj1);
@@ -180,12 +183,12 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldCreateOffCouchbaseCollection() {
-        CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class);
+        CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class, options);
         assertTrue(set.isEmpty());
         set.add(1);
         assertFalse(set.isEmpty());
 
-        CouchbaseArraySet<Integer> set2 = collection.set(uuid, Integer.class);
+        CouchbaseArraySet<Integer> set2 = collection.set(uuid, Integer.class, options);
         assertFalse(set.isEmpty());
     }
 }
