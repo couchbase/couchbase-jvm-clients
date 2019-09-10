@@ -16,21 +16,19 @@
 package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.queries.*;
-import com.couchbase.client.java.search.result.SearchQueryRow;
+import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.sort.SearchSort;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The FTS API entry point. Describes an FTS query entirely (index, query body and parameters) and can
@@ -224,7 +222,7 @@ public class SearchQuery {
     /**
      * Configures the highlighting of matches in the response.
      *
-     * This drives the inclusion of the {@link SearchQueryRow#fragments() fragments} in each {@link SearchQueryRow hit}.
+     * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
      *
      * Note that to be highlighted, the fields must be stored in the FTS index.
      *
@@ -244,7 +242,7 @@ public class SearchQuery {
      * Configures the highlighting of matches in the response, for the specified fields and using the server's default
      * highlighting style.
      *
-     * This drives the inclusion of the {@link SearchQueryRow#fragments() fragments} in each {@link SearchQueryRow hit}.
+     * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
      *
      * Note that to be highlighted, the fields must be stored in the FTS index.
      *
@@ -259,7 +257,7 @@ public class SearchQuery {
      * Configures the highlighting of matches in the response for all fields, using the server's default highlighting
      * style.
      *
-     * This drives the inclusion of the {@link SearchQueryRow#fragments() fragments} in each {@link SearchQueryRow hit}.
+     * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
      *
      * Note that to be highlighted, the fields must be stored in the FTS index.
      *
@@ -285,7 +283,7 @@ public class SearchQuery {
      * Configures the list of fields for which the whole value should be included in the response. If empty, no field
      * values are included.
      *
-     * This drives the inclusion of the {@link SearchQueryRow#fields() fields} in each {@link SearchQueryRow hit}.
+     * This drives the inclusion of the {@link SearchRow#fields() fields} in each {@link SearchRow hit}.
      *
      * Note that to be highlighted, the fields must be stored in the FTS index.
      *

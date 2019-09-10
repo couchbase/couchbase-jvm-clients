@@ -16,77 +16,73 @@
 
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchMetaData;
 
 import java.util.List;
 
 /**
- * Full Text Search (FTS) query results, as returned from the asynchronous API.
+ * The result of an search query, including hits and associated metadata.
  *
- * It is also an {@link Iterable Iterable&lt;SearchQueryRow&gt;}, where iteration is similar to iterating over
- * {@link #rowsOrFail()}.
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
+ * @since 3.0
  */
 public class SearchResult {
 
-    private final List<SearchQueryRow> rows;
+    /**
+     * Stores the encoded rows from the search response.
+     */
+    private final List<SearchRow> rows;
+
+    /**
+     * If errors happened during the responses, they will be stored in here.
+     */
     private final List<RuntimeException> errors;
+
+    /**
+     * The metadata for this search result.
+     */
     private final SearchMetaData meta;
 
-    public SearchResult(List<SearchQueryRow> rows,
-                        List<RuntimeException> errors,
-                        SearchMetaData meta) {
+    /**
+     * Creates a new SearchResult.
+     *
+     * @param rows the rows/hits for this result.
+     * @param errors any errors that came up.
+     * @param meta the search metadata.
+     */
+    public SearchResult(final List<SearchRow> rows, final List<RuntimeException> errors, final SearchMetaData meta) {
         this.rows = rows;
         this.errors = errors;
         this.meta = meta;
     }
 
     /**
-     * Any additional meta information associated with the FTS query.
+     * Returns the {@link SearchMetaData} giving access to the additional metadata associated with this search
+     * query.
      */
     public SearchMetaData metaData() {
         return meta;
     }
 
     /**
-     * The list of FTS result rows for the FTS query. This method always returns
-     * a list, including when an execution error (eg. partial results) occurred.
-     *
-     * @see #rowsOrFail() for a variant that throws an exception whenever execution errors have occurred.
-     * @see #errors() to get a list of execution errors in JSON form.
+     * Returns all search hits.
      */
-    public List<SearchQueryRow> rows() {
+    public List<SearchRow> rows() {
         return rows;
     }
 
     /**
-     * The list of FTS result rows for the FTS query. In case of an execution error
-     * (eg. partial results), a {@link RuntimeException} is thrown instead, containing the first error.
-     *
-     * @see #rows() for a variant that lists partial results instead of throwing the exception.
-     * @see #errors() to get a list of execution errors in JSON form.
-     */
-    public List<SearchQueryRow> rowsOrFail() {
-        if (errors.isEmpty()) {
-            return rows();
-        }
-        else {
-            throw errors.get(0);
-        }
-    }
-
-    /**
-     * When an execution error happens (including partial results), this method returns a {@link List} of
-     * the error(s) in {@link JsonObject JSON format}.
-     *
-     * @see #rows() to get results, including partial results (rather than throwing an exception).
-     * @see #rowsOrFail() to get only full results, but throwing an exception whenever execution errors have occurred.
+     * Returns all errors that appeared as part of the response.
      */
     public List<RuntimeException> errors() {
         return errors;
+    }
+
+    @Override
+    public String toString() {
+        return "SearchResult{" +
+          "rows=" + rows +
+          ", errors=" + errors +
+          ", meta=" + meta +
+          '}';
     }
 }

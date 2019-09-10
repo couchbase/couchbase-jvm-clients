@@ -52,7 +52,7 @@ class ClusterLevelQueryIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG, Capabilities.QUERY})
   void performsClusterLevelQueryWithoutOpenBucket() {
     QueryResult result = cluster.query("select 1=1", queryOptions().clientContextId("my-context-id"));
-    assertEquals(1, result.allRowsAsObject().size());
+    assertEquals(1, result.rowsAsObject().size());
     assertEquals("my-context-id", result.metaData().clientContextId().get());
   }
 

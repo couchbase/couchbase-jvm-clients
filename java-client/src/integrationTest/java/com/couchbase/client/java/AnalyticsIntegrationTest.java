@@ -60,7 +60,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
     void performsDataverseQuery() {
         AnalyticsResult result = cluster.analyticsQuery("SELECT DataverseName FROM Metadata.`Dataverse`");
 
-        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.rowsAs(JsonObject.class);
         assertFalse(rows.isEmpty());
         for (JsonObject row : rows) {
             assertNotNull(row.get("DataverseName"));

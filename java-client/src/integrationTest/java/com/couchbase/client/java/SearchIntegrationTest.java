@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.manager.search.SearchIndex;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;

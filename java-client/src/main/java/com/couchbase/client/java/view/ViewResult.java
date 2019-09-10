@@ -19,9 +19,8 @@ package com.couchbase.client.java.view;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Holds a the result of a View request operation if successful.
@@ -30,41 +29,40 @@ import java.util.stream.Stream;
  */
 public class ViewResult {
 
+  /**
+   * Stores the encoded rows from the view response.
+   */
   private final List<ViewChunkRow> rows;
+
+  /**
+   * The header holds associated metadata that came back before the rows streamed.
+   */
   private final ViewChunkHeader header;
 
-  ViewResult(ViewChunkHeader header, List<ViewChunkRow> rows) {
+  /**
+   * Creates a new ViewResult.
+   *
+   * @param header the view header.
+   * @param rows the view rows.
+   */
+  ViewResult(final ViewChunkHeader header, final List<ViewChunkRow> rows) {
     this.rows = rows;
     this.header = header;
   }
 
   /**
-   * Returns the {@link ViewRow ViewRows} in a blocking, but streaming fashion.
-   *
-   * @return the {@link Stream} of {@link ViewRow ViewRows}.
+   * Returns all view rows.
    */
-  public Stream<ViewRow> rows() {
-    return rows.stream().map(r -> new ViewRow(r.data()));
+  public List<ViewRow> rows() {
+    final List<ViewRow> converted = new ArrayList<>(rows.size());
+    for (ViewChunkRow row : rows) {
+      converted.add(new ViewRow(row.data()));
+    }
+    return converted;
   }
 
   /**
-   * Convenience method to collect all {@link #rows()} into a {@link List}.
-   *
-   * <p>Be careful when using this method on a large result since it will end up buffering the complete
-   * result set in memory. This is very helpful for small queries and exploration, but for larger responses
-   * we recommend using either the blocking {@link #rows()} method or the reactive variants for ultimate
-   * control.</p>
-   *
-   * @return a collected list of {@link ViewRow ViewRows}.
-   */
-  public List<ViewRow> allRows() {
-    return rows().collect(Collectors.toList());
-  }
-
-  /**
-   * Returns the metadata associated with this {@link ViewResult}.
-   *
-   * @return the metadata associated.
+   * Returns the {@link ViewMetaData} giving access to the additional metadata associated with this view query.
    */
   public ViewMetaData metaData() {
     return ViewMetaData.from(header);
@@ -77,4 +75,5 @@ public class ViewResult {
       ", header=" + header +
       '}';
   }
+
 }

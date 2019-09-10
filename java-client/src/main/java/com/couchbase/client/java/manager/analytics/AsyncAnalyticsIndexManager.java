@@ -106,7 +106,7 @@ public class AsyncAnalyticsIndexManager {
 
   public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses() {
     return cluster.analyticsQuery("SELECT DataverseName from Metadata.`Dataverse`")
-        .thenApply(result -> result.allRowsAsObject().stream()
+        .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsDataverse::new)
             .collect(toList()));
   }
@@ -190,7 +190,7 @@ public class AsyncAnalyticsIndexManager {
     String statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
     return exec(statement, builtOpts)
-        .thenApply(result -> result.allRowsAsObject().stream()
+        .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsDataset::new)
             .collect(toList()));
   }
@@ -227,7 +227,7 @@ public class AsyncAnalyticsIndexManager {
     String statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
     return exec(statement, builtOpts)
-        .thenApply(result -> result.allRowsAsObject().stream()
+        .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsIndex::new)
             .collect(toList()));
   }

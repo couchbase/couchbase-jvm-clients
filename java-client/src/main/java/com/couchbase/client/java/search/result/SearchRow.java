@@ -37,7 +37,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  *
  * @since 2.3.0
  */
-public class SearchQueryRow {
+public class SearchRow {
     private final String index;
     private final String id;
     private final double score;
@@ -46,8 +46,8 @@ public class SearchQueryRow {
     private final Map<String, List<String>> fragments;
     private final Map<String, String> fields;
 
-    public SearchQueryRow(String index, String id, double score, JsonObject explanation, RowLocations locations,
-                          Map<String, List<String>> fragments, Map<String, String> fields) {
+    public SearchRow(String index, String id, double score, JsonObject explanation, RowLocations locations,
+                     Map<String, List<String>> fragments, Map<String, String> fields) {
         this.index = index;
         this.id = id;
         this.score = score;
@@ -122,7 +122,7 @@ public class SearchQueryRow {
             return false;
         }
 
-        SearchQueryRow that = (SearchQueryRow) o;
+        SearchRow that = (SearchRow) o;
 
         if (Double.compare(that.score, score) != 0) {
             return false;
@@ -145,7 +145,7 @@ public class SearchQueryRow {
         return result;
     }
 
-    public static SearchQueryRow fromResponse(SearchChunkRow row) {
+    public static SearchRow fromResponse(SearchChunkRow row) {
         try {
             JsonObject hit = JacksonTransformers.MAPPER.readValue(row.data(), JsonObject.class);
 
@@ -191,7 +191,7 @@ public class SearchQueryRow {
                 fields = Collections.emptyMap();
             }
 
-            return new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields);
+            return new SearchRow(index, id, score, explanationJson, locations, fragments, fields);
         } catch (IOException e) {
             throw new DecodingFailedException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
         }

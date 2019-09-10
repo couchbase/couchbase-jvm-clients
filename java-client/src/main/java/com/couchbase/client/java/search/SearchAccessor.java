@@ -27,7 +27,7 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import com.couchbase.client.java.search.result.SearchMetrics;
-import com.couchbase.client.java.search.result.SearchQueryRow;
+import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchStatus;
 import com.couchbase.client.java.search.result.DefaultSearchMetrics;
@@ -57,7 +57,7 @@ public class SearchAccessor {
         return Mono.fromFuture(request.response())
 
                 .flatMap(response -> response.rows()
-                        .map(row -> SearchQueryRow.fromResponse(row))
+                        .map(row -> SearchRow.fromResponse(row))
                         .collectList()
 
                         .flatMap(rows -> response.trailer()
@@ -92,8 +92,8 @@ public class SearchAccessor {
 
 
                     // Any errors should be raised in SearchServiceException and will be returned directly
-                    Flux<SearchQueryRow> rows = response.rows()
-                            .map(row -> SearchQueryRow.fromResponse(row));
+                    Flux<SearchRow> rows = response.rows()
+                            .map(row -> SearchRow.fromResponse(row));
 
                     Mono<SearchMetaData> meta = response.trailer()
                             .map(trailer -> {

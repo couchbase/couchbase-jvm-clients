@@ -16,32 +16,48 @@
 
 package com.couchbase.client.java.query;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
- * Holds the results (including metadata) of a N1QL query.
+ * The result of a N1QL query, including rows and associated metadata.
  *
  * @since 3.0.0
  */
-@Stability.Volatile
 public class QueryResult {
 
+    /**
+     * Stores the encoded rows from the query response.
+     */
     private final List<QueryChunkRow> rows;
+
+    /**
+     * The header holds associated metadata that came back before the rows streamed.
+     */
     private final QueryChunkHeader header;
+
+    /**
+     * The trailer holds associated metadata that came back after the rows streamed.
+     */
     private final QueryChunkTrailer trailer;
 
-    QueryResult(QueryChunkHeader header, List<QueryChunkRow> rows, QueryChunkTrailer trailer) {
+    /**
+     * Creates a new QueryResult.
+     *
+     * @param header the query header.
+     * @param rows the query rows.
+     * @param trailer the query trailer.
+     */
+    QueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer) {
         this.rows = rows;
         this.header = header;
         this.trailer = trailer;
@@ -49,44 +65,40 @@ public class QueryResult {
 
     /**
      * Returns all rows, converted into {@link JsonObject}s.
-     * <p>
-     * @throws DecodingFailedException if any row could not be successfully decoded
+     *
+     * @throws DecodingFailedException if any row could not be successfully deserialized.
      */
-    public Stream<JsonObject> rowsAsObject() {
+    public List<JsonObject> rowsAsObject() {
         return rowsAs(JsonObject.class);
     }
 
     /**
-     * Returns all rows, converted into the target class, and using the default decoder.
-     * <p>
-     * @param target the target class to decode into
-     * @throws DecodingFailedException if any row could not be successfully decoded
+     * Returns all rows, converted into the target class, and using the default serializer.
+     *
+     * @param target the target class to deserialize into.
+     * @throws DecodingFailedException if any row could not be successfully deserialized.
      */
-    public <T> Stream<T> rowsAs(final Class<T> target) {
-        return rows.stream().map(n -> {
-            try {
-                return JacksonTransformers.MAPPER.readValue(n.data(), target);
-            } catch (IOException ex) {
-                throw new DecodingFailedException(ex);
-            }
-        });
-    }
-
-    public <T> List<T> allRowsAs(final Class<T> target) {
-        return rowsAs(target).collect(Collectors.toList());
+    public <T> List<T> rowsAs(final Class<T> target) {
+        return rowsAs(target, JsonSerializer.INSTANCE);
     }
 
     /**
-     * Returns all rows, converted into {@link JsonObject}s.
-     * <p>
-     * @throws DecodingFailedException if any row could not be successfully decoded
+     * Returns all rows, converted into the target class, and using a custom serializer.
+     *
+     * @param target the target class to deserialize into.
+     * @param serializer the custom serializer to use.
+     * @throws DecodingFailedException if any row could not be successfully deserialized.
      */
-    public List<JsonObject> allRowsAsObject() {
-        return allRowsAs(JsonObject.class);
+    public <T> List<T> rowsAs(final Class<T> target, final Serializer serializer) {
+        final List<T> converted = new ArrayList<T>(rows.size());
+        for (QueryChunkRow row : rows) {
+            converted.add(serializer.deserialize(target, row.data()));
+        }
+        return converted;
     }
 
     /**
-     * Returns a {@link QueryMetaData} giving access to the additional metadata associated with this query.
+     * Returns the {@link QueryMetaData} giving access to the additional metadata associated with this query.
      */
     public QueryMetaData metaData() {
         return QueryMetaData.from(header, trailer);
@@ -95,9 +107,9 @@ public class QueryResult {
     @Override
     public String toString() {
         return "QueryResult{" +
-                "rows=" + rows +
-                ", header=" + header +
-                ", trailer=" + trailer +
-                '}';
+            "rows=" + rows +
+            ", header=" + header +
+            ", trailer=" + trailer +
+            '}';
     }
 }

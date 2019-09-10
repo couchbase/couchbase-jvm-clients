@@ -21,65 +21,94 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryMetaData;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Holds the results (including metadata) of an analytics query.
+ * The result of an analytics query, including rows and associated metadata.
  *
  * @since 3.0.0
  */
 @Stability.Volatile
 public class AnalyticsResult {
 
+  /**
+   * Stores the encoded rows from the analytics response.
+   */
   private final List<AnalyticsChunkRow> rows;
+
+  /**
+   * The header holds associated metadata that came back before the rows streamed.
+   */
   private final AnalyticsChunkHeader header;
+
+  /**
+   * The trailer holds associated metadata that came back after the rows streamed.
+   */
   private final AnalyticsChunkTrailer trailer;
 
-  AnalyticsResult(AnalyticsChunkHeader header, List<AnalyticsChunkRow> rows, AnalyticsChunkTrailer trailer) {
+  /**
+   * Creates a new AnalyticsResult.
+   *
+   * @param header the analytics header.
+   * @param rows the analytics rows.
+   * @param trailer the analytics trailer.
+   */
+  AnalyticsResult(final AnalyticsChunkHeader header, final List<AnalyticsChunkRow> rows,
+                  final AnalyticsChunkTrailer trailer) {
     this.rows = rows;
     this.header = header;
     this.trailer = trailer;
   }
 
-
-  public <T> Stream<T> rowsAs(final Class<T> target) {
-    return rows.stream().map(row -> {
-      try {
-        return JacksonTransformers.MAPPER.readValue(row.data(), target);
-      } catch (IOException e) {
-        throw new DecodingFailedException("Decoding of Analytics Row failed!", e);
-      }
-    });
+  /**
+   * Returns all rows, converted into the target class, and using the default serializer.
+   *
+   * @param target the target class to deserialize into.
+   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   */
+  public <T> List<T> rowsAs(final Class<T> target) {
+    return rowsAs(target, JsonSerializer.INSTANCE);
   }
 
-  public <T> List<T> allRowsAs(final Class<T> target) {
-    return rowsAs(target).collect(Collectors.toList());
+  /**
+   * Returns all rows, converted into the target class, and using a custom serializer.
+   *
+   * @param target the target class to deserialize into.
+   * @param serializer the custom serializer to use.
+   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   */
+  public <T> List<T> rowsAs(final Class<T> target, final Serializer serializer) {
+    final List<T> converted = new ArrayList<T>(rows.size());
+    for (AnalyticsChunkRow row : rows) {
+      converted.add(serializer.deserialize(target, row.data()));
+    }
+    return converted;
   }
 
   /**
    * Returns all rows, converted into {@link JsonObject}s.
-   * <p>
-   * @throws DecodingFailedException if any row could not be successfully decoded
+   *
+   * @throws DecodingFailedException if any row could not be successfully deserialized.
    */
-  public Stream<JsonObject> rowsAsObject() {
+  public List<JsonObject> rowsAsObject() {
     return rowsAs(JsonObject.class);
   }
 
   /**
-   * Returns all rows, converted into {@link JsonObject}s.
-   * <p>
-   * @throws DecodingFailedException if any row could not be successfully decoded
+   * Returns the {@link AnalyticsMetaData} giving access to the additional metadata associated with this analytics
+   * query.
    */
-  public List<JsonObject> allRowsAsObject() {
-    return allRowsAs(JsonObject.class);
-  }
-
   public AnalyticsMetaData metaData() {
     return AnalyticsMetaData.from(header, trailer);
   }
@@ -87,9 +116,10 @@ public class AnalyticsResult {
   @Override
   public String toString() {
     return "AnalyticsResult{" +
-            "rows=" + rows +
-            ", header=" + header +
-            ", trailer=" + trailer +
-            '}';
+          "rows=" + rows +
+          ", header=" + header +
+          ", trailer=" + trailer +
+          '}';
   }
+
 }

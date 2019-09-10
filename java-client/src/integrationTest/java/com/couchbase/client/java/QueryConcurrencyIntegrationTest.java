@@ -74,7 +74,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
       "select count(*) as count from " + bucketName,
       queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS)
     );
-    assertTrue(numDocsInserted <= countResult.allRowsAsObject().get(0).getInt("count"));
+    assertTrue(numDocsInserted <= countResult.rowsAsObject().get(0).getInt("count"));
   }
 
   @AfterAll
@@ -94,7 +94,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
         try {
           for (int runs = 0; runs < 20; runs++) {
             QueryResult result = cluster.query("select * from " + bucketName + " limit " + numConcurrentThreads);
-            assertEquals(numDocsInserted, result.allRowsAsObject().size());
+            assertEquals(numDocsInserted, result.rowsAsObject().size());
           }
         } finally {
           servicesDone.countDown();

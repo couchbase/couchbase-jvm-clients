@@ -22,10 +22,10 @@ import reactor.core.publisher.Mono;
 
 public class ReactiveSearchResult {
 
-    private final Flux<SearchQueryRow> rows;
+    private final Flux<SearchRow> rows;
     private final Mono<SearchMetaData> meta;
 
-    public ReactiveSearchResult(Flux<SearchQueryRow> rows,
+    public ReactiveSearchResult(Flux<SearchRow> rows,
                                 Mono<SearchMetaData> meta) {
         this.rows = rows;
         this.meta = meta;
@@ -36,7 +36,7 @@ public class ReactiveSearchResult {
      * <p>
      * Any errors will be raised as onError on this.
      */
-    public Flux<SearchQueryRow> rows() {
+    public Flux<SearchRow> rows() {
         return rows;
     }
 

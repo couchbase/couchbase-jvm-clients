@@ -96,7 +96,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(result.metaData().clientContextId().isPresent());
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
         assertFalse(result.metaData().warnings().isPresent());
-        assertEquals(1, result.allRowsAs(JsonObject.class).size());
+        assertEquals(1, result.rowsAs(JsonObject.class).size());
         assertTrue(result.metaData().signature().isPresent());
 
         QueryMetrics metrics = result.metaData().metrics().get();
@@ -155,7 +155,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(result.metaData().clientContextId().isPresent());
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
         assertFalse(result.metaData().warnings().isPresent());
-        assertEquals(1, result.allRowsAs(JsonObject.class).size());
+        assertEquals(1, result.rowsAs(JsonObject.class).size());
         assertTrue(result.metaData().signature().isPresent());
 
         QueryMetrics metrics = result.metaData().metrics().get();
@@ -173,7 +173,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.get().rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -242,7 +242,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -258,7 +258,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=$id",
           options
         );
-        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.get().rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -293,7 +293,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -309,7 +309,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName+ " where meta().id=$1",
           options
         );
-        List<JsonObject> rows = result.get().allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.get().rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
     }
 
@@ -345,7 +345,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
                 "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
                 options
         );
-        List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+        List<JsonObject> rows = result.rowsAs(JsonObject.class);
         assertEquals(1, rows.size());
         assertEquals(FOO_CONTENT, rows.get(0));
     }
@@ -368,7 +368,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
               options
             );
 
-            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            List<JsonObject> rows = result.rowsAs(JsonObject.class);
             assertEquals(1, rows.size());
             assertEquals(FOO_CONTENT, rows.get(0));
         }
@@ -388,7 +388,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
               options
             );
 
-            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            List<JsonObject> rows = result.rowsAs(JsonObject.class);
             assertEquals(1, rows.size());
             assertEquals(FOO_CONTENT, rows.get(0));
         }
@@ -408,7 +408,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
               options
             );
 
-            List<JsonObject> rows = result.allRowsAs(JsonObject.class);
+            List<JsonObject> rows = result.rowsAs(JsonObject.class);
             assertEquals(1, rows.size());
             assertEquals(FOO_CONTENT, rows.get(0));
         }

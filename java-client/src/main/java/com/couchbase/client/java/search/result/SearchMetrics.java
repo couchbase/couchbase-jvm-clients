@@ -30,7 +30,7 @@ public interface SearchMetrics {
     long took();
 
     /**
-     * The total number of rows (or {@link SearchQueryRow}) in the result.
+     * The total number of rows (or {@link SearchRow}) in the result.
      */
     long totalRows();
 
