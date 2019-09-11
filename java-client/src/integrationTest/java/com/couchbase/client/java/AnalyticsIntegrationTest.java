@@ -64,21 +64,18 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
         AnalyticsMetaData meta = result.metaData();
         assertFalse(meta.clientContextId().isEmpty());
-        assertTrue(meta.signatureAs(JsonObject.class).isPresent());
+        assertTrue(meta.signature().isPresent());
         assertFalse(meta.requestId().isEmpty());
         assertEquals(AnalyticsStatus.SUCCESS, meta.status());
 
-        assertFalse(meta.metrics().elapsedTime().isEmpty());
-        assertFalse(meta.metrics().executionTime().isEmpty());
+        assertFalse(meta.metrics().elapsedTime().isZero());
+        assertFalse(meta.metrics().executionTime().isZero());
         assertEquals(rows.size(), meta.metrics().resultCount());
         assertEquals(rows.size(), meta.metrics().processedObjects());
         assertTrue(meta.metrics().resultSize() > 0);
-        assertFalse(meta.warnings().isPresent());
-        assertFalse(meta.errors().isPresent());
+        assertTrue(meta.warnings().isEmpty());
 
         assertEquals(0, meta.metrics().errorCount());
-        assertEquals(0, meta.metrics().warningCount());
-        assertEquals(0, meta.metrics().mutationCount());
     }
 
     @Test

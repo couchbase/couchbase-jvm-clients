@@ -20,8 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.QueryStatus;
-import com.couchbase.client.java.query.ScanConsistency;
+import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -72,7 +71,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 
     QueryResult countResult = cluster.query(
       "select count(*) as count from " + bucketName,
-      queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS)
+      queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS)
     );
     assertTrue(numDocsInserted <= countResult.rowsAsObject().get(0).getInt("count"));
   }

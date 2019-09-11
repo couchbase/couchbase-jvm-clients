@@ -20,16 +20,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.json.JsonValue;
+import com.couchbase.client.java.kv.MutationState;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -37,25 +35,24 @@ import java.util.UUID;
  *
  * @since 3.0.0
  */
-@Stability.Volatile
 public class QueryOptions extends CommonOptions<QueryOptions> {
 
-  private Optional<Map<String, Object>> rawParams = Optional.empty();
-  private Optional<Map<String, String>> credentials = Optional.empty();
-  private Optional<ScanConsistency> scanConsistency = Optional.empty();
-  private Optional<QueryProfile> queryProfile = Optional.empty();
-  private Optional<String> clientContextId = Optional.empty();
-  private Optional<Boolean> metricsDisabled = Optional.empty();
-  private Optional<String> scanWait = Optional.empty();
-  private Optional<Integer> maxParallelism = Optional.empty();
-  private Optional<Integer> pipelineCap = Optional.empty();
-  private Optional<Integer> pipelineBatch = Optional.empty();
-  private Optional<Integer> scanCap = Optional.empty();
-  private Optional<Boolean> readonly = Optional.empty();
-  private Optional<JsonValue> parameters = Optional.empty();
-  private Optional<Boolean> prepared = Optional.empty();
-  private Optional<Boolean> adhoc = Optional.empty();
-  private Optional<List<MutationToken>> consistentWith = Optional.empty();
+  private boolean adhoc = true;
+  private String clientContextId;
+  private MutationState consistentWith;
+  private Integer maxParallelism;
+  private boolean metrics = false;
+  private JsonObject namedParameters;
+  private Integer pipelineBatch;
+  private Integer pipelineCap;
+  private JsonArray positionalParameters;
+  private QueryProfile profile;
+  private Map<String, Object> raw;
+  private boolean readonly = false;
+  private String scanWait;
+  private Integer scanCap;
+  private QueryScanConsistency scanConsistency;
+  private JsonSerializer serializer;
 
   private QueryOptions() {}
 
@@ -70,26 +67,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param value the parameter value
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions rawParams(String param, Object value) {
-    if (!this.rawParams.isPresent()) {
-      this.rawParams = Optional.of(new HashMap<>());
+  public QueryOptions raw(final String param, final Object value) {
+    if (raw == null) {
+      raw = new HashMap<>();
     }
-    this.rawParams.get().put(param, value.toString());
-    return this;
-  }
-
-  /**
-   * Additional credentials for the query
-   *
-   * @param user the user name
-   * @param password the user password
-   * @return {@link QueryOptions} for further chaining
-   */
-  public QueryOptions credentials(String user, String password) {
-    if (!this.credentials.isPresent()) {
-      this.credentials = Optional.of(new HashMap<>());
-    }
-    this.credentials.get().put(user, password);
+    raw.put(param, value);
     return this;
   }
 
@@ -100,7 +82,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return {@link QueryOptions} for further chaining.
    */
   public QueryOptions adhoc(final boolean adhoc) {
-    this.adhoc = Optional.of(adhoc);
+    this.adhoc = adhoc;
     return this;
   }
 
@@ -110,19 +92,25 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param scanConsistency the index scan consistency to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions scanConsistency(ScanConsistency scanConsistency) {
-    this.scanConsistency = Optional.of(scanConsistency);
+  public QueryOptions scanConsistency(final QueryScanConsistency scanConsistency) {
+    this.scanConsistency = scanConsistency;
+    consistentWith = null;
+    return this;
+  }
+
+  public QueryOptions serializer(final JsonSerializer serializer) {
+    this.serializer = serializer;
     return this;
   }
 
   /**
    * Set the profiling information level for query execution
    *
-   * @param queryProfile the query profile level to be used
+   * @param profile the query profile level to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public QueryOptions profile(QueryProfile queryProfile) {
-    this.queryProfile = Optional.of(queryProfile);
+  public QueryOptions profile(final QueryProfile profile) {
+    this.profile = profile;
     return this;
   }
 
@@ -133,26 +121,25 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param clientContextId the client context ID (null to send none)
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions clientContextId(String clientContextId) {
-    this.clientContextId = Optional.of(clientContextId);
+  public QueryOptions clientContextId(final String clientContextId) {
+    this.clientContextId = clientContextId;
     return this;
   }
 
   /**
-   * If set to true (false being the default), the metrics object will not be returned from N1QL and
-   * as a result be more efficient. Note that if metrics are disabled you are losing information
-   * to diagnose problems - so use with care!
+   * If set to true (false being the default), the metrics object will be returned from N1QL and
+   * as a result provide insight into timings.
    *
-   * @param metricsDisabled true if disabled, false otherwise (false = default).
+   * @param metrics true if enabled, false otherwise (true = default).
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions metricsDisabled(boolean metricsDisabled) {
-    this.metricsDisabled = Optional.of(metricsDisabled);
+  public QueryOptions metrics(boolean metrics) {
+    this.metrics = metrics;
     return this;
   }
 
   /**
-   * If the {@link ScanConsistency#NOT_BOUNDED scan consistency} has been chosen, does nothing.
+   * If the {@link QueryScanConsistency#NOT_BOUNDED scan consistency} has been chosen, does nothing.
    *
    * Otherwise, sets the maximum time the client is willing to wait for an index to catch up to the
    * vector timestamp in the request.
@@ -160,11 +147,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param wait the duration.
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions scanWait(Duration wait) {
-    if (this.scanConsistency.isPresent() && this.scanConsistency.get() == ScanConsistency.NOT_BOUNDED) {
-      this.scanWait = Optional.empty();
+  public QueryOptions scanWait(final Duration wait) {
+    if (this.scanConsistency != null && this.scanConsistency == QueryScanConsistency.NOT_BOUNDED) {
+      this.scanWait = null;
     } else {
-      this.scanWait = Optional.of(Golang.encodeDurationToMs(wait));
+      this.scanWait = Golang.encodeDurationToMs(wait);
     }
     return this;
   }
@@ -176,7 +163,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions maxParallelism(int maxParallelism) {
-    this.maxParallelism = Optional.of(maxParallelism);
+    this.maxParallelism = maxParallelism;
     return this;
   }
 
@@ -199,7 +186,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions readonly(boolean readonly) {
-    this.readonly = Optional.of(readonly);
+    this.readonly = readonly;
     return this;
   }
 
@@ -212,7 +199,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions scanCap(int scanCap) {
-    this.scanCap = Optional.of(scanCap);
+    this.scanCap = scanCap;
     return this;
   }
 
@@ -223,7 +210,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions pipelineBatch(int pipelineBatch) {
-    this.pipelineBatch = Optional.of(pipelineBatch);
+    this.pipelineBatch = pipelineBatch;
     return this;
   }
 
@@ -234,7 +221,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions pipelineCap(int pipelineCap) {
-    this.pipelineCap = Optional.of(pipelineCap);
+    this.pipelineCap = pipelineCap;
     return this;
   }
 
@@ -245,7 +232,8 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions parameters(final JsonObject named) {
-    this.parameters = Optional.of(named);
+    this.namedParameters = named;
+    positionalParameters = null;
     return this;
   }
 
@@ -256,40 +244,20 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public QueryOptions parameters(final JsonArray positional) {
-    this.parameters = Optional.of(positional);
+    this.positionalParameters = positional;
+    namedParameters = null;
     return this;
   }
 
   /**
-   * Set to true if the query is already prepared/to be prepared
+   * Sets the {@link MutationToken}s this query should be consistent with. These tokens are returned from mutations.
    *
-   * @param prepared true if prepared, else false
+   * @param mutationState the mutation tokens
    * @return this {@link QueryOptions} for chaining.
    */
-  public QueryOptions prepared(final boolean prepared) {
-    this.prepared = Optional.of(prepared);
-    return this;
-  }
-
-  /**
-   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
-   *
-   * @param tokens the mutation tokens
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public QueryOptions consistentWith(MutationToken... tokens) {
-    this.consistentWith = Optional.of(Arrays.asList(tokens));
-    return this;
-  }
-
-  /**
-   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
-   *
-   * @param tokens the mutation tokens
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public QueryOptions consistentWith(List<MutationToken> tokens) {
-    this.consistentWith = Optional.of(tokens);
+  public QueryOptions consistentWith(final MutationState mutationState) {
+    this.consistentWith = mutationState;
+    scanConsistency = null;
     return this;
   }
 
@@ -300,62 +268,49 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
   public class Built extends BuiltCommonOptions {
 
-    public boolean adhoc() {
-      return adhoc.orElse(true);
+    boolean adhoc() {
+      return adhoc;
     }
 
     public boolean readonly() {
-      return readonly.orElse(false);
+      return readonly;
+    }
+
+    public JsonSerializer serializer() {
+      return serializer;
     }
 
     @Stability.Internal
-    public void injectParams(JsonObject queryJson) {
-      queryJson.put("client_context_id", clientContextId.orElse(UUID.randomUUID().toString()));
+    public void injectParams(final JsonObject queryJson) {
+      queryJson.put("client_context_id", clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
 
-      credentials.ifPresent(cr -> {
-        if (!cr.isEmpty()) {
-          JsonArray creds = JsonArray.create();
+      boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
+      if (namedParameters != null && !namedParameters.isEmpty()) {
+        if (positionalPresent) {
+          throw new IllegalArgumentException("Both positional and named parameters cannot be present at the same time!");
+        }
 
-          for (Map.Entry<String, String> c : cr.entrySet()) {
-            if (c.getKey() != null && !c.getKey().isEmpty()) {
-              creds.add(JsonObject.create().put("user", c.getKey()).put("pass", c.getValue()));
-            }
+        namedParameters.getNames().forEach(key -> {
+          Object value = namedParameters.get(key);
+          if (key.charAt(0) != '$') {
+            queryJson.put('$' + key, value);
+          } else {
+            queryJson.put(key, value);
           }
+        });
+      }
 
-          if (!creds.isEmpty()) {
-            queryJson.put("creds", creds);
-          }
-        }
-      });
+      if (positionalPresent) {
+        queryJson.put("args", positionalParameters);
+      }
 
-      parameters.ifPresent(params -> {
-        if (params instanceof JsonArray && !((JsonArray) params).isEmpty()) {
-          queryJson.put("args", (JsonArray) params);
-        }
-        else if (params instanceof JsonObject && !((JsonObject) params).isEmpty()) {
-          JsonObject namedParams = (JsonObject) params;
+      if (scanConsistency != null && scanConsistency != QueryScanConsistency.NOT_BOUNDED) {
+        queryJson.put("scan_consistency", scanConsistency.toString());
+      }
 
-          namedParams.getNames().forEach(key -> {
-            Object value = namedParams.get(key);
-            if (key.charAt(0) != '$') {
-              queryJson.put('$' + key, value);
-            } else {
-              queryJson.put(key, value);
-            }
-          });
-        }
-      });
-
-      scanConsistency.ifPresent(sc -> queryJson.put("scan_consistency", sc.export()));
-
-      consistentWith.ifPresent(cw -> {
-        if (scanConsistency.isPresent()) {
-          throw new IllegalArgumentException("`withScanConsistency(...)` cannot be used "
-                  + "together with `consistentWith(...)`");
-        }
-
+      if (consistentWith != null) {
         JsonObject mutationState = JsonObject.create();
-        for (MutationToken token : cw) {
+        for (MutationToken token : consistentWith) {
           JsonObject bucket = mutationState.getObject(token.bucket());
           if (bucket == null) {
             bucket = JsonObject.create();
@@ -363,44 +318,54 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
           }
 
           bucket.put(
-                  String.valueOf(token.vbucketID()),
-                  JsonArray.from(token.sequenceNumber(), String.valueOf(token.vbucketUUID()))
+            String.valueOf(token.vbucketID()),
+            JsonArray.from(token.sequenceNumber(), String.valueOf(token.vbucketUUID()))
           );
         }
         queryJson.put("scan_vectors", mutationState);
         queryJson.put("scan_consistency", "at_plus");
-      });
-
-      queryProfile.ifPresent(v -> queryJson.put("profile", v.toString()));
-
-      scanWait.ifPresent(v -> {
-        if (!scanConsistency.isPresent() || ScanConsistency.NOT_BOUNDED != scanConsistency.get()) {
-          queryJson.put("scan_wait", v);
-        }
-      });
-
-      maxParallelism.ifPresent(v -> queryJson.put("max_parallelism", v.toString()));
-
-      pipelineCap.ifPresent(v -> queryJson.put("pipeline_cap", v.toString()));
-
-      pipelineBatch.ifPresent(v -> queryJson.put("pipeline_batch", v.toString()));
-
-      scanCap.ifPresent(v -> queryJson.put("scan_cap", v.toString()));
-
-      metricsDisabled.ifPresent(v -> queryJson.put("metrics", !v));
-
-      readonly.ifPresent(v -> queryJson.put("readonly", v));
-
-      boolean autoPrepare = Boolean.parseBoolean(System.getProperty("com.couchbase.client.query.autoprepared", "false"));
-      if (autoPrepare) {
-        queryJson.put("auto_prepare", true);
       }
 
-      rawParams.ifPresent(v -> {
-      for (Map.Entry<String, Object> entry : v.entrySet()) {
+      if (profile != null && profile != QueryProfile.OFF) {
+        queryJson.put("profile", profile.toString());
+      }
+
+      if (scanWait != null && !scanWait.isEmpty()) {
+        if (scanConsistency == null || QueryScanConsistency.NOT_BOUNDED != scanConsistency) {
+          queryJson.put("scan_wait", scanWait);
+        }
+      }
+
+      if (maxParallelism != null) {
+        queryJson.put("max_parallelism", maxParallelism);
+      }
+
+      if (pipelineCap != null) {
+        queryJson.put("pipeline_cap", pipelineCap);
+      }
+
+      if (pipelineBatch != null) {
+        queryJson.put("pipeline_batch", pipelineBatch);
+      }
+
+      if (scanCap != null) {
+        queryJson.put("scan_cap", scanCap);
+      }
+
+      if (!metrics) {
+        queryJson.put("metrics", false);
+      }
+
+      if (readonly) {
+        queryJson.put("readonly", true);
+      }
+
+      if (raw != null) {
+        for (Map.Entry<String, Object> entry : raw.entrySet()) {
           queryJson.put(entry.getKey(), entry.getValue());
         }
-      });
+      }
     }
   }
+
 }

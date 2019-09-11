@@ -47,8 +47,8 @@ public class AnalyticsAccessor {
       .toFuture();
   }
 
-  public static Mono<ReactiveAnalyticsResult> analyticsQueryReactive(final Core core, final AnalyticsRequest request) {
-    return analyticsQueryInternal(core, request).map(ReactiveAnalyticsResult::new);
+  public static Mono<ReactiveAnalyticsResult> analyticsQueryReactive(final Core core, final AnalyticsRequest request, final JsonSerializer serializer) {
+    return analyticsQueryInternal(core, request).map(r -> new ReactiveAnalyticsResult(r, serializer));
   }
 
   private static Mono<AnalyticsResponse> analyticsQueryInternal(final Core core, final AnalyticsRequest request) {

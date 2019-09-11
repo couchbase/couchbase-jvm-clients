@@ -71,24 +71,13 @@ public class AnalyticsResult {
   }
 
   /**
-   * Returns all rows, converted into the target class, and using the default serializer.
+   * Returns all rows, converted into the target class.
    *
    * @param target the target class to deserialize into.
    * @throws DecodingFailedException if any row could not be successfully deserialized.
    */
   public <T> List<T> rowsAs(final Class<T> target) {
-    return rowsAs(target, serializer);
-  }
-
-  /**
-   * Returns all rows, converted into the target class, and using a custom serializer.
-   *
-   * @param target the target class to deserialize into.
-   * @param serializer the custom serializer to use.
-   * @throws DecodingFailedException if any row could not be successfully deserialized.
-   */
-  public <T> List<T> rowsAs(final Class<T> target, final JsonSerializer serializer) {
-    final List<T> converted = new ArrayList<T>(rows.size());
+    final List<T> converted = new ArrayList<>(rows.size());
     for (AnalyticsChunkRow row : rows) {
       converted.add(serializer.deserialize(target, row.data()));
     }
@@ -115,10 +104,10 @@ public class AnalyticsResult {
   @Override
   public String toString() {
     return "AnalyticsResult{" +
-          "rows=" + rows +
-          ", header=" + header +
-          ", trailer=" + trailer +
-          '}';
+      "rows=" + rows +
+      ", header=" + header +
+      ", trailer=" + trailer +
+      ", serializer=" + serializer +
+      '}';
   }
-
 }

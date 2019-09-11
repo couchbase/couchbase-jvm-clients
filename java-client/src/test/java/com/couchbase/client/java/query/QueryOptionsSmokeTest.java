@@ -23,23 +23,13 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Basic smoke test for query options
+ * Basic smoke test for query options.
  */
-public class QueryOptionsSmokeTest {
+class QueryOptionsSmokeTest {
 
     @Test
-    public void testCredentials() {
-        QueryOptions options = QueryOptions.queryOptions().credentials("johndoe", "secret");
-        QueryOptions.Built opts = options.build();
-        JsonObject queryJson = JsonObject.create();
-        opts.injectParams(queryJson);
-        assertEquals(queryJson.getArray("creds").getObject(0).get("user"), "johndoe");
-        assertEquals(queryJson.getArray("creds").getObject(0).get("pass"), "secret");
-    }
-
-    @Test
-    public void testScanConsistency() {
-        QueryOptions options = QueryOptions.queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS);
+    void testScanConsistency() {
+        QueryOptions options = QueryOptions.queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         QueryOptions.Built opts = options.build();
         JsonObject queryJson = JsonObject.create();
         opts.injectParams(queryJson);
@@ -47,7 +37,7 @@ public class QueryOptionsSmokeTest {
     }
 
     @Test
-    public void testProfile() {
+    void testProfile() {
         QueryOptions options = QueryOptions.queryOptions().profile(QueryProfile.TIMINGS);
         QueryOptions.Built opts = options.build();
         JsonObject queryJson = JsonObject.create();
@@ -56,7 +46,7 @@ public class QueryOptionsSmokeTest {
     }
 
     @Test
-    public void testClientContextId() {
+    void testClientContextId() {
         String randomId = UUID.randomUUID().toString();
         QueryOptions options = QueryOptions.queryOptions().clientContextId(randomId);
         QueryOptions.Built opts = options.build();
@@ -64,4 +54,5 @@ public class QueryOptionsSmokeTest {
         opts.injectParams(queryJson);
         assertEquals(queryJson.get("client_context_id"), randomId);
     }
+
 }

@@ -16,13 +16,10 @@
 
 package com.couchbase.client.java.query;
 
-import java.io.IOException;
-
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryResponse;
-import com.couchbase.client.java.json.JacksonTransformers;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,8 +34,14 @@ public class ReactiveQueryResult {
 
 	private final QueryResponse response;
 
-	ReactiveQueryResult(final QueryResponse response) {
+	/**
+	 * The default serializer to use.
+	 */
+	private final JsonSerializer serializer;
+
+	ReactiveQueryResult(final QueryResponse response, final JsonSerializer serializer) {
 		this.response = response;
+		this.serializer = serializer;
 	}
 
 	/**
@@ -63,13 +66,7 @@ public class ReactiveQueryResult {
 	 * @return {@link Flux}
 	 */
 	public <T> Flux<T> rowsAs(Class<T> target) {
-		return response.rows().map(n -> {
-			try {
-				return JacksonTransformers.MAPPER.readValue(n.data(), target);
-			} catch (IOException ex) {
-				throw new CouchbaseException(ex);
-			}
-		});
+		return response.rows().map(n -> serializer.deserialize(target, n.data()));
 	}
 
 	/**

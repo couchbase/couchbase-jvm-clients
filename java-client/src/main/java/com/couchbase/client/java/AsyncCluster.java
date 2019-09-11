@@ -32,6 +32,7 @@ import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -247,8 +248,11 @@ public class AsyncCluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
+    notNull(options, "QueryOptions");
+
     final QueryOptions.Built opts = options.build();
-    return queryAccessor.queryAsync(queryRequest(statement, opts), opts, environment.get().jsonSerializer());
+    JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
+    return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
   }
 
   /**
@@ -260,7 +264,6 @@ public class AsyncCluster {
    */
   QueryRequest queryRequest(final String statement, final QueryOptions.Built options) {
     notNullOrEmpty(statement, "Statement");
-    notNull(options, "QueryOptions");
 
     Duration timeout = options.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.get().retryStrategy());
@@ -294,23 +297,23 @@ public class AsyncCluster {
    * @param options the custom options for this analytics query.
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
-  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement,
-                                                           final AnalyticsOptions options) {
-    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, options), environment.get().jsonSerializer());
+  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNull(options, "AnalyticsOptions");
+
+    AnalyticsOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
+    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, opts), serializer);
   }
 
   /**
    * Helper method to craft an analytics request.
    *
    * @param statement the statement to use.
-   * @param options the analytics options.
+   * @param opts the built analytics options.
    * @return the created analytics request.
    */
-  AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions options) {
+  AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions.Built opts) {
     notNullOrEmpty(statement, "Statement");
-    notNull(options, "AnalyticsOptions");
-
-    AnalyticsOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());

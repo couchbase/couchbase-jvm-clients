@@ -18,13 +18,18 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryWarning;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Holds associated metadata returned by the server for the performed analytics request.
@@ -59,24 +64,7 @@ public class AnalyticsMetaData {
      * @return client context identifier
      */
     public String clientContextId() {
-        return header.clientContextId().get();
-    }
-
-    /**
-     * Get the signature as the target type, if present.
-     *
-     * @param target the target type.
-     * @param <T> the generic target type.
-     * @return the decoded signature if present.
-     */
-    public <T> Optional<T> signatureAs(final Class<T> target) {
-        return header.signature().map(bytes -> {
-            try {
-                return JacksonTransformers.MAPPER.readValue(bytes, target);
-            } catch (IOException e) {
-                throw new DecodingFailedException("Could not decode Analytics signature", e);
-            }
-        });
+        return header.clientContextId().orElse("");
     }
 
     /**
@@ -86,6 +74,21 @@ public class AnalyticsMetaData {
      */
     public AnalyticsStatus status() {
         return AnalyticsStatus.from(trailer.status());
+    }
+
+    /**
+     * Get the signature as the target type, if present.
+     *
+     * @return the decoded signature if present.
+     */
+    public Optional<JsonObject> signature() {
+        return header.signature().map(bytes -> {
+            try {
+                return JacksonTransformers.MAPPER.readValue(bytes, JsonObject.class);
+            } catch (IOException e) {
+                throw new DecodingFailedException("Could not decode Analytics signature", e);
+            }
+        });
     }
 
     /**
@@ -102,34 +105,15 @@ public class AnalyticsMetaData {
      *
      * @return warnings, if present.
      */
-    public Optional<JsonObject> warnings() {
-        return trailer.warnings().map(bytes -> {
-            try {
-                return JacksonTransformers.MAPPER.readValue(bytes, JsonObject.class);
-            } catch (IOException e) {
-                throw new DecodingFailedException("Could not decode Analytics warnings", e);
-            }
-        });
-    }
-
-    /**
-     * Returns errors if present.
-     *
-     * @return errors, if present.
-     */
-    public Optional<JsonObject> errors() {
-        return trailer.errors().map(bytes -> {
-            try {
-                return JacksonTransformers.MAPPER.readValue(bytes, JsonObject.class);
-            } catch (IOException e) {
-                throw new DecodingFailedException("Could not decode Analytics errors", e);
-            }
-        });
+    public List<AnalyticsWarning> warnings() {
+        return this.trailer.warnings().map(warnings ->
+          ErrorCodeAndMessage.fromJsonArray(warnings).stream().map(AnalyticsWarning::new).collect(Collectors.toList())
+        ).orElse(Collections.emptyList());
     }
 
     @Override
     public String toString() {
-        return "AnalyticsMeta{" +
+        return "AnalyticsMetaData{" +
           "header=" + header +
           ", trailer=" + trailer +
           '}';

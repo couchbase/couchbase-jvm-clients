@@ -18,24 +18,27 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.json.JsonValue;
 import com.couchbase.client.java.query.QueryOptions;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
-  private int priority;
   private String clientContextId;
-  private Map<String, Object> rawParams;
-  private JsonValue parameters;
-  private ScanConsistency scanConsistency;
-  private Optional<Boolean> readonly = Optional.empty();
+  private JsonObject namedParameters;
+  private JsonArray positionalParameters;
+  private int priority;
+  private Map<String, Object> raw;
+  private boolean readonly = false;
+  private AnalyticsScanConsistency scanConsistency;
+  private JsonSerializer serializer;
 
   public static AnalyticsOptions analyticsOptions() {
     return new AnalyticsOptions();
@@ -43,18 +46,25 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
   private AnalyticsOptions() {}
 
-  public AnalyticsOptions priority(final int priority) {
-    this.priority = priority;
+  public AnalyticsOptions priority(final boolean priority) {
+    this.priority = priority ? -1 : 0;
     return this;
   }
 
   public AnalyticsOptions clientContextId(final String clientContextId) {
+    notNull(clientContextId, "ClientContextId");
     this.clientContextId = clientContextId;
     return this;
   }
 
   public AnalyticsOptions readonly(boolean readonly) {
-    this.readonly = Optional.of(readonly);
+    this.readonly = readonly;
+    return this;
+  }
+
+  public AnalyticsOptions serializer(final JsonSerializer serializer) {
+    notNull(serializer, "JsonSerializer");
+    this.serializer = serializer;
     return this;
   }
 
@@ -64,7 +74,8 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @param scanConsistency the index scan consistency to be used
    * @return {@link QueryOptions} for further chaining
    */
-  public AnalyticsOptions scanConsistency(ScanConsistency scanConsistency) {
+  public AnalyticsOptions scanConsistency(final AnalyticsScanConsistency scanConsistency) {
+    notNull(scanConsistency, "AnalyticsScanConsistency");
     this.scanConsistency = scanConsistency;
     return this;
   }
@@ -76,7 +87,8 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public AnalyticsOptions parameters(final JsonObject named) {
-    this.parameters = named;
+    this.namedParameters = named;
+    positionalParameters = null;
     return this;
   }
 
@@ -87,15 +99,23 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @return this {@link QueryOptions} for chaining.
    */
   public AnalyticsOptions parameters(final JsonArray positional) {
-    this.parameters = positional;
+    this.positionalParameters = positional;
+    namedParameters = null;
     return this;
   }
 
-  public AnalyticsOptions rawParam(final String key, final Object value) {
-    if (rawParams == null) {
-      rawParams = new HashMap<>();
+  /**
+   * Raw parameters for the query
+   *
+   * @param param the parameter name
+   * @param value the parameter value
+   * @return {@link QueryOptions} for further chaining
+   */
+  public AnalyticsOptions raw(final String param, final Object value) {
+    if (raw == null) {
+      raw = new HashMap<>();
     }
-    this.rawParams.put(key, value);
+    this.raw.put(param, value);
     return this;
   }
 
@@ -107,7 +127,11 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   public class Built extends BuiltCommonOptions {
 
     public boolean readonly() {
-      return readonly.orElse(false);
+      return readonly;
+    }
+
+    public JsonSerializer serializer() {
+      return serializer;
     }
 
     public int priority() {
@@ -119,31 +143,32 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
           ? UUID.randomUUID().toString()
           : clientContextId);
 
-
       if (scanConsistency != null) {
-        input.put("scan_consistency", scanConsistency.export());
+        input.put("scan_consistency", scanConsistency.toString());
       }
 
-      if (parameters != null) {
-        if (parameters instanceof JsonArray && !((JsonArray) parameters).isEmpty()) {
-          input.put("args", (JsonArray) parameters);
-        } else if (parameters instanceof JsonObject && !((JsonObject) parameters).isEmpty()) {
-          JsonObject namedParams = (JsonObject) parameters;
-          namedParams.getNames().forEach(key -> {
-            Object value = namedParams.get(key);
-            if (key.charAt(0) != '$') {
-              input.put('$' + key, value);
-            } else {
-              input.put(key, value);
-            }
-          });
-        }
+      boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
+      if (namedParameters != null && !namedParameters.isEmpty()) {
+        namedParameters.getNames().forEach(key -> {
+          Object value = namedParameters.get(key);
+          if (key.charAt(0) != '$') {
+            input.put('$' + key, value);
+          } else {
+            input.put(key, value);
+          }
+        });
       }
 
-      readonly.ifPresent(v -> input.put("readonly", v));
+      if (positionalPresent) {
+        input.put("args", positionalParameters);
+      }
 
-      if (rawParams != null) {
-        for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
+      if (readonly) {
+        input.put("readonly", true);
+      }
+
+      if (raw != null) {
+        for (Map.Entry<String, Object> entry : raw.entrySet()) {
           input.put(entry.getKey(), entry.getValue());
         }
       }

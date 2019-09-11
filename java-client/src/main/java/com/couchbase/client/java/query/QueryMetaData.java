@@ -18,14 +18,19 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Stores any non-rows results related to the execution of a particular N1QL query.
@@ -34,6 +39,7 @@ import java.util.Optional;
  * @since 1.0.0
  */
 public class QueryMetaData {
+
     private final QueryChunkHeader header;
     private final QueryChunkTrailer trailer;
 
@@ -56,10 +62,10 @@ public class QueryMetaData {
     }
 
     /**
-     * Returns the client context identifier string set on the query request, if it's available
+     * Returns the client context identifier string set on the query request.
      */
-    public Optional<String> clientContextId() {
-        return header.clientContextId();
+    public String clientContextId() {
+        return header.clientContextId().orElse("");
     }
 
     /**
@@ -93,7 +99,7 @@ public class QueryMetaData {
      *
      * @throws DecodingFailedException when the profile cannot be decoded successfully
      */
-    public Optional<JsonObject> profileInfo() {
+    public Optional<JsonObject> profile() {
         return trailer.profile().map(profile -> {
             try {
                 return JacksonTransformers.MAPPER.readValue(profile, JsonObject.class);
@@ -104,20 +110,12 @@ public class QueryMetaData {
     }
 
     /**
-     * Returns the {@link QueryMetrics} as returned by the query engine
-     * <p>
-     * It is returned as an Optional which will be empty if no metrics information is available.
+     * Returns the {@link QueryMetrics} as returned by the query engine if enabled.
      *
      * @throws DecodingFailedException when the metrics cannot be decoded successfully
      */
     public Optional<QueryMetrics> metrics() {
-        return this.trailer.metrics().map(v -> {
-            try {
-                return new QueryMetrics(JacksonTransformers.MAPPER.readValue(v, JsonObject.class));
-            } catch (IOException ex) {
-                throw new DecodingFailedException(ex);
-            }
-        });
+        return trailer.metrics().map(QueryMetrics::new);
     }
 
     /**
@@ -127,19 +125,15 @@ public class QueryMetaData {
      *
      * @throws DecodingFailedException when the warnings cannot be decoded successfully
      */
-    public Optional<JsonArray> warnings() {
-        return this.trailer.warnings().map(warnings -> {
-            try {
-                return JacksonTransformers.MAPPER.readValue(warnings, JsonArray.class);
-            } catch (IOException ex) {
-                throw new DecodingFailedException(ex);
-            }
-        });
+    public List<QueryWarning> warnings() {
+        return this.trailer.warnings().map(warnings ->
+          ErrorCodeAndMessage.fromJsonArray(warnings).stream().map(QueryWarning::new).collect(Collectors.toList())
+        ).orElse(Collections.emptyList());
     }
 
     @Override
     public String toString() {
-        return "QueryMeta{" +
+        return "QueryMetaData{" +
           "header=" + header +
           ", trailer=" + trailer +
           '}';

@@ -20,21 +20,20 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingE
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.ViewServiceException;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.json.JacksonTransformers;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
  * Holds the metrics as returned from an analytics response.
  */
 public class AnalyticsMetrics {
-
-    /**
-     * Holds the raw metric data.
-     */
-    private final byte[] raw;
 
     /**
      * Provides a pointer into the root nodes of the raw response for easier decoding.
@@ -47,7 +46,6 @@ public class AnalyticsMetrics {
      * @param raw the raw analytics data.
      */
     AnalyticsMetrics(final byte[] raw) {
-        this.raw = raw;
         try {
             this.rootNode = JacksonTransformers.MAPPER.readTree(raw);
         } catch (IOException e) {
@@ -60,8 +58,8 @@ public class AnalyticsMetrics {
      * request was received until the results were returned, in a human-readable
      * format (eg. 123.45ms for a little over 123 milliseconds).
      */
-    public String elapsedTime() {
-        return decode(String.class, "elapsedTime").get();
+    public Duration elapsedTime() {
+        return decode(String.class, "elapsedTime").map(Golang::parseDuration).orElse(Duration.ZERO);
     }
 
     /**
@@ -69,16 +67,8 @@ public class AnalyticsMetrics {
      * when query execution started until the results were returned, in a human-readable
      * format (eg. 123.45ms for a little over 123 milliseconds).
      */
-    public String executionTime() {
-        return decode(String.class, "executionTime").get();
-    }
-
-    /**
-     * @return the total number of results selected by the engine before restriction
-     * through LIMIT clause.
-     */
-    public long sortCount() {
-        return decode(Long.class, "sortCount").orElse(0L);
+    public Duration executionTime() {
+        return decode(String.class, "executionTime").map(Golang::parseDuration).orElse(Duration.ZERO);
     }
 
     /**
@@ -95,12 +85,6 @@ public class AnalyticsMetrics {
         return decode(Long.class, "resultSize").orElse(0L);
     }
 
-    /**
-     * @return The number of mutations that were made during the request.
-     */
-    public long mutationCount() {
-        return decode(Long.class, "mutationCount").orElse(0L);
-    }
     /**
      * @return The number of errors that occurred during the request.
      */
@@ -145,7 +129,7 @@ public class AnalyticsMetrics {
     @Override
     public String toString() {
         return "AnalyticsMetrics{" +
-            "raw=" + new String(raw, StandardCharsets.UTF_8) +
+            "raw=" + redactUser(Mapper.encodeAsString(rootNode)) +
             '}';
     }
 

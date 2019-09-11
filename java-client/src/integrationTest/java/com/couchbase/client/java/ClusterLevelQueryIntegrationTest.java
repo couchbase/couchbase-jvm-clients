@@ -49,7 +49,7 @@ class ClusterLevelQueryIntegrationTest extends JavaIntegrationTest {
   void performsClusterLevelQueryWithoutOpenBucket() {
     QueryResult result = cluster.query("select 1=1", queryOptions().clientContextId("my-context-id"));
     assertEquals(1, result.rowsAsObject().size());
-    assertEquals("my-context-id", result.metaData().clientContextId().get());
+    assertEquals("my-context-id", result.metaData().clientContextId());
   }
 
   @Test

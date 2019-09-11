@@ -25,6 +25,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
@@ -179,9 +180,11 @@ public class ReactiveCluster {
    */
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return asyncCluster.queryAccessor().queryReactive(
       asyncCluster.queryRequest(statement, opts),
-      opts
+      opts,
+      serializer
     );
   }
 
@@ -205,9 +208,12 @@ public class ReactiveCluster {
    */
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement,
                                                       final AnalyticsOptions options) {
+    AnalyticsOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return AnalyticsAccessor.analyticsQueryReactive(
       asyncCluster.core(),
-      asyncCluster.analyticsRequest(statement, options)
+      asyncCluster.analyticsRequest(statement, opts),
+      serializer
     );
   }
 

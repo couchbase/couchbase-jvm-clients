@@ -72,7 +72,7 @@ public class ErrorCodeAndMessage {
   }
 
   @Stability.Internal
-  static List<ErrorCodeAndMessage> fromJsonArray(byte[] jsonArray) {
+  public static List<ErrorCodeAndMessage> fromJsonArray(byte[] jsonArray) {
     try {
       return unmodifiableList(Mapper.decodeInto(jsonArray, new TypeReference<List<ErrorCodeAndMessage>>() {
       }));

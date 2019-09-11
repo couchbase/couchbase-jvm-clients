@@ -110,7 +110,7 @@ public class QueryAccessor {
     public CompletableFuture<QueryResult> queryAsync(final QueryRequest request,
                                                      final QueryOptions.Built options,
                                                      final JsonSerializer serializer) {
-        return queryInternal(request, options, options.adhoc())
+        return queryInternal(request, options, options.adhoc(), serializer)
           .flatMap(response -> response
             .rows()
             .collectList()
@@ -130,8 +130,9 @@ public class QueryAccessor {
      * @return the mono once the result is complete.
      */
     public Mono<ReactiveQueryResult> queryReactive(final QueryRequest request,
-                                                   final QueryOptions.Built options) {
-        return queryInternal(request, options, options.adhoc()).map(ReactiveQueryResult::new);
+                                                   final QueryOptions.Built options,
+                                                   final JsonSerializer serializer) {
+        return queryInternal(request, options, options.adhoc(), serializer).map(r -> new ReactiveQueryResult(r, serializer));
     }
 
     /**
@@ -143,12 +144,14 @@ public class QueryAccessor {
      * @return the mono once the result is complete.
      */
     private Mono<QueryResponse> queryInternal(final QueryRequest request,
-                                              final QueryOptions.Built options, final boolean adhoc) {
+                                              final QueryOptions.Built options,
+                                              final boolean adhoc,
+                                              final JsonSerializer serializer) {
         if (adhoc) {
             core.send(request);
             return Reactor.wrap(request, request.response(), true);
         } else {
-            return maybePrepareAndExecute(request, options);
+            return maybePrepareAndExecute(request, options, serializer);
         }
     }
 
@@ -167,14 +170,15 @@ public class QueryAccessor {
      * @return the mono once the result is complete.
      */
     private Mono<QueryResponse> maybePrepareAndExecute(final QueryRequest request,
-                                                       final QueryOptions.Built options) {
+                                                       final QueryOptions.Built options,
+                                                       final JsonSerializer serializer) {
         final QueryCacheEntry cacheEntry = queryCache.get(request.statement());
         boolean enhancedEnabled = enhancedPreparedEnabled;
 
         if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
-            return queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true);
+            return queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true, serializer);
         } else if (enhancedEnabled) {
-            return queryInternal(buildPrepareRequest(request, options), options, true)
+            return queryInternal(buildPrepareRequest(request, options), options, true, serializer)
               .flatMap(qr -> {
                   Optional<String> preparedName = qr.header().prepared();
                   if (!preparedName.isPresent()) {
@@ -189,7 +193,7 @@ public class QueryAccessor {
                   return Mono.just(qr);
               });
         } else {
-            return queryReactive(buildPrepareRequest(request, options), queryOptions().build())
+            return queryReactive(buildPrepareRequest(request, options), queryOptions().build(), serializer)
               .flatMap(result -> result.rowsAsObject().next())
               .map(row -> {
                   queryCache.put(
@@ -202,7 +206,7 @@ public class QueryAccessor {
                   );
                   return row;
               })
-              .then(Mono.defer(() -> maybePrepareAndExecute(request, options)));
+              .then(Mono.defer(() -> maybePrepareAndExecute(request, options, serializer)));
         }
     }
 

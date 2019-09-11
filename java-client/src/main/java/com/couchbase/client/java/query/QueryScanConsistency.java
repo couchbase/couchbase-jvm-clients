@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.analytics;
+package com.couchbase.client.java.query;
 
 /**
- * The possible values for scan_consistency in an analytics request.
+ * The possible values for scan_consistency in a N1QL request.
  *
  * @since 3.0.0
  */
-public enum ScanConsistency {
+public enum QueryScanConsistency {
 
 	/**
 	 * This is the default (for single-statement requests). No timestamp vector is used
@@ -29,16 +29,24 @@ public enum ScanConsistency {
 	 * This is also the fastest mode, because we avoid the cost of obtaining the vector,
 	 * and we also avoid any wait for the index to catch up to the vector.
 	 */
-	NOT_BOUNDED,
+	NOT_BOUNDED {
+		@Override
+		public String toString() {
+			return "not_bounded";
+		}
+	},
+
 	/**
 	 * This implements strong consistency per request.
 	 * Before processing the request, a current vector is obtained.
 	 * The vector is used as a lower bound for the statements in the request.
 	 * If there are DML statements in the request, RYOW is also applied within the request.
 	 */
-	REQUEST_PLUS;
-
-	public String export() {
-		return this.name().toLowerCase();
+	REQUEST_PLUS {
+		@Override
+		public String toString() {
+			return "request_plus";
+		}
 	}
+
 }

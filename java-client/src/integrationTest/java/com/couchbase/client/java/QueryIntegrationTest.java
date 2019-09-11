@@ -23,13 +23,14 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryProfile;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryStatus;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.query.ScanConsistency;
+import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -93,9 +94,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         QueryResult result = cluster.query("select 'hello world' as Greeting");
 
         assertNotNull(result.metaData().requestId());
-        assertTrue(result.metaData().clientContextId().isPresent());
+        assertFalse(result.metaData().clientContextId().isEmpty());
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
-        assertFalse(result.metaData().warnings().isPresent());
+        assertTrue(result.metaData().warnings().isEmpty());
         assertEquals(1, result.rowsAs(JsonObject.class).size());
         assertTrue(result.metaData().signature().isPresent());
 
@@ -112,13 +113,12 @@ class QueryIntegrationTest extends JavaIntegrationTest {
             .adhoc(true)
             .clientContextId("123")
             .maxParallelism(3)
-            .metricsDisabled(true)
+            .metrics(false)
             .pipelineBatch(1)
             .pipelineCap(1)
-            .prepared(false)
             .readonly(true)
             .scanCap(10)
-            .scanConsistency(ScanConsistency.REQUEST_PLUS)
+            .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
             .scanWait(Duration.ofMillis(50));
         QueryResult result = cluster.query(
             "select * from " + bucketName + " where meta().id=\"" + id + "\"",
@@ -127,7 +127,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
         assertEquals(Optional.of("123"), result.metaData().clientContextId());
-        assertFalse(result.metaData().metrics().isPresent());
+        assertEquals(QueryMetrics.EMPTY_METRICS, result.metaData().metrics());
     }
 
     @Test
@@ -145,16 +145,16 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void blockingSelect() {
         String id = insertDoc();
 
-        QueryOptions options = queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         QueryResult result = cluster.query(
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
 
         assertNotNull(result.metaData().requestId());
-        assertTrue(result.metaData().clientContextId().isPresent());
+        assertFalse(result.metaData().clientContextId().isEmpty());
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
-        assertFalse(result.metaData().warnings().isPresent());
+        assertTrue(result.metaData().warnings().isEmpty());
         assertEquals(1, result.rowsAs(JsonObject.class).size());
         assertTrue(result.metaData().signature().isPresent());
 
@@ -168,7 +168,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void asyncSelect() throws Exception {
         String id = insertDoc();
 
-        QueryOptions options = queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
@@ -181,7 +181,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void reactiveSelect() {
         String id = insertDoc();
 
-        QueryOptions options = queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         Mono<ReactiveQueryResult> result = cluster.reactive().query(
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
@@ -199,12 +199,12 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void noProfileRequestedGivesEmptyProfile() {
         String id = insertDoc();
 
-        QueryOptions options = queryOptions().scanConsistency(ScanConsistency.REQUEST_PLUS);
+        QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         QueryResult result = cluster.query(
           "select * from " + bucketName + " where meta().id=\"" + id + "\"",
           options
         );
-        assertFalse(result.metaData().profileInfo().isPresent());
+        assertFalse(result.metaData().profile().isPresent());
     }
 
     @Test
@@ -216,7 +216,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
           "select * from " + bucketName + " where meta().id=\"" + id +"\"",
           options
         );
-        JsonObject profile = result.metaData().profileInfo().get();
+        JsonObject profile = result.metaData().profile().get();
         assertTrue(profile.size() > 0);
     }
 
@@ -236,7 +236,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonObject.create().put("id", id));
         QueryResult result = cluster.query(
           "select " + bucketName + ".* from " + bucketName + " where meta().id=$id",
@@ -252,7 +252,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonObject.create().put("id", id));
         CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName + " where meta().id=$id",
@@ -267,7 +267,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonObject.create().put("id", id));
         Mono<ReactiveQueryResult> result = cluster.reactive().query(
           "select * from " + bucketName + " where meta().id=$id",
@@ -287,7 +287,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonArray.from(id));
         QueryResult result = cluster.query(
           "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
@@ -303,7 +303,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonArray.from(id));
         CompletableFuture<QueryResult> result = cluster.async().query(
           "select * from " + bucketName+ " where meta().id=$1",
@@ -318,7 +318,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         String id = insertDoc();
 
         QueryOptions options = queryOptions()
-          .scanConsistency(ScanConsistency.REQUEST_PLUS)
+          .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
           .parameters(JsonArray.from(id));
         Mono<ReactiveQueryResult> result =  cluster.reactive().query(
           "select * from " + bucketName + " where meta().id=$1",
@@ -339,7 +339,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         MutationResult mr = collection.insert(id, FOO_CONTENT);
 
         QueryOptions options = queryOptions()
-                .consistentWith(mr.mutationToken().get())
+                .consistentWith(MutationState.from(mr.mutationToken().get()))
                 .parameters(JsonArray.from(id));
         QueryResult result = cluster.query(
                 "select  " + bucketName + ".* from " + bucketName + " where meta().id=$1",
@@ -361,7 +361,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         for (int i = 0; i < 10; i++) {
             QueryOptions options = queryOptions()
-              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
               .adhoc(false);
             QueryResult result = cluster.query(
               "select " + bucketName + ".* from " + bucketName + " where meta().id=\"" + id + "\"",
@@ -380,7 +380,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         for (int i = 0; i < 10; i++) {
             QueryOptions options = queryOptions()
-              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
               .parameters(JsonObject.create().put("id", id))
               .adhoc(false);
             QueryResult result = cluster.query(
@@ -400,7 +400,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
         for (int i = 0; i < 10; i++) {
             QueryOptions options = queryOptions()
-              .scanConsistency(ScanConsistency.REQUEST_PLUS)
+              .scanConsistency(QueryScanConsistency.REQUEST_PLUS)
               .parameters(JsonArray.from(id))
               .adhoc(false);
             QueryResult result = cluster.query(
