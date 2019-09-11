@@ -27,6 +27,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
+import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
 import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
 import com.couchbase.client.java.query.QueryOptions;
@@ -125,6 +126,14 @@ public class ReactiveCluster {
   @Stability.Volatile
   public Core core() {
     return asyncCluster.core();
+  }
+
+  /**
+   * Provides access to the bucket management services.
+   */
+  @Stability.Volatile
+  public ReactiveBucketManager buckets() {
+    return new ReactiveBucketManager(async().buckets());
   }
 
   /**

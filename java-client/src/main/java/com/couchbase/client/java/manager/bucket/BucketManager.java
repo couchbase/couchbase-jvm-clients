@@ -21,14 +21,25 @@ import com.couchbase.client.core.annotation.Stability;
 import java.util.Map;
 
 import static com.couchbase.client.java.AsyncUtils.block;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
 public class BucketManager {
 
   private final AsyncBucketManager async;
+  private final ReactiveBucketManager reactive;
 
   public BucketManager(final AsyncBucketManager async) {
-    this.async = async;
+    this.async = requireNonNull(async);
+    this.reactive = new ReactiveBucketManager(async);
+  }
+
+  public AsyncBucketManager async() {
+    return async;
+  }
+
+  public ReactiveBucketManager reactive() {
+    return reactive;
   }
 
   public void createBucket(final BucketSettings settings) {
