@@ -16,10 +16,23 @@
 
 package com.couchbase.client.java.manager.bucket;
 
-public class GetBucketOptions {
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
+
+public class GetBucketOptions extends CommonOptions<GetBucketOptions> {
 
   public static GetBucketOptions getBucketOptions() {
     return new GetBucketOptions();
   }
 
+  private GetBucketOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
+  }
 }

@@ -16,10 +16,23 @@
 
 package com.couchbase.client.java.manager.bucket;
 
-public class DropBucketOptions {
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
+
+public class DropBucketOptions extends CommonOptions<DropBucketOptions> {
 
   public static DropBucketOptions dropBucketOptions() {
     return new DropBucketOptions();
   }
 
+  private DropBucketOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
+  }
 }

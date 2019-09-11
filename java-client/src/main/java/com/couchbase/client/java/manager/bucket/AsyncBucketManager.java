@@ -68,7 +68,7 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false)).thenApply(response -> {
+    return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.INVALID_ARGS && response.content() != null) {
         String content = new String(response.content(), StandardCharsets.UTF_8);
         if (content.contains("Bucket with given name already exists")) {
@@ -88,14 +88,20 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
+    UpdateBucketOptions.Built builtOpts = options.build();
+
+    GetAllBucketOptions getAllBucketOptions = getAllBucketOptions();
+    builtOpts.timeout().ifPresent(getAllBucketOptions::timeout);
+    builtOpts.retryStrategy().ifPresent(getAllBucketOptions::retryStrategy);
+
     return Mono
-      .fromFuture(this::getAllBuckets)
+      .fromFuture(() -> getAllBuckets(getAllBucketOptions))
       .map(buckets -> buckets.containsKey(settings.name()))
       .flatMap(bucketExists -> {
         if (!bucketExists) {
           return Mono.error(BucketNotFoundException.forBucket(settings.name()));
         }
-        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true)).thenApply(response -> {
+        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true), builtOpts).thenApply(response -> {
           checkStatus(response, "update bucket [" + redactMeta(settings) + "]");
           return null;
         }));
@@ -130,7 +136,7 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    return sendRequest(DELETE, pathForBucket(bucketName)).thenApply(response -> {
+    return sendRequest(DELETE, pathForBucket(bucketName), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
@@ -144,7 +150,7 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    return sendRequest(GET, pathForBucket(bucketName)).thenApply(response -> {
+    return sendRequest(GET, pathForBucket(bucketName), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
@@ -158,7 +164,7 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
-    return sendRequest(GET, pathForBuckets()).thenApply(response -> {
+    return sendRequest(GET, pathForBuckets(), options.build()).thenApply(response -> {
       checkStatus(response, "get all buckets");
       return Mapper
         .decodeInto(response.content(), new TypeReference<List<BucketSettings>>() {})
@@ -172,7 +178,7 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
-    return sendRequest(POST, pathForBucketFlush(bucketName)).thenApply(response -> {
+    return sendRequest(POST, pathForBucketFlush(bucketName), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }

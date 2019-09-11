@@ -28,8 +28,11 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
+import com.couchbase.client.java.CommonOptions;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -49,11 +52,40 @@ public abstract class ManagerSupport {
     return request.response();
   }
 
+  protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
+    Duration timeout = timeout(options);
+    RetryStrategy retry = retryStrategy(options);
+
+    return sendRequest(new GenericManagerRequest(timeout, core.context(), retry,
+        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET));
+  }
+
+  /**
+   * @deprecated in favor of the version that takes an option block
+   */
+  @Deprecated
   protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path) {
     return sendRequest(new GenericManagerRequest(core.context(),
         () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET));
   }
 
+  protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, UrlQueryStringBuilder body, CommonOptions<?>.BuiltCommonOptions options) {
+    Duration timeout = timeout(options);
+    RetryStrategy retry = retryStrategy(options);
+
+    return sendRequest(new GenericManagerRequest(timeout, core.context(), retry, () -> {
+      ByteBuf content = Unpooled.copiedBuffer(body.build(), UTF_8);
+      DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content);
+      req.headers().add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED);
+      req.headers().add("Content-Length", content.readableBytes());
+      return req;
+    }, method == HttpMethod.GET));
+  }
+
+  /**
+   * @deprecated in favor of the version that takes an option block
+   */
+  @Deprecated
   protected CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, UrlQueryStringBuilder body) {
     return sendRequest(new GenericManagerRequest(core.context(), () -> {
       ByteBuf content = Unpooled.copiedBuffer(body.build(), UTF_8);
@@ -68,5 +100,13 @@ public abstract class ManagerSupport {
     if (response.status() != ResponseStatus.SUCCESS) {
       throw new CouchbaseException("Failed to " + action + "; response status=" + response.status() + "; response body=" + new String(response.content(), UTF_8));
     }
+  }
+
+  private Duration timeout(CommonOptions<?>.BuiltCommonOptions options) {
+    return options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
+  }
+
+  private RetryStrategy retryStrategy(CommonOptions<?>.BuiltCommonOptions options) {
+    return options.retryStrategy().orElse(core.context().environment().retryStrategy());
   }
 }

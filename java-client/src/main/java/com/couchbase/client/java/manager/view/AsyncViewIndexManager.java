@@ -74,8 +74,8 @@ public class AsyncViewIndexManager {
       super(core);
     }
 
-    public CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path) {
-      return super.sendRequest(method, path);
+    public CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
+      return super.sendRequest(method, path, options);
     }
   }
 
@@ -109,7 +109,7 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    */
   public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
-    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments()).thenApply(response -> {
+    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), options.build()).thenApply(response -> {
       // Unlike the other view management requests, this request goes through the config manager endpoint.
       // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
       if (response.status() != ResponseStatus.SUCCESS) {
