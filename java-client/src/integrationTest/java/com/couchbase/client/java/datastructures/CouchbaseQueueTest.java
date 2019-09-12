@@ -34,6 +34,7 @@ import java.util.UUID;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 class CouchbaseQueueTest extends JavaIntegrationTest {
     private static Cluster cluster;
@@ -92,6 +93,12 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         assertEquals(1, queue.peek().intValue());
         // should not have been consumed, so...
         assertEquals(5, queue.size());
+    }
+
+    @Test
+    void peekReturnsNullWhenEmpty() {
+        CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
+        assertNull(queue.peek());
     }
     @Test
     void canPoll() {

@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.java.datastructures;
 
-import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Iterator;
@@ -43,6 +42,7 @@ import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
  * A CouchbaseMap is a {@link Map} backed by a {@link Bucket Couchbase} document (more specifically a
@@ -56,8 +56,6 @@ import com.couchbase.client.java.kv.MutateInSpec;
  *
  * @param <E> the type of values in the map (restricted to {@link JsonObject}.
  *
- * @author Simon Baslé
- * @author Subhashni Balakrishnan
  * @since 2.3.6
  */
 
@@ -67,9 +65,11 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     private final String id;
     private final Collection collection;
     private final Class<E> entityTypeClass;
-    private final Duration timeout;
-    private final int casMismatchRetries;
-
+    private final MapOptions.Built mapOptions;
+    private final GetOptions getOptions;
+    private final LookupInOptions lookupInOptions;
+    private final InsertOptions insertOptions;
+    private final UpsertOptions upsertOptions;
     /**
      * Create a new {@link CouchbaseMap}, backed by the document identified by <code>id</code>
      * in the given Couchbase <code>bucket</code>. Note that if the document already exists,
@@ -84,12 +84,19 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         this.id = id;
         this.collection = collection;
         this.entityTypeClass = entityType;
-        MapOptions.Built opts = options.build();
-        this.casMismatchRetries = opts.casMismatchRetries();
-        this.timeout = opts.timeout().orElse(null);
+
+        MapOptions.Built optionsIn = options.build();
+        MapOptions mapOpts = MapOptions.mapOptions();
+
+        optionsIn.copyInto(mapOpts);
+        this.mapOptions = mapOpts.build();
+        this.getOptions = optionsIn.getOptions();
+        this.lookupInOptions = optionsIn.lookupInOptions();
+        this.upsertOptions = optionsIn.upsertOptions();
+        this.insertOptions = optionsIn.insertOptions();
 
         try {
-            collection.insert(id, JsonObject.empty(), InsertOptions.insertOptions().timeout(timeout));
+            collection.insert(id, JsonObject.empty(), insertOptions);
         } catch (KeyExistsException ex) {
             // Ignore concurrent creations, keep on moving.
         }
@@ -112,13 +119,14 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     public E put(String key, E value) {
         checkKey(key);
 
-        for(int i = 0; i < casMismatchRetries; i++) {
+        for(int i = 0; i < mapOptions.casMismatchRetries(); i++) {
             try {
                 long returnCas = 0;
                 E result = null;
                 try {
-                    LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(key)),
-                            LookupInOptions.lookupInOptions().timeout(timeout));
+                    LookupInResult current = collection.lookupIn(id,
+                            Collections.singletonList(LookupInSpec.get(key)),
+                            lookupInOptions);
                     returnCas = current.cas();
                     if (current.exists(0)) {
                         result = current.contentAs(0, entityTypeClass);
@@ -126,22 +134,24 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                 } catch (PathNotFoundException e) {
                     // that's ok, we will just upsert anyways, and return null
                 }
-                collection.mutateIn(id, Collections.singletonList(MutateInSpec.upsert(key, value)),
-                        MutateInOptions.mutateInOptions().cas(returnCas).timeout(timeout));
+                collection.mutateIn(id,
+                        Collections.singletonList(MutateInSpec.upsert(key, value)),
+                        mapOptions.mutateInOptions().cas(returnCas));
                 return result;
             } catch (CASMismatchException ex) {
                 //will need to retry get-and-set
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + mapOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
     public E get(Object key) {
         String idx = checkKey(key);
         try {
-            return collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
-                    LookupInOptions.lookupInOptions().timeout(timeout))
+            return collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.get(idx)),
+                    lookupInOptions)
                     .contentAs(0, entityTypeClass);
         } catch (PathNotFoundException e) {
             return null;
@@ -153,15 +163,16 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     @Override
     public E remove(Object key) {
         String idx = checkKey(key);
-        for(int i = 0; i < casMismatchRetries; i++) {
+        for(int i = 0; i < mapOptions.casMismatchRetries(); i++) {
             try {
-                LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
-                        LookupInOptions.lookupInOptions().timeout(timeout));
+                LookupInResult current = collection.lookupIn(id,
+                        Collections.singletonList(LookupInSpec.get(idx)),
+                        lookupInOptions);
                 long returnCas = current.cas();
                 E result = current.contentAs(0, entityTypeClass);
                 collection.mutateIn(id,
                         Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(returnCas).timeout(timeout));
+                        mapOptions.mutateInOptions().cas(returnCas));
                 return result;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
@@ -172,20 +183,18 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                 throw ex;
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + mapOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
     public void clear() {
         //optimized version over AbstractMap's (which uses the entry set)
-        collection.upsert(id, JsonObject.empty());
+        collection.upsert(id, JsonObject.empty(), upsertOptions);
     }
 
     @Override
     public Set<Entry<String, E>> entrySet() {
-        return new CouchbaseEntrySet((Map<String, E>) collection.get(id,
-                GetOptions.getOptions().timeout(timeout))
-                .contentAsObject().toMap());
+        return new CouchbaseEntrySet((Map<String, E>) collection.get(id, getOptions).contentAsObject().toMap());
     }
 
     @Override
@@ -193,7 +202,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         String idx = checkKey(key);
         return collection.lookupIn(id,
                 Collections.singletonList(LookupInSpec.exists(idx)),
-                LookupInOptions.lookupInOptions().timeout(timeout))
+                lookupInOptions)
                 .exists(0);
 
     }
@@ -205,8 +214,9 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
 
     @Override
     public int size() {
-        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("")),
-                LookupInOptions.lookupInOptions().timeout(timeout));
+        LookupInResult current = collection.lookupIn(id,
+                Collections.singletonList(LookupInSpec.count("")),
+                lookupInOptions);
         return current.contentAs(0, Integer.class);
     }
 

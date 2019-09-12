@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.java.datastructures;
 
-import java.time.Duration;
 import java.util.AbstractQueue;
 import java.util.Collections;
 import java.util.Iterator;
@@ -25,6 +24,7 @@ import com.couchbase.client.core.annotation.Stability;
 
 
 import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
@@ -55,8 +55,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
  *
  * @param <E> the type of values in the queue.
  *
- * @author Simon Baslé
- * @author Subhashni Balakrishnan
  * @since 2.3.6
  */
 
@@ -66,8 +64,12 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
     private final String id;
     private final Collection collection;
     private final Class<E> entityTypeClass;
-    private final Duration timeout;
-    private final int casMismatchRetries;
+    private final QueueOptions.Built queueOptions;
+    private final GetOptions getOptions;
+    private final LookupInOptions lookupInOptions;
+    private final MutateInOptions mutateInOptions;
+    private final InsertOptions insertOptions;
+    private final UpsertOptions upsertOptions;
 
     /**
      * Create a new {@link Collection Couchbase-backed} Queue, backed by the document identified by <code>id</code>
@@ -83,12 +85,21 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         this.collection = collection;
         this.id = id;
         this.entityTypeClass = entityType;
-        QueueOptions.Built opts = options.build();
-        this.casMismatchRetries = opts.casMismatchRetries();
-        this.timeout = opts.timeout().orElse(null);
+
+        // copy the options just in case they are reused later
+        QueueOptions.Built optionsIn = options.build();
+        QueueOptions opts = QueueOptions.queueOptions();
+        optionsIn.copyInto(opts);
+        this.queueOptions = opts.build();
+        this.getOptions = optionsIn.getOptions();
+        this.lookupInOptions = optionsIn.lookupInOptions();
+        this.upsertOptions = optionsIn.upsertOptions();
+        this.insertOptions = optionsIn.insertOptions();
+        this.mutateInOptions = optionsIn.mutateInOptions();
+
 
         try {
-            this.collection.insert(id, JsonArray.empty(), InsertOptions.insertOptions().timeout(timeout));
+            this.collection.insert(id, JsonArray.empty(), insertOptions);
         } catch (KeyExistsException ex) {
             // Ignore concurrent creations, keep on moving.
         }
@@ -109,22 +120,21 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
 
     @Override
     public Iterator<E> iterator() {
-        GetResult result = collection.get(id, GetOptions.getOptions().timeout(timeout));
+        GetResult result = collection.get(id, getOptions);
         return (Iterator<E>) result.contentAsArray().iterator();
     }
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("")),
-                LookupInOptions.lookupInOptions().timeout(timeout));
+        LookupInResult result = collection.lookupIn(id,
+                Collections.singletonList(LookupInSpec.count("")),
+                lookupInOptions);
         return result.contentAs(0, Integer.class);
     }
 
     @Override
     public void clear() {
-
-        collection.upsert(id, JsonArray.empty(),
-                UpsertOptions.upsertOptions().timeout(timeout));
+        collection.upsert(id, JsonArray.empty(), upsertOptions);
     }
 
     @Override
@@ -132,23 +142,25 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         if (e == null) {
             throw new NullPointerException("Unsupported null value");
         }
-        collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayPrepend("", e)),
-                MutateInOptions.mutateInOptions().timeout(timeout));
+        collection.mutateIn(id,
+                Collections.singletonList(MutateInSpec.arrayPrepend("", e)),
+                mutateInOptions);
         return true;
     }
 
     @Override
     public E poll() {
         String idx = "[-1]"; //FIFO queue as offer uses ARRAY_PREPEND
-        for(int i = 0; i < casMismatchRetries; i++) {
+        for(int i = 0; i < queueOptions.casMismatchRetries(); i++) {
             try {
-                LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get(idx)),
-                        LookupInOptions.lookupInOptions().timeout(timeout));
-                //
+                LookupInResult result = collection.lookupIn(id,
+                        Collections.singletonList(LookupInSpec.get(idx)),
+                        lookupInOptions);
                 E current = result.contentAs(0, entityTypeClass);
                 long returnCas = result.cas();
-                collection.mutateIn(id, Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(returnCas).timeout(timeout));
+                collection.mutateIn(id,
+                        Collections.singletonList(MutateInSpec.remove(idx)),
+                        queueOptions.mutateInOptions().cas(returnCas));
                 return current;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
@@ -160,20 +172,18 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 throw ex;
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " +casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + queueOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
     public E peek() {
         try {
-            LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get("[-1]")),
-                    LookupInOptions.lookupInOptions().timeout(timeout));
+            LookupInResult result = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.get("[-1]")),
+                    lookupInOptions);
             return result.contentAs(0, entityTypeClass);
-        } catch (MultiMutationException ex) {
-            if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
+        } catch (PathNotFoundException e) {
                 return null; //the queue is empty
-            }
-            throw ex;
         }
     }
 }

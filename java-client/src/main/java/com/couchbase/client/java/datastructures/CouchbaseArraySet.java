@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package com.couchbase.client.java.datastructures;
-import java.time.Duration;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,8 +61,12 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
     private final String id;
     private final Collection collection;
     private final Class<T> entityTypeClass;
-    private final Duration timeout;
-    private final int casMismatchRetries;
+    private ArraySetOptions.Built arraySetOptions;
+    private final GetOptions getOptions;
+    private final LookupInOptions lookupInOptions;
+    private final MutateInOptions mutateInOptions;
+    private final InsertOptions insertOptions;
+    private final UpsertOptions upsertOptions;
 
     /**
      * Create a new {@link CouchbaseArraySet}, backed by the document identified by <code>id</code>
@@ -80,12 +83,21 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         this.id = id;
         this.collection = collection;
         this.entityTypeClass = entityType;
-        ArraySetOptions.Built opts = options.build();
-        this.casMismatchRetries = opts.casMismatchRetries();
-        this.timeout = opts.timeout().orElse(null);
+
+        // copy the options just in case they are reused later
+        ArraySetOptions.Built optionsIn = options.build();
+
+        ArraySetOptions arrayOpts = ArraySetOptions.arraySetOptions();
+        optionsIn.copyInto(arrayOpts);
+        this.arraySetOptions = arrayOpts.build();
+        this.getOptions = optionsIn.getOptions();
+        this.lookupInOptions = optionsIn.lookupInOptions();
+        this.upsertOptions = optionsIn.upsertOptions();
+        this.insertOptions = optionsIn.insertOptions();
+        this.mutateInOptions = optionsIn.mutateInOptions();
 
         try {
-            this.collection.insert(id, JsonArray.empty(), InsertOptions.insertOptions().timeout(timeout));
+            this.collection.insert(id, JsonArray.empty(), insertOptions);
         } catch (KeyExistsException e) {
             //use a pre-existing document
         }
@@ -107,15 +119,17 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.count("")),
-                LookupInOptions.lookupInOptions().timeout(timeout));
+        LookupInResult result = collection.lookupIn(id,
+                Collections.singletonList(LookupInSpec.count("")),
+                lookupInOptions);
         return result.contentAs(0, Integer.class);
     }
 
     @Override
     public boolean isEmpty() {
-        LookupInResult current = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("[0]")),
-                LookupInOptions.lookupInOptions().timeout(timeout));
+        LookupInResult current = collection.lookupIn(id,
+                Collections.singletonList(LookupInSpec.exists("[0]")),
+                lookupInOptions);
         return !current.exists(0);
     }
 
@@ -123,7 +137,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
     public boolean contains(Object t) {
         //TODO subpar implementation for a Set, use ARRAY_CONTAINS when available
         enforcePrimitive(t);
-        GetResult result = collection.get(id, GetOptions.getOptions().timeout(timeout));
+        GetResult result = collection.get(id, getOptions);
         JsonArray current = result.contentAs(JsonArray.class);
         for (Object in : current) {
             if (safeEquals(in, t)) {
@@ -182,8 +196,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.remove(idx)),
-                        MutateInOptions.mutateInOptions().cas(this.cas).timeout(timeout)
-                );
+                        arraySetOptions.mutateInOptions().cas(cas));
                 //update the cas so that several removes in a row can work
                 this.cas = updated.cas();
                 //also correctly reset the state:
@@ -212,8 +225,9 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         enforcePrimitive(t);
 
         try {
-            collection.mutateIn(id, Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
-                    MutateInOptions.mutateInOptions().timeout(timeout));
+            collection.mutateIn(id,
+                    Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
+                    mutateInOptions);
             return true;
         } catch (MultiMutationException ex) {
             if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) {
@@ -227,7 +241,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
     public boolean remove(Object t) {
         enforcePrimitive(t);
 
-        for (int i = 0; i < casMismatchRetries; i++) {
+        for (int i = 0; i < arraySetOptions.casMismatchRetries(); i++) {
             try {
                 GetResult result = collection.get(id);
                 JsonArray current = result.contentAsArray();
@@ -250,20 +264,19 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 } else {
                     collection.mutateIn(id,
                             Collections.singletonList(MutateInSpec.remove(path)),
-                            MutateInOptions.mutateInOptions().cas(cas).timeout(timeout));
+                            arraySetOptions.mutateInOptions().cas(cas));
                     return true;
                 }
             } catch (CASMismatchException e) {
                 //retry
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + casMismatchRetries + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new RetryExhaustedException("Couldn't perform set in less than " + arraySetOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
     }
 
     @Override
     public void clear() {
-        collection.upsert(id, JsonArray.empty(),
-                UpsertOptions.upsertOptions().timeout(timeout));
+        collection.upsert(id, JsonArray.empty(), upsertOptions);
     }
 
     /**
