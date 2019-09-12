@@ -25,7 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -36,8 +36,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
-
 public class QueryRequest
   extends BaseRequest<QueryResponse>
   implements HttpRequest<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse> {
@@ -46,14 +44,14 @@ public class QueryRequest
   private final byte[] query;
   private final String statement;
   private final boolean idempotent;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                      final Credentials credentials, final String statement, final byte[] query, boolean idempotent) {
+                      final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.statement = statement;
-    this.credentials = credentials;
+    this.authenticator = authenticator;
     this.idempotent = idempotent;
   }
 
@@ -68,7 +66,7 @@ public class QueryRequest
       .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
     request.headers()
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
-    addHttpBasicAuth(request, credentials);
+    authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
 
@@ -88,8 +86,8 @@ public class QueryRequest
     return statement;
   }
 
-  public Credentials credentials() {
-    return credentials;
+  public Authenticator credentials() {
+    return authenticator;
   }
 
   @Override

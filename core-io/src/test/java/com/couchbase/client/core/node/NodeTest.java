@@ -27,9 +27,8 @@ import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
-import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
@@ -76,7 +75,7 @@ class NodeTest {
   static void beforeAll() {
     Core core = mock(Core.class);
     ENV = CoreEnvironment
-      .builder(mock(Credentials.class))
+      .builder(mock(Authenticator.class))
       .build();
     CTX = new CoreContext(core, 1, ENV);
   }
@@ -457,7 +456,7 @@ class NodeTest {
     Core core = mock(Core.class);
     SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(NodeStateChangedEvent.class));
     CoreEnvironment env = CoreEnvironment
-      .builder(mock(Credentials.class))
+      .builder(mock(Authenticator.class))
       .eventBus(eventBus)
       .build();
     CoreContext ctx = new CoreContext(core, 1, env);

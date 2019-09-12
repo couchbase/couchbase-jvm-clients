@@ -18,7 +18,7 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.cnc.events.config.UnorderedExecutionEnabledEvent;
 import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
@@ -39,7 +39,7 @@ import java.util.Set;
 public class KeyValueEndpoint extends BaseEndpoint {
 
   private final Optional<String> bucketname;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
 
   private static final int FLUSH_CONSOLIDATION_LIMIT = Integer.parseInt(System.getProperty(
     "com.couchbase.experimental.flushConsolidationLimit",
@@ -47,27 +47,27 @@ public class KeyValueEndpoint extends BaseEndpoint {
   ));
 
   public KeyValueEndpoint(final ServiceContext ctx, final String hostname,
-                          final int port, final Optional<String> bucketname, final Credentials credentials) {
+                          final int port, final Optional<String> bucketname, final Authenticator authenticator) {
     super(hostname, port, ctx.environment().ioEnvironment().kvEventLoopGroup().get(),
       ctx, ctx.environment().ioConfig().kvCircuitBreakerConfig(), ServiceType.KV, true);
-    this.credentials = credentials;
+    this.authenticator = authenticator;
     this.bucketname = bucketname;
   }
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new KeyValuePipelineInitializer(endpointContext(), bucketname, credentials);
+    return new KeyValuePipelineInitializer(endpointContext(), bucketname, authenticator);
   }
 
   public static class KeyValuePipelineInitializer implements PipelineInitializer {
 
     private final EndpointContext ctx;
     private final Optional<String> bucketname;
-    private final Credentials credentials;
+    private final Authenticator authenticator;
 
-    public KeyValuePipelineInitializer(EndpointContext ctx, Optional<String> bucketname, Credentials credentials) {
+    public KeyValuePipelineInitializer(EndpointContext ctx, Optional<String> bucketname, Authenticator authenticator) {
       this.ctx = ctx;
-      this.credentials = credentials;
+      this.authenticator = authenticator;
       this.bucketname = bucketname;
     }
 
@@ -83,13 +83,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
-      if (!ctx.environment().securityConfig().certAuthEnabled()) {
-        pipeline.addLast(new SaslAuthenticationHandler(
-          ctx,
-          credentials.username(),
-          credentials.password()
-        ));
-      }
+      authenticator.authKeyValueConnection(ctx, pipeline);
 
       bucketname.ifPresent(s -> pipeline.addLast(new SelectBucketHandler(ctx, s)));
       pipeline.addLast(new KeyValueMessageHandler(endpoint, ctx, bucketname));

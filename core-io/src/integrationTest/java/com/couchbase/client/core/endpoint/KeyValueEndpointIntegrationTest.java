@@ -85,7 +85,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
       node.hostname(),
       node.ports().get(Services.KV),
       Optional.of(config().bucketname()),
-      env.credentials()
+      env.authenticator()
     );
 
     endpoint.connect();

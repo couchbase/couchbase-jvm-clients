@@ -26,8 +26,8 @@ import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -77,7 +77,7 @@ public class Node implements Stateful<NodeState> {
 
   private final NodeIdentifier identifier;
   private final NodeContext ctx;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
   private final Map<String, Map<ServiceType, Service>> services;
   private final AtomicBoolean disconnect;
   private final Optional<String> alternateAddress;
@@ -100,7 +100,7 @@ public class Node implements Stateful<NodeState> {
   protected Node(final CoreContext ctx, final NodeIdentifier identifier, final Optional<String> alternateAddress) {
     this.identifier = identifier;
     this.ctx = new NodeContext(ctx, identifier, alternateAddress);
-    this.credentials = ctx.environment().credentials();
+    this.authenticator = ctx.environment().authenticator();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
     this.alternateAddress = alternateAddress;
@@ -392,7 +392,7 @@ public class Node implements Stateful<NodeState> {
 
     switch (serviceType) {
       case KV:
-        return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port, bucket, credentials);
+        return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port, bucket, authenticator);
       case MANAGER:
         return new ManagerService(ctx, address, port);
       case QUERY:

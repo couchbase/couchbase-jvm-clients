@@ -19,7 +19,7 @@ package com.couchbase.client.scala.env
 import java.util.concurrent.{Executors, ThreadFactory}
 
 import com.couchbase.client.core
-import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, Credentials}
+import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoader}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
@@ -39,7 +39,7 @@ import scala.util.Try
   */
 object ClusterEnvironment {
 
-  case class Builder(private[scala] val credentials: Credentials,
+  case class Builder(private[scala] val credentials: Authenticator,
                      private[scala] val owned: Boolean,
                      private[scala] val connectionString: Option[String] = None,
                      private[scala] val ioEnvironment: Option[IoEnvironment] = None,
@@ -144,25 +144,24 @@ object ClusterEnvironment {
 
   private[scala] def create(connectionString: String, username: String, password: String, owned: Boolean)
   : Try[ClusterEnvironment] = {
-    create(connectionString, UsernameAndPassword(username, password), owned)
+    create(connectionString, PasswordAuthenticator(username, password), owned)
   }
 
-  /** Creates a ClusterEnvironment to connect to a Couchbase cluster with custom [[Credentials]].
+  /** Creates a ClusterEnvironment to connect to a Couchbase cluster with custom [[Authenticator]].
     *
     * All other configuration options are left at their default.  Use one of the
     * [[ClusterEnvironment.builder]] overloads to setup a more customized environment.
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param credentials      custom credentials used when connecting to the cluster.
-    *
     * @return a constructed `ClusterEnvironment`
     */
-  def create(connectionString: String, credentials: Credentials): Try[ClusterEnvironment] = {
+  def create(connectionString: String, credentials: Authenticator): Try[ClusterEnvironment] = {
     create(connectionString, credentials, true)
   }
 
 
-  private[scala] def create(connectionString: String, credentials: Credentials, owned: Boolean): Try[ClusterEnvironment] = {
+  private[scala] def create(connectionString: String, credentials: Authenticator, owned: Boolean): Try[ClusterEnvironment] = {
     Try(new ClusterEnvironment(Builder(credentials, owned)
       .connectionString(connectionString)))
   }
@@ -181,11 +180,11 @@ object ClusterEnvironment {
     * @return a `ClusterEnvironment.Builder`
     */
   def builder(connectionString: String, username: String, password: String): ClusterEnvironment.Builder = {
-    builder(connectionString, UsernameAndPassword(username, password))
+    builder(connectionString, PasswordAuthenticator(username, password))
   }
 
 
-  /** Creates a `ClusterEnvironment.Builder` setup to connect to a Couchbase cluster with custom [[Credentials]].
+  /** Creates a `ClusterEnvironment.Builder` setup to connect to a Couchbase cluster with custom [[Authenticator]].
     *
     * All other configuration options can be customzed with the methods on the returned `ClusterEnvironment.Builder`.
     * Use `build` to finalize the builder into a `ClusterEnvironment`, ready for use with the methods in
@@ -193,16 +192,15 @@ object ClusterEnvironment {
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param credentials      custom credentials used when connecting to the cluster.
-    *
     * @return a `ClusterEnvironment.Builder`
     */
-  def builder(connectionString: String, credentials: Credentials): ClusterEnvironment.Builder = {
+  def builder(connectionString: String, credentials: Authenticator): ClusterEnvironment.Builder = {
     Builder(credentials, false)
       .connectionString(connectionString)
   }
 
-  /** Creates a `ClusterEnvironment.Builder` setup to connect with custom [[Credentials]].
-    *
+  /** Creates a `ClusterEnvironment.Builder` setup to connect with custom [[Authenticator]].
+   *
     * All other configuration options can be customzed with the methods on the returned `ClusterEnvironment.Builder`.
     * Use `build` to finalize the builder into a `ClusterEnvironment`, ready for use with the methods in
     * [[com.couchbase.client.scala.Cluster]].
@@ -211,15 +209,14 @@ object ClusterEnvironment {
     * `seedNodes` option must be provided.
     *
     * @param credentials      custom credentials used when connecting to the cluster.
-    *
     * @return a ClusterEnvironment.Builder`
     **/
-  def builder(credentials: Credentials): ClusterEnvironment.Builder = {
+  def builder(credentials: Authenticator): ClusterEnvironment.Builder = {
     Builder(credentials, false)
   }
 }
 
-private[scala] class CoreEnvironmentWrapper(credentials: Credentials)
+private[scala] class CoreEnvironmentWrapper(credentials: Authenticator)
   extends core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper](credentials) {}
 
 private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper])
@@ -238,7 +235,7 @@ private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[C
 class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder) {
   private[scala] val owned: Boolean = builder.owned
 
-  private[scala] def credentials: Credentials = coreEnv.credentials()
+  private[scala] def credentials: Authenticator = coreEnv.authenticator()
 
   private[scala] def timeoutConfig = coreEnv.timeoutConfig()
 

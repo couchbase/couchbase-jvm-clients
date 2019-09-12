@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.UsernameAndPassword;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.NoopRequest;
@@ -108,7 +108,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of(config().bucketname()),
-            env.credentials()
+            env.authenticator()
           ).init(null, ch.pipeline());
         }
       });
@@ -138,7 +138,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of(config().bucketname()),
-            new UsernameAndPassword(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
+            PasswordAuthenticator.create(config().adminUsername(), "djslkfsdfsoufhoshfoishgs")
           ).init(null, ch.pipeline());
         }
       });
@@ -159,7 +159,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of(config().bucketname()),
-            new UsernameAndPassword("vfwmf42343rew", config().adminPassword())
+            PasswordAuthenticator.create("vfwmf42343rew", config().adminPassword())
           ).init(null, ch.pipeline());
         }
       });
@@ -180,7 +180,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of("42eredwefrfe"),
-            env.credentials()
+            env.authenticator()
           ).init(null, ch.pipeline());
         }
       });

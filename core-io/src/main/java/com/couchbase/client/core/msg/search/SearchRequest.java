@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -31,26 +31,24 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
-
 public class SearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
 
     private final String indexName;
     private final byte[] content;
-    private final Credentials credentials;
+    private final Authenticator authenticator;
 
     // TODO expose all other parameters
     public SearchRequest(Duration timeout,
                          CoreContext ctx,
                          RetryStrategy retryStrategy,
-                         Credentials credentials,
+                         Authenticator authenticator,
                          String indexName,
                          byte[] content) {
         super(timeout, ctx, retryStrategy);
         this.indexName = indexName;
         this.content = content;
-        this.credentials = credentials;
+        this.authenticator = authenticator;
     }
 
     @Override
@@ -60,7 +58,7 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, c);
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request.headers().set(HttpHeaderNames.CONTENT_LENGTH, c.readableBytes());
-        addHttpBasicAuth(request, credentials);
+        authenticator.authHttpRequest(serviceType(), request);
         return request;
     }
 

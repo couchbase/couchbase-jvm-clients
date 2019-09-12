@@ -18,9 +18,9 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.OwnedSupplier;
-import com.couchbase.client.core.env.UsernameAndPassword;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -82,19 +82,19 @@ public class Cluster {
    * @return if properly connected, returns a {@link Cluster}.
    */
   public static Cluster connect(final String connectionString, final String username, final String password) {
-    return connect(connectionString, new UsernameAndPassword(username, password));
+    return connect(connectionString, PasswordAuthenticator.create(username, password));
   }
 
   /**
-   * Connect to a Couchbase cluster with custom {@link Credentials}.
+   * Connect to a Couchbase cluster with custom {@link Authenticator}.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param credentials custom credentials used when connecting to the cluster.
+   * @param authenticator custom credentials used when connecting to the cluster.
    * @return if properly connected, returns a {@link Cluster}.
    */
-  public static Cluster connect(final String connectionString, final Credentials credentials) {
+  public static Cluster connect(final String connectionString, final Authenticator authenticator) {
     Cluster cluster = new Cluster(new OwnedSupplier<>(
-      ClusterEnvironment.create(connectionString, credentials)
+      ClusterEnvironment.create(connectionString, authenticator)
     ));
     cluster.async().performGlobalConnect().block();
     return cluster;

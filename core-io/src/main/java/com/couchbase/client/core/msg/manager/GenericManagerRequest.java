@@ -24,7 +24,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static java.util.Objects.requireNonNull;
 
@@ -53,7 +52,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
   @Override
   public FullHttpRequest encode() {
     FullHttpRequest request = requestSupplier.get();
-    addHttpBasicAuth(request, context().environment().credentials());
+    context().environment().authenticator().authHttpRequest(serviceType(), request);
     return request;
   }
 

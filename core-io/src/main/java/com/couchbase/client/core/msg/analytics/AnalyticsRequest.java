@@ -25,7 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -35,8 +35,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 
 public class AnalyticsRequest
   extends BaseRequest<AnalyticsResponse>
@@ -49,13 +47,13 @@ public class AnalyticsRequest
   private final int priority;
   private final boolean idempotent;
 
-  private final Credentials credentials;
+  private final Authenticator authenticator;
 
   public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                          final Credentials credentials, final byte[] query, int priority, boolean idempotent) {
+                          final Authenticator authenticator, final byte[] query, int priority, boolean idempotent) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
-    this.credentials = credentials;
+    this.authenticator = authenticator;
     this.priority = priority;
     this.idempotent = idempotent;
   }
@@ -74,7 +72,7 @@ public class AnalyticsRequest
     if (priority != NO_PRIORITY) {
       request.headers().set("Analytics-Priority", priority);
     }
-    addHttpBasicAuth(request, credentials);
+    authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
 

@@ -25,7 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -38,13 +38,12 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 import static java.util.Objects.requireNonNull;
 
 public class ViewRequest extends BaseRequest<ViewResponse>
   implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse>, ScopedRequest {
 
-  private final Credentials credentials;
+  private final Authenticator authenticator;
   private final String bucket;
   private final boolean development;
   private final String design;
@@ -53,11 +52,11 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   private final Optional<byte[]> keysJson;
 
   public ViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                     final Credentials credentials, final String bucket, final String design,
+                     final Authenticator authenticator, final String bucket, final String design,
                      final String view, final String query, Optional<byte[]> keysJson,
                      final boolean development) {
     super(timeout, ctx, retryStrategy);
-    this.credentials = requireNonNull(credentials);
+    this.authenticator = requireNonNull(authenticator);
     this.bucket = requireNonNull(bucket);
     this.design = requireNonNull(design);
     this.view = requireNonNull(view);
@@ -95,7 +94,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
       .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
 
-    addHttpBasicAuth(request, credentials);
+    authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
 

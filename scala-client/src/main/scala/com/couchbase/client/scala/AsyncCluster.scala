@@ -17,7 +17,7 @@ package com.couchbase.client.scala
 
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
+import com.couchbase.client.core.env.{Authenticator, OwnedSupplier}
 import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.msg.search.SearchRequest
@@ -227,16 +227,15 @@ object AsyncCluster {
     }
   }
 
-  /** Connect to a Couchbase cluster with custom [[Credentials]].
+  /** Connect to a Couchbase cluster with custom [[Authenticator]].
     *
     * $DeferredErrors
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param credentials      custom credentials used when connecting to the cluster.
-    *
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Credentials): Future[AsyncCluster] = {
+  def connect(connectionString: String, credentials: Authenticator): Future[AsyncCluster] = {
     ClusterEnvironment.create(connectionString, credentials, true)
       .flatMap(env => Cluster.connect(env)) match {
       case Success(cluster) =>

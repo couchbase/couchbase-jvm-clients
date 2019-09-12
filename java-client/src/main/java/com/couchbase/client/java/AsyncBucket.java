@@ -186,7 +186,7 @@ public class AsyncBucket {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, environment.credentials(), name, designDoc,
+    ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, environment.authenticator(), name, designDoc,
       viewName, query, keysJson, development);
     request.context().clientContext(opts.clientContext());
     return request;

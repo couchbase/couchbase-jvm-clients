@@ -22,8 +22,8 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.node.Node;
@@ -62,7 +62,7 @@ class CoreTest {
   @BeforeAll
   static void beforeAll() {
     EVENT_BUS = new SimpleEventBus(true);
-    ENV = CoreEnvironment.builder(mock(Credentials.class)).eventBus(EVENT_BUS).build();
+    ENV = CoreEnvironment.builder(mock(Authenticator.class)).eventBus(EVENT_BUS).build();
   }
 
   @AfterAll

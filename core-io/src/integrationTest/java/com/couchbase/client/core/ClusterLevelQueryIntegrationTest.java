@@ -60,7 +60,7 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
       env.timeoutConfig().queryTimeout(),
       core.context(),
       env.retryStrategy(),
-      env.credentials(),
+      env.authenticator(),
       "select 1=1",
       query.getBytes(StandardCharsets.UTF_8),
       true

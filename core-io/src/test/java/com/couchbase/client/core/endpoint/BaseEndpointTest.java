@@ -79,13 +79,13 @@ class BaseEndpointTest {
   private SimpleEventBus eventBus;
   private CoreEnvironment environment;
   private ServiceContext ctx;
-  private Credentials credentials = mock(Credentials.class);
+  private Authenticator authenticator = mock(Authenticator.class);
 
   @BeforeEach
   void beforeEach() {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
-    environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
+    environment = CoreEnvironment.builder(authenticator).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
     ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
@@ -123,7 +123,7 @@ class BaseEndpointTest {
   @Test
   void retryOnTimeoutUntilEventuallyConnected() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    CoreEnvironment env = CoreEnvironment.builder(credentials)
+    CoreEnvironment env = CoreEnvironment.builder(authenticator)
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
@@ -245,7 +245,7 @@ class BaseEndpointTest {
   @Test
   void disconnectDuringRetry() {
     SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
-    CoreEnvironment env = CoreEnvironment.builder(credentials)
+    CoreEnvironment env = CoreEnvironment.builder(authenticator)
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();

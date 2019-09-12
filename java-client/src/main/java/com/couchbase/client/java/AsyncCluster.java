@@ -18,9 +18,9 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.OwnedSupplier;
-import com.couchbase.client.core.env.UsernameAndPassword;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -97,20 +97,20 @@ public class AsyncCluster {
    */
   public static CompletableFuture<AsyncCluster> connect(final String connectionString, final String username,
                                                         final String password) {
-    return connect(connectionString, new UsernameAndPassword(username, password));
+    return connect(connectionString, PasswordAuthenticator.create(username, password));
   }
 
   /**
-   * Connect to a Couchbase cluster with custom {@link Credentials}.
+   * Connect to a Couchbase cluster with custom {@link Authenticator}.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param credentials custom credentials used when connecting to the cluster.
+   * @param authenticator custom credentials used when connecting to the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final Credentials credentials) {
+  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final Authenticator authenticator) {
     return Mono.defer(() -> {
       AsyncCluster cluster = new AsyncCluster(new OwnedSupplier<>(
-        ClusterEnvironment.create(connectionString, credentials)
+        ClusterEnvironment.create(connectionString, authenticator)
       ));
       return cluster.performGlobalConnect().then(Mono.just(cluster));
     }).toFuture();
@@ -252,7 +252,7 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     options.injectParams(query);
 
-    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
       statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly());
     request.context().clientContext(options.clientContext());
     return request;
@@ -302,7 +302,7 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     opts.injectParams(query);
 
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
         query.toString().getBytes(StandardCharsets.UTF_8), opts.priority(), opts.readonly()
     );
     request.context().clientContext(opts.clientContext());
@@ -340,7 +340,7 @@ public class AsyncCluster {
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, environment.get().credentials(),
+    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
       query.indexName(), bytes);
     request.context().clientContext(opts.clientContext());
     return request;

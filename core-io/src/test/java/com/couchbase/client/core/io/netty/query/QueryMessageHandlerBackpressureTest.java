@@ -40,11 +40,10 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCode
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
-import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.UsernameAndPassword;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -81,7 +80,7 @@ class QueryMessageHandlerBackpressureTest {
   void beforeEach() {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
-    environment = CoreEnvironment.create(new UsernameAndPassword("admin", "password"));
+    environment = CoreEnvironment.create(PasswordAuthenticator.create("admin", "password"));
     core = Core.create(environment);
   }
 
@@ -131,7 +130,7 @@ class QueryMessageHandlerBackpressureTest {
       Duration.ofSeconds(1),
       endpointContext,
       BestEffortRetryStrategy.INSTANCE,
-      environment.credentials(),
+      environment.authenticator(),
       "select 1=1",
       "myquery".getBytes(UTF_8),
       true

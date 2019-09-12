@@ -16,8 +16,7 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.{Credentials, OwnedSupplier}
-import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.core.env.{Authenticator, OwnedSupplier}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -166,7 +165,7 @@ object Cluster {
       .map(env => new Cluster(env))
   }
 
-  /** Connect to a Couchbase cluster with custom [[Credentials]].
+  /** Connect to a Couchbase cluster with custom [[Authenticator]].
     *
     * $DeferredErrors
     *
@@ -174,7 +173,7 @@ object Cluster {
     * @param credentials      custom credentials used when connecting to the cluster.
     * @return a [[Cluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Credentials): Try[Cluster] = {
+  def connect(connectionString: String, credentials: Authenticator): Try[Cluster] = {
     ClusterEnvironment.create(connectionString, credentials)
       .map(env => new Cluster(env))
   }

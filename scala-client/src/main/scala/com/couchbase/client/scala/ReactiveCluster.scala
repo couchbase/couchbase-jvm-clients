@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.Credentials
+import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.retry.RetryStrategy
@@ -228,7 +228,7 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Credentials): ScalaMono[ReactiveCluster] = {
+  def connect(connectionString: String, credentials: Authenticator): ScalaMono[ReactiveCluster] = {
     Cluster.connect(connectionString, credentials) match {
       case Success(cluster) =>
         implicit val ec = cluster.ec

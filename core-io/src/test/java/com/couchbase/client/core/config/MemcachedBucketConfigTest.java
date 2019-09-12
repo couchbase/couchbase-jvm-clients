@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.mock;
  */
 class MemcachedBucketConfigTest {
 
-    private static final CoreEnvironment ENV = CoreEnvironment.create(mock(Credentials.class));
+    private static final CoreEnvironment ENV = CoreEnvironment.create(mock(Authenticator.class));
 
     @AfterAll
     static void cleanup() {

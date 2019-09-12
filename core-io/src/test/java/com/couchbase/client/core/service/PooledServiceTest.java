@@ -23,8 +23,8 @@ import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEv
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -59,12 +59,12 @@ class PooledServiceTest {
   private CoreEnvironment environment;
   private SimpleEventBus eventBus;
   private ServiceContext serviceContext;
-  private Credentials credentials = mock(Credentials.class);
+  private Authenticator authenticator = mock(Authenticator.class);
 
   @BeforeEach
   void beforeEach() {
     eventBus = new SimpleEventBus(true, Collections.singletonList(ServiceStateChangedEvent.class));
-    environment = CoreEnvironment.builder(credentials).eventBus(eventBus).build();
+    environment = CoreEnvironment.builder(authenticator).eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
     serviceContext = new ServiceContext(coreContext, "127.0.0.1", 1234,
       ServiceType.KV, Optional.empty());

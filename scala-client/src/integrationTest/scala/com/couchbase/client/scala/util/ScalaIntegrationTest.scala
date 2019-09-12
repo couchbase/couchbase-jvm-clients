@@ -18,7 +18,7 @@ package com.couchbase.client.scala.util
 
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode, UsernameAndPassword}
+import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode, PasswordAuthenticator}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services}
 import org.junit.jupiter.api.Timeout
 
@@ -48,7 +48,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
       .toSet
 
     ClusterEnvironment
-      .builder(UsernameAndPassword(config.adminUsername, config.adminPassword))
+      .builder(PasswordAuthenticator(config.adminUsername, config.adminPassword))
       .seedNodes(seeds)
   }
 }

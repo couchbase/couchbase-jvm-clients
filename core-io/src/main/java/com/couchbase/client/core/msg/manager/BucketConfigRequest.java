@@ -22,14 +22,13 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 
 public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse> implements TargetedRequest {
@@ -37,14 +36,14 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
   private static final String PATH = "/pools/default/b/%s";
 
   private final String bucketName;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
   private final NodeIdentifier target;
 
   public BucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                             String bucketName, Credentials credentials, final NodeIdentifier target) {
+                             String bucketName, Authenticator authenticator, final NodeIdentifier target) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
-    this.credentials = credentials;
+    this.authenticator = authenticator;
     this.target = target;
   }
 
@@ -55,7 +54,7 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
       HttpMethod.GET,
       String.format(PATH, bucketName)
     );
-    addHttpBasicAuth(request, credentials);
+    authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
 

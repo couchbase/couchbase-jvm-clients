@@ -16,24 +16,21 @@
 
 package com.couchbase.client.core.env;
 
-public class UsernameAndPassword implements Credentials {
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.service.ServiceType;
 
-  private final String username;
-  private final String password;
+public class CertificateAuthenticator implements Authenticator {
 
-  public UsernameAndPassword(String username, String password) {
-    this.username = username;
-    this.password = password;
-  }
+  public static CertificateAuthenticator INSTANCE = new CertificateAuthenticator();
 
-  @Override
-  public String username() {
-    return username;
-  }
+  private CertificateAuthenticator() { }
 
   @Override
-  public String password() {
-    return password;
-  }
+  public void authKeyValueConnection(EndpointContext endpointContext, ChannelPipeline pipeline) { }
+
+  @Override
+  public void authHttpRequest(ServiceType serviceType, HttpRequest request) { }
 
 }

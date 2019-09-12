@@ -22,13 +22,11 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.Credentials;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
-
-import static com.couchbase.client.core.io.netty.HttpProtocol.addHttpBasicAuth;
 
 /**
  * Performs a (potential endless) streaming request against the cluster manager for the given bucket.
@@ -38,14 +36,14 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
   private static final String PATH = "/pools/default/bs/%s";
 
   private final String bucketName;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
 
   public BucketConfigStreamingRequest(final Duration timeout, final CoreContext ctx,
                                       final RetryStrategy retryStrategy, final String bucketName,
-                                      final Credentials credentials) {
+                                      final Authenticator authenticator) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
-    this.credentials = credentials;
+    this.authenticator = authenticator;
   }
 
   @Override
@@ -60,7 +58,7 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
       HttpMethod.GET,
       String.format(PATH, bucketName)
     );
-    addHttpBasicAuth(request, credentials);
+    authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
 

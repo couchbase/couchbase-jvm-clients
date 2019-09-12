@@ -115,7 +115,7 @@ public class CoreEnvironment {
   private final DiagnosticsMonitor diagnosticsMonitor;
 
   private final Set<SeedNode> seedNodes;
-  private final Credentials credentials;
+  private final Authenticator authenticator;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
 
@@ -124,39 +124,39 @@ public class CoreEnvironment {
     return builder(username, password).build();
   }
 
-  public static CoreEnvironment create(final Credentials credentials) {
-    return builder(credentials).build();
+  public static CoreEnvironment create(final Authenticator authenticator) {
+    return builder(authenticator).build();
   }
 
   public static CoreEnvironment create(final String connectionString, String username, String password) {
     return builder(connectionString, username, password).build();
   }
 
-  public static CoreEnvironment create(final String connectionString, Credentials credentials) {
-    return builder(connectionString, credentials).build();
+  public static CoreEnvironment create(final String connectionString, Authenticator authenticator) {
+    return builder(connectionString, authenticator).build();
   }
 
   public static CoreEnvironment.Builder builder(final String username, final String password) {
-    return builder(new UsernameAndPassword(username, password));
+    return builder(PasswordAuthenticator.create(username, password));
   }
 
-  public static CoreEnvironment.Builder builder(final Credentials credentials) {
-    return new Builder(credentials);
+  public static CoreEnvironment.Builder builder(final Authenticator authenticator) {
+    return new Builder(authenticator);
   }
 
   public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, new UsernameAndPassword(username, password));
+    return builder(connectionString, PasswordAuthenticator.create(username, password));
   }
 
-  public static CoreEnvironment.Builder builder(final String connectionString, final Credentials credentials) {
-    return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
+  public static CoreEnvironment.Builder builder(final String connectionString, final Authenticator authenticator) {
+    return builder(authenticator).load(new ConnectionStringPropertyLoader(connectionString));
   }
 
   @SuppressWarnings("unchecked")
   protected CoreEnvironment(final Builder builder) {
     new SystemPropertyPropertyLoader().load(builder);
 
-    this.credentials = builder.credentials;
+    this.authenticator = builder.authenticator;
     this.userAgent = defaultUserAgent();
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
@@ -259,10 +259,10 @@ public class CoreEnvironment {
   }
 
   /**
-   * Returns the {@link Credentials} attached to this environment.
+   * Returns the {@link Authenticator} attached to this environment.
    */
-  public Credentials credentials() {
-    return credentials;
+  public Authenticator authenticator() {
+    return authenticator;
   }
 
   /**
@@ -446,7 +446,7 @@ public class CoreEnvironment {
     input.put("serviceConfig", serviceConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
 
-    input.put("credentials", credentials.getClass().getSimpleName());
+    input.put("credentials", authenticator.getClass().getSimpleName());
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
 
     return format.apply(input);
@@ -472,11 +472,11 @@ public class CoreEnvironment {
     private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
 
-    private final Credentials credentials;
+    private final Authenticator authenticator;
 
-    protected Builder(final Credentials credentials) {
-      notNull(credentials, "Credentials");
-      this.credentials = credentials;
+    protected Builder(final Authenticator authenticator) {
+      notNull(authenticator, "Credentials");
+      this.authenticator = authenticator;
     }
 
     @SuppressWarnings("unchecked")

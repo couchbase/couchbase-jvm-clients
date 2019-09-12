@@ -16,16 +16,16 @@
 
 package com.couchbase.client.java.env;
 
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.Credentials;
-import com.couchbase.client.core.env.UsernameAndPassword;
 import com.couchbase.client.java.codec.DefaultTranscoder;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.codec.Transcoder;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 
 public class ClusterEnvironment extends CoreEnvironment {
 
@@ -47,32 +47,32 @@ public class ClusterEnvironment extends CoreEnvironment {
     return builder(username, password).build();
   }
 
-  public static ClusterEnvironment create(final Credentials credentials) {
-    return builder(credentials).build();
+  public static ClusterEnvironment create(final Authenticator authenticator) {
+    return builder(authenticator).build();
   }
 
   public static ClusterEnvironment create(final String connectionString, String username, String password) {
     return builder(connectionString, username, password).build();
   }
 
-  public static ClusterEnvironment create(final String connectionString, Credentials credentials) {
-    return builder(connectionString, credentials).build();
+  public static ClusterEnvironment create(final String connectionString, Authenticator authenticator) {
+    return builder(connectionString, authenticator).build();
   }
 
   public static ClusterEnvironment.Builder builder(final String username, final String password) {
-    return builder(new UsernameAndPassword(username, password));
+    return builder(PasswordAuthenticator.create(username, password));
   }
 
-  public static ClusterEnvironment.Builder builder(final Credentials credentials) {
-    return new ClusterEnvironment.Builder(credentials);
+  public static ClusterEnvironment.Builder builder(final Authenticator authenticator) {
+    return new ClusterEnvironment.Builder(authenticator);
   }
 
   public static ClusterEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, new UsernameAndPassword(username, password));
+    return builder(connectionString, PasswordAuthenticator.create(username, password));
   }
 
-  public static ClusterEnvironment.Builder builder(final String connectionString, final Credentials credentials) {
-    return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
+  public static ClusterEnvironment.Builder builder(final String connectionString, final Authenticator authenticator) {
+    return builder(authenticator).load(new ConnectionStringPropertyLoader(connectionString));
   }
 
   /**
@@ -94,8 +94,8 @@ public class ClusterEnvironment extends CoreEnvironment {
     private Serializer jsonSerializer;
     private Transcoder transcoder;
 
-    Builder(Credentials credentials) {
-      super(credentials);
+    Builder(Authenticator authenticator) {
+      super(authenticator);
     }
 
     public Builder load(final ClusterPropertyLoader loader) {
