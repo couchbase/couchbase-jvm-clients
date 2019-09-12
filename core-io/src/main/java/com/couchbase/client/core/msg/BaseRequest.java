@@ -56,6 +56,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   private final Duration timeout;
 
   /**
+   * Holds the absolute timeout deadline.
+   */
+  private final long absoluteTimeout;
+
+  /**
    * Holds the request context, if set.
    */
   private final RequestContext ctx;
@@ -98,6 +103,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
       throw new IllegalArgumentException("A CoreContext must be provided");
     }
     this.timeout = timeout;
+    this.absoluteTimeout = System.nanoTime() + timeout.toNanos();
     this.response = new CompletableFuture<>();
     this.id = REQUEST_ID.incrementAndGet();
     this.ctx = new RequestContext(ctx, this);
@@ -167,6 +173,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public Duration timeout() {
     return timeout;
+  }
+
+  @Override
+  public boolean timeoutElapsed() {
+    return (this.absoluteTimeout - System.nanoTime()) <= 0;
   }
 
   @Override

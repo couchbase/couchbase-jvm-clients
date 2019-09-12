@@ -75,7 +75,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
     service.connect();
     waitUntilCondition(() -> service.state() == ServiceState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, coreContext, null, CollectionIdentifier.fromDefault(config().bucketname()));
+    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), coreContext, null, CollectionIdentifier.fromDefault(config().bucketname()));
     assertTrue(request.id() > 0);
     service.send(request);
 

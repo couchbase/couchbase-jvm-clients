@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -27,7 +28,9 @@ import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,18 +48,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KeyValueIntegrationTest extends CoreIntegrationTest {
 
-  private Core core;
-  private CoreEnvironment env;
+  private static Core core;
+  private static CoreEnvironment env;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     env = environment().build();
     core = Core.create(env);
     core.openBucket(config().bucketname()).block();
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     core.shutdown().block();
     env.shutdown();
   }
@@ -99,6 +102,22 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());
     assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+  }
+
+  /**
+   * The timer wheel has a resolution if 100ms by default, so very low timeouts might go through and never have
+   * a chance of getting into the next tick.
+   *
+   * <p>The code has additional checks in place to proactively check for such a timeout. This test makes sure that
+   * super low timeouts always hit.</p>
+   */
+  @Test
+  void timesOutVeryLowTimeoutDurations() {
+    GetRequest getRequest = new GetRequest("foo", Duration.ofNanos(1), core.context(),
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
+    core.send(getRequest);
+
+    assertThrows(RequestTimeoutException.class, () -> getRequest.response().get());
   }
 
 }

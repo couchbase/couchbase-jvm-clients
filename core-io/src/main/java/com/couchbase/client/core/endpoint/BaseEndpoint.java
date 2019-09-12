@@ -34,6 +34,7 @@ import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -423,7 +424,14 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   @Override
-  public <R extends Request<? extends Response>> void send(R request) {
+  public <R extends Request<? extends Response>> void send(final R request) {
+    if (request.timeoutElapsed()) {
+      request.cancel(CancellationReason.TIMEOUT);
+    }
+    if (request.completed()) {
+      return;
+    }
+
     if (canWrite()) {
         if (!pipelined) {
           outstandingRequests.incrementAndGet();

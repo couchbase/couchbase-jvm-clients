@@ -91,7 +91,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, serviceContext, null,
+    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), serviceContext, null,
       CollectionIdentifier.fromDefault(config().bucketname())
     );
     assertTrue(request.id() > 0);

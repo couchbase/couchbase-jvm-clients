@@ -71,11 +71,16 @@ public interface Request<R extends Response> {
   RequestContext context();
 
   /**
-   * Returns the timeout for this rquest.
+   * Returns the timeout for this request.
    *
    * @return the timeout for this request.
    */
   Duration timeout();
+
+  /**
+   * Returns true if the timeout elapsed.
+   */
+  boolean timeoutElapsed();
 
   /**
    * Allows to check if this request is completed already.
