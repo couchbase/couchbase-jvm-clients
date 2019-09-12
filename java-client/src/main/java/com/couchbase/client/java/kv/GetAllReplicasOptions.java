@@ -16,9 +16,30 @@
 
 package com.couchbase.client.java.kv;
 
-public enum ReplicaMode {
-  ALL,
-  FIRST,
-  SECOND,
-  THIRD
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.json.JsonObject;
+
+public class GetAllReplicasOptions extends CommonOptions<GetAllReplicasOptions> {
+  /**
+   * Creates a new set of {@link GetAllReplicasOptions}.
+   *
+   * @return options to customize.
+   */
+  public static GetAllReplicasOptions getAllReplicasOptions() {
+    return new GetAllReplicasOptions();
+  }
+
+  private GetAllReplicasOptions() {
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  public class Built extends BuiltCommonOptions {
+
+  }
+
 }

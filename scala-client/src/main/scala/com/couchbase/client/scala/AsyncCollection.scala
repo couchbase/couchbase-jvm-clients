@@ -352,7 +352,7 @@ class AsyncCollection(name: String,
   def getAnyReplica(id: String,
                     timeout: Duration = kvTimeout,
                     retryStrategy: RetryStrategy = environment.retryStrategy
-                   ): Future[GetFromReplicaResult] = {
+                   ): Future[GetReplicaResult] = {
     getAllReplicas(id, timeout, retryStrategy).take(1).head
   }
 
@@ -362,7 +362,7 @@ class AsyncCollection(name: String,
   def getAllReplicas(id: String,
                      timeout: Duration = kvTimeout,
                      retryStrategy: RetryStrategy = environment.retryStrategy
-                    ): Seq[Future[GetFromReplicaResult]] = {
+                    ): Seq[Future[GetReplicaResult]] = {
     val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.requestAll(id, timeout, retryStrategy)
 
     reqsTry match {

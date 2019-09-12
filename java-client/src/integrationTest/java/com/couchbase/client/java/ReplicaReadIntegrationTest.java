@@ -17,6 +17,11 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
@@ -24,16 +29,28 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This integration test verifies all different ways a replica read can be used.
@@ -71,7 +88,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, "Hello, World!");
 
-    List<GetResult> results = collection.getFromReplica(id).collect(Collectors.toList());
+    List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
     assertFalse(results.isEmpty());
     for (GetResult result : results) {
       assertEquals("Hello, World!", result.contentAs(String.class));
@@ -101,7 +118,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     // TODO: perform a "replicate to 1" instead
     Thread.sleep(1000);
 
-    List<GetResult> results = collection.getFromReplica(id).collect(Collectors.toList());
+    List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
     assertEquals(2, results.size());
     assertNotNull(results.get(0));
     assertNotNull(results.get(1));
@@ -141,7 +158,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     // TODO: perform a "replicate to 1" instead
     Thread.sleep(1000);
 
-    List<GetResult> results = collection.getFromReplica(id).collect(Collectors.toList());
+    List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
     assertEquals(2, results.size());
     assertNotNull(results.get(0));
     assertNotNull(results.get(1));
@@ -151,4 +168,77 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     waitUntilCondition(() -> ev.get() != null);
   }
 
+  // Checking behaviour used in getAnyReplica to make sure an aggregated future times out
+  @Test
+  void checkFuturesTimeout() throws InterruptedException {
+    List<CompletableFuture> futures = new ArrayList<>();
+
+    CompletableFuture<Integer> cf1 = new CompletableFuture<>();
+    CompletableFuture<Integer> cf2 = new CompletableFuture<>();
+
+    futures.add(cf1);
+    futures.add(cf2);
+
+    cf1.completeExceptionally(new RuntimeException("argh!"));
+    cf2.completeExceptionally(new RuntimeException("argh!"));
+
+    CompletableFuture<Integer> f = new CompletableFuture<>();
+    Consumer<Integer> complete = f::complete;
+    futures.forEach(s -> s.thenAccept(complete));
+
+    collection.core().context().environment().scheduler().schedule(() -> f.completeExceptionally(new TimeoutException()),
+            50,
+            TimeUnit.MILLISECONDS);
+
+    try {
+      f.get();
+    }
+    catch (ExecutionException err) {
+      assertTrue(err.getCause() instanceof TimeoutException);
+    }
+  }
+
+  // Checking behaviour used in reactive getAnyReplica
+  @Test
+  void oneMonoReturns() {
+    Mono<Object> m1 = Mono.error(new RuntimeException("m1 failed")).onErrorResume(err -> Mono.empty());
+    Mono<Object> m2 = Mono.error(new RuntimeException("m2 failed")).onErrorResume(err -> Mono.empty());
+    Mono<Object> m3 = Mono.just(3);
+
+    Flux<Object> flux = Flux.merge(m1, m2, m3);
+
+    assertEquals(3, flux.next().block());
+  }
+
+  @Test
+  void noMonoReturns() {
+    Mono<Object> m1 = Mono.error(new RuntimeException("m1 failed")).onErrorResume(err -> Mono.empty());
+    Mono<Object> m2 = Mono.error(new RuntimeException("m2 failed")).onErrorResume(err -> Mono.empty());
+
+    Flux<Object> flux = Flux.merge(m1, m2);
+
+    assertNull(flux.next().block());
+  }
+
+  @Test
+  void noMonoReturnsErrorIfEmpty() {
+    Mono<Object> m1 = Mono.error(new RuntimeException("m1 failed")).onErrorResume(err -> Mono.empty());
+    Mono<Object> m2 = Mono.error(new RuntimeException("m2 failed")).onErrorResume(err -> Mono.empty());
+    Mono<Object> m3 = Mono.just(3);
+
+    Flux<Object> flux = Flux.merge(m1, m2)
+            .switchIfEmpty(Mono.error(new NoSuchElementException()));
+
+    assertThrows(NoSuchElementException.class, () -> flux.next().block());
+
+    Flux<Object> flux2 = Flux.merge(m1, m2, m3)
+            .switchIfEmpty(Mono.error(new NoSuchElementException()));
+
+    assertEquals(3, flux2.next().block());
+
+    Flux<Object> flux3 = Flux.merge(m1)
+            .switchIfEmpty(Mono.error(new NoSuchElementException()));
+
+    assertThrows(NoSuchElementException.class, () -> flux3.next().block());
+  }
 }

@@ -27,10 +27,12 @@ import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.kv.ArraySetOptions;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetFromReplicaOptions;
+import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
@@ -53,7 +55,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
-import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_FROM_REPLICA_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -237,8 +239,8 @@ public class Collection {
    * @param id the document id.
    * @return a stream of results from the active and the replica.
    */
-  public Stream<GetResult> getFromReplica(final String id) {
-    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
+  public Stream<GetReplicaResult> getAllReplicas(final String id) {
+    return getAllReplicas(id, DEFAULT_GET_ALL_REPLICAS_OPTIONS);
   }
 
   /**
@@ -251,8 +253,29 @@ public class Collection {
    * @param options the custom options.
    * @return a stream of results from the active and the replica depending on the options.
    */
-  public Stream<GetResult> getFromReplica(final String id, final GetFromReplicaOptions options) {
-    return reactiveCollection.getFromReplica(id, options).toStream();
+  public Stream<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
+    return reactiveCollection.getAllReplicas(id, options).toStream();
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @return the first available replica.
+   */
+  public GetReplicaResult getAnyReplica(final String id) {
+    return block(asyncCollection.getAnyReplica(id));
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @param options the custom options.
+   * @return the first available replica.
+   */
+  public GetReplicaResult getAnyReplica(final String id, final GetAnyReplicaOptions options) {
+    return block(asyncCollection.getAnyReplica(id, options));
   }
 
   /**

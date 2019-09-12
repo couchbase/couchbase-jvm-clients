@@ -19,19 +19,17 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
-public class GetFromReplicaOptions extends CommonOptions<GetFromReplicaOptions> {
-  private ReplicaMode replicaMode = ReplicaMode.ALL;
-
-  public static GetFromReplicaOptions getFromReplicaOptions() {
-    return new GetFromReplicaOptions();
+public class GetAnyReplicaOptions extends CommonOptions<GetAnyReplicaOptions> {
+  /**
+   * Creates a new set of {@link GetAnyReplicaOptions}.
+   *
+   * @return options to customize.
+   */
+  public static GetAnyReplicaOptions getAnyReplicaOptions() {
+    return new GetAnyReplicaOptions();
   }
 
-  private GetFromReplicaOptions() {
-  }
-
-  public GetFromReplicaOptions replicaMode(final ReplicaMode replicaMode) {
-    this.replicaMode = replicaMode;
-    return this;
+  private GetAnyReplicaOptions() {
   }
 
   @Stability.Internal
@@ -40,10 +38,6 @@ public class GetFromReplicaOptions extends CommonOptions<GetFromReplicaOptions> 
   }
 
   public class Built extends BuiltCommonOptions {
-
-    public ReplicaMode replicaMode() {
-      return replicaMode;
-    }
 
   }
 

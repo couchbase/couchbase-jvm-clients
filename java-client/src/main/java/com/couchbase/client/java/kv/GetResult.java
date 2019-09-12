@@ -38,12 +38,12 @@ public class GetResult {
   /**
    * The encoded content when loading the document.
    */
-  private final byte[] content;
+  protected final byte[] content;
 
   /**
    * The data format loaded from the common flags.
    */
-  private final DataFormat format;
+  protected final DataFormat format;
 
   /**
    * The CAS of the fetched document.
@@ -58,7 +58,7 @@ public class GetResult {
   /**
    * The default transcoder which should be used.
    */
-  private final Transcoder transcoder;
+  protected final Transcoder transcoder;
 
   /**
    * Creates a new {@link GetResult}.

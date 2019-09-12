@@ -28,6 +28,7 @@ import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
@@ -40,8 +41,10 @@ import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetFromReplicaOptions;
+import com.couchbase.client.java.kv.GetAllReplicasOptions;
+import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -58,7 +61,6 @@ import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.ReplicaMode;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockAccessor;
@@ -70,11 +72,14 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
+import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
-import static com.couchbase.client.java.kv.GetFromReplicaOptions.getFromReplicaOptions;
+import static com.couchbase.client.java.kv.GetAnyReplicaOptions.getAnyReplicaOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.LookupInOptions.lookupInOptions;
@@ -101,7 +106,8 @@ public class ReactiveCollection {
   static final ExistsOptions DEFAULT_EXISTS_OPTIONS = existsOptions();
   static final GetAndLockOptions DEFAULT_GET_AND_LOCK_OPTIONS = getAndLockOptions();
   static final GetAndTouchOptions DEFAULT_GET_AND_TOUCH_OPTIONS = getAndTouchOptions();
-  static final GetFromReplicaOptions DEFAULT_GET_FROM_REPLICA_OPTIONS = getFromReplicaOptions();
+  static final GetAllReplicasOptions DEFAULT_GET_ALL_REPLICAS_OPTIONS = getAllReplicasOptions();
+  static final GetAnyReplicaOptions DEFAULT_GET_ANY_REPLICA_OPTIONS = getAnyReplicaOptions();
   static final GetOptions DEFAULT_GET_OPTIONS = getOptions();
   static final InsertOptions DEFAULT_INSERT_OPTIONS = insertOptions();
   static final LookupInOptions DEFAULT_LOOKUP_IN_OPTIONS = lookupInOptions();
@@ -284,48 +290,76 @@ public class ReactiveCollection {
   }
 
   /**
-   * Reads from all available replicas and the active node and returns the results as a flux.
+   * Reads all available replicas, including the active, and returns the results as a flux.
    *
    * <p>Note that individual errors are ignored, so you can think of this API as a best effort
    * approach which explicitly emphasises availability over consistency.</p>
+   * <p>
+   * Raises NoSuchElementException on the flux if no replica was available.
    *
    * @param id the document id.
-   * @return a flux of results from the active and the replica.
+   * @return a flux of results from all replicas
    */
-  public Flux<GetResult> getFromReplica(final String id) {
-    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
+  public Flux<GetReplicaResult> getAllReplicas(final String id) {
+    return getAllReplicas(id, DEFAULT_GET_ALL_REPLICAS_OPTIONS);
   }
 
   /**
-   * Reads all available or one replica and returns the results as a flux.
-   *
-   * <p>By default all available replicas and the active node will be asked and returned as
-   * an async stream. If configured differently in the options</p>
+   * Reads all available replicas, including the active, and returns the results as a flux.
+   * <p>
+   * Raises NoSuchElementException on the flux if no replica was available.
    *
    * @param id the document id.
    * @param options the custom options.
-   * @return a flux of results from the active and the replica depending on the options.
+   * @return a flux of results from all replicas
    */
-  public Flux<GetResult> getFromReplica(final String id, final GetFromReplicaOptions options) {
+  public Flux<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
     return Flux
-      .fromStream(asyncCollection.getFromReplicaRequests(id, options))
-      .flatMap(request -> {
+      .fromStream(asyncCollection.getAllReplicasRequests(id, options))
+      .flatMap(request ->
+              Reactor
+                .wrap(request, GetAccessor.get(core, id, request, environment().transcoder()), true)
+                .onErrorResume(t -> {
+                  coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
+                  // Swallow any errors from individual replicas
+                  return Mono.empty();
+                })
+                .map(response -> {
+                  boolean isMaster = !(request instanceof ReplicaGetRequest);
 
-        Mono<GetResult> result = Reactor
-          .wrap(request, GetAccessor.get(core, id, request, environment().transcoder()), true);
+                  return GetReplicaResult.from(response, isMaster);
+                }))
+      .switchIfEmpty(Mono.error(new NoSuchElementException()));
+  }
 
-        GetFromReplicaOptions.Built opts = options.build();
-        if (opts.replicaMode() == ReplicaMode.ALL) {
-          result = result.onErrorResume(t -> {
-            coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(
-              request.context()
-            ));
-            return Mono.empty();
-          });
-        }
+  /**
+   * Reads all available replicas, and returns the first found.
+   * <p>
+   * Raises NoSuchElementException on the mono if no replica was available.
+   *
+   * @param id the document id.
+   * @return a mono containing the first available replica.
+   */
+  public Mono<GetReplicaResult> getAnyReplica(final String id) {
+    return getAnyReplica(id, DEFAULT_GET_ANY_REPLICA_OPTIONS);
+  }
 
-        return result;
-      });
+    /**
+     * Reads all available replicas, and returns the first found.
+     * <p>
+     * Raises NoSuchElementException on the mono if no replica was available.
+     *
+     * @param id the document id.
+     * @param options the custom options.
+     * @return a mono containing the first available replica.
+     */
+  public Mono<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
+    GetAnyReplicaOptions.Built built = options.build();
+    GetAllReplicasOptions opts = GetAllReplicasOptions.getAllReplicasOptions().clientContext(built.clientContext());
+    built.timeout().ifPresent(v -> opts.timeout(v));
+    built.retryStrategy().ifPresent(v -> opts.retryStrategy(v));
+
+    return getAllReplicas(id, opts).next();
   }
 
   /**

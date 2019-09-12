@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
@@ -46,10 +47,12 @@ import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAllReplicasOptions;
+import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetFromReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -66,7 +69,6 @@ import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.ReplicaMode;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockAccessor;
@@ -79,6 +81,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -87,7 +92,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
-import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_FROM_REPLICA_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ANY_REPLICA_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_OPTIONS;
@@ -434,8 +440,8 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  public List<CompletableFuture<GetResult>> getFromReplica(final String id) {
-    return getFromReplica(id, DEFAULT_GET_FROM_REPLICA_OPTIONS);
+  public List<CompletableFuture<GetReplicaResult>> getAllReplicas(final String id) {
+    return getAllReplicas(id, DEFAULT_GET_ALL_REPLICAS_OPTIONS);
   }
 
   /**
@@ -445,12 +451,60 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  // TODO sync with RFC changes
-  public List<CompletableFuture<GetResult>> getFromReplica(final String id, final GetFromReplicaOptions options) {
-    return getFromReplicaRequests(id, options)
-      .map(request -> GetAccessor.get(core, id, request, environment.transcoder()))
+  public List<CompletableFuture<GetReplicaResult>> getAllReplicas(final String id, final GetAllReplicasOptions options) {
+    return getAllReplicasRequests(id, options)
+
+      .map(request ->
+              GetAccessor.get(core, id, request, environment.transcoder())
+                      .thenApply(response -> {
+                        boolean isMaster = !(request instanceof ReplicaGetRequest);
+
+                        return GetReplicaResult.from(response, isMaster);
+                      }))
+
       .collect(Collectors.toList());
   }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @return a future containing the first available replica.
+   */
+  public CompletableFuture<GetReplicaResult> getAnyReplica(final String id) {
+    return getAnyReplica(id, DEFAULT_GET_ANY_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @param options the custom options.
+   * @return a future containing the first available replica.
+   */
+  public CompletableFuture<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
+    GetAnyReplicaOptions.Built built = options.build();
+
+    GetAllReplicasOptions opts = GetAllReplicasOptions.getAllReplicasOptions().clientContext(built.clientContext());
+    built.timeout().ifPresent(v -> opts.timeout(v));
+    built.retryStrategy().ifPresent(v -> opts.retryStrategy(v));
+
+    List<CompletableFuture<GetReplicaResult>> futures = getAllReplicas(id, opts);
+
+    // Aggregating the futures here will discard the individual errors, which we don't need
+    CompletableFuture<GetReplicaResult> f = new CompletableFuture<>();
+    Consumer<GetReplicaResult> complete = f::complete;
+    futures.forEach(s -> s.thenAccept(complete));
+
+    // If all the futures error, make sure the overall future still times out
+    Duration timeout = built.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    core.context().environment().scheduler().schedule(() -> f.completeExceptionally(new TimeoutException()),
+            timeout.toMillis(),
+            TimeUnit.MILLISECONDS);
+
+    return f;
+  }
+
 
   /**
    * Helper method to assemble a stream of requests either to the active or to the replica.
@@ -459,11 +513,11 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a stream of requests.
    */
-  Stream<GetRequest> getFromReplicaRequests(final String id,
-                                            final GetFromReplicaOptions options) {
+  Stream<GetRequest> getAllReplicasRequests(final String id,
+                                            final GetAllReplicasOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(options, "GetFromReplicaOptions");
-    GetFromReplicaOptions.Built opts = options.build();
+    notNull(options, "GetAllReplicasOptions");
+    GetAllReplicasOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -475,30 +529,21 @@ public class AsyncCollection {
     }
 
     if (config instanceof CouchbaseBucketConfig) {
-      if (opts.replicaMode() == ReplicaMode.ALL) {
-        int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
-        List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
+      int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
+      List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
 
-        GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
-        activeRequest.context().clientContext(opts.clientContext());
-        requests.add(activeRequest);
+      GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+      activeRequest.context().clientContext(opts.clientContext());
+      requests.add(activeRequest);
 
-        for (int i = 0; i < numReplicas; i++) {
-          ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
-            id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1)
-          );
-          replicaRequest.context().clientContext(opts.clientContext());
-          requests.add(replicaRequest);
-        }
-        return requests.stream();
-      } else {
+      for (int i = 0; i < numReplicas; i++) {
         ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
-          id, timeout, coreContext, collectionIdentifier, retryStrategy,
-          (short) opts.replicaMode().ordinal()
+          id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1)
         );
         replicaRequest.context().clientContext(opts.clientContext());
-        return Stream.of(replicaRequest);
+        requests.add(replicaRequest);
       }
+      return requests.stream();
     } else {
       throw CommonExceptions.getFromReplicaNotCouchbaseBucket();
     }
