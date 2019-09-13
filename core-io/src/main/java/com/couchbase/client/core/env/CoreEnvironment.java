@@ -215,19 +215,31 @@ public class CoreEnvironment {
     return CORE_AGENT_TITLE;
   }
 
-  private Optional<String> clientHash() {
+  /**
+   * If present, returns the git hash for the client at build time.
+   */
+  public Optional<String> clientHash() {
     return loadFromManifest(defaultAgentTitle(), "Impl-Git-Revision");
   }
 
-  private Optional<String> coreHash() {
+  /**
+   * If present, returns the git hash for the core at build time.
+   */
+  public Optional<String> coreHash() {
     return loadFromManifest(CORE_AGENT_TITLE, "Impl-Git-Revision");
   }
 
-  private Optional<String> clientVersion() {
+  /**
+   * If present, returns the client version at build time.
+   */
+  public Optional<String> clientVersion() {
     return loadFromManifest(defaultAgentTitle(), "Impl-Version");
   }
 
-  private Optional<String> coreVersion() {
+  /**
+   * If present, returns the core version at build time.
+   */
+  public Optional<String> coreVersion() {
     return loadFromManifest(CORE_AGENT_TITLE, "Impl-Version");
   }
 
