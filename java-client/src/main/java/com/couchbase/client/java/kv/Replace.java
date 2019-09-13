@@ -19,7 +19,6 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Serializer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -35,7 +34,7 @@ public class Replace extends MutateInSpec {
     private final Object doc;
     private boolean xattr = false;
     private boolean expandMacro = false;
-    private Serializer serializer = JsonSerializer.INSTANCE;
+    private Serializer serializer;
 
     Replace(String path, Object doc) {
         this.path = path;
@@ -73,7 +72,9 @@ public class Replace extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode() {
+    public SubdocMutateRequest.Command encode(final Serializer defaultSerializer) {
+        Serializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
+
         return new SubdocMutateRequest.Command(
             SubdocCommandType.REPLACE,
             path,

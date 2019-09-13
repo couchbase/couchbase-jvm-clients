@@ -8,6 +8,7 @@ import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
+import com.couchbase.client.java.codec.Serializer;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -18,14 +19,15 @@ public class MutateInAccessor {
                                                            final String key,
                                                            final PersistTo persistTo,
                                                            final ReplicateTo replicateTo,
-                                                           final Boolean insertDocument) {
+                                                           final Boolean insertDocument,
+                                                           final Serializer serializer) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-            return new MutateInResult(response.values(), response.cas(), response.mutationToken());
+            return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
           case EXISTS:

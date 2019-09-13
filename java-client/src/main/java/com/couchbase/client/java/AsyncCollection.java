@@ -40,6 +40,7 @@ import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.codec.DataFormat;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
@@ -243,9 +244,9 @@ public class AsyncCollection {
     GetOptions.Built opts = options.build();
 
     if (opts.projections().isEmpty() && !opts.withExpiration()) {
-      return GetAccessor.get(core, id, fullGetRequest(id, options));
+      return GetAccessor.get(core, id, fullGetRequest(id, options), environment.transcoder());
     } else {
-      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options));
+      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options), environment.transcoder());
     }
   }
 
@@ -341,7 +342,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndLock(final String id,
                                                            final GetAndLockOptions options) {
-    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, options));
+    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, options), environment.transcoder());
   }
 
   /**
@@ -393,7 +394,7 @@ public class AsyncCollection {
   public CompletableFuture<GetResult> getAndTouch(final String id,
                                                             final Duration expiration,
                                                             final GetAndTouchOptions options) {
-    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options));
+    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options), environment.transcoder());
   }
 
   /**
@@ -441,7 +442,7 @@ public class AsyncCollection {
   // TODO sync with RFC changes
   public List<CompletableFuture<GetResult>> getFromReplica(final String id, final GetFromReplicaOptions options) {
     return getFromReplicaRequests(id, options)
-      .map(request -> GetAccessor.get(core, id, request))
+      .map(request -> GetAccessor.get(core, id, request, environment.transcoder()))
       .collect(Collectors.toList());
   }
 
@@ -625,8 +626,9 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     DataFormat dataFormat = opts.dataFormat();
+    Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    InsertRequest request = new InsertRequest(id, opts.transcoder().encode(content, dataFormat),
+    InsertRequest request = new InsertRequest(id, transcoder.encode(content, dataFormat),
       opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
       retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
@@ -681,8 +683,9 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     DataFormat dataFormat = opts.dataFormat();
+    Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    UpsertRequest request = new UpsertRequest(id, opts.transcoder().encode(content, dataFormat),
+    UpsertRequest request = new UpsertRequest(id, transcoder.encode(content, dataFormat),
       opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
       retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
@@ -738,8 +741,9 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     DataFormat dataFormat = opts.dataFormat();
+    Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    ReplaceRequest request = new ReplaceRequest(id,  opts.transcoder().encode(content, dataFormat),
+    ReplaceRequest request = new ReplaceRequest(id, transcoder.encode(content, dataFormat),
       opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, opts.cas(), coreContext,
       collectionIdentifier, retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
@@ -865,7 +869,7 @@ public class AsyncCollection {
   public CompletableFuture<LookupInResult> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiration());
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiration(), environment.jsonSerializer());
   }
 
   /**
@@ -932,7 +936,8 @@ public class AsyncCollection {
       id,
       opts.persistTo(),
       opts.replicateTo(),
-      opts.insertDocument()
+      opts.insertDocument(),
+      environment.jsonSerializer()
     );
   }
 
@@ -961,7 +966,7 @@ public class AsyncCollection {
 
       List<SubdocMutateRequest.Command> commands = specs
         .stream()
-        .map(v -> v.encode())
+        .map(v -> v.encode(environment.jsonSerializer()))
         .collect(Collectors.toList());
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,

@@ -31,7 +31,9 @@ import com.couchbase.client.java.json.JacksonTransformers;
  */
 public class JsonSerializer implements Serializer {
 
-  public static final JsonSerializer INSTANCE = new JsonSerializer();
+  public static JsonSerializer create() {
+    return new JsonSerializer();
+  }
 
   private JsonSerializer() {}
 

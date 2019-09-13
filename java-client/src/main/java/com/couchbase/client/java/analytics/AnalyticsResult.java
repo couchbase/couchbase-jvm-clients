@@ -58,6 +58,11 @@ public class AnalyticsResult {
   private final AnalyticsChunkTrailer trailer;
 
   /**
+   * The default serializer to use.
+   */
+  private final Serializer serializer;
+
+  /**
    * Creates a new AnalyticsResult.
    *
    * @param header the analytics header.
@@ -65,10 +70,11 @@ public class AnalyticsResult {
    * @param trailer the analytics trailer.
    */
   AnalyticsResult(final AnalyticsChunkHeader header, final List<AnalyticsChunkRow> rows,
-                  final AnalyticsChunkTrailer trailer) {
+                  final AnalyticsChunkTrailer trailer, final Serializer serializer) {
     this.rows = rows;
     this.header = header;
     this.trailer = trailer;
+    this.serializer = serializer;
   }
 
   /**
@@ -78,7 +84,7 @@ public class AnalyticsResult {
    * @throws DecodingFailedException if any row could not be successfully deserialized.
    */
   public <T> List<T> rowsAs(final Class<T> target) {
-    return rowsAs(target, JsonSerializer.INSTANCE);
+    return rowsAs(target, serializer);
   }
 
   /**

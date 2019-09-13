@@ -57,16 +57,22 @@ public class GetResult {
   private final Optional<Duration> expiration;
 
   /**
+   * The default transcoder which should be used.
+   */
+  private final Transcoder transcoder;
+
+  /**
    * Creates a new {@link GetResult}.
    *
    * @param cas the cas from the doc.
    * @param expiration the expiration if fetched from the doc.
    */
-  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiration) {
+  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiration, Transcoder transcoder) {
     this.cas = cas;
     this.content = content;
     this.format = format;
     this.expiration = expiration;
+    this.transcoder = transcoder;
   }
 
   /**
@@ -104,13 +110,13 @@ public class GetResult {
    * Decodes the content of the document into a the target class using the default decoder.
    *
    * <p>Note that while the decoder understands many types, if it fails to decode a certain POJO
-   * or custom decoding is needed use the {@link #contentAs(Class, Decoder)} overload.</p>
+   * or custom decoding is needed use the {@link #contentAs(Class, Transcoder)} overload.</p>
    *
    * @param target the target class to decode the encoded content into.
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
-    return contentAs(target, DefaultTranscoder.INSTANCE);
+    return contentAs(target, transcoder);
   }
 
   /**
@@ -130,7 +136,7 @@ public class GetResult {
    * @param format the custom data format that should be used.
    */
   public <T> T contentAs(final Class<T> target, final DataFormat format) {
-    return DefaultTranscoder.INSTANCE.decode(target, content, format);
+    return transcoder.decode(target, content, format);
   }
 
   @Override

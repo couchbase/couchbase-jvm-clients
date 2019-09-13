@@ -19,7 +19,6 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Serializer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -36,7 +35,7 @@ public class ArrayInsert extends MutateInSpec {
     private boolean xattr = false;
     private boolean expandMacro = false;
     private boolean createPath = false;
-    private Serializer serializer = JsonSerializer.INSTANCE;
+    private Serializer serializer;
 
     ArrayInsert(String path, Object doc) {
         this.path = path;
@@ -83,7 +82,9 @@ public class ArrayInsert extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode() {
+    public SubdocMutateRequest.Command encode(final Serializer defaultSerializer) {
+        Serializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
+
         return new SubdocMutateRequest.Command(
             SubdocCommandType.ARRAY_INSERT,
             path,

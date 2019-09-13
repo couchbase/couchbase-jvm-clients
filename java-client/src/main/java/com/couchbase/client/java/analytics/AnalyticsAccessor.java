@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
+import com.couchbase.client.java.codec.Serializer;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
@@ -32,14 +33,15 @@ import java.util.concurrent.CompletableFuture;
 public class AnalyticsAccessor {
 
   public static CompletableFuture<AnalyticsResult> analyticsQueryAsync(final Core core,
-                                                                       final AnalyticsRequest request) {
+                                                                       final AnalyticsRequest request,
+                                                                       final Serializer serializer) {
     return analyticsQueryInternal(core, request)
       .flatMap(response -> response
         .rows()
         .collectList()
         .flatMap(rows -> response
           .trailer()
-          .map(trailer -> new AnalyticsResult(response.header(), rows, trailer))
+          .map(trailer -> new AnalyticsResult(response.header(), rows, trailer, serializer))
         )
       )
       .toFuture();

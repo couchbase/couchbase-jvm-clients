@@ -230,7 +230,7 @@ public class AsyncCluster {
    */
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     final QueryOptions.Built opts = options.build();
-    return queryAccessor.queryAsync(queryRequest(statement, opts), opts);
+    return queryAccessor.queryAsync(queryRequest(statement, opts), opts, environment.get().jsonSerializer());
   }
 
   /**
@@ -278,7 +278,7 @@ public class AsyncCluster {
    */
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement,
                                                            final AnalyticsOptions options) {
-    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, options));
+    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, options), environment.get().jsonSerializer());
   }
 
   /**

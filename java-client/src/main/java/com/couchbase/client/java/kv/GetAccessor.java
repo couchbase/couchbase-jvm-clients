@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.java.codec.DataFormat;
+import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -49,7 +50,7 @@ public enum GetAccessor {
    * @return a {@link CompletableFuture} once the document is fetched and decoded.
    */
   public static CompletableFuture<GetResult> get(final Core core, final String id,
-                                                 final GetRequest request) {
+                                                 final GetRequest request, Transcoder transcoder) {
     core.send(request);
     return request
       .response()
@@ -59,7 +60,8 @@ public enum GetAccessor {
             getResponse.content(),
             DataFormat.fromCommonFlag(getResponse.flags()),
             getResponse.cas(),
-            Optional.empty()
+            Optional.empty(),
+            transcoder
           );
         }
         throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
@@ -67,7 +69,7 @@ public enum GetAccessor {
   }
 
   public static CompletableFuture<GetResult> getAndLock(final Core core, final String id,
-                                                        final GetAndLockRequest request) {
+                                                        final GetAndLockRequest request, Transcoder transcoder) {
     core.send(request);
     return request
       .response()
@@ -78,7 +80,8 @@ public enum GetAccessor {
               getResponse.content(),
               DataFormat.fromCommonFlag(getResponse.flags()),
               getResponse.cas(),
-              Optional.empty()
+              Optional.empty(),
+              transcoder
             );
           // This is a special case on getAndLock for backwards compatibility (see MB-13087)
           case TEMPORARY_FAILURE:
@@ -90,7 +93,7 @@ public enum GetAccessor {
   }
 
   public static CompletableFuture<GetResult> getAndTouch(final Core core, final String id,
-                                                         final GetAndTouchRequest request) {
+                                                         final GetAndTouchRequest request, Transcoder transcoder) {
     core.send(request);
     return request
       .response()
@@ -100,27 +103,28 @@ public enum GetAccessor {
             getResponse.content(),
             DataFormat.fromCommonFlag(getResponse.flags()),
             getResponse.cas(),
-            Optional.empty()
+            Optional.empty(),
+            transcoder
           );
         }
         throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
       });
   }
 
-  public static CompletableFuture<GetResult> subdocGet(final Core core, final String id,
-                                                                 final SubdocGetRequest request) {
+  public static CompletableFuture<GetResult> subdocGet(final Core core, final String id, final SubdocGetRequest request,
+                                                       final Transcoder transcoder) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
         if (response.status() == ResponseStatus.SUCCESS) {
-          return parseSubdocGet(response);
+          return parseSubdocGet(response, transcoder);
         }
         throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
       });
   }
 
-  private static GetResult parseSubdocGet(final SubdocGetResponse response) {
+  private static GetResult parseSubdocGet(final SubdocGetResponse response, Transcoder transcoder) {
     if (response.error().isPresent()) {
       throw response.error().get();
     }
@@ -149,7 +153,7 @@ public enum GetAccessor {
     Optional<Duration> expiration = exptime == null
       ? Optional.empty()
       : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
-    return new GetResult(content, DataFormat.JSON, cas, expiration);
+    return new GetResult(content, DataFormat.JSON, cas, expiration, transcoder);
   }
 
   /**

@@ -35,38 +35,40 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class JsonSerializerTest {
 
+  private static final JsonSerializer SERIALIZER = JsonSerializer.create();
+
   @Test
   void encodesJsonObject() {
     JsonObject input = JsonObject.create().put("foo", "bar");
-    byte[] output = JsonSerializer.INSTANCE.serialize(input);
+    byte[] output = SERIALIZER.serialize(input);
     assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonObject() {
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    JsonObject decoded = JsonSerializer.INSTANCE.deserialize(JsonObject.class, input);
+    JsonObject decoded = SERIALIZER.deserialize(JsonObject.class, input);
     assertEquals(JsonObject.fromJson(input), decoded);
   }
 
   @Test
   void encodesJsonArray() {
     JsonArray input = JsonArray.from("1", true, 2);
-    byte[] output = JsonSerializer.INSTANCE.serialize(input);
+    byte[] output = SERIALIZER.serialize(input);
     assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonArray() {
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    JsonArray decoded = JsonSerializer.INSTANCE.deserialize(JsonArray.class, input);
+    JsonArray decoded = SERIALIZER.deserialize(JsonArray.class, input);
     assertEquals(JsonArray.fromJson(input), decoded);
   }
 
   @Test
   void encodesMap() {
     Map<String, Object> input = Collections.singletonMap("foo", "bar");
-    byte[] output = JsonSerializer.INSTANCE.serialize(input);
+    byte[] output = SERIALIZER.serialize(input);
     assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -74,14 +76,14 @@ class JsonSerializerTest {
   void decodesMap() {
     Map<String, Object> expected = Collections.singletonMap("foo", "bar");
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    Map decoded = JsonSerializer.INSTANCE.deserialize(Map.class, input);
+    Map decoded = SERIALIZER.deserialize(Map.class, input);
     assertEquals(expected, decoded);
   }
 
   @Test
   void encodesList() {
     List<Object> input = Arrays.asList("1", true, 2);
-    byte[] output = JsonSerializer.INSTANCE.serialize(input);
+    byte[] output = SERIALIZER.serialize(input);
     assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -89,7 +91,7 @@ class JsonSerializerTest {
   void decodesList() {
     List<Object> expected = Arrays.asList("1", true, 2);
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    List decoded = JsonSerializer.INSTANCE.deserialize(List.class, input);
+    List decoded = SERIALIZER.deserialize(List.class, input);
     assertEquals(expected, decoded);
   }
 
@@ -98,7 +100,7 @@ class JsonSerializerTest {
     Set<Object> input = new LinkedHashSet<>();
     input.add("foo");
     input.add("bar");
-    byte[] output = JsonSerializer.INSTANCE.serialize(input);
+    byte[] output = SERIALIZER.serialize(input);
     assertEquals("[\"foo\",\"bar\"]", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -108,7 +110,7 @@ class JsonSerializerTest {
     expected.add("foo");
     expected.add("bar");
     byte[] input = "[\"foo\",\"bar\"]".getBytes(StandardCharsets.UTF_8);
-    Set decoded = JsonSerializer.INSTANCE.deserialize(Set.class, input);
+    Set decoded = SERIALIZER.deserialize(Set.class, input);
     assertEquals(expected, decoded);
   }
 

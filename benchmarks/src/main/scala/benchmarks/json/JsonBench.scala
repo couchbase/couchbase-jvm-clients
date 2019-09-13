@@ -94,6 +94,8 @@ object Jackson {
 
 // Change this to LocalTime for a fast result
 object JsonBench extends Bench.LocalTime {
+
+  val jsonSerializer = JsonSerializer.create()
   val gen = Gen.unit("num")
   val content = Jackson.content
 
@@ -119,7 +121,7 @@ object JsonBench extends Bench.LocalTime {
 
       using(gen) in {
         r => {
-          val decoded = JsonSerializer.INSTANCE.deserialize(classOf[JsonObject], Jackson.encoded)
+          val decoded = jsonSerializer.deserialize(classOf[JsonObject], Jackson.encoded)
           val hello = decoded.getString("name")
           val age = decoded.getInt("age")
         }
@@ -411,7 +413,7 @@ object JsonBench extends Bench.LocalTime {
             .put("name", FieldName)
             .put("address", JsonArray.from(JsonObject.create().put("address", FieldAddress)))
             .put("age", 29)
-          val encoded: Array[Byte] = JsonSerializer.INSTANCE.serialize(json)
+          val encoded: Array[Byte] = jsonSerializer.serialize(json)
         }
       }
     }

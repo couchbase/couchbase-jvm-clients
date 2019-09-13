@@ -49,15 +49,21 @@ public class LookupInResult {
   private final Optional<Duration> expiration;
 
   /**
+   * The default JSON serializer that should be used.
+   */
+  private final Serializer serializer;
+
+  /**
    * Creates a new {@link LookupInResult}.
    *
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiration) {
+  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiration, Serializer serializer) {
     this.cas = cas;
     this.encoded = encoded;
     this.expiration = expiration;
+    this.serializer = serializer;
   }
 
   /**
@@ -88,7 +94,7 @@ public class LookupInResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    return contentAs(index, target, JsonSerializer.INSTANCE);
+    return contentAs(index, target, serializer);
   }
 
   /**

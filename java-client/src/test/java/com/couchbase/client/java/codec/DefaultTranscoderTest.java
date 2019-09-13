@@ -35,38 +35,40 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class DefaultTranscoderTest {
 
+  private static final Transcoder TRANSCODER = DefaultTranscoder.create();
+
   @Test
   void encodesJsonObject() {
     JsonObject input = JsonObject.create().put("foo", "bar");
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.JSON);
     assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonObject() {
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    JsonObject decoded = DefaultTranscoder.INSTANCE.decode(JsonObject.class, input, DataFormat.JSON);
+    JsonObject decoded = TRANSCODER.decode(JsonObject.class, input, DataFormat.JSON);
     assertEquals(JsonObject.fromJson(input), decoded);
   }
 
   @Test
   void encodesJsonArray() {
     JsonArray input = JsonArray.from("1", true, 2);
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.JSON);
     assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonArray() {
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    JsonArray decoded = DefaultTranscoder.INSTANCE.decode(JsonArray.class, input, DataFormat.JSON);
+    JsonArray decoded = TRANSCODER.decode(JsonArray.class, input, DataFormat.JSON);
     assertEquals(JsonArray.fromJson(input), decoded);
   }
 
   @Test
   void encodesMap() {
     Map<String, Object> input = Collections.singletonMap("foo", "bar");
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.JSON);
     assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -74,14 +76,14 @@ class DefaultTranscoderTest {
   void decodesMap() {
     Map<String, Object> expected = Collections.singletonMap("foo", "bar");
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    Map decoded = DefaultTranscoder.INSTANCE.decode(Map.class, input, DataFormat.JSON);
+    Map decoded = TRANSCODER.decode(Map.class, input, DataFormat.JSON);
     assertEquals(expected, decoded);
   }
 
   @Test
   void encodesList() {
     List<Object> input = Arrays.asList("1", true, 2);
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.JSON);
     assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -89,7 +91,7 @@ class DefaultTranscoderTest {
   void decodesList() {
     List<Object> expected = Arrays.asList("1", true, 2);
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    List decoded = DefaultTranscoder.INSTANCE.decode(List.class, input, DataFormat.JSON);
+    List decoded = TRANSCODER.decode(List.class, input, DataFormat.JSON);
     assertEquals(expected, decoded);
   }
 
@@ -98,7 +100,7 @@ class DefaultTranscoderTest {
     Set<Object> input = new LinkedHashSet<>();
     input.add("foo");
     input.add("bar");
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.JSON);
     assertEquals("[\"foo\",\"bar\"]", new String(output, StandardCharsets.UTF_8));
   }
 
@@ -108,28 +110,28 @@ class DefaultTranscoderTest {
     expected.add("foo");
     expected.add("bar");
     byte[] input = "[\"foo\",\"bar\"]".getBytes(StandardCharsets.UTF_8);
-    Set decoded = DefaultTranscoder.INSTANCE.decode(Set.class, input, DataFormat.JSON);
+    Set decoded = TRANSCODER.decode(Set.class, input, DataFormat.JSON);
     assertEquals(expected, decoded);
   }
 
   @Test
   void encodesJsonPassthroughString() {
     String input = "{\"hello\": true}";
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.ENCODED_JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.ENCODED_JSON);
     assertArrayEquals(input.getBytes(StandardCharsets.UTF_8), output);
   }
 
   @Test
   void encodesJsonPassthroughByteArray() {
     byte[] input = "{\"hello\": true}".getBytes(StandardCharsets.UTF_8);
-    byte[] output = DefaultTranscoder.INSTANCE.encode(input, DataFormat.ENCODED_JSON);
+    byte[] output = TRANSCODER.encode(input, DataFormat.ENCODED_JSON);
     assertArrayEquals(input, output);
   }
 
   @Test
   void decodesJsonPassthroughString() {
     String input = "{\"hello\": true}";
-    String output = DefaultTranscoder.INSTANCE.decode(
+    String output = TRANSCODER.decode(
       String.class,
       input.getBytes(StandardCharsets.UTF_8),
       DataFormat.ENCODED_JSON
@@ -140,7 +142,7 @@ class DefaultTranscoderTest {
   @Test
   void decodesJsonPassthroughByteArray() {
     byte[] input = "{\"hello\": true}".getBytes(StandardCharsets.UTF_8);
-    byte[] output = DefaultTranscoder.INSTANCE.decode(
+    byte[] output = TRANSCODER.decode(
       byte[].class,
       input,
       DataFormat.ENCODED_JSON

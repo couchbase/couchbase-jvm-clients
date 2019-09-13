@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.java.codec.Serializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -34,7 +35,8 @@ public class LookupInAccessor {
   public static CompletableFuture<LookupInResult> lookupInAccessor(final String id,
                                                                    final Core core,
                                                                    final SubdocGetRequest request,
-                                                                   final boolean withExpiration) {
+                                                                   final boolean withExpiration,
+                                                                   final Serializer serializer) {
     core.send(request);
     return request
       .response()
@@ -58,10 +60,10 @@ public class LookupInAccessor {
                           ? Optional.empty()
                           : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
 
-                  return new LookupInResult(values, response.cas(), expiration);
+                  return new LookupInResult(values, response.cas(), expiration, serializer);
               }
               else {
-                  return new LookupInResult(response.values(), response.cas(), Optional.empty());
+                  return new LookupInResult(response.values(), response.cas(), Optional.empty(), serializer);
               }
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});

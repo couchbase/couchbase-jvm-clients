@@ -37,15 +37,21 @@ public class MutateInResult extends MutationResult {
   private final List<SubdocField> encoded;
 
   /**
+   * The default JSON serializer that should be used.
+   */
+  private final Serializer serializer;
+
+  /**
    * Creates a new {@link MutateInResult}.
    *
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    * @param mutationToken the mutation token of the doc, if present.
    */
-  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken) {
+  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken, Serializer serializer) {
     super(cas, mutationToken);
     this.encoded = encoded;
+    this.serializer = serializer;
   }
 
   /**
@@ -57,7 +63,7 @@ public class MutateInResult extends MutationResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    return contentAs(index, target, JsonSerializer.INSTANCE);
+    return contentAs(index, target, serializer);
   }
 
   /**

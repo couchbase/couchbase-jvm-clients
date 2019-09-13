@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.LRUCache;
+import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Mono;
 
@@ -107,14 +108,15 @@ public class QueryAccessor {
      * @return the future once the result is complete.
      */
     public CompletableFuture<QueryResult> queryAsync(final QueryRequest request,
-                                                     final QueryOptions.Built options) {
+                                                     final QueryOptions.Built options,
+                                                     final Serializer serializer) {
         return queryInternal(request, options, options.adhoc())
           .flatMap(response -> response
             .rows()
             .collectList()
             .flatMap(rows -> response
                 .trailer()
-                .map(trailer -> new QueryResult(response.header(), rows, trailer))
+                .map(trailer -> new QueryResult(response.header(), rows, trailer, serializer))
             )
           )
           .toFuture();

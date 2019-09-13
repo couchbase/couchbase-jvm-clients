@@ -20,11 +20,22 @@ import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.Credentials;
 import com.couchbase.client.core.env.UsernameAndPassword;
+import com.couchbase.client.java.codec.DefaultTranscoder;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.Transcoder;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ClusterEnvironment extends CoreEnvironment {
 
+  private final Serializer jsonSerializer;
+  private final Transcoder transcoder;
+
   private ClusterEnvironment(Builder builder) {
     super(builder);
+    this.jsonSerializer = builder.jsonSerializer == null ? JsonSerializer.create() : builder.jsonSerializer;
+    this.transcoder = builder.transcoder == null ? DefaultTranscoder.create(jsonSerializer) : builder.transcoder;
   }
 
   @Override
@@ -64,7 +75,24 @@ public class ClusterEnvironment extends CoreEnvironment {
     return builder(credentials).load(new ConnectionStringPropertyLoader(connectionString));
   }
 
+  /**
+   * Returns the default transcoder used for all operations if not overridden on a per-operation basis.
+   */
+  public Transcoder transcoder() {
+    return transcoder;
+  }
+
+  /**
+   * Returns the default serializer used to serialize and deserialize JSON values.
+   */
+  public Serializer jsonSerializer() {
+    return jsonSerializer;
+  }
+
   public static class Builder extends CoreEnvironment.Builder<Builder> {
+
+    private Serializer jsonSerializer;
+    private Transcoder transcoder;
 
     Builder(Credentials credentials) {
       super(credentials);
@@ -72,6 +100,30 @@ public class ClusterEnvironment extends CoreEnvironment {
 
     public Builder load(final ClusterPropertyLoader loader) {
       loader.load(this);
+      return this;
+    }
+
+    /**
+     * Allows to override the default serializer going to be used for all JSON values.
+     *
+     * @param jsonSerializer the serializer used for all JSON values.
+     * @return this builder for chaining purposes.
+     */
+    public Builder jsonSerializer(final Serializer jsonSerializer) {
+      notNull(jsonSerializer, "Json Serializer");
+      this.jsonSerializer = jsonSerializer;
+      return this;
+    }
+
+    /**
+     * Allows to override the default transcoder going to be used for all KV operations.
+     *
+     * @param transcoder the transcoder that should be used by default.
+     * @return this builder for chaining purposes.
+     */
+    public Builder transcoder(final Transcoder transcoder) {
+      notNull(transcoder, "Transcoder");
+      this.transcoder = transcoder;
       return this;
     }
 

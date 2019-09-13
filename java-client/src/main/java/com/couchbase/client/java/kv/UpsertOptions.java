@@ -29,7 +29,7 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
   private Duration expiry = Duration.ZERO;
   private DataFormat dataFormat = DataFormat.DEFAULT_DATA_FORMAT;
-  private Transcoder transcoder = DefaultTranscoder.INSTANCE;
+  private Transcoder transcoder;
 
   private UpsertOptions() { }
 

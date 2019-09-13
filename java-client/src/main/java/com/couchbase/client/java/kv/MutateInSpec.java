@@ -21,10 +21,12 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Serializer;
 
 public abstract class MutateInSpec {
+
     @Stability.Internal
-    public abstract SubdocMutateRequest.Command encode();
+    public abstract SubdocMutateRequest.Command encode(Serializer defaultSerializer);
 
     /**
      * Creates a command with the intention of replacing an existing value in a JSON object.
@@ -143,7 +145,7 @@ public abstract class MutateInSpec {
      * @param delta      the value to increment the field by.
      */
     public static <T> Increment increment(final String path, final long delta) {
-        return new Increment(path, JsonSerializer.INSTANCE.serialize(delta));
+        return new Increment(path, delta);
     }
 
     /**
@@ -155,7 +157,7 @@ public abstract class MutateInSpec {
      * @param delta      the value to increment the field by.
      */
     public static <T> Increment decrement(final String path, final long delta) {
-        return new Increment(path, JsonSerializer.INSTANCE.serialize(delta * -1));
+        return new Increment(path,delta * -1);
     }
 }
 

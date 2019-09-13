@@ -29,7 +29,7 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
   private Duration expiry = Duration.ZERO;
   private DataFormat dataFormat = DataFormat.DEFAULT_DATA_FORMAT;
-  private Transcoder transcoder = DefaultTranscoder.INSTANCE;
+  private Transcoder transcoder;
   private long cas;
 
   private ReplaceOptions() { }

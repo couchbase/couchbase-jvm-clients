@@ -29,12 +29,21 @@ import java.nio.charset.StandardCharsets;
  */
 public class DefaultTranscoder implements Transcoder {
 
-  private static final JsonSerializer JSON_SERIALIZER = JsonSerializer.INSTANCE;
   private static final JavaObjectSerializer JAVA_OBJECT_SERIALIZER = JavaObjectSerializer.INSTANCE;
 
-  public static final DefaultTranscoder INSTANCE = new DefaultTranscoder();
+  private final Serializer jsonSerializer;
 
-  private DefaultTranscoder() {}
+  public static DefaultTranscoder create() {
+    return create(JsonSerializer.create());
+  }
+
+  public static DefaultTranscoder create(Serializer jsonSerializer) {
+    return new DefaultTranscoder(jsonSerializer);
+  }
+
+  private DefaultTranscoder(final Serializer jsonSerializer) {
+    this.jsonSerializer = jsonSerializer;
+  }
 
   @Override
   public byte[] encode(final Object input, final DataFormat format) {
@@ -45,7 +54,7 @@ public class DefaultTranscoder implements Transcoder {
 
     switch (format) {
       case JSON:
-        return JSON_SERIALIZER.serialize(input);
+        return jsonSerializer.serialize(input);
       case ENCODED_JSON:
       case STRING:
         if (input instanceof byte[]) {
@@ -70,7 +79,7 @@ public class DefaultTranscoder implements Transcoder {
   public <T> T decode(final Class<T> target, final byte[] input, final DataFormat format) {
     switch (format) {
       case JSON:
-        return JSON_SERIALIZER.deserialize(target, input);
+        return jsonSerializer.deserialize(target, input);
       case ENCODED_JSON:
       case STRING:
         if (target.isAssignableFrom(byte[].class)) {
