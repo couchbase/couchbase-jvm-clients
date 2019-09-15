@@ -16,9 +16,8 @@
 
 package com.couchbase.client.test;
 
-import org.awaitility.Duration;
-
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -40,17 +39,17 @@ public class Util {
    */
   public static void waitUntilCondition(final BooleanSupplier supplier) {
     with()
-      .pollInterval(Duration.ONE_MILLISECOND)
+      .pollInterval(Duration.ofMillis(1))
       .await()
-      .atMost(Duration.ONE_MINUTE)
+      .atMost(Duration.ofMinutes(1))
       .until(supplier::getAsBoolean);
   }
 
   public static void waitUntilThrows(final Class<? extends Exception> clazz, final Supplier<Object> supplier) {
     with()
-      .pollInterval(Duration.ONE_MILLISECOND)
+      .pollInterval(Duration.ofMillis(1))
       .await()
-      .atMost(Duration.ONE_MINUTE)
+      .atMost(Duration.ofMinutes(1))
       .until(() -> {
         try {
           supplier.get();
