@@ -23,6 +23,9 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
 /**
  * This factory creates {@link SslHandler} based on a given configuration.
  *
@@ -48,7 +51,14 @@ public class SslHandlerFactory {
       context.trustManager(config.trustCertificates());
     }
 
-    return context.build().newHandler(allocator);
+    SslHandler sslHandler = context.build().newHandler(allocator);
+
+    SSLEngine sslEngine = sslHandler.engine();
+    SSLParameters sslParameters = sslEngine.getSSLParameters();
+    sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+    sslEngine.setSSLParameters(sslParameters);
+
+    return sslHandler;
   }
 
 }
