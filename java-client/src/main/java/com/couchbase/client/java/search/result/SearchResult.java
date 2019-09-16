@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.search.SearchMetaData;
 
 import java.util.List;
@@ -74,7 +75,10 @@ public class SearchResult {
 
     /**
      * Returns all errors that appeared as part of the response.
+     *
+     * <p>This might go away, keeping it for now</p>
      */
+    @Stability.Internal
     public List<RuntimeException> errors() {
         return errors;
     }

@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that matches several given terms (a "phrase"), applying further processing
@@ -25,7 +26,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class MatchPhraseQuery extends AbstractFtsQuery {
+public class MatchPhraseQuery extends SearchQuery {
 
     private final String matchPhrase;
     private String field;

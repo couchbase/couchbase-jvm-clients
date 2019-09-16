@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A compound FTS query that performs a logical OR between all its sub-queries (disjunction).
@@ -30,7 +31,7 @@ public class DisjunctionQuery extends AbstractCompoundQuery {
 
     private int min = -1;
 
-    public DisjunctionQuery(AbstractFtsQuery... queries) {
+    public DisjunctionQuery(SearchQuery... queries) {
         super(queries);
     }
 
@@ -45,7 +46,7 @@ public class DisjunctionQuery extends AbstractCompoundQuery {
         return this;
     }
 
-    public DisjunctionQuery or(AbstractFtsQuery... queries) {
+    public DisjunctionQuery or(SearchQuery... queries) {
         super.addAll(queries);
         return this;
     }
@@ -64,7 +65,7 @@ public class DisjunctionQuery extends AbstractCompoundQuery {
         }
 
         JsonArray disjuncts = JsonArray.create();
-        for (AbstractFtsQuery childQuery : childQueries) {
+        for (SearchQuery childQuery : childQueries) {
             JsonObject childJson = JsonObject.create();
             childQuery.injectParamsAndBoost(childJson);
             disjuncts.add(childJson);

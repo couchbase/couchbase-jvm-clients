@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query which allows to match geo bounding boxes.
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.4.5
  */
-public class GeoBoundingBoxQuery extends AbstractFtsQuery {
+public class GeoBoundingBoxQuery extends SearchQuery {
 
     private final double topLeftLat;
     private final double topLeftLon;

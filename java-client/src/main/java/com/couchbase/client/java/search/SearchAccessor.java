@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -30,7 +31,6 @@ import com.couchbase.client.java.search.result.SearchMetrics;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchStatus;
-import com.couchbase.client.java.search.result.DefaultSearchMetrics;
 import com.couchbase.client.java.search.result.DefaultSearchStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,12 +52,12 @@ public class SearchAccessor {
 
     // TODO facets are streaming (update: they're not, but they need adding)
 
-    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request) {
+    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request, final JsonSerializer serializer) {
         core.send(request);
         return Mono.fromFuture(request.response())
 
                 .flatMap(response -> response.rows()
-                        .map(row -> SearchRow.fromResponse(row))
+                        .map(row -> SearchRow.fromResponse(row, serializer))
                         .collectList()
 
                         .flatMap(rows -> response.trailer()
@@ -77,12 +77,12 @@ public class SearchAccessor {
     static SearchMetaData parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
         byte[] rawStatus = response.header().getStatus();
         SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
-        SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
+        SearchMetrics metrics = new SearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
         SearchMetaData meta = new SearchMetaData(status, metrics);
         return meta;
     }
 
-    public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request) {
+    public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request, final JsonSerializer serializer) {
         core.send(request);
         return Mono.fromFuture(request.response())
 
@@ -93,11 +93,11 @@ public class SearchAccessor {
 
                     // Any errors should be raised in SearchServiceException and will be returned directly
                     Flux<SearchRow> rows = response.rows()
-                            .map(row -> SearchRow.fromResponse(row));
+                            .map(row -> SearchRow.fromResponse(row, serializer));
 
                     Mono<SearchMetaData> meta = response.trailer()
                             .map(trailer -> {
-                                SearchMetrics metrics = new DefaultSearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
+                                SearchMetrics metrics = new SearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
 
                                 return new SearchMetaData(status, metrics);
                             });

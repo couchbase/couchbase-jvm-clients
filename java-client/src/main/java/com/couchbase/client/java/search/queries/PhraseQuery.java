@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,7 +32,7 @@ import java.util.List;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class PhraseQuery extends AbstractFtsQuery {
+public class PhraseQuery extends SearchQuery {
 
     private final List<String> terms;
     private String field;

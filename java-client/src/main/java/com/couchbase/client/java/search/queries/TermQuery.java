@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that matches terms (without further analysis). Usually for debugging purposes,
@@ -25,7 +26,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class TermQuery extends AbstractFtsQuery {
+public class TermQuery extends SearchQuery {
 
     private final String term;
     private String field;

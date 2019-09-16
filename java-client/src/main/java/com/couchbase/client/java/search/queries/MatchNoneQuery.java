@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that matches 0 document (usually for debugging purposes).
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class MatchNoneQuery extends AbstractFtsQuery {
+public class MatchNoneQuery extends SearchQuery {
 
     public MatchNoneQuery() {
         super();

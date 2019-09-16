@@ -336,8 +336,8 @@ public class AsyncCluster {
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
-  public CompletableFuture<SearchResult> searchQuery(final SearchQuery query) {
-    return searchQuery(query, DEFAULT_SEARCH_OPTIONS);
+  public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query) {
+    return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
   }
 
   /**
@@ -347,22 +347,24 @@ public class AsyncCluster {
    * @param options the custom options for this query.
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
-  public CompletableFuture<SearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
-    return SearchAccessor.searchQueryAsync(core, searchRequest(query, options));
+  public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    notNull(options, "SearchOptions");
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
+    return SearchAccessor.searchQueryAsync(core, searchRequest(indexName, query, opts), serializer);
   }
 
-  SearchRequest searchRequest(final SearchQuery query, final SearchOptions options) {
+  SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
+    notNullOrEmpty(indexName, "IndexName");
     notNull(query, "SearchQuery");
-    notNull(options, "SearchOptions");
 
-    SearchOptions.Built opts = options.build();
     JsonObject params = query.export();
     byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator,
-      query.indexName(), bytes);
+
+    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator, indexName, bytes);
     request.context().clientContext(opts.clientContext());
     return request;
   }

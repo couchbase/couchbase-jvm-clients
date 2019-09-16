@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
 import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
@@ -232,8 +233,8 @@ public class ReactiveCluster {
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
-  public Mono<ReactiveSearchResult> searchQuery(SearchQuery query) {
-    return searchQuery(query, DEFAULT_SEARCH_OPTIONS);
+  public Mono<ReactiveSearchResult> searchQuery(final String indexName, SearchQuery query) {
+    return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
   }
 
   /**
@@ -243,8 +244,11 @@ public class ReactiveCluster {
    * @param options the custom options for this query.
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
-  public Mono<ReactiveSearchResult> searchQuery(final SearchQuery query, final SearchOptions options) {
-    return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(query, options));
+  public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    notNull(options, "SearchOptions");
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(indexName, query, opts), serializer);
   }
 
   /**

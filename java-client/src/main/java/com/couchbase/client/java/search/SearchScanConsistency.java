@@ -22,8 +22,14 @@ package com.couchbase.client.java.search;
  * @author Simon Baslé
  * @since 2.3
  */
-public enum SearchConsistency {
+public enum SearchScanConsistency {
 
-    NOT_BOUNDED;
-    //TODO in Spock, add REQUEST_PLUS
+    /**
+     * This is the default, the indexer does not wait for certain index updates until it returns the current hits.
+     *
+     * <p>This is also the fastest mode, because we avoid the cost of obtaining the vector,
+     * and we also avoid any wait for the index to catch up to the vector.</p>
+     */
+    NOT_BOUNDED
+
 }

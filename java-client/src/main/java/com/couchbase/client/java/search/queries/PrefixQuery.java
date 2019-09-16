@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that allows for simple matching on a given prefix.
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class PrefixQuery extends AbstractFtsQuery {
+public class PrefixQuery extends SearchQuery {
 
     private final String prefix;
     private String field;

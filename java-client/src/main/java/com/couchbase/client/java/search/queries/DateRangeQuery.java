@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.SearchUtils;
 
 import java.util.Date;
@@ -28,7 +29,7 @@ import java.util.Date;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class DateRangeQuery extends AbstractFtsQuery {
+public class DateRangeQuery extends SearchQuery {
 
     private String start;
     private String  end;

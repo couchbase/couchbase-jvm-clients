@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -101,10 +102,10 @@ class SearchIntegrationTest extends JavaIntegrationTest {
 
         for (int i = 0; i < 20; i++) {
             try {
-                SearchResult result = cluster.searchQuery(new SearchQuery(
+                SearchResult result = cluster.searchQuery(
                   "idx-" + config().bucketname(),
                   SearchQuery.queryString("michael")
-                ));
+                );
 
                 if (result.rows().size() >= 1) {
                     assertEquals(docId, result.rows().get(0).id());

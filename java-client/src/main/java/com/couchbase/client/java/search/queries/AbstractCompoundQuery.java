@@ -16,33 +16,34 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Base class for FTS queries that are composite, compounding several other {@link AbstractFtsQuery}.
+ * Base class for FTS queries that are composite, compounding several other {@link SearchQuery}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
 @Stability.Internal
-public abstract class AbstractCompoundQuery extends AbstractFtsQuery {
+public abstract class AbstractCompoundQuery extends SearchQuery {
 
-    List<AbstractFtsQuery> childQueries = new LinkedList<AbstractFtsQuery>();
+    List<SearchQuery> childQueries = new LinkedList<SearchQuery>();
 
-    protected AbstractCompoundQuery(AbstractFtsQuery... queries) {
+    protected AbstractCompoundQuery(SearchQuery... queries) {
         super();
         addAll(queries);
     }
 
-    protected void addAll(AbstractFtsQuery... queries) {
+    protected void addAll(SearchQuery... queries) {
         Collections.addAll(childQueries, queries);
     }
 
-    public List<AbstractFtsQuery> childQueries() {
+    public List<SearchQuery> childQueries() {
         return this.childQueries;
     }
 }

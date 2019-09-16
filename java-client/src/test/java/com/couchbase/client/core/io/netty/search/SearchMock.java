@@ -36,6 +36,8 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.java.codec.DefaultJsonSerializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.result.SearchResult;
@@ -140,7 +142,7 @@ public class SearchMock {
             return null;
         }).when(mockedCore).send(any());
 
-        CompletableFuture<SearchResult> future = SearchAccessor.searchQueryAsync(mockedCore, req);
+        CompletableFuture<SearchResult> future = SearchAccessor.searchQueryAsync(mockedCore, req, DefaultJsonSerializer.create());
         SearchResult result = future.get();
 
         return result;

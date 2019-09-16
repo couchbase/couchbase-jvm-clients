@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A compound FTS query that allows various combinations of sub-queries.
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class BooleanQuery extends AbstractFtsQuery {
+public class BooleanQuery extends SearchQuery {
 
     private final ConjunctionQuery must;
     private final DisjunctionQuery mustNot;
@@ -42,16 +43,16 @@ public class BooleanQuery extends AbstractFtsQuery {
         return this;
     }
 
-    public BooleanQuery must(AbstractFtsQuery... mustQueries) {
+    public BooleanQuery must(SearchQuery... mustQueries) {
         must.and(mustQueries);
         return this;
     }
 
-    public BooleanQuery mustNot(AbstractFtsQuery... mustNotQueries) {
+    public BooleanQuery mustNot(SearchQuery... mustNotQueries) {
         mustNot.or(mustNotQueries);
         return this;
     }
-    public BooleanQuery should(AbstractFtsQuery... shouldQueries) {
+    public BooleanQuery should(SearchQuery... shouldQueries) {
         should.or(shouldQueries);
         return this;
     }

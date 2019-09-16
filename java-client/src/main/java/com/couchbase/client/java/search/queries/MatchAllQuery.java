@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that matches all indexed documents (usually for debugging purposes).
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class MatchAllQuery extends AbstractFtsQuery {
+public class MatchAllQuery extends SearchQuery {
 
     public MatchAllQuery() {
         super();

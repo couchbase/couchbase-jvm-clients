@@ -15,27 +15,38 @@
  */
 package com.couchbase.client.java.search.result;
 
-/**
- * Provides statistics on an FTS query result (number of rows, time taken...).
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
- */
-public interface SearchMetrics {
+import java.time.Duration;
 
-    /**
-     * The number of nanoseconds the request took executing on the server side.
-     */
-    long took();
+public class SearchMetrics {
 
-    /**
-     * The total number of rows (or {@link SearchRow}) in the result.
-     */
-    long totalRows();
+    private final long took;
+    private final long totalRows;
+    private final double maxScore;
 
-    /**
-     * The largest score amongst the rows.
-     */
-    double maxScore();
+    public SearchMetrics(long took, long totalRows, double maxScore) {
+        this.took = took;
+        this.totalRows = totalRows;
+        this.maxScore = maxScore;
+    }
+
+    public Duration took() {
+        return Duration.ofNanos(this.took);
+    }
+
+    public long totalRows() {
+        return this.totalRows;
+    }
+
+    public double maxScore() {
+        return this.maxScore;
+    }
+
+    @Override
+    public String toString() {
+        return "DefaultSearchMetrics{" +
+                "took=" + took +
+                ", totalRows=" + totalRows +
+                ", maxScore=" + maxScore +
+                '}';
+    }
 }

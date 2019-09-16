@@ -17,10 +17,12 @@ package com.couchbase.client.java.search.result;
 
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.HighlightStyle;
+import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 
 import java.io.IOException;
@@ -45,10 +47,11 @@ public class SearchRow {
     private final JsonObject explanation;
     private final RowLocations locations;
     private final Map<String, List<String>> fragments;
-    private final Map<String, String> fields;
+    private final byte[] fields;
+    private final JsonSerializer serializer;
 
     public SearchRow(String index, String id, double score, JsonObject explanation, RowLocations locations,
-                     Map<String, List<String>> fragments, Map<String, String> fields) {
+                     Map<String, List<String>> fragments, byte[] fields, JsonSerializer serializer) {
         this.index = index;
         this.id = id;
         this.score = score;
@@ -56,6 +59,7 @@ public class SearchRow {
         this.locations = locations;
         this.fragments = fragments;
         this.fields = fields;
+        this.serializer = serializer;
     }
 
     /**
@@ -80,7 +84,7 @@ public class SearchRow {
     }
 
     /**
-     * If {@link SearchQuery#explain() requested in the query}, an explanation of the match, in JSON form.
+     * If {@link SearchOptions#explain(boolean)} () requested in the query}, an explanation of the match, in JSON form.
      */
     public JsonObject explanation() {
         return this.explanation;
@@ -95,7 +99,7 @@ public class SearchRow {
 
     /**
      * The fragments for each field that was requested as highlighted
-     * (as defined in the {@link SearchQuery#highlight(HighlightStyle, String...) SearchParams}).
+     * (as defined in the {@link SearchOptions#highlight(HighlightStyle, String...) SearchParams}).
      * <p>
      * A fragment is an extract of the field's value where the matching terms occur.
      * Matching terms are surrounded by a <code>&lt;match&gt;</code> tag.
@@ -109,10 +113,10 @@ public class SearchRow {
     /**
      * The value of each requested field (as defined in the {@link SearchQuery}.
      *
-     * @return the fields values as a {@link Map}. Keys are the fields.
+     * @return the fields mapped to the given target type
      */
-    public Map<String, String> fields() {
-        return this.fields;
+    public <T> T fieldsAs(final Class<T> target) {
+        return serializer.deserialize(target, fields);
     }
 
     public boolean equals(Object o) {
@@ -146,7 +150,7 @@ public class SearchRow {
         return result;
     }
 
-    public static SearchRow fromResponse(SearchChunkRow row) {
+    public static SearchRow fromResponse(final SearchChunkRow row, final JsonSerializer serializer) {
         try {
             JsonObject hit = JacksonTransformers.MAPPER.readValue(row.data(), JsonObject.class);
 
@@ -163,12 +167,12 @@ public class SearchRow {
             JsonObject fragmentsJson = hit.getObject("fragments");
             Map<String, List<String>> fragments;
             if (fragmentsJson != null) {
-                fragments = new HashMap<String, List<String>>(fragmentsJson.size());
+                fragments = new HashMap<>(fragmentsJson.size());
                 for (String field : fragmentsJson.getNames()) {
                     List<String> fragment;
                     JsonArray fragmentJson = fragmentsJson.getArray(field);
                     if (fragmentJson != null) {
-                        fragment = new ArrayList<String>(fragmentJson.size());
+                        fragment = new ArrayList<>(fragmentJson.size());
                         for (int i = 0; i < fragmentJson.size(); i++) {
                             fragment.add(fragmentJson.getString(i));
                         }
@@ -180,19 +184,9 @@ public class SearchRow {
             } else {
                 fragments = Collections.emptyMap();
             }
-
-            Map<String, String> fields;
-            JsonObject fieldsJson = hit.getObject("fields");
-            if (fieldsJson != null) {
-                fields = new HashMap<String, String>(fieldsJson.size());
-                for (String f : fieldsJson.getNames()) {
-                    fields.put(f, String.valueOf(fieldsJson.get(f)));
-                }
-            } else {
-                fields = Collections.emptyMap();
-            }
-
-            return new SearchRow(index, id, score, explanationJson, locations, fragments, fields);
+            // daschl: this is a bit wasteful and should be streamlined
+            byte[] fields = JacksonTransformers.MAPPER.writeValueAsBytes(hit.getObject("fields").toMap());
+            return new SearchRow(index, id, score, explanationJson, locations, fragments, fields, serializer);
         } catch (IOException e) {
             throw new DecodingFailedException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
         }

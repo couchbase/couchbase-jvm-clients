@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A compound FTS query that performs a logical AND between all its sub-queries (conjunction).
@@ -27,7 +28,7 @@ import com.couchbase.client.java.json.JsonObject;
  */
 public class ConjunctionQuery extends AbstractCompoundQuery {
 
-    public ConjunctionQuery(AbstractFtsQuery... queries) {
+    public ConjunctionQuery(SearchQuery... queries) {
         super(queries);
     }
 
@@ -37,7 +38,7 @@ public class ConjunctionQuery extends AbstractCompoundQuery {
         return this;
     }
 
-    public ConjunctionQuery and(AbstractFtsQuery... queries) {
+    public ConjunctionQuery and(SearchQuery... queries) {
         super.addAll(queries);
         return this;
     }
@@ -49,7 +50,7 @@ public class ConjunctionQuery extends AbstractCompoundQuery {
         }
 
         JsonArray conjuncts = JsonArray.create();
-        for (AbstractFtsQuery childQuery : childQueries) {
+        for (SearchQuery childQuery : childQueries) {
             JsonObject childJson = JsonObject.create();
             childQuery.injectParamsAndBoost(childJson);
             conjuncts.add(childJson);

@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -30,7 +31,7 @@ import java.util.List;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public class DocIdQuery extends AbstractFtsQuery {
+public class DocIdQuery extends SearchQuery {
 
     private List<String> docIds = new LinkedList<String>();
 

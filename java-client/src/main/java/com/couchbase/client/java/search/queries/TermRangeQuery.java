@@ -16,6 +16,7 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.SearchQuery;
 
 /**
  * A FTS query that matches documents on a range of values. At least one bound is required, and the
@@ -24,7 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.4.5
  */
-public class TermRangeQuery extends AbstractFtsQuery {
+public class TermRangeQuery extends SearchQuery {
 
     private String min;
     private String max;
