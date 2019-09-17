@@ -24,6 +24,8 @@ import com.couchbase.client.java.codec.Serializer;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
  * This result is returned from successful KeyValue subdocument mutation responses.
  *
@@ -71,7 +73,7 @@ public class MutateInResult extends MutationResult {
    *
    * @param index the index of the subdoc value to decode.
    * @param target the target type to decode into.
-   * @param decoder the custom decoder that will be used.
+   * @param serializer the custom {@link Serializer} that will be used.
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final Class<T> target, final Serializer serializer) {
@@ -90,7 +92,7 @@ public class MutateInResult extends MutationResult {
   @Override
   public String toString() {
     return "MutateInResult{" +
-      "encoded=" + encoded +
+      "encoded=" + redactUser(encoded) +
       '}';
   }
 

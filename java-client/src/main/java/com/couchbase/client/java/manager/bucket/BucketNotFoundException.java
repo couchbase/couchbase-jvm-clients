@@ -18,9 +18,8 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.java.manager.user.AuthDomain;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
@@ -29,7 +28,7 @@ public class BucketNotFoundException extends CouchbaseException {
   private final String bucketName;
 
   BucketNotFoundException(final String bucketName) {
-    super("Bucket [" + redactUser(bucketName) + "] not found.");
+    super("Bucket [" + redactMeta(bucketName) + "] not found.");
     this.bucketName = requireNonNull(bucketName);
   }
 

@@ -23,6 +23,8 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JacksonTransformers;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
  * The default JSON serializer based on jackson.
  *
@@ -55,7 +57,7 @@ public class JsonSerializer implements Serializer {
         e = e.getCause();
       }
       throw new DecodingFailedException("Deserialization of content into target " + target
-        + " failed; encoded = " + new String(input, CharsetUtil.UTF_8), e);
+        + " failed; encoded = " + redactUser(new String(input, CharsetUtil.UTF_8)), e);
     }
   }
 

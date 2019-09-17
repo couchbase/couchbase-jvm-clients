@@ -28,6 +28,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 public class ViewRow {
 
   /**
@@ -108,7 +110,7 @@ public class ViewRow {
   @Override
   public String toString() {
     return "ViewRow{" +
-      "raw=" + new String(raw, StandardCharsets.UTF_8) +
+      "raw=" + redactUser(new String(raw, StandardCharsets.UTF_8)) +
       '}';
   }
 

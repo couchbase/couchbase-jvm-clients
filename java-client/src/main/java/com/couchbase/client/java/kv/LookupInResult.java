@@ -26,6 +26,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
  * This result is returned from successful KeyValue subdocument lookup responses.
  *
@@ -153,7 +155,7 @@ public class LookupInResult {
   @Override
   public String toString() {
     return "LookupInResult{" +
-      "encoded=" + encoded +
+      "encoded=" + redactUser(encoded) +
       ", cas=" + cas +
       '}';
   }

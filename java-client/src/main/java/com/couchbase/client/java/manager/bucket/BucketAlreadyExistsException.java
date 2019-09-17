@@ -19,7 +19,7 @@ package com.couchbase.client.java.manager.bucket;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
@@ -28,7 +28,7 @@ public class BucketAlreadyExistsException extends CouchbaseException {
   private final String bucketName;
 
   BucketAlreadyExistsException(final String bucketName) {
-    super("Bucket [" + redactUser(bucketName) + "] already exists.");
+    super("Bucket [" + redactMeta(bucketName) + "] already exists.");
     this.bucketName = requireNonNull(bucketName);
   }
 

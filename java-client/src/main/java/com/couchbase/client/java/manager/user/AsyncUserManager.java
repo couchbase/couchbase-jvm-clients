@@ -157,7 +157,7 @@ public class AsyncUserManager extends ManagerSupport {
             .collect(Collectors.joining(",")));
 
     return sendRequest(PUT, pathForGroup(group.name()), params).thenApply(response -> {
-      checkStatus(response, "create group [" + redactSystem(group.name()) + "]");
+      checkStatus(response, "create group [" + redactMeta(group.name()) + "]");
       return null;
     });
   }
@@ -167,7 +167,7 @@ public class AsyncUserManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
-      checkStatus(response, "drop group [" + redactSystem(groupName) + "]");
+      checkStatus(response, "drop group [" + redactMeta(groupName) + "]");
       return null;
     });
   }

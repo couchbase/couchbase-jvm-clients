@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -206,8 +207,8 @@ public class SearchRow {
                 ", score=" + score +
                 ", explanation=" + explanation +
                 ", locations=" + locations +
-                ", fragments=" + fragments +
-                ", fields=" + fields +
+                ", fragments=" + redactUser(fragments) +
+                ", fields=" + redactUser(fields) +
                 '}';
     }
 }

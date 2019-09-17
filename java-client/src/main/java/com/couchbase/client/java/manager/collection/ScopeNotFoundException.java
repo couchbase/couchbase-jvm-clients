@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
@@ -27,7 +28,7 @@ public class ScopeNotFoundException extends CouchbaseException {
   private final String scopeName;
 
   public ScopeNotFoundException(String scopeName) {
-    super("Scope [" + redactSystem(scopeName) + "] not found.");
+    super("Scope [" + redactMeta(scopeName) + "] not found.");
     this.scopeName = requireNonNull(scopeName);
   }
 

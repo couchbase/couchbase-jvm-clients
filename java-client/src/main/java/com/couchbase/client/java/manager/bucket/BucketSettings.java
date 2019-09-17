@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
@@ -172,7 +173,7 @@ public class BucketSettings {
   @Override
   public String toString() {
     return "BucketSettings{" +
-      "name='" + name + '\'' +
+      "name='" + redactMeta(name) + '\'' +
       ", flushEnabled=" + flushEnabled +
       ", ramQuotaMB=" + ramQuotaMB +
       ", numReplicas=" + numReplicas +

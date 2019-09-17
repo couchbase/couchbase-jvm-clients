@@ -20,6 +20,8 @@ import com.couchbase.client.core.msg.chunk.ChunkRow;
 
 import java.nio.charset.StandardCharsets;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 public class ViewChunkRow implements ChunkRow {
 
   private final byte[] data;
@@ -35,7 +37,7 @@ public class ViewChunkRow implements ChunkRow {
   @Override
   public String toString() {
     return "ViewChunkRow{" +
-      "data=" + new String(data, StandardCharsets.UTF_8) +
+      "data=" + redactUser(new String(data, StandardCharsets.UTF_8)) +
       '}';
   }
 

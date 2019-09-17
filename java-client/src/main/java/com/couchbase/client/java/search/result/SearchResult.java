@@ -20,6 +20,8 @@ import com.couchbase.client.java.search.SearchMetaData;
 
 import java.util.List;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
  * The result of an search query, including hits and associated metadata.
  *

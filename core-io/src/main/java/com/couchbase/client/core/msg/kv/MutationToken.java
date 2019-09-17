@@ -17,6 +17,8 @@ package com.couchbase.client.core.msg.kv;
 
 import java.util.Objects;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+
 /**
  * Value object to contain vbucket UUID and sequence number.
  *
@@ -78,7 +80,7 @@ public class MutationToken {
         "vbID=" + vbucketID +
         ", vbUUID=" + vbucketUUID +
         ", seqno=" + sequenceNumber +
-        ", bucket=" + bucket +
+        ", bucket=" + redactMeta(bucket) +
         '}';
   }
 }
