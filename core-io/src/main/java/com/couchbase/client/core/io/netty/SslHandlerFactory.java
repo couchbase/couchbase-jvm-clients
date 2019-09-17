@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
+import java.security.cert.X509Certificate;
 
 /**
  * This factory creates {@link SslHandler} based on a given configuration.
@@ -47,8 +48,14 @@ public class SslHandlerFactory {
 
     if (config.trustManagerFactory() != null) {
       context.trustManager(config.trustManagerFactory());
-    } else if (config.trustCertificates() != null && config.trustCertificates().length > 0) {
-      context.trustManager(config.trustCertificates());
+    } else if (config.trustCertificates() != null && !config.trustCertificates().isEmpty()) {
+      context.trustManager(config.trustCertificates().toArray(new X509Certificate[0]));
+    }
+
+    if (config.keyManagerFactory() != null) {
+      context.keyManager(config.keyManagerFactory());
+    } else if (config.key() != null) {
+      context.keyManager(config.key(), config.keyPassword(), config.keyCertChain().toArray(new X509Certificate[0]));
     }
 
     SslHandler sslHandler = context.build().newHandler(allocator);

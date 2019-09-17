@@ -18,25 +18,33 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class SecurityConfig {
 
-  public static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
+  private static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
 
   private final boolean nativeTlsEnabled;
   private final boolean tlsEnabled;
-  private final boolean certAuthEnabled;
-  private final X509Certificate[] trustCertificates;
+  private final List<X509Certificate> trustCertificates;
   private final TrustManagerFactory trustManagerFactory;
+  private final PrivateKey key;
+  private final String keyPassword;
+  private final List<X509Certificate> keyCertChain;
+  private final KeyManagerFactory keyManagerFactory;
 
   public static Builder builder() {
     return new Builder();
@@ -50,15 +58,7 @@ public class SecurityConfig {
     return builder().tlsEnabled(tlsEnabled);
   }
 
-  public static Builder certAuthEnabled(boolean certAuthEnabled) {
-    return builder().certAuthEnabled(certAuthEnabled);
-  }
-
-  public static Builder trustCertificates(final X509Certificate... certificates) {
-    return builder().trustCertificates(certificates);
-  }
-
-  public static Builder trustCertificates(final String... certificates) {
+  public static Builder trustCertificates(final List<X509Certificate> certificates) {
     return builder().trustCertificates(certificates);
   }
 
@@ -66,34 +66,45 @@ public class SecurityConfig {
     return builder().trustManagerFactory(trustManagerFactory);
   }
 
+  public static Builder keyManagerFactory(final KeyManagerFactory keyManagerFactory) {
+    return builder().keyManagerFactory(keyManagerFactory);
+  }
+
+  public static Builder keyCertificate(final PrivateKey key, final String keyPassword, final List<X509Certificate> keyCertChain) {
+    return builder().keyCertificate(key, keyPassword, keyCertChain);
+  }
+
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
     nativeTlsEnabled = builder.nativeTlsEnabled;
-    certAuthEnabled = builder.certAuthEnabled;
     trustCertificates = builder.trustCertificates;
     trustManagerFactory = builder.trustManagerFactory;
+    key = builder.key;
+    keyPassword = builder.keyPassword;
+    keyCertChain = builder.keyCertChain;
+    keyManagerFactory = builder.keyManagerFactory;
 
     if (tlsEnabled) {
       if (trustCertificates != null && trustManagerFactory != null) {
         throw new IllegalArgumentException("Either trust certificates or a trust manager factory" +
           " can be provided, but not both!");
       }
-      if ((trustCertificates == null || trustCertificates.length == 0) && trustManagerFactory == null) {
+      if ((trustCertificates == null || trustCertificates.isEmpty()) && trustManagerFactory == null) {
         throw new IllegalArgumentException("Either a trust certificate or a trust manager factory" +
           " must be provided when TLS is enabled!");
       }
+      if (key != null && keyManagerFactory != null) {
+        throw new IllegalArgumentException("Either a key certificate or a key manager factory" +
+          " can be provided, but not both!");
+      }
     }
-  }
-
-  public boolean certAuthEnabled() {
-    return certAuthEnabled;
   }
 
   public boolean tlsEnabled() {
     return tlsEnabled;
   }
 
-  public X509Certificate[] trustCertificates() {
+  public List<X509Certificate> trustCertificates() {
     return trustCertificates;
   }
 
@@ -105,6 +116,22 @@ public class SecurityConfig {
     return nativeTlsEnabled;
   }
 
+  public PrivateKey key() {
+    return key;
+  }
+
+  public String keyPassword() {
+    return keyPassword;
+  }
+
+  public List<X509Certificate>  keyCertChain() {
+    return keyCertChain;
+  }
+
+  public KeyManagerFactory keyManagerFactory() {
+    return keyManagerFactory;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -113,9 +140,10 @@ public class SecurityConfig {
     Map<String, Object> export = new LinkedHashMap<>();
     export.put("tlsEnabled", tlsEnabled);
     export.put("nativeTlsEnabled", nativeTlsEnabled);
-    export.put("certAuthEnabled", certAuthEnabled);
-    export.put("hasTrustCertificates", trustCertificates != null && trustCertificates.length > 0);
+    export.put("hasKey", key != null);
+    export.put("hasTrustCertificates", trustCertificates != null && !trustCertificates.isEmpty());
     export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
+    export.put("keyManagerFactory", keyManagerFactory != null ? keyManagerFactory.getClass().getSimpleName() : null);
     return export;
   }
 
@@ -123,9 +151,12 @@ public class SecurityConfig {
 
     private boolean tlsEnabled = false;
     private boolean nativeTlsEnabled = DEFAULT_NATIVE_TLS_ENABLED;
-    private boolean certAuthEnabled = false;
-    private X509Certificate[] trustCertificates = null;
+    private List<X509Certificate> trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
+    private PrivateKey key = null;
+    private String keyPassword = null;
+    private List<X509Certificate> keyCertChain = null;
+    private KeyManagerFactory keyManagerFactory = null;
 
     public SecurityConfig build() {
       return new SecurityConfig(this);
@@ -141,39 +172,55 @@ public class SecurityConfig {
       return this;
     }
 
-    public Builder certAuthEnabled(boolean certAuthEnabled) {
-      throw new UnsupportedOperationException("not yet supported");
-      // this.certAuthEnabled = certAuthEnabled;
-      // return this;
-    }
-
-    public Builder trustCertificates(final X509Certificate... certificates) {
+    public Builder trustCertificates(final List<X509Certificate> certificates) {
       this.trustCertificates = certificates;
       return this;
-    }
-
-    public Builder trustCertificates(final String... certificates) {
-      final CertificateFactory cf;
-      try {
-        cf = CertificateFactory.getInstance("X.509");
-      } catch (CertificateException e) {
-        throw new IllegalStateException("Could not instantiate X.509 CertificateFactory", e);
-      }
-
-      return trustCertificates(Arrays.stream(certificates).map(c -> {
-        try {
-          return (X509Certificate) cf.generateCertificate(
-            new ByteArrayInputStream(c.getBytes(StandardCharsets.UTF_8))
-          );
-        } catch (CertificateException e) {
-          throw new IllegalArgumentException("Could not generate certificate from raw input: \"" + c + "\"", e);
-        }
-      }).toArray(X509Certificate[]::new));
     }
 
     public Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
       this.trustManagerFactory = trustManagerFactory;
       return this;
     }
+
+    public Builder keyManagerFactory(final KeyManagerFactory keyManagerFactory) {
+      this.keyManagerFactory = keyManagerFactory;
+      return this;
+    }
+
+    public Builder keyCertificate(final PrivateKey key, final String keyPassword,
+                                  final List<X509Certificate> keyCertChain) {
+      notNull(key, "PrivateKey");
+
+      this.key = key;
+      this.keyPassword = keyPassword;
+      this.keyCertChain = keyCertChain;
+      return this;
+    }
   }
+
+  /**
+   * Helper method to decode string-encoded certificates into their x.509 format.
+   *
+   * @param certificates the string-encoded certificates.
+   * @return the decoded certs in x.509 format.
+   */
+  public static List<X509Certificate> decodeCertificates(final List<String> certificates) {
+    final CertificateFactory cf;
+    try {
+      cf = CertificateFactory.getInstance("X.509");
+    } catch (CertificateException e) {
+      throw new IllegalStateException("Could not instantiate X.509 CertificateFactory", e);
+    }
+
+    return certificates.stream().map(c -> {
+      try {
+        return (X509Certificate) cf.generateCertificate(
+          new ByteArrayInputStream(c.getBytes(StandardCharsets.UTF_8))
+        );
+      } catch (CertificateException e) {
+        throw new IllegalArgumentException("Could not generate certificate from raw input: \"" + c + "\"", e);
+      }
+    }).collect(Collectors.toList());
+  }
+
 }

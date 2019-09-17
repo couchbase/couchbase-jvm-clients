@@ -39,6 +39,8 @@ import org.junit.jupiter.api.Test;
 import javax.net.ssl.TrustManagerFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -126,7 +128,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(config().clusterCert().get()), null);
+      .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
     Core core = Core.create(env);
     core.openBucket(config().bucketname()).block();
 
@@ -167,7 +169,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustManagerFactory(mock(TrustManagerFactory.class))
-      .trustCertificates(mock(X509Certificate.class)), null)
+      .trustCertificates(mock(List.class)), null)
     );
   }
 
@@ -177,7 +179,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
-      .trustCertificates(mock(X509Certificate.class)), eventBus);
+      .trustCertificates(mock(List.class)), eventBus);
     Core core = Core.create(env);
 
     try {

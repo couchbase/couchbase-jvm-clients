@@ -168,10 +168,23 @@ public class CoreEnvironment {
         Schedulers.newParallel("cb-comp", Schedulers.DEFAULT_POOL_SIZE, true))
       );
 
+    this.securityConfig = builder.securityConfig.build();
+    if (authenticator instanceof CertificateAuthenticator
+      && securityConfig.key() == null
+      && securityConfig.keyManagerFactory() == null) {
+      throw new IllegalStateException("When Certificate authentication is used, either a key " +
+        "certificate or a key manager factory need to be configured!");
+    }
+
+    if (!(authenticator instanceof CertificateAuthenticator)
+      && (securityConfig.key() != null || securityConfig.keyManagerFactory() != null)) {
+      throw new IllegalStateException("Key certificates are configured in the SecurityConfig, " +
+        "but no CertificateAuthenticator!");
+    }
+
     this.ioEnvironment = builder.ioEnvironment.build();
     this.ioConfig = builder.ioConfig.build();
     this.compressionConfig = builder.compressionConfig.build();
-    this.securityConfig = builder.securityConfig.build();
     this.timeoutConfig = builder.timeoutConfig.build();
     this.serviceConfig = builder.serviceConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
