@@ -52,7 +52,7 @@ class ClusterManagerBucketRefresherTest {
   @BeforeEach
   void beforeEach() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    env = CoreEnvironment.builder("username", "password").eventBus(eventBus).build();
+    env = CoreEnvironment.builder().eventBus(eventBus).build();
 
     CoreContext coreContext = mock(CoreContext.class);
     core = mock(Core.class);

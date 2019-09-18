@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
@@ -72,9 +73,9 @@ class KeyValueMessageHandlerTest {
 
   @BeforeAll
   static void setup() {
-    ENV = CoreEnvironment.builder("foo", "bar").eventBus(new SimpleEventBus(true)).build();
+    ENV = CoreEnvironment.builder().eventBus(new SimpleEventBus(true)).build();
     Core core = mock(Core.class);
-    CoreContext coreContext = new CoreContext(core, 1, ENV);
+    CoreContext coreContext = new CoreContext(core, 1, ENV, PasswordAuthenticator.create("foo", "bar"));
     ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
     when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());
     when(core.configurationProvider()).thenReturn(configurationProvider);

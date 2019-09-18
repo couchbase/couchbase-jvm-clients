@@ -49,7 +49,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    */
   protected static ClusterEnvironment.Builder environment() {
     return ClusterEnvironment
-      .builder(config().adminUsername(), config().adminPassword())
+      .builder()
       .seedNodes(seedNodes());
   }
 

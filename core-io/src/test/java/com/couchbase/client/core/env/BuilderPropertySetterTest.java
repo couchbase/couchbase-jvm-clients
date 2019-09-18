@@ -37,7 +37,7 @@ class BuilderPropertySetterTest {
   private static final BuilderPropertySetter setter = new BuilderPropertySetter();
 
   private static CoreEnvironment.Builder newEnvironmentBuilder() {
-    return CoreEnvironment.builder("username", "password");
+    return CoreEnvironment.builder();
   }
 
   @Test

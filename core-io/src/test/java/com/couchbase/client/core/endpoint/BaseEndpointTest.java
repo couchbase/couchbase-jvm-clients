@@ -85,8 +85,8 @@ class BaseEndpointTest {
   void beforeEach() {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
-    environment = CoreEnvironment.builder(authenticator).eventBus(eventBus).build();
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
+    environment = CoreEnvironment.builder().eventBus(eventBus).build();
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment, authenticator);
     ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
   }
@@ -123,12 +123,12 @@ class BaseEndpointTest {
   @Test
   void retryOnTimeoutUntilEventuallyConnected() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    CoreEnvironment env = CoreEnvironment.builder(authenticator)
+    CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
 
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
     ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
 
@@ -245,11 +245,11 @@ class BaseEndpointTest {
   @Test
   void disconnectDuringRetry() {
     SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
-    CoreEnvironment env = CoreEnvironment.builder(authenticator)
+    CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
       .build();
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
     ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
 

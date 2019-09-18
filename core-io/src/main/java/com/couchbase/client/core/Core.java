@@ -33,6 +33,7 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
@@ -165,8 +166,8 @@ public class Core {
    * @param environment the environment for this core.
    * @return the created {@link Core}.
    */
-  public static Core create(final CoreEnvironment environment) {
-    return new Core(environment);
+  public static Core create(final CoreEnvironment environment, final Authenticator authenticator) {
+    return new Core(environment, authenticator);
   }
 
   /**
@@ -174,8 +175,8 @@ public class Core {
    *
    * @param environment the environment for this core.
    */
-  protected Core(final CoreEnvironment environment) {
-    this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment);
+  protected Core(final CoreEnvironment environment, final Authenticator authenticator) {
+    this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
     this.eventBus = environment.eventBus();

@@ -31,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.util.concurrent.EventExecutor;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.java.json.JsonObject;
@@ -98,8 +99,8 @@ public class SearchMock {
 
         // Fake some core stuff
         Core mockedCore = mock(Core.class);
-        CoreEnvironment env = CoreEnvironment.create("localhost", "Administrator", "password");
-        CoreContext ctx = new CoreContext(mockedCore, 0, env);
+        CoreEnvironment env = CoreEnvironment.create("localhost");
+        CoreContext ctx = new CoreContext(mockedCore, 0, env, PasswordAuthenticator.create("Administrator", "password"));
 
         // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest
         // through it

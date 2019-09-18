@@ -100,7 +100,7 @@ public class Node implements Stateful<NodeState> {
   protected Node(final CoreContext ctx, final NodeIdentifier identifier, final Optional<String> alternateAddress) {
     this.identifier = identifier;
     this.ctx = new NodeContext(ctx, identifier, alternateAddress);
-    this.authenticator = ctx.environment().authenticator();
+    this.authenticator = ctx.authenticator();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
     this.alternateAddress = alternateAddress;

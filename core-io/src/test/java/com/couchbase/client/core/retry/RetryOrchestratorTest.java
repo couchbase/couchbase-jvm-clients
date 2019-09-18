@@ -22,6 +22,7 @@ import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
 import com.couchbase.client.core.cnc.events.request.RequestRetriedEvent;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -74,7 +75,7 @@ class RetryOrchestratorTest {
     CoreEnvironment env = mock(CoreEnvironment.class);
     SimpleEventBus eventBus = new SimpleEventBus(true);
     when(env.eventBus()).thenReturn(eventBus);
-    CoreContext context = new CoreContext(mock(Core.class), 1, env);
+    CoreContext context = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     RetryOrchestrator.maybeRetry(context, request, RetryReason.UNKNOWN);
 
     verify(request, times(1)).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
@@ -107,7 +108,7 @@ class RetryOrchestratorTest {
     when(env.timer()).thenReturn(timer);
     when(env.eventBus()).thenReturn(eventBus);
 
-    CoreContext ctx = new CoreContext(core, 1, env);
+    CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
 
     long start = System.nanoTime();
     RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);

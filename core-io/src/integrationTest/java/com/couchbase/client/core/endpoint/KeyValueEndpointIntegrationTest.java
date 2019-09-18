@@ -55,7 +55,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
 
     env = environment().build();
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env),
+      new CoreContext(null, 1, env, authenticator()),
       node.hostname(),
       node.ports().get(Services.KV),
       ServiceType.KV,
@@ -85,7 +85,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
       node.hostname(),
       node.ports().get(Services.KV),
       Optional.of(config().bucketname()),
-      env.authenticator()
+      authenticator()
     );
 
     endpoint.connect();

@@ -88,6 +88,8 @@ public class AsyncCluster {
 
   private final AsyncAnalyticsIndexManager analyticsIndexManager;
 
+  private final Authenticator authenticator;
+
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
    *
@@ -111,7 +113,7 @@ public class AsyncCluster {
   public static CompletableFuture<AsyncCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
       ClusterOptions.Built opts = options.build();
-      AsyncCluster cluster = new AsyncCluster(extractClusterEnvironment(connectionString, opts));
+      AsyncCluster cluster = new AsyncCluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
       return cluster.performGlobalConnect().then(Mono.just(cluster));
     }).toFuture();
   }
@@ -120,7 +122,7 @@ public class AsyncCluster {
                                                                 final ClusterOptions.Built opts) {
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
-      envSupplier = new OwnedSupplier<>(ClusterEnvironment.create(connectionString, opts.authenticator()));
+      envSupplier = new OwnedSupplier<>(ClusterEnvironment.create(connectionString));
     } else {
       envSupplier = opts::environment;
     }
@@ -141,15 +143,16 @@ public class AsyncCluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  AsyncCluster(final Supplier<ClusterEnvironment> environment) {
+  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
     this.environment = environment;
-    this.core = Core.create(environment.get());
+    this.core = Core.create(environment.get(), authenticator);
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.queryAccessor = new QueryAccessor(core);
     this.userManager = new AsyncUserManager(core);
     this.bucketManager = new AsyncBucketManager(core);
     this.queryIndexManager = new AsyncQueryIndexManager(this);
     this.analyticsIndexManager = new AsyncAnalyticsIndexManager(this);
+    this.authenticator = authenticator;
   }
 
   /**
@@ -250,7 +253,7 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     options.injectParams(query);
 
-    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
+    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator,
       statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly());
     request.context().clientContext(options.clientContext());
     return request;
@@ -300,7 +303,7 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     opts.injectParams(query);
 
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
         query.toString().getBytes(StandardCharsets.UTF_8), opts.priority(), opts.readonly()
     );
     request.context().clientContext(opts.clientContext());
@@ -338,7 +341,7 @@ public class AsyncCluster {
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, environment.get().authenticator(),
+    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator,
       query.indexName(), bytes);
     request.context().clientContext(opts.clientContext());
     return request;

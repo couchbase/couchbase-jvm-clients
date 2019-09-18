@@ -119,7 +119,7 @@ class ConnectionStringPropertyLoaderTest {
    * @param consumer the consumer which will get the full env to assert against.
    */
   private void parse(final String connectionString, final Consumer<CoreEnvironment> consumer) {
-    CoreEnvironment.Builder builder = CoreEnvironment.builder(USER, PASS);
+    CoreEnvironment.Builder builder = CoreEnvironment.builder();
     ConnectionStringPropertyLoader loader = new ConnectionStringPropertyLoader(connectionString);
     loader.load(builder);
     CoreEnvironment built = builder.build();

@@ -41,7 +41,7 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment().build();
-    core = Core.create(env);
+    core = Core.create(env, authenticator());
 
     core.initGlobalConfig().block();
   }
@@ -60,7 +60,7 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
       env.timeoutConfig().queryTimeout(),
       core.context(),
       env.retryStrategy(),
-      env.authenticator(),
+      core.context().authenticator(),
       "select 1=1",
       query.getBytes(StandardCharsets.UTF_8),
       true

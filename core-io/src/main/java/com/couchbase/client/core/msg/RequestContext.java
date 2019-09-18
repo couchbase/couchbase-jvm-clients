@@ -81,7 +81,7 @@ public class RequestContext extends CoreContext {
    */
   @Stability.Internal
   public RequestContext(CoreContext ctx, final Request<? extends Response> request) {
-    super(ctx.core(), ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
     this.request = request;
     this.retryAttempts = new AtomicInteger(0);
   }

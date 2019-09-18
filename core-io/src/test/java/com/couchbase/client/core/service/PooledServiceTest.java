@@ -64,8 +64,8 @@ class PooledServiceTest {
   @BeforeEach
   void beforeEach() {
     eventBus = new SimpleEventBus(true, Collections.singletonList(ServiceStateChangedEvent.class));
-    environment = CoreEnvironment.builder(authenticator).eventBus(eventBus).build();
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment);
+    environment = CoreEnvironment.builder().eventBus(eventBus).build();
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment, authenticator);
     serviceContext = new ServiceContext(coreContext, "127.0.0.1", 1234,
       ServiceType.KV, Optional.empty());
   }

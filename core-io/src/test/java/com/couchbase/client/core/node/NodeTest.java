@@ -75,9 +75,9 @@ class NodeTest {
   static void beforeAll() {
     Core core = mock(Core.class);
     ENV = CoreEnvironment
-      .builder(mock(Authenticator.class))
+      .builder()
       .build();
-    CTX = new CoreContext(core, 1, ENV);
+    CTX = new CoreContext(core, 1, ENV, mock(Authenticator.class));
   }
 
   @AfterAll
@@ -456,10 +456,10 @@ class NodeTest {
     Core core = mock(Core.class);
     SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(NodeStateChangedEvent.class));
     CoreEnvironment env = CoreEnvironment
-      .builder(mock(Authenticator.class))
+      .builder()
       .eventBus(eventBus)
       .build();
-    CoreContext ctx = new CoreContext(core, 1, env);
+    CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
 
     try {
       Node node = new Node(ctx, mock(NodeIdentifier.class), NO_ALTERNATE) {

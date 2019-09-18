@@ -96,7 +96,7 @@ public class Cluster {
    */
   public static Cluster connect(final String connectionString, final ClusterOptions options) {
     ClusterOptions.Built opts = options.build();
-    Cluster cluster = new Cluster(extractClusterEnvironment(connectionString, opts));
+    Cluster cluster = new Cluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
     cluster.async().performGlobalConnect().block();
     return cluster;
   }
@@ -106,8 +106,8 @@ public class Cluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  private Cluster(final Supplier<ClusterEnvironment> environment) {
-    this.asyncCluster = new AsyncCluster(environment);
+  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
+    this.asyncCluster = new AsyncCluster(environment, authenticator);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());

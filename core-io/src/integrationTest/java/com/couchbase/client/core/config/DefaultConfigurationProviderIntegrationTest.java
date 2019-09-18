@@ -78,10 +78,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       Optional.of(cfg.ports().get(Services.MANAGER))
     )));
 
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -104,10 +104,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       SeedNode.create("1.2.3.4")
     ));
 
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -130,10 +130,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       )
     ));
 
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -153,7 +153,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create("1.2.3.4")));
 
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig
@@ -161,7 +161,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
         .managementTimeout(Duration.ofMillis(100))
       )
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -186,14 +186,14 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       Optional.of(9998)
     )));
 
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(500))
         .managementTimeout(Duration.ofMillis(500))
       )
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -218,14 +218,14 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       Optional.of(cfg.ports().get(Services.MANAGER))
     )));
 
-    environment = CoreEnvironment.builder(config().adminUsername(), config().adminPassword())
+    environment = CoreEnvironment.builder()
       .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofSeconds(1))
         .managementTimeout(Duration.ofSeconds(1))
       )
       .build();
-    core = Core.create(environment);
+    core = Core.create(environment, authenticator());
 
     String bucketName = config().bucketname();
     ConfigurationProvider provider = new DefaultConfigurationProvider(core);

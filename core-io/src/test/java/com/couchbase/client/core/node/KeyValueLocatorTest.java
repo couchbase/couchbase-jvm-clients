@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -63,7 +64,7 @@ class KeyValueLocatorTest {
     CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
     when(getRequestMock.bucket()).thenReturn("bucket");
     when(getRequestMock.key()).thenReturn("key".getBytes(UTF_8));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class));
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class), mock(Authenticator.class));
     when(getRequestMock.context()).thenReturn(new RequestContext(coreContext, getRequestMock));
     when(configMock.bucketConfig("bucket")).thenReturn(bucketMock);
     when(bucketMock.nodes()).thenReturn(Arrays.asList(nodeInfo1, nodeInfo2));

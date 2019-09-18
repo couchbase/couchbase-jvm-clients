@@ -51,7 +51,7 @@ class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void streamsNewConfigurations() {
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
 
     ProposedBucketConfigInspectingProvider inspectingProvider = new ProposedBucketConfigInspectingProvider(core.configurationProvider());
     ClusterManagerBucketRefresher refresher = new ClusterManagerBucketRefresher(inspectingProvider, core);

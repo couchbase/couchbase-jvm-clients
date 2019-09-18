@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 
 import java.util.Map;
@@ -49,6 +50,11 @@ public class CoreContext extends AbstractContext {
   private final Core core;
 
   /**
+   * The aauthenticator to be used for this core.
+   */
+  private final Authenticator authenticator;
+
+  /**
    * If present, contains the alternate address identifier that is used.
    */
   private volatile Optional<String> alternateAddress = Optional.empty();
@@ -59,10 +65,11 @@ public class CoreContext extends AbstractContext {
   * @param id the core id.
   * @param env the core environment.
   */
-  public CoreContext(final Core core, final long id, final CoreEnvironment env) {
+  public CoreContext(final Core core, final long id, final CoreEnvironment env, final Authenticator authenticator) {
     this.id = id;
     this.env = env;
     this.core = core;
+    this.authenticator = authenticator;
   }
 
   /**
@@ -84,6 +91,13 @@ public class CoreContext extends AbstractContext {
    */
   public Optional<String> alternateAddress() {
     return alternateAddress;
+  }
+
+  /**
+   * Returns the authenticator used for this core.
+   */
+  public Authenticator authenticator() {
+    return authenticator;
   }
 
   /**

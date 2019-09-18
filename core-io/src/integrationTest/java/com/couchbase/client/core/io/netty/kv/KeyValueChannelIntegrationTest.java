@@ -66,7 +66,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
     env = environment().build();
 
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
     endpointContext = new EndpointContext(
       core.context(),
       node.hostname(),
@@ -108,7 +108,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of(config().bucketname()),
-            env.authenticator()
+            endpointContext.authenticator()
           ).init(null, ch.pipeline());
         }
       });
@@ -180,7 +180,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
             Optional.of("42eredwefrfe"),
-            env.authenticator()
+            endpointContext.authenticator()
           ).init(null, ch.pipeline());
         }
       });

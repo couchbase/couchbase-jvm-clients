@@ -34,6 +34,7 @@ import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -71,7 +72,7 @@ class ManagerMessageHandlerTest {
 
   @BeforeAll
   static void setup() {
-    ENV = CoreEnvironment.create(USER, PASS);
+    ENV = CoreEnvironment.create();
   }
 
   @AfterAll
@@ -85,7 +86,7 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void returnsNewConfigsWhenChunked() throws Exception {
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV);
+    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV, PasswordAuthenticator.create(USER, PASS));
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(ENV);
@@ -93,7 +94,7 @@ class ManagerMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
-      BestEffortRetryStrategy.INSTANCE, "bucket", ENV.authenticator());
+      BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
     channel.write(request);
 
     HttpRequest outboundHeader = channel.readOutbound();
@@ -153,7 +154,7 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void closesStreamIfChannelClosed() throws Exception {
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV);
+    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV,  PasswordAuthenticator.create(USER, PASS));
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(ENV);
@@ -161,7 +162,7 @@ class ManagerMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
-      BestEffortRetryStrategy.INSTANCE, "bucket", ENV.authenticator());
+      BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
     channel.write(request);
 
     HttpRequest outboundHeader = channel.readOutbound();

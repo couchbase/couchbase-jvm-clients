@@ -18,6 +18,7 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigResponse;
 import com.couchbase.client.core.service.ServiceContext;
@@ -45,9 +46,9 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
   void beforeEach() {
     TestNodeConfig node = config().nodes().get(0);
 
-    env = CoreEnvironment.create(config().adminUsername(), config().adminPassword());
+    env = CoreEnvironment.create();
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env),
+      new CoreContext(null, 1, env, PasswordAuthenticator.create(config().adminUsername(), config().adminPassword())),
       node.hostname(),
       node.ports().get(Services.MANAGER),
       ServiceType.MANAGER,
@@ -80,7 +81,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
     BucketConfigRequest request = new BucketConfigRequest(Duration.ofSeconds(1),
-      serviceContext, null, config().bucketname(), env.authenticator(), null);
+      serviceContext, null, config().bucketname(), serviceContext.authenticator(), null);
 
     assertTrue(request.id() > 0);
     endpoint.send(request);

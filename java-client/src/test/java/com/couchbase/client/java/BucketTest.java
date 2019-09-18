@@ -17,12 +17,15 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Verifies the basic functionality of the bucket.
@@ -31,13 +34,17 @@ class BucketTest {
 
   @Test
   void preventsDefaultScopeFromBeingOpened() {
-    Bucket bucket = new Bucket( new AsyncBucket("bar", mock(Core.class), mock(ClusterEnvironment.class)));
+    Core core = mock(Core.class);
+    when(core.context()).thenReturn(new CoreContext(core, 1, null, mock(Authenticator.class)));
+    Bucket bucket = new Bucket( new AsyncBucket("bar", core, mock(ClusterEnvironment.class)));
     assertThrows(IllegalArgumentException.class, () -> bucket.scope(CollectionIdentifier.DEFAULT_SCOPE));
   }
 
   @Test
   void shouldNotAcceptEmptyOrNullScopeName() {
-    Bucket bucket = new Bucket( new AsyncBucket("bar", mock(Core.class), mock(ClusterEnvironment.class)));
+    Core core = mock(Core.class);
+    when(core.context()).thenReturn(new CoreContext(core, 1, null, mock(Authenticator.class)));
+    Bucket bucket = new Bucket( new AsyncBucket("bar", core, mock(ClusterEnvironment.class)));
     assertThrows(IllegalArgumentException.class, () -> bucket.scope(null));
     assertThrows(IllegalArgumentException.class, () -> bucket.scope(""));
   }

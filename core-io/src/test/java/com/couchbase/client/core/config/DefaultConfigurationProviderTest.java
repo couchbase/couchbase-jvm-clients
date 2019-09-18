@@ -18,9 +18,11 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,7 +49,7 @@ class DefaultConfigurationProviderTest {
 
   @BeforeAll
   static void setup() {
-    ENVIRONMENT = CoreEnvironment.create("user", "pass");
+    ENVIRONMENT = CoreEnvironment.create();
   }
 
   @AfterAll
@@ -58,7 +60,7 @@ class DefaultConfigurationProviderTest {
   @Test
   void canProposeNewBucketConfig() {
     Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT);
+    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -91,7 +93,7 @@ class DefaultConfigurationProviderTest {
   @Test
   void ignoreProposedConfigWithLowerOrEqualRev() {
     Core core = mock(Core.class);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
@@ -119,7 +121,7 @@ class DefaultConfigurationProviderTest {
   @Test
   void canUpdateConfigWithNewRev() {
     Core core = mock(Core.class);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
@@ -152,7 +154,7 @@ class DefaultConfigurationProviderTest {
   @Test
   void ignoreProposedConfigOnceShutdown() {
     Core core = mock(Core.class);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
@@ -190,7 +192,7 @@ class DefaultConfigurationProviderTest {
   @Test
   void updatesSeedNodesFromGlobalConfig() {
     Core core = mock(Core.class);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT));
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
 
@@ -212,9 +214,9 @@ class DefaultConfigurationProviderTest {
   @Test
   void externalModeSelectedIfAuto() {
     Core core = mock(Core.class);
-    CoreEnvironment environment = CoreEnvironment.create("192.168.132.234", "user", "pw");
+    CoreEnvironment environment = CoreEnvironment.create("192.168.132.234");
 
-    CoreContext ctx = new CoreContext(core, 1, environment);
+    CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
     when(core.context()).thenReturn(ctx);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
@@ -240,11 +242,11 @@ class DefaultConfigurationProviderTest {
   void forceDefaultModeIfDefault() {
     Core core = mock(Core.class);
     CoreEnvironment environment = CoreEnvironment
-      .builder("192.168.132.234", "user", "pw")
+      .builder("192.168.132.234")
       .ioConfig(IoConfig.networkResolution(NetworkResolution.DEFAULT))
       .build();
 
-    CoreContext ctx = new CoreContext(core, 1, environment);
+    CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
     when(core.context()).thenReturn(ctx);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);

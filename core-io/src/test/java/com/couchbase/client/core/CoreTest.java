@@ -62,7 +62,7 @@ class CoreTest {
   @BeforeAll
   static void beforeAll() {
     EVENT_BUS = new SimpleEventBus(true);
-    ENV = CoreEnvironment.builder(mock(Authenticator.class)).eventBus(EVENT_BUS).build();
+    ENV = CoreEnvironment.builder().eventBus(EVENT_BUS).build();
   }
 
   @AfterAll
@@ -105,7 +105,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV) {
+    new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -201,7 +201,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV) {
+    new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -301,7 +301,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV) {
+    new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -384,7 +384,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV) {
+    new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -471,7 +471,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("127.0.0.1:9000", mock101);
     mocks.put("127.0.0.1:9001", mock102);
-    new Core(ENV) {
+    new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -513,7 +513,7 @@ class CoreTest {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     when(configProvider.configs()).thenReturn(Flux.empty());
 
-    Core core = new Core(ENV) {
+    Core core = new Core(ENV, mock(Authenticator.class)) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;

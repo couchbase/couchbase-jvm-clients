@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.GenericViewRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -60,7 +61,7 @@ class NonChunkedHttpMessageHandlerTest {
 
   @BeforeAll
   static void beforeAll() {
-    env = CoreEnvironment.create("user", "pass");
+    env = CoreEnvironment.create();
   }
 
   @AfterAll
@@ -73,6 +74,7 @@ class NonChunkedHttpMessageHandlerTest {
     endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(env);
+    when(endpointContext.authenticator()).thenReturn(PasswordAuthenticator.create("user", "pass"));
     when(endpoint.endpointContext()).thenReturn(endpointContext);
     channel = new EmbeddedChannel();
   }

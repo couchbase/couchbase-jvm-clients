@@ -115,48 +115,30 @@ public class CoreEnvironment {
   private final DiagnosticsMonitor diagnosticsMonitor;
 
   private final Set<SeedNode> seedNodes;
-  private final Authenticator authenticator;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
 
 
-  public static CoreEnvironment create(final String username, final String password) {
-    return builder(username, password).build();
+  public static CoreEnvironment create() {
+    return builder().build();
   }
 
-  public static CoreEnvironment create(final Authenticator authenticator) {
-    return builder(authenticator).build();
+  public static CoreEnvironment create(final String connectionString) {
+    return builder(connectionString).build();
   }
 
-  public static CoreEnvironment create(final String connectionString, String username, String password) {
-    return builder(connectionString, username, password).build();
+  public static CoreEnvironment.Builder builder(final String connectionString) {
+    return builder().load(new ConnectionStringPropertyLoader(connectionString));
   }
 
-  public static CoreEnvironment create(final String connectionString, Authenticator authenticator) {
-    return builder(connectionString, authenticator).build();
-  }
-
-  public static CoreEnvironment.Builder builder(final String username, final String password) {
-    return builder(PasswordAuthenticator.create(username, password));
-  }
-
-  public static CoreEnvironment.Builder builder(final Authenticator authenticator) {
-    return new Builder(authenticator);
-  }
-
-  public static CoreEnvironment.Builder builder(final String connectionString, final String username, final String password) {
-    return builder(connectionString, PasswordAuthenticator.create(username, password));
-  }
-
-  public static CoreEnvironment.Builder builder(final String connectionString, final Authenticator authenticator) {
-    return builder(authenticator).load(new ConnectionStringPropertyLoader(connectionString));
+  public static CoreEnvironment.Builder builder() {
+    return new Builder();
   }
 
   @SuppressWarnings("unchecked")
   protected CoreEnvironment(final Builder builder) {
     new SystemPropertyPropertyLoader().load(builder);
 
-    this.authenticator = builder.authenticator;
     this.userAgent = defaultUserAgent();
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
@@ -169,18 +151,6 @@ public class CoreEnvironment {
       );
 
     this.securityConfig = builder.securityConfig.build();
-    if (authenticator instanceof CertificateAuthenticator
-      && securityConfig.key() == null
-      && securityConfig.keyManagerFactory() == null) {
-      throw new IllegalStateException("When Certificate authentication is used, either a key " +
-        "certificate or a key manager factory need to be configured!");
-    }
-
-    if (!(authenticator instanceof CertificateAuthenticator)
-      && (securityConfig.key() != null || securityConfig.keyManagerFactory() != null)) {
-      throw new IllegalStateException("Key certificates are configured in the SecurityConfig, " +
-        "but no CertificateAuthenticator!");
-    }
 
     this.ioEnvironment = builder.ioEnvironment.build();
     this.ioConfig = builder.ioConfig.build();
@@ -269,13 +239,6 @@ public class CoreEnvironment {
       return Optional.empty();
     }
     return Optional.ofNullable(attributes.getValue(value));
-  }
-
-  /**
-   * Returns the {@link Authenticator} attached to this environment.
-   */
-  public Authenticator authenticator() {
-    return authenticator;
   }
 
   /**
@@ -459,7 +422,6 @@ public class CoreEnvironment {
     input.put("serviceConfig", serviceConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
 
-    input.put("credentials", authenticator.getClass().getSimpleName());
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
 
     return format.apply(input);
@@ -485,12 +447,7 @@ public class CoreEnvironment {
     private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
 
-    private final Authenticator authenticator;
-
-    protected Builder(final Authenticator authenticator) {
-      notNull(authenticator, "Credentials");
-      this.authenticator = authenticator;
-    }
+    protected Builder() { }
 
     @SuppressWarnings("unchecked")
     protected SELF self() {

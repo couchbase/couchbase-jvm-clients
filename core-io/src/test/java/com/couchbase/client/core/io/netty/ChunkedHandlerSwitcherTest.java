@@ -60,7 +60,7 @@ class ChunkedHandlerSwitcherTest {
 
   @BeforeAll
   static void beforeAll() {
-    env = CoreEnvironment.create("user", "pass");
+    env = CoreEnvironment.create();
   }
 
   @AfterAll

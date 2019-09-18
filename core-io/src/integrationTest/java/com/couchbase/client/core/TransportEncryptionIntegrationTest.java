@@ -37,7 +37,6 @@ import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
-import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -91,7 +90,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
     core.openBucket(config().bucketname()).block();
 
     try {
@@ -129,7 +128,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
     core.openBucket(config().bucketname()).block();
 
     try {
@@ -180,7 +179,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustCertificates(mock(List.class)), eventBus);
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
 
     try {
       // Todo: this must not throw, but the op underneath timeout! .. also assert based

@@ -36,6 +36,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -70,8 +71,8 @@ class QueryMessageHandlerTest {
 
   @BeforeAll
   static void setup() {
-    ENV = CoreEnvironment.create("user", "pass");
-    CORE_CTX = new CoreContext(mock(Core.class), 1, ENV);
+    ENV = CoreEnvironment.create();
+    CORE_CTX = new CoreContext(mock(Core.class), 1, ENV, PasswordAuthenticator.create("user", "pass"));
     ENDPOINT_CTX = new EndpointContext(CORE_CTX, "127.0.0.1", 1234,
       NoopCircuitBreaker.INSTANCE, ServiceType.QUERY, Optional.empty(), Optional.empty(), Optional.empty());
   }
@@ -95,7 +96,7 @@ class QueryMessageHandlerTest {
 
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), ENV.authenticator(), "statement", query, false
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), CORE_CTX.authenticator(), "statement", query, false
     );
     channel.writeAndFlush(request);
 
@@ -147,11 +148,11 @@ class QueryMessageHandlerTest {
 
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request1 = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.authenticator(), "statement", query,
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, CORE_CTX.authenticator(), "statement", query,
       true
     );
     QueryRequest request2 = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, ENV.authenticator(), "statement", query,
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, CORE_CTX.authenticator(), "statement", query,
       true
     );
     channel.writeAndFlush(request1);

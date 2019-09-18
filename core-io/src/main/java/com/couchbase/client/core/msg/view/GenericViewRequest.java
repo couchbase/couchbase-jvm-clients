@@ -56,7 +56,7 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
   @Override
   public FullHttpRequest encode() {
     FullHttpRequest request = httpRequest.get();
-    context().environment().authenticator().authHttpRequest(serviceType(), request);
+    context().authenticator().authHttpRequest(serviceType(), request);
     return request;
   }
 

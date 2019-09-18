@@ -32,7 +32,7 @@ public class NodeContext extends CoreContext {
   private final Optional<String> alternateAddress;
 
   public NodeContext(CoreContext ctx, NodeIdentifier nodeIdentifier, Optional<String> alternateAddress) {
-    super(ctx.core(), ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
     this.nodeIdentifier = nodeIdentifier;
     this.alternateAddress = alternateAddress;
   }

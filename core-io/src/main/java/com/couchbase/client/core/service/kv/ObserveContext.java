@@ -40,7 +40,7 @@ public class ObserveContext extends CoreContext {
   public ObserveContext(CoreContext ctx, Observe.ObservePersistTo persistTo, Observe.ObserveReplicateTo replicateTo,
                         Optional<MutationToken> mutationToken, long cas, CollectionIdentifier collectionIdentifier, String key,
                         boolean remove, Duration timeout) {
-    super(ctx.core(), ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
     this.persistTo = persistTo;
     this.replicateTo = replicateTo;
     this.mutationToken = mutationToken;

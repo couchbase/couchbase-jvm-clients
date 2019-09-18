@@ -44,7 +44,7 @@ public class ServiceContext extends CoreContext {
 
   public ServiceContext(CoreContext ctx, String remoteHostname, int remotePort,
                         ServiceType serviceType, Optional<String> bucket) {
-    super(ctx.core(), ctx.id(), ctx.environment());
+    super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
     this.remoteHostname = remoteHostname;
     this.remotePort = remotePort;
     this.bucket = bucket;

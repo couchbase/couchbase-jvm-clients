@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -58,7 +59,7 @@ class BaseBucketLoaderTest {
   void setup() {
     CoreEnvironment env = mock(CoreEnvironment.class);
     core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, env);
+    CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
   }
 

@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import org.junit.jupiter.api.Test;
 
@@ -36,11 +37,13 @@ class CoreContextTest {
     long id = 12345;
     CoreEnvironment env = mock(CoreEnvironment.class);
     Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, id, env);
+    Authenticator authenticator = mock(Authenticator.class);
+    CoreContext ctx = new CoreContext(core, id, env, authenticator);
 
     assertEquals(core, ctx.core());
     assertEquals(id, ctx.id());
     assertEquals(env, ctx.environment());
+    assertEquals(authenticator, ctx.authenticator());
 
     String result = ctx.exportAsString(Context.ExportFormat.JSON);
     assertEquals("{\"coreId\":12345}", result);
@@ -48,7 +51,7 @@ class CoreContextTest {
 
   @Test
   void doesNotAllowNullAlternateIdentifier() {
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class));
+    CoreContext ctx = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class), mock(Authenticator.class));
     assertEquals(Optional.empty(), ctx.alternateAddress());
     assertThrows(IllegalArgumentException.class, () -> ctx.alternateAddress(null));
   }

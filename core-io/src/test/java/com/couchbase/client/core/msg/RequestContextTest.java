@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Authenticator;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -40,7 +41,7 @@ class RequestContextTest {
   void requestCancellation() {
     Request<?> request = mock(Request.class);
     Core core = mock(Core.class);
-    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null), request);
+    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null, mock(Authenticator.class)), request);
 
     ctx.cancel();
     verify(request, times(1)).cancel(CancellationReason.CANCELLED_VIA_CONTEXT);
@@ -50,7 +51,7 @@ class RequestContextTest {
   void customPayloadCanBeAttached() {
     Request<?> request = mock(Request.class);
     Core core = mock(Core.class);
-    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null), request);
+    RequestContext ctx = new RequestContext(new CoreContext(core, 1, null, mock(Authenticator.class)), request);
     assertNull(ctx.clientContext());
 
     Map<String, Object> payload = new HashMap<>();

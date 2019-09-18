@@ -18,6 +18,7 @@ package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.ConfigException;
@@ -61,7 +62,7 @@ class ClusterManagerBucketLoaderTest {
     when(env.retryStrategy()).thenReturn(BestEffortRetryStrategy.INSTANCE);
 
     core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, env);
+    CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
     loader = new ClusterManagerBucketLoader(core);
   }

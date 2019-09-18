@@ -19,10 +19,13 @@ package com.couchbase.client.java.examples;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
 import java.time.Duration;
+
+import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 
 /**
  * This example shows how to configure a custom environment for the cluster.
@@ -44,10 +47,10 @@ public class CustomEnvironment {
          * one! It will shut down fine but you risk prematurely terminating outstanding operations.
          */
         ClusterEnvironment environment = ClusterEnvironment
-                .builder("127.0.0.1", "Administrator", "password")
+                .builder("127.0.0.1")
                 .timeoutConfig(TimeoutConfig.kvTimeout(Duration.ofSeconds(2)))
                 .build();
-        Cluster cluster = Cluster.connect(environment);
+        Cluster cluster = Cluster.connect("127.0.0.1", clusterOptions("Administrator", "password").environment(environment));
 
         /**
          * From here on everything works the same.

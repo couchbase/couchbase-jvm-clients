@@ -43,7 +43,7 @@ import static org.mockito.Mockito.mock;
  */
 class MemcachedBucketConfigTest {
 
-    private static final CoreEnvironment ENV = CoreEnvironment.create(mock(Authenticator.class));
+    private static final CoreEnvironment ENV = CoreEnvironment.create();
 
     @AfterAll
     static void cleanup() {

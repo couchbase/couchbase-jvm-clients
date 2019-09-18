@@ -60,7 +60,7 @@ class ViewEndpointIntegrationTest extends CoreIntegrationTest {
 
     env = environment().ioConfig(IoConfig.captureTraffic(ServiceType.VIEWS)).build();
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env),
+      new CoreContext(null, 1, env, authenticator()),
       node.hostname(),
       node.ports().get(Services.VIEW),
       ServiceType.VIEWS,

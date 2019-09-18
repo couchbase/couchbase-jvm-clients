@@ -60,7 +60,7 @@ public class ClusterManagerBucketLoader extends BaseBucketLoader {
         ctx,
         BestEffortRetryStrategy.INSTANCE,
         bucket,
-        ctx.environment().authenticator(),
+        ctx.authenticator(),
         seed
       );
       core().send(request);

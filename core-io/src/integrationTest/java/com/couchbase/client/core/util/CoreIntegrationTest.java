@@ -17,7 +17,9 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -53,8 +55,12 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
     )).collect(Collectors.toSet());
 
     return CoreEnvironment
-      .builder(config().adminUsername(), config().adminPassword())
+      .builder()
       .seedNodes(seeds);
+  }
+
+  protected static Authenticator authenticator() {
+    return PasswordAuthenticator.create(config().adminUsername(), config().adminPassword());
   }
 
 }

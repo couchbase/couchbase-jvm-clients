@@ -51,7 +51,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment().build();
-    core = Core.create(env);
+    core = Core.create(env, authenticator());
     core.openBucket(config().bucketname()).block();
   }
 

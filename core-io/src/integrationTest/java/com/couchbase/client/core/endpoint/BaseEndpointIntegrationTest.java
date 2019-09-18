@@ -31,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.channel.local.LocalServerChannel;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests the endpoint in a generic fashion that is not tied to a specific target implementation.
  */
-class BaseEndpointIntegrationTest {
+class BaseEndpointIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
   private DefaultEventLoopGroup eventLoopGroup;
@@ -63,9 +64,7 @@ class BaseEndpointIntegrationTest {
   @BeforeEach
   void beforeEach() {
     eventBus = new SimpleEventBus(true);
-    env = CoreEnvironment.builder("Administrator", "password")
-      .eventBus(eventBus)
-      .build();
+    env = environment().eventBus(eventBus).build();
     eventLoopGroup = new DefaultEventLoopGroup();
   }
 
@@ -84,7 +83,7 @@ class BaseEndpointIntegrationTest {
     LocalServerController localServerController = startLocalServer(eventLoopGroup);
 
     ServiceContext serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env),
+      new CoreContext(null, 1, env, authenticator()),
       "127.0.0.1",
       1234,
       ServiceType.KV,
@@ -178,7 +177,7 @@ class BaseEndpointIntegrationTest {
   /**
    * Simple server controller to handle back and forth between client and server instance.
    */
-  class LocalServerController {
+  static class LocalServerController {
     final AtomicInteger connectAttempts = new AtomicInteger();
     final AtomicReference<Channel> channel = new AtomicReference<>();
   }

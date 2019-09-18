@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -62,6 +63,8 @@ public class AsyncBucket {
 
   private final AsyncViewIndexManager viewManager;
 
+  private final Authenticator authenticator;
+
   /**
    * Creates a new {@link AsyncBucket}.
    *
@@ -75,6 +78,7 @@ public class AsyncBucket {
     this.name = name;
     this.collectionManager = new AsyncCollectionManager(core, name);
     this.viewManager = new AsyncViewIndexManager(core, name);
+    this.authenticator = core.context().authenticator();
   }
 
   /**
@@ -186,7 +190,7 @@ public class AsyncBucket {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, environment.authenticator(), name, designDoc,
+    ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, authenticator, name, designDoc,
       viewName, query, keysJson, development);
     request.context().clientContext(opts.clientContext());
     return request;

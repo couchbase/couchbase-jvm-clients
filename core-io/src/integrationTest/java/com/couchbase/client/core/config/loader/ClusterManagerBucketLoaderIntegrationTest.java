@@ -61,7 +61,7 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
   void loadConfigViaClusterManagerHttp() {
     TestNodeConfig config = config().firstNodeWith(Services.MANAGER).get();
 
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
     ClusterManagerBucketLoader loader = new ClusterManagerBucketLoader(core);
     int port = config.ports().get(Services.MANAGER);
     ProposedBucketConfigContext ctx = loader.load(

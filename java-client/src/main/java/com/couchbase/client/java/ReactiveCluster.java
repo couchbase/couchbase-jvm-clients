@@ -81,7 +81,7 @@ public class ReactiveCluster {
   public static Mono<ReactiveCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
       ClusterOptions.Built opts = options.build();
-      ReactiveCluster cluster = new ReactiveCluster(extractClusterEnvironment(connectionString, opts));
+      ReactiveCluster cluster = new ReactiveCluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
       return cluster.asyncCluster.performGlobalConnect().then(Mono.just(cluster));
     });
   }
@@ -91,8 +91,8 @@ public class ReactiveCluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  private ReactiveCluster(final Supplier<ClusterEnvironment> environment) {
-    this(new AsyncCluster(environment));
+  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
+    this(new AsyncCluster(environment, authenticator));
   }
 
   /**

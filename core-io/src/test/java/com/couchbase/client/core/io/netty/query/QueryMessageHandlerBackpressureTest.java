@@ -80,8 +80,8 @@ class QueryMessageHandlerBackpressureTest {
   void beforeEach() {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
-    environment = CoreEnvironment.create(PasswordAuthenticator.create("admin", "password"));
-    core = Core.create(environment);
+    environment = CoreEnvironment.create();
+    core = Core.create(environment, PasswordAuthenticator.create("admin", "password"));
   }
 
   @AfterEach
@@ -130,7 +130,7 @@ class QueryMessageHandlerBackpressureTest {
       Duration.ofSeconds(1),
       endpointContext,
       BestEffortRetryStrategy.INSTANCE,
-      environment.authenticator(),
+      endpointContext.authenticator(),
       "select 1=1",
       "myquery".getBytes(UTF_8),
       true

@@ -53,7 +53,7 @@ public class GenericAnalyticsRequest extends BaseRequest<GenericAnalyticsRespons
   @Override
   public FullHttpRequest encode() {
     FullHttpRequest request = requestSupplier.get();
-    context().environment().authenticator().authHttpRequest(serviceType(), request);
+    context().authenticator().authHttpRequest(serviceType(), request);
     return request;
   }
 

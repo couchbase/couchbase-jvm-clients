@@ -43,7 +43,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment().build();
-    coreContext = new CoreContext(null, 1, env);
+    coreContext = new CoreContext(null, 1, env, authenticator());
   }
 
   @AfterEach
@@ -69,7 +69,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
       node.hostname(),
       node.ports().get(Services.KV),
       Optional.of(config().bucketname()),
-      env.authenticator()
+      coreContext.authenticator()
     );
 
     service.connect();

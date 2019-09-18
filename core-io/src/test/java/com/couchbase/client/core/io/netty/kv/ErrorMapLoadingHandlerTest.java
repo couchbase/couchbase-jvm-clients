@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.service.ServiceType;
@@ -78,7 +79,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
@@ -123,7 +124,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(100));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env);
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     EndpointContext endpointContext = new EndpointContext(coreContext,
       "127.0.0.1", 1234, null, ServiceType.KV,
       Optional.empty(), Optional.empty(), Optional.empty());

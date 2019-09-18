@@ -54,7 +54,7 @@ class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
   void loadGlobalConfigViaCarrierPublication() {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
-    Core core = Core.create(env);
+    Core core = Core.create(env, authenticator());
     GlobalLoader loader = new GlobalLoader(core);
 
     ProposedGlobalConfigContext globalConfigContext = loader.load(
