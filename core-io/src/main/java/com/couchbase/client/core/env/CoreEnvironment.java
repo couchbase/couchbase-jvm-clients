@@ -32,7 +32,6 @@ import reactor.core.scheduler.Schedulers;
 import java.net.URL;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,7 +47,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -87,13 +85,6 @@ public class CoreEnvironment {
   }
 
   /**
-   * Holds the default seed nodes (going to localhost) with default ports.
-   */
-  private static final Set<SeedNode> DEFAULT_SEED_NODES = new HashSet<>(Collections.singletonList(
-    SeedNode.create("127.0.0.1")
-  ));
-
-  /**
    * The default retry strategy used for all ops if not overridden.
    */
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
@@ -114,21 +105,12 @@ public class CoreEnvironment {
   private final LoggerConfig loggerConfig;
   private final DiagnosticsMonitor diagnosticsMonitor;
 
-  private final Set<SeedNode> seedNodes;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
 
 
   public static CoreEnvironment create() {
     return builder().build();
-  }
-
-  public static CoreEnvironment create(final String connectionString) {
-    return builder(connectionString).build();
-  }
-
-  public static CoreEnvironment.Builder builder(final String connectionString) {
-    return builder().load(new ConnectionStringPropertyLoader(connectionString));
   }
 
   public static CoreEnvironment.Builder builder() {
@@ -159,7 +141,6 @@ public class CoreEnvironment {
     this.serviceConfig = builder.serviceConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
-    this.seedNodes = Optional.ofNullable(builder.seedNodes).orElse(DEFAULT_SEED_NODES);
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -303,10 +284,6 @@ public class CoreEnvironment {
     return timer;
   }
 
-  public Set<SeedNode> seedNodes() {
-    return seedNodes;
-  }
-
   public RetryStrategy retryStrategy() {
     return retryStrategy;
   }
@@ -406,14 +383,6 @@ public class CoreEnvironment {
 
     input.put("userAgent", userAgent.formattedLong());
 
-    input.put("seedNodes", seedNodes.stream().map(n -> {
-      Map<String, Object> node = new HashMap<>();
-      node.put("address", n.address());
-      n.kvPort().ifPresent(p -> node.put("kvPort", p));
-      n.httpPort().ifPresent(p -> node.put("httpPort", p));
-      return node;
-    }).collect(Collectors.toList()));
-
     input.put("ioEnvironment", ioEnvironment.exportAsMap());
     input.put("ioConfig", ioConfig.exportAsMap());
     input.put("compressionConfig", compressionConfig.exportAsMap());
@@ -444,7 +413,6 @@ public class CoreEnvironment {
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
 
-    private Set<SeedNode> seedNodes = null;
     private RetryStrategy retryStrategy;
 
     protected Builder() { }
@@ -527,16 +495,6 @@ public class CoreEnvironment {
     @Stability.Uncommitted
     public SELF scheduler(final Scheduler scheduler) {
       this.scheduler = new ExternalSupplier<>(scheduler);
-      return self();
-    }
-
-    public SELF seedNodes(final Set<SeedNode> seedNodes) {
-      this.seedNodes = seedNodes;
-      return self();
-    }
-
-    public SELF seedNodes(SeedNode... seedNodes) {
-      this.seedNodes = new HashSet<>(Arrays.asList(seedNodes));
       return self();
     }
 

@@ -48,9 +48,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the builder, ready to be further modified or used directly.
    */
   protected static ClusterEnvironment.Builder environment() {
-    return ClusterEnvironment
-      .builder()
-      .seedNodes(seedNodes());
+    return ClusterEnvironment.builder();
   }
 
   /**
@@ -59,7 +57,13 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the connection string to connect.
    */
   protected static String connectionString() {
-    return seedNodes().stream().map(SeedNode::address).collect(Collectors.joining(","));
+    return seedNodes().stream().map(s -> {
+      if (s.kvPort().isPresent()) {
+        return s.address() + ":" + s.kvPort().get();
+      } else {
+        return s.address();
+      }
+    }).collect(Collectors.joining(","));
   }
 
   /**

@@ -19,15 +19,17 @@ package com.couchbase.client.core.io.netty.search;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.channel.*;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
-import com.couchbase.client.core.deps.io.netty.util.Attribute;
-import com.couchbase.client.core.deps.io.netty.util.AttributeKey;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpResponse;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultLastHttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.EventExecutor;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -37,22 +39,22 @@ import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.result.SearchResult;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Mocks out the search code to allow doing unit tests against the search service.
@@ -99,7 +101,7 @@ public class SearchMock {
 
         // Fake some core stuff
         Core mockedCore = mock(Core.class);
-        CoreEnvironment env = CoreEnvironment.create("localhost");
+        CoreEnvironment env = CoreEnvironment.create();
         CoreContext ctx = new CoreContext(mockedCore, 0, env, PasswordAuthenticator.create("Administrator", "password"));
 
         // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest

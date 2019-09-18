@@ -41,7 +41,7 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment().build();
-    core = Core.create(env, authenticator());
+    core = Core.create(env, authenticator(), seedNodes());
 
     core.initGlobalConfig().block();
   }

@@ -48,7 +48,7 @@ class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment().build();
-    core = Core.create(env, authenticator());
+    core = Core.create(env, authenticator(), seedNodes());
   }
 
   @AfterEach
@@ -116,12 +116,12 @@ class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
   /**
    * Extends the config provider to allow for introspection on the proposed global configs.
    */
-  class GlobalConfigCountingConfigurationProvider extends DefaultConfigurationProvider {
+  static class GlobalConfigCountingConfigurationProvider extends DefaultConfigurationProvider {
 
     private final List<ProposedGlobalConfigContext> proposedConfigs;
 
     GlobalConfigCountingConfigurationProvider(final Core core) {
-      super(core);
+      super(core, GlobalBucketRefresherIntegrationTest.seedNodes());
       this.proposedConfigs = Collections.synchronizedList(new ArrayList<>());
     }
 

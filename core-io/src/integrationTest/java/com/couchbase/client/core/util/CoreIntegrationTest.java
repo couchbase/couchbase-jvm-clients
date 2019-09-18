@@ -48,15 +48,15 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
    * set.
    */
   protected static CoreEnvironment.Builder environment() {
-    Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
+    return CoreEnvironment.builder();
+  }
+
+  protected static Set<SeedNode> seedNodes() {
+    return config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV)),
       Optional.of(cfg.ports().get(Services.MANAGER))
     )).collect(Collectors.toSet());
-
-    return CoreEnvironment
-      .builder()
-      .seedNodes(seeds);
   }
 
   protected static Authenticator authenticator() {

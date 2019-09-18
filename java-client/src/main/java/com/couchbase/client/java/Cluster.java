@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -37,9 +38,11 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
+import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
@@ -96,7 +99,9 @@ public class Cluster {
    */
   public static Cluster connect(final String connectionString, final ClusterOptions options) {
     ClusterOptions.Built opts = options.build();
-    Cluster cluster = new Cluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
+    Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+    Cluster cluster = new Cluster(environmentSupplier, opts.authenticator(), seedNodes);
     cluster.async().performGlobalConnect().block();
     return cluster;
   }
@@ -106,8 +111,8 @@ public class Cluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
-    this.asyncCluster = new AsyncCluster(environment, authenticator);
+  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
+    this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());

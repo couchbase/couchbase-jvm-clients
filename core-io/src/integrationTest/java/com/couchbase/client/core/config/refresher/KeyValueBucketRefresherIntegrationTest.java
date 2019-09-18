@@ -60,7 +60,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void pollsForNewConfigs() {
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), seedNodes());
 
     ProposedBucketConfigInspectingProvider inspectingProvider =
       new ProposedBucketConfigInspectingProvider(core.configurationProvider());

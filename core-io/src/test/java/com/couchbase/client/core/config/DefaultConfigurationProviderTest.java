@@ -28,7 +28,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.test.Util.readResource;
@@ -63,7 +66,7 @@ class DefaultConfigurationProviderTest {
     CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -95,7 +98,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -123,7 +126,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -156,7 +159,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -194,7 +197,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
 
     String newConfig = readResource(
       "global_config_mad_hatter_multi_node.json",
@@ -214,12 +217,13 @@ class DefaultConfigurationProviderTest {
   @Test
   void externalModeSelectedIfAuto() {
     Core core = mock(Core.class);
-    CoreEnvironment environment = CoreEnvironment.create("192.168.132.234");
+    CoreEnvironment environment = CoreEnvironment.create();
 
     CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
     when(core.context()).thenReturn(ctx);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("192.168.132.234")));
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -242,14 +246,15 @@ class DefaultConfigurationProviderTest {
   void forceDefaultModeIfDefault() {
     Core core = mock(Core.class);
     CoreEnvironment environment = CoreEnvironment
-      .builder("192.168.132.234")
+      .builder()
       .ioConfig(IoConfig.networkResolution(NetworkResolution.DEFAULT))
       .build();
 
     CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
     when(core.context()).thenReturn(ctx);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("192.168.132.234")));
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());

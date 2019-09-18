@@ -46,22 +46,6 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
 
   @Override
   public void load(final CoreEnvironment.Builder builder) {
-    if (builder.ioConfig().dnsSrvEnabled() && connectionString.isValidDnsSrv()) {
-      boolean isEncrypted = connectionString.scheme() == ConnectionString.Scheme.COUCHBASES;
-      String dnsHostname = connectionString.hosts().get(0).hostname();
-      try {
-        List<String> foundNodes = DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname);
-        if (foundNodes.isEmpty()) {
-          throw new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!");
-        }
-        builder.seedNodes(foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet()));
-      } catch (Exception ex) {
-        builder.seedNodes(populateSeedsFromConnectionString());
-      }
-    } else {
-      builder.seedNodes(populateSeedsFromConnectionString());
-    }
-
     for (Map.Entry<String, String> entry : connectionString.params().entrySet()) {
       try {
         setter.set(builder, entry.getKey(), entry.getValue());
@@ -72,16 +56,6 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
     }
   }
 
-  private Set<SeedNode> populateSeedsFromConnectionString() {
-    return connectionString
-      .hosts()
-      .stream()
-      .map(a -> SeedNode.create(
-        a.hostname(),
-        a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
-        Optional.empty()
-      ))
-      .collect(Collectors.toSet());
-  }
+
 
 }

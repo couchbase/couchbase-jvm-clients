@@ -124,10 +124,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param core the core against which all ops are executed.
    */
-  public DefaultConfigurationProvider(final Core core) {
+  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
-    seedNodes = new AtomicReference<>(new HashSet<>(core.context().environment().seedNodes()));
+    this.seedNodes = new AtomicReference<>(seedNodes);
 
     keyValueLoader = new KeyValueBucketLoader(core);
     clusterManagerLoader = new ClusterManagerBucketLoader(core);

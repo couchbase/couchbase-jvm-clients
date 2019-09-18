@@ -19,8 +19,8 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -39,9 +39,11 @@ import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
+import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
@@ -81,7 +83,9 @@ public class ReactiveCluster {
   public static Mono<ReactiveCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
       ClusterOptions.Built opts = options.build();
-      ReactiveCluster cluster = new ReactiveCluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
+      Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+      Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+      ReactiveCluster cluster = new ReactiveCluster(environmentSupplier, opts.authenticator(), seedNodes);
       return cluster.asyncCluster.performGlobalConnect().then(Mono.just(cluster));
     });
   }
@@ -91,8 +95,8 @@ public class ReactiveCluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
-    this(new AsyncCluster(environment, authenticator));
+  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
+    this(new AsyncCluster(environment, authenticator, seedNodes));
   }
 
   /**

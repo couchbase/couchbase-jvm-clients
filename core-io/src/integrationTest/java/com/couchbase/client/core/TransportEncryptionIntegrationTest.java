@@ -69,13 +69,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
    * @return a core environment, set up for encrypted networking.
    */
   private CoreEnvironment secureEnvironment(final SecurityConfig.Builder config, EventBus customEventBus) {
-    Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
-      cfg.hostname(),
-      Optional.of(cfg.ports().get(Services.KV_TLS)),
-      Optional.of(cfg.ports().get(Services.MANAGER_TLS))
-    )).collect(Collectors.toSet());
-
-    CoreEnvironment.Builder builder = environment().securityConfig(config).seedNodes(seeds);
+    CoreEnvironment.Builder builder = environment().securityConfig(config);
 
     if (customEventBus != null) {
       builder.eventBus(customEventBus);
@@ -84,13 +78,23 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     return builder.build();
   }
 
+  private Set<SeedNode> secureSeeds() {
+    return config().nodes().stream().map(cfg -> SeedNode.create(
+      cfg.hostname(),
+      Optional.of(cfg.ports().get(Services.KV_TLS)),
+      Optional.of(cfg.ports().get(Services.MANAGER_TLS))
+    )).collect(Collectors.toSet());
+  }
+
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueIgnoringServerCert() throws Exception {
+
+
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname()).block();
 
     try {
@@ -128,7 +132,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname()).block();
 
     try {
@@ -179,7 +183,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .tlsEnabled(true)
       .trustCertificates(mock(List.class)), eventBus);
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), secureSeeds());
 
     try {
       // Todo: this must not throw, but the op underneath timeout! .. also assert based

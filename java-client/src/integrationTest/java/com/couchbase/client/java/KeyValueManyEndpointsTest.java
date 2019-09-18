@@ -34,12 +34,8 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    ServiceConfig.Builder serviceConfig = ServiceConfig
-      .keyValueServiceConfig(KeyValueServiceConfig.builder().endpoints(8));
-
-    environment = environment()
-      .serviceConfig(serviceConfig)
-      .build();
+    ServiceConfig.Builder serviceConfig = ServiceConfig.keyValueServiceConfig(KeyValueServiceConfig.builder().endpoints(8));
+    environment = environment().serviceConfig(serviceConfig).build();
     cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

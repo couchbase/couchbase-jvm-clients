@@ -79,12 +79,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     )));
 
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
   }
@@ -105,12 +104,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     ));
 
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
   }
@@ -131,12 +129,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     ));
 
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
   }
@@ -154,17 +151,16 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(100))
         .managementTimeout(Duration.ofMillis(100))
       )
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
 
     long start = System.nanoTime();
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
@@ -187,16 +183,15 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     )));
 
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofMillis(500))
         .managementTimeout(Duration.ofMillis(500))
       )
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
 
     long start = System.nanoTime();
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
@@ -219,16 +214,15 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     )));
 
     environment = CoreEnvironment.builder()
-      .seedNodes(seeds)
       .timeoutConfig(TimeoutConfig
         .kvTimeout(Duration.ofSeconds(1))
         .managementTimeout(Duration.ofSeconds(1))
       )
       .build();
-    core = Core.create(environment, authenticator());
+    core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core);
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
 
     AtomicInteger configEvents = new AtomicInteger(0);
     CountDownLatch configsComplete = new CountDownLatch(1);

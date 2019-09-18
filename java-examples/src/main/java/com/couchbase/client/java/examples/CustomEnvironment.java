@@ -47,7 +47,7 @@ public class CustomEnvironment {
          * one! It will shut down fine but you risk prematurely terminating outstanding operations.
          */
         ClusterEnvironment environment = ClusterEnvironment
-                .builder("127.0.0.1")
+                .builder()
                 .timeoutConfig(TimeoutConfig.kvTimeout(Duration.ofSeconds(2)))
                 .build();
         Cluster cluster = Cluster.connect("127.0.0.1", clusterOptions("Administrator", "password").environment(environment));

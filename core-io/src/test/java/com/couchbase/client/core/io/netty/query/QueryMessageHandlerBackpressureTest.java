@@ -44,6 +44,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -81,7 +82,7 @@ class QueryMessageHandlerBackpressureTest {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
     environment = CoreEnvironment.create();
-    core = Core.create(environment, PasswordAuthenticator.create("admin", "password"));
+    core = Core.create(environment, PasswordAuthenticator.create("admin", "password"), SeedNode.DEFAULT);
   }
 
   @AfterEach

@@ -35,6 +35,7 @@ import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -160,14 +161,16 @@ public class Core {
    */
   private final Timer timer;
 
+  private final Set<SeedNode> seedNodes;
+
   /**
    * Creates a new {@link Core} with the given environment.
    *
    * @param environment the environment for this core.
    * @return the created {@link Core}.
    */
-  public static Core create(final CoreEnvironment environment, final Authenticator authenticator) {
-    return new Core(environment, authenticator);
+  public static Core create(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
+    return new Core(environment, authenticator, seedNodes);
   }
 
   /**
@@ -175,7 +178,8 @@ public class Core {
    *
    * @param environment the environment for this core.
    */
-  protected Core(final CoreEnvironment environment, final Authenticator authenticator) {
+  protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
+    this.seedNodes = seedNodes;
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -196,7 +200,7 @@ public class Core {
    * @return by default returns the default config provider.
    */
   ConfigurationProvider createConfigurationProvider() {
-    return new DefaultConfigurationProvider(this);
+    return new DefaultConfigurationProvider(this, seedNodes);
   }
 
   /**

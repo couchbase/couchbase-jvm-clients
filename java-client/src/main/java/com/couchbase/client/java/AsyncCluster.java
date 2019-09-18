@@ -19,12 +19,16 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.DnsSrv;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -46,8 +50,12 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -113,20 +121,56 @@ public class AsyncCluster {
   public static CompletableFuture<AsyncCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
       ClusterOptions.Built opts = options.build();
-      AsyncCluster cluster = new AsyncCluster(extractClusterEnvironment(connectionString, opts), opts.authenticator());
+      Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+      Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+      AsyncCluster cluster = new AsyncCluster(environmentSupplier, opts.authenticator(), seedNodes);
       return cluster.performGlobalConnect().then(Mono.just(cluster));
     }).toFuture();
   }
 
-  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString,
-                                                                final ClusterOptions.Built opts) {
+  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString, final ClusterOptions.Built opts) {
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
-      envSupplier = new OwnedSupplier<>(ClusterEnvironment.create(connectionString));
+      envSupplier = new OwnedSupplier<>(ClusterEnvironment
+        .builder()
+        .load(new ConnectionStringPropertyLoader(connectionString))
+        .build());
     } else {
       envSupplier = opts::environment;
     }
     return envSupplier;
+  }
+
+  static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment environment) {
+    final ConnectionString connectionString = ConnectionString.create(cs);
+
+    if (environment.ioConfig().dnsSrvEnabled() && connectionString.isValidDnsSrv()) {
+      boolean isEncrypted = connectionString.scheme() == ConnectionString.Scheme.COUCHBASES;
+      String dnsHostname = connectionString.hosts().get(0).hostname();
+      try {
+        List<String> foundNodes = DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname);
+        if (foundNodes.isEmpty()) {
+          throw new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!");
+        }
+        return foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet());
+      } catch (Exception ex) {
+        return populateSeedsFromConnectionString(connectionString);
+      }
+    } else {
+      return populateSeedsFromConnectionString(connectionString);
+    }
+  }
+
+  private static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
+    return connectionString
+      .hosts()
+      .stream()
+      .map(a -> SeedNode.create(
+        a.hostname(),
+        a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
+        Optional.empty()
+      ))
+      .collect(Collectors.toSet());
   }
 
   /**
@@ -143,9 +187,9 @@ public class AsyncCluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator) {
+  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
     this.environment = environment;
-    this.core = Core.create(environment.get(), authenticator);
+    this.core = Core.create(environment.get(), authenticator, seedNodes);
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.queryAccessor = new QueryAccessor(core);
     this.userManager = new AsyncUserManager(core);

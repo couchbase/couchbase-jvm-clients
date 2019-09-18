@@ -1,9 +1,16 @@
 package com.couchbase.client.core.env;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class SeedNode {
+
+  public static final Set<SeedNode> DEFAULT = new HashSet<>(Collections.singletonList(
+    SeedNode.create("127.0.0.1")
+  ));
 
   private final String address;
 

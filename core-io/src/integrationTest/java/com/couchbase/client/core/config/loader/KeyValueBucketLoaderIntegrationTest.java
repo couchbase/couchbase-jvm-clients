@@ -57,7 +57,7 @@ class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
   void loadConfigViaCarrierPublication() {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), seedNodes());
     KeyValueBucketLoader loader = new KeyValueBucketLoader(core);
     ProposedBucketConfigContext loaded = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),

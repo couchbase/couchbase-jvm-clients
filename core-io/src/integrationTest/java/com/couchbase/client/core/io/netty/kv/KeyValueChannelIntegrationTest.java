@@ -66,7 +66,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
     env = environment().build();
 
-    Core core = Core.create(env, authenticator());
+    Core core = Core.create(env, authenticator(), seedNodes());
     endpointContext = new EndpointContext(
       core.context(),
       node.hostname(),

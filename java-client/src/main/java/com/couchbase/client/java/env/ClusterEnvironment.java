@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.env;
 
-import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.codec.DefaultTranscoder;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -41,22 +40,13 @@ public class ClusterEnvironment extends CoreEnvironment {
     return "java";
   }
 
-  public static ClusterEnvironment create(final String connectionString) {
-    return builder(connectionString).build();
-  }
-
   public static ClusterEnvironment create() {
     return builder().build();
-  }
-
-  public static ClusterEnvironment.Builder builder(final String connectionString) {
-    return builder().load(new ConnectionStringPropertyLoader(connectionString));
   }
 
   public static ClusterEnvironment.Builder builder() {
     return new Builder();
   }
-
 
   /**
    * Returns the default transcoder used for all operations if not overridden on a per-operation basis.
