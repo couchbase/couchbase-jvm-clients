@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -49,7 +50,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     collections = cluster.bucket(config().bucketname()).collections();
   }
 

@@ -18,7 +18,6 @@ package com.couchbase.client.java.datastructures;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -37,9 +36,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class CouchbaseMapTest extends JavaIntegrationTest {
+class CouchbaseMapTest extends JavaIntegrationTest {
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection collection;
     private static MapOptions options;
 
@@ -47,8 +45,7 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = MapOptions.mapOptions();
     }
@@ -56,7 +53,6 @@ public class CouchbaseMapTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
 
     @BeforeEach

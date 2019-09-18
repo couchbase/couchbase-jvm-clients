@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -75,13 +74,11 @@ class SearchIntegrationTest extends JavaIntegrationTest {
       "}";
 
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection collection;
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
@@ -95,7 +92,6 @@ class SearchIntegrationTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
 
     @Test

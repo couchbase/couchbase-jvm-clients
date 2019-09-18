@@ -52,6 +52,7 @@ import java.util.function.Supplier;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
@@ -97,36 +98,33 @@ public class AsyncCluster {
    */
   public static CompletableFuture<AsyncCluster> connect(final String connectionString, final String username,
                                                         final String password) {
-    return connect(connectionString, PasswordAuthenticator.create(username, password));
+    return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
   /**
    * Connect to a Couchbase cluster with custom {@link Authenticator}.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param authenticator custom credentials used when connecting to the cluster.
+   * @param options custom options when creating the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final Authenticator authenticator) {
+  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
-      AsyncCluster cluster = new AsyncCluster(new OwnedSupplier<>(
-        ClusterEnvironment.create(connectionString, authenticator)
-      ));
+      ClusterOptions.Built opts = options.build();
+      AsyncCluster cluster = new AsyncCluster(extractClusterEnvironment(connectionString, opts));
       return cluster.performGlobalConnect().then(Mono.just(cluster));
     }).toFuture();
   }
 
-  /**
-   * Connect to a Couchbase cluster with a custom {@link ClusterEnvironment}.
-   *
-   * @param environment the custom environment with its properties used to connect to the cluster.
-   * @return if properly connected, returns a {@link AsyncCluster}.
-   */
-  public static CompletableFuture<AsyncCluster> connect(final ClusterEnvironment environment) {
-    return Mono.defer(() -> {
-      AsyncCluster cluster = new AsyncCluster(() -> environment);
-      return cluster.performGlobalConnect().then(Mono.just(cluster));
-    }).toFuture();
+  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString,
+                                                                final ClusterOptions.Built opts) {
+    Supplier<ClusterEnvironment> envSupplier;
+    if (opts.environment() == null) {
+      envSupplier = new OwnedSupplier<>(ClusterEnvironment.create(connectionString, opts.authenticator()));
+    } else {
+      envSupplier = opts::environment;
+    }
+    return envSupplier;
   }
 
   /**

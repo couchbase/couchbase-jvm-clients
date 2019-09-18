@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -34,18 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ClusterLevelQueryIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
   }
 
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @Test

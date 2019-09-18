@@ -20,7 +20,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -62,14 +61,12 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   private static final String index = "myIndex";
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static AnalyticsIndexManager analytics;
   private static Bucket bucket;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
   }
@@ -77,7 +74,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @BeforeEach

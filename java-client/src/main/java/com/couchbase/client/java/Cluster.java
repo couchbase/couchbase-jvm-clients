@@ -39,7 +39,9 @@ import com.couchbase.client.java.search.result.SearchResult;
 import java.time.Duration;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
@@ -82,32 +84,19 @@ public class Cluster {
    * @return if properly connected, returns a {@link Cluster}.
    */
   public static Cluster connect(final String connectionString, final String username, final String password) {
-    return connect(connectionString, PasswordAuthenticator.create(username, password));
+    return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
   /**
    * Connect to a Couchbase cluster with custom {@link Authenticator}.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param authenticator custom credentials used when connecting to the cluster.
+   * @param options custom options when creating the cluster.
    * @return if properly connected, returns a {@link Cluster}.
    */
-  public static Cluster connect(final String connectionString, final Authenticator authenticator) {
-    Cluster cluster = new Cluster(new OwnedSupplier<>(
-      ClusterEnvironment.create(connectionString, authenticator)
-    ));
-    cluster.async().performGlobalConnect().block();
-    return cluster;
-  }
-
-  /**
-   * Connect to a Couchbase cluster with a custom {@link ClusterEnvironment}.
-   *
-   * @param environment the custom environment with its properties used to connect to the cluster.
-   * @return if properly connected, returns a {@link Cluster}.
-   */
-  public static Cluster connect(final ClusterEnvironment environment) {
-    Cluster cluster = new Cluster(() -> environment);
+  public static Cluster connect(final String connectionString, final ClusterOptions options) {
+    ClusterOptions.Built opts = options.build();
+    Cluster cluster = new Cluster(extractClusterEnvironment(connectionString, opts));
     cluster.async().performGlobalConnect().block();
     return cluster;
   }

@@ -19,7 +19,6 @@ package com.couchbase.client.java.manager.view;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -43,14 +42,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ViewManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
 
   private static ViewIndexManager views;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     views = bucket.viewIndexes();
   }
@@ -58,7 +55,6 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @AfterEach

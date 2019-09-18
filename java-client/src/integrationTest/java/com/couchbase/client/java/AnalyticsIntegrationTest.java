@@ -20,7 +20,6 @@ import com.couchbase.client.java.analytics.AnalyticsMetaData;
 import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -41,19 +40,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         cluster.bucket(config().bucketname());
     }
 
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
 
     @Test

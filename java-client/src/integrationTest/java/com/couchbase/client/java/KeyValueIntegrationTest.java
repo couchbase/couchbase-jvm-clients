@@ -22,7 +22,6 @@ import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.DataFormat;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -65,13 +64,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
-  static private ClusterEnvironment environment;
   static private Collection collection;
 
   @BeforeAll
   static void beforeAll() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
@@ -79,7 +76,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @Test

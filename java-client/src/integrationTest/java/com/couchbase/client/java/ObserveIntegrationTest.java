@@ -41,13 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ObserveIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static Collection collection;
 
   @BeforeAll
   static void beforeAll() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
@@ -55,7 +53,6 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @Test
@@ -139,7 +136,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     ClusterEnvironment environment = environment()
       .ioConfig(IoConfig.mutationTokensEnabled(false))
       .build();
-    Cluster cluster = Cluster.connect(environment);
+    Cluster cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 

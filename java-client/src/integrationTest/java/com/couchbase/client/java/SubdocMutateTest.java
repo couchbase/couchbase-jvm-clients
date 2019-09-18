@@ -52,13 +52,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 class SubdocMutateTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection coll;
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
         coll = bucket.defaultCollection();
     }
@@ -66,7 +64,6 @@ class SubdocMutateTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
 
 

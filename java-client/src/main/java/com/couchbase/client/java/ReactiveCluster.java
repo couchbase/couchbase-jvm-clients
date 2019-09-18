@@ -41,6 +41,8 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
+import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
@@ -66,35 +68,20 @@ public class ReactiveCluster {
    */
   public static Mono<ReactiveCluster> connect(final String connectionString, final String username,
                                         final String password) {
-    return connect(connectionString, PasswordAuthenticator.create(username, password));
+    return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
   /**
    * Connect to a Couchbase cluster with custom {@link Authenticator}.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param authenticator custom credentials used when connecting to the cluster.
+   * @param options custom options when creating the cluster.
    * @return if properly connected, returns a {@link ReactiveCluster}.
    */
-  public static Mono<ReactiveCluster> connect(final String connectionString,
-                                        final Authenticator authenticator) {
+  public static Mono<ReactiveCluster> connect(final String connectionString, final ClusterOptions options) {
     return Mono.defer(() -> {
-      ReactiveCluster cluster = new ReactiveCluster(new OwnedSupplier<>(
-        ClusterEnvironment.create(connectionString, authenticator)
-      ));
-      return cluster.asyncCluster.performGlobalConnect().then(Mono.just(cluster));
-    });
-  }
-
-  /**
-   * Connect to a Couchbase cluster with a custom {@link ClusterEnvironment}.
-   *
-   * @param environment the custom environment with its properties used to connect to the cluster.
-   * @return if properly connected, returns a {@link ReactiveCluster}.
-   */
-  public static Mono<ReactiveCluster> connect(final ClusterEnvironment environment) {
-    return Mono.defer(() -> {
-      ReactiveCluster cluster = new ReactiveCluster(() -> environment);
+      ClusterOptions.Built opts = options.build();
+      ReactiveCluster cluster = new ReactiveCluster(extractClusterEnvironment(connectionString, opts));
       return cluster.asyncCluster.performGlobalConnect().then(Mono.just(cluster));
     });
   }

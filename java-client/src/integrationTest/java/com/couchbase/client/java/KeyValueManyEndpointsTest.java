@@ -40,7 +40,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
     environment = environment()
       .serviceConfig(serviceConfig)
       .build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }

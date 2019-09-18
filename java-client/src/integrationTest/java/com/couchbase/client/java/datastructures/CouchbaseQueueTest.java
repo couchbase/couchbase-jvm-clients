@@ -18,7 +18,6 @@ package com.couchbase.client.java.datastructures;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -38,7 +37,6 @@ import static org.junit.Assert.assertNull;
 
 class CouchbaseQueueTest extends JavaIntegrationTest {
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection collection;
     private static QueueOptions options;
 
@@ -46,8 +44,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = QueueOptions.queueOptions();
     }
@@ -55,7 +52,6 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
 
     @BeforeEach

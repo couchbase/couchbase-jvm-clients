@@ -17,18 +17,14 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,13 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static Collection collection;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
@@ -63,7 +57,6 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   /**
@@ -136,7 +129,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   )
   void ignoresErrorsOnNonAvailableReplicasInAllMode() throws Exception {
     final AtomicReference<IndividualReplicaGetFailedEvent> ev = new AtomicReference<>();
-    environment.eventBus().subscribe(event -> {
+    cluster.environment().eventBus().subscribe(event -> {
       if (event instanceof IndividualReplicaGetFailedEvent) {
         ev.set((IndividualReplicaGetFailedEvent) event);
       }

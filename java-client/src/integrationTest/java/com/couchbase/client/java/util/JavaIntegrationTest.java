@@ -16,8 +16,11 @@
 
 package com.couchbase.client.java.util;
 
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -45,15 +48,41 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the builder, ready to be further modified or used directly.
    */
   protected static ClusterEnvironment.Builder environment() {
-    Set<SeedNode> seeds = config().nodes().stream().map(cfg -> SeedNode.create(
+    return ClusterEnvironment
+      .builder(config().adminUsername(), config().adminPassword())
+      .seedNodes(seedNodes());
+  }
+
+  /**
+   * Creates the right connection string out of the seed nodes in the config.
+   *
+   * @return the connection string to connect.
+   */
+  protected static String connectionString() {
+    return seedNodes().stream().map(SeedNode::address).collect(Collectors.joining(","));
+  }
+
+  /**
+   * Returns the pre-set cluster options with the environment and authenticator configured.
+   *
+   * @return the cluster options ready to be used.
+   */
+  protected static ClusterOptions clusterOptions() {
+    return ClusterOptions
+      .clusterOptions(authenticator())
+      .environment(environment().build());
+  }
+
+  protected static Authenticator authenticator() {
+    return PasswordAuthenticator.create(config().adminUsername(), config().adminPassword());
+  }
+
+  private static Set<SeedNode> seedNodes() {
+    return config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV)),
       Optional.of(cfg.ports().get(Services.MANAGER))
     )).collect(Collectors.toSet());
-
-    return ClusterEnvironment
-      .builder(config().adminUsername(), config().adminPassword())
-      .seedNodes(seeds);
   }
 
   /**

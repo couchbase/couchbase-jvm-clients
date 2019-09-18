@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.CASMismatchException;
 import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.env.ClusterEnvironment;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -43,13 +42,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class SubdocIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static Collection collection;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }
@@ -57,7 +54,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @Test

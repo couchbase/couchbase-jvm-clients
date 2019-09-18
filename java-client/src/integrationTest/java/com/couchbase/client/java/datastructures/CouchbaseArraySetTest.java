@@ -18,10 +18,8 @@ package com.couchbase.client.java.datastructures;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ArraySetOptions;
-import com.couchbase.client.java.kv.CommonDatastructureOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -40,9 +38,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class CouchbaseArraySetTest extends JavaIntegrationTest {
+class CouchbaseArraySetTest extends JavaIntegrationTest {
+
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection collection;
     private static ArraySetOptions options;
 
@@ -50,8 +48,7 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        environment = environment().build();
-        cluster = Cluster.connect(environment);
+        cluster = Cluster.connect(connectionString(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = ArraySetOptions.arraySetOptions();
     }
@@ -59,8 +56,8 @@ public class CouchbaseArraySetTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.shutdown();
-        environment.shutdown();
     }
+
     @BeforeEach
     void before() {
         uuid = UUID.randomUUID().toString();

@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -52,7 +53,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     cluster.bucket(config().bucketname());
     buckets = cluster.buckets();
   }

@@ -59,15 +59,13 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   private static final Duration watchTimeout = Duration.ofSeconds(15);
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
 
   private static QueryIndexManager indexes;
   private static String bucketName;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     bucketName = config().bucketname();
     indexes = cluster.queryIndexes();
 
@@ -78,7 +76,6 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @BeforeEach

@@ -18,7 +18,6 @@ package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -56,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
 
   private static UserManager users;
 
@@ -68,8 +66,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     cluster.bucket(config().bucketname());
     users = cluster.users();
   }
@@ -77,7 +74,6 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @AfterEach

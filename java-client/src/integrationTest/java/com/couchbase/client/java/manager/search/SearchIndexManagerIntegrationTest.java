@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -38,14 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
 
   private static SearchIndexManager indexes;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     cluster.bucket(config().bucketname());
     indexes = cluster.searchIndexes();
   }
@@ -53,7 +50,6 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.shutdown();
-    environment.shutdown();
   }
 
   @Test

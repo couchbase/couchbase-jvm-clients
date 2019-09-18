@@ -59,7 +59,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     environment = environment()
       .ioConfig(IoConfig.mutationTokensEnabled(true))
       .build();
-    cluster = Cluster.connect(environment);
+    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
