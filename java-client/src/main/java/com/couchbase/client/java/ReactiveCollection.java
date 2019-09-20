@@ -621,7 +621,7 @@ public class ReactiveCollection {
       SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, options);
       return Reactor.wrap(
         request,
-        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.insertDocument(), environment().jsonSerializer()),
+        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.insert(), environment().jsonSerializer()),
         true
       );
     });

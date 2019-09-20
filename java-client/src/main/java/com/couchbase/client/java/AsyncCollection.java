@@ -987,7 +987,7 @@ public class AsyncCollection {
       id,
       opts.persistTo(),
       opts.replicateTo(),
-      opts.insertDocument(),
+      opts.insert(),
       environment.jsonSerializer()
     );
   }
@@ -1021,7 +1021,7 @@ public class AsyncCollection {
         .collect(Collectors.toList());
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        opts.insertDocument(), opts.upsertDocument(),
+        opts.insert(), opts.upsert(),
         commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );

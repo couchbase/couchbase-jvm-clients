@@ -24,8 +24,8 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
   private Duration expiry = Duration.ZERO;
   private long cas = 0;
-  private boolean insertDocument = false;
-  private boolean upsertDocument = false;
+  private boolean insert = false;
+  private boolean upsert = false;
 
   public static MutateInOptions mutateInOptions() {
     return new MutateInOptions();
@@ -44,13 +44,29 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     return this;
   }
 
+  // TODO this can be removed when transactions no longer depends on it
+  @Deprecated
+  @Stability.Internal
   public MutateInOptions insertDocument(boolean insertDocument) {
-    this.insertDocument = insertDocument;
+    this.insert = insertDocument;
     return this;
   }
 
+  // TODO this can be removed when transactions no longer depends on it
+  @Deprecated
+  @Stability.Internal
   public MutateInOptions upsertDocument(boolean upsertDocument) {
-    this.upsertDocument = upsertDocument;
+    this.upsert = upsertDocument;
+    return this;
+  }
+
+  public MutateInOptions insert(boolean insert) {
+    this.insert = insert;
+    return this;
+  }
+
+  public MutateInOptions upsert(boolean upsert) {
+    this.upsert = upsert;
     return this;
   }
 
@@ -69,12 +85,12 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
       return cas;
     }
 
-    public boolean insertDocument() {
-      return insertDocument;
+    public boolean insert() {
+      return insert;
     }
 
-    public boolean upsertDocument() {
-      return upsertDocument;
+    public boolean upsert() {
+      return upsert;
     }
   }
 
