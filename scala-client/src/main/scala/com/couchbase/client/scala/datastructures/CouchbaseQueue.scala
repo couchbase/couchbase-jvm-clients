@@ -23,6 +23,9 @@ import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import scala.util.{Failure, Success}
 
 
+/** Presents a Scala Queue interface on top of a mutable persistent data structure, in the form of a document stored
+  * on the cluster.
+  */
 class CouchbaseQueue[T](id: String,
                         collection: Collection,
                         options: Option[CouchbaseCollectionOptions] = None)

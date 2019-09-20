@@ -51,7 +51,7 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
     coll.remove(docId)
   }
 
-  private def makeCollection = new CouchbaseMap[Int](docId, coll)
+  private def makeCollection = coll.map[Int](docId)
 
   @Test
   def exists(): Unit = {

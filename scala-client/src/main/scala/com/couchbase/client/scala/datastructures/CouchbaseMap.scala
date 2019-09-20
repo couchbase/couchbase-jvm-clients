@@ -26,6 +26,9 @@ import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+/** Presents a Scala Map interface on top of a mutable persistent data structure, in the form of a document stored
+  * on the cluster.
+  */
 class CouchbaseMap[T](id: String,
                       collection: Collection,
                       options: Option[CouchbaseCollectionOptions] = None)

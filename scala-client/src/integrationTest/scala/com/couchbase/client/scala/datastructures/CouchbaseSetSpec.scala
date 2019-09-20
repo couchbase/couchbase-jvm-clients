@@ -52,7 +52,7 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
     coll.remove(docId)
   }
 
-  private def makeCollection = new CouchbaseSet[Int](docId, coll)
+  private def makeCollection = coll.set[Int](docId)
 
   @Test
   def append(): Unit = {

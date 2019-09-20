@@ -52,7 +52,7 @@ class CouchbaseBufferSpec extends ScalaIntegrationTest {
     coll.remove(docId)
   }
 
-  private def makeCollection = new CouchbaseBuffer[Int](docId, coll)
+  private def makeCollection = coll.buffer[Int](docId)
 
   @Test
   def prepend(): Unit = {

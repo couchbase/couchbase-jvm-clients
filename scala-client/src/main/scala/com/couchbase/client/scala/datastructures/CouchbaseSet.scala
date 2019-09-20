@@ -27,6 +27,9 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 
+/** Presents a Scala Set interface on top of a mutable persistent data structure, in the form of a document stored
+  * on the cluster.
+  */
 class CouchbaseSet[T](id: String,
                       collection: Collection,
                       options: Option[CouchbaseCollectionOptions] = None)

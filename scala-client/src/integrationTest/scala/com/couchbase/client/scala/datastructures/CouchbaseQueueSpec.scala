@@ -51,7 +51,7 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
     coll.remove(docId)
   }
 
-  private def makeCollection = new CouchbaseQueue[Int](docId, coll)
+  private def makeCollection = coll.queue[Int](docId)
 
   @Test
   def prepend(): Unit = {

@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
@@ -465,6 +466,54 @@ class Collection(
                  retryStrategy: RetryStrategy = retryStrategy
                ): Try[ExistsResult] =
     block(async.exists(id, timeout, retryStrategy), timeout)
+
+  /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
+  def buffer[T](id: String,
+                options: Option[CouchbaseCollectionOptions] = None)
+               (implicit decode: Conversions.Decodable[T],
+                encode: Conversions.Encodable[T]): CouchbaseBuffer[T] = {
+    new CouchbaseBuffer[T](id, this)
+  }
+
+  /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseSet]] backed by this collection.
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
+  def set[T](id: String,
+                options: Option[CouchbaseCollectionOptions] = None)
+               (implicit decode: Conversions.Decodable[T],
+                encode: Conversions.Encodable[T]): CouchbaseSet[T] = {
+    new CouchbaseSet[T](id, this)
+  }
+
+  /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseMap]] backed by this collection.
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
+  def map[T](id: String,
+                options: Option[CouchbaseCollectionOptions] = None)
+               (implicit decode: Conversions.Decodable[T],
+                encode: Conversions.Encodable[T]): CouchbaseMap[T] = {
+    new CouchbaseMap[T](id, this)
+  }
+
+  /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseQueue]] backed by this collection.
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
+  def queue[T](id: String,
+                options: Option[CouchbaseCollectionOptions] = None)
+               (implicit decode: Conversions.Decodable[T],
+                encode: Conversions.Encodable[T]): CouchbaseQueue[T] = {
+    new CouchbaseQueue[T](id, this)
+  }
 }
 
 
