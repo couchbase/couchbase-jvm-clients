@@ -11,16 +11,12 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class MutationTokensSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = null
-  private var cluster: Cluster = null
-  private var coll: Collection = null
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment.ioConfig(IoConfig().mutationTokensEnabled(true))
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -29,7 +25,6 @@ class MutationTokensSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

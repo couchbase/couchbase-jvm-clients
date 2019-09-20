@@ -16,13 +16,12 @@ import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
 class AsyncKeyValueSpec extends ScalaIntegrationTest {
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var blocking: Collection = _
   private var coll: AsyncCollection = _
 
   // All async operations, including onComplete, map, flatMap, require an ec
-  val threadPool = Executors.newCachedThreadPool(new ThreadFactory {
+  private val threadPool = Executors.newCachedThreadPool(new ThreadFactory {
     override def newThread(runnable: Runnable): Thread = {
       val thread = new Thread(runnable)
       // Make it a daemon thread so it doesn't block app exit
@@ -31,14 +30,11 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
       thread
     }
   })
-  implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  private implicit val ec = ExecutionContext.fromExecutor(threadPool)
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.async

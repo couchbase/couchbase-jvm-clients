@@ -12,16 +12,12 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class BinarySpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: BinaryCollection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection.binary
   }
@@ -29,7 +25,6 @@ class BinarySpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

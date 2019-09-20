@@ -13,7 +13,6 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class GetFromReplicaSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: Collection = _
   private var reactive: ReactiveCollection = _
@@ -21,10 +20,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment.ioConfig(IoConfig().mutationTokensEnabled(true))
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     reactive = coll.reactive
@@ -34,7 +30,6 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

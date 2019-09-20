@@ -16,10 +16,12 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.Authenticator
+import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
+import com.couchbase.client.scala.Cluster.connect
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
@@ -33,7 +35,7 @@ import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -210,13 +212,7 @@ object ReactiveCluster {
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): ScalaMono[ReactiveCluster] = {
-    Cluster.connect(connectionString, username, password) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
-
-        ScalaMono.just(new ReactiveCluster(cluster.async))
-      case Failure(err) => ScalaMono.error(err)
-    }
+    connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
   /** Connect to a Couchbase cluster with custom `com.couchbase.client.core.env.Credentials`.
@@ -224,33 +220,18 @@ object ReactiveCluster {
     * $DeferredErrors
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
-    * @param credentials      custom credentials used when connecting to the cluster.
+    * @param options custom options used when connecting to the cluster.
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Authenticator): ScalaMono[ReactiveCluster] = {
-    Cluster.connect(connectionString, credentials) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
-        ScalaMono.just(new ReactiveCluster(cluster.async))
+  def connect(connectionString: String, options: ClusterOptions): ScalaMono[ReactiveCluster] = {
+    extractClusterEnvironment(connectionString, options) match {
+      case Success(ce) =>
+        implicit val ec = ce.ec
+        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+        ScalaMono.just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
       case Failure(err) => ScalaMono.error(err)
     }
   }
 
-  /** Connect to a Couchbase cluster with a custom [[env.ClusterEnvironment]].
-    *
-    * $DeferredErrors
-    *
-    * @param environment the custom environment with its properties used to connect to the cluster.
-    *
-    * @return a Mono[ReactiveCluster] representing a connection to the cluster
-    */
-  def connect(environment: ClusterEnvironment): ScalaMono[ReactiveCluster] = {
-    Cluster.connect(environment) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
-        ScalaMono.just(new ReactiveCluster(cluster.async))
-      case Failure(err) => ScalaMono.error(err)
-    }
-  }
 }

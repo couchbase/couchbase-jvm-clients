@@ -21,15 +21,12 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class SubdocGetSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: Collection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    env = environment.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
   }
@@ -37,7 +34,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

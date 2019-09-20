@@ -16,10 +16,11 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.{Authenticator, OwnedSupplier}
+import com.couchbase.client.core.env.{Authenticator, OwnedSupplier, PasswordAuthenticator}
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.AsyncCluster.{connect, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
@@ -29,7 +30,8 @@ import com.couchbase.client.scala.util.AsyncUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
+import collection.JavaConverters._
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -42,12 +44,12 @@ import scala.util.{Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class Cluster private[scala](env: => ClusterEnvironment) {
+class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenticator, seedNodes: Set[SeedNode]) {
 
   private[scala] implicit val ec: ExecutionContext = env.ec
 
   /** Access an asynchronous version of this API. */
-  val async = new AsyncCluster(env)
+  val async = new AsyncCluster(env, authenticator, seedNodes)
 
   /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)
@@ -161,8 +163,7 @@ object Cluster {
     * @return a [[Cluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
-    ClusterEnvironment.create(connectionString, username, password, true)
-      .map(env => new Cluster(env))
+    connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
   /** Connect to a Couchbase cluster with custom [[Authenticator]].
@@ -170,21 +171,15 @@ object Cluster {
     * $DeferredErrors
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
-    * @param credentials      custom credentials used when connecting to the cluster.
+    * @param options custom options used when connecting to the cluster.
     * @return a [[Cluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Authenticator): Try[Cluster] = {
-    ClusterEnvironment.create(connectionString, credentials)
-      .map(env => new Cluster(env))
+  def connect(connectionString: String, options: ClusterOptions): Try[Cluster] = {
+    AsyncCluster.extractClusterEnvironment(connectionString, options)
+      .map(ce => {
+        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+        new Cluster(ce, options.authenticator, seedNodes)
+      })
   }
-
-  /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
-    *
-    * $DeferredErrors
-    *
-    * @param environment the custom environment with its properties used to connect to the cluster.
-    *
-    * @return a [[Cluster]] representing a connection to the cluster
-    */
-  def connect(environment: ClusterEnvironment): Try[Cluster] = Success(new Cluster(environment))
 }
+

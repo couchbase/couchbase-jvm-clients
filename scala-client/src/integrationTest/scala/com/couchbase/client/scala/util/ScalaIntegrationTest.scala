@@ -16,10 +16,13 @@ package com.couchbase.client.scala.util
  * limitations under the License.
  */
 
+
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode, PasswordAuthenticator}
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services}
+import com.couchbase.client.core.env.Authenticator
+import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
+import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services, TestClusterConfig, TestNodeConfig}
 import org.junit.jupiter.api.Timeout
 
 import scala.collection.JavaConverters._
@@ -42,13 +45,55 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     * @return the builder, ready to be further modified or used directly.
     */
   protected def environment: ClusterEnvironment.Builder = {
-    val config = ClusterAwareIntegrationTest.config()
-    val seeds = config.nodes.asScala.map(cfg =>
-      SeedNode(cfg.hostname, Some(cfg.ports.get(Services.KV)), Some(cfg.ports.get(Services.MANAGER))))
-      .toSet
+    ClusterEnvironment.builder
+  }
 
-    ClusterEnvironment
-      .builder(PasswordAuthenticator(config.adminUsername, config.adminPassword))
-      .seedNodes(seeds)
+  /**
+    * Creates the right connection string out of the seed nodes in the config.
+    *
+    * @return the connection string to connect.
+    */
+  protected def connectionString: String = {
+    val strings = seedNodes.map((s: SeedNode) => {
+      s.kvPort match {
+        case Some(kvPort) => s.address + ":" + kvPort
+        case _ => s.address
+      }
+    })
+
+    strings.mkString(",")
+  }
+
+  private def seedNodes: Set[SeedNode] = {
+    config
+      .nodes.asScala
+      .map((cfg: TestNodeConfig) => {
+        val kvPort = Some(cfg.ports.get(Services.KV).toInt)
+        val httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
+
+        SeedNode(cfg.hostname, kvPort, httpPort)
+      })
+      .toSet
+  }
+
+  protected def config: TestClusterConfig = {
+    ClusterAwareIntegrationTest.config()
+  }
+
+  /**
+    * Returns the pre-set cluster options with the environment and authenticator configured.
+    *
+    * @return the cluster options ready to be used.
+    */
+  protected def clusterOptions: ClusterOptions = {
+    ClusterOptions(authenticator, environment.build.toOption)
+  }
+
+  protected def authenticator: Authenticator = {
+    PasswordAuthenticator(config.adminUsername, config.adminPassword)
+  }
+
+  protected def connectToCluster(): Cluster = {
+    Cluster.connect(connectionString, clusterOptions).get
   }
 }

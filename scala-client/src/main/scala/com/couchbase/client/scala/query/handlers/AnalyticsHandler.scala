@@ -68,7 +68,7 @@ private[scala] class AnalyticsHandler() {
         new AnalyticsRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials,
+          core.context().authenticator(),
           queryBytes,
           if (options.priority) -1 else 0,
           options.readonly.getOrElse(false))

@@ -21,16 +21,13 @@ import scala.util.{Failure, Success}
 @IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY))
 class QuerySpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: Collection = _
   private var bucketName: String = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    env = environment.ioConfig(IoConfig().mutationTokensEnabled(true)).build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -41,7 +38,6 @@ class QuerySpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
 

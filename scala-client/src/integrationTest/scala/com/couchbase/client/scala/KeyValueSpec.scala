@@ -13,16 +13,13 @@ import scala.util.{Failure, Success, Try}
 @TestInstance(Lifecycle.PER_CLASS)
 class KeyValueSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = null
-  private var cluster: Cluster = null
-  private var coll: Collection = null
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
+
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -31,15 +28,6 @@ class KeyValueSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
-  }
-
-  @Test
-  def config() {
-    val env: ClusterEnvironment = ClusterEnvironment.builder("localhost", "Administrator", "password")
-      .seedNodes(SeedNode("localhost"))
-      .build
-      .get
   }
 
   @Test

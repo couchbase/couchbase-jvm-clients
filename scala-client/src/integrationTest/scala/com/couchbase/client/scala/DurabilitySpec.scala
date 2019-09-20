@@ -16,16 +16,12 @@ import scala.util.{Failure, Success}
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SYNC_REPLICATION))
 class DurabilitySpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = null
-  private var cluster: Cluster = null
-  private var coll: Collection = null
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment.ioConfig(IoConfig().mutationTokensEnabled(true))
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -34,7 +30,6 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

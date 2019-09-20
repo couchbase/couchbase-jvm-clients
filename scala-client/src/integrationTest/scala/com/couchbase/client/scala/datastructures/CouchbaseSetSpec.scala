@@ -30,17 +30,13 @@ import scala.util.control.NonFatal
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class CouchbaseSetSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var coll: Collection = _
   private val docId = "test"
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -49,7 +45,6 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @BeforeEach

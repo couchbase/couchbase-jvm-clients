@@ -21,7 +21,6 @@ import reactor.core.scala.publisher.Mono
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class UserManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
-  private var env: ClusterEnvironment = _
   private var users: ReactiveUserManager = _
   private var coll: Collection = _
 
@@ -32,9 +31,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
   @BeforeAll
   def setup(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    env = environment.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     users = cluster.reactive.users
@@ -43,7 +40,6 @@ class UserManagerSpec extends ScalaIntegrationTest {
   @AfterAll
   def tearDown(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

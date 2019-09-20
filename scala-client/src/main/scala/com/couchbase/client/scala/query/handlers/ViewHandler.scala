@@ -87,7 +87,7 @@ private[scala] class ViewHandler() {
         Try(new ViewRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials,
+          core.context().authenticator(),
           bucketName,
           designDoc,
           viewName,

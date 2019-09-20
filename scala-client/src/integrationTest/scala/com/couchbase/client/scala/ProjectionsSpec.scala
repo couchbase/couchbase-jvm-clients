@@ -12,17 +12,13 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class ProjectionsSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = null
-  private var cluster: Cluster = null
-  private var coll: Collection = null
+  private var cluster: Cluster = _
+  private var coll: Collection = _
   private val docId = "projection-test"
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
@@ -62,7 +58,6 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
 

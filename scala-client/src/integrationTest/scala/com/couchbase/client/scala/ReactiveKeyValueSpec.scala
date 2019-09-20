@@ -18,17 +18,13 @@ import scala.util.{Failure, Success, Try}
 @TestInstance(Lifecycle.PER_CLASS)
 class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
-  private var env: ClusterEnvironment = _
   private var cluster: Cluster = _
   private var blocking: Collection = _
   private var coll: ReactiveCollection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    val x: ClusterEnvironment.Builder = environment
-    env = x.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.reactive
@@ -38,7 +34,6 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   def wrap[T](in: ScalaMono[T]): Try[T] = {

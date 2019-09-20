@@ -16,34 +16,30 @@
 package com.couchbase.client.scala
 
 
+
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.env.{Authenticator, OwnedSupplier}
-import com.couchbase.client.core.error.{AnalyticsException, QueryException}
-import com.couchbase.client.core.msg.query.QueryChunkRow
+import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoader}
+import com.couchbase.client.core.error.AnalyticsException
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.util.{ConnectionString, DnsSrv}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
-import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
+import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
-import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions, RowTraversalUtil}
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
-import com.couchbase.client.scala.search.SearchQuery
-import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
-import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
-import com.couchbase.client.scala.util.{FunctionalUtil, FutureConversions}
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
-import reactor.core.scala.publisher.{Flux, Mono}
+import com.couchbase.client.scala.util.FutureConversions
+import reactor.core.scala.publisher.Mono
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
+import collection.JavaConverters._
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -59,9 +55,11 @@ import scala.util.{Failure, Success}
   * @author Graham Pople
   * @since 1.0.0
   */
-class AsyncCluster(environment: => ClusterEnvironment) {
+class AsyncCluster(environment: => ClusterEnvironment,
+                   private[scala] val authenticator: Authenticator,
+                   private[scala] val seedNodes: Set[SeedNode]) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  private[scala] val core = Core.create(environment.coreEnv)
+  private[scala] val core = Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
   private[scala] val env = environment
   private[scala] val kvTimeout = javaDurationToScala(env.timeoutConfig.kvTimeout())
   private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig.searchTimeout())
@@ -217,14 +215,7 @@ object AsyncCluster {
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
-    Cluster.connect(connectionString, username, password) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
-        Future {
-          cluster.async
-        }
-      case Failure(err) => Future.failed(err)
-    }
+    connect(connectionString, ClusterOptions(PasswordAuthenticator(username, password)))
   }
 
   /** Connect to a Couchbase cluster with custom [[Authenticator]].
@@ -232,39 +223,21 @@ object AsyncCluster {
     * $DeferredErrors
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
-    * @param credentials      custom credentials used when connecting to the cluster.
+    * @param options custom options used when connecting to the cluster.
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, credentials: Authenticator): Future[AsyncCluster] = {
-    ClusterEnvironment.create(connectionString, credentials, true)
-      .flatMap(env => Cluster.connect(env)) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
+  def connect(connectionString: String, options: ClusterOptions): Future[AsyncCluster] = {
+    extractClusterEnvironment(connectionString, options) match {
+      case Success(ce) =>
+        implicit val ec = ce.ec
         Future {
-          cluster.async
+          val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+          new AsyncCluster(ce, options.authenticator, seedNodes)
         }
       case Failure(err) => Future.failed(err)
     }
   }
 
-  /** Connect to a Couchbase cluster with a custom [[ClusterEnvironment]].
-    *
-    * $DeferredErrors
-    *
-    * @param environment the custom environment with its properties used to connect to the cluster.
-    *
-    * @return a [[AsyncCluster]] representing a connection to the cluster
-    */
-  def connect(environment: ClusterEnvironment): Future[AsyncCluster] = {
-    Cluster.connect(environment) match {
-      case Success(cluster) =>
-        implicit val ec = cluster.ec
-        Future {
-          cluster.async
-        }
-      case Failure(err) => Future.failed(err)
-    }
-  }
 
   private[client] def searchQuery(request: SearchRequest, core: Core): Future[SearchResult] = {
     core.send(request)
@@ -295,5 +268,46 @@ object AsyncCluster {
         .toFuture
 
     ret
+  }
+
+  private[client] def extractClusterEnvironment(connectionString: String, opts: ClusterOptions): Try[ClusterEnvironment] = {
+    opts.environment match {
+      case Some(env) => Success(env)
+      case _ => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
+    }
+  }
+
+  private[client] def seedNodesFromConnectionString(cs: String, environment: ClusterEnvironment): Set[SeedNode] = {
+    val connectionString = ConnectionString.create(cs)
+
+    if (environment.coreEnv.ioConfig.dnsSrvEnabled && connectionString.isValidDnsSrv) {
+      val isEncrypted = connectionString.scheme eq ConnectionString.Scheme.COUCHBASES
+      val dnsHostname = connectionString.hosts.get(0).hostname
+
+      val result: Try[Seq[SeedNode]] =
+        Try(DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname).asScala)
+          .flatMap(foundNodes => {
+            if (foundNodes.isEmpty)
+              Failure(new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!"))
+            else Success(foundNodes.map(s => SeedNode(s)))
+          })
+
+      result match {
+        case Success(seedNodes) => seedNodes.toSet
+        case Failure(err) => populateSeedsFromConnectionString(connectionString)
+      }
+    }
+    else populateSeedsFromConnectionString(connectionString)
+  }
+
+  private def populateSeedsFromConnectionString(connectionString: ConnectionString): Set[SeedNode] = {
+    connectionString
+      .hosts.asScala
+      .map((a: ConnectionString.UnresolvedSocket) => {
+        val kvPort: Option[Int] = if (a.port > 0) Some(a.port) else None
+
+        SeedNode(a.hostname, kvPort)
+      })
+      .toSet
   }
 }

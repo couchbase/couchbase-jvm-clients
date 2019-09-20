@@ -68,7 +68,7 @@ private[scala] class SearchHandler() {
       Try(new SearchRequest(timeout,
         core.context(),
         retryStrategy,
-        environment.credentials,
+        core.context().authenticator(),
         query.indexName,
         queryBytes))
     }

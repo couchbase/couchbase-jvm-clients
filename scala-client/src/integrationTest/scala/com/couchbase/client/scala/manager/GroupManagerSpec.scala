@@ -21,7 +21,6 @@ import reactor.core.scala.publisher.Mono
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class GroupManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
-  private var env: ClusterEnvironment = _
   private var users: ReactiveUserManager = _
   private var coll: Collection = _
 
@@ -34,9 +33,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
   @BeforeAll
   def setup(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    env = environment.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     users = new ReactiveUserManager(cluster.async.core)
@@ -45,7 +42,6 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   @AfterAll
   def tearDown(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {
@@ -119,8 +115,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     assertEquals(Some(fakeLdapRef), users.getGroup(GroupA).block().ldapGroupReference)
     assertEquals(Option.empty, users.getGroup(GroupB).block().ldapGroupReference)
 
-    assertEquals(Set(ReadOnlyAdmin), users.getGroup(GroupA).block().roles)
-    assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), users.getGroup(GroupB).block().roles)
+    assertEquals(Set(ReadOnlyAdmin), users.getGroup(GroupA).block().roles.toSet)
+    assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), users.getGroup(GroupB).block().roles.toSet)
 
     users.upsertUser(User(Username)
       .password("password")
@@ -129,8 +125,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
     var userMeta = users.getUser(Username, AuthDomain.Local).block()
 
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles)
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin), userMeta.effectiveRoles)
+    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
+    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin), userMeta.effectiveRoles.toSet)
 
     // xxx possibly flaky, depends on order of origins reported by server?
     checkRoleOrigins(userMeta, "SecurityAdmin<-[user]", "ro_admin<-[group:group-a, group:group-b]",
@@ -140,7 +136,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     users.upsertGroup(users.getGroup(GroupB).block().roles(SecurityAdmin)).block()
 
     userMeta = users.getUser(Username, AuthDomain.Local).block()
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles)
+    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles.toSet)
   }
 
   @Test

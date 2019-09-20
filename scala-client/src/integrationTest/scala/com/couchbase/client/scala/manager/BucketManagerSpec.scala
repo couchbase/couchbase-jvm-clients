@@ -34,16 +34,13 @@ import reactor.core.scala.publisher.Mono
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class BucketManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
-  private var env: ClusterEnvironment = _
   private var buckets: BucketManager = _
   private var bucketName: String = _
 
 
   @BeforeAll
   def setup(): Unit = {
-    val config = ClusterAwareIntegrationTest.config()
-    env = environment.build.get
-    cluster = Cluster.connect(env).get
+    cluster = connectToCluster()
     buckets = cluster.buckets
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
@@ -52,7 +49,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @AfterAll
   def tearDown(): Unit = {
     cluster.shutdown()
-    env.shutdown()
   }
 
   @Test

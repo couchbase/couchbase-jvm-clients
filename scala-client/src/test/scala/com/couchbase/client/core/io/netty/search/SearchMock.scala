@@ -17,26 +17,21 @@
 package com.couchbase.client.core.io.netty.search
 
 import java.io.{ByteArrayOutputStream, InputStream}
-import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.charset.StandardCharsets
 import java.util.Optional
-import java.util.concurrent.CompletableFuture
 
-import com.couchbase.client.core.deps.io.netty.buffer.{ByteBuf, ByteBufAllocator, Unpooled}
-import com.couchbase.client.core.deps.io.netty.channel._
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.deps.io.netty.util.concurrent.EventExecutor
-import com.couchbase.client.core.deps.io.netty.util.{Attribute, AttributeKey}
 import com.couchbase.client.core.endpoint.{BaseEndpoint, EndpointContext}
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.core.{Core, CoreContext}
 import com.couchbase.client.scala.AsyncCluster
+import com.couchbase.client.scala.env.PasswordAuthenticator
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.search.result.SearchResult
-import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 
@@ -83,8 +78,8 @@ object SearchMock {
 
     // Fake some core stuff
     val mockedCore = mock(classOf[Core])
-    val env = CoreEnvironment.create("localhost", "Administrator", "password")
-    val ctx = new CoreContext(mockedCore, 0, env)
+    val env = CoreEnvironment.create()
+    val ctx = new CoreContext(mockedCore, 0, env, PasswordAuthenticator("not", "used"))
 
     // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest
     // through it

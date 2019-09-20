@@ -126,7 +126,7 @@ private[scala] class QueryHandler(core: Core) {
         val request = new QueryRequest(timeout,
           core.context(),
           retryStrategy,
-          environment.credentials,
+          core.context().authenticator(),
           statement,
           queryBytes,
           options.readonly.getOrElse(false))
