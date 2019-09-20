@@ -22,7 +22,7 @@ import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoa
 import com.couchbase.client.core.error.AnalyticsException
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.{ConnectionString, DnsSrv}
+import com.couchbase.client.core.util.{ConnectionString, ConnectionStringUtil, DnsSrv}
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
@@ -278,36 +278,9 @@ object AsyncCluster {
   }
 
   private[client] def seedNodesFromConnectionString(cs: String, environment: ClusterEnvironment): Set[SeedNode] = {
-    val connectionString = ConnectionString.create(cs)
-
-    if (environment.coreEnv.ioConfig.dnsSrvEnabled && connectionString.isValidDnsSrv) {
-      val isEncrypted = connectionString.scheme eq ConnectionString.Scheme.COUCHBASES
-      val dnsHostname = connectionString.hosts.get(0).hostname
-
-      val result: Try[Seq[SeedNode]] =
-        Try(DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname).asScala)
-          .flatMap(foundNodes => {
-            if (foundNodes.isEmpty)
-              Failure(new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!"))
-            else Success(foundNodes.map(s => SeedNode(s)))
-          })
-
-      result match {
-        case Success(seedNodes) => seedNodes.toSet
-        case Failure(err) => populateSeedsFromConnectionString(connectionString)
-      }
-    }
-    else populateSeedsFromConnectionString(connectionString)
-  }
-
-  private def populateSeedsFromConnectionString(connectionString: ConnectionString): Set[SeedNode] = {
-    connectionString
-      .hosts.asScala
-      .map((a: ConnectionString.UnresolvedSocket) => {
-        val kvPort: Option[Int] = if (a.port > 0) Some(a.port) else None
-
-        SeedNode(a.hostname, kvPort)
-      })
+    ConnectionStringUtil.seedNodesFromConnectionString(cs, environment.coreEnv.ioConfig.dnsSrvEnabled)
+      .asScala
+      .map(sn => SeedNode.fromCore(sn))
       .toSet
   }
 }

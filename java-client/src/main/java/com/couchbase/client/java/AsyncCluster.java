@@ -28,6 +28,7 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.DnsSrv;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -142,35 +143,7 @@ public class AsyncCluster {
   }
 
   static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment environment) {
-    final ConnectionString connectionString = ConnectionString.create(cs);
-
-    if (environment.ioConfig().dnsSrvEnabled() && connectionString.isValidDnsSrv()) {
-      boolean isEncrypted = connectionString.scheme() == ConnectionString.Scheme.COUCHBASES;
-      String dnsHostname = connectionString.hosts().get(0).hostname();
-      try {
-        List<String> foundNodes = DnsSrv.fromDnsSrv("", false, isEncrypted, dnsHostname);
-        if (foundNodes.isEmpty()) {
-          throw new IllegalStateException("The loaded DNS SRV list from " + dnsHostname + " is empty!");
-        }
-        return foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet());
-      } catch (Exception ex) {
-        return populateSeedsFromConnectionString(connectionString);
-      }
-    } else {
-      return populateSeedsFromConnectionString(connectionString);
-    }
-  }
-
-  private static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
-    return connectionString
-      .hosts()
-      .stream()
-      .map(a -> SeedNode.create(
-        a.hostname(),
-        a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
-        Optional.empty()
-      ))
-      .collect(Collectors.toSet());
+    return ConnectionStringUtil.seedNodesFromConnectionString(cs, environment.ioConfig().dnsSrvEnabled());
   }
 
   /**

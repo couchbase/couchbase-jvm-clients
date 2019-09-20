@@ -19,9 +19,18 @@ import scala.compat.java8.OptionConverters._
 case class SeedNode(address: String,
                     kvPort: Option[Int] = None,
                     httpPort: Option[Int] = None) {
+
   private[scala] def toCore: com.couchbase.client.core.env.SeedNode = {
     com.couchbase.client.core.env.SeedNode.create(address,
       kvPort.map(new Integer(_)).asJava,
       httpPort.map(new Integer(_)).asJava)
+  }
+}
+
+object SeedNode {
+  private[scala] def fromCore(sn: com.couchbase.client.core.env.SeedNode): SeedNode = {
+    SeedNode(sn.address,
+      sn.kvPort.asScala.map(v => v.toInt),
+      sn.httpPort.asScala.map(v => v.toInt))
   }
 }
