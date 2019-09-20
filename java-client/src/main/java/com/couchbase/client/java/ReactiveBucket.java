@@ -19,6 +19,8 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
+import com.couchbase.client.java.manager.collection.ReactiveCollectionManager;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
@@ -38,6 +40,8 @@ public class ReactiveBucket {
    */
   private final AsyncBucket asyncBucket;
 
+  private final ReactiveCollectionManager collectionManager;
+
   /**
    * Constructs a new {@link ReactiveBucket}.
    *
@@ -45,6 +49,7 @@ public class ReactiveBucket {
    */
   ReactiveBucket(final AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
+    this.collectionManager = new ReactiveCollectionManager(asyncBucket.collectionManager);
   }
 
   /**
@@ -69,6 +74,11 @@ public class ReactiveBucket {
   @Stability.Volatile
   public Core core() {
     return asyncBucket.core();
+  }
+
+  @Stability.Volatile
+  public ReactiveCollectionManager collections() {
+    return collectionManager;
   }
 
   /**

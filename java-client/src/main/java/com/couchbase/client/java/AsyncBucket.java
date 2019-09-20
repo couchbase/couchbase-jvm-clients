@@ -59,7 +59,7 @@ public class AsyncBucket {
    */
   private final Core core;
 
-  private final AsyncCollectionManager collectionManager;
+  final AsyncCollectionManager collectionManager;
 
   private final AsyncViewIndexManager viewManager;
 
