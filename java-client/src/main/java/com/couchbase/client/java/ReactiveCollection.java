@@ -229,10 +229,12 @@ public class ReactiveCollection {
    * Fetches a full document and write-locks it for the given duration with default options.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<GetResult> getAndLock(final String id) {
-    return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
+  public Mono<GetResult> getAndLock(final String id, final Duration lockTime) {
+    return getAndLock(id, lockTime, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
@@ -242,9 +244,9 @@ public class ReactiveCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<GetResult> getAndLock(final String id, final GetAndLockOptions options) {
+  public Mono<GetResult> getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
     return Mono.defer(() -> {
-      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, options);
+      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, lockTime, options);
       return Reactor.wrap(request, GetAccessor.getAndLock(core, id, request, environment().transcoder()), true);
     });
   }

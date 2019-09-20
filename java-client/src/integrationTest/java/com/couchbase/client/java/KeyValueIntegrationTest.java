@@ -230,7 +230,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertTrue(insert.cas() != 0);
 
-    GetResult getAndLock = collection.getAndLock(id);
+    GetResult getAndLock = collection.getAndLock(id, Duration.ofSeconds(30));
 
     assertTrue(getAndLock.cas() != 0);
     assertNotEquals(insert.cas(), getAndLock.cas());
@@ -238,10 +238,10 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     RequestTimeoutException exception = assertThrows(
       RequestTimeoutException.class,
-      () -> collection.getAndLock(id, getAndLockOptions().timeout(Duration.ofMillis(100)))
+      () -> collection.getAndLock(id, Duration.ofSeconds(30), getAndLockOptions().timeout(Duration.ofMillis(100)))
     );
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
-    assertThrows(KeyNotFoundException.class, () -> collection.getAndLock("some_doc"));
+    assertThrows(KeyNotFoundException.class, () -> collection.getAndLock("some_doc", Duration.ofSeconds(30)));
   }
 
   /**
@@ -418,7 +418,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult upsert = collection.upsert(id, JsonObject.create().put("foo", true));
     assertTrue(upsert.cas() != 0);
 
-    GetResult locked = collection.getAndLock(id);
+    GetResult locked = collection.getAndLock(id, Duration.ofSeconds(30));
 
     RequestTimeoutException exception = assertThrows(
       RequestTimeoutException.class,

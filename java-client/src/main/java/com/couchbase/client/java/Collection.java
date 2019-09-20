@@ -181,21 +181,25 @@ public class Collection {
    * Fetches a full document and write-locks it for the given duration with default options.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public GetResult getAndLock(final String id) {
-    return block(async().getAndLock(id));
+  public GetResult getAndLock(final String id, final Duration lockTime) {
+    return block(async().getAndLock(id, lockTime));
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @param options custom options to change the default behavior.
    * @return a {@link GetResult} once the document has been loaded.
    */
-  public GetResult getAndLock(final String id, final GetAndLockOptions options) {
-    return block(async().getAndLock(id, options));
+  public GetResult getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
+    return block(async().getAndLock(id, lockTime, options));
   }
 
 

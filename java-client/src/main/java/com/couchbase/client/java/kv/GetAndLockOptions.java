@@ -23,18 +23,11 @@ import java.time.Duration;
 
 public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
 
-  private Duration lockFor;
-
   public static GetAndLockOptions getAndLockOptions() {
     return new GetAndLockOptions();
   }
 
   private GetAndLockOptions() {
-  }
-
-  public GetAndLockOptions lockFor(final Duration duration) {
-    this.lockFor = duration;
-    return this;
   }
 
   @Stability.Internal
@@ -43,11 +36,6 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
-
-    public Duration lockFor() {
-      return lockFor;
-    }
-
   }
 
 

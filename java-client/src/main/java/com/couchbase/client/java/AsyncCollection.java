@@ -327,33 +327,40 @@ public class AsyncCollection {
    * Fetches a full document and write-locks it for the given duration with default options.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<GetResult> getAndLock(final String id) {
-    return getAndLock(id, DEFAULT_GET_AND_LOCK_OPTIONS);
+  public CompletableFuture<GetResult> getAndLock(final String id, Duration lockTime) {
+    return getAndLock(id, lockTime, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<GetResult> getAndLock(final String id,
+                                                           final Duration lockTime,
                                                            final GetAndLockOptions options) {
-    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, options), environment.transcoder());
+    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, lockTime, options), environment.transcoder());
   }
 
   /**
    * Helper method to create the get and lock request.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
+   *                 treated as 30 seconds.
    * @param options custom options to change the default behavior.
    * @return the get and lock request.
    */
   @Stability.Internal
-  GetAndLockRequest getAndLockRequest(final String id, final GetAndLockOptions options) {
+  GetAndLockRequest getAndLockRequest(final String id, final Duration lockTime, final GetAndLockOptions options) {
     notNullOrEmpty(id, "Id");
     notNull(options, "GetAndLockOptions");
     GetAndLockOptions.Built opts = options.build();
@@ -361,9 +368,8 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    Duration lockFor = opts.lockFor() == null ? Duration.ofSeconds(30) : opts.lockFor();
     GetAndLockRequest request = new GetAndLockRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockFor
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime
     );
     request.context().clientContext(opts.clientContext());
     return request;
