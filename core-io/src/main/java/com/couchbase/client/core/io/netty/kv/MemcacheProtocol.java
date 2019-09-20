@@ -526,11 +526,14 @@ public enum MemcacheProtocol {
     } else if (status == Status.SYNC_WRITE_RE_COMMIT_IN_PROGRESS.status) {
       return ResponseStatus.SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
+            || status == Status.SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED.status
             || status == Status.SUBDOC_DOC_NOT_JSON.status
             || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
             || status == Status.SUBDOC_INVALID_COMBO.status) {
       return ResponseStatus.SUBDOC_FAILURE;
+    } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
+      return ResponseStatus.SUCCESS;
     } else if (status == Status.UNKNOWN_COLLECTION.status) {
       return ResponseStatus.UNKNOWN_COLLECTION;
     } else if (status == Status.NO_BUCKET.status) {
@@ -884,6 +887,10 @@ public enum MemcacheProtocol {
      */
     UNLOCK((byte) 0x95),
     /**
+     * Deletes (tombstones) a document while setting metadata.
+     */
+    DELETE_WITH_META((byte) 0xa8),
+    /**
      * Returns the collections manifest for a bucket.
      */
     COLLECTIONS_GET_MANIFEST((byte) 0xba),
@@ -1046,6 +1053,10 @@ public enum MemcacheProtocol {
      * The subdoc operation completed successfully on the deleted document
      */
     SUBDOC_SUCCESS_DELETED_DOCUMENT((short) 0xcd),
+    /**
+     * The subdoc operation found the deleted document, but one or more path operations failed.
+     */
+    SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED((short) 0xd3),
 
     /**
      * Invalid request. Returned if an invalid durability level is specified.
@@ -1110,7 +1121,12 @@ public enum MemcacheProtocol {
     /**
      * Snappy datatype used to signal compression.
      */
-    SNAPPY((byte) 0x02);
+    SNAPPY((byte) 0x02),
+
+    /**
+     * Extended attributes (XATTR)
+     */
+    XATTR((byte) 0x04);
 
     private final byte datatype;
 

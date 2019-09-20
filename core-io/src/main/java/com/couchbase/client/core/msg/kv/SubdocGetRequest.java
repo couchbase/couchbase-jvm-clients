@@ -43,6 +43,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
+  private static final byte SUBDOC_FLAG_ACCESS_DELETED = (byte) 0x08;
 
   private final byte flags;
   private final List<Command> commands;
@@ -142,7 +143,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     Optional<SubDocumentException> error = Optional.empty();
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
-    if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
+    if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
+        || rawStatus == Status.SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED.status()) {
       // Special case logic for CMD_EXISTS
       if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
         status = ResponseStatus.SUCCESS;

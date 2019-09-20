@@ -29,6 +29,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   private long cas = 0;
   private StoreSemantics storeSemantics = StoreSemantics.REPLACE;
   private JsonSerializer serializer = null;
+  private boolean accessDeleted = false;
 
   public static MutateInOptions mutateInOptions() {
     return new MutateInOptions();
@@ -59,6 +60,16 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     return this;
   }
 
+  /**
+   * For internal use only: allows access to deleted documents that are in 'tombstone' form.
+   */
+  @Stability.Internal
+  public MutateInOptions accessDeleted(final boolean accessDeleted) {
+    notNull(accessDeleted, "AccessDeleted");
+    this.accessDeleted = accessDeleted;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -82,6 +93,8 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
       return serializer;
     }
 
+    public boolean accessDeleted() {
+      return accessDeleted;
+    }
   }
-
 }

@@ -26,6 +26,8 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
   private JsonSerializer serializer;
 
+  private boolean accessDeleted = false;
+
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
   }
@@ -33,6 +35,15 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   public LookupInOptions serializer(final JsonSerializer serializer) {
     notNull(serializer, "Serializer");
     this.serializer = serializer;
+    return this;
+  }
+
+  /**
+   * For internal use only: allows access to deleted documents that are in 'tombstone' form.
+   */
+  @Stability.Internal
+  public LookupInOptions accessDeleted(boolean accessDeleted) {
+    this.accessDeleted = accessDeleted;
     return this;
   }
 
@@ -48,6 +59,10 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
     public JsonSerializer serializer() {
       return serializer;
+    }
+
+    public boolean accessDeleted() {
+      return accessDeleted;
     }
   }
 

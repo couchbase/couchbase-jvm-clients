@@ -351,7 +351,7 @@ public class AsyncCollection {
     }
 
     SubdocGetRequest request = new SubdocGetRequest(
-      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0, commands
+      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x8, commands
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -984,8 +984,14 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+    byte flags = 0;
+    if (opts.accessDeleted()) {
+      flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
+    }
+
     SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      (byte) 0, commands);
+      flags, commands);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -1056,10 +1062,9 @@ public class AsyncCollection {
       // xattrs come first
       commands.sort(Comparator.comparing(v -> !v.xattr()));
 
-      boolean accessDeleted = false;
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT, accessDeleted,
-        commands, opts.expiry().getSeconds(), opts.cas(),
+        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
+        opts.accessDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );
       request.context().clientContext(opts.clientContext());
