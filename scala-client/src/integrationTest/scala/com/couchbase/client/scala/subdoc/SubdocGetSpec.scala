@@ -55,7 +55,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
-    val insertResult = coll.insert(docId, content, expiration = Duration(60, TimeUnit.SECONDS)).get
+    val insertResult = coll.insert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age"))) match {
       case Success(result) =>
@@ -63,7 +63,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         assert(result.cas == insertResult.cas)
         assert(result.contentAs[String](0).get == "bar")
         assert(result.contentAs[Int](1).get == 22)
-        assert(result.expiration.isEmpty)
+        assert(result.expiry.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -75,16 +75,16 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world",
       "foo" -> "bar",
       "age" -> 22)
-    val insertResult = coll.upsert(docId, content, expiration = Duration(60, TimeUnit.SECONDS)).get
+    val insertResult = coll.upsert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
 
-    coll.lookupIn(docId, Array(get("foo"), get("age")), withExpiration = true) match {
+    coll.lookupIn(docId, Array(get("foo"), get("age")), withExpiry = true) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
         assert(result.contentAs[String](0).get == "bar")
         assert(result.contentAs[Int](1).get == 22)
         assert(!result.exists(2))
-        assert(result.expiration.isDefined)
+        assert(result.expiry.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

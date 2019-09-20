@@ -17,7 +17,6 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.SubdocField;
-import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -46,9 +45,9 @@ public class LookupInResult {
   private final long cas;
 
   /**
-   * The expiration if fetched and present.
+   * The expiry if fetched and present.
    */
-  private final Optional<Duration> expiration;
+  private final Optional<Duration> expiry;
 
   /**
    * The default JSON serializer that should be used.
@@ -61,21 +60,21 @@ public class LookupInResult {
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiration, Serializer serializer) {
+  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiry, Serializer serializer) {
     this.cas = cas;
     this.encoded = encoded;
-    this.expiration = expiration;
+    this.expiry = expiry;
     this.serializer = serializer;
   }
 
   /**
-   * If present, returns the expiration of the loaded document.
+   * If present, returns the expiry of the loaded document.
    *
    * <p>Note that the duration represents the time when the document has been loaded and can only
    * ever be an approximation.</p>
    */
-  public Optional<Duration> expiration() {
-    return expiration;
+  public Optional<Duration> expiry() {
+    return expiry;
   }
 
   /**

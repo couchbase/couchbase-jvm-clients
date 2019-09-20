@@ -68,13 +68,13 @@ object Collection {
   *                        optimistic concurrency - e.g. it can detect if another agent has modified a document
   *                        in-between this agent getting and modifying the document.  See **CHANGEME** for a full
   *                        description.  The default is 0, which disables CAS checking.
-  * @define WithExpiration Couchbase documents optionally can have an expiration field set, e.g. when they will
+  * @define WithExpiry     Couchbase documents optionally can have an expiration field set, e.g. when they will
   *                        automatically expire.  For efficiency reasons, by default the value of this expiration
   *                        field is not fetched upon getting a document.  If expiry is being used, then set this
   *                        field to true to ensure the expiration is fetched.  This will not only make it available
   *                        in the returned result, but also ensure that the expiry is available to use when mutating
   *                        the document, to avoid accidentally resetting the expiry to the default of 0.
-  * @define Expiration     Couchbase documents optionally can have an expiration field set, e.g. when they will
+  * @define Expiry         Couchbase documents optionally can have an expiration field set, e.g. when they will
   *                        automatically expire.  On mutations if this is left at the default (0), then any expiry
   *                        will be removed and the document will never expire.  If the application wants to preserve
   *                        expiration then they should use the `withExpiration` parameter on any gets, and provide
@@ -126,7 +126,7 @@ class Collection(
   /** Fetches a full document from this collection.
     *
     * @param id             $Id
-    * @param withExpiration $WithExpiration
+    * @param withExpiry     $WithExpiry
     * @param project        projection is an advanced feature allowing one or more fields to be fetched from a JSON
     *                       document, and the results
     *                       combined into a [[json.JsonObject]] result.  By default this
@@ -139,14 +139,14 @@ class Collection(
     **/
   def get(
            id: String,
-           withExpiration: Boolean = false,
+           withExpiry: Boolean = false,
            project: Seq[String] = Seq.empty,
            timeout: Duration = kvTimeout,
            retryStrategy: RetryStrategy = retryStrategy
          ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiration, project, timeout, retryStrategy),
+        .get(id, withExpiry, project, timeout, retryStrategy),
       timeout
     )
 
@@ -155,7 +155,7 @@ class Collection(
     * @param id            $Id
     * @param content       $SupportedTypes
     * @param durability    $Durability
-    * @param expiration    $Expiration
+    * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -166,7 +166,7 @@ class Collection(
                  id: String,
                  content: T,
                  durability: Durability = Disabled,
-                 expiration: Duration = 0.seconds,
+                 expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -175,7 +175,7 @@ class Collection(
         id,
         content,
         durability,
-        expiration,
+        expiry,
         timeout,
         retryStrategy
       ),
@@ -188,7 +188,7 @@ class Collection(
     * @param content       $SupportedTypes
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param expiration    $Expiration
+    * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -200,7 +200,7 @@ class Collection(
                   content: T,
                   cas: Long = 0,
                   durability: Durability = Disabled,
-                  expiration: Duration = 0.seconds,
+                  expiry: Duration = 0.seconds,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = retryStrategy
                 )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -210,7 +210,7 @@ class Collection(
         content,
         cas,
         durability,
-        expiration,
+        expiry,
         timeout,
         retryStrategy
       ),
@@ -224,7 +224,7 @@ class Collection(
     * @param id            $Id
     * @param content       $SupportedTypes
     * @param durability    $Durability
-    * @param expiration    $Expiration
+    * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
@@ -233,7 +233,7 @@ class Collection(
                  id: String,
                  content: T,
                  durability: Durability = Disabled,
-                 expiration: Duration = 0.seconds,
+                 expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
@@ -242,7 +242,7 @@ class Collection(
         id,
         content,
         durability,
-        expiration,
+        expiry,
         timeout,
         retryStrategy
       ),
@@ -284,7 +284,7 @@ class Collection(
     * @param document      controls whether the document should be inserted, upserted, or not touched.  See
     *                      [[kv.DocumentCreation]] for details.
     * @param durability    $Durability
-    * @param expiration    $Expiration
+    * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -297,7 +297,7 @@ class Collection(
                 cas: Long = 0,
                 document: DocumentCreation = DocumentCreation.DoNothing,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
               ): Try[MutateInResult] =
@@ -308,7 +308,7 @@ class Collection(
         cas,
         document,
         durability,
-        expiration,
+        expiry,
         timeout,
         retryStrategy
       ),
@@ -329,7 +329,7 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def getAndLock(id: String,
-                 lockFor: Duration = 30.seconds,
+                 lockFor: Duration,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
@@ -359,7 +359,7 @@ class Collection(
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
     * @param id             $Id
-    * @param expiration     $Expiration
+    * @param expiry         $Expiry
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -367,13 +367,13 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def getAndTouch(id: String,
-                  expiration: Duration,
+                  expiry: Duration,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
       async.getAndTouch(
         id,
-        expiration,
+        expiry,
         timeout,
         retryStrategy
       ),
@@ -389,7 +389,7 @@ class Collection(
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
     *                      [[kv.LookupInSpec]] for more details.
-    * @param withExpiration $WithExpiration
+    * @param withExpiry    $WithExpiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
@@ -399,11 +399,11 @@ class Collection(
   def lookupIn(
                 id: String,
                 spec: Seq[LookupInSpec],
-                withExpiration: Boolean = false,
+                withExpiry: Boolean = false,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
               ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, withExpiration, timeout, retryStrategy), timeout)
+    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy), timeout)
 
   /** Retrieves any available version of the document.
     *

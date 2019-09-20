@@ -24,7 +24,7 @@ class GetFromReplicaResult(id: String,
                            private val _content: Either[Array[Byte], JsonObject],
                            flags: Int,
                            cas: Long,
-                           expiration: Option[Duration],
+                           expiry: Option[Duration],
 
                            /** Whether this came from the active vbucket, or a replica. */
-                           val isMaster: Boolean) extends GetResult(id, _content, flags, cas, expiration)
+                           val isMaster: Boolean) extends GetResult(id, _content, flags, cas, expiry)

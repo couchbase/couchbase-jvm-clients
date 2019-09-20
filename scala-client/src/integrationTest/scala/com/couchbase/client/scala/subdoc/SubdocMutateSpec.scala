@@ -668,15 +668,15 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), expiration = 10.seconds) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), expiry = 10.seconds) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.get(docId, withExpiration = true) match {
+    coll.get(docId, withExpiry = true) match {
       case Success(result) =>
-        assert(result.expiration.isDefined)
-        assert(result.expiration.get.toSeconds != 0)
+        assert(result.expiry.isDefined)
+        assert(result.expiry.get.toSeconds != 0)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

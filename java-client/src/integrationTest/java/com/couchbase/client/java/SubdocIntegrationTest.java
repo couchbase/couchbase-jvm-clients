@@ -161,7 +161,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
                     LookupInSpec.get("not_exist"),
                     LookupInSpec.get("foo")));
 
-    assertFalse(result.expiration().isPresent());
+    assertFalse(result.expiry().isPresent());
   }
 
   @Test
@@ -177,9 +177,9 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
             Arrays.asList(
                     LookupInSpec.get("not_exist"),
                     LookupInSpec.get("foo")),
-            LookupInOptions.lookupInOptions().withExpiration(true));
+            LookupInOptions.lookupInOptions().withExpiry(true));
 
-    assertTrue(result.expiration().isPresent());
+    assertTrue(result.expiry().isPresent());
   }
 
   // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder

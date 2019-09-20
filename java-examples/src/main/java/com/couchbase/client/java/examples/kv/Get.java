@@ -22,8 +22,6 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.kv.GetResult;
 
-import java.util.Optional;
-
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 
 /**
@@ -68,8 +66,8 @@ public class Get {
      * options.
      */
 
-    GetResult airline2 = collection.get("airline_10", getOptions().withExpiration(true));
-    System.out.println("Expiration is: " + airline2.expiration());
+    GetResult airline2 = collection.get("airline_10", getOptions().withExpiry(true));
+    System.out.println("Expiration is: " + airline2.expiry());
 
   }
 }

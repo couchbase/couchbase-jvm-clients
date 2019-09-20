@@ -64,11 +64,11 @@ class ReactiveCollection(async: AsyncCollection) {
   def insert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy)
                (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
-    val req = async.insertHandler.request(id, content, durability, expiration, timeout, retryStrategy)
+    val req = async.insertHandler.request(id, content, durability, expiry, timeout, retryStrategy)
     wrap(req, id, async.insertHandler)
   }
 
@@ -79,11 +79,11 @@ class ReactiveCollection(async: AsyncCollection) {
                  content: T,
                  cas: Long = 0,
                  durability: Durability = Disabled,
-                 expiration: Duration = 0.seconds,
+                 expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy)
                 (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
-    val req = async.replaceHandler.request(id, content, cas, durability, expiration, timeout, retryStrategy)
+    val req = async.replaceHandler.request(id, content, cas, durability, expiry, timeout, retryStrategy)
     wrap(req, id, async.replaceHandler)
   }
 
@@ -93,11 +93,11 @@ class ReactiveCollection(async: AsyncCollection) {
   def upsert[T](id: String,
                 content: T,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy)
                (implicit ev: Conversions.Encodable[T]): Mono[MutationResult] = {
-    val req = async.upsertHandler.request(id, content, durability, expiration, timeout, retryStrategy)
+    val req = async.upsertHandler.request(id, content, durability, expiry, timeout, retryStrategy)
     wrap(req, id, async.upsertHandler)
   }
 
@@ -117,7 +117,7 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
   def get(id: String,
-          withExpiration: Boolean = false,
+          withExpiry: Boolean = false,
           project: Seq[String] = Seq.empty,
           timeout: Duration = kvTimeout,
           retryStrategy: RetryStrategy = environment.retryStrategy): Mono[Option[GetResult]] = {
@@ -139,10 +139,10 @@ class ReactiveCollection(async: AsyncCollection) {
       }
 
     }
-    else if (withExpiration) {
-      getSubDoc(id, AsyncCollection.getFullDoc, withExpiration, timeout, retryStrategy)
+    else if (withExpiry) {
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiry, timeout, retryStrategy)
         .map(lookupInResult => lookupInResult.map(v => {
-          GetResult(id, Left(v.contentAsBytes(0).get), v.flags, v.cas, v.expiration)
+          GetResult(id, Left(v.contentAsBytes(0).get), v.flags, v.cas, v.expiry)
         })
         )
     }
@@ -161,15 +161,15 @@ class ReactiveCollection(async: AsyncCollection) {
 
   private def getSubDoc(id: String,
                         spec: Seq[LookupInSpec],
-                        withExpiration: Boolean,
+                        withExpiry: Boolean,
                         timeout: Duration = kvTimeout,
                         retryStrategy: RetryStrategy = environment.retryStrategy): Mono[Option[LookupInResult]] = {
-    async.getSubDocHandler.request(id, spec, withExpiration, timeout, retryStrategy) match {
+    async.getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy) match {
       case Success(request) =>
         core.send(request)
 
         FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.getSubDocHandler.response(id, r, withExpiration))
+          .map(r => async.getSubDocHandler.response(id, r, withExpiry))
 
       case Failure(err) => Mono.error(err)
     }
@@ -184,10 +184,10 @@ class ReactiveCollection(async: AsyncCollection) {
                cas: Long = 0,
                document: DocumentCreation = DocumentCreation.DoNothing,
                durability: Durability = Disabled,
-               expiration: Duration,
+               expiry: Duration,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy): Mono[MutateInResult] = {
-    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiration, timeout,
+    val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiry, timeout,
       retryStrategy)
     req match {
       case Success(request) =>
@@ -204,11 +204,11 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(id: String,
-                 expiration: Duration = 30.seconds,
+                 expiry: Duration,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy
                 ): Mono[Option[GetResult]] = {
-    val req = async.getAndLockHandler.request(id, expiration, timeout, retryStrategy)
+    val req = async.getAndLockHandler.request(id, expiry, timeout, retryStrategy)
     wrap(req, id, async.getAndLockHandler)
   }
 
@@ -228,11 +228,11 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
   def getAndTouch(id: String,
-                  expiration: Duration,
+                  expiry: Duration,
                   timeout: Duration = kvTimeout,
                   retryStrategy: RetryStrategy = environment.retryStrategy
                  ): Mono[Option[GetResult]] = {
-    val req = async.getAndTouchHandler.request(id, expiration, timeout, retryStrategy)
+    val req = async.getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
     wrap(req, id, async.getAndTouchHandler)
   }
 
@@ -242,11 +242,11 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
   def lookupIn(id: String,
                spec: Seq[LookupInSpec],
-               withExpiration: Boolean = false,
+               withExpiry: Boolean = false,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy
               ): Mono[Option[LookupInResult]] = {
-    getSubDoc(id, spec, withExpiration, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiry, timeout, retryStrategy)
   }
 
   /** Retrieves any available version of the document.

@@ -243,7 +243,7 @@ public class AsyncCollection {
     notNull(options, "GetOptions");
     GetOptions.Built opts = options.build();
 
-    if (opts.projections().isEmpty() && !opts.withExpiration()) {
+    if (opts.projections().isEmpty() && !opts.withExpiry()) {
       return GetAccessor.get(core, id, fullGetRequest(id, options), environment.transcoder());
     } else {
       return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options), environment.transcoder());
@@ -288,7 +288,7 @@ public class AsyncCollection {
 
     List<SubdocGetRequest.Command> commands = new ArrayList<>();
 
-    if (opts.withExpiration()) {
+    if (opts.withExpiry()) {
       commands.add(new SubdocGetRequest.Command(
         SubdocCommandType.GET,
         EXPIRATION_MACRO,
@@ -380,12 +380,12 @@ public class AsyncCollection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<GetResult> getAndTouch(final String id,
-                                                            final Duration expiration) {
-    return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
+                                                            final Duration expiry) {
+    return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
   /**
@@ -393,36 +393,36 @@ public class AsyncCollection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<GetResult> getAndTouch(final String id,
-                                                            final Duration expiration,
+                                                            final Duration expiry,
                                                             final GetAndTouchOptions options) {
-    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiration, options), environment.transcoder());
+    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiry, options), environment.transcoder());
   }
 
   /**
    * Helper method for get and touch requests.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @param options custom options to change the default behavior.
    * @return the get and touch request.
    */
   @Stability.Internal
-  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiration,
+  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiry,
                                         final GetAndTouchOptions options) {
     notNullOrEmpty(id, "Id");
-    notNull(expiration, "Expiration");
+    notNull(expiry, "Expiry");
     notNull(options, "GetAndTouchOptions");
     GetAndTouchOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     GetAndTouchRequest request = new GetAndTouchRequest(id, timeout, coreContext,
-      collectionIdentifier, retryStrategy, expiration);
+      collectionIdentifier, retryStrategy, expiry);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -875,7 +875,7 @@ public class AsyncCollection {
   public CompletableFuture<LookupInResult> lookupIn(final String id,
                                                               final List<LookupInSpec> specs,
                                                               final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiration(), environment.jsonSerializer());
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiry(), environment.jsonSerializer());
   }
 
   /**
@@ -895,7 +895,7 @@ public class AsyncCollection {
 
     ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>();
 
-    if (options.build().withExpiration()) {
+    if (options.build().withExpiry()) {
       // Xattr commands have to go first
       commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, EXPIRATION_MACRO, true));
     }

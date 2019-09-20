@@ -97,10 +97,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = async.binaryIncrementHandler.request(id, delta, initial, cas, durability, expiration, timeout, retryStrategy)
+    val req = async.binaryIncrementHandler.request(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryIncrementHandler, durability, false, timeout)
   }
 
@@ -113,10 +113,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = async.binaryDecrementHandler.request(id, delta, initial, cas, durability, expiration, timeout, retryStrategy)
+    val req = async.binaryDecrementHandler.request(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryDecrementHandler, durability, false, timeout)
   }
 }

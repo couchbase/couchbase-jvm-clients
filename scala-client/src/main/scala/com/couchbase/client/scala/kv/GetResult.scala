@@ -27,7 +27,7 @@ import scala.util.{Failure, Success, Try}
   *
   * @param id         the unique identifier of the document
   * @param cas        the document's CAS value at the time of the lookup
-  * @param expiration if the document was fetched with the `withExpiration` flag set then this will contain the
+  * @param expiry     if the document was fetched with the `withExpiry` flag set then this will contain the
   *                   document's expiration value.  Otherwise it will be None.
   * @define SupportedTypes this can be of any type for which an implicit
   *                        [[com.couchbase.client.scala.codec.Conversions.Decodable]] can be found: a list
@@ -41,7 +41,7 @@ case class GetResult(id: String,
                      private val _content: Either[Array[Byte], JsonObject],
                      private[scala] val flags: Int,
                      cas: Long,
-                     expiration: Option[Duration]) {
+                     expiry: Option[Duration]) {
 
   /** Return the content, converted into the application's preferred representation.
     *

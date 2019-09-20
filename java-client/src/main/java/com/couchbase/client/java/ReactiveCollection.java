@@ -70,7 +70,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
@@ -215,7 +214,7 @@ public class ReactiveCollection {
   public Mono<GetResult> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
       GetOptions.Built opts = options.build();
-      if (opts.projections().isEmpty() && !opts.withExpiration()) {
+      if (opts.projections().isEmpty() && !opts.withExpiry()) {
         GetRequest request = asyncCollection.fullGetRequest(id, options);
         return Reactor.wrap(request, GetAccessor.get(core, id, request, environment().transcoder()), true);
       } else {
@@ -256,11 +255,11 @@ public class ReactiveCollection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<GetResult> getAndTouch(final String id, final Duration expiration) {
-    return getAndTouch(id, expiration, DEFAULT_GET_AND_TOUCH_OPTIONS);
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiry) {
+    return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
   /**
@@ -268,14 +267,14 @@ public class ReactiveCollection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<GetResult> getAndTouch(final String id, final Duration expiration,
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiry,
                                                final GetAndTouchOptions options) {
     return Mono.defer(() -> {
-      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiration, options);
+      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiry, options);
       return Reactor.wrap(
           request,
           GetAccessor.getAndTouch(core, id, request, environment().transcoder()),
@@ -558,7 +557,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
       return Reactor
-        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request, options.build().withExpiration(), environment().jsonSerializer()), true);
+        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request, options.build().withExpiry(), environment().jsonSerializer()), true);
     });
   }
 

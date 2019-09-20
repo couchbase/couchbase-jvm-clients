@@ -26,7 +26,7 @@ case class LookupInResult(
                            private val content: Seq[SubdocField],
                            private[scala] val flags: Int,
                            cas: Long,
-                           expiration: Option[Duration]) {
+                           expiry: Option[Duration]) {
 
   /** Retrieve the content returned for a particular `LookupInSpec`, converted into the application's preferred
     * representation.

@@ -208,11 +208,11 @@ public class Collection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @return a {@link GetResult} completing once loaded or failed.
    */
-  public GetResult getAndTouch(final String id, final Duration expiration) {
-    return block(async().getAndTouch(id, expiration));
+  public GetResult getAndTouch(final String id, final Duration expiry) {
+    return block(async().getAndTouch(id, expiry));
   }
 
   /**
@@ -220,12 +220,12 @@ public class Collection {
    * options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param expiration the new expiration time for the document.
+   * @param expiry the new expiration time for the document.
    * @param options custom options to change the default behavior.
    * @return a {@link GetResult} completing once loaded or failed.
    */
-  public GetResult getAndTouch(final String id, final Duration expiration, final GetAndTouchOptions options) {
-    return block(async().getAndTouch(id, expiration, options));
+  public GetResult getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
+    return block(async().getAndTouch(id, expiry, options));
   }
 
   /**

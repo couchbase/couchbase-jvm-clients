@@ -24,7 +24,7 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   /**
    * If the expiration should also be fetched.
    */
-  private boolean withExpiration = false;
+  private boolean withExpiry = false;
 
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
@@ -37,8 +37,8 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
    * @param expiration true if it should be fetched.
    * @return the {@link LookupInOptions} to allow method chaining.
    */
-  public LookupInOptions withExpiration(boolean expiration) {
-    withExpiration = expiration;
+  public LookupInOptions withExpiry(boolean expiration) {
+    withExpiry = expiration;
     return this;
   }
 
@@ -51,8 +51,8 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
-    public boolean withExpiration() {
-      return withExpiration;
+    public boolean withExpiry() {
+      return withExpiry;
     }
   }
 

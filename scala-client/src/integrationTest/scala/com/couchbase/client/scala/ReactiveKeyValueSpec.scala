@@ -104,10 +104,10 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(wrap(coll.insert(docId, content, expiration = 5.seconds)).isSuccess)
+    assert(wrap(coll.insert(docId, content, expiry = 5.seconds)).isSuccess)
 
     wrap(coll.get(docId)) match {
-      case Success(Some(result)) => assert(result.expiration.isEmpty)
+      case Success(Some(result)) => assert(result.expiry.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
       case _ => assert(false, s"unexpected error")
     }
@@ -119,10 +119,10 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(wrap(coll.insert(docId, content, expiration = 5.seconds)).isSuccess)
+    assert(wrap(coll.insert(docId, content, expiry = 5.seconds)).isSuccess)
 
-    wrap(coll.get(docId, withExpiration = true)) match {
-      case Success(Some(result)) => assert(result.expiration.isDefined)
+    wrap(coll.get(docId, withExpiry = true)) match {
+      case Success(Some(result)) => assert(result.expiry.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
       case _ => assert(false, s"unexpected error")
     }
@@ -136,7 +136,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val insertResult = wrap(coll.insert(docId, content)).get
 
-    wrap(coll.getAndLock(docId)) match {
+    wrap(coll.getAndLock(docId, 30.seconds)) match {
       case Success(Some(result)) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.cas)
@@ -145,7 +145,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case _ => assert(false, s"unexpected error")
     }
 
-    wrap(coll.getAndLock(docId)) match {
+    wrap(coll.getAndLock(docId, 30.seconds)) match {
       case Success(Some(result)) => assert(false, "should not have been able to relock locked doc")
       case Failure(err: LockException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -159,7 +159,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = wrap(coll.insert(docId, content, expiration = 10.seconds)).get
+    val insertResult = wrap(coll.insert(docId, content, expiry = 10.seconds)).get
 
     assert(insertResult.cas != 0)
 

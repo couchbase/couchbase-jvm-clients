@@ -86,10 +86,10 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = binaryIncrementHandler.request(id, delta, initial, cas, durability, expiration, timeout,
+    val req = binaryIncrementHandler.request(id, delta, initial, cas, durability, expiry, timeout,
       retryStrategy)
     async.wrapWithDurability(req, id, binaryIncrementHandler, durability, false, timeout)
   }
@@ -103,10 +103,10 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = binaryDecrementHandler.request(id, delta, initial, cas, durability, expiration, timeout,
+    val req = binaryDecrementHandler.request(id, delta, initial, cas, durability, expiry, timeout,
       retryStrategy)
     async.wrapWithDurability(req, id, binaryDecrementHandler, durability, false, timeout)
   }

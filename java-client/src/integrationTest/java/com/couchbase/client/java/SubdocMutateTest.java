@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
@@ -585,9 +584,9 @@ class SubdocMutateTest extends JavaIntegrationTest {
         coll.mutateIn(docId,
                 Arrays.asList(MutateInSpec.insert("foo2", "bar2")), MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
 
-        GetResult result = coll.get(docId, GetOptions.getOptions().withExpiration(true));
-        assertTrue(result.expiration().isPresent());
-        assertTrue(result.expiration().get().getSeconds() != 0);
+        GetResult result = coll.get(docId, GetOptions.getOptions().withExpiry(true));
+        assertTrue(result.expiry().isPresent());
+        assertTrue(result.expiry().get().getSeconds() != 0);
     }
 
 

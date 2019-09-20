@@ -89,7 +89,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     GetResult getResult = collection.get(id);
     assertEquals("Hello, World", getResult.contentAs(String.class));
     assertTrue(getResult.cas() != 0);
-    assertFalse(getResult.expiration().isPresent());
+    assertFalse(getResult.expiry().isPresent());
   }
 
   @Test
@@ -127,7 +127,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult getResult = collection.get(id, getOptions().project("foo", "created"));
     assertTrue(getResult.cas() != 0);
-    assertFalse(getResult.expiration().isPresent());
+    assertFalse(getResult.expiry().isPresent());
 
     JsonObject decoded = getResult.contentAsObject();
     assertEquals("bar", decoded.getString("foo"));
@@ -159,9 +159,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
     assertTrue(mutationResult.cas() != 0);
 
-    GetResult getResult = collection.get(id, getOptions().withExpiration(true));
-    assertTrue(getResult.expiration().isPresent());
-    assertTrue(getResult.expiration().get().toMillis() > 0);
+    GetResult getResult = collection.get(id, getOptions().withExpiry(true));
+    assertTrue(getResult.expiry().isPresent());
+    assertTrue(getResult.expiry().get().toMillis() > 0);
     assertEquals(content, getResult.contentAsObject());
   }
 
@@ -191,11 +191,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult getResult = collection.get(
       id,
-      getOptions().project("foo", "created").withExpiration(true)
+      getOptions().project("foo", "created").withExpiry(true)
     );
     assertTrue(getResult.cas() != 0);
-    assertTrue(getResult.expiration().isPresent());
-    assertTrue(getResult.expiration().get().toMillis() > 0);
+    assertTrue(getResult.expiry().isPresent());
+    assertTrue(getResult.expiry().get().toMillis() > 0);
 
     JsonObject decoded = getResult.contentAsObject();
     assertEquals("bar", decoded.getString("foo"));

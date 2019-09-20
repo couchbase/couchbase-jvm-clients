@@ -38,7 +38,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * If the expiration should also fetched with a get.
    */
-  private boolean withExpiration;
+  private boolean withExpiry;
 
   /**
    * Holds a possible projection.
@@ -55,18 +55,18 @@ public class GetOptions extends CommonOptions<GetOptions> {
   }
 
   private GetOptions() {
-    withExpiration = false;
+    withExpiry = false;
   }
 
   /**
-   * If set to true, the get will fetch the expiration for the document as well and return
+   * If set to true, the get will fetch the expiry for the document as well and return
    * it as part of the {@link GetResult}.
    *
-   * @param expiration true if it should be fetched.
+   * @param expiry true if it should be fetched.
    * @return the {@link GetOptions} to allow method chaining.
    */
-  public GetOptions withExpiration(boolean expiration) {
-    withExpiration = expiration;
+  public GetOptions withExpiry(boolean expiry) {
+    withExpiry = expiry;
     return this;
   }
 
@@ -109,8 +109,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
 
   public class Built extends BuiltCommonOptions {
 
-    public boolean withExpiration() {
-      return withExpiration;
+    public boolean withExpiry() {
+      return withExpiry;
     }
 
     public Set<String> projections() {

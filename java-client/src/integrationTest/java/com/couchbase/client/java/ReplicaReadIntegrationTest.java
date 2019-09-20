@@ -75,7 +75,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     assertFalse(results.isEmpty());
     for (GetResult result : results) {
       assertEquals("Hello, World!", result.contentAs(String.class));
-      assertFalse(result.expiration().isPresent());
+      assertFalse(result.expiry().isPresent());
     }
   }
 

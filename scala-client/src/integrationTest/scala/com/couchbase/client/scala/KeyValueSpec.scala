@@ -89,10 +89,10 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, expiration = 5.seconds).isSuccess)
+    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
 
     coll.get(docId) match {
-      case Success(result) => assert(result.expiration.isEmpty)
+      case Success(result) => assert(result.expiry.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -103,10 +103,10 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, expiration = 5.seconds).isSuccess)
+    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
 
-    coll.get(docId, withExpiration = true) match {
-      case Success(result) => assert(result.expiration.isDefined)
+    coll.get(docId, withExpiry = true) match {
+      case Success(result) => assert(result.expiry.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -119,7 +119,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
-    coll.getAndLock(docId) match {
+    coll.getAndLock(docId, 30.seconds) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.cas)
@@ -127,7 +127,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.getAndLock(docId) match {
+    coll.getAndLock(docId, 30.seconds) match {
       case Success(result) => assert(false, "should not have been able to relock locked doc")
       case Failure(err: LockException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -141,7 +141,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
-    coll.getAndLock(docId) match {
+    coll.getAndLock(docId, 30.seconds) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas != insertResult.cas)
@@ -155,7 +155,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.getAndLock(docId) match {
+    coll.getAndLock(docId, 30.seconds) match {
       case Success(result) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -168,7 +168,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content, expiration = 10.seconds).get
+    val insertResult = coll.insert(docId, content, expiry = 10.seconds).get
 
     assert (insertResult.cas != 0)
 

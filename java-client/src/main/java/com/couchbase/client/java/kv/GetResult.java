@@ -17,7 +17,6 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.codec.DataFormat;
-import com.couchbase.client.java.codec.DefaultTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -52,9 +51,9 @@ public class GetResult {
   private final long cas;
 
   /**
-   * The expiration if fetched and present.
+   * The expiry if fetched and present.
    */
-  private final Optional<Duration> expiration;
+  private final Optional<Duration> expiry;
 
   /**
    * The default transcoder which should be used.
@@ -65,13 +64,13 @@ public class GetResult {
    * Creates a new {@link GetResult}.
    *
    * @param cas the cas from the doc.
-   * @param expiration the expiration if fetched from the doc.
+   * @param expiry the expiry if fetched from the doc.
    */
-  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiration, Transcoder transcoder) {
+  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiry, Transcoder transcoder) {
     this.cas = cas;
     this.content = content;
     this.format = format;
-    this.expiration = expiration;
+    this.expiry = expiry;
     this.transcoder = transcoder;
   }
 
@@ -83,13 +82,13 @@ public class GetResult {
   }
 
   /**
-   * If present, returns the expiration of the loaded document.
+   * If present, returns the expiry of the loaded document.
    *
    * <p>Note that the duration represents the time when the document has been loaded and can only
    * ever be an approximation.</p>
    */
-  public Optional<Duration> expiration() {
-    return expiration;
+  public Optional<Duration> expiry() {
+    return expiry;
   }
 
   /**
@@ -145,7 +144,7 @@ public class GetResult {
       "content=" + redactUser(Arrays.toString(content)) +
       ", format=" + format +
       ", cas=" + cas +
-      ", expiration=" + expiration +
+      ", expiry=" + expiry +
       '}';
   }
 
@@ -157,12 +156,12 @@ public class GetResult {
     return cas == getResult.cas &&
       Arrays.equals(content, getResult.content) &&
       format == getResult.format &&
-      Objects.equals(expiration, getResult.expiration);
+      Objects.equals(expiry, getResult.expiry);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(format, cas, expiration);
+    int result = Objects.hash(format, cas, expiry);
     result = 31 * result + Arrays.hashCode(content);
     return result;
   }

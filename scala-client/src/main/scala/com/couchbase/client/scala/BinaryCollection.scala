@@ -152,10 +152,10 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.increment(id, delta, initial, cas, durability, expiration, timeout,
+    Collection.block(async.increment(id, delta, initial, cas, durability, expiry, timeout,
       retryStrategy), timeout)
   }
 
@@ -182,10 +182,10 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
-                expiration: Duration = 0.seconds,
+                expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.decrement(id, delta, initial, cas, durability, expiration, timeout,
+    Collection.block(async.decrement(id, delta, initial, cas, durability, expiry, timeout,
       retryStrategy), timeout)
   }
 
