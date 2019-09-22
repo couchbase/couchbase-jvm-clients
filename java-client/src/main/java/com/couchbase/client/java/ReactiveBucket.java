@@ -49,7 +49,7 @@ public class ReactiveBucket {
    */
   ReactiveBucket(final AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
-    this.collectionManager = new ReactiveCollectionManager(asyncBucket.collectionManager);
+    this.collectionManager = new ReactiveCollectionManager(asyncBucket.collections());
   }
 
   /**
