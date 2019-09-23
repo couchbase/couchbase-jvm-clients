@@ -16,7 +16,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <junit.version>5.5.2</junit.version>
-        <jackson.version>2.9.9.3</jackson.version>
+        <jackson.version>2.9.10</jackson.version>
 
         <!--Can override this with mvn -Dscala.compat.version=2.11-->
         <scala.compat.version>2.12</scala.compat.version>
