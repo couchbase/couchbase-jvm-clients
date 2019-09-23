@@ -67,6 +67,10 @@ public abstract class MutateInSpec {
      * Creates a command with the intention of upserting a value in a JSON object.
      * <p>
      * That is, the value will be replaced if the path already exists, or inserted if not.
+     * <p>
+     * If the path is empty (""), then the value will be used for the document's full body.  Whether the document is
+     * to be upserted or inserted is controlled by {@link MutateInOptions#upsertDocument(boolean)} and
+     * {@link MutateInOptions#insertDocument(boolean)}.
      *
      * @param path     the path identifying where to upsert the value.
      * @param value the value to upsert
@@ -81,8 +85,14 @@ public abstract class MutateInSpec {
      * Provided to support advanced workflows that need to set a document's extended attributes (xattrs)
      * at the same time as the document's regular content.
      *
+     * @deprecated this functionality has been deprecated and will be removed in a future release.  Instead, specify
+     * a blank path ("") on an upsert command
+     *
      * @param value the value to upsert to the document's body
      */
+    // TODO remove when transactions no longer depends on this
+    @Deprecated
+    @Stability.Internal
     public static <T> FullDocument fullDocument(final Object value) {
         return new FullDocument(value);
     }

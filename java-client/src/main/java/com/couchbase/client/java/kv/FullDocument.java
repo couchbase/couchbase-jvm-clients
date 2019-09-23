@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.Serializer;
@@ -28,6 +29,8 @@ import static com.couchbase.client.core.util.Validators.notNull;
  * @author Graham Pople
  * @since 1.0.0
  */
+@Deprecated
+@Stability.Internal
 public class FullDocument extends MutateInSpec {
     private final Object doc;
     private Serializer serializer;

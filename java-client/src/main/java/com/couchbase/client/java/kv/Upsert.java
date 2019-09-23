@@ -85,8 +85,10 @@ public class Upsert extends MutateInSpec {
   public SubdocMutateRequest.Command encode(final Serializer defaultSerializer) {
     Serializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
+    SubdocCommandType command = path.equals("") ? SubdocCommandType.SET_DOC : SubdocCommandType.DICT_UPSERT;
+
     return new SubdocMutateRequest.Command(
-        SubdocCommandType.DICT_UPSERT,
+        command,
         path,
         serializer.serialize(doc),
         createPath,

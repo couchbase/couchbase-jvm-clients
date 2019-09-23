@@ -253,7 +253,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       Arrays.asList(
         // Server doesn't allow fulLDocument to be only op here, get "key not found"
         MutateInSpec.upsert("qix", "qux"),
-        MutateInSpec.fullDocument(content)
+        MutateInSpec.upsert("", content)
       ),
       MutateInOptions.mutateInOptions().upsertDocument(true)
     );
@@ -272,7 +272,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       Arrays.asList(
         // Server doesn't allow fulLDocument to be only op here, get "key not found"
         MutateInSpec.upsert("qix", "qux"),
-        MutateInSpec.fullDocument(content)
+        MutateInSpec.upsert("", content)
       ),
       MutateInOptions.mutateInOptions().insertDocument(true)
     );
