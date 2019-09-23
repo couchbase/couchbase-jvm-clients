@@ -26,6 +26,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
+import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.ServiceConfig;
@@ -50,6 +51,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -57,6 +60,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
@@ -406,6 +410,13 @@ public class Node implements Stateful<NodeState> {
       default:
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }
+  }
+
+  public Stream<EndpointHealth> diagnostics() {
+    return services.values()
+            .stream()
+            .flatMap(services -> services.values().stream())
+            .flatMap(service -> service.diagnostics());
   }
 
   @Override

@@ -25,6 +25,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
+import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
@@ -46,6 +47,7 @@ import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
 import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
+import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
 
@@ -54,6 +56,7 @@ public class ReactiveCluster {
   static final QueryOptions DEFAULT_QUERY_OPTIONS = queryOptions();
   static final SearchOptions DEFAULT_SEARCH_OPTIONS = searchOptions();
   static final AnalyticsOptions DEFAULT_ANALYTICS_OPTIONS = analyticsOptions();
+  static final DiagnosticsOptions DEFAULT_DIAGNOSTICS_OPTIONS = diagnosticsOptions();
 
   /**
    * Holds the underlying async cluster reference.

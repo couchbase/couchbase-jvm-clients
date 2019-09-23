@@ -17,14 +17,15 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
+import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
@@ -46,6 +47,7 @@ import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionStri
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
@@ -282,4 +284,27 @@ public class Cluster {
     block(asyncCluster.disconnect(timeout));
   }
 
+  /**
+   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
+   * cluster.
+   *
+   * @param options options on the generation of the report
+   * @return a {@link DiagnosticsResult}
+   */
+  @Stability.Volatile
+  public DiagnosticsResult diagnostics(DiagnosticsOptions options) {
+    return block(asyncCluster.diagnostics(options));
+  }
+
+  /**
+   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
+   * cluster.
+   *
+   * @return a {@link DiagnosticsResult}
+   */
+  @Stability.Volatile
+  public DiagnosticsResult diagnostics() {
+    return block(asyncCluster.diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS));
+  }
 }
+

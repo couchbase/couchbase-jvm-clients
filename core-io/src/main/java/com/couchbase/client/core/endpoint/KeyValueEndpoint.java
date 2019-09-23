@@ -17,19 +17,19 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.cnc.events.config.UnorderedExecutionEnabledEvent;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
+import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -123,5 +123,4 @@ public class KeyValueEndpoint extends BaseEndpoint {
       return features;
     }
   }
-
 }

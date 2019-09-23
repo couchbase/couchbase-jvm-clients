@@ -16,10 +16,11 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Stateful;
-import reactor.core.publisher.Flux;
 
 /**
  * The parent interface for all endpoints.
@@ -74,5 +75,8 @@ public interface Endpoint extends Stateful<EndpointState> {
    */
   long lastResponseReceived();
 
-
+  /**
+   * Returns diagnostics information for this endpoint.
+   */
+  EndpointHealth diagnostics();
 }

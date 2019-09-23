@@ -56,6 +56,7 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGro
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
+import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.util.SingleStateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -65,6 +66,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,6 +74,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
 /**
  * This {@link BaseEndpoint} implements all common logic for endpoints that wrap the IO layer.
@@ -554,4 +558,31 @@ public abstract class BaseEndpoint implements Endpoint {
     }
   }
 
+  @Override
+  public EndpointHealth diagnostics() {
+    String remote = null;
+    String local = null;
+    if(channel != null) {
+      SocketAddress remoteAddr = channel.remoteAddress();
+      SocketAddress localAddr = channel.localAddress();
+      if (remoteAddr instanceof InetSocketAddress) {
+        InetSocketAddress ra = (InetSocketAddress) remoteAddr;
+        remote = redactMeta(ra.getHostString()) + ":" + ra.getPort();
+      }
+      if (localAddr instanceof InetSocketAddress) {
+        InetSocketAddress la = (InetSocketAddress) localAddr;
+        local = redactMeta(la.getHostString()) + ":" + la.getPort();
+      }
+    }
+    long lastActivity = TimeUnit.NANOSECONDS.toMicros(lastResponseTimestamp > 0 ? System.nanoTime() - lastResponseTimestamp : 0);
+    String id = "0x" + Integer.toHexString(hashCode());
+
+    return new EndpointHealth(endpointContext().serviceType(),
+            state(),
+            remote,
+            local,
+            endpointContext().bucket(),
+            lastActivity,
+            id);
+  }
 }

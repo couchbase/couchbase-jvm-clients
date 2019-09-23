@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
+import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
@@ -34,6 +35,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The {@link PooledService} is a flexible implementation to pool endpoints based on the
@@ -283,6 +286,13 @@ abstract class PooledService implements Service {
   @Override
   public Flux<ServiceState> states() {
     return endpointStates.states();
+  }
+
+  @Override
+  public Stream<EndpointHealth> diagnostics() {
+    return endpoints
+            .stream()
+            .map(v -> v.diagnostics());
   }
 
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
@@ -31,6 +32,7 @@ import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
+import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager;
@@ -50,14 +52,17 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
@@ -411,5 +416,33 @@ public class AsyncCluster {
   @Stability.Internal
   QueryAccessor queryAccessor() {
     return queryAccessor;
+  }
+
+
+  /**
+   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
+   * cluster.
+   *
+   * @param options options on the generation of the report
+   * @return a {@link DiagnosticsResult}
+   */
+  @Stability.Volatile
+  public CompletableFuture<DiagnosticsResult> diagnostics(DiagnosticsOptions options) {
+    DiagnosticsResult out = new DiagnosticsResult(core.diagnostics().collect(Collectors.toList()),
+            core.context().environment().userAgent().formattedShort(),
+            options.build().reportId().orElse(UUID.randomUUID().toString()));
+
+    return CompletableFuture.completedFuture(out);
+  }
+
+  /**
+   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
+   * cluster.
+   *
+   * @return a {@link DiagnosticsResult}
+   */
+  @Stability.Volatile
+  public CompletableFuture<DiagnosticsResult> diagnostics() {
+      return diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS);
   }
 }
