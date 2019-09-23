@@ -49,15 +49,6 @@ object LookupInSpec {
   def exists(path: String): Exists = {
     Exists(path)
   }
-
-  /** Requests that the full document should be fetched.
-    *
-    * This is provided to support some advanced workloads that need to fetch the document along with some extended
-    * attributes (xattrs).
-    */
-  def getDoc: GetFullDocument = {
-    GetFullDocument()
-  }
 }
 
 /** Represents a single SubDocument lookup operation, such as fetching a particular field. */
@@ -70,8 +61,6 @@ case class Get(path: String,
     copy(path, _xattr = true)
   }
 }
-
-case class GetFullDocument() extends LookupInSpec
 
 case class Exists(path: String,
                   private[scala] val _xattr: Boolean = false) extends LookupInSpec {

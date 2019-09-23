@@ -239,7 +239,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     JsonObject content = JsonObject.create().put("foo", "bar");
     collection.upsert(id, content);
 
-    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.getFullDocument()));
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.get("")));
     assertEquals(content, result.contentAsObject(0));
   }
 

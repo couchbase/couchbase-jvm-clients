@@ -149,7 +149,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
       "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId, Array(get("foo"), get("age"), getDoc)) match {
+    coll.lookupIn(docId, Array(get("foo"), get("age"), get(""))) match {
       case Success(result) =>
         assert(result.contentAs[String](0).get == "bar")
         result.contentAs[ujson.Obj](2) match {

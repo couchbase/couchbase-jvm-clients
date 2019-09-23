@@ -25,9 +25,16 @@ public abstract class LookupInSpec {
   abstract public SubdocGetRequest.Command export();
 
   public static LookupInSpecStandard get(final String path) {
-    return new LookupInSpecStandard(SubdocCommandType.GET, path);
+    SubdocCommandType command = path.equals("") ? SubdocCommandType.GET_DOC : SubdocCommandType.GET;
+    return new LookupInSpecStandard(command, path);
   }
 
+  /**
+   * @deprecated use LookupInSpec.get with a blank path ("") instead
+   */
+  // TODO remove when transactions no longer depends on this
+  @Deprecated
+  @Stability.Internal
   public static LookupInSpecFull getFullDocument() {
     return new LookupInSpecFull();
   }

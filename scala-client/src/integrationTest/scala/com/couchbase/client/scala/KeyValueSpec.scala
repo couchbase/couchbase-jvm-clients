@@ -2,6 +2,9 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
+import com.couchbase.client.scala.implicits.Codec
+import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -328,5 +331,39 @@ class KeyValueSpec extends ScalaIntegrationTest {
     } yield null
 
     assert(validations.isFailure)
+  }
+
+  @Test
+  def all(): Unit = {
+    val collection = coll
+
+    val json = ujson.Obj("hello" -> "world")
+
+    val result: Try[String] = collection.upsert("document-key", json)
+      .flatMap(_ => collection.get("document-key", timeout = 10.seconds))
+      .flatMap(_.contentAs[JsonObjectSafe])
+      .flatMap(_.str("status"))
+
+    result match {
+      case Success(status) => println(s"Couchbase is $status")
+      case Failure(err) =>    println("Error: " + err)
+    }
+
+
+    case class Address(line1: String)
+    case class User(name: String, age: Int, addresses: Seq[Address])
+    object User {
+      implicit val codec: Codec[User] = Codec.codec[User]
+    }
+
+    val user = User("user1", 21, Seq(Address("address1")))
+
+    coll.upsert("user1", user).get
+
+    val statement = s"""select * from `users` where meta().id like 'user%';"""
+
+    val users: Try[Seq[User]] = cluster.query(statement)
+      .flatMap(_.allRowsAs[User])
+
   }
 }

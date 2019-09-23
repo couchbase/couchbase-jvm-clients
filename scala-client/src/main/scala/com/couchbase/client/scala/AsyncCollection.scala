@@ -402,7 +402,7 @@ class AsyncCollection(name: String,
 }
 
 object AsyncCollection {
-  private[scala] val getFullDoc = Array(LookupInSpec.getDoc)
+  private[scala] val getFullDoc = Array(LookupInSpec.get(""))
 
   private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
                                           id: String,

@@ -69,8 +69,9 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       }
 
       spec.map {
-        case x: Get => new SubdocGetRequest.Command(SubdocCommandType.GET, x.path, x._xattr)
-        case x: GetFullDocument => new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false)
+        case x: Get =>
+          val cmd = if (x.path == "") SubdocCommandType.GET_DOC else SubdocCommandType.GET
+          new SubdocGetRequest.Command(cmd, x.path, x._xattr)
         case x: Exists => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x._xattr)
         case x: Count => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x._xattr)
       }.foreach(commands.add)
