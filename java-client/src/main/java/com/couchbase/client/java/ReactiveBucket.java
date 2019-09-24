@@ -18,6 +18,10 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diag.HealthPinger;
+import com.couchbase.client.core.diag.PingResult;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
@@ -27,6 +31,10 @@ import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.java.diagnostics.PingOptions.pingOptions;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
@@ -36,6 +44,7 @@ import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 public class ReactiveBucket {
 
   static final ViewOptions DEFAULT_VIEW_OPTIONS = viewOptions();
+  static final PingOptions DEFAULT_PING_OPTIONS = pingOptions();
 
   /**
    * Holds the underlying async bucket reference.
@@ -145,4 +154,30 @@ public class ReactiveBucket {
     );
   }
 
+  /**
+   * Performs a diagnostic active "ping" call with custom options, on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @param options options controlling the final ping result
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public Mono<PingResult> ping(final PingOptions options) {
+    return Mono.fromFuture(async().ping(options));
+  }
+
+  /**
+   * Performs a diagnostic active "ping" call on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public Mono<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
 }

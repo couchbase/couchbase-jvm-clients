@@ -37,6 +37,7 @@ import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.util.AssignChannelInfo;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
@@ -437,7 +438,21 @@ public abstract class BaseEndpoint implements Endpoint {
     }
 
     if (canWrite()) {
-        if (!pipelined) {
+      if (request instanceof AssignChannelInfo && channel != null) {
+        AssignChannelInfo resp = (AssignChannelInfo) request;
+        SocketAddress remoteAddr = channel.remoteAddress();
+        SocketAddress localAddr = channel.localAddress();
+        if (remoteAddr instanceof InetSocketAddress) {
+          InetSocketAddress ra = (InetSocketAddress) remoteAddr;
+          resp.remote(redactMeta(ra.getHostString()) + ":" + ra.getPort());
+        }
+        if (localAddr instanceof InetSocketAddress) {
+          InetSocketAddress la = (InetSocketAddress) localAddr;
+          resp.local(redactMeta(la.getHostString()) + ":" + la.getPort());
+        }
+      }
+
+      if (!pipelined) {
           outstandingRequests.incrementAndGet();
         }
         if (circuitBreakerEnabled) {

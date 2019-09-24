@@ -16,11 +16,12 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
+import com.couchbase.client.core.io.netty.query.QueryHandlerSwitcher;
 import com.couchbase.client.core.io.netty.query.QueryMessageHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
 
 public class QueryEndpoint extends BaseEndpoint {
 
@@ -45,7 +46,7 @@ public class QueryEndpoint extends BaseEndpoint {
     @Override
     public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new QueryMessageHandler(endpoint, endpointContext));
+      pipeline.addLast(QueryHandlerSwitcher.SWITCHER_IDENTIFIER, new QueryHandlerSwitcher(endpoint, endpointContext));
     }
   }
 }

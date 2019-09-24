@@ -56,7 +56,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   private volatile short partition;
 
-  BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                       final String key, final CollectionIdentifier collectionIdentifier) {
     super(timeout, ctx, retryStrategy);
     this.key = encodeKey(key);

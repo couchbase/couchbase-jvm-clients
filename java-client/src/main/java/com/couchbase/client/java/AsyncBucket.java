@@ -18,10 +18,15 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diag.HealthPinger;
+import com.couchbase.client.core.diag.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.diagnostics.PingResponse;
 import com.couchbase.client.core.msg.view.ViewRequest;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
@@ -33,11 +38,13 @@ import com.couchbase.client.java.view.ViewResult;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+import static com.couchbase.client.java.ReactiveBucket.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 
 /**
@@ -196,4 +203,39 @@ public class AsyncBucket {
     return request;
   }
 
+  /**
+   * Performs a diagnostic active "ping" call with custom options, on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @param options options controlling the final ping result
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public CompletableFuture<PingResult> ping(final PingOptions options) {
+    PingOptions.Built built = options.build();
+    return HealthPinger.ping(environment,
+            name,
+            core,
+            built.reportId().orElse(UUID.randomUUID().toString()),
+            // Don't want to add another default timeout just for ping, KV seems reasonable
+            built.timeout().orElse(environment.timeoutConfig().kvTimeout()),
+            // Fast fail makes more sense for ping than using cluster strategy, which is likely default BestEffort
+            built.retryStrategy().orElse(FailFastRetryStrategy.INSTANCE),
+            built.services()).toFuture();
+  }
+
+  /**
+   * Performs a diagnostic active "ping" call on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public CompletableFuture<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
 }

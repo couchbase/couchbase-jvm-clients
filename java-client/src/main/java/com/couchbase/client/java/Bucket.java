@@ -18,13 +18,21 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diag.HealthPinger;
+import com.couchbase.client.core.diag.PingResult;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.view.ViewIndexManager;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveBucket.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 
 /**
@@ -155,4 +163,30 @@ public class Bucket {
     return block(asyncBucket.viewQuery(designDoc, viewName, options));
   }
 
+  /**
+   * Performs a diagnostic active "ping" call with custom options, on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @param options options controlling the final ping result
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public PingResult ping(final PingOptions options) {
+    return block(asyncBucket.ping(options));
+  }
+
+  /**
+   * Performs a diagnostic active "ping" call on all services.
+   *
+   * Note that since each service has different timeouts, you need to provide a timeout that suits
+   * your needs (how long each individual service ping should take max before it times out).
+   *
+   * @return a ping report once created.
+   */
+  @Stability.Volatile
+  public PingResult ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
 }
