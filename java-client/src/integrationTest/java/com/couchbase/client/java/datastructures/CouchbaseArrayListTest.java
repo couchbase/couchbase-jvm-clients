@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.datastructures;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static junit.framework.TestCase.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
@@ -67,7 +69,11 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
 
     @AfterEach
     void after() {
-        collection.remove(uuid);
+         try {
+             collection.remove(uuid);
+         } catch (KeyNotFoundException e) {
+             // that's fine
+         }
     }
 
     @Test
@@ -132,8 +138,17 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         assertEquals(list.size(), 1);
         assertEquals(list.get(0).longValue(), 1L);
         // TODO: 1L OR Long.valueOf(1L) seem to not work here, but
-        // Integer (or int below) does.
+        //       Integer (or int below) does.
         assertTrue(list.contains(1));
+    }
+    @Test
+    void shouldFailToAddPastEnd() {
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        list.add(1L);
+        assertEquals(1, list.size());
+        assertThrows(IndexOutOfBoundsException.class, () -> list.add(3, 5L));
+        list.add(2L);
+        assertEquals(2, list.size());
     }
     @Test
     void shouldPrepend() {
@@ -206,12 +221,39 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         }
     }
     @Test
+    void shouldReturnEmptyIterator() {
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        Iterator<Long> it = list.iterator();
+        assertFalse(it.hasNext());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+    }
+    @Test
+    void shouldBeAbleToStartWithEmptyIteratorAndAdd() {
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        ListIterator<Long> it = list.listIterator();
+        it.add(1L);
+        // add will put the cursor on this single element, so now we should have a previous
+        assertTrue(it.hasPrevious());
+        assertEquals(1, list.size());
+    }
+    @Test
     void shouldClear() {
         CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         assertEquals(list.size(), 5);
         list.clear();
         assertTrue(list.isEmpty());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+    }
+    @Test
+    void shouldAllowMultipleClears() {
+        CouchbaseArrayList<Long> list = new CouchbaseArrayList<>(uuid, collection, Long.class, options);
+        list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
+        assertEquals(list.size(), 5);
+        list.clear();
+        assertTrue(list.isEmpty());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertDoesNotThrow(() -> list.clear());
     }
     @Test
     void shouldClearViaIterator() {
@@ -333,5 +375,34 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         it.next();
         assertThrows(ConcurrentModificationException.class, ()-> {it.remove();});
     }
+    @Test
+    void shouldNotRemoveViaIteratorIfCleared() {
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        list.addAll(Arrays.asList(1,2,3,4,5));
 
+        ListIterator<Integer> it = list.listIterator();
+        it.next();
+        list.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.remove());
+    }
+    @Test
+    void shouldNotSetViaIteratorIfCleared() {
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        list.addAll(Arrays.asList(1,2,3,4,5));
+
+        ListIterator<Integer> it = list.listIterator();
+        it.next();
+        list.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.set(5));
+    }
+    @Test
+    void shouldNotAddViaIteratorIfCleared() {
+        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        list.addAll(Arrays.asList(1,2,3,4,5));
+
+        ListIterator<Integer> it = list.listIterator();
+        it.next();
+        list.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.add(5));
+    }
 }

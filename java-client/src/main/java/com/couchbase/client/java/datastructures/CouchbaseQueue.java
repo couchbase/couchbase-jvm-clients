@@ -17,6 +17,7 @@ package com.couchbase.client.java.datastructures;
 
 import java.util.AbstractQueue;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 
@@ -24,6 +25,7 @@ import com.couchbase.client.core.annotation.Stability;
 
 
 import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -40,6 +42,7 @@ import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -96,13 +99,6 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         this.upsertOptions = optionsIn.upsertOptions();
         this.insertOptions = optionsIn.insertOptions();
         this.mutateInOptions = optionsIn.mutateInOptions();
-
-
-        try {
-            this.collection.insert(id, JsonArray.empty(), insertOptions);
-        } catch (KeyExistsException ex) {
-            // Ignore concurrent creations, keep on moving.
-        }
     }
 
     /**
@@ -119,22 +115,23 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
     }
 
     @Override
-    public Iterator<E> iterator() {
-        GetResult result = collection.get(id, getOptions);
-        return (Iterator<E>) result.contentAsArray().iterator();
-    }
+    public Iterator<E> iterator() { return new CouchbaseQueueIterator<>(); }
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.count("")),
-                lookupInOptions);
-        return result.contentAs(0, Integer.class);
+        try {
+            LookupInResult result = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.count("")),
+                    lookupInOptions);
+            return result.contentAs(0, Integer.class);
+        } catch (KeyNotFoundException e) {
+            return 0;
+        }
     }
 
     @Override
     public void clear() {
-        collection.upsert(id, JsonArray.empty(), upsertOptions);
+        collection.remove(id);
     }
 
     @Override
@@ -144,7 +141,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         }
         collection.mutateIn(id,
                 Collections.singletonList(MutateInSpec.arrayPrepend("", e)),
-                mutateInOptions);
+                queueOptions.mutateInOptions().upsert(true));
         return true;
     }
 
@@ -162,6 +159,8 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         queueOptions.mutateInOptions().cas(returnCas));
                 return current;
+            } catch (KeyNotFoundException ex) {
+                return null;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
             } catch (MultiMutationException ex) {
@@ -182,8 +181,75 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                     Collections.singletonList(LookupInSpec.get("[-1]")),
                     lookupInOptions);
             return result.contentAs(0, entityTypeClass);
+        } catch (KeyNotFoundException e) {
+            return null;
         } catch (PathNotFoundException e) {
                 return null; //the queue is empty
         }
     }
-}
+
+    public class CouchbaseQueueIterator<E> implements Iterator<E> {
+
+        private long cas;
+        private final Iterator<E> delegate;
+        private int lastVisited = -1;
+        private boolean doneRemove = false;
+
+        public CouchbaseQueueIterator() {
+            JsonArray content;
+            try {
+                GetResult result = collection.get(id);
+                this.cas = result.cas();
+                content = result.contentAsArray();
+            } catch (KeyNotFoundException e) {
+                this.cas = 0;
+                content = JsonArray.empty();
+            }
+            this.delegate = (Iterator<E>) content.iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return delegate.hasNext();
+        }
+
+        @Override
+        public E next() {
+            if (hasNext()) {
+                lastVisited++;
+                doneRemove = false;
+            }
+            return delegate.next();
+        }
+
+        @Override
+        public void remove() {
+            if (lastVisited < 0) {
+                throw new IllegalStateException("Cannot remove before having started iterating");
+            }
+            //skip remove attempts past the first one after a next()
+            if (doneRemove) {
+                throw new IllegalStateException("Cannot remove twice in a row while iterating");
+            }
+            String path = "[" + lastVisited + "]";
+            //use the cas to attempt to remove
+            try {
+                MutateInResult result = collection.mutateIn(id, Collections.singletonList(MutateInSpec.remove(path)),
+                        queueOptions.mutateInOptions().cas(this.cas));
+                //update the cas
+                this.cas = result.cas();
+                //ok the remove succeeded in DB, let's reflect that in the iterator's backing collection and state
+                delegate.remove();
+                doneRemove = true;
+                lastVisited--;
+            } catch (CASMismatchException | KeyNotFoundException e) {
+                throw new ConcurrentModificationException("Couldn't remove while iterating: " + e);
+            } catch (MultiMutationException ex) {
+                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
+                    // queue is empty
+                    return;
+                }
+                throw ex;
+           }
+        }
+    }}

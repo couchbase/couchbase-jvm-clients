@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.datastructures;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -35,6 +36,8 @@ import java.util.UUID;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CouchbaseMapTest extends JavaIntegrationTest {
     private static Cluster cluster;
@@ -83,6 +86,7 @@ class CouchbaseMapTest extends JavaIntegrationTest {
     void shouldCreateEmptyMap() {
         CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         assertEquals(0, map.size());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldPut() {
@@ -111,12 +115,18 @@ class CouchbaseMapTest extends JavaIntegrationTest {
         assertFalse(map.containsKey("a"));
     }
     @Test
+    void shouldRemoveWhenEmpty() {
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        assertNull(map.remove("foo"));
+    }
+    @Test
     void shouldClear() {
         CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         map.putAll(createJavaMap());
         assertEquals(5, map.size());
         map.clear();
         assertEquals(0, map.size());
+        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
     }
     @Test
     void shouldEntrySet() {
@@ -124,6 +134,11 @@ class CouchbaseMapTest extends JavaIntegrationTest {
         map.putAll(createJavaMap());
         assertEquals(5, map.size());
         assertEquals(5, map.entrySet().size());
+    }
+    @Test
+    void shouldEntrySetWhenEmpty() {
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        assertEquals(0, map.entrySet().size());
     }
     @Test
     void canIterate() {
@@ -157,6 +172,16 @@ class CouchbaseMapTest extends JavaIntegrationTest {
         for(String key: javaMap.keySet()) {
             assertTrue(map.containsKey(key));
         }
+    }
+    @Test
+    void canContainsKeyWhenEmpty() {
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        assertFalse(map.containsKey("foo"));
+    }
+    @Test
+    void canContainsValueWhenEmpty() {
+        CouchbaseMap<Integer> map = collection.map(uuid, Integer.class);
+        assertFalse(map.containsValue(1));
     }
     @Test
     void canContainsValue() {

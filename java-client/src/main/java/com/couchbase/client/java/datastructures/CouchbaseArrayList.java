@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -110,12 +111,6 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         this.upsertOptions = optionsIn.upsertOptions();
         this.insertOptions = optionsIn.insertOptions();
         this.mutateInOptions = optionsIn.mutateInOptions();
-
-        try {
-            collection.insert(id, JsonArray.empty(), insertOptions);
-        } catch (KeyExistsException ex) {
-            // Ignore concurrent creations, keep on moving.
-        }
     }
 
     @Override
@@ -125,30 +120,46 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
         String idx = "[" + index + "]";
-        LookupInResult result = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.get(idx)),
-                lookupInOptions);
-        if (!result.exists(0)) {
+        try {
+            LookupInResult result = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.get(idx)),
+                    lookupInOptions);
+
+            if (!result.exists(0)) {
+                throw new IndexOutOfBoundsException("Index: " + index);
+            }
+            return result.contentAs(0, entityTypeClass);
+        } catch (KeyNotFoundException e) {
+            // that's ok, we are lazy.  ArrayList will throw if you clear the list
+            // then try to get or remove, so lets do same.
             throw new IndexOutOfBoundsException("Index: " + index);
         }
-
-        return result.contentAs(0, entityTypeClass);
     }
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.count("")),
-                lookupInOptions);
-        return result.contentAs(0, Integer.class);
+        try {
+            LookupInResult result = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.count("")),
+                    lookupInOptions);
+
+            return result.contentAs(0, Integer.class);
+        } catch (KeyNotFoundException e) {
+            return 0;
+        }
     }
 
     @Override
     public boolean isEmpty() {
-        LookupInResult current = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.exists("[0]")),
-                lookupInOptions);
-        return !current.exists(0);
+        try {
+            LookupInResult current = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.exists("[0]")),
+                    lookupInOptions);
+
+            return !current.exists(0);
+        } catch (KeyNotFoundException e) {
+            return true;
+        }
     }
 
     @Override
@@ -172,6 +183,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                         Collections.singletonList(MutateInSpec.replace(idx, element)),
                         arrayListOptions.mutateInOptions().cas(returnCas));
                 return result;
+            } catch (KeyNotFoundException e) {
+                createEmptyList();
             } catch (CASMismatchException ex) {
                 //will need to retry get-and-set
             } catch (MultiMutationException ex) {
@@ -190,11 +203,20 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         if (index < 0) {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
-
+        int retry = 0;
         try {
-            collection.mutateIn(id,
-                    Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)),
-                    mutateInOptions);
+            while (retry < 2) {
+                try {
+                    collection.mutateIn(id,
+                            Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)),
+                            arrayListOptions.mutateInOptions());
+                    return;
+                } catch (KeyNotFoundException e) {
+                    // empty list, create empty one and try again
+                    createEmptyList();
+                    retry += 1;
+                }
+            }
         } catch (PathNotFoundException e) {
             throw new IndexOutOfBoundsException("Index: " + index);
         } catch (MultiMutationException ex) {
@@ -204,6 +226,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             throw ex;
         }
     }
+
 
     @Override
     public E remove(int index) {
@@ -224,6 +247,9 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         arrayListOptions.mutateInOptions().cas(returnCas));
                 return result;
+            } catch (KeyNotFoundException e) {
+                // ArrayList will throw if underlying list was cleared before a remove.
+                throw new IndexOutOfBoundsException("Index:" + index);
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
             } catch (PathNotFoundException e) {
@@ -258,8 +284,11 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
 
     @Override
     public void clear() {
-        //optimized version over AbstractList's (which iterates on all and remove)
-       collection.upsert(id, JsonArray.empty(), upsertOptions);
+       try {
+           collection.remove(id);
+       } catch (KeyNotFoundException e) {
+           // could be we called this twice, that's ok
+       }
     }
 
     private class CouchbaseListIterator implements ListIterator<E> {
@@ -271,15 +300,21 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         private int lastVisited;
 
         public CouchbaseListIterator(int index) {
-            GetResult result = collection.get(id, getOptions);
-            JsonArray current = result.contentAs(JsonArray.class);
+            JsonArray current;
+            try {
+                GetResult result = collection.get(id, getOptions);
+                current = result.contentAs(JsonArray.class);
+                this.cas = result.cas();
+            } catch (KeyNotFoundException e) {
+                current = JsonArray.empty();
+                this.cas = 0;
+            }
             //Care not to use toList, as it will convert internal JsonObject/JsonArray to Map/List
             List<E> list = new ArrayList<E>(current.size());
             for (E value : (Iterable<E>) current) {
                 list.add(value);
             }
 
-            this.cas = result.cas();
             this.delegate = list.listIterator(index);
             this.lastVisited = -1;
             this.cursor = index;
@@ -339,7 +374,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException ex) {
+            } catch (CASMismatchException | KeyNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -365,7 +400,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 this.cas = updated.cas();
                 //also correctly reset the state:
                 delegate.set(e);
-            } catch (CASMismatchException ex) {
+            } catch (CASMismatchException | KeyNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -383,7 +418,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.arrayInsert(idx, e)),
-                        arrayListOptions.mutateInOptions().cas(cas));
+                        arrayListOptions.mutateInOptions().cas(cas).upsert(true));
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();
                 //also correctly reset the state:
@@ -398,6 +433,13 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 }
                 throw ex;
             }
+        }
+    }
+    private void createEmptyList() {
+        try {
+            collection.insert(id, JsonArray.empty(), insertOptions);
+        } catch (KeyExistsException ex) {
+            // Ignore concurrent creations, keep on moving.
         }
     }
 }

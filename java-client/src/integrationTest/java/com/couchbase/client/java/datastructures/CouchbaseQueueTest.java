@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.datastructures;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -28,12 +29,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CouchbaseQueueTest extends JavaIntegrationTest {
     private static Cluster cluster;
@@ -61,9 +66,18 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
 
     @AfterEach
     void after() {
-        collection.remove(uuid);
+        try {
+            collection.remove(uuid);
+        } catch (KeyNotFoundException e) {
+            // we lazy create, so that's ok
+        }
     }
 
+    @Test
+    void canCreateEmptyQueue() {
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
+    }
     @Test
     void canCreateSimpleFifoQueue() {
         CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
@@ -107,12 +121,26 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         assertEquals(4, queue.size());
     }
     @Test
+    void canPollEmptyQueue() {
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        assertNull(queue.poll());
+    }
+    @Test
     void canOffer() {
         CouchbaseQueue<Integer> queue = new CouchbaseQueue<>(uuid, collection, Integer.class, options);
         queue.offer(1);
         queue.offer(2);
         queue.offer(3);
         assertEquals(1, queue.peek().intValue());
+    }
+    @Test
+    void canClear() {
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        queue.addAll(Arrays.asList(1,2,3,4,5));
+        assertEquals(5, queue.size());
+        queue.clear();
+        assertEquals(0, queue.size());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void canUseJsonObjects() {
@@ -145,5 +173,52 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         CouchbaseQueue<Integer> queue2 = collection.queue(uuid, Integer.class, options);
         assertFalse(queue.isEmpty());
         assertFalse(queue2.isEmpty());
-    }}
+    }
+    @Test
+    void canRemove() {
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        queue.addAll(Arrays.asList(1,2,3,4,5));
+        assertEquals(1, queue.element().intValue());
+        queue.remove();
+        assertEquals(2, queue.element().intValue());
+    }
+    @Test
+    void mustNextAfterRemoveFromItr() {
+        CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
+        queue.addAll(Arrays.asList(1,2,3,4,5));
+        Iterator<Integer> it = queue.iterator();
+        // throws if you have not started iterating
+        assertThrows(IllegalStateException.class, () -> it.remove());
+        it.next();
+        assertDoesNotThrow(() -> it.remove());
+        // throws if you delete 2 times without a next() between 'em
+        assertThrows(IllegalStateException.class, () -> {it.remove();});
+        it.next();
+        assertDoesNotThrow(() -> it.remove());
+    }
+    @Test
+    void shouldThrowConcurrentModificationExceptionWhenQueueCleared() {
+        CouchbaseQueue<Integer> queue1 = collection.queue(uuid, Integer.class);
+        queue1.addAll(Arrays.asList(1,2,3,4,5));
+        Iterator<Integer> it = queue1.iterator();
+        it.next();
+        queue1.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.remove());
+    }
+    @Test
+    void shouldThrowConcurrentModificationExceptionWhenIteratorOutOfSync() {
+        CouchbaseQueue<Integer> queue1 = collection.queue(uuid, Integer.class);
+        CouchbaseQueue<Integer> queue2 = collection.queue(uuid, Integer.class);
+        queue1.addAll(Arrays.asList(1,2,3,4,5));
+        Iterator<Integer> it1 = queue1.iterator();
+        Iterator<Integer> it2 = queue2.iterator();
+        it1.next();
+        it2.next();
+        assertDoesNotThrow(() -> it1.remove());
+        assertThrows(ConcurrentModificationException.class, () -> it2.remove());
+        assertEquals(4, queue1.size());
+        assertFalse(queue1.contains(5));
+        assertFalse(queue2.contains(5));
+    }
+}
 

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.datastructures;
 
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
@@ -65,7 +66,17 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     @AfterEach
     void after() {
-        collection.remove(uuid);
+        try {
+            collection.remove(uuid);
+        } catch (KeyNotFoundException e) {
+            // that's ok, we lazy create.
+        }
+    }
+
+    @Test
+    void shouldNotCreateEmptyDoc() {
+        CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class);
+        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
     }
 
     @Test
@@ -134,6 +145,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         assertFalse(set.isEmpty());
         set.clear();
         assertTrue(set.isEmpty());
+        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldIterate() {
@@ -155,8 +167,22 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         // this _should_ remove the item from the set.
         it.remove();
         assertEquals(4, set.size());
+
+        // gotta do another next() before another remove()
+        assertThrows(IllegalStateException.class, () -> it.remove());
+
         // we last visited 1, so...
         assertFalse(set.contains(valToRemove));
+    }
+    @Test
+    void shouldThrowConcurrentModificationException() {
+        CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
+        HashSet<Integer> javaSet = new HashSet<>(Arrays.asList(1,2,3,4,5));
+        set.addAll(javaSet);
+        Iterator<Integer> it = set.iterator();
+        it.next();
+        set.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.remove());
     }
     @Test
     void shouldNotRemoveViaIteratorIfListChanged() {

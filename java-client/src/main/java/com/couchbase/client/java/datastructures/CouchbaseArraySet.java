@@ -23,6 +23,7 @@ import java.util.Set;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -96,11 +97,6 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         this.insertOptions = optionsIn.insertOptions();
         this.mutateInOptions = optionsIn.mutateInOptions();
 
-        try {
-            this.collection.insert(id, JsonArray.empty(), insertOptions);
-        } catch (KeyExistsException e) {
-            //use a pre-existing document
-        }
     }
 
     /**
@@ -119,33 +115,47 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
 
     @Override
     public int size() {
-        LookupInResult result = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.count("")),
-                lookupInOptions);
-        return result.contentAs(0, Integer.class);
+        try {
+            LookupInResult result = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.count("")),
+                    lookupInOptions);
+            return result.contentAs(0, Integer.class);
+        } catch (KeyNotFoundException e) {
+            return 0;
+        }
     }
 
     @Override
     public boolean isEmpty() {
-        LookupInResult current = collection.lookupIn(id,
-                Collections.singletonList(LookupInSpec.exists("[0]")),
-                lookupInOptions);
-        return !current.exists(0);
+        try {
+            LookupInResult current = collection.lookupIn(id,
+                    Collections.singletonList(LookupInSpec.exists("[0]")),
+                    lookupInOptions);
+            return !current.exists(0);
+        } catch (KeyNotFoundException e) {
+            return true;
+        }
     }
 
     @Override
     public boolean contains(Object t) {
         //TODO subpar implementation for a Set, use ARRAY_CONTAINS when available
         enforcePrimitive(t);
-        GetResult result = collection.get(id, getOptions);
-        JsonArray current = result.contentAs(JsonArray.class);
-        for (Object in : current) {
-            if (safeEquals(in, t)) {
-                return true;
+        try {
+            GetResult result = collection.get(id, getOptions);
+
+            JsonArray current = result.contentAs(JsonArray.class);
+            for (Object in : current) {
+                if (safeEquals(in, t)) {
+                    return true;
+                }
             }
+            return false;
+        } catch(KeyNotFoundException e) {
+            return false;
         }
-        return false;
     }
+
     private class CouchbaseArraySetIterator<E> implements Iterator<E> {
         private long cas;
         private final Iterator<E> delegate;
@@ -153,17 +163,24 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         private int cursor;
 
         public CouchbaseArraySetIterator() {
-            GetResult result = collection.get(id);
-            JsonArray current = result.contentAs(JsonArray.class);
-            // We use a list rather than a set, so the index of the
-            // removed item matches the index in the actual document in
-            // the server
+            JsonArray current;
+            try {
+                GetResult result = collection.get(id);
+
+                current = result.contentAs(JsonArray.class);
+                // We use a list rather than a set, so the index of the
+                // removed item matches the index in the actual document in
+                // the server
+                this.cas = result.cas();
+            } catch (KeyNotFoundException e) {
+                current = JsonArray.empty();
+                this.cas = 0;
+            }
             ArrayList<E> list = new ArrayList<E>(current.size());
             for (E value : (Iterable<E>) current) {
                 list.add(value);
             }
 
-            this.cas = result.cas();
             this.delegate = list.iterator();
             this.lastVisited = -1;
             this.cursor = 0;
@@ -203,7 +220,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException ex) {
+            } catch (CASMismatchException | KeyNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -227,7 +244,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         try {
             collection.mutateIn(id,
                     Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
-                    mutateInOptions);
+                    arraySetOptions.mutateInOptions().upsert(true));
             return true;
         } catch (MultiMutationException ex) {
             if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) {
@@ -269,6 +286,8 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 }
             } catch (CASMismatchException e) {
                 //retry
+            } catch (KeyNotFoundException ex) {
+                return false;
             }
         }
         throw new RetryExhaustedException("Couldn't perform set in less than " + arraySetOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
@@ -276,7 +295,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
 
     @Override
     public void clear() {
-        collection.upsert(id, JsonArray.empty(), upsertOptions);
+        collection.remove(id);
     }
 
     /**
