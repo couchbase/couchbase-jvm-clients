@@ -136,6 +136,10 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
      */
     YOUNG,
     /**
+     * The used collector does not use a generational approach to perform GC.
+     */
+    NO_GENERATIONS,
+    /**
      * We couldn't figure out the generation type, sorry.
      */
     UNKNOWN
@@ -201,6 +205,14 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
      */
     CONCURRENT_MARK_SWEEP("ConcurrentMarkSweep", GcGeneration.OLD, Concurrency.MOSTLY_CONCURRENT),
     /**
+     * A reported pause in shenandoah is part of a cycle and a STW phase.
+     */
+    SHENANDOAH_PAUSE("Shenandoah Pauses", GcGeneration.NO_GENERATIONS, Concurrency.STOP_THE_WORLD),
+    /**
+     * Represents a full shenandoah cycle, which includes the pauses that are reported separately.
+     */
+    SHENANDOAH_CYCLE("Shenandoah Cycles", GcGeneration.NO_GENERATIONS, Concurrency.MOSTLY_CONCURRENT),
+    /**
      * We couldn't figure out the gc type, sorry!
      */
     UNKNOWN("Unknown", GcGeneration.UNKNOWN, Concurrency.UNKNOWN);
@@ -255,6 +267,10 @@ public class GcAnalyzer implements Analyzer, NotificationListener {
         return PAR_NEW;
       } else if (name.equals(CONCURRENT_MARK_SWEEP.identifier)) {
         return CONCURRENT_MARK_SWEEP;
+      } else if (name.equals(SHENANDOAH_CYCLE.identifier)) {
+        return SHENANDOAH_CYCLE;
+      } else if (name.equals(SHENANDOAH_PAUSE.identifier)) {
+        return SHENANDOAH_PAUSE;
       } else {
         return UNKNOWN;
       }
