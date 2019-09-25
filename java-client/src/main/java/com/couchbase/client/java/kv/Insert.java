@@ -76,6 +76,8 @@ public class Insert extends MutateInSpec {
      * @param serializer the serializer that should be used.
      * @return this, for chaining
      */
+    @Deprecated
+    @Stability.Internal
     public Insert serializer(final Serializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;

@@ -87,7 +87,7 @@ public class LookupInResult {
   // TODO these should return null if exists is false
 
   /**
-   * Decodes the content at the given index into the target class with the default decoder.
+   * Decodes the content at the given index into the target class.
    *
    * @param index the index of the subdoc value to decode.
    * @param target the target type to decode into.
@@ -95,18 +95,6 @@ public class LookupInResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    return contentAs(index, target, serializer);
-  }
-
-  /**
-   * Decodes the content at the given index into the target class with a custom decoder.
-   *
-   * @param index the index of the subdoc value to decode.
-   * @param target the target type to decode into.
-   * @param serializer the custom serializer that will be used.
-   * @return the decoded content into the generic type requested.
-   */
-  public <T> T contentAs(int index, final Class<T> target, final Serializer serializer) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
       value.error().map(err -> {
@@ -154,8 +142,10 @@ public class LookupInResult {
   @Override
   public String toString() {
     return "LookupInResult{" +
-      "encoded=" + redactUser(encoded) +
+      "encoded=" + encoded +
       ", cas=" + cas +
+      ", expiry=" + expiry +
+      ", serializer=" + serializer +
       '}';
   }
 

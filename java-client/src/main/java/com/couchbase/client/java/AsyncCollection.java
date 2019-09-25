@@ -19,7 +19,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
@@ -41,6 +40,7 @@ import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.codec.DataFormat;
+import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
@@ -249,10 +249,11 @@ public class AsyncCollection {
     notNull(options, "GetOptions");
     GetOptions.Built opts = options.build();
 
+    final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
     if (opts.projections().isEmpty() && !opts.withExpiry()) {
-      return GetAccessor.get(core, id, fullGetRequest(id, options), environment.transcoder());
+      return GetAccessor.get(core, id, fullGetRequest(id, opts), transcoder);
     } else {
-      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, options), environment.transcoder());
+      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, opts), transcoder);
     }
   }
 
@@ -260,14 +261,12 @@ public class AsyncCollection {
    * Helper method to create a get request for a full doc fetch.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
    * @return the get request.
    */
   @Stability.Internal
-  GetRequest fullGetRequest(final String id, final GetOptions options) {
+  GetRequest fullGetRequest(final String id, final GetOptions.Built opts) {
     notNullOrEmpty(id, "Id");
-    notNull(options, "GetOptions");
-    GetOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -280,14 +279,12 @@ public class AsyncCollection {
    * Helper method to create a get request for a subdoc fetch.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
    * @return the subdoc get request.
    */
   @Stability.Internal
-  SubdocGetRequest subdocGetRequest(final String id, final GetOptions options) {
+  SubdocGetRequest subdocGetRequest(final String id, final GetOptions.Built opts) {
     notNullOrEmpty(id, "Id");
-    notNull(options, "GetOptions");
-    GetOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -350,10 +347,12 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<GetResult> getAndLock(final String id,
-                                                           final Duration lockTime,
-                                                           final GetAndLockOptions options) {
-    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, lockTime, options), environment.transcoder());
+  public CompletableFuture<GetResult> getAndLock(final String id, final Duration lockTime,
+                                                 final GetAndLockOptions options) {
+    notNull(options, "GetAndLockOptions");
+    GetAndLockOptions.Built opts = options.build();
+    final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
+    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, lockTime, opts), transcoder);
   }
 
   /**
@@ -362,15 +361,12 @@ public class AsyncCollection {
    * @param id the document id which is used to uniquely identify it.
    * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
    *                 treated as 30 seconds.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
    * @return the get and lock request.
    */
   @Stability.Internal
-  GetAndLockRequest getAndLockRequest(final String id, final Duration lockTime, final GetAndLockOptions options) {
+  GetAndLockRequest getAndLockRequest(final String id, final Duration lockTime, final GetAndLockOptions.Built opts) {
     notNullOrEmpty(id, "Id");
-    notNull(options, "GetAndLockOptions");
-    GetAndLockOptions.Built opts = options.build();
-
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
@@ -389,8 +385,7 @@ public class AsyncCollection {
    * @param expiry the new expiration time for the document.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<GetResult> getAndTouch(final String id,
-                                                            final Duration expiry) {
+  public CompletableFuture<GetResult> getAndTouch(final String id, final Duration expiry) {
     return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
@@ -403,10 +398,12 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
-  public CompletableFuture<GetResult> getAndTouch(final String id,
-                                                            final Duration expiry,
-                                                            final GetAndTouchOptions options) {
-    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiry, options), environment.transcoder());
+  public CompletableFuture<GetResult> getAndTouch(final String id, final Duration expiry,
+                                                  final GetAndTouchOptions options) {
+    notNull(options, "GetAndTouchOptions");
+    GetAndTouchOptions.Built opts = options.build();
+    final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
+    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiry, opts), transcoder);
   }
 
   /**
@@ -414,16 +411,13 @@ public class AsyncCollection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @param expiry the new expiration time for the document.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
    * @return the get and touch request.
    */
   @Stability.Internal
-  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiry,
-                                        final GetAndTouchOptions options) {
+  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiry, final GetAndTouchOptions.Built opts) {
     notNullOrEmpty(id, "Id");
     notNull(expiry, "Expiry");
-    notNull(options, "GetAndTouchOptions");
-    GetAndTouchOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -904,8 +898,7 @@ public class AsyncCollection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public CompletableFuture<LookupInResult> lookupIn(final String id,
-                                                              final List<LookupInSpec> specs) {
+  public CompletableFuture<LookupInResult> lookupIn(final String id, final List<LookupInSpec> specs) {
     return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
 
@@ -917,10 +910,12 @@ public class AsyncCollection {
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public CompletableFuture<LookupInResult> lookupIn(final String id,
-                                                              final List<LookupInSpec> specs,
-                                                              final LookupInOptions options) {
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, options), options.build().withExpiry(), environment.jsonSerializer());
+  public CompletableFuture<LookupInResult> lookupIn(final String id, final List<LookupInSpec> specs,
+                                                    final LookupInOptions options) {
+    notNull(options, "LookupInOptions");
+    LookupInOptions.Built opts = options.build();
+    final Serializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), opts.withExpiry(), serializer);
   }
 
   /**
@@ -928,19 +923,16 @@ public class AsyncCollection {
    *
    * @param id the outer document ID.
    * @param specs the spec which specifies the type of lookups to perform.
-   * @param options custom options to modify the lookup options.
+   * @param opts custom options to modify the lookup options.
    * @return the subdoc lookup request.
    */
-  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs,
-                                   final LookupInOptions options) {
+  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs, final LookupInOptions.Built opts) {
     notNullOrEmpty(id, "Id");
     notNullOrEmpty(specs, "LookupInSpecs");
-    notNull(options, "LookupInOptions");
-    LookupInOptions.Built opts = options.build();
 
     ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>();
 
-    if (options.build().withExpiry()) {
+    if (opts.withExpiry()) {
       // Xattr commands have to go first
       commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, EXPIRATION_MACRO, true));
     }
@@ -1000,8 +992,7 @@ public class AsyncCollection {
    * @param options custom options to modify the mutation options.
    * @return the subdoc mutate request.
    */
-  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs,
-                                      final MutateInOptions options) {
+  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs, final MutateInOptions options) {
     if (specs.isEmpty()) {
       throw SubdocMutateRequest.errIfNoCommands();
     } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
@@ -1014,11 +1005,9 @@ public class AsyncCollection {
 
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+      Serializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
-      List<SubdocMutateRequest.Command> commands = specs
-        .stream()
-        .map(v -> v.encode(environment.jsonSerializer()))
-        .collect(Collectors.toList());
+      List<SubdocMutateRequest.Command> commands = specs.stream().map(v -> v.encode(serializer)).collect(Collectors.toList());
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.insert(), opts.upsert(),

@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 
@@ -53,6 +55,9 @@ public class GetOptions extends CommonOptions<GetOptions> {
   public static GetOptions getOptions() {
     return new GetOptions();
   }
+
+  private Transcoder transcoder;
+
 
   private GetOptions() {
     withExpiry = false;
@@ -102,6 +107,12 @@ public class GetOptions extends CommonOptions<GetOptions> {
     return this;
   }
 
+  public GetOptions transcoder(final Transcoder transcoder) {
+    notNull(transcoder, "Transcoder");
+    this.transcoder = transcoder;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -115,6 +126,10 @@ public class GetOptions extends CommonOptions<GetOptions> {
 
     public Set<String> projections() {
       return projections == null ? emptySet() : projections;
+    }
+
+    public Transcoder transcoder() {
+      return transcoder;
     }
 
   }

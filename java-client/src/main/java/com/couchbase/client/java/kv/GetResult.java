@@ -106,25 +106,12 @@ public class GetResult {
   }
 
   /**
-   * Decodes the content of the document into a the target class using the default decoder.
-   *
-   * <p>Note that while the decoder understands many types, if it fails to decode a certain POJO
-   * or custom decoding is needed use the {@link #contentAs(Class, Transcoder)} overload.</p>
+   * Decodes the content of the document into a the target class.
    *
    * @param target the target class to decode the encoded content into.
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
-    return contentAs(target, transcoder);
-  }
-
-  /**
-   * Decodes the content of the document into a the target class using a custom decoder.
-   *
-   * @param target the target class to decode the encoded content into.
-   * @param transcoder the transcoder that should be used to decode the content.
-   */
-  public <T> T contentAs(final Class<T> target, final Transcoder transcoder) {
     return transcoder.decode(target, content, format);
   }
 

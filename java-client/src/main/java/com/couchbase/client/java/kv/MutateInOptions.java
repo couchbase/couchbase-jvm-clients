@@ -17,8 +17,11 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.codec.Serializer;
 
 import java.time.Duration;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
@@ -26,6 +29,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   private long cas = 0;
   private boolean insert = false;
   private boolean upsert = false;
+  private Serializer serializer = null;
 
   public static MutateInOptions mutateInOptions() {
     return new MutateInOptions();
@@ -41,6 +45,12 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
   public MutateInOptions cas(long cas) {
     this.cas = cas;
+    return this;
+  }
+
+  public MutateInOptions serializer(final Serializer serializer) {
+    notNull(serializer, "Serializer");
+    this.serializer = serializer;
     return this;
   }
 
@@ -92,6 +102,11 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     public boolean upsert() {
       return upsert;
     }
+
+    public Serializer serializer() {
+      return serializer;
+    }
+
   }
 
 }

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.Serializer;
@@ -64,6 +65,8 @@ public class Increment extends MutateInSpec {
      * @param serializer the serializer that should be used.
      * @return this, for chaining
      */
+    @Deprecated
+    @Stability.Internal
     public Increment serializer(final Serializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;

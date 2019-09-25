@@ -66,6 +66,8 @@ public class Replace extends MutateInSpec {
      * @param serializer the serializer that should be used.
      * @return this, for chaining
      */
+    @Deprecated
+    @Stability.Internal
     public Replace serializer(final Serializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;

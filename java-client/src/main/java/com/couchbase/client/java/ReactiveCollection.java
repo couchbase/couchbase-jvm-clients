@@ -34,6 +34,8 @@ import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
@@ -73,7 +75,6 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
@@ -220,12 +221,14 @@ public class ReactiveCollection {
   public Mono<GetResult> get(final String id, final GetOptions options) {
     return Mono.defer(() -> {
       GetOptions.Built opts = options.build();
+      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+
       if (opts.projections().isEmpty() && !opts.withExpiry()) {
-        GetRequest request = asyncCollection.fullGetRequest(id, options);
-        return Reactor.wrap(request, GetAccessor.get(core, id, request, environment().transcoder()), true);
+        GetRequest request = asyncCollection.fullGetRequest(id, opts);
+        return Reactor.wrap(request, GetAccessor.get(core, id, request, transcoder), true);
       } else {
-        SubdocGetRequest request = asyncCollection.subdocGetRequest(id, options);
-        return Reactor.wrap(request, GetAccessor.subdocGet(core, id, request, environment().transcoder()), true);
+        SubdocGetRequest request = asyncCollection.subdocGetRequest(id, opts);
+        return Reactor.wrap(request, GetAccessor.subdocGet(core, id, request, transcoder), true);
       }
     });
   }
@@ -251,8 +254,10 @@ public class ReactiveCollection {
    */
   public Mono<GetResult> getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
     return Mono.defer(() -> {
-      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, lockTime, options);
-      return Reactor.wrap(request, GetAccessor.getAndLock(core, id, request, environment().transcoder()), true);
+      GetAndLockOptions.Built opts = options.build();
+      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, lockTime, opts);
+      return Reactor.wrap(request, GetAccessor.getAndLock(core, id, request, transcoder), true);
     });
   }
 
@@ -277,15 +282,12 @@ public class ReactiveCollection {
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
-  public Mono<GetResult> getAndTouch(final String id, final Duration expiry,
-                                               final GetAndTouchOptions options) {
+  public Mono<GetResult> getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
     return Mono.defer(() -> {
-      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiry, options);
-      return Reactor.wrap(
-          request,
-          GetAccessor.getAndTouch(core, id, request, environment().transcoder()),
-          true
-        );
+      GetAndTouchOptions.Built opts = options.build();
+      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiry, opts);
+      return Reactor.wrap(request, GetAccessor.getAndTouch(core, id, request, transcoder), true);
     });
   }
 
@@ -586,12 +588,16 @@ public class ReactiveCollection {
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
-  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs,
-                                       final LookupInOptions options) {
+  public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
     return Mono.defer(() -> {
-      SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, options);
-      return Reactor
-        .wrap(request, LookupInAccessor.lookupInAccessor(id, core, request, options.build().withExpiry(), environment().jsonSerializer()), true);
+      LookupInOptions.Built opts = options.build();
+      Serializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
+      return Reactor.wrap(
+        request,
+        LookupInAccessor.lookupInAccessor(id, core, request, opts.withExpiry(), serializer),
+        true
+      );
     });
   }
 

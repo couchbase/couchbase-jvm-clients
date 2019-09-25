@@ -18,8 +18,11 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
 
@@ -27,7 +30,16 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
     return new GetAndLockOptions();
   }
 
+  private Transcoder transcoder;
+
+
   private GetAndLockOptions() {
+  }
+
+  public GetAndLockOptions transcoder(final Transcoder transcoder) {
+    notNull(transcoder, "Transcoder");
+    this.transcoder = transcoder;
+    return this;
   }
 
   @Stability.Internal
@@ -36,6 +48,11 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+
+    public Transcoder transcoder() {
+      return transcoder;
+    }
+
   }
 
 

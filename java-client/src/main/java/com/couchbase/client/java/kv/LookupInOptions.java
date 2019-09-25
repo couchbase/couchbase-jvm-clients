@@ -18,6 +18,9 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.Serializer;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
@@ -25,6 +28,8 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
    * If the expiration should also be fetched.
    */
   private boolean withExpiry = false;
+
+  private Serializer serializer;
 
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
@@ -42,6 +47,12 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
     return this;
   }
 
+  public LookupInOptions serializer(final Serializer serializer) {
+    notNull(serializer, "Serializer");
+    this.serializer = serializer;
+    return this;
+  }
+
   private LookupInOptions() {
   }
 
@@ -53,6 +64,10 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   public class Built extends BuiltCommonOptions {
     public boolean withExpiry() {
       return withExpiry;
+    }
+
+    public Serializer serializer() {
+      return serializer;
     }
   }
 

@@ -18,6 +18,9 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.Transcoder;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class GetAndTouchOptions extends CommonOptions<GetAndTouchOptions> {
 
@@ -25,7 +28,15 @@ public class GetAndTouchOptions extends CommonOptions<GetAndTouchOptions> {
     return new GetAndTouchOptions();
   }
 
+  private Transcoder transcoder;
+
   private GetAndTouchOptions() {
+  }
+
+  public GetAndTouchOptions transcoder(final Transcoder transcoder) {
+    notNull(transcoder, "Transcoder");
+    this.transcoder = transcoder;
+    return this;
   }
 
   @Stability.Internal
@@ -34,6 +45,10 @@ public class GetAndTouchOptions extends CommonOptions<GetAndTouchOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+
+    public Transcoder transcoder() {
+      return transcoder;
+    }
 
   }
 

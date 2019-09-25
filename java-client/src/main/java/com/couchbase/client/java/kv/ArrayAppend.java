@@ -76,6 +76,8 @@ public class ArrayAppend extends MutateInSpec {
      * @param serializer the serializer that should be used.
      * @return this, for chaining
      */
+    @Deprecated
+    @Stability.Internal
     public ArrayAppend serializer(final Serializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;
