@@ -36,8 +36,9 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.couchbase.client.util.SimpleEventBus;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -56,15 +57,20 @@ import static org.junit.Assert.assertTrue;
  */
 class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
-  private CoreEnvironment env;
-  private EndpointContext endpointContext;
-  private NioEventLoopGroup eventLoopGroup;
+  private static CoreEnvironment env;
+  private static EndpointContext endpointContext;
+  private static NioEventLoopGroup eventLoopGroup;
 
-  @BeforeEach
-  void beforeEach() {
+  /**
+   * Some tests raise warnings which are expected (i.e. auth failures), so we silence them
+   * in the logs by using the simple event bus.
+   */
+  private static SimpleEventBus eventBus = new SimpleEventBus(true);
+
+  @BeforeAll
+  static void beforeAll() {
     TestNodeConfig node = config().nodes().get(0);
-
-    env = environment().build();
+    env = environment().eventBus(eventBus).build();
 
     Core core = Core.create(env, authenticator(), seedNodes());
     endpointContext = new EndpointContext(
@@ -80,8 +86,8 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     eventLoopGroup = new NioEventLoopGroup(1);
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
     env.shutdown();
     eventLoopGroup.shutdownGracefully();
   }

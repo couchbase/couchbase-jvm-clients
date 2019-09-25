@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -27,8 +28,9 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.couchbase.client.util.SimpleEventBus;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -46,16 +48,19 @@ import static org.junit.Assert.assertTrue;
  */
 class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
 
-  private CoreEnvironment env;
-  private ServiceContext serviceContext;
+  private static CoreEnvironment env;
+  private static Core core;
+  private static ServiceContext serviceContext;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     TestNodeConfig node = config().nodes().get(0);
 
     env = environment().build();
+    core = Core.create(env, authenticator(), seedNodes());
+
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env, authenticator()),
+      new CoreContext(core, 1, env, authenticator()),
       node.hostname(),
       node.ports().get(Services.KV),
       ServiceType.KV,
@@ -63,8 +68,9 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     );
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
+    core.shutdown().block();
     env.shutdown();
   }
 

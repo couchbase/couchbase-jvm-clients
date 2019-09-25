@@ -16,16 +16,17 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -37,17 +38,18 @@ import static org.junit.Assert.assertTrue;
 
 class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
 
-  private CoreEnvironment env;
-  private CoreContext coreContext;
+  private static CoreEnvironment env;
+  private static Core core;
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     env = environment().build();
-    coreContext = new CoreContext(null, 1, env, authenticator());
+    core = Core.create(env, authenticator(), seedNodes());
   }
 
-  @AfterEach
-  void afterEach() {
+  @AfterAll
+  static void afterAll() {
+    core.shutdown().block();
     env.shutdown();
   }
 
@@ -65,17 +67,17 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
 
     KeyValueService service = new KeyValueService(
       KeyValueServiceConfig.builder().build(),
-      coreContext,
+      core.context(),
       node.hostname(),
       node.ports().get(Services.KV),
       Optional.of(config().bucketname()),
-      coreContext.authenticator()
+      core.context().authenticator()
     );
 
     service.connect();
     waitUntilCondition(() -> service.state() == ServiceState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), coreContext, null, CollectionIdentifier.fromDefault(config().bucketname()));
+    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), core.context(), null, CollectionIdentifier.fromDefault(config().bucketname()));
     assertTrue(request.id() > 0);
     service.send(request);
 
