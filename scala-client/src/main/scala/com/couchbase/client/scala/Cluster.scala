@@ -141,8 +141,8 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     *
     * This should be called before application exit.
     */
-  def shutdown(): Unit = {
-    reactive.shutdown().block()
+  def disconnect(): Unit = {
+    reactive.disconnect().block()
   }
 }
 

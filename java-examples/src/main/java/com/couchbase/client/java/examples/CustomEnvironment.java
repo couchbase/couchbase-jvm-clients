@@ -62,7 +62,7 @@ public class CustomEnvironment {
         /**
          * Do not forget to first shutdown the cluster and then also the environment afterwards!
          */
-        cluster.shutdown();
+        cluster.disconnect();
         environment.shutdown();
     }
 }

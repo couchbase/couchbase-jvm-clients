@@ -73,7 +73,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void tearDown() {
-    cluster.shutdown();
+    cluster.disconnect();
   }
 
   /**

@@ -41,7 +41,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
   @AfterAll
   def tearDown(): Unit = {
-    cluster.shutdown()
+    cluster.disconnect()
   }
 
   def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {

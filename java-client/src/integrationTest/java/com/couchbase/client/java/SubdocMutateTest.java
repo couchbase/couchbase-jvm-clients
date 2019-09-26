@@ -62,7 +62,7 @@ class SubdocMutateTest extends JavaIntegrationTest {
 
     @AfterAll
     static void tearDown() {
-        cluster.shutdown();
+        cluster.disconnect();
     }
 
 

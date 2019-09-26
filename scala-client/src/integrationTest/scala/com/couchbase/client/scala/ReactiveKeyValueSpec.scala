@@ -33,7 +33,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
   @AfterAll
   def afterAll(): Unit = {
-    cluster.shutdown()
+    cluster.disconnect()
   }
 
   def wrap[T](in: ScalaMono[T]): Try[T] = {

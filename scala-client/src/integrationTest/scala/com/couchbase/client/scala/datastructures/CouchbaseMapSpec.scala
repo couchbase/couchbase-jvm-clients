@@ -43,7 +43,7 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
 
   @AfterAll
   def afterAll(): Unit = {
-    cluster.shutdown()
+    cluster.disconnect()
   }
 
   @BeforeEach

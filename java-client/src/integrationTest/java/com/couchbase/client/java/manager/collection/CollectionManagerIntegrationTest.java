@@ -56,7 +56,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void tearDown() {
-    cluster.shutdown();
+    cluster.disconnect();
     environment.shutdown();
   }
 

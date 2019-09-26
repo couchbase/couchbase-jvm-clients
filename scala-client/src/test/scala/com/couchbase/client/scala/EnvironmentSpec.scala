@@ -18,7 +18,7 @@ class EnvironmentSpec {
     assert(!env.owned)
     assert(env == cluster.async.env)
 
-    cluster.shutdown()
+    cluster.disconnect()
     env.shutdown()
   }
 
@@ -46,7 +46,7 @@ class EnvironmentSpec {
     val env = ClusterEnvironment.create
     val cluster = Cluster.connect("localhost", "Administrator", "password").get
     assert(!env.owned)
-    cluster.shutdown()
+    cluster.disconnect()
     env.shutdown()
     assert(env.threadPool.isShutdown)
     assert(env.threadPool.isTerminated)
@@ -57,7 +57,7 @@ class EnvironmentSpec {
     val cluster = Cluster.connect("localhost", "Administrator", "password").get
     val env = cluster.async.env
     assert(env.owned)
-    cluster.shutdown()
+    cluster.disconnect()
     assert(env.threadPool.isShutdown)
     assert(env.threadPool.isTerminated)
   }

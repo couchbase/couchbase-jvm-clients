@@ -183,7 +183,7 @@ class AsyncCluster(environment: => ClusterEnvironment,
     *
     * This should be called before application exit.
     */
-  def shutdown(): Future[Unit] = {
+  def disconnect(): Future[Unit] = {
     FutureConversions.javaMonoToScalaMono(core.shutdown())
       .flatMap(_ => {
         if (env.owned) {

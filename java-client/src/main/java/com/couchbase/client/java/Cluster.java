@@ -267,19 +267,19 @@ public class Cluster {
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link Cluster}.
+   * Performs a non-reversible disconnect of this {@link Cluster}.
    */
-  public void shutdown() {
-    block(asyncCluster.shutdown());
+  public void disconnect() {
+    block(asyncCluster.disconnect());
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link Cluster}.
+   * Performs a non-reversible disconnect of this {@link Cluster}.
    *
    * @param timeout overriding the default disconnect timeout if needed.
    */
-  public void shutdown(final Duration timeout) {
-    block(asyncCluster.shutdown(timeout));
+  public void disconnect(final Duration timeout) {
+    block(asyncCluster.disconnect(timeout));
   }
 
 }

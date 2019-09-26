@@ -54,7 +54,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void tearDown() {
-    cluster.shutdown();
+    cluster.disconnect();
   }
 
   @AfterEach

@@ -39,7 +39,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
   @AfterAll
   def tearDown(): Unit = {
-    cluster.shutdown()
+    cluster.disconnect()
   }
 
   @Test

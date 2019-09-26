@@ -75,7 +75,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void afterAll() {
-    cluster.shutdown();
+    cluster.disconnect();
   }
 
   @Test

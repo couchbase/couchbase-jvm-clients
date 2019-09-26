@@ -181,7 +181,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * This should be called before application exit.
     */
-  def shutdown(): ScalaMono[Unit] = {
+  def disconnect(): ScalaMono[Unit] = {
     FutureConversions.javaMonoToScalaMono(async.core.shutdown())
       .then(ScalaMono.defer(() => {
         if (env.owned) {

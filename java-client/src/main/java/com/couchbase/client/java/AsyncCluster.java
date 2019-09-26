@@ -379,19 +379,19 @@ public class AsyncCluster {
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link AsyncCluster}.
+   * Performs a non-reversible disconnect of this {@link AsyncCluster}.
    */
-  public CompletableFuture<Void> shutdown() {
-    return shutdown(environment.get().timeoutConfig().disconnectTimeout());
+  public CompletableFuture<Void> disconnect() {
+    return disconnect(environment.get().timeoutConfig().disconnectTimeout());
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link AsyncCluster}.
+   * Performs a non-reversible disconnect of this {@link AsyncCluster}.
    *
    * @param timeout overriding the default disconnect timeout if needed.
    */
-  public CompletableFuture<Void> shutdown(final Duration timeout) {
-    return shutdownInternal(timeout).toFuture();
+  public CompletableFuture<Void> disconnect(final Duration timeout) {
+    return disconnectInternal(timeout).toFuture();
   }
 
   /**
@@ -400,7 +400,7 @@ public class AsyncCluster {
    * @param timeout the timeout for the environment to shut down if owned.
    * @return a mono once complete.
    */
-  Mono<Void> shutdownInternal(final Duration timeout) {
+  Mono<Void> disconnectInternal(final Duration timeout) {
     return core.shutdown().flatMap(ignore -> {
       if (environment instanceof OwnedSupplier) {
         return environment.get().shutdownReactive(timeout);

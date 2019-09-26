@@ -24,7 +24,7 @@ class BinarySpec extends ScalaIntegrationTest {
 
   @AfterAll
   def afterAll(): Unit = {
-    cluster.shutdown()
+    cluster.disconnect()
   }
 
   @Test

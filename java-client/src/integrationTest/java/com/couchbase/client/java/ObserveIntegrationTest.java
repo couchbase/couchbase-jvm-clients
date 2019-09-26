@@ -52,7 +52,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void afterAll() {
-    cluster.shutdown();
+    cluster.disconnect();
   }
 
   @Test
@@ -150,7 +150,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
         )
       );
     } finally {
-      cluster.shutdown();
+      cluster.disconnect();
       environment.shutdown();
     }
   }

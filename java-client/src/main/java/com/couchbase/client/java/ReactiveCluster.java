@@ -242,19 +242,19 @@ public class ReactiveCluster {
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link ReactiveCluster}.
+   * Performs a non-reversible disconnect of this {@link ReactiveCluster}.
    */
-  public Mono<Void> shutdown() {
-    return shutdown(environment().timeoutConfig().disconnectTimeout());
+  public Mono<Void> disconnect() {
+    return disconnect(environment().timeoutConfig().disconnectTimeout());
   }
 
   /**
-   * Performs a non-reversible shutdown of this {@link ReactiveCluster}.
+   * Performs a non-reversible disconnect of this {@link ReactiveCluster}.
    *
    * @param timeout overriding the default disconnect timeout if needed.
    */
-  public Mono<Void> shutdown(final Duration timeout) {
-    return asyncCluster.shutdownInternal(timeout);
+  public Mono<Void> disconnect(final Duration timeout) {
+    return asyncCluster.disconnectInternal(timeout);
   }
 
 }

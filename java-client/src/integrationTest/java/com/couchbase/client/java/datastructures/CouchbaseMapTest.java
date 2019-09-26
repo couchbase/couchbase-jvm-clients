@@ -52,7 +52,7 @@ class CouchbaseMapTest extends JavaIntegrationTest {
 
     @AfterAll
     static void tearDown() {
-        cluster.shutdown();
+        cluster.disconnect();
     }
 
     @BeforeEach

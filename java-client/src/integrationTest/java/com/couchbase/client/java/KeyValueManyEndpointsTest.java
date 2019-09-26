@@ -43,7 +43,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
 
   @AfterEach
   void afterEach() {
-    cluster.shutdown();
+    cluster.disconnect();
     environment.shutdown();
   }
 

@@ -49,7 +49,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
     @AfterAll
     static void tearDown() {
-        cluster.shutdown();
+        cluster.disconnect();
     }
 
     @Test
