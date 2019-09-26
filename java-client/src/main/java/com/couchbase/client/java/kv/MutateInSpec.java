@@ -17,16 +17,13 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.codec.Serializer;
 
 public abstract class MutateInSpec {
 
     @Stability.Internal
-    public abstract SubdocMutateRequest.Command encode(Serializer defaultSerializer);
+    public abstract SubdocMutateRequest.Command encode(JsonSerializer defaultSerializer);
 
     /**
      * Creates a command with the intention of replacing an existing value in a JSON object.

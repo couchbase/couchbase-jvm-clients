@@ -18,7 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -29,7 +29,7 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
    */
   private boolean withExpiry = false;
 
-  private Serializer serializer;
+  private JsonSerializer serializer;
 
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
@@ -47,7 +47,7 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
     return this;
   }
 
-  public LookupInOptions serializer(final Serializer serializer) {
+  public LookupInOptions serializer(final JsonSerializer serializer) {
     notNull(serializer, "Serializer");
     this.serializer = serializer;
     return this;
@@ -66,7 +66,7 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
       return withExpiry;
     }
 
-    public Serializer serializer() {
+    public JsonSerializer serializer() {
       return serializer;
     }
   }

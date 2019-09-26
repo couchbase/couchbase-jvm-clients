@@ -39,8 +39,7 @@ import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.codec.DataFormat;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
@@ -670,12 +669,11 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    DataFormat dataFormat = opts.dataFormat();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    InsertRequest request = new InsertRequest(id, transcoder.encode(content, dataFormat),
-      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
-      retryStrategy, opts.durabilityLevel());
+    Transcoder.EncodedValue encoded = transcoder.encode(content);
+    InsertRequest request = new InsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -727,12 +725,11 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    DataFormat dataFormat = opts.dataFormat();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    UpsertRequest request = new UpsertRequest(id, transcoder.encode(content, dataFormat),
-      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, coreContext, collectionIdentifier,
-      retryStrategy, opts.durabilityLevel());
+    Transcoder.EncodedValue encoded = transcoder.encode(content);
+    UpsertRequest request = new UpsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -785,12 +782,11 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    DataFormat dataFormat = opts.dataFormat();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    ReplaceRequest request = new ReplaceRequest(id, transcoder.encode(content, dataFormat),
-      opts.expiry().getSeconds(), dataFormat.commonFlag(), timeout, opts.cas(), coreContext,
-      collectionIdentifier, retryStrategy, opts.durabilityLevel());
+    Transcoder.EncodedValue encoded = transcoder.encode(content);
+    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+      timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -914,7 +910,7 @@ public class AsyncCollection {
                                                     final LookupInOptions options) {
     notNull(options, "LookupInOptions");
     LookupInOptions.Built opts = options.build();
-    final Serializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
     return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), opts.withExpiry(), serializer);
   }
 
@@ -1005,9 +1001,12 @@ public class AsyncCollection {
 
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-      Serializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+      JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
-      List<SubdocMutateRequest.Command> commands = specs.stream().map(v -> v.encode(serializer)).collect(Collectors.toList());
+      List<SubdocMutateRequest.Command> commands = specs
+        .stream()
+        .map(v -> v.encode(serializer))
+        .collect(Collectors.toList());
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.insert(), opts.upsert(),

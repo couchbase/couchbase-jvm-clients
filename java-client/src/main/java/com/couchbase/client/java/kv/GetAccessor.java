@@ -23,7 +23,6 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
@@ -58,7 +57,7 @@ public enum GetAccessor {
         if (getResponse.status() == ResponseStatus.SUCCESS) {
           return new GetResult(
             getResponse.content(),
-            DataFormat.fromCommonFlag(getResponse.flags()),
+            getResponse.flags(),
             getResponse.cas(),
             Optional.empty(),
             transcoder
@@ -78,7 +77,7 @@ public enum GetAccessor {
           case SUCCESS:
             return new GetResult(
               getResponse.content(),
-              DataFormat.fromCommonFlag(getResponse.flags()),
+              getResponse.flags(),
               getResponse.cas(),
               Optional.empty(),
               transcoder
@@ -101,7 +100,7 @@ public enum GetAccessor {
         if (getResponse.status() == ResponseStatus.SUCCESS) {
           return new GetResult(
             getResponse.content(),
-            DataFormat.fromCommonFlag(getResponse.flags()),
+            getResponse.flags(),
             getResponse.cas(),
             Optional.empty(),
             transcoder
@@ -153,7 +152,7 @@ public enum GetAccessor {
     Optional<Duration> expiration = exptime == null
       ? Optional.empty()
       : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
-    return new GetResult(content, DataFormat.JSON, cas, expiration, transcoder);
+    return new GetResult(content, CodecFlags.JSON_COMPAT_FLAGS, cas, expiration, transcoder);
   }
 
   /**

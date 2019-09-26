@@ -26,19 +26,41 @@ public interface Transcoder {
    * Encodes the given input into the wire representation based on the data format.
    *
    * @param input the input object to encode.
-   * @param format the data format which describes how to encode.
    * @return the encoded wire representation of the payload.
    */
-  byte[] encode(Object input, DataFormat format);
+  EncodedValue encode(Object input);
 
   /**
    * Decodes the wire representation into the entity based on the data format.
    *
    * @param target the target type to decode.
    * @param input the wire representation to decode.
-   * @param format the format which is used to decide the decoding serializer.
+   * @oaram flags the flags on the wire
    * @return the decoded entity.
    */
-  <T> T decode(Class<T> target, byte[] input, DataFormat format);
+  <T> T decode(Class<T> target, byte[] input, int flags);
+
+  /**
+   * Represents the tuple of encoded value and flags to be used on the wire.
+   */
+  class EncodedValue {
+
+    private final byte[] encoded;
+    private final int flags;
+
+    EncodedValue(final byte[] encoded, final int flags) {
+      this.encoded = encoded;
+      this.flags = flags;
+    }
+
+    public byte[] encoded() {
+      return encoded;
+    }
+
+    public int flags() {
+      return flags;
+    }
+
+  }
 
 }

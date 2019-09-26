@@ -23,7 +23,7 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
@@ -51,7 +51,7 @@ public class QueryResult {
     /**
      * The default serializer to use.
      */
-    private final Serializer serializer;
+    private final JsonSerializer serializer;
 
     /**
      * Creates a new QueryResult.
@@ -61,7 +61,7 @@ public class QueryResult {
      * @param trailer the query trailer.
      */
     QueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer,
-                final Serializer serializer) {
+                final JsonSerializer serializer) {
         this.rows = rows;
         this.header = header;
         this.trailer = trailer;
@@ -94,7 +94,7 @@ public class QueryResult {
      * @param serializer the custom serializer to use.
      * @throws DecodingFailedException if any row could not be successfully deserialized.
      */
-    public <T> List<T> rowsAs(final Class<T> target, final Serializer serializer) {
+    public <T> List<T> rowsAs(final Class<T> target, final JsonSerializer serializer) {
         final List<T> converted = new ArrayList<T>(rows.size());
         for (QueryChunkRow row : rows) {
             converted.add(serializer.deserialize(target, row.data()));

@@ -21,18 +21,11 @@ import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.codec.Serializer;
-import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryMetaData;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The result of an analytics query, including rows and associated metadata.
@@ -60,7 +53,7 @@ public class AnalyticsResult {
   /**
    * The default serializer to use.
    */
-  private final Serializer serializer;
+  private final JsonSerializer serializer;
 
   /**
    * Creates a new AnalyticsResult.
@@ -70,7 +63,7 @@ public class AnalyticsResult {
    * @param trailer the analytics trailer.
    */
   AnalyticsResult(final AnalyticsChunkHeader header, final List<AnalyticsChunkRow> rows,
-                  final AnalyticsChunkTrailer trailer, final Serializer serializer) {
+                  final AnalyticsChunkTrailer trailer, final JsonSerializer serializer) {
     this.rows = rows;
     this.header = header;
     this.trailer = trailer;
@@ -94,7 +87,7 @@ public class AnalyticsResult {
    * @param serializer the custom serializer to use.
    * @throws DecodingFailedException if any row could not be successfully deserialized.
    */
-  public <T> List<T> rowsAs(final Class<T> target, final Serializer serializer) {
+  public <T> List<T> rowsAs(final Class<T> target, final JsonSerializer serializer) {
     final List<T> converted = new ArrayList<T>(rows.size());
     for (AnalyticsChunkRow row : rows) {
       converted.add(serializer.deserialize(target, row.data()));

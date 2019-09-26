@@ -16,10 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.codec.Transcoder;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -45,18 +42,18 @@ public class GetReplicaResult extends GetResult {
    * @param isMaster whether the active/master replica returned this result
    */
   private GetReplicaResult(final byte[] content,
-                   final DataFormat format,
+                   final int flags,
                    final long cas,
                    final Optional<Duration> expiration,
                    Transcoder transcoder,
                    boolean isMaster) {
-    super(content, format, cas, expiration, transcoder);
+    super(content, flags, cas, expiration, transcoder);
     this.isMaster = isMaster;
   }
 
   public static GetReplicaResult from(GetResult response, boolean isMaster) {
     return new GetReplicaResult(response.content,
-            response.format,
+            response.flags,
             response.cas(),
             response.expiry(),
             response.transcoder,
@@ -74,7 +71,7 @@ public class GetReplicaResult extends GetResult {
   public String toString() {
     return "GetReplicaResult{" +
             "content=" + redactUser(Arrays.toString(content)) +
-            ", format=" + format +
+            ", flags=" + flags +
             ", cas=" + cas() +
             ", expiration=" + expiry() +
             ", isMaster=" + isMaster +
@@ -94,6 +91,6 @@ public class GetReplicaResult extends GetResult {
 
   @Override
   public int hashCode() {
-    return Objects.hash(content, format, cas(), expiry(), isMaster);
+    return Objects.hash(content, flags, cas(), expiry(), isMaster);
   }
 }

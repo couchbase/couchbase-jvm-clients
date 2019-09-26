@@ -21,7 +21,7 @@ import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class LookupInAccessor {
                                                                    final Core core,
                                                                    final SubdocGetRequest request,
                                                                    final boolean withExpiration,
-                                                                   final Serializer serializer) {
+                                                                   final JsonSerializer serializer) {
     core.send(request);
     return request
       .response()

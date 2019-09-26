@@ -19,7 +19,7 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -35,7 +35,7 @@ public class ArrayPrepend extends MutateInSpec {
     private boolean xattr = false;
     private boolean expandMacro = false;
     private boolean createPath = false;
-    private Serializer serializer;
+    private JsonSerializer serializer;
 
     ArrayPrepend(String path, Object doc) {
         this.path = path;
@@ -68,7 +68,7 @@ public class ArrayPrepend extends MutateInSpec {
      */
     @Deprecated
     @Stability.Internal
-    public ArrayPrepend serializer(final Serializer serializer) {
+    public ArrayPrepend serializer(final JsonSerializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;
         return this;
@@ -84,8 +84,8 @@ public class ArrayPrepend extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final Serializer defaultSerializer) {
-        Serializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
+        JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
         return new SubdocMutateRequest.Command(
             SubdocCommandType.ARRAY_PUSH_FIRST,

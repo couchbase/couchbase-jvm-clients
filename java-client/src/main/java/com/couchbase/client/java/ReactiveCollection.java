@@ -34,7 +34,7 @@ import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
@@ -590,8 +590,9 @@ public class ReactiveCollection {
    */
   public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
     return Mono.defer(() -> {
+
       LookupInOptions.Built opts = options.build();
-      Serializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
       return Reactor.wrap(
         request,

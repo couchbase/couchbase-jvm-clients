@@ -3,7 +3,7 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.util.Bytes;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 /**
  * An intention to perform a SubDocument remove operation.
@@ -28,7 +28,7 @@ public class Remove extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final Serializer defaultSerializer) {
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
         return new SubdocMutateRequest.Command(
                 SubdocCommandType.DELETE,
                 path,

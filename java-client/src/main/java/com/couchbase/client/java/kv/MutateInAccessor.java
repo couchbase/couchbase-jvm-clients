@@ -8,7 +8,7 @@ import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -20,7 +20,7 @@ public class MutateInAccessor {
                                                            final PersistTo persistTo,
                                                            final ReplicateTo replicateTo,
                                                            final Boolean insertDocument,
-                                                           final Serializer serializer) {
+                                                           final JsonSerializer serializer) {
     core.send(request);
     return request
       .response()

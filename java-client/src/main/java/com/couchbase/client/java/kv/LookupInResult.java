@@ -17,15 +17,13 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.SubdocField;
-import com.couchbase.client.java.codec.Serializer;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
  * This result is returned from successful KeyValue subdocument lookup responses.
@@ -52,7 +50,7 @@ public class LookupInResult {
   /**
    * The default JSON serializer that should be used.
    */
-  private final Serializer serializer;
+  private final JsonSerializer serializer;
 
   /**
    * Creates a new {@link LookupInResult}.
@@ -60,7 +58,7 @@ public class LookupInResult {
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiry, Serializer serializer) {
+  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiry, JsonSerializer serializer) {
     this.cas = cas;
     this.encoded = encoded;
     this.expiry = expiry;

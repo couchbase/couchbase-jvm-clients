@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -28,70 +29,70 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies the basic functionality of the default {@link JsonSerializer}.
+ * Verifies the functionality of the {@link JsonTranscoder}.
  */
-class JsonSerializerTest {
+class JsonTranscoderTest {
 
-  private static final JsonSerializer SERIALIZER = JsonSerializer.create();
+  private static final Transcoder JSON_TRANSCODER = JsonTranscoder.create();
 
   @Test
   void encodesJsonObject() {
     JsonObject input = JsonObject.create().put("foo", "bar");
-    byte[] output = SERIALIZER.serialize(input);
-    assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
+    Transcoder.EncodedValue output = JSON_TRANSCODER.encode(input);
+    assertEquals("{\"foo\":\"bar\"}", new String(output.encoded(), StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonObject() {
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    JsonObject decoded = SERIALIZER.deserialize(JsonObject.class, input);
+    JsonObject decoded = JSON_TRANSCODER.decode(JsonObject.class, input, CodecFlags.JSON_COMPAT_FLAGS);
     assertEquals(JsonObject.fromJson(input), decoded);
   }
 
   @Test
   void encodesJsonArray() {
     JsonArray input = JsonArray.from("1", true, 2);
-    byte[] output = SERIALIZER.serialize(input);
-    assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
+    Transcoder.EncodedValue output = JSON_TRANSCODER.encode(input);
+    assertEquals("[\"1\",true,2]", new String(output.encoded(), StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesJsonArray() {
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    JsonArray decoded = SERIALIZER.deserialize(JsonArray.class, input);
+    JsonArray decoded = JSON_TRANSCODER.decode(JsonArray.class, input, CodecFlags.JSON_COMPAT_FLAGS);
     assertEquals(JsonArray.fromJson(input), decoded);
   }
 
   @Test
   void encodesMap() {
     Map<String, Object> input = Collections.singletonMap("foo", "bar");
-    byte[] output = SERIALIZER.serialize(input);
-    assertEquals("{\"foo\":\"bar\"}", new String(output, StandardCharsets.UTF_8));
+    Transcoder.EncodedValue output = JSON_TRANSCODER.encode(input);
+    assertEquals("{\"foo\":\"bar\"}", new String(output.encoded(), StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesMap() {
     Map<String, Object> expected = Collections.singletonMap("foo", "bar");
     byte[] input = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
-    Map decoded = SERIALIZER.deserialize(Map.class, input);
+    Map decoded = JSON_TRANSCODER.decode(Map.class, input, CodecFlags.JSON_COMPAT_FLAGS);
     assertEquals(expected, decoded);
   }
 
   @Test
   void encodesList() {
     List<Object> input = Arrays.asList("1", true, 2);
-    byte[] output = SERIALIZER.serialize(input);
-    assertEquals("[\"1\",true,2]", new String(output, StandardCharsets.UTF_8));
+    Transcoder.EncodedValue output = JSON_TRANSCODER.encode(input);
+    assertEquals("[\"1\",true,2]", new String(output.encoded(), StandardCharsets.UTF_8));
   }
 
   @Test
   void decodesList() {
     List<Object> expected = Arrays.asList("1", true, 2);
     byte[] input = "[\"1\",true,2]".getBytes(StandardCharsets.UTF_8);
-    List decoded = SERIALIZER.deserialize(List.class, input);
+    List decoded = JSON_TRANSCODER.decode(List.class, input, CodecFlags.JSON_COMPAT_FLAGS);
     assertEquals(expected, decoded);
   }
 
@@ -100,8 +101,8 @@ class JsonSerializerTest {
     Set<Object> input = new LinkedHashSet<>();
     input.add("foo");
     input.add("bar");
-    byte[] output = SERIALIZER.serialize(input);
-    assertEquals("[\"foo\",\"bar\"]", new String(output, StandardCharsets.UTF_8));
+    Transcoder.EncodedValue output = JSON_TRANSCODER.encode(input);
+    assertEquals("[\"foo\",\"bar\"]", new String(output.encoded(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -110,8 +111,18 @@ class JsonSerializerTest {
     expected.add("foo");
     expected.add("bar");
     byte[] input = "[\"foo\",\"bar\"]".getBytes(StandardCharsets.UTF_8);
-    Set decoded = SERIALIZER.deserialize(Set.class, input);
+    Set decoded = JSON_TRANSCODER.decode(Set.class, input, CodecFlags.JSON_COMPAT_FLAGS);
     assertEquals(expected, decoded);
+  }
+
+  @Test
+  void rejectsByteArrayEncode() {
+    assertThrows(IllegalArgumentException.class, () -> JSON_TRANSCODER.encode(new byte[] {}));
+  }
+
+  @Test
+  void rejectsByteArrayDecode() {
+    assertThrows(IllegalArgumentException.class, () -> JSON_TRANSCODER.decode(byte[].class, new byte[] {}, CodecFlags.JSON_COMPAT_FLAGS));
   }
 
 }

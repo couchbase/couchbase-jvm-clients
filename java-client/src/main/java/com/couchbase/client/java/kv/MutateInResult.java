@@ -19,7 +19,6 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.codec.Serializer;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +40,7 @@ public class MutateInResult extends MutationResult {
   /**
    * The default JSON serializer that should be used.
    */
-  private final Serializer serializer;
+  private final JsonSerializer serializer;
 
   /**
    * Creates a new {@link MutateInResult}.
@@ -50,7 +49,7 @@ public class MutateInResult extends MutationResult {
    * @param cas the cas of the outer doc.
    * @param mutationToken the mutation token of the doc, if present.
    */
-  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken, Serializer serializer) {
+  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken, JsonSerializer serializer) {
     super(cas, mutationToken);
     this.encoded = encoded;
     this.serializer = serializer;
@@ -73,10 +72,10 @@ public class MutateInResult extends MutationResult {
    *
    * @param index the index of the subdoc value to decode.
    * @param target the target type to decode into.
-   * @param serializer the custom {@link Serializer} that will be used.
+   * @param serializer the custom {@link JsonSerializer} that will be used.
    * @return the decoded content into the generic type requested.
    */
-  public <T> T contentAs(int index, final Class<T> target, final Serializer serializer) {
+  public <T> T contentAs(int index, final Class<T> target, final JsonSerializer serializer) {
     if (index >= 0 && index < encoded.size()) {
       SubdocField value = encoded.get(index);
       value.error().map(err -> {

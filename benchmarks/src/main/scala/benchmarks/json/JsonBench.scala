@@ -25,7 +25,7 @@
 package benchmarks.json
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.java.codec.JsonSerializer
+import com.couchbase.client.java.codec.DefaultJsonSerializer
 import com.couchbase.client.scala.codec.Conversions.{Decodable, Encodable, JsonFlags}
 import com.couchbase.client.scala.codec.EncodeParams
 import org.scalameter
@@ -95,7 +95,7 @@ object Jackson {
 // Change this to LocalTime for a fast result
 object JsonBench extends Bench.LocalTime {
 
-  val jsonSerializer = JsonSerializer.create()
+  val jsonSerializer = DefaultJsonSerializer.create()
   val gen = Gen.unit("num")
   val content = Jackson.content
 

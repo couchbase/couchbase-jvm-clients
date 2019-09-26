@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.java.codec.DataFormat;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -41,9 +40,9 @@ public class GetResult {
   protected final byte[] content;
 
   /**
-   * The data format loaded from the common flags.
+   * The flags from the kv operation.
    */
-  protected final DataFormat format;
+  protected final int flags;
 
   /**
    * The CAS of the fetched document.
@@ -66,10 +65,10 @@ public class GetResult {
    * @param cas the cas from the doc.
    * @param expiry the expiry if fetched from the doc.
    */
-  GetResult(final byte[] content, final DataFormat format, final long cas, final Optional<Duration> expiry, Transcoder transcoder) {
+  GetResult(final byte[] content, final int flags, final long cas, final Optional<Duration> expiry, Transcoder transcoder) {
     this.cas = cas;
     this.content = content;
-    this.format = format;
+    this.flags = flags;
     this.expiry = expiry;
     this.transcoder = transcoder;
   }
@@ -112,24 +111,14 @@ public class GetResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
-    return transcoder.decode(target, content, format);
-  }
-
-  /**
-   * Decodes the content of the document into a the target class using the default transcoder and a custom data format.
-   *
-   * @param target the target class to decode the encoded content into.
-   * @param format the custom data format that should be used.
-   */
-  public <T> T contentAs(final Class<T> target, final DataFormat format) {
-    return transcoder.decode(target, content, format);
+    return transcoder.decode(target, content, flags);
   }
 
   @Override
   public String toString() {
     return "GetResult{" +
       "content=" + redactUser(Arrays.toString(content)) +
-      ", format=" + format +
+      ", flags=" + flags +
       ", cas=" + cas +
       ", expiry=" + expiry +
       '}';
@@ -140,17 +129,17 @@ public class GetResult {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     GetResult getResult = (GetResult) o;
-    return cas == getResult.cas &&
+    return flags == getResult.flags &&
+      cas == getResult.cas &&
       Arrays.equals(content, getResult.content) &&
-      format == getResult.format &&
-      Objects.equals(expiry, getResult.expiry);
+      Objects.equals(expiry, getResult.expiry) &&
+      Objects.equals(transcoder, getResult.transcoder);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(format, cas, expiry);
+    int result = Objects.hash(flags, cas, expiry, transcoder);
     result = 31 * result + Arrays.hashCode(content);
     return result;
   }
-
 }

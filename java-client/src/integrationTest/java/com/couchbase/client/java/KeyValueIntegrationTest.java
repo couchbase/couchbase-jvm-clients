@@ -21,7 +21,7 @@ import com.couchbase.client.core.error.KeyExistsException;
 import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.java.codec.DataFormat;
+import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -453,11 +453,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       () -> collection.binary().append(id, helloBytes)
     );
 
-    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
 
     MutationResult append = collection.binary().append(id, worldBytes);
@@ -466,7 +466,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       helloWorldBytes,
-      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
   }
 
@@ -483,11 +483,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
             () -> collection.reactive().binary().append(id, helloBytes).block()
     );
 
-    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+            collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
 
     MutationResult append = collection.reactive().binary().append(id, worldBytes).block();
@@ -497,7 +497,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+            collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
   }
 
@@ -514,11 +514,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
             () -> collection.async().binary().append(id, helloBytes).get()
     );
 
-    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
             helloBytes,
-            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+            collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
 
     MutationResult append = collection.async().binary().append(id, worldBytes).get();
@@ -527,7 +527,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
             helloWorldBytes,
-            collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+            collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
   }
 
@@ -544,11 +544,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       () -> collection.binary().prepend(id, helloBytes)
     );
 
-    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().dataFormat(DataFormat.BINARY));
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
     assertTrue(upsert.cas() != 0);
     assertArrayEquals(
       helloBytes,
-      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
 
     MutationResult append = collection.binary().prepend(id, worldBytes);
@@ -557,7 +557,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertArrayEquals(
       worldHelloBytes,
-      collection.get(id).contentAs(byte[].class, DataFormat.BINARY)
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
     );
   }
 

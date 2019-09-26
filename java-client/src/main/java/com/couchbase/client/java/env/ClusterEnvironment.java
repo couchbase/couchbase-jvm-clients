@@ -17,22 +17,22 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.java.codec.DefaultTranscoder;
+import com.couchbase.client.java.codec.DefaultJsonSerializer;
+import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.codec.Serializer;
 import com.couchbase.client.java.codec.Transcoder;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ClusterEnvironment extends CoreEnvironment {
 
-  private final Serializer jsonSerializer;
+  private final JsonSerializer jsonSerializer;
   private final Transcoder transcoder;
 
   private ClusterEnvironment(Builder builder) {
     super(builder);
-    this.jsonSerializer = builder.jsonSerializer == null ? JsonSerializer.create() : builder.jsonSerializer;
-    this.transcoder = builder.transcoder == null ? DefaultTranscoder.create(jsonSerializer) : builder.transcoder;
+    this.jsonSerializer = builder.jsonSerializer == null ? DefaultJsonSerializer.create() : builder.jsonSerializer;
+    this.transcoder = builder.transcoder == null ? JsonTranscoder.create(jsonSerializer) : builder.transcoder;
   }
 
   @Override
@@ -58,13 +58,13 @@ public class ClusterEnvironment extends CoreEnvironment {
   /**
    * Returns the default serializer used to serialize and deserialize JSON values.
    */
-  public Serializer jsonSerializer() {
+  public JsonSerializer jsonSerializer() {
     return jsonSerializer;
   }
 
   public static class Builder extends CoreEnvironment.Builder<Builder> {
 
-    private Serializer jsonSerializer;
+    private JsonSerializer jsonSerializer;
     private Transcoder transcoder;
 
     Builder() {
@@ -82,7 +82,7 @@ public class ClusterEnvironment extends CoreEnvironment {
      * @param jsonSerializer the serializer used for all JSON values.
      * @return this builder for chaining purposes.
      */
-    public Builder jsonSerializer(final Serializer jsonSerializer) {
+    public Builder jsonSerializer(final JsonSerializer jsonSerializer) {
       notNull(jsonSerializer, "Json Serializer");
       this.jsonSerializer = jsonSerializer;
       return this;

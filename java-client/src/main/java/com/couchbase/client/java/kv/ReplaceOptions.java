@@ -17,8 +17,6 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.codec.DataFormat;
-import com.couchbase.client.java.codec.DefaultTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
@@ -28,7 +26,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
   private Duration expiry = Duration.ZERO;
-  private DataFormat dataFormat = DataFormat.DEFAULT_DATA_FORMAT;
   private Transcoder transcoder;
   private long cas;
 
@@ -40,12 +37,6 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
   public ReplaceOptions expiry(final Duration expiry) {
     this.expiry = expiry;
-    return this;
-  }
-
-  public ReplaceOptions dataFormat(final DataFormat dataFormat) {
-    notNull(dataFormat, "DataFormat");
-    this.dataFormat = dataFormat;
     return this;
   }
 
@@ -69,10 +60,6 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
     public Duration expiry() {
       return expiry;
-    }
-
-    public DataFormat dataFormat() {
-      return dataFormat;
     }
 
     public Transcoder transcoder() {

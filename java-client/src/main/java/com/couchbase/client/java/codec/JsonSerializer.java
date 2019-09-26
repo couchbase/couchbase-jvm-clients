@@ -16,49 +16,27 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
-import com.couchbase.client.core.error.DecodingFailedException;
-import com.couchbase.client.core.error.EncodingFailedException;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.java.CommonOptions;
-import com.couchbase.client.java.json.JacksonTransformers;
-
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-
 /**
- * The default JSON serializer based on jackson.
- *
- * <p>This serializer uses the internal {@link JacksonTransformers} class which uses jackson for encoding and decoding
- * of JSON.</p>
+ * The {@link JsonSerializer} handles the serialization and deserialization of raw json data into java objects.
  */
-public class JsonSerializer implements Serializer {
+public interface JsonSerializer {
 
-  public static JsonSerializer create() {
-    return new JsonSerializer();
-  }
+  /**
+   * Serializes the given input into its encoded byte array form.
+   *
+   * @param input the object as input.
+   * @return the serialized output.
+   */
+  byte[] serialize(Object input);
 
-  private JsonSerializer() {}
-
-  @Override
-  public byte[] serialize(final Object input) {
-    try {
-      return JacksonTransformers.MAPPER.writeValueAsBytes(input);
-    } catch (Throwable t) {
-      throw new EncodingFailedException("Serializing of content + " + input + " to JSON failed.", t);
-    }
-  }
-
-  @Override
-  public <T> T deserialize(final Class<T> target, final byte[] input) {
-    try {
-      return JacksonTransformers.MAPPER.readValue(input, target);
-    } catch (Throwable e) {
-      if (e instanceof DecodingFailedException) {
-        e = e.getCause();
-      }
-      throw new DecodingFailedException("Deserialization of content into target " + target
-        + " failed; encoded = " + redactUser(new String(input, CharsetUtil.UTF_8)), e);
-    }
-  }
+  /**
+   * Deserializes raw input into the target class.
+   *
+   * @param target the target class.
+   * @param input the raw input.
+   * @param <T> the generic type to deserialize into.
+   * @return the deserialized output.
+   */
+  <T> T deserialize(Class<T> target, byte[] input);
 
 }
