@@ -86,7 +86,7 @@ public class ViewMetaData {
 
     @Override
     public String toString() {
-        return "ViewMeta{" +
+        return "ViewMetaData{" +
             "totalRows=" + totalRows +
             ", debug=" + debug +
             '}';

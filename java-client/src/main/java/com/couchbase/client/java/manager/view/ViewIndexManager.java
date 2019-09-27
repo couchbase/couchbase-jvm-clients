@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.view.DesignDocumentNamespace;
 
 import java.util.List;
 

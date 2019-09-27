@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.java.view.DesignDocumentNamespace;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;

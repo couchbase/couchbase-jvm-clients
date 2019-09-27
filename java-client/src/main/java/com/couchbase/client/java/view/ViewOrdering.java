@@ -13,30 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.view;
 
 /**
- * Sets the staleness requirement for the view query.
- *
- * @author Michael Nitschinger
- * @since 2.0
+ * Sets the ordering of the view result rows.
  */
-public enum Stale {
+public enum ViewOrdering {
 
-    TRUE("ok"),
+  ASCENDING,
+  DESCENDING
 
-    FALSE("false"),
-
-    UPDATE_AFTER("update_after");
-
-    private String identifier;
-
-    private Stale(String identifier) {
-        this.identifier = identifier;
-    }
-
-    public String identifier() {
-        return identifier;
-    }
 }

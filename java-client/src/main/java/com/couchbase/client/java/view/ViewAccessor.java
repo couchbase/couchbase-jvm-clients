@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.msg.view.ViewResponse;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
 
@@ -37,18 +38,18 @@ import java.util.function.Function;
 @Stability.Internal
 public class ViewAccessor {
 
-    public static CompletableFuture<ViewResult> viewQueryAsync(final Core core, final ViewRequest request) {
+    public static CompletableFuture<ViewResult> viewQueryAsync(final Core core, final ViewRequest request, final JsonSerializer serializer) {
         return viewQueryInternal(core, request)
           .flatMap(response -> response
             .rows()
             .collectList()
-            .map(rows -> new ViewResult(response.header(), rows))
+            .map(rows -> new ViewResult(response.header(), rows, serializer))
           )
           .toFuture();
     }
 
-    public static Mono<ReactiveViewResult> viewQueryReactive(final Core core, final ViewRequest request) {
-        return viewQueryInternal(core, request).map(ReactiveViewResult::new);
+    public static Mono<ReactiveViewResult> viewQueryReactive(final Core core, final ViewRequest request, final JsonSerializer serializer) {
+        return viewQueryInternal(core, request).map(r -> new ReactiveViewResult(r, serializer));
     }
 
     private static Mono<ViewResponse> viewQueryInternal(final Core core, final ViewRequest request) {

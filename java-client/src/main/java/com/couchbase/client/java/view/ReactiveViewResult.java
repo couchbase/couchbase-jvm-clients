@@ -17,6 +17,7 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.msg.view.ViewResponse;
+import com.couchbase.client.java.codec.JsonSerializer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -32,13 +33,16 @@ public class ReactiveViewResult {
      */
     private final ViewResponse response;
 
+    private final JsonSerializer serializer;
+
     /**
      * Creates a new {@link ReactiveViewResult}.
      *
      * @param response the core response.
      */
-    ReactiveViewResult(final ViewResponse response) {
+    ReactiveViewResult(final ViewResponse response, final JsonSerializer serializer) {
         this.response = response;
+        this.serializer = serializer;
     }
 
     /**
@@ -47,7 +51,7 @@ public class ReactiveViewResult {
      * @return the {@link Flux} of {@link ViewRow ViewRows}.
      */
     public Flux<ViewRow> rows() {
-        return response.rows().map(r -> new ViewRow(r.data()));
+        return response.rows().map(r -> new ViewRow(r.data(), serializer));
     }
 
     /**

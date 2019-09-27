@@ -22,18 +22,19 @@ package com.couchbase.client.java.view;
  * @author Michael Nitschinger
  * @since 2.0
  */
-public enum OnError {
+public enum ViewErrorMode {
 
-    STOP("stop"),
-    CONTINUE("continue");
-
-    private final String identifier;
-
-    OnError(String identifier) {
-        this.identifier = identifier;
+    STOP {
+        @Override
+        public String toString() {
+            return "stop";
+        }
+    },
+    CONTINUE {
+        @Override
+        public String toString() {
+            return "continue";
+        }
     }
 
-    public String identifier() {
-        return identifier;
-    }
 }

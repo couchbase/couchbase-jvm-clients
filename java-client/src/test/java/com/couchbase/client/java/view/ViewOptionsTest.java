@@ -87,22 +87,22 @@ class ViewOptionsTest {
 
   @Test
   void shouldSetStale() {
-    ViewOptions options = viewOptions().stale(Stale.FALSE);
+    ViewOptions options = viewOptions().scanConsistency(ViewScanConsistency.REQUEST_PLUS);
     assertEquals("stale=false", options.export());
 
-    options = viewOptions().stale(Stale.TRUE);
+    options = viewOptions().scanConsistency(ViewScanConsistency.NOT_BOUNDED);
     assertEquals("stale=ok", options.export());
 
-    options = viewOptions().stale(Stale.UPDATE_AFTER);
+    options = viewOptions().scanConsistency(ViewScanConsistency.UPDATE_AFTER);
     assertEquals("stale=update_after", options.export());
   }
 
   @Test
   void shouldSetOnError() {
-    ViewOptions options = viewOptions().onError(OnError.CONTINUE);
+    ViewOptions options = viewOptions().onError(ViewErrorMode.CONTINUE);
     assertEquals("on_error=continue", options.export());
 
-    options = viewOptions().onError(OnError.STOP);
+    options = viewOptions().onError(ViewErrorMode.STOP);
     assertEquals("on_error=stop", options.export());
   }
 
@@ -117,10 +117,10 @@ class ViewOptionsTest {
 
   @Test
   void shouldSetDescending() {
-    ViewOptions options = viewOptions().descending(true);
+    ViewOptions options = viewOptions().order(ViewOrdering.DESCENDING);
     assertEquals("descending=true", options.export());
 
-    options = viewOptions().descending(false);
+    options = viewOptions().order(ViewOrdering.ASCENDING);
     assertEquals("descending=false", options.export());
   }
 
@@ -232,19 +232,19 @@ class ViewOptionsTest {
 
   @Test
   void shouldRespectDevelopmentParam() {
-    ViewOptions options = viewOptions().development(true);
+    ViewOptions options = viewOptions().namespace(DesignDocumentNamespace.DEVELOPMENT);
     assertTrue(options.build().development());
 
-    options = viewOptions().development(false);
+    options = viewOptions().namespace(DesignDocumentNamespace.PRODUCTION);
     assertFalse(options.build().development());
   }
 
   @Test
   void shouldConcatMoreParams() {
     ViewOptions options = viewOptions()
-      .descending(true)
+      .order(ViewOrdering.DESCENDING)
       .debug(true)
-      .development(true)
+      .namespace(DesignDocumentNamespace.DEVELOPMENT)
       .group(true)
       .reduce(false)
       .startKey(JsonArray.from("foo", true));
@@ -264,10 +264,10 @@ class ViewOptionsTest {
 
   @Test
   void shouldToggleDevelopment() {
-    ViewOptions options = viewOptions().development(true);
+    ViewOptions options = viewOptions().namespace(DesignDocumentNamespace.DEVELOPMENT);
     assertTrue(options.build().development());
 
-    options = viewOptions().development(false);
+    options = viewOptions().namespace(DesignDocumentNamespace.PRODUCTION);
     assertFalse(options.build().development());
   }
 

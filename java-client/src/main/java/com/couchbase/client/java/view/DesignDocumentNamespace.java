@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.view;
+package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.annotation.Stability;
 
@@ -26,31 +26,31 @@ public enum DesignDocumentNamespace {
 
   DEVELOPMENT() {
     @Override
-    String adjustName(String name) {
+    public String adjustName(String name) {
       return name.startsWith(DEV_PREFIX) ? name : DEV_PREFIX + name;
     }
 
     @Override
-    boolean contains(String rawDesignDocName) {
+    public boolean contains(String rawDesignDocName) {
       return rawDesignDocName.startsWith(DEV_PREFIX);
     }
   },
 
   PRODUCTION {
     @Override
-    String adjustName(String name) {
+    public String adjustName(String name) {
       return removeStart(name, DEV_PREFIX);
     }
 
     @Override
-    boolean contains(String rawDesignDocName) {
+    public boolean contains(String rawDesignDocName) {
       return !DEVELOPMENT.contains(rawDesignDocName);
     }
   };
 
   static final String DEV_PREFIX = "dev_";
 
-  static String requireUnqualified(String name) {
+  public static String requireUnqualified(final String name) {
     if (name.startsWith(DEV_PREFIX)) {
       throw new IllegalArgumentException(
           "Design document name '" + redactMeta(name) + "' must not start with '" + DEV_PREFIX + "'" +
@@ -59,7 +59,7 @@ public enum DesignDocumentNamespace {
     return name;
   }
 
-  abstract String adjustName(String name);
+  public abstract String adjustName(String name);
 
-  abstract boolean contains(String rawDesignDocName);
+  public abstract boolean contains(String rawDesignDocName);
 }

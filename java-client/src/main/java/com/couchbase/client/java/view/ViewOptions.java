@@ -19,8 +19,11 @@ package com.couchbase.client.java.view;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ViewOptions extends CommonOptions<ViewOptions> {
 
@@ -29,8 +32,9 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    */
   private final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames();
 
-  private boolean development;
   private String keysJson;
+  private JsonSerializer serializer;
+  private DesignDocumentNamespace namespace;
 
   public static ViewOptions viewOptions() {
     return new ViewOptions();
@@ -39,8 +43,13 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   private ViewOptions() {
   }
 
-  public ViewOptions development(boolean development) {
-    this.development = development;
+  public ViewOptions namespace(final DesignDocumentNamespace namespace) {
+    this.namespace = namespace;
+    return this;
+  }
+
+  public ViewOptions serializer(final JsonSerializer serializer) {
+    this.serializer = serializer;
     return this;
   }
 
@@ -101,7 +110,6 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
     return this;
   }
 
-
   /**
    * Specifies whether the specified end key should be included in the result.
    *
@@ -111,7 +119,6 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
     params.set("inclusive_end", inclusive);
     return this;
   }
-
 
   /**
    * Skip this number of records before starting to return the results.
@@ -128,16 +135,13 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   /**
-   * Allow the results from a stale view to be used.
-   * <p>
-   * See the "Stale" enum for more information on the possible options. The
-   * default setting is "update_after"!
+   * Sets the scan consistency (staleness) of a view query.
    *
-   * @param stale Which stale mode should be used.
+   * @param scanConsistency Which consistency mode should be used.
    * @return the {@link ViewOptions} object for proper chaining.
    */
-  public ViewOptions stale(final Stale stale) {
-    params.set("stale", stale.identifier());
+  public ViewOptions scanConsistency(final ViewScanConsistency scanConsistency) {
+    params.set("stale", scanConsistency.toString());
     return this;
   }
 
@@ -146,11 +150,11 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    * <p>
    * See the "OnError" enum for more details on the available options.
    *
-   * @param onError The appropriate error handling type.
+   * @param viewErrorMode The appropriate error handling type.
    * @return the {@link ViewOptions} object for proper chaining.
    */
-  public ViewOptions onError(final OnError onError) {
-    params.set("on_error", onError.identifier());
+  public ViewOptions onError(final ViewErrorMode viewErrorMode) {
+    params.set("on_error", viewErrorMode.toString());
     return this;
   }
 
@@ -169,11 +173,11 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    *
    * @return the {@link ViewOptions} object for proper chaining.
    */
-  public ViewOptions descending(boolean desc) {
-    params.set("descending", desc);
+  public ViewOptions order(final ViewOrdering ordering) {
+    notNull(ordering, "ViewOrdering");
+    params.set("descending", ordering == ViewOrdering.DESCENDING);
     return this;
   }
-
 
   public ViewOptions key(String key) {
     params.set("key", "\"" + key + "\"");
@@ -297,6 +301,11 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
     return this;
   }
 
+  public ViewOptions raw(String key, String value) {
+    params.set(key, value);
+    return this;
+  }
+
   /**
    * A string representation of this ViewQuery, suitable for logging and other human consumption.
    * If the {@link #keys(JsonArray)} parameter is too large, it is truncated in this dump.
@@ -308,7 +317,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
     StringBuilder sb = new StringBuilder();
     sb.append("ViewQuery{");
     sb.append("params=\"").append(export()).append('"');
-    if (development) {
+    if (namespace == DesignDocumentNamespace.DEVELOPMENT) {
       sb.append(", dev");
     }
     if (keysJson != null) {
@@ -341,13 +350,16 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    public JsonSerializer serializer() {
+      return serializer;
+    }
 
     public String keys() {
       return keysJson;
     }
 
     public boolean development() {
-      return development;
+      return namespace == DesignDocumentNamespace.DEVELOPMENT;
     }
 
     public String query() {

@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingE
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.ViewServiceException;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -42,13 +43,16 @@ public class ViewRow {
    */
   private final JsonNode rootNode;
 
+  private final JsonSerializer serializer;
+
   /**
    * Creates anew {@link ViewRow} from the raw row data.
    *
    * @param raw the raw json encoded row.
    */
-  ViewRow(final byte[] raw) {
+  ViewRow(final byte[] raw, final JsonSerializer serializer) {
     this.raw = raw;
+    this.serializer = serializer;
     try {
       this.rootNode = JacksonTransformers.MAPPER.readTree(raw);
     } catch (IOException e) {
@@ -101,7 +105,10 @@ public class ViewRow {
       if (subNode == null || subNode.isNull() || subNode.isMissingNode()) {
         return Optional.empty();
       }
-      return Optional.ofNullable(JacksonTransformers.MAPPER.treeToValue(subNode, target));
+      // daschl: I know this is a bit wasteful, but key and value are sub-structures of the
+      // overall result and to make use of the serializer we need to turn it into a byte array
+      byte[] raw = JacksonTransformers.MAPPER.writeValueAsBytes(subNode);
+      return Optional.of(serializer.deserialize(target, raw));
     } catch (JsonProcessingException e) {
       throw new DecodingFailedException("Could not decode " + path +" in view row!");
     }

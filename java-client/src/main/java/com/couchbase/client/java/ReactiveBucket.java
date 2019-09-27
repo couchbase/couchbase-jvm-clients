@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
 import com.couchbase.client.java.manager.collection.ReactiveCollectionManager;
@@ -26,6 +27,7 @@ import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
 /**
@@ -132,11 +134,14 @@ public class ReactiveBucket {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
-  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName,
-                                            final ViewOptions options) {
+  public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
+    notNull(options, "ViewOptions");
+    ViewOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return ViewAccessor.viewQueryReactive(
       asyncBucket.core(),
-      asyncBucket.viewRequest(designDoc, viewName, options)
+      asyncBucket.viewRequest(designDoc, viewName, opts),
+      serializer
     );
   }
 

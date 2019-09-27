@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.java.view.DesignDocumentNamespace;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -32,8 +33,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
-import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.DEVELOPMENT;
-import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.PRODUCTION;
+import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT;
+import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;

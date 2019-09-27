@@ -22,6 +22,7 @@ import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
 import com.couchbase.client.java.manager.view.AsyncViewIndexManager;
@@ -171,17 +172,16 @@ public class AsyncBucket {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
-  public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName,
-                                                 final ViewOptions options) {
-    return ViewAccessor.viewQueryAsync(core, viewRequest(designDoc, viewName, options));
+  public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
+    notNull(options, "ViewOptions");
+    ViewOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return ViewAccessor.viewQueryAsync(core, viewRequest(designDoc, viewName, opts), serializer);
   }
 
-  ViewRequest viewRequest(final String designDoc, final String viewName, final ViewOptions options) {
+  ViewRequest viewRequest(final String designDoc, final String viewName, final ViewOptions.Built opts) {
     notNullOrEmpty(designDoc, "DesignDoc");
     notNullOrEmpty(viewName, "ViewName");
-    notNull(options, "ViewOptions");
-
-    ViewOptions.Built opts = options.build();
 
     String query = opts.query();
     Optional<byte[]> keysJson = Optional.ofNullable(opts.keys()).map(s -> s.getBytes(StandardCharsets.UTF_8));

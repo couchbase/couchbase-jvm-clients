@@ -151,8 +151,7 @@ public class Bucket {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
-  public ViewResult viewQuery(final String designDoc, final String viewName,
-                                                 final ViewOptions options) {
+  public ViewResult viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     return block(asyncBucket.viewQuery(designDoc, viewName, options));
   }
 

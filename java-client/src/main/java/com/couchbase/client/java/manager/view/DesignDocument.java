@@ -25,7 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.java.manager.view.DesignDocumentNamespace.requireUnqualified;
+import static com.couchbase.client.java.view.DesignDocumentNamespace.requireUnqualified;
 
 /**
  * A collection of named {@link View}s.

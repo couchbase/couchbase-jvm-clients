@@ -18,6 +18,7 @@ package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
+import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,15 +40,18 @@ public class ViewResult {
    */
   private final ViewChunkHeader header;
 
+  private final JsonSerializer serializer;
+
   /**
    * Creates a new ViewResult.
    *
    * @param header the view header.
    * @param rows the view rows.
    */
-  ViewResult(final ViewChunkHeader header, final List<ViewChunkRow> rows) {
+  ViewResult(final ViewChunkHeader header, final List<ViewChunkRow> rows, final JsonSerializer serializer) {
     this.rows = rows;
     this.header = header;
+    this.serializer = serializer;
   }
 
   /**
@@ -56,7 +60,7 @@ public class ViewResult {
   public List<ViewRow> rows() {
     final List<ViewRow> converted = new ArrayList<>(rows.size());
     for (ViewChunkRow row : rows) {
-      converted.add(new ViewRow(row.data()));
+      converted.add(new ViewRow(row.data(), serializer));
     }
     return converted;
   }
