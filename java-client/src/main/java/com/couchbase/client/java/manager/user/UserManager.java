@@ -32,6 +32,14 @@ public class UserManager {
     this.async = requireNonNull(async);
   }
 
+  public AsyncUserManager async() {
+    return async;
+  }
+
+  public ReactiveUserManager reactive() {
+    return new ReactiveUserManager(async);
+  }
+
   public UserAndMetadata getUser(AuthDomain domain, String username) {
     return block(async.getUser(domain, username));
   }
