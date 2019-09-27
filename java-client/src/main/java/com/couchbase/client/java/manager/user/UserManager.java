@@ -44,12 +44,24 @@ public class UserManager {
     return block(async.getUser(domain, username));
   }
 
+  public UserAndMetadata getUser(AuthDomain domain, String username, GetUserOptions options) {
+    return block(async.getUser(domain, username, options));
+  }
+
   public List<RoleAndDescription> availableRoles() {
     return block(async.availableRoles());
   }
 
+  public List<RoleAndDescription> availableRoles(AvailableRolesOptions options) {
+    return block(async.availableRoles(options));
+  }
+
   public List<UserAndMetadata> getAllUsers() {
     return block(async.getAllUsers());
+  }
+
+  public List<UserAndMetadata> getAllUsers(GetAllUsersOptions options) {
+    return block(async.getAllUsers(options));
   }
 
   public void upsertUser(User user) {
@@ -64,19 +76,39 @@ public class UserManager {
     block(async.dropUser(username));
   }
 
+  public void dropUser(String username, DropUserOptions options) {
+    block(async.dropUser(username, options));
+  }
+
   public Group getGroup(String name) {
     return block(async.getGroup(name));
+  }
+
+  public Group getGroup(String name, GetGroupOptions options) {
+    return block(async.getGroup(name, options));
   }
 
   public List<Group> getAllGroups() {
     return block(async.getAllGroups());
   }
 
+  public List<Group> getAllGroups(GetAllGroupsOptions options) {
+    return block(async.getAllGroups(options));
+  }
+
   public void upsertGroup(Group group) {
     block(async.upsertGroup(group));
   }
 
+  public void upsertGroup(Group group, UpsertGroupOptions options) {
+    block(async.upsertGroup(group, options));
+  }
+
   public void dropGroup(String name) {
     block(async.dropGroup(name));
+  }
+
+  public void dropGroup(String name, DropGroupOptions options) {
+    block(async.dropGroup(name, options));
   }
 }

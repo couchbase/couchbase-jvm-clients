@@ -32,9 +32,16 @@ import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMet
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.java.manager.user.AvailableRolesOptions.availableRolesOptions;
+import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
+import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
+import static com.couchbase.client.java.manager.user.GetAllGroupsOptions.getAllGroupsOptions;
+import static com.couchbase.client.java.manager.user.GetAllUsersOptions.getAllUsersOptions;
+import static com.couchbase.client.java.manager.user.GetGroupOptions.getGroupOptions;
+import static com.couchbase.client.java.manager.user.GetUserOptions.getUserOptions;
+import static com.couchbase.client.java.manager.user.UpsertGroupOptions.upsertGroupOptions;
 import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
 
 @Stability.Volatile
@@ -56,6 +63,7 @@ public class AsyncUserManager extends ManagerSupport {
   private static String pathForUser(AuthDomain domain, String username) {
     return pathForUsers() + "/" + urlEncode(domain.alias()) + "/" + urlEncode(username);
   }
+
   private static String pathForGroups() {
     return "/settings/rbac/groups";
   }
@@ -65,7 +73,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username) {
-    return sendRequest(GET, pathForUser(domain, username)).thenApply(response -> {
+    return getUser(domain, username, getUserOptions());
+  }
+
+  public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
+    return sendRequest(GET, pathForUser(domain, username), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain, username);
       }
@@ -75,7 +87,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers() {
-    return sendRequest(GET, pathForUsers()).thenApply(response -> {
+    return getAllUsers(getAllUsersOptions());
+  }
+
+  public CompletableFuture<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
+    return sendRequest(GET, pathForUsers(), options.build()).thenApply(response -> {
       checkStatus(response, "get all users");
       return Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
       });
@@ -83,7 +99,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<RoleAndDescription>> availableRoles() {
-    return sendRequest(GET, pathForRoles()).thenApply(response -> {
+    return availableRoles(availableRolesOptions());
+  }
+
+  public CompletableFuture<List<RoleAndDescription>> availableRoles(AvailableRolesOptions options) {
+    return sendRequest(GET, pathForRoles(), options.build()).thenApply(response -> {
       checkStatus(response, "get all roles");
       return Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
       });
@@ -112,16 +132,20 @@ public class AsyncUserManager extends ManagerSupport {
     // Password is required when creating user, but optional when updating existing user.
     user.password().ifPresent(pwd -> params.add("password", pwd));
 
-    return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params).thenApply(response -> {
+    return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params, options.build()).thenApply(response -> {
       checkStatus(response, "create user [" + redactUser(username) + "]");
       return null;
     });
   }
 
   public CompletableFuture<Void> dropUser(String username) {
+    return dropUser(username, dropUserOptions());
+  }
+
+  public CompletableFuture<Void> dropUser(String username, DropUserOptions options) {
     final AuthDomain domain = AuthDomain.LOCAL;
 
-    return sendRequest(DELETE, pathForUser(domain, username)).thenApply(response -> {
+    return sendRequest(DELETE, pathForUser(domain, username), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain, username);
       }
@@ -131,7 +155,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Group> getGroup(String groupName) {
-    return sendRequest(GET, pathForGroup(groupName)).thenApply(response -> {
+    return getGroup(groupName, getGroupOptions());
+  }
+
+  public CompletableFuture<Group> getGroup(String groupName, GetGroupOptions options) {
+    return sendRequest(GET, pathForGroup(groupName), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
@@ -141,7 +169,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<Group>> getAllGroups() {
-    return sendRequest(GET, pathForGroups()).thenApply(response -> {
+    return getAllGroups(getAllGroupsOptions());
+  }
+
+  public CompletableFuture<List<Group>> getAllGroups(GetAllGroupsOptions options) {
+    return sendRequest(GET, pathForGroups(), options.build()).thenApply(response -> {
       checkStatus(response, "get all groups");
       return Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
       });
@@ -149,6 +181,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> upsertGroup(Group group) {
+    return upsertGroup(group, upsertGroupOptions());
+  }
+
+  public CompletableFuture<Void> upsertGroup(Group group, UpsertGroupOptions options) {
     final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
         .add("description", group.description())
         .add("ldap_group_ref", group.ldapGroupReference().orElse(""))
@@ -156,14 +192,18 @@ public class AsyncUserManager extends ManagerSupport {
             .map(Role::format)
             .collect(Collectors.joining(",")));
 
-    return sendRequest(PUT, pathForGroup(group.name()), params).thenApply(response -> {
+    return sendRequest(PUT, pathForGroup(group.name()), params, options.build()).thenApply(response -> {
       checkStatus(response, "create group [" + redactMeta(group.name()) + "]");
       return null;
     });
   }
 
   public CompletableFuture<Void> dropGroup(String groupName) {
-    return sendRequest(DELETE, pathForGroup(groupName)).thenApply(response -> {
+    return dropGroup(groupName, dropGroupOptions());
+  }
+
+  public CompletableFuture<Void> dropGroup(String groupName, DropGroupOptions options) {
+    return sendRequest(DELETE, pathForGroup(groupName), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }

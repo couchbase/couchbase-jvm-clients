@@ -20,10 +20,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 @Stability.Volatile
-public class UpsertUserOptions extends CommonOptions<UpsertUserOptions> {
+public class UpsertGroupOptions extends CommonOptions<UpsertGroupOptions> {
 
-  public static UpsertUserOptions upsertUserOptions() {
-    return new UpsertUserOptions();
+  public static UpsertGroupOptions upsertGroupOptions() {
+    return new UpsertGroupOptions();
   }
 
   @Stability.Internal
