@@ -32,39 +32,39 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  */
 public class GetReplicaResult extends GetResult {
 
-  private final boolean isMaster;
+  private final boolean isReplica;
 
   /**
    * Creates a new {@link GetReplicaResult}.
    *
    * @param cas the cas from the doc.
    * @param expiration the expiration if fetched from the doc.
-   * @param isMaster whether the active/master replica returned this result
+   * @param isReplica whether the active/master replica returned this result
    */
   private GetReplicaResult(final byte[] content,
                    final int flags,
                    final long cas,
                    final Optional<Duration> expiration,
                    Transcoder transcoder,
-                   boolean isMaster) {
+                   boolean isReplica) {
     super(content, flags, cas, expiration, transcoder);
-    this.isMaster = isMaster;
+    this.isReplica = isReplica;
   }
 
-  public static GetReplicaResult from(GetResult response, boolean isMaster) {
+  public static GetReplicaResult from(GetResult response, boolean isReplica) {
     return new GetReplicaResult(response.content,
             response.flags,
             response.cas(),
             response.expiry(),
             response.transcoder,
-            isMaster);
+      isReplica);
   }
 
   /**
    * Returns whether the replica that returned this result was the master.
    */
-  public boolean isMaster() {
-    return isMaster;
+  public boolean isReplica() {
+    return isReplica;
   }
 
   @Override
@@ -74,7 +74,7 @@ public class GetReplicaResult extends GetResult {
             ", flags=" + flags +
             ", cas=" + cas() +
             ", expiration=" + expiry() +
-            ", isMaster=" + isMaster +
+            ", isReplica=" + isReplica +
             '}';
   }
 
@@ -85,12 +85,12 @@ public class GetReplicaResult extends GetResult {
 
     GetReplicaResult getResult = (GetReplicaResult) o;
 
-    if (isMaster != getResult.isMaster) return false;
+    if (isReplica != getResult.isReplica) return false;
     return super.equals(o);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(content, flags, cas(), expiry(), isMaster);
+    return Objects.hash(content, flags, cas(), expiry(), isReplica);
   }
 }

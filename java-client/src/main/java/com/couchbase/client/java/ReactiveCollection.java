@@ -326,11 +326,7 @@ public class ReactiveCollection {
                   // Swallow any errors from individual replicas
                   return Mono.empty();
                 })
-                .map(response -> {
-                  boolean isMaster = !(request instanceof ReplicaGetRequest);
-
-                  return GetReplicaResult.from(response, isMaster);
-                }))
+                .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
       .switchIfEmpty(Mono.error(new NoSuchElementException()));
   }
 

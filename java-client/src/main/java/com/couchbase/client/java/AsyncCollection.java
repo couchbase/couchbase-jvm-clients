@@ -446,15 +446,10 @@ public class AsyncCollection {
    */
   public List<CompletableFuture<GetReplicaResult>> getAllReplicas(final String id, final GetAllReplicasOptions options) {
     return getAllReplicasRequests(id, options)
-
       .map(request ->
-              GetAccessor.get(core, id, request, environment.transcoder())
-                      .thenApply(response -> {
-                        boolean isMaster = !(request instanceof ReplicaGetRequest);
-
-                        return GetReplicaResult.from(response, isMaster);
-                      }))
-
+              GetAccessor
+                .get(core, id, request, environment.transcoder())
+                .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
       .collect(Collectors.toList());
   }
 
