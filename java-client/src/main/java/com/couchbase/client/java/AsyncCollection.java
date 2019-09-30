@@ -907,7 +907,7 @@ public class AsyncCollection {
     notNull(options, "LookupInOptions");
     LookupInOptions.Built opts = options.build();
     final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), opts.withExpiry(), serializer);
+    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), serializer);
   }
 
   /**
@@ -923,11 +923,6 @@ public class AsyncCollection {
     notNullOrEmpty(specs, "LookupInSpecs");
 
     ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>();
-
-    if (opts.withExpiry()) {
-      // Xattr commands have to go first
-      commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, EXPIRATION_MACRO, true));
-    }
 
     for (LookupInSpec spec : specs) {
       commands.add(spec.export());

@@ -593,7 +593,7 @@ public class ReactiveCollection {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
       return Reactor.wrap(
         request,
-        LookupInAccessor.lookupInAccessor(id, core, request, opts.withExpiry(), serializer),
+        LookupInAccessor.lookupInAccessor(id, core, request, serializer),
         true
       );
     });

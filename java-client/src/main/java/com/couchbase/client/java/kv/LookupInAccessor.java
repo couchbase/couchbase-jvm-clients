@@ -35,7 +35,6 @@ public class LookupInAccessor {
   public static CompletableFuture<LookupInResult> lookupInAccessor(final String id,
                                                                    final Core core,
                                                                    final SubdocGetRequest request,
-                                                                   final boolean withExpiration,
                                                                    final JsonSerializer serializer) {
     core.send(request);
     return request
@@ -43,28 +42,7 @@ public class LookupInAccessor {
       .thenApply(response -> {
         switch (response.status()) {
           case SUCCESS:
-              if (withExpiration) {
-                  ArrayList<SubdocField> values = new ArrayList<>(response.values().size() - 1);
-                  byte[] exptime = null;
-
-                  for (SubdocField value : response.values()) {
-                      if (value.path().equals(GetAccessor.EXPIRATION_MACRO)) {
-                          exptime = value.value();
-                      }
-                      else {
-                          values.add(value);
-                      }
-                  }
-
-                  Optional<Duration> expiration = exptime == null
-                          ? Optional.empty()
-                          : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
-
-                  return new LookupInResult(values, response.cas(), expiration, serializer);
-              }
-              else {
-                  return new LookupInResult(response.values(), response.cas(), Optional.empty(), serializer);
-              }
+            return new LookupInResult(response.values(), response.cas(), serializer);
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});
             default:

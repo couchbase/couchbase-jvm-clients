@@ -160,26 +160,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
             Arrays.asList(
                     LookupInSpec.get("not_exist"),
                     LookupInSpec.get("foo")));
-
-    assertFalse(result.expiry().isPresent());
-  }
-
-  @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
-  void fetchExpiration() {
-    String id = UUID.randomUUID().toString();
-
-    collection.upsert(id, JsonObject.create().put("foo", "bar"),
-            UpsertOptions.upsertOptions()
-                    .expiry(Duration.ofSeconds(60)));
-
-    LookupInResult result = collection.lookupIn(id,
-            Arrays.asList(
-                    LookupInSpec.get("not_exist"),
-                    LookupInSpec.get("foo")),
-            LookupInOptions.lookupInOptions().withExpiry(true));
-
-    assertTrue(result.expiry().isPresent());
   }
 
   // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder

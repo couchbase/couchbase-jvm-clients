@@ -24,27 +24,10 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
-  /**
-   * If the expiration should also be fetched.
-   */
-  private boolean withExpiry = false;
-
   private JsonSerializer serializer;
 
   public static LookupInOptions lookupInOptions() {
     return new LookupInOptions();
-  }
-
-  /**
-   * If set to true, the get will fetch the expiration for the document as well and return
-   * it as part of the {@link LookupInResult}.
-   *
-   * @param expiration true if it should be fetched.
-   * @return the {@link LookupInOptions} to allow method chaining.
-   */
-  public LookupInOptions withExpiry(boolean expiration) {
-    withExpiry = expiration;
-    return this;
   }
 
   public LookupInOptions serializer(final JsonSerializer serializer) {
@@ -62,9 +45,6 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
-    public boolean withExpiry() {
-      return withExpiry;
-    }
 
     public JsonSerializer serializer() {
       return serializer;

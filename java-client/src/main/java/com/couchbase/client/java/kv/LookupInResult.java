@@ -43,11 +43,6 @@ public class LookupInResult {
   private final long cas;
 
   /**
-   * The expiry if fetched and present.
-   */
-  private final Optional<Duration> expiry;
-
-  /**
    * The default JSON serializer that should be used.
    */
   private final JsonSerializer serializer;
@@ -58,21 +53,10 @@ public class LookupInResult {
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas, final Optional<Duration> expiry, JsonSerializer serializer) {
+  LookupInResult(final List<SubdocField> encoded, final long cas, JsonSerializer serializer) {
     this.cas = cas;
     this.encoded = encoded;
-    this.expiry = expiry;
     this.serializer = serializer;
-  }
-
-  /**
-   * If present, returns the expiry of the loaded document.
-   *
-   * <p>Note that the duration represents the time when the document has been loaded and can only
-   * ever be an approximation.</p>
-   */
-  public Optional<Duration> expiry() {
-    return expiry;
   }
 
   /**
@@ -142,7 +126,6 @@ public class LookupInResult {
     return "LookupInResult{" +
       "encoded=" + encoded +
       ", cas=" + cas +
-      ", expiry=" + expiry +
       ", serializer=" + serializer +
       '}';
   }
