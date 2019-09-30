@@ -63,7 +63,7 @@ public class SubdocMutateResponse extends BaseResponse {
 
   @Override
   public String toString() {
-    return "SubdocGetResponse{" +
+    return "SubdocMutateResponse{" +
       "values=" + values +
       ", cas=" + cas +
       '}';

@@ -44,7 +44,7 @@ import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
-import com.couchbase.client.java.kv.StoreSemantics;
+import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
@@ -419,13 +419,22 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.arrayInsert(idx, e)),
-                        arrayListOptions.mutateInOptions().cas(cas).storeSemantics(StoreSemantics.UPSERT));
+                        arrayListOptions.mutateInOptions().cas(cas));
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();
                 //also correctly reset the state:
                 delegate.add(e);
                 this.cursor++;
                 this.lastVisited = -1;
+            } catch (KeyNotFoundException ex) {
+                if (delegate.nextIndex() == 0 && !delegate.hasNext()) {
+                    // ok, so we just tried to add to a doc we have not
+                    // created yet.
+                    this.cas = createEmptyList();
+                    add(e);
+                } else {
+                    throw new ConcurrentModificationException("List was modified since iterator creation", ex);
+                }
             } catch (CASMismatchException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation", ex);
             } catch (MultiMutationException ex) {
@@ -436,11 +445,13 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             }
         }
     }
-    private void createEmptyList() {
+    private long createEmptyList() {
         try {
-            collection.insert(id, JsonArray.empty(), insertOptions);
+            MutationResult resp = collection.insert(id, JsonArray.empty(), insertOptions);
+            return resp.cas();
         } catch (KeyExistsException ex) {
             // Ignore concurrent creations, keep on moving.
+            return 0;
         }
     }
 }

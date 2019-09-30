@@ -229,7 +229,6 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
-    @Disabled("Throws Exception, needs to be looked at")
     void shouldBeAbleToStartWithEmptyIteratorAndAdd() {
         CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
         ListIterator<Long> it = list.listIterator();
@@ -237,6 +236,29 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         // add will put the cursor on this single element, so now we should have a previous
         assertTrue(it.hasPrevious());
         assertEquals(1, list.size());
+    }
+    @Test
+    void shouldNotAllowAddAfterClear() {
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
+        ListIterator<Long> it = list.listIterator();
+        it.next();
+        list.clear();
+        assertThrows(ConcurrentModificationException.class, () -> it.add(100L));
+    }
+    @Test
+    void canAddAfterClearIfIteratorThoughtItWasEmpty() {
+        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        ListIterator<Long> it = list.listIterator();
+
+        // list changes under the iterator, which thinks the list is empty
+        list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
+        list.clear();
+
+        // the add puts the cursor at the new (only) value
+        assertDoesNotThrow(() -> it.add(100L));
+        assertTrue(it.hasPrevious());
+        assertEquals(100L, it.previous().longValue());
     }
     @Test
     void shouldClear() {
@@ -298,7 +320,6 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
 
     @Test
-    @Disabled("Throws Unknown Response")
     void shouldAddViaIterator() {
         CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
@@ -345,7 +366,6 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
 
     @Test
-    @Disabled("Throws wrong exception, needs to be looked into")
     void shouldNotAddViaIteratorIfListChanged() {
         CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
@@ -353,7 +373,9 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         ListIterator<Integer> it = list.listIterator();
         // change list _after_ getting iterator
         list.add(100);
-        assertThrows(ConcurrentModificationException.class, ()-> {it.add(100);});
+        assertThrows(ConcurrentModificationException.class, () -> {
+            it.add(100);
+        });
     }
     @Test
     void shouldNotSetViaIteratorIfListChanged() {
@@ -402,7 +424,6 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         assertThrows(ConcurrentModificationException.class, () -> it.set(5));
     }
     @Test
-    @Disabled("Throws wrong exception, needs to be looked into")
     void shouldNotAddViaIteratorIfCleared() {
         CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
