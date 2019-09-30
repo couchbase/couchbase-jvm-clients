@@ -84,8 +84,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void availableRoles() {
-    List<RoleAndDescription> roles = users.availableRoles();
+  void getRoles() {
+    List<RoleAndDescription> roles = users.getRoles();
 
     // Full results vary by server version, but should at least contain the admin role.
     assertTrue(roles.stream()

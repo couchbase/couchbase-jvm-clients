@@ -34,7 +34,7 @@ import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMet
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
-import static com.couchbase.client.java.manager.user.AvailableRolesOptions.availableRolesOptions;
+import static com.couchbase.client.java.manager.user.GetRolesOptions.getRolesOptions;
 import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
 import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
 import static com.couchbase.client.java.manager.user.GetAllGroupsOptions.getAllGroupsOptions;
@@ -98,11 +98,11 @@ public class AsyncUserManager extends ManagerSupport {
     });
   }
 
-  public CompletableFuture<List<RoleAndDescription>> availableRoles() {
-    return availableRoles(availableRolesOptions());
+  public CompletableFuture<List<RoleAndDescription>> getRoles() {
+    return getRoles(getRolesOptions());
   }
 
-  public CompletableFuture<List<RoleAndDescription>> availableRoles(AvailableRolesOptions options) {
+  public CompletableFuture<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
     return sendRequest(GET, pathForRoles(), options.build()).thenApply(response -> {
       checkStatus(response, "get all roles");
       return Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {

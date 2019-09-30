@@ -20,10 +20,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 @Stability.Volatile
-public class AvailableRolesOptions extends CommonOptions<AvailableRolesOptions> {
+public class GetRolesOptions extends CommonOptions<GetRolesOptions> {
 
-  public static AvailableRolesOptions availableRolesOptions() {
-    return new AvailableRolesOptions();
+  public static GetRolesOptions getRolesOptions() {
+    return new GetRolesOptions();
   }
 
   @Stability.Internal

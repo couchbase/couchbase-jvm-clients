@@ -48,12 +48,12 @@ public class UserManager {
     return block(async.getUser(domain, username, options));
   }
 
-  public List<RoleAndDescription> availableRoles() {
-    return block(async.availableRoles());
+  public List<RoleAndDescription> getRoles() {
+    return block(async.getRoles());
   }
 
-  public List<RoleAndDescription> availableRoles(AvailableRolesOptions options) {
-    return block(async.availableRoles(options));
+  public List<RoleAndDescription> getRoles(GetRolesOptions options) {
+    return block(async.getRoles(options));
   }
 
   public List<UserAndMetadata> getAllUsers() {

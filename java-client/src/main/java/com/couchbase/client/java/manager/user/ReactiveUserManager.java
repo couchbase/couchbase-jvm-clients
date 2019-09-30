@@ -49,12 +49,12 @@ public class ReactiveUserManager {
     return Reactor.toMono(() -> async.getAllUsers(options));
   }
 
-  public Mono<List<RoleAndDescription>> availableRoles() {
-    return Reactor.toMono(() -> async.availableRoles());
+  public Mono<List<RoleAndDescription>> getRoles() {
+    return Reactor.toMono(() -> async.getRoles());
   }
 
-  public Mono<List<RoleAndDescription>> availableRoles(AvailableRolesOptions options) {
-    return Reactor.toMono(() -> async.availableRoles(options));
+  public Mono<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
+    return Reactor.toMono(() -> async.getRoles(options));
   }
 
   public Mono<Void> upsertUser(User user) {
