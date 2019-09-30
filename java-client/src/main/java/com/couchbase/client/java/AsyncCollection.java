@@ -68,6 +68,7 @@ import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockAccessor;
@@ -970,7 +971,7 @@ public class AsyncCollection {
       id,
       opts.persistTo(),
       opts.replicateTo(),
-      opts.insert(),
+      opts.storeSemantics() == StoreSemantics.INSERT,
       environment.jsonSerializer()
     );
   }
@@ -1004,7 +1005,7 @@ public class AsyncCollection {
         .collect(Collectors.toList());
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        opts.insert(), opts.upsert(),
+        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
         commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );

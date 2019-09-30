@@ -42,6 +42,7 @@ import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
@@ -244,7 +245,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
         try {
             collection.mutateIn(id,
                     Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
-                    arraySetOptions.mutateInOptions().upsert(true));
+                    arraySetOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
             return true;
         } catch (MultiMutationException ex) {
             if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) {

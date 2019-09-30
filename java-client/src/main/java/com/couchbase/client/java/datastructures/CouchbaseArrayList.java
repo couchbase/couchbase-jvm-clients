@@ -44,6 +44,7 @@ import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
@@ -418,7 +419,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 MutateInResult updated = collection.mutateIn(
                         id,
                         Collections.singletonList(MutateInSpec.arrayInsert(idx, e)),
-                        arrayListOptions.mutateInOptions().cas(cas).upsert(true));
+                        arrayListOptions.mutateInOptions().cas(cas).storeSemantics(StoreSemantics.UPSERT));
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();
                 //also correctly reset the state:

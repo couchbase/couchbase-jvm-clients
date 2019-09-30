@@ -27,8 +27,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
   private Duration expiry = Duration.ZERO;
   private long cas = 0;
-  private boolean insert = false;
-  private boolean upsert = false;
+  private StoreSemantics storeSemantics = StoreSemantics.REPLACE;
   private JsonSerializer serializer = null;
 
   public static MutateInOptions mutateInOptions() {
@@ -58,25 +57,19 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   @Deprecated
   @Stability.Internal
   public MutateInOptions insertDocument(boolean insertDocument) {
-    this.insert = insertDocument;
-    return this;
+    return storeSemantics(StoreSemantics.INSERT);
   }
 
   // TODO this can be removed when transactions no longer depends on it
   @Deprecated
   @Stability.Internal
   public MutateInOptions upsertDocument(boolean upsertDocument) {
-    this.upsert = upsertDocument;
-    return this;
+    return storeSemantics(StoreSemantics.UPSERT);
   }
 
-  public MutateInOptions insert(boolean insert) {
-    this.insert = insert;
-    return this;
-  }
-
-  public MutateInOptions upsert(boolean upsert) {
-    this.upsert = upsert;
+  public MutateInOptions storeSemantics(final StoreSemantics storeSemantics) {
+    notNull(storeSemantics, "StoreSemantics");
+    this.storeSemantics = storeSemantics;
     return this;
   }
 
@@ -95,12 +88,8 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
       return cas;
     }
 
-    public boolean insert() {
-      return insert;
-    }
-
-    public boolean upsert() {
-      return upsert;
+    public StoreSemantics storeSemantics() {
+      return storeSemantics;
     }
 
     public JsonSerializer serializer() {

@@ -45,6 +45,7 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.QueueOptions;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.UpsertOptions;
 
 /**
@@ -141,7 +142,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         }
         collection.mutateIn(id,
                 Collections.singletonList(MutateInSpec.arrayPrepend("", e)),
-                queueOptions.mutateInOptions().upsert(true));
+                queueOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
         return true;
     }
 
