@@ -475,6 +475,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.INTERNAL_SERVER_ERROR;
     } else if (status == Status.NOT_INITIALIZED.status) {
       return ResponseStatus.NOT_INITIALIZED;
+    } else if (status == Status.INVALID_REQUEST.status) {
+      return ResponseStatus.INVALID_REQUEST;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -851,6 +853,10 @@ public enum MemcacheProtocol {
      * Resource too big.
      */
     TOO_BIG((short) 0x03),
+    /**
+     * Invalid request sent.
+     */
+    INVALID_REQUEST((short) 0x04),
     /**
      * Not stored for some reason.
      */

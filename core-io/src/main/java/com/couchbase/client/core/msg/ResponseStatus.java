@@ -139,6 +139,8 @@ public enum ResponseStatus {
 
   INVALID_ARGS,
 
+  INVALID_REQUEST,
+
   UNKNOWN_COLLECTION,
   /**
    * The server reports that it is not initialized yet.
