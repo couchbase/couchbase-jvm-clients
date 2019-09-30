@@ -806,16 +806,8 @@ public class AsyncCollection {
    * @param options the custom options.
    * @return a {@link MutationResult} once the operation completes.
    */
-  public CompletableFuture<MutationResult> touch(final String id, final Duration expiry,
-                                                 final TouchOptions options) {
-    TouchOptions.Built opts = options.build();
-    return TouchAccessor.touch(
-      core,
-      touchRequest(id, expiry, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+  public CompletableFuture<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
+    return TouchAccessor.touch(core, touchRequest(id, expiry, options), id);
   }
 
   /**
@@ -834,7 +826,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      expiry.getSeconds(), opts.durabilityLevel());
+      expiry.getSeconds());
     request.context().clientContext(opts.clientContext());
     return request;
   }

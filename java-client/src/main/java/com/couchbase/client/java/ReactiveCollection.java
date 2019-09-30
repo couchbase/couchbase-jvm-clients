@@ -527,16 +527,10 @@ public class ReactiveCollection {
    * @param options the custom options.
    * @return a {@link MutationResult} once the operation completes.
    */
-  public Mono<MutationResult> touch(final String id, final Duration expiry,
-                                    final TouchOptions options) {
+  public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
     return Mono.defer(() -> {
-      TouchOptions.Built opts = options.build();
       TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
-      return Reactor.wrap(
-        request,
-        TouchAccessor.touch(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
+      return Reactor.wrap(request, TouchAccessor.touch(core, request, id), true);
     });
   }
 

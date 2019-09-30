@@ -18,7 +18,6 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -27,60 +26,40 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleSyncReplication;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 
-public class TouchRequest extends BaseKeyValueRequest<TouchResponse> implements SyncDurabilityRequest {
+public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
 
   private final long expiry;
-  private final Optional<DurabilityLevel> syncReplicationType;
 
 
   public TouchRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                      RetryStrategy retryStrategy, String key, long expiry,
-                      final Optional<DurabilityLevel> syncReplicationType) {
+                      RetryStrategy retryStrategy, String key, long expiry) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier);
     this.expiry = expiry;
-    this.syncReplicationType = syncReplicationType;
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
-    ByteBuf flexibleExtras = null;
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
       extras = alloc.buffer(Integer.BYTES);
       extras.writeInt((int) expiry);
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
-            partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
-          partition(), opaque, noCas(), extras, key, noBody());
-      }
-      return request;
+      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
+        partition(), opaque, noCas(), extras, key, noBody());
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(extras);
-      ReferenceCountUtil.release(flexibleExtras);
     }
   }
 
@@ -91,11 +70,6 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> implements 
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
     );
-  }
-
-  @Override
-  public Optional<DurabilityLevel> durabilityLevel() {
-    return syncReplicationType;
   }
 
 }

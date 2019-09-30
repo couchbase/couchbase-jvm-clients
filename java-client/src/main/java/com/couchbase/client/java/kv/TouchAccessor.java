@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,24 +27,16 @@ import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class TouchAccessor {
 
-  public static CompletableFuture<MutationResult> touch(final Core core,
-                                                        final TouchRequest request,
-                                                        final String key,
-                                                        final PersistTo persistTo,
-                                                        final ReplicateTo replicateTo) {
+  public static CompletableFuture<MutationResult> touch(final Core core, final TouchRequest request, final String key) {
     core.send(request);
-    final CompletableFuture<MutationResult> mutationResult = request
+    return request
       .response()
       .thenApply(response -> {
-        switch (response.status()) {
-          case SUCCESS:
-            return new MutationResult(response.cas(), response.mutationToken());
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
+        if (response.status() == ResponseStatus.SUCCESS) {
+          return new MutationResult(response.cas(), response.mutationToken());
         }
+        throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
       });
-    return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
-
   }
 
 }

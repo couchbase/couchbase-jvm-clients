@@ -17,22 +17,22 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.CommonOptions;
 
-public class TouchOptions extends CommonDurabilityOptions<TouchOptions> {
+public class TouchOptions extends CommonOptions<TouchOptions> {
 
   public static TouchOptions touchOptions() {
     return new TouchOptions();
   }
 
-  private TouchOptions() {
-  }
+  private TouchOptions() { }
 
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
-  public class Built extends BuiltCommonDurabilityOptions {
+  public class Built extends BuiltCommonOptions {
 
   }
 
