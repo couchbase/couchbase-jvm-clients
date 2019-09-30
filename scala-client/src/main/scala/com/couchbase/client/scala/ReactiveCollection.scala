@@ -293,6 +293,18 @@ class ReactiveCollection(async: AsyncCollection) {
 
   }
 
+  /** Updates the expiry of the document with the given id.
+    *
+    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+  def touch(id: String,
+            expiry: Duration,
+            timeout: Duration = kvTimeout,
+            retryStrategy: RetryStrategy = environment.retryStrategy
+           ): Mono[MutationResult] = {
+    val req = async.touchHandler.request(id, expiry, timeout, retryStrategy)
+    wrap(req, id, async.touchHandler)
+  }
+
   private def wrap[Resp <: Response, Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp, Res])
   : Mono[Res] = {
     in match {

@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
+import com.couchbase.client.scala.AsyncCollection.wrap
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability._
@@ -79,6 +80,7 @@ class AsyncCollection(name: String,
   private[scala] val mutateInHandler = new MutateInHandler(hp)
   private[scala] val unlockHandler = new UnlockHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
+  private[scala] val touchHandler = new TouchHandler(hp)
 
   val binary = new AsyncBinaryCollection(this)
 
@@ -398,6 +400,18 @@ class AsyncCollection(name: String,
              retryStrategy: RetryStrategy = environment.retryStrategy): Future[ExistsResult] = {
     val req = existsHandler.request(id, timeout, retryStrategy)
     wrap(req, id, existsHandler)
+  }
+
+  /** Updates the expiry of the document with the given id.
+    *
+    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+  def touch(id: String,
+            expiry: Duration,
+            timeout: Duration = kvTimeout,
+            retryStrategy: RetryStrategy = retryStrategy
+           ): Future[MutationResult] = {
+    val req = touchHandler.request(id, expiry, timeout, retryStrategy)
+    wrap(req, id, touchHandler)
   }
 }
 

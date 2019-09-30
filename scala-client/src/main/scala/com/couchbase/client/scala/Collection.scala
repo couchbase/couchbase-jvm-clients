@@ -467,6 +467,23 @@ class Collection(
                ): Try[ExistsResult] =
     block(async.exists(id, timeout, retryStrategy), timeout)
 
+  /** Updates the expiry of the document with the given id.
+    *
+    * @param id             $Id
+    * @param timeout        $Timeout
+    * @param retryStrategy  $RetryStrategy
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    */
+  def touch(id: String,
+            expiry: Duration,
+            timeout: Duration = kvTimeout,
+            retryStrategy: RetryStrategy = retryStrategy
+           ): Try[MutationResult] = {
+    block(async.touch(id, expiry, timeout, retryStrategy), timeout)
+  }
+
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.
     *
     * @param id id of the document underyling the datastructure

@@ -116,6 +116,22 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
+  def touch() {
+    val docId = cleanupDoc()
+
+    val content = ujson.Obj("hello" -> "world")
+    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
+
+    assert(coll.touch(docId, expiry = 10.seconds).isSuccess)
+
+    coll.get(docId, withExpiry = true) match {
+      case Success(result) => assert(result.expiry.isDefined)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
   def get_and_lock() {
     val docId = TestUtils.docId()
     coll.remove(docId)
