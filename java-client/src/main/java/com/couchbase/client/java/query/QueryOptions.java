@@ -337,19 +337,19 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       }
 
       if (maxParallelism != null) {
-        queryJson.put("max_parallelism", maxParallelism);
+        queryJson.put("max_parallelism", maxParallelism.toString());
       }
 
       if (pipelineCap != null) {
-        queryJson.put("pipeline_cap", pipelineCap);
+        queryJson.put("pipeline_cap", pipelineCap.toString());
       }
 
       if (pipelineBatch != null) {
-        queryJson.put("pipeline_batch", pipelineBatch);
+        queryJson.put("pipeline_batch", pipelineBatch.toString());
       }
 
       if (scanCap != null) {
-        queryJson.put("scan_cap", scanCap);
+        queryJson.put("scan_cap", scanCap.toString());
       }
 
       if (!metrics) {

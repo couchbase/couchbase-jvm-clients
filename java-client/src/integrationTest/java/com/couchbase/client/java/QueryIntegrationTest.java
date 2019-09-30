@@ -91,7 +91,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void simpleBlockingSelect() {
-        QueryResult result = cluster.query("select 'hello world' as Greeting");
+        QueryResult result = cluster.query("select 'hello world' as Greeting", queryOptions().metrics(true));
 
         assertNotNull(result.metaData().requestId());
         assertFalse(result.metaData().clientContextId().isEmpty());
@@ -113,7 +113,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
             .adhoc(true)
             .clientContextId("123")
             .maxParallelism(3)
-            .metrics(false)
+            .metrics(true)
             .pipelineBatch(1)
             .pipelineCap(1)
             .readonly(true)
@@ -126,8 +126,8 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         );
 
         assertEquals(QueryStatus.SUCCESS, result.metaData().status());
-        assertEquals(Optional.of("123"), result.metaData().clientContextId());
-        assertEquals(QueryMetrics.EMPTY_METRICS, result.metaData().metrics());
+        assertEquals("123", result.metaData().clientContextId());
+        assertTrue(result.metaData().metrics().isPresent());
     }
 
     @Test
@@ -157,11 +157,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(result.metaData().warnings().isEmpty());
         assertEquals(1, result.rowsAs(JsonObject.class).size());
         assertTrue(result.metaData().signature().isPresent());
-
-        QueryMetrics metrics = result.metaData().metrics().get();
-        assertEquals(0, metrics.errorCount());
-        assertEquals(0, metrics.warningCount());
-        assertEquals(1, metrics.resultCount());
     }
 
     @Test
