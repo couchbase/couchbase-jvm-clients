@@ -53,6 +53,7 @@ import reactor.core.publisher.Mono;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -479,19 +480,24 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   private void updateSeedNodeList() {
     ClusterConfig config = currentConfig;
-
     boolean tlsEnabled = core.context().environment().securityConfig().tlsEnabled();
-    final Optional<String> alternate = core.context().alternateAddress();
 
     if (config.globalConfig() != null) {
       Set<SeedNode> seedNodes = config.globalConfig().portInfos().stream().map(ni -> {
         Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslPorts() : ni.ports();
+
+        if (!ports.containsKey(ServiceType.KV)) {
+          // We  only want seed nodes where the KV service is enabled
+          return null;
+        }
+
         return SeedNode.create(
           ni.hostname(),
           Optional.ofNullable(ports.get(ServiceType.KV)),
           Optional.ofNullable(ports.get(ServiceType.MANAGER))
         );
-      }).collect(Collectors.toSet());
+      }).filter(Objects::nonNull).collect(Collectors.toSet());
+
       if (!seedNodes.isEmpty()) {
         this.seedNodes.set(seedNodes);
       }
@@ -506,12 +512,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       .flatMap(bc -> bc.nodes().stream())
       .map(ni -> {
         Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslServices() : ni.services();
+
+        if (!ports.containsKey(ServiceType.KV)) {
+          // We  only want seed nodes where the KV service is enabled
+          return null;
+        }
+
         return SeedNode.create(
           ni.hostname(),
           Optional.ofNullable(ports.get(ServiceType.KV)),
           Optional.ofNullable(ports.get(ServiceType.MANAGER))
         );
-      }).collect(Collectors.toSet());
+      }).filter(Objects::nonNull).collect(Collectors.toSet());
 
     if (!seedNodes.isEmpty()) {
       this.seedNodes.set(seedNodes);
