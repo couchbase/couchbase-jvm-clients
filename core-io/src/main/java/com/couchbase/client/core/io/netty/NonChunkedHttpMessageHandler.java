@@ -195,6 +195,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         } catch (Throwable ex) {
           currentRequest.fail(ex);
         } finally {
+          currentRequest = null;
           endpoint.markRequestCompletion();
         }
       } else {
