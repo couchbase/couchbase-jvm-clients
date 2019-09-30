@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static com.couchbase.client.test.Util.waitUntilThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,8 +111,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     collection.exists(id);
 
     buckets.flushBucket(config().bucketname());
-
-    waitUntilThrows(KeyNotFoundException.class, () -> collection.exists(id));
+    waitUntilCondition(() -> !collection.exists(id).exists());
   }
 
   @Test
