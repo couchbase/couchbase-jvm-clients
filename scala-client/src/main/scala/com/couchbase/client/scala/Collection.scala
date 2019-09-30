@@ -35,20 +35,13 @@ import scala.util.control.NonFatal
 import scala.reflect.runtime.universe._
 
 object Collection {
-  private[scala] val SafetyTimeout = 1.second
-
-  private[scala] def blockForever[T](in: Future[T]): Try[T] = {
-    block(in, Duration.Inf)
-  }
-
-  private[scala] def block[T](in: Future[T], timeout: Duration): Try[T] = {
+  private[scala] def block[T](in: Future[T]): Try[T] = {
     try {
-      Try(Await.result(in, timeout + SafetyTimeout))
+      Try(Await.result(in, Duration.Inf))
     } catch {
       case NonFatal(err) => Failure(err)
     }
   }
-
 }
 
 /**
@@ -120,8 +113,8 @@ class Collection(
   private[scala] val kvTimeout = async.kvTimeout
   private[scala] val retryStrategy = async.retryStrategy
 
-  private def block[T](in: Future[T], timeout: Duration) =
-    Collection.block(in, timeout)
+  private def block[T](in: Future[T]) =
+    Collection.block(in)
 
   /** Fetches a full document from this collection.
     *
@@ -146,8 +139,7 @@ class Collection(
          ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiry, project, timeout, retryStrategy),
-      timeout
+        .get(id, withExpiry, project, timeout, retryStrategy)
     )
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -178,8 +170,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy
-      ),
-      timeout
+      )
     )
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -213,8 +204,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy
-      ),
-      timeout
+      )
     )
 
   /** Upserts the contents of a full document in this collection.
@@ -245,8 +235,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy
-      ),
-      timeout
+      )
     )
 
   /** Removes a document from this collection, if it exists.
@@ -268,8 +257,7 @@ class Collection(
               retryStrategy: RetryStrategy = retryStrategy
             ): Try[MutationResult] =
     block(
-      async.remove(id, cas, durability, timeout, retryStrategy),
-      timeout
+      async.remove(id, cas, durability, timeout, retryStrategy)
     )
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -311,8 +299,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy
-      ),
-      timeout
+      )
     )
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
@@ -333,8 +320,7 @@ class Collection(
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
-      async.getAndLock(id, lockFor, timeout, retryStrategy),
-      timeout
+      async.getAndLock(id, lockFor, timeout, retryStrategy)
     )
 
   /** Unlock a locked document.
@@ -354,7 +340,7 @@ class Collection(
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = retryStrategy
             ): Try[Unit] =
-    block(async.unlock(id, cas, timeout, retryStrategy), timeout)
+    block(async.unlock(id, cas, timeout, retryStrategy))
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
@@ -376,8 +362,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy
-      ),
-      timeout
+      )
     )
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -403,7 +388,7 @@ class Collection(
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy
               ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy), timeout)
+    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy))
 
   /** Retrieves any available version of the document.
     *
@@ -426,7 +411,7 @@ class Collection(
                     retryStrategy: RetryStrategy = retryStrategy): Try[GetReplicaResult] =
     Try(reactive
       .getAnyReplica(id, timeout, retryStrategy)
-      .block(Collection.SafetyTimeout + timeout))
+      .block(timeout))
 
   /** Retrieves all available versions of the document.
     *
@@ -465,7 +450,7 @@ class Collection(
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy
                ): Try[ExistsResult] =
-    block(async.exists(id, timeout, retryStrategy), timeout)
+    block(async.exists(id, timeout, retryStrategy))
 
   /** Updates the expiry of the document with the given id.
     *
@@ -481,7 +466,7 @@ class Collection(
             timeout: Duration = kvTimeout,
             retryStrategy: RetryStrategy = retryStrategy
            ): Try[MutationResult] = {
-    block(async.touch(id, expiry, timeout, retryStrategy), timeout)
+    block(async.touch(id, expiry, timeout, retryStrategy))
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.

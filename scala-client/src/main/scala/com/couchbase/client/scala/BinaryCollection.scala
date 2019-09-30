@@ -101,7 +101,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
              durability: Durability = Disabled,
              timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.append(id, content, cas, durability, timeout, retryStrategy), timeout)
+    Collection.block(async.append(id, content, cas, durability, timeout, retryStrategy))
 
   }
 
@@ -126,7 +126,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
               durability: Durability = Disabled,
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.prepend(id, content, cas, durability, timeout, retryStrategy), timeout)
+    Collection.block(async.prepend(id, content, cas, durability, timeout, retryStrategy))
   }
 
   /** Increment a Couchbase 'counter' document.  $CounterDoc
@@ -156,7 +156,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
     Collection.block(async.increment(id, delta, initial, cas, durability, expiry, timeout,
-      retryStrategy), timeout)
+      retryStrategy))
   }
 
   /** Decrement a Couchbase 'counter' document.  $CounterDoc
@@ -186,7 +186,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
     Collection.block(async.decrement(id, delta, initial, cas, durability, expiry, timeout,
-      retryStrategy), timeout)
+      retryStrategy))
   }
 
 }

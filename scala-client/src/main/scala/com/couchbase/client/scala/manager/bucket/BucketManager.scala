@@ -33,36 +33,36 @@ class BucketManager(val async: AsyncBucketManager) {
              timeout: Duration = defaultManagerTimeout,
              retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
     val future = async.create(settings, timeout, retryStrategy)
-    Collection.blockForever(future)
+    Collection.block(future)
   }
 
   def updateBucket(settings: CreateBucketSettings,
                    timeout: Duration = defaultManagerTimeout,
                    retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForever(async.updateBucket(settings, timeout, retryStrategy))
+    Collection.block(async.updateBucket(settings, timeout, retryStrategy))
   }
 
   def dropBucket(bucketName: String,
                  timeout: Duration = defaultManagerTimeout,
                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForever(async.dropBucket(bucketName, timeout, retryStrategy))
+    Collection.block(async.dropBucket(bucketName, timeout, retryStrategy))
   }
 
   def getBucket(bucketName: String,
                 timeout: Duration = defaultManagerTimeout,
                 retryStrategy: RetryStrategy = defaultRetryStrategy): Try[BucketSettings] = {
-    Collection.blockForever(async.getBucket(bucketName, timeout, retryStrategy))
+    Collection.block(async.getBucket(bucketName, timeout, retryStrategy))
   }
 
 
   def getAllBuckets(timeout: Duration = defaultManagerTimeout,
                     retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[BucketSettings]] = {
-    Collection.blockForever(async.getAllBuckets(timeout, retryStrategy))
+    Collection.block(async.getAllBuckets(timeout, retryStrategy))
   }
 
   def flushBucket(bucketName: String,
                   timeout: Duration = defaultManagerTimeout,
                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
-    Collection.blockForever(async.flushBucket(bucketName, timeout, retryStrategy))
+    Collection.block(async.flushBucket(bucketName, timeout, retryStrategy))
   }
 }
