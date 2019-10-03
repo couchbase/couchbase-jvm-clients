@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 import java.util.Optional
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.kv._
@@ -245,13 +246,14 @@ class AsyncCollection(name: String,
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-               document: DocumentCreation = DocumentCreation.DoNothing,
+               document: StoreSemantics = StoreSemantics.Replace,
                durability: Durability = Disabled,
                expiry: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
-               retryStrategy: RetryStrategy = environment.retryStrategy): Future[MutateInResult] = {
+               retryStrategy: RetryStrategy = environment.retryStrategy,
+               @Stability.Internal accessDeleted: Boolean = false): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, document, durability, expiry, timeout,
-      retryStrategy)
+      retryStrategy, accessDeleted)
 
     req match {
       case Success(request) =>
@@ -295,11 +297,11 @@ class AsyncCollection(name: String,
     *
     * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(id: String,
-                 expiry: Duration = 30.seconds,
+                 lockTime: Duration = 30.seconds,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy
                 ): Future[GetResult] = {
-    val req = getAndLockHandler.request(id, expiry, timeout, retryStrategy)
+    val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
     wrap(req, id, getAndLockHandler)
       .map {
         case Some(x) => x
@@ -376,11 +378,11 @@ class AsyncCollection(name: String,
 
           FutureConverters.toScala(request.response())
             .map(response => {
-              val isMaster = request match {
-                case _: GetRequest => true
-                case _ => false
+              val isReplica = request match {
+                case _: GetRequest => false
+                case _ => true
               }
-              getFromReplicaHandler.response(id, response, isMaster)
+              getFromReplicaHandler.response(id, response, isReplica)
             })
             .map {
               case Some(x) => x

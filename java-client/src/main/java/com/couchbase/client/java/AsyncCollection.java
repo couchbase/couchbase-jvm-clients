@@ -991,8 +991,9 @@ public class AsyncCollection {
         .map(v -> v.encode(serializer))
         .collect(Collectors.toList());
 
+      boolean accessDeleted = false;
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
+        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT, accessDeleted,
         commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel()
       );

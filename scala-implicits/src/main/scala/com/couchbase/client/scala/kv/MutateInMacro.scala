@@ -10,5 +10,12 @@ object MutateInMacro {
     private[scala] val value = """"${Mutation.CAS}""""
   }
 
+  case object MutationSeqNo extends MutateInMacro {
+    private[scala] val value = """"${Mutation.seqno}""""
+  }
+
+  case object MutationCrc32c extends MutateInMacro {
+    private[scala] val value = """"${Mutation.value_crc32c}""""
+  }
 }
 

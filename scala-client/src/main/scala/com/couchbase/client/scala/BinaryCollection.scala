@@ -85,7 +85,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyBinary
     *
     * @param id            $Id
-    * @param content       the bytes to append
+    * @param value       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
@@ -96,12 +96,12 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         found.  $ErrorHandling
     * */
   def append(id: String,
-             content: Array[Byte],
+             value: Array[Byte],
              cas: Long = 0,
              durability: Durability = Disabled,
              timeout: Duration = kvTimeout,
              retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.append(id, content, cas, durability, timeout, retryStrategy))
+    Collection.block(async.append(id, value, cas, durability, timeout, retryStrategy))
 
   }
 
@@ -110,7 +110,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyBinary
     *
     * @param id            $Id
-    * @param content       the bytes to append
+    * @param value       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
@@ -121,12 +121,12 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         found.  $ErrorHandling
     * */
   def prepend(id: String,
-              content: Array[Byte],
+              value: Array[Byte],
               cas: Long = 0,
               durability: Durability = Disabled,
               timeout: Duration = kvTimeout,
               retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
-    Collection.block(async.prepend(id, content, cas, durability, timeout, retryStrategy))
+    Collection.block(async.prepend(id, value, cas, durability, timeout, retryStrategy))
   }
 
   /** Increment a Couchbase 'counter' document.  $CounterDoc
@@ -148,7 +148,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         found.  $ErrorHandling
     * */
   def increment(id: String,
-                delta: Long,
+                delta: Long = 1,
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,
@@ -178,7 +178,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         found.  $ErrorHandling
     * */
   def decrement(id: String,
-                delta: Long,
+                delta: Long = 1,
                 initial: Option[Long] = None,
                 cas: Long = 0,
                 durability: Durability = Disabled,

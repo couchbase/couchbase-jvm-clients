@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
@@ -270,11 +271,12 @@ class Collection(
     *                      [[kv.MutateInSpec]] for more details.
     * @param cas           $CAS
     * @param document      controls whether the document should be inserted, upserted, or not touched.  See
-    *                      [[kv.DocumentCreation]] for details.
+    *                      [[kv.StoreSemantics]] for details.
     * @param durability    $Durability
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -283,11 +285,12 @@ class Collection(
                 id: String,
                 spec: Seq[MutateInSpec],
                 cas: Long = 0,
-                document: DocumentCreation = DocumentCreation.DoNothing,
+                document: StoreSemantics = StoreSemantics.Replace,
                 durability: Durability = Disabled,
                 expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = retryStrategy
+                retryStrategy: RetryStrategy = retryStrategy,
+                @Stability.Internal accessDeleted: Boolean = false
               ): Try[MutateInResult] =
     block(
       async.mutateIn(
@@ -298,7 +301,8 @@ class Collection(
         durability,
         expiry,
         timeout,
-        retryStrategy
+        retryStrategy,
+        accessDeleted
       )
     )
 
@@ -308,7 +312,7 @@ class Collection(
     * may only be modified by providing this CAS.
     *
     * @param id             $Id
-    * @param lockFor        how long to lock the document for
+    * @param lockTime        how long to lock the document for
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -316,11 +320,11 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def getAndLock(id: String,
-                 lockFor: Duration,
+                 lockTime: Duration,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
     block(
-      async.getAndLock(id, lockFor, timeout, retryStrategy)
+      async.getAndLock(id, lockTime, timeout, retryStrategy)
     )
 
   /** Unlock a locked document.

@@ -19,12 +19,14 @@ import com.couchbase.client.scala.json.JsonObject
 
 import scala.concurrent.duration.Duration
 
+/** The result of a get-from-replica request.
+  *
+  * @param isReplica whether this came from a replica (as opposed to the active vbucket)
+  */
 class GetReplicaResult(id: String,
                        // It's Right only in the case where projections were requested
                        private val _content: Either[Array[Byte], JsonObject],
                        flags: Int,
                        cas: Long,
                        expiry: Option[Duration],
-
-                           /** Whether this came from the active vbucket, or a replica. */
-                           val isMaster: Boolean) extends GetResult(id, _content, flags, cas, expiry)
+                       val isReplica: Boolean) extends GetResult(id, _content, flags, cas, expiry)

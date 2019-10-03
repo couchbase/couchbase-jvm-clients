@@ -28,6 +28,8 @@ package com.couchbase.client.scala.kv
 object LookupInSpec {
   /** Gets a field from a JSON document.
     *
+    * To fetch the full document, use an empty path of "".
+    *
     * @param path  $Path
     */
   def get(path: String): Get = {

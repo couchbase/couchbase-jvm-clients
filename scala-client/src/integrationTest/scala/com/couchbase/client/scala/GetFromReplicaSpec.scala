@@ -58,7 +58,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
     val result = coll.getAnyReplica(docId).get
 
     assert(result.contentAs[ujson.Obj].get("hello").str == "world")
-    assert(result.isMaster)
+    assert(!result.isReplica)
   }
 
   @Test

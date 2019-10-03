@@ -89,7 +89,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
   def viewQuery(designDoc: String,
                 viewName: String,
                 options: ViewOptions = ViewOptions()): Try[ViewResult] = {
-  AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
+    AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
   }
 
 }

@@ -16,17 +16,17 @@
 package com.couchbase.client.scala.kv
 
 /** Specifies whether a document should be created, and how, if it does not already exist. */
-sealed class DocumentCreation
+sealed class StoreSemantics
 
-object DocumentCreation {
+object StoreSemantics {
   /** If the document does not exist then do nothing, and fail the operation with `DocumentDoesNotExistException`. */
-  case object DoNothing extends DocumentCreation
+  case object Replace extends StoreSemantics
 
   /** If - and only if - the document does not exist, create it before applying the operation.  If it does exist, fail
     * the operation with `DocumentAlreadyExistsException`.
     */
-  case object Insert extends DocumentCreation
+  case object Insert extends StoreSemantics
 
   /** Create the document does not exist, or do nothing if it does.  Then apply the operation. */
-  case object Upsert extends DocumentCreation
+  case object Upsert extends StoreSemantics
 }

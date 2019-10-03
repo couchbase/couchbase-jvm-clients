@@ -78,10 +78,10 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: GetResponse, isMaster: Boolean): Option[GetReplicaResult] = {
+  def response(id: String, response: GetResponse, isReplica: Boolean): Option[GetReplicaResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isMaster))
+        Some(new GetReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isReplica))
 
       case ResponseStatus.NOT_FOUND => None
 

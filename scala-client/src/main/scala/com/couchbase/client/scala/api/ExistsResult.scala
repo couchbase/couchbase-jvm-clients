@@ -16,4 +16,8 @@
 
 package com.couchbase.client.scala.api
 
+/** The result of an `exists` operation.
+  *
+  * @param exists whether the document exists
+  */
 case class ExistsResult(exists: Boolean)

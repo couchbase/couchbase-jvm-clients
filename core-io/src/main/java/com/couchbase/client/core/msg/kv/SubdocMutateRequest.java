@@ -62,7 +62,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final RetryStrategy retryStrategy, final String key,
-                             final boolean insertDocument, final boolean upsertDocument,
+                             final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
                              final List<Command> commands, long expiration, long cas,
                              final Optional<DurabilityLevel> syncReplicationType) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier);
@@ -78,6 +78,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     if (insertDocument) {
       flags |= SUBDOC_DOC_FLAG_ADD;
+    }
+
+    if (accessDeleted) {
+      flags |= SUBDOC_DOC_FLAG_ACCESS_DELETED;
     }
 
     this.flags = flags;

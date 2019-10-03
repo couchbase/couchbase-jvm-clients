@@ -20,6 +20,7 @@ import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Reactor
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -182,13 +183,14 @@ class ReactiveCollection(async: AsyncCollection) {
   def mutateIn(id: String,
                spec: Seq[MutateInSpec],
                cas: Long = 0,
-               document: DocumentCreation = DocumentCreation.DoNothing,
+               document: StoreSemantics = StoreSemantics.Replace,
                durability: Durability = Disabled,
                expiry: Duration,
                timeout: Duration = kvTimeout,
-               retryStrategy: RetryStrategy = environment.retryStrategy): Mono[MutateInResult] = {
+               retryStrategy: RetryStrategy = environment.retryStrategy,
+               @Stability.Internal accessDeleted: Boolean = false): Mono[MutateInResult] = {
     val req = async.mutateInHandler.request(id, spec, cas, document, durability, expiry, timeout,
-      retryStrategy)
+      retryStrategy, accessDeleted)
     req match {
       case Success(request) =>
         core.send(request)
@@ -204,11 +206,11 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(id: String,
-                 expiry: Duration,
+                 lockTime: Duration,
                  timeout: Duration = kvTimeout,
                  retryStrategy: RetryStrategy = environment.retryStrategy
                 ): Mono[Option[GetResult]] = {
-    val req = async.getAndLockHandler.request(id, expiry, timeout, retryStrategy)
+    val req = async.getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
     wrap(req, id, async.getAndLockHandler)
   }
 
@@ -256,7 +258,9 @@ class ReactiveCollection(async: AsyncCollection) {
                     timeout: Duration = kvTimeout,
                     retryStrategy: RetryStrategy = environment.retryStrategy
                    ): Mono[GetReplicaResult] = {
-    getAllReplicas(id, timeout, retryStrategy).next()
+    getAllReplicas(id, timeout, retryStrategy)
+      .timeout(timeout)
+      .next()
   }
 
   /** Retrieves all available versions of the document.
@@ -277,18 +281,18 @@ class ReactiveCollection(async: AsyncCollection) {
 
           FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
             .flatMap(r => {
-              val isMaster = request match {
-                case _: GetRequest => true
-                case _ => false
+              val isReplica = request match {
+                case _: GetRequest => false
+                case _ => true
               }
-              async.getFromReplicaHandler.response(id, r, isMaster) match {
+              async.getFromReplicaHandler.response(id, r, isReplica) match {
                 case Some(getResult) => Mono.just(getResult)
                 case _ => Mono.empty[GetReplicaResult]
               }
             })
         })
 
-        Flux.merge(monos)
+        Flux.merge(monos).timeout(timeout)
     }
 
   }

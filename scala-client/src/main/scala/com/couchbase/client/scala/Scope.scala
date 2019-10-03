@@ -42,7 +42,7 @@ class Scope private[scala] (val async: AsyncScope,
   lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)
 
   /** The name of this scope. */
-  def name = async.name
+  def name: String = async.name
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(name: String): Collection = {

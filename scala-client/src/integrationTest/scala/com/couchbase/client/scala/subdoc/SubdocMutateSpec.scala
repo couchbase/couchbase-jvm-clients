@@ -7,7 +7,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
-import com.couchbase.client.scala.kv.{DocumentCreation, MutateInMacro, MutateInSpec}
+import com.couchbase.client.scala.kv.{StoreSemantics, MutateInMacro, MutateInSpec}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -82,7 +82,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     coll.remove(docId)
     val insertResult = coll.mutateIn(docId, Array(
       insert("x", content).xattr
-    ), document = DocumentCreation.Insert).get
+    ), document = StoreSemantics.Insert).get
     (docId, insertResult.cas)
   }
 
@@ -121,7 +121,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Upsert) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) =>
         assert(false, s"unexpected error $err")
@@ -135,7 +135,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Insert) match {
       case Success(result) => assert(false)
       case Failure(err: KeyExistsException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -146,7 +146,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def insert_not_existing_doc() {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Insert) match {
       case Success(result) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -158,7 +158,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def upsert_not_existing_doc() {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = DocumentCreation.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Upsert) match {
       case Success(result) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -748,7 +748,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   @Test
   def write_and_read_primitive_boolean() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", true)), document = DocumentCreation.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", true)), document = StoreSemantics.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -763,7 +763,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   @Test
   def write_and_read_primitive_int() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", 42)), document = DocumentCreation.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", 42)), document = StoreSemantics.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -777,7 +777,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   @Test
   def write_and_read_primitive_double() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = DocumentCreation.Insert).isSuccess)
+    assert(coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = StoreSemantics.Insert).isSuccess)
 
     (for {
       result <- coll.lookupIn(docId, Array(get("foo")))
@@ -791,7 +791,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   @Test
   def write_and_read_primitive_long() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = DocumentCreation.Insert)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = StoreSemantics.Insert)
       .isSuccess)
 
     (for {
@@ -806,7 +806,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   @Test
   def write_and_read_primitive_short() {
     val docId = TestUtils.docId()
-    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = DocumentCreation.Insert)
+    assert(coll.mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = StoreSemantics.Insert)
       .isSuccess)
 
     (for {

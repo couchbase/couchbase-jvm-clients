@@ -42,11 +42,12 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
   def request[T](id: String,
                  spec: Seq[MutateInSpec],
                  cas: Long,
-                 document: DocumentCreation = DocumentCreation.DoNothing,
+                 document: StoreSemantics = StoreSemantics.Replace,
                  durability: Durability,
                  expiration: java.time.Duration,
                  timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
+                 retryStrategy: RetryStrategy,
+                 accessDeleted: Boolean)
   : Try[SubdocMutateRequest] = {
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -88,8 +89,9 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
               hp.collectionIdentifier,
               retryStrategy,
               id,
-              document == DocumentCreation.Insert,
-              document == DocumentCreation.Upsert,
+              document == StoreSemantics.Insert,
+              document == StoreSemantics.Upsert,
+              accessDeleted,
               commands,
               expiration.getSeconds,
               cas,
@@ -100,7 +102,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
   }
 
   def response(id: String,
-               document: DocumentCreation = DocumentCreation.DoNothing,
+               document: StoreSemantics = StoreSemantics.Replace,
                response: SubdocMutateResponse): MutateInResult = {
     response.status() match {
 
@@ -118,7 +120,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
       case ResponseStatus.EXISTS =>
         document match {
-          case DocumentCreation.Insert => throw KeyExistsException.forKey(id)
+          case StoreSemantics.Insert => throw KeyExistsException.forKey(id)
           case _ => throw CASMismatchException.forKey(id)
         }
 

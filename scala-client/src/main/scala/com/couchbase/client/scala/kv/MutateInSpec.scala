@@ -38,10 +38,13 @@ object MutateInSpec {
       case v: MutateInMacro => true
       case _ => false
     }
-    Insert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    if (path == "") Insert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
+    else Insert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of replacing an existing value in a JSON object.
+    *
+    * If the path is an empty string (""), the value replace the entire contents of the document.
     *
     * Will error if the last element of the path does not exist.
     *
@@ -64,7 +67,6 @@ object MutateInSpec {
     *
     * @param path       the path identifying where to upsert the value.
     * @param value      the value to upsert.  $SupportedTypes
-    * @param xattr      $Xattr
     * @param ev         $Encodable
     */
   def upsert[T](path: String, value: T)
@@ -73,7 +75,8 @@ object MutateInSpec {
       case v: MutateInMacro => true
       case _ => false
     }
-    Upsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    if (path == "") Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
+    else Upsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of removing a value from a JSON object.
@@ -91,13 +94,13 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to append the value.
-    * @param value      the value(s) to append.  $SupportedTypes
+    * @param values     the values to append.  $SupportedTypes
     * @param ev         $Encodable
     */
   def arrayAppend[T](path: String, values: T*)
                     (implicit ev: Encodable[T]): ArrayAppend = {
     if (values.size == 1) {
-      val value = values(0)
+      val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
@@ -151,13 +154,13 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to prepend the value.
-    * @param value      the value(s) to prepend.  $SupportedTypes
+    * @param values     the value(s) to prepend.  $SupportedTypes
     * @param ev         $Encodable
     */
   def arrayPrepend[T](path: String, values: T*)
                      (implicit ev: Encodable[T]): ArrayPrepend = {
     if (values.size == 1) {
-      val value = values(0)
+      val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
@@ -180,14 +183,12 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
     * @param value      the value(s) to insert.  $SupportedTypes
-    * @param xattr      $Xattr
-    * @param createPath $CreatePath
     * @param ev         $Encodable
     */
   def arrayInsert[T](path: String, values: T*)
                     (implicit ev: Encodable[T]): ArrayInsert = {
     if (values.size == 1) {
-      val value = values(0)
+      val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
@@ -211,9 +212,6 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
     * @param value      the value to insert.  $SupportedTypes
-    * @param xattr      $Xattr
-    * @param createPath $CreatePath
-    * @param ev         $Encodable
     */
   def arrayAddUnique[T](path: String, value: T)
                        (implicit ev: Encodable[T]): ArrayAddUnique = {
@@ -230,9 +228,6 @@ object MutateInSpec {
     *
     * @param path       the path identifying a numerical field to adjust or create.
     * @param delta      the value to increment the field by.
-    * @param xattr      $Xattr
-    * @param createPath $CreatePath
-    * @param ev         $Encodable
     */
   def increment(path: String, delta: Long): Increment = {
     Increment(path, delta)
@@ -244,27 +239,9 @@ object MutateInSpec {
     *
     * @param path       the path identifying a numerical field to adjust or create.
     * @param delta      the value to decrement the field by.
-    * @param xattr      $Xattr
-    * @param createPath $CreatePath
-    * @param ev         $Encodable
     */
   def decrement(path: String, delta: Long): Increment = {
     Increment(path, delta * -1)
-  }
-
-  /** Returns a `MutateInSpec` with the intent of upserting the entire content of the document.
-    *
-    * That is, the document will be inserted with the specified content if it does not exist, or replace with the
-    * specified content if it does.
-    *
-    * This is provided for advanced workflows that need to upsert a document along with xattrs.
-    *
-    * @param value      the value to upsert.  $SupportedTypes
-    * @param ev         $Encodable
-    */
-  def fullDocument[T](value: T)
-                     (implicit ev: Encodable[T]): FullDocument = {
-    FullDocument(ev.encodeSubDocumentField(value))
   }
 }
 
@@ -313,7 +290,10 @@ case class Replace(path: String,
                    private[scala] val _xattr: Boolean = false,
                    private[scala] val _expandMacro: Boolean = false
                   ) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.REPLACE
+  override val typ: SubdocCommandType = path match {
+    case "" => SubdocCommandType.SET_DOC
+    case _ =>  SubdocCommandType.REPLACE
+  }
 
   /** $Xattr */
   def xattr: Replace = {
@@ -340,12 +320,6 @@ case class Upsert(path: String,
   def createPath: Upsert = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
-}
-
-case class FullDocument(fragment: Try[(Array[Byte], EncodeParams)]) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.SET_DOC
-
-  def convert = new SubdocMutateRequest.Command(typ, "", fragment.get._1, false, false, false)
 }
 
 case class Remove(path: String,
