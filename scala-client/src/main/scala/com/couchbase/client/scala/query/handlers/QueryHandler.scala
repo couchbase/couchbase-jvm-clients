@@ -21,7 +21,7 @@ import java.util.Collections
 
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage, QueryException}
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
@@ -36,7 +36,7 @@ import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, 
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.Future
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -61,7 +61,7 @@ private[scala] case class QueryCacheEntry(name: String, fullPlan: Boolean, value
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class QueryHandler(core: Core) {
+private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
 
   import DurationConversions._
 
@@ -96,7 +96,7 @@ private[scala] class QueryHandler(core: Core) {
       _ <- Validate.optNotNull(options.clientContextId, "clientContextId")
       _ <- Validate.optNotNull(options.credentials, "credentials")
       _ <- Validate.optNotNull(options.maxParallelism, "maxParallelism")
-      _ <- Validate.optNotNull(options.disableMetrics, "disableMetrics")
+      _ <- Validate.notNull(options.metrics, "metrics")
       _ <- Validate.optNotNull(options.pipelineBatch, "pipelineBatch")
       _ <- Validate.optNotNull(options.pipelineCap, "pipelineCap")
       _ <- Validate.optNotNull(options.profile, "profile")
@@ -141,19 +141,42 @@ private[scala] class QueryHandler(core: Core) {
     * @return a ReactiveQueryResult
     */
   private def convertResponse(response: QueryResponse): ReactiveQueryResult = {
+    import collection.JavaConverters._
+
     val rows: SFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
 
-    val meta: SMono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+    val meta: SMono[QueryMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
       .map(addl => {
-        QueryMeta(
+        val warnings: Seq[QueryWarning] = addl.warnings.asScala.map(warnings =>
+          ErrorCodeAndMessage.fromJsonArray(warnings)
+            .asScala
+            .map(warning => QueryWarning(warning.code(), warning.message())))
+          .getOrElse(Seq())
+
+        val status: QueryStatus = addl.status match {
+          case "running" => QueryStatus.Running
+          case "success" => QueryStatus.Success
+          case "errors" => QueryStatus.Errors
+          case "completed" => QueryStatus.Completed
+          case "stopped" => QueryStatus.Stopped
+          case "timeout" => QueryStatus.Timeout
+          case "closed" => QueryStatus.Closed
+          case "fatal" => QueryStatus.Fatal
+          case "aborted" => QueryStatus.Aborted
+          case _ => QueryStatus.Unknown
+        }
+
+        val out = QueryMetaData(
           response.header().requestId(),
-          response.header().clientContextId().asScala,
+          response.header().clientContextId().asScala.getOrElse(""),
           response.header().signature().asScala.map(QuerySignature),
-          addl.metrics().asScala.map(QueryMetrics.fromBytes),
-          addl.warnings.asScala.map(QueryWarnings),
-          addl.status,
-          addl.profile.asScala.map(v => QueryProfile(v))
+          addl.metrics().asScala.flatMap(QueryMetrics.fromBytes),
+          warnings,
+          status,
+          addl.profile.asScala
         )
+
+        out
       })
 
     ReactiveQueryResult(
@@ -174,7 +197,7 @@ private[scala] class QueryHandler(core: Core) {
   private def queryInternal(request: QueryRequest, options: QueryOptions, adhoc: Boolean) = {
     if (adhoc) {
       core.send(request)
-      FutureConversions.javaMonoToScalaMono(Reactor.wrap(request, request.response, true))
+      FutureConversions.wrap(request, request.response, propagateCancellation = true)
     }
     else maybePrepareAndExecute(request, options)
   }
@@ -213,7 +236,7 @@ private[scala] class QueryHandler(core: Core) {
               request.statement(),
               QueryCacheEntry(preparedName.get(), fullPlan = false, None)
             )
-            return SMono.just(qr)
+            SMono.just(qr)
           }
         })
     }
@@ -221,7 +244,7 @@ private[scala] class QueryHandler(core: Core) {
       SMono.defer(() => {
         val req = buildPrepareRequest(request, options)
         core.send(req)
-        FutureConversions.javaMonoToScalaMono(Reactor.wrap(req, req.response, true))
+        FutureConversions.wrap(req, req.response, propagateCancellation = true)
       })
 
         .flatMapMany(result => result.rows())
@@ -352,14 +375,14 @@ private[scala] class QueryHandler(core: Core) {
       case Success(req) =>
         queryReactive(req, options)
           // Buffer the responses
-          .flatMap(response => response.rows.collectSeq()
-          .flatMap(rows => response.meta
-            .map(meta => QueryResult(
-              rows,
-              meta)
-            )
-          )
-        ).toFuture
+          .flatMap(response => response.rows.collectSeq().flatMap(rows => {
+          response.metaData
+            .map(meta => {
+              QueryResult(
+                rows,
+                meta)
+            })
+        })).toFuture
 
       case Failure(err) => Future.failed(err)
     }

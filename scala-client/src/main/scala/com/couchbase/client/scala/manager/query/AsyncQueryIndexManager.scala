@@ -74,7 +74,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)
          | DESC, name ASC""".stripMargin
 
     execInternal(readonly = true, statement, timeout, retryStrategy)
-      .map(_.allRowsAs[QueryIndex])
+      .map(_.rowsAs[QueryIndex])
       .flatMap {
         case Success(z) => Future.successful(z)
         case Failure(err) => Future.failed(err)

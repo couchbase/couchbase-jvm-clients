@@ -16,12 +16,14 @@
 
 package com.couchbase.client.scala.query
 
-import java.util
-import java.util.{List, UUID}
+import java.util.UUID
 
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.util.Golang
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.query.QueryScanConsistency.{ConsistentWith, RequestPlus}
+import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Success
@@ -37,39 +39,19 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val credentials: Option[Map[String,String]] = None,
                         private[scala] val maxParallelism: Option[Int] = None,
-                        private[scala] val disableMetrics: Option[Boolean] = None,
+                        private[scala] val metrics: Boolean = false,
                         private[scala] val pipelineBatch: Option[Int] = None,
                         private[scala] val pipelineCap: Option[Int] = None,
-                        private[scala] val profile: Option[N1qlProfile.Value] = None,
+                        private[scala] val profile: Option[QueryProfile] = None,
                         private[scala] val readonly: Option[Boolean] = None,
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val scanCap: Option[Int] = None,
-                        private[scala] val scanConsistency: Option[ScanConsistency] = None,
+                        private[scala] val scanConsistency: Option[QueryScanConsistency] = None,
                         private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None,
                         private[scala] val adhoc: Boolean = true
                        ) {
-  /** Provides a named parameter for queries parameterised that way.
-    *
-    * Merged in with any previously provided named parameters.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def namedParameter(name: String, value: Any): QueryOptions = {
-    copy(namedParameters = Some(namedParameters.getOrElse(Map()) + (name -> value)))
-  }
-
-  /** Provides named parameters for queries parameterised that way.
-    *
-    * Overrides any previously-supplied named parameters.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def namedParameters(values: (String, Any)*): QueryOptions = {
-    copy(namedParameters = Option(values.toMap))
-  }
-
   /** Provides named parameters for queries parameterised that way.
     *
     * Overrides any previously-supplied named parameters.
@@ -77,15 +59,15 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     * @return a copy of this with the change applied, for chaining.
     */
   def namedParameters(values: Map[String,Any]): QueryOptions = {
-    copy(namedParameters = Option(values))
+    copy(namedParameters = Option(values), positionalParameters = None)
   }
 
   /** Provides positional parameters for queries parameterised that way.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def positionalParameters(values: Any*): QueryOptions = {
-    copy(positionalParameters = Option(values.toList))
+  def positionalParameters(values: Seq[Any]): QueryOptions = {
+    copy(positionalParameters = Option(values), namedParameters = None)
   }
 
   /** Adds a client context ID to the request, that will be sent back in the response, allowing clients
@@ -128,15 +110,11 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     */
   def pipelineBatch(pipelineBatch: Int): QueryOptions = copy(pipelineBatch = Some(pipelineBatch))
 
-  /** If set to true (false being the default), the metrics object will not be returned from N1QL and
-    * as a result be more efficient. Note that if metrics are disabled you are losing information
-    * to diagnose problems - so use with care!
-    *
-    * @param metricsDisabled true if disabled, false otherwise (false = default).
+  /** Controls where metrics are returned by the server.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def disableMetrics(metricsDisabled: Boolean): QueryOptions = copy(disableMetrics = Option(metricsDisabled))
+  def metrics(metrics: Boolean): QueryOptions = copy(metrics = metrics)
 
   /** Set the profiling information level for query execution
     *
@@ -144,7 +122,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def profile(profile: N1qlProfile.Value): QueryOptions = copy(profile = Option(profile))
+  def profile(profile: QueryProfile): QueryOptions = copy(profile = Option(profile))
 
   /** If set to true, it will signal the query engine on the server that only non-data modifying requests
     * are allowed. Note that this rule is enforced on the server and not the SDK side.
@@ -183,17 +161,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def scanConsistency(scanConsistency: ScanConsistency): QueryOptions = copy(scanConsistency = Some(scanConsistency))
-
-  /** Sets the [[MutationToken]]s this query should be consistent with.  These tokens are returned from mutations.
-    *
-    * @param tokens the mutation tokens
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def consistentWith(tokens: Seq[MutationToken]): QueryOptions = {
-    copy(consistentWith = Option(tokens))
-  }
+  def scanConsistency(scanConsistency: QueryScanConsistency): QueryOptions = copy(scanConsistency = Some(scanConsistency))
 
   /** Sets a maximum timeout for processing on the server side.
     *
@@ -266,26 +234,34 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
       })
       out.put("args", arr)
     })
-    scanConsistency.foreach(v => out.put("scan_consistency", v.encoded))
-    consistentWith.map(cw => {
-      val mutationState = JsonObjectSafe.create
+    scanConsistency match {
+      case Some(x: ConsistentWith) =>
+        out.put("scan_consistency", x.encoded)
+        val mutationState = JsonObject.create
 
-      cw.foreach(token => {
-        val bucket: JsonObject = mutationState.obj(token.bucketName) match {
-          case Success(bkt) => bkt.o
-          case _ =>
-            val bkt = JsonObject.create
-            mutationState.put(token.bucketName(), bkt)
-            bkt
-        }
+        x.consistentWith.tokens.foreach(token => {
+          val bucket: JsonObject = if (mutationState.containsKey(token.bucketName)) mutationState.obj(token.bucketName)
+          else {
+            val out = JsonObject.create
+            mutationState.put(token.bucketName, out)
+            out
+          }
 
-        bucket.put(token.partitionID().toString,
-          JsonArray(token.sequenceNumber -> String.valueOf(token.partitionUUID)))
-      })
-      out.put("scan_vectors", mutationState.o)
-      out.put("scan_consistency", "at_plus")
-    })
-    profile.foreach(v => out.put("profile", v.toString.toLowerCase))
+          bucket.put(token.partitionID.toString,
+            JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID)))
+        })
+        out.put("scan_vectors", mutationState)
+
+      case Some(x: RequestPlus) =>
+        out.put("scan_consistency", x.encoded)
+        x.scanWait.foreach(sw => out.put("scan_wait", Golang.encodeDurationToMs(sw)))
+
+      case Some(x: QueryScanConsistency) =>
+        out.put("scan_consistency", x.encoded)
+
+      case _ =>
+    }
+    profile.foreach(v => out.put("profile", v.encoded))
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
     val cciOut = clientContextId match {
       case Some(cci) => cci
@@ -296,11 +272,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     pipelineCap.foreach(v => out.put("pipeline_cap", v.toString))
     pipelineBatch.foreach(v => out.put("pipeline_batch", v.toString))
     scanCap.foreach(v => out.put("scan_cap", v.toString))
-    disableMetrics.foreach(v => out.put("metrics", v))
+    out.put("metrics", metrics)
     readonly.foreach(v => out.put("readonly", v))
-
-    val autoPrepare = System.getProperty("com.couchbase.client.query.autoprepared", "false").toBoolean
-    if (autoPrepare) out.put("auto_prepare", "true")
 
     out
   }
@@ -309,8 +282,4 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 
 object QueryOptions {
   def apply() = new QueryOptions()
-}
-
-object N1qlProfile extends Enumeration {
-  val Off, Phases, Timings = Value
 }

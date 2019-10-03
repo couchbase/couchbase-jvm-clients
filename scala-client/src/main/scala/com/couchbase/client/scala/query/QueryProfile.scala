@@ -15,22 +15,24 @@
  */
 package com.couchbase.client.scala.query
 
-import scala.concurrent.duration.Duration
-
-/** Provides some control over what consistency is required for a given query. */
-sealed trait ScanConsistency {
+sealed trait QueryProfile {
   private[scala] def encoded: String
 }
 
-object ScanConsistency {
-
-  /** The default.  Any indexes used by the query reflect their current content. */
-  case object NotBounded extends ScanConsistency {
-    private[scala] def encoded = "not_bounded"
+object QueryProfile {
+  /** Provides no profiling information. */
+  case object Off extends QueryProfile {
+    private[scala] def encoded: String = "off"
   }
 
-  /** The query blocks until any indexes used by the query are updated to reflect any pending mutations. */
-  case class RequestPlus(scanWait: Option[Duration] = None) extends ScanConsistency {
-    private[scala] def encoded = "request_plus"
+  /** Provides profiling information about the phases. */
+  case object Phases extends QueryProfile {
+    private[scala] def encoded: String = "phases"
+  }
+
+  /** Provides phases plus detailed timing information. */
+  case object Timings extends QueryProfile {
+    private[scala] def encoded: String = "timings"
   }
 }
+

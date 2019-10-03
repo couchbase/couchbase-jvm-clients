@@ -39,7 +39,7 @@ case class SearchResult(private[scala] val _rows: Seq[SearchQueryRow],
                         meta: SearchMeta) {
   /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the FTS service first.
     *
-    * The return type is of `Iterator[Try[SearchQueryRow]]` in case any row cannot be decoded.  See `allRowsAs` for a more
+    * The return type is of `Iterator[Try[SearchQueryRow]]` in case any row cannot be decoded.  See `rowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     */
   def rows: Iterator[SearchQueryRow] = {

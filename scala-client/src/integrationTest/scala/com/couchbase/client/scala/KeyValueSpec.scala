@@ -379,7 +379,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val statement = s"""select * from `users` where meta().id like 'user%';"""
 
     val users: Try[Seq[User]] = cluster.query(statement)
-      .flatMap(_.allRowsAs[User])
+      .flatMap(_.rowsAs[User])
 
   }
 }

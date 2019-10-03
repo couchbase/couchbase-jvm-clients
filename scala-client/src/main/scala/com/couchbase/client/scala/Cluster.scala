@@ -101,7 +101,7 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
       case _ => env.timeoutConfig.queryTimeout()
     }
 
-    AsyncUtils.block(async.query(statement, options), timeout)
+    AsyncUtils.block(async.query(statement, options))
   }
 
   /** Performs an Analytics query against the cluster.

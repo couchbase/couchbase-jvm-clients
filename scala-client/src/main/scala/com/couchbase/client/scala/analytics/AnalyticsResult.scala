@@ -45,7 +45,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
     *
     * $SupportedTypes
     *
-    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See `allRowsAs` for a more
+    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See `rowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     **/
   def rowsAs[T]

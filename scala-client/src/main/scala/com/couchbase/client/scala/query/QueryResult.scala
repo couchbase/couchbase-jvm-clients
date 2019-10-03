@@ -18,18 +18,21 @@ package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.msg.query.QueryChunkRow
+import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryResponse}
+import com.couchbase.client.core.util.Golang
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.util.{DurationConversions, FunctionalUtil, RowTraversalUtil}
 import com.couchbase.client.scala.util.RowTraversalUtil
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 /** The results of a N1QL query.
   *
   * @param rows            all rows returned from the query
-  * @param meta            any additional information related to the query
+  * @param metaData            any additional information related to the query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
   *                        implicit `Decodable[T]` can be found, and can include [[JsonObject]], a case class, String,
@@ -38,39 +41,28 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
-                       meta: QueryMeta) {
+                       metaData: QueryMetaData) {
   /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the query service first.
     *
     * $SupportedTypes
     *
-    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See allRowsAs` for a more
+    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See rowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     **/
   def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): Iterator[Try[T]] = {
-    rows.iterator.map(row => {
-      ev.decode(row.data(), Conversions.JsonFlags)
-    })
-  }
-
-  /** All returned rows.  All rows are buffered from the query service first.
-    *
-    * $SupportedTypes
-    *
-    * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
-    */
-  def allRowsAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    RowTraversalUtil.traverse(rowsAs[T])
+    RowTraversalUtil.traverse(rows.iterator.map(row => {
+      ev.decode(row.data(), Conversions.JsonFlags)
+    }))
   }
 }
 
 /** The results of a N1QL query, as returned by the reactive API.
   *
-  * @param meta            any additional information related to the query
+  * @param metaData            any additional information related to the query
   */
 case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
-                               meta: SMono[QueryMeta]) {
+                               metaData: SMono[QueryMetaData]) {
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.
     *
@@ -83,24 +75,6 @@ case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
       ev.decode(row.data(), Conversions.JsonFlags).get
     })
   }
-}
-
-/** Returns the profile information of a query request, in JSON form. */
-case class QueryProfile(private val _content: Array[Byte]) {
-
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = _content
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-
-  override def toString: String = contentAs[JsonObject].toString
 }
 
 /** If an error is returned by the query service as it is processing rows, this will be raised. */
@@ -146,40 +120,18 @@ case class QuerySignature(private val _content: Array[Byte]) {
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
     ev.decode(_content, Conversions.JsonFlags)
   }
-
-  override def toString: String = contentAs[JsonObject].get.toString
 }
 
-/** Returns any warnings of a query request, in JSON form. */
-case class QueryWarnings(private val _content: Array[Byte]) {
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = {
-    _content
-  }
+/** A warning returned from the query service. */
+case class QueryWarning(code: Int, message: String)
 
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * The content is a JSON array, so a suitable representation would be
-    * [[com.couchbase.client.scala.json.JsonArray]].
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-
-  override def toString: String = contentAs[JsonObject].get.toString
-}
 
 /** Metrics of a given query request.
   *
   * @param elapsedTime   the total time taken for the request, that is the time from when the
-  *                      request was received until the results were returned, in a human-readable
-  *                      format (eg. 123.45ms for a little over 123 milliseconds).
+  *                      request was received until the results were returned.
   * @param executionTime the time taken for the execution of the request, that is the time from
-  *                      when query execution started until the results were returned, in a human-readable
-  *                      format (eg. 123.45ms for a little over 123 milliseconds).
+  *                      when query execution started until the results were returned.
   * @param resultCount   the total number of results selected by the engine before restriction
   *                      through LIMIT clause.
   * @param resultSize    the total number of returned rows.
@@ -189,32 +141,39 @@ case class QueryWarnings(private val _content: Array[Byte]) {
   * @param errorCount    the number of errors that occurred during the request.
   * @param warningCount  the number of warnings that occurred during the request.
   */
-case class QueryMetrics(elapsedTime: String,
-                        executionTime: String,
-                        resultCount: Int,
-                        resultSize: Int,
-                        mutationCount: Int,
-                        sortCount: Int,
-                        errorCount: Int,
-                        warningCount: Int)
+case class QueryMetrics(elapsedTime: Duration,
+                        executionTime: Duration,
+                        resultCount: Long,
+                        resultSize: Long,
+                        mutationCount: Long,
+                        sortCount: Long,
+                        errorCount: Long,
+                        warningCount: Long)
 
 private[scala] object QueryMetrics {
-  def fromBytes(in: Array[Byte]): QueryMetrics = {
+  import com.couchbase.client.scala.util.DurationConversions._
+
+  def fromBytes(in: Array[Byte]): Option[QueryMetrics] = {
     JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
       case Success(jo) =>
-        QueryMetrics(
-          jo.str("elapsedTime").getOrElse(""),
-          jo.str("executionTime").getOrElse(""),
-          jo.num("resultCount").getOrElse(0),
-          jo.num("resultSize").getOrElse(0),
-          jo.num("mutationCount").getOrElse(0),
-          jo.num("sortCount").getOrElse(0),
-          jo.num("errorCount").getOrElse(0),
-          jo.num("warningCount").getOrElse(0)
-        )
+
+        Some(QueryMetrics(
+          jo.str("elapsedTime").map(time => {
+            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+          }).getOrElse(Duration.Zero),
+          jo.str("executionTime").map(time => {
+            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+          }).getOrElse(Duration.Zero),
+          jo.numLong("resultCount").getOrElse(0l),
+          jo.numLong("resultSize").getOrElse(0l),
+          jo.numLong("mutationCount").getOrElse(0l),
+          jo.numLong("sortCount").getOrElse(0l),
+          jo.numLong("errorCount").getOrElse(0l),
+          jo.numLong("warningCount").getOrElse(0l)
+        ))
 
       case Failure(err) =>
-        QueryMetrics("", "", 0, 0, 0, 0, 0, 0)
+        None
     }
 
   }
@@ -222,17 +181,46 @@ private[scala] object QueryMetrics {
 
 /** Additional information returned by the query service aside from any rows and errors.
   *
-  * @param metrics         metrics related to the query request, if they were not disabled in [[QueryOptions]]
+  * @param clientContextId the client context id passed into [[QueryOptions]]
+  * @param metrics         metrics related to the query request, if they were enabled in [[QueryOptions]]
   * @param warnings        any warnings returned from the query service
-  * @param status          the raw status string returned from the query service
-  * @param profile         if a profile was requested in [[QueryOptions]] it will be returned here
+  * @param status          the status returned from the query service
   */
-case class QueryMeta(private[scala] val requestId: String,
-                     clientContextId: Option[String],
-                     signature: Option[QuerySignature],
-                     metrics: Option[QueryMetrics],
-                     warnings: Option[QueryWarnings],
-                     status: String,
-                     profile: Option[QueryProfile])
+case class QueryMetaData(private[scala] val requestId: String,
+                         clientContextId: String,
+                         signature: Option[QuerySignature],
+                         metrics: Option[QueryMetrics],
+                         warnings: Seq[QueryWarning],
+                         status: QueryStatus,
+                         private val _profileContent: Option[Array[Byte]]) {
+
+  /** Return the content, converted into the application's preferred representation.
+    *
+    * Note a profile must first be requested with [[QueryOptions.profile]].
+    *
+    * @tparam T $SupportedTypes
+    */
+  def profileAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    _profileContent match {
+      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case _ => Failure(new IllegalArgumentException("No profile is available"))
+    }
+  }
+}
 
 
+sealed trait QueryStatus
+
+object QueryStatus {
+  case object Running extends QueryStatus
+  case object Success extends QueryStatus
+  case object Errors extends QueryStatus
+  case object Completed extends QueryStatus
+  case object Stopped extends QueryStatus
+  case object Timeout extends QueryStatus
+  case object Closed extends QueryStatus
+  case object Fatal extends QueryStatus
+  case object Aborted extends QueryStatus
+  case object Unknown extends QueryStatus
+}

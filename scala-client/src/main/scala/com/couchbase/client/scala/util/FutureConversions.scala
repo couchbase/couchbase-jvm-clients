@@ -16,16 +16,16 @@
 package com.couchbase.client.scala.util
 
 
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.{CompletableFuture, CompletionException}
 import java.util.function.Consumer
 
-import com.couchbase.client.core.msg.{CancellationReason, Request}
+import com.couchbase.client.core.msg.{CancellationReason, Request, Response}
 import reactor.core.publisher.{SignalType, Flux => JavaFlux, Mono => JavaMono}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.FutureConverters._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Convert between Java and Scala async and reactive APIs.
   *
@@ -83,4 +83,33 @@ private[scala] object FutureConversions {
     }
     else javaMono
   }
+
+  /**
+    * Wraps a {@link Request} and returns it in a {@link Mono}.
+    *
+    * @param request               the request to wrap.
+    * @param response              the full response to wrap, might not be the same as in the request.
+    * @param propagateCancellation if a cancelled/unsubscribed mono should also cancel the
+    *                              request.
+    *
+    * @return the mono that wraps the request.
+    */
+  def wrap[T](request: Request[_ <: Response],
+              response: CompletableFuture[T],
+              propagateCancellation: Boolean)
+             (implicit ec: ExecutionContext): SMono[T] = {
+    val future = javaCFToScalaFuture(response)
+    var mono = SMono.fromFuture(future)
+    if (propagateCancellation) {
+      mono = mono.doFinally((st: SignalType) => {
+        if (st == SignalType.CANCEL) request.cancel(CancellationReason.STOPPED_LISTENING)
+      })
+    }
+    mono.onErrorResume((err: Throwable) => {
+      if (err.isInstanceOf[CompletionException]) SMono.raiseError(err.getCause)
+      else SMono.raiseError(err)
+    })
+  }
+
+
 }

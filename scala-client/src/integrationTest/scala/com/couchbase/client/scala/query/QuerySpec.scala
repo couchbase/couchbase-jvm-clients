@@ -4,16 +4,18 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.QueryException
-import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.kv.MutationState
+import com.couchbase.client.scala.query.QueryScanConsistency.ConsistentWith
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+import reactor.core.scala.publisher.SMono
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -68,33 +70,33 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
-        val rows = result.allRowsAs[String].get
+        val rows = result.rowsAs[String].get
         assert(rows.head == """{"Greeting":"hello world"}""")
         // Should be an implicit client context id if none provided
-        assert(result.meta.clientContextId.isDefined)
+        assert(result.metaData.clientContextId != "")
       case Failure(err) => throw err
     }
   }
 
   @Test
   def hello_world_content_as_JsonObject() {
-    cluster.query("""select 'hello world 2' as Greeting""") match {
+    cluster.query("""select 'hello world 2' as Greeting""", QueryOptions().metrics(true)) match {
       case Success(result) =>
-        assert(result.meta.clientContextId.isEmpty)
-        assert(result.meta.requestId != null)
+        assert(result.metaData.clientContextId != "")
+        assert(result.metaData.requestId != null)
         assert(result.rows.size == 1)
-        val rows = result.allRowsAs[JsonObject].get
+        val rows = result.rowsAs[JsonObject].get
         assert(rows.head.str("Greeting") == "hello world 2")
-        val signature = result.meta.signature.get.contentAs[JsonObject].get
+        val signature = result.metaData.signature.get.contentAs[JsonObject].get
         assert(signature.size > 0)
 
-        val out = result.meta
+        val out = result.metaData
         assert(out.metrics.get.errorCount == 0)
         assert(out.metrics.get.warningCount == 0)
         assert(out.metrics.get.mutationCount == 0)
         assert(out.warnings.size == 0)
-        assert(out.status == "success")
-        assert(out.profile.isEmpty)
+        assert(out.status == QueryStatus.Success)
+        assert(out.profileAs[JsonObject].isFailure)
 
       case Failure(err) => throw err
     }
@@ -103,23 +105,22 @@ class QuerySpec extends ScalaIntegrationTest {
   @Test
   def hello_world_content_as_JsonObject_for_comp() {
     (for {
-      result <- cluster.query("""select 'hello world 2' as Greeting""")
-      rows <- result.allRowsAs[JsonObject]
+      result <- cluster.query("""select 'hello world 2' as Greeting""", QueryOptions().metrics(true))
+      rows <- result.rowsAs[JsonObject]
     } yield (result, rows)) match {
       case Success((result, rows)) =>
         assert(result.rows.size == 1)
-        val rows = result.allRowsAs[JsonObject].get
+        val rows = result.rowsAs[JsonObject].get
         assert(rows.head.str("Greeting") == "hello world 2")
-        val signature = result.meta.signature.get.contentAs[JsonObject].get
+        val signature = result.metaData.signature.get.contentAs[JsonObject].get
         assert(signature.size > 0)
 
-        val out = result.meta
+        val out = result.metaData
         assert(out.metrics.get.errorCount == 0)
         assert(out.metrics.get.warningCount == 0)
         assert(out.metrics.get.mutationCount == 0)
         assert(out.warnings.size == 0)
-        assert(out.status == "success")
-        assert(out.profile.isEmpty)
+        assert(out.status == QueryStatus.Success)
 
       case Failure(err) => throw err
     }
@@ -130,7 +131,7 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster.query("""select "hello world" as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
-        val rows = result.allRowsAs[String].get
+        val rows = result.rowsAs[String].get
         assert(rows.head == """{"Greeting":"hello world"}""")
       case Failure(err) => throw err
     }
@@ -143,9 +144,9 @@ class QuerySpec extends ScalaIntegrationTest {
 
     val statement =s"""select name from `${bucketName}` use keys ['$docId1', '$docId2'];"""
     //    val statement = s"""SELECT * FROM default USE KEYS '$docId1';"""
-    cluster.query(statement, QueryOptions().scanConsistency(ScanConsistency.RequestPlus())) match {
+    cluster.query(statement, QueryOptions().scanConsistency(QueryScanConsistency.RequestPlus())) match {
       case Success(result) =>
-        val rows = result.allRowsAs[ujson.Obj].get
+        val rows = result.rowsAs[ujson.Obj].get
         assert(rows.size == 2)
         assert(rows.head("name").str == """Andy""")
         assert(rows.last("name").str == """Beth""")
@@ -179,10 +180,10 @@ class QuerySpec extends ScalaIntegrationTest {
 
           .doOnNext(rows => assert(rows.size == 1))
 
-          .flatMap(_ => result.meta)
+          .flatMap(_ => result.metaData)
 
           .doOnNext(meta => {
-            assert(meta.clientContextId.isEmpty)
+            assert(meta.clientContextId != "")
           })
       })
       .block()
@@ -193,14 +194,15 @@ class QuerySpec extends ScalaIntegrationTest {
 
     val rowsKeeper = new AtomicReference[Seq[JsonObject]]()
 
-    val out: QueryMeta = cluster.reactive.query("""select 'hello world' as Greeting""")
+    val out: QueryMetaData = cluster.reactive.query("""select 'hello world' as Greeting"""
+      , QueryOptions().metrics(true))
       .flatMapMany(result => {
         result.rowsAs[JsonObject]
           .collectSeq()
           .doOnNext(rows => {
             rowsKeeper.set(rows)
           })
-          .flatMap(_ => result.meta)
+          .flatMap(_ => result.metaData)
       })
       .blockLast().get
 
@@ -209,8 +211,7 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(out.metrics.get.warningCount == 0)
     assert(out.metrics.get.mutationCount == 0)
     assert(out.warnings.size == 0)
-    assert(out.status == "success")
-    assert(out.profile.isEmpty)
+    assert(out.status == QueryStatus.Success)
   }
 
   @Test
@@ -228,15 +229,15 @@ class QuerySpec extends ScalaIntegrationTest {
 
   @Test
   def options_profile () {
-    cluster.query("""select 'hello world' as Greeting""", QueryOptions().profile(N1qlProfile.Timings)) match {
+    cluster.query("""select 'hello world' as Greeting""", QueryOptions().profile(QueryProfile.Timings)) match {
       case Success(result) =>
-        assert(result.meta.profile.nonEmpty)
-        val profile = result.meta.profile.get.contentAs[JsonObject].get
-        assert(result.meta.profile.size > 0)
-        assert(result.meta.clientContextId.isEmpty)
-        assert(result.meta.requestId != null)
+        assert(result.metaData.profileAs[JsonObject].isSuccess)
+        val profile = result.metaData.profileAs[JsonObject].get
+        assert(profile.size > 0)
+        assert(result.metaData.clientContextId != "")
+        assert(result.metaData.requestId != null)
         assert(result.rows.size == 1)
-        val rows = result.allRowsAs[JsonObject].get
+        val rows = result.rowsAs[JsonObject].get
         assert(rows.head.str("Greeting") == "hello world")
 
       case Failure(err) => throw err
@@ -249,8 +250,8 @@ class QuerySpec extends ScalaIntegrationTest {
 
     cluster.query(
       s"""select * from `${bucketName}` where name=$$nval""",
-      QueryOptions().namedParameter("nval", "Eric Wimp")
-        .scanConsistency(ScanConsistency.RequestPlus())) match {
+      QueryOptions().namedParameters(Map("nval" -> "Eric Wimp"))
+        .scanConsistency(QueryScanConsistency.RequestPlus())) match {
       case Success(result) =>
         assert(result.rows.size > 0)
       case Failure(err) => throw err
@@ -263,9 +264,11 @@ class QuerySpec extends ScalaIntegrationTest {
 
     cluster.query(
       s"""select * from `${bucketName}` where name=$$1""",
-      QueryOptions().positionalParameters("Eric Wimp")
-        .scanConsistency(ScanConsistency.RequestPlus())) match {
-      case Success(result) => assert(result.rows.size > 0)
+      QueryOptions().positionalParameters(Seq("Eric Wimp"))
+        .scanConsistency(QueryScanConsistency.RequestPlus())) match {
+      case Success(result) => {
+        assert(result.rows.size > 0)
+      }
       case Failure(err) => throw err
     }
   }
@@ -275,7 +278,7 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster.query(
       """select 'hello world' as Greeting""",
       QueryOptions().clientContextId("test")) match {
-      case Success(result) => assert(result.meta.clientContextId.contains("test"))
+      case Success(result) => assert(result.metaData.clientContextId.contains("test"))
       case Failure(err) => throw err
     }
   }
@@ -284,9 +287,9 @@ class QuerySpec extends ScalaIntegrationTest {
   def options_disableMetrics () {
     cluster.query(
       """select 'hello world' as Greeting""",
-      QueryOptions().disableMetrics(true)) match {
+      QueryOptions().metrics(true)) match {
       case Success(result) =>
-        assert(result.meta.metrics.get.errorCount == 0)
+        assert(result.metaData.metrics.get.errorCount == 0)
       case Failure(err) => throw err
     }
   }
@@ -318,48 +321,70 @@ class QuerySpec extends ScalaIntegrationTest {
   @Test
   def handlesPreparedStatements(): Unit = {
     val id: String = insertDoc
-    for (i <- Range(0, 10)) {
-      val options: QueryOptions = QueryOptions()
-        .scanConsistency(ScanConsistency.RequestPlus())
-        .adhoc(false)
-      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-        ".id=\"" + id + "\"", options).get
-      val rows = result.allRowsAs[JsonObject].get
-      assert(1 == rows.size)
-      assert(FooContent == rows(0))
-    }
+    val options: QueryOptions = QueryOptions()
+      .scanConsistency(QueryScanConsistency.RequestPlus())
+      .adhoc(false)
+    val result = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+      ".id=\"" + id + "\"", options).get
+
+    val rows = result.rowsAs[JsonObject].get
+    assert(1 == rows.size)
+    assert(FooContent == rows(0))
+  }
+
+  @Test
+  def handlesPreparedStatementsAsync(): Unit = {
+    val id: String = insertDoc
+    val options: QueryOptions = QueryOptions()
+      .scanConsistency(QueryScanConsistency.RequestPlus())
+      .adhoc(false)
+    val future = cluster.async.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+      ".id=\"" + id + "\"", options)
+    val result = Await.result(future, Duration.Inf)
+    val rows = result.rowsAs[JsonObject].get
+    assert(1 == rows.size)
+    assert(FooContent == rows(0))
+  }
+
+  @Test
+  def handlesPreparedStatementsReactive(): Unit = {
+    val id: String = insertDoc
+    val options: QueryOptions = QueryOptions()
+      .scanConsistency(QueryScanConsistency.RequestPlus())
+      .adhoc(false)
+    val mono: SMono[ReactiveQueryResult] = cluster.reactive.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+      ".id=\"" + id + "\"", options)
+    val result = mono.block()
+    val rows = result.rowsAs[JsonObject].collectSeq().block()
+    assert(1 == rows.size)
+    assert(FooContent == rows(0))
   }
 
   @Test
   def handlesPreparedStatementsWithNamedArgs(): Unit = {
     val id: String = insertDoc
-    for (i <- Range(0, 10)) {
-      val options: QueryOptions = QueryOptions()
-        .scanConsistency(ScanConsistency.RequestPlus())
-        .adhoc(false)
-        .namedParameters("id" -> id)
-      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-        ".id=$id", options).get
-      val rows = result.allRowsAs[JsonObject].get
-      assert(1 == rows.size)
-      assert(FooContent == rows(0))
-    }
+    val options: QueryOptions = QueryOptions()
+      .scanConsistency(QueryScanConsistency.RequestPlus())
+      .adhoc(false)
+      .namedParameters(Map("id" -> id))
+    val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+      ".id=$id", options).get
+    val rows = result.rowsAs[JsonObject].get
+    assert(1 == rows.size)
+    assert(FooContent == rows(0))
   }
 
   @Test
   def handlesPreparedStatementsWithPositionalArgs(): Unit = {
     val id: String = insertDoc
-    for (i <- Range(0, 10)) {
-      val options: QueryOptions = QueryOptions()
-        .scanConsistency(ScanConsistency.RequestPlus())
-        .adhoc(false)
-        .positionalParameters(id)
-      val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-        ".id=$1", options).get
-      val rows = result.allRowsAs[JsonObject].get
-      assert(1 == rows.size)
-      assert(FooContent == rows(0))
-    }
+    val options: QueryOptions = QueryOptions()
+      .scanConsistency(QueryScanConsistency.RequestPlus())
+      .positionalParameters(Seq(id))
+    val st = "select `" + bucketName + "`.* from `" + bucketName + "` where meta().id=$1"
+    val result: QueryResult = cluster.query(st, options).get
+    val rows = result.rowsAs[JsonObject].get
+    assert(1 == rows.size)
+    assert(FooContent == rows(0))
   }
 
   /**
@@ -378,15 +403,15 @@ class QuerySpec extends ScalaIntegrationTest {
   @Test
   def consistentWith(): Unit = {
     val id = UUID.randomUUID.toString
-    val mt: MutationToken = coll.upsert(id, FooContent).get.mutationToken.get
+    val mt = coll.upsert(id, FooContent).get
 
     val options: QueryOptions = QueryOptions()
-      .consistentWith(Seq(mt))
+      .scanConsistency(ConsistentWith(MutationState.from(mt)))
 
-    val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-      ".id=\"" + id + "\"", options).get
+    val st = "select `" + bucketName + "`.* from `" + bucketName + "` where meta().id=\"" + id + "\""
+    val result: QueryResult = cluster.query(st, options).get
 
-    val rows = result.allRowsAs[JsonObject].get
+    val rows = result.rowsAs[JsonObject].get
     assert(1 == rows.size)
   }
 
@@ -405,8 +430,8 @@ class QuerySpec extends ScalaIntegrationTest {
 
     val statement = s"""select * from `${bucketName}` where meta().id like 'user%';"""
 
-    cluster.query(statement, QueryOptions().consistentWith(Seq(result.mutationToken.get)))
-      .flatMap(_.allRowsAs[JsonObject]) match {
+    cluster.query(statement, QueryOptions().scanConsistency(ConsistentWith(MutationState.from(result))))
+      .flatMap(_.rowsAs[JsonObject]) match {
       case Success(rows: Seq[JsonObject]) =>
         assert(rows.nonEmpty)
         rows.foreach(row => println(row))
