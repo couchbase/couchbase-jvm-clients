@@ -121,12 +121,11 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
               }
             })
 
-
-            val meta = ViewMeta(
+            val meta = ViewMetaData(
               response.header().debug().asScala.map(v => ViewDebug(v)),
               response.header().totalRows())
 
-            ReactiveViewResult(meta, rows)
+            ReactiveViewResult(Mono.just(meta), rows)
           })
     }
   }

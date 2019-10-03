@@ -19,8 +19,10 @@ package com.couchbase.client.scala.view
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject}
 import com.couchbase.client.scala.query.QueryOptions
+import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 
 
@@ -30,17 +32,16 @@ import scala.concurrent.duration.Duration
   * @since 1.0.0
   */
 case class ViewOptions(
-                        private[scala] val development: Option[Boolean] = None,
+                        private[scala] val namespace: Option[DesignDocumentNamespace] = None,
                         private[scala] val reduce: Option[Boolean] = None,
                         private[scala] val limit: Option[Int] = None,
                         private[scala] val group: Option[Boolean] = None,
                         private[scala] val groupLevel: Option[Int] = None,
                         private[scala] val inclusiveEnd: Option[Boolean] = None,
                         private[scala] val skip: Option[Int] = None,
-                        private[scala] val stale: Option[Stale] = None,
-                        private[scala] val onError: Option[OnError] = None,
+                        private[scala] val onError: Option[ViewErrorMode] = None,
                         private[scala] val debug: Option[Boolean] = None,
-                        private[scala] val descending: Option[Boolean] = None,
+                        private[scala] val order: Option[ViewOrdering] = None,
                         private[scala] val key: Option[String] = None,
                         private[scala] val startKeyDocId: Option[String] = None,
                         private[scala] val endKeyDocId: Option[String] = None,
@@ -48,11 +49,12 @@ case class ViewOptions(
                         private[scala] val startKey: Option[String] = None,
                         private[scala] val keys: Option[String] = None,
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
-                        private[scala] val timeout: Option[Duration] = None
+                        private[scala] val timeout: Option[Duration] = None,
+                        private[scala] val scanConsistency: Option[ViewScanConsistency] = None
                       ) {
 
-  def development(value: Boolean): ViewOptions = {
-    copy(development = Some(value))
+  def namespace(value: DesignDocumentNamespace): ViewOptions = {
+    copy(namespace = Some(value))
   }
 
   /** Explicitly enable/disable the reduce function on the query.
@@ -113,21 +115,11 @@ case class ViewOptions(
     copy(skip = Some(value))
   }
 
-  /** Allow the results from a stale view to be used.
-    *
-    * The default is Stale.UpdateAfter.
-    *
-    * @return this for further chaining
-    */
-  def stale(value: Stale): ViewOptions = {
-    copy(stale = Some(value))
-  }
-
   /** Sets the response in the event of an error.
     *
     * @return this for further chaining
     */
-  def onError(value: OnError): ViewOptions = {
+  def onError(value: ViewErrorMode): ViewOptions = {
     copy(onError = Some(value))
   }
 
@@ -139,12 +131,12 @@ case class ViewOptions(
     copy(debug = Some(value))
   }
 
-  /** Return the documents in descending key order.
+  /** Specifies the results ordering.  See [[ViewOrdering]] for details.
     *
     * @return this for further chaining
     */
-  def descending(value: Boolean): ViewOptions = {
-    copy(descending = Some(value))
+  def order(value: ViewOrdering): ViewOptions = {
+    copy(order = Some(value))
   }
 
   /** Return the documents in descending key order.
@@ -168,14 +160,14 @@ case class ViewOptions(
 
   def endKey(value: Any): ViewOptions = {
     value match {
-      case s: String => copy(endKey = Some('"' + s + "'"))
+      case s: String => copy(endKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
       case _ => copy(endKey = Some(value.toString))
     }
   }
 
   def startKey(value: Any): ViewOptions = {
     value match {
-      case s: String => copy(startKey = Some('"' + s + "'"))
+      case s: String => copy(startKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
       case _ => copy(startKey = Some(value.toString))
     }
   }
@@ -204,6 +196,15 @@ case class ViewOptions(
     copy(retryStrategy = Some(strategy))
   }
 
+  /** Sets what scan consistency to use.  See [[ViewScanConsistency]] for details.
+    *
+    * @param scanConsistency the scan consistency to use
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def retryStrategy(scanConsistency: ViewScanConsistency): ViewOptions = {
+    copy(scanConsistency = Some(scanConsistency))
+  }
 
   private[scala] def durationToN1qlFormat(duration: Duration) = {
     if (duration.toSeconds > 0) duration.toSeconds + "s"
@@ -220,9 +221,9 @@ case class ViewOptions(
     })
 
     limit.foreach(v => {
-      sb.append("limit=")
+      sb.append("limit='")
       sb.append(v.toString)
-      sb.append('&')
+      sb.append("'&")
     })
 
     group.foreach(v => {
@@ -244,15 +245,9 @@ case class ViewOptions(
     })
 
     skip.foreach(v => {
-      sb.append("skip=")
+      sb.append("skip='")
       sb.append(v.toString)
-      sb.append('&')
-    })
-
-    stale.foreach(v => {
-      sb.append("stale=")
-      sb.append(v.encode)
-      sb.append('&')
+      sb.append("'&")
     })
 
     onError.foreach(v => {
@@ -267,7 +262,7 @@ case class ViewOptions(
       sb.append('&')
     })
 
-    descending.foreach(v => {
+    order.foreach(v => {
       sb.append("descending=")
       sb.append(v.toString)
       sb.append('&')
@@ -303,6 +298,14 @@ case class ViewOptions(
       sb.append('&')
     })
 
+    scanConsistency match {
+      case Some(sc) =>
+        sb.append("stale=")
+        sb.append(sc.encoded)
+        sb.append('&')
+      case _ =>
+    }
+
     sb.toString.stripSuffix("&")
   }
 }
@@ -311,34 +314,3 @@ case class ViewOptions(
 
 
 
-sealed trait Stale {
-  private[scala] def encode: String
-}
-
-object Stale {
-  case class True() extends Stale {
-    private[scala] def encode: String = "ok"
-  }
-
-  case class False() extends Stale {
-    private[scala] def encode: String = "false"
-  }
-
-  case class UpdateAfter() extends Stale {
-    private[scala] def encode: String = "update_after"
-  }
-}
-
-sealed trait OnError {
-  private[scala] def encode: String
-}
-
-object OnError {
-  case class Stop() extends OnError {
-    private[scala] def encode: String = "stop"
-  }
-
-  case class Continue() extends Stale {
-    private[scala] def encode: String = "continue"
-  }
-}

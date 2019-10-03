@@ -92,10 +92,10 @@ class AsyncBucket private[scala](val name: String,
     reactive.viewQuery(designDoc, viewName, options)
 
       .flatMap(response => {
-        response.rows.collectSeq()
-
-          .map(rows => {
-            ViewResult(response.meta, rows)
+        response.rows
+          .collectSeq()
+          .flatMap(rows => {
+            response.meta.map(meta => ViewResult(meta, rows))
           })
       })
 

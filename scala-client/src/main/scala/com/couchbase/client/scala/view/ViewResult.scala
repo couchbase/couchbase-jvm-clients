@@ -21,8 +21,9 @@ import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import reactor.core.scala.publisher.{Flux, Mono}
+import com.couchbase.client.core.logging.RedactableArgument.redactUser
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
 /** The results of a view request.
   *
@@ -32,16 +33,16 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-case class ViewResult(meta: ViewMeta,
+case class ViewResult(meta: ViewMetaData,
                       rows: Seq[ViewRow])
 
 /** The results of a N1QL view, as returned by the reactive API.
   *
   * @param rows            a Flux of any returned rows.  If the view service returns an error while returning the
   *                        rows, it will be raised on this Flux
-  * @param meta            contains additional information related to the view
+  * @param meta            contains additional information related to the view.
   */
-case class ReactiveViewResult(meta: ViewMeta,
+case class ReactiveViewResult(meta: Mono[ViewMetaData],
                               rows: Flux[ViewRow])
 
 /** An individual view result row.
@@ -54,27 +55,39 @@ case class ViewRow(private val _content: Array[Byte]) {
 
   private val rootNode: Try[JsonNode] = Try(JacksonTransformers.MAPPER.readTree(_content))
 
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = _content
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * The result is JSON, so a suitable default representation is [[JsonObject]].
-    *
-    * The resultant JSON contains these fields:
-    *
-    * "id" - the document's ID
-    * "key" - the key emitted from the view
-    * "value" - the value emitted from the view
+  /** Return the value, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
     */
-  def contentAs[T]
+  def valueAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
+    rootNode
+      .map(rn => rn.get("value"))
+      .flatMap(key => ev.decode(key.binaryValue(), Conversions.JsonFlags))
   }
 
-  override def toString: String = contentAs[JsonObject].get.toString
+  /** Return the key, converted into the application's preferred representation.
+    *
+    * @tparam T $SupportedTypes
+    */
+  def keyAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    rootNode
+      .map(rn => rn.get("key"))
+      .flatMap(key => ev.decode(key.binaryValue(), Conversions.JsonFlags))
+  }
+
+  /** The id of this row.
+    */
+  def id: Try[String] = {
+    rootNode
+      .map(rn => rn.get("id").asText())
+  }
+
+  override def toString: String = rootNode match {
+    case Success(rn) => redactUser(rn.toString).toString
+    case _ => "could not decode"
+  }
 }
 
 /** Returns any debug information from a view request. */
@@ -105,6 +118,6 @@ case class ViewDebug(private val _content: Array[Byte]) {
   * @param debug            any debug information available from the view service
   * @param totalRows        the total number of returned rows
   */
-case class ViewMeta(debug: Option[ViewDebug],
-                    totalRows: Long)
+case class ViewMetaData(debug: Option[ViewDebug],
+                        totalRows: Long)
 

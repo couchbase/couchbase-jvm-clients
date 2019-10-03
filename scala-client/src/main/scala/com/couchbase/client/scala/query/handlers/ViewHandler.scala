@@ -25,9 +25,10 @@ import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
 import com.couchbase.client.scala.view.ViewOptions
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.compat.java8.OptionConverters._
 
+import scala.compat.java8.OptionConverters._
 import com.couchbase.client.core.msg.view.ViewRequest
+import com.couchbase.client.scala.view.DesignDocumentNamespace.Development
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -52,17 +53,17 @@ private[scala] class ViewHandler() {
       _ <- Validate.notNullOrEmpty(designDoc, "designDoc")
       _ <- Validate.notNullOrEmpty(viewName, "viewName")
       _ <- Validate.notNull(options, "options")
-      _ <- Validate.optNotNull(options.development, "development")
+      _ <- Validate.optNotNull(options.namespace, "namespace")
       _ <- Validate.optNotNull(options.reduce, "reduce")
       _ <- Validate.optNotNull(options.limit, "limit")
       _ <- Validate.optNotNull(options.group, "group")
       _ <- Validate.optNotNull(options.groupLevel, "groupLevel")
       _ <- Validate.optNotNull(options.inclusiveEnd, "inclusiveEnd")
       _ <- Validate.optNotNull(options.skip, "skip")
-      _ <- Validate.optNotNull(options.stale, "stale")
+      _ <- Validate.optNotNull(options.scanConsistency, "scanConsistency")
       _ <- Validate.optNotNull(options.onError, "onError")
       _ <- Validate.optNotNull(options.debug, "debug")
-      _ <- Validate.optNotNull(options.descending, "descending")
+      _ <- Validate.optNotNull(options.order, "order")
       _ <- Validate.optNotNull(options.key, "key")
       _ <- Validate.optNotNull(options.startKeyDocId, "startKeyDocId")
       _ <- Validate.optNotNull(options.endKeyDocId, "endKeyDocId")
@@ -84,6 +85,11 @@ private[scala] class ViewHandler() {
         val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
         val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
+        val isDevelopment = options.namespace match {
+          case Some(Development) => true
+          case _ => false
+        }
+
         Try(new ViewRequest(timeout,
           core.context(),
           retryStrategy,
@@ -93,7 +99,7 @@ private[scala] class ViewHandler() {
           viewName,
           params,
           bytes.asJava,
-          options.development.getOrElse(false)))
+          isDevelopment))
     }
   }
 }
