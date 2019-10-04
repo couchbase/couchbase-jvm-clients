@@ -22,7 +22,7 @@ import scala.concurrent.duration.Duration
 import scala.collection.JavaConverters._
 import com.couchbase.client.scala.util.DurationConversions._
 
-case class IoConfig(private[scala] val mutationTokensEnabled: Boolean = false,
+case class IoConfig(private[scala] val mutationTokensEnabled: Boolean = true,
                     private[scala] val allowedSaslMechanisms: Option[Set[SaslMechanism]] = None,
                     private[scala] val configPollInterval: Option[Duration] = None,
                     private[scala] val kvCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,

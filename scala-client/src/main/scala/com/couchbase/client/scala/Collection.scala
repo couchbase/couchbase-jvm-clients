@@ -105,6 +105,8 @@ class Collection(
                   bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
+  def name: String = async.name
+
   /** Provides access to a reactive-programming version of this API. */
   val reactive = new ReactiveCollection(async)
 

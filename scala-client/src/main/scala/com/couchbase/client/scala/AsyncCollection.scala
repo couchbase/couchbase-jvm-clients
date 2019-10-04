@@ -56,7 +56,7 @@ case class HandlerParams(core: Core, bucketName: String, collectionIdentifier: C
   * @define Same             This asynchronous version performs the same functionality and takes the same parameters,
   *                          but returns the same result object asynchronously in a `Future`.
   * */
-class AsyncCollection(name: String,
+class AsyncCollection(val name: String,
                       bucketName: String,
                       scopeName: String,
                       val core: Core,

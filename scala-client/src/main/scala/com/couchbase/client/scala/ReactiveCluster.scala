@@ -171,10 +171,10 @@ class ReactiveCluster(val async: AsyncCluster) {
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
-    * @param name the name of the bucket to open
+    * @param bucketName the name of the bucket to open
     */
-  def bucket(name: String): ScalaMono[ReactiveBucket] = {
-    ScalaMono.fromFuture(async.bucket(name)).map(v => new ReactiveBucket(v))
+  def bucket(bucketName: String): ScalaMono[ReactiveBucket] = {
+    ScalaMono.fromFuture(async.bucket(bucketName)).map(v => new ReactiveBucket(v))
   }
 
   /** Shutdown all cluster resources.search

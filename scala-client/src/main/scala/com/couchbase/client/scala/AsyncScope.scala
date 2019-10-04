@@ -50,16 +50,16 @@ class AsyncScope private[scala] (scopeName: String,
   private[scala] def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
-  def collection(name: String): Future[AsyncCollection] = {
-    if (name == CollectionIdentifier.DEFAULT_COLLECTION && scopeName == CollectionIdentifier.DEFAULT_SCOPE) {
+  def collection(collectionName: String): Future[AsyncCollection] = {
+    if (collectionName == CollectionIdentifier.DEFAULT_COLLECTION && scopeName == CollectionIdentifier.DEFAULT_SCOPE) {
       Future {
-        new AsyncCollection(name, bucketName, scopeName, core, environment)
+        new AsyncCollection(collectionName, bucketName, scopeName, core, environment)
       }
     }
     else {
       FutureConverters
         .toScala(core.configurationProvider().refreshCollectionMap(bucketName, false).toFuture)
-        .map(_ => new AsyncCollection(name, bucketName, scopeName, core, environment))
+        .map(_ => new AsyncCollection(collectionName, bucketName, scopeName, core, environment))
     }
   }
 }

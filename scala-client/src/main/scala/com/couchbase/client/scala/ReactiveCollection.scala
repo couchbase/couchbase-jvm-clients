@@ -59,6 +59,8 @@ class ReactiveCollection(async: AsyncCollection) {
 
   import com.couchbase.client.scala.util.DurationConversions._
 
+  def name: String = async.name
+
   /** Inserts a full document into this collection, if it does not exist already.
     *
     * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */

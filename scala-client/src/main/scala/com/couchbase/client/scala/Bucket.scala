@@ -44,12 +44,12 @@ class Bucket private[scala] (val async: AsyncBucket) {
 
   /** Opens a Couchbase collection resource on the default scope.
     *
-    * @param collection the name of the collection
+    * @param collectionName the name of the collection
     * @return a created collection resource
     */
   @Stability.Volatile
-  def collection(collection: String): Collection = {
-    scope(DefaultResources.DefaultScope).collection(collection)
+  def collection(collectionName: String): Collection = {
+    scope(DefaultResources.DefaultScope).collection(collectionName)
   }
 
   /** Returns the Couchbase default collection resource. */
@@ -59,11 +59,11 @@ class Bucket private[scala] (val async: AsyncBucket) {
 
   /** Opens and returns a Couchbase scope resource.
     *
-    * @param name the name of the scope
+    * @param scopeName the name of the scope
     */
   @Stability.Volatile
-  def scope(name: String): Scope = {
-    AsyncUtils.block(async.scope(name))
+  def scope(scopeName: String): Scope = {
+    AsyncUtils.block(async.scope(scopeName))
       .map(asyncScope => new Scope(asyncScope, async.name))
       .get
   }

@@ -47,11 +47,11 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
 
   /** Opens and returns a Couchbase scope resource.
     *
-    * @param name the name of the scope
+    * @param scopeName the name of the scope
     */
   @Stability.Volatile
-  def scope(name: String): Mono[ReactiveScope] = {
-    Mono.fromFuture(async.scope(name)).map(v => new ReactiveScope(v, async.name))
+  def scope(scopeName: String): Mono[ReactiveScope] = {
+    Mono.fromFuture(async.scope(scopeName)).map(v => new ReactiveScope(v, async.name))
   }
 
   /** Opens and returns the default Couchbase scope. */
@@ -67,13 +67,13 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
 
   /** Opens a Couchbase collection resource on the default scope.
     *
-    * @param name the name of the collection
+    * @param collectionName the name of the collection
     *
     * @return a created collection resource
     */
   @Stability.Volatile
-  def collection(name: String): Mono[ReactiveCollection] = {
-    scope(DefaultResources.DefaultScope).flatMap(v => v.collection(name))
+  def collection(collectionName: String): Mono[ReactiveCollection] = {
+    scope(DefaultResources.DefaultScope).flatMap(v => v.collection(collectionName))
   }
 
   /** Performs a view query against the cluster.

@@ -67,10 +67,10 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
-    * @param name the name of the bucket to open
+    * @param bucketName the name of the bucket to open
     */
-  def bucket(name: String): Bucket = {
-    AsyncUtils.block(async.bucket(name))
+  def bucket(bucketName: String): Bucket = {
+    AsyncUtils.block(async.bucket(bucketName))
       .map(new Bucket(_))
       .get
   }

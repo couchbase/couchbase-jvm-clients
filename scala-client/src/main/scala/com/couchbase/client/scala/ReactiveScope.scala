@@ -48,7 +48,7 @@ class ReactiveScope(async: AsyncScope,
   }
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
-  def collection(name: String): Mono[ReactiveCollection] = {
-    Mono.fromFuture(async.collection(name)).map(v => new ReactiveCollection(v))
+  def collection(collectionName: String): Mono[ReactiveCollection] = {
+    Mono.fromFuture(async.collection(collectionName)).map(v => new ReactiveCollection(v))
   }
 }

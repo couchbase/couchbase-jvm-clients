@@ -45,8 +45,8 @@ class Scope private[scala] (val async: AsyncScope,
   def name: String = async.name
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
-  def collection(name: String): Collection = {
-    AsyncUtils.block(async.collection(name))
+  def collection(collectionName: String): Collection = {
+    AsyncUtils.block(async.collection(collectionName))
       .map(asyncCollection => new Collection(asyncCollection, bucketName))
       .get
   }

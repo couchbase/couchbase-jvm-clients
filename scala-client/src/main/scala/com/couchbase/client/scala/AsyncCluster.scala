@@ -79,11 +79,11 @@ class AsyncCluster(environment: => ClusterEnvironment,
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
-    * @param name the name of the bucket to open
+    * @param bucketName the name of the bucket to open
     */
-  def bucket(name: String): Future[AsyncBucket] = {
-    FutureConversions.javaMonoToScalaFuture(core.openBucket(name))
-      .map(v => new AsyncBucket(name, core, environment))
+  def bucket(bucketName: String): Future[AsyncBucket] = {
+    FutureConversions.javaMonoToScalaFuture(core.openBucket(bucketName))
+      .map(v => new AsyncBucket(bucketName, core, environment))
   }
 
   /** Performs a N1QL query against the cluster.
