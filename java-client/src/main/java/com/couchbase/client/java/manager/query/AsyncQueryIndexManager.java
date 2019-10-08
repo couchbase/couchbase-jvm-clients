@@ -131,7 +131,6 @@ public class AsyncQueryIndexManager {
 
     String statement = "SELECT idx.* FROM system:indexes AS idx" +
         " WHERE keyspace_id = \"" + bucketName + "\"" +
-        " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
 
     return exec(READ_ONLY, statement, builtOpts)

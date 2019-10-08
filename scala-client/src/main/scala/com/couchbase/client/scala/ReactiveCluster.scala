@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.error.{AnalyticsException, QueryException}
 import com.couchbase.client.core.msg.query.QueryChunkRow
@@ -26,6 +27,7 @@ import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
+import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.ReactiveQueryResult
 import com.couchbase.client.scala.query.handlers.SearchHandler
@@ -57,10 +59,16 @@ class ReactiveCluster(val async: AsyncCluster) {
   private val env = async.env
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
-  val users = new ReactiveUserManager(async.core)
+  @Stability.Volatile
+  lazy val users = new ReactiveUserManager(async.core)
 
   /** The ReactiveBucketManager provides access to creating and getting buckets. */
-  val buckets = new ReactiveBucketManager(async.core)
+  @Stability.Volatile
+  lazy val buckets = new ReactiveBucketManager(async.core)
+
+  @Stability.Volatile
+  /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
+  lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
 
 
   /** Performs a N1QL query against the cluster.

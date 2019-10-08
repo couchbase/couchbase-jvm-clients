@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoader}
 import com.couchbase.client.core.error.AnalyticsException
 import com.couchbase.client.core.msg.search.SearchRequest
@@ -26,6 +27,7 @@ import com.couchbase.client.core.util.{ConnectionString, ConnectionStringUtil, D
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
@@ -72,10 +74,15 @@ class AsyncCluster(environment: => ClusterEnvironment,
   private val reactiveBucketManager = new ReactiveBucketManager(core)
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
-  val buckets = new AsyncBucketManager(reactiveBucketManager)
+  @Stability.Volatile
+  lazy val buckets = new AsyncBucketManager(reactiveBucketManager)
 
   /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
-  val users = new AsyncUserManager(reactiveUserManager)
+  @Stability.Volatile
+  lazy val users = new AsyncUserManager(reactiveUserManager)
+
+  @Stability.Volatile
+  lazy val queryIndexes = new AsyncQueryIndexManager(this)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

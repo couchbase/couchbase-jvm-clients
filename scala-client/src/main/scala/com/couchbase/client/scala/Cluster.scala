@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.env.{Authenticator, OwnedSupplier, PasswordAuthenticator}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncCluster.{connect, seedNodesFromConnectionString}
@@ -23,6 +24,7 @@ import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -54,16 +56,17 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
   /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)
 
-  private[scala] val reactiveUserManager = new ReactiveUserManager(async.core)
-  private[scala] val asyncUserManager = new AsyncUserManager(reactiveUserManager)
-  private val reactiveBucketManager = new ReactiveBucketManager(async.core)
-  private val asyncBucketManager = new AsyncBucketManager(reactiveBucketManager)
-
   /** The UserManager provides programmatic access to and creation of users and groups. */
-  val users = new UserManager(asyncUserManager, reactiveUserManager)
+  @Stability.Volatile
+  lazy val users = new UserManager(async.users, reactive.users)
 
   /** The BucketManager provides access to creating and getting buckets. */
-  val buckets = new BucketManager(asyncBucketManager)
+  @Stability.Volatile
+  lazy val buckets = new BucketManager(async.buckets)
+
+  @Stability.Volatile
+  lazy val queryIndexes = new QueryIndexManager(async.queryIndexes)
+
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
