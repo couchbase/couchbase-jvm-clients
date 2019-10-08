@@ -20,38 +20,38 @@ import java.util.Objects;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
 /**
- * Value object to contain vbucket UUID and sequence number.
+ * Value object to contain partition details and sequence number.
  *
  * @since 1.2.0
  */
 public class MutationToken {
 
-  private final short vbucketID;
-  private final long vbucketUUID;
+  private final short partitionID;
+  private final long partitionUUID;
   private final long sequenceNumber;
-  private final String bucket;
+  private final String bucketName;
 
-  public MutationToken(short vbucketID, long vbucketUUID, long sequenceNumber, String bucket) {
-    this.vbucketID = vbucketID;
-    this.vbucketUUID = vbucketUUID;
+  public MutationToken(short partitionID, long partitionUUID, long sequenceNumber, String bucketName) {
+    this.partitionID = partitionID;
+    this.partitionUUID = partitionUUID;
     this.sequenceNumber = sequenceNumber;
-    this.bucket = bucket;
+    this.bucketName = bucketName;
   }
 
-  public long vbucketUUID() {
-    return vbucketUUID;
+  public long partitionUUID() {
+    return partitionUUID;
   }
 
   public long sequenceNumber() {
     return sequenceNumber;
   }
 
-  public short vbucketID() {
-    return vbucketID;
+  public short partitionID() {
+    return partitionID;
   }
 
-  public String bucket() {
-    return bucket;
+  public String bucketName() {
+    return bucketName;
   }
 
   @Override
@@ -63,24 +63,24 @@ public class MutationToken {
       return false;
     }
     MutationToken that = (MutationToken) o;
-    return vbucketID == that.vbucketID &&
-        vbucketUUID == that.vbucketUUID &&
+    return partitionID == that.partitionID &&
+        partitionUUID == that.partitionUUID &&
         sequenceNumber == that.sequenceNumber &&
-        Objects.equals(bucket, that.bucket);
+        Objects.equals(bucketName, that.bucketName);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(vbucketID, vbucketUUID, sequenceNumber, bucket);
+    return Objects.hash(partitionID, partitionUUID, sequenceNumber, bucketName);
   }
 
   @Override
   public String toString() {
     return "mt{" +
-        "vbID=" + vbucketID +
-        ", vbUUID=" + vbucketUUID +
+        "vbID=" + partitionID +
+        ", vbUUID=" + partitionUUID +
         ", seqno=" + sequenceNumber +
-        ", bucket=" + redactMeta(bucket) +
+        ", bucket=" + redactMeta(bucketName) +
         '}';
   }
 }

@@ -266,16 +266,16 @@ case class SearchQuery(indexName: String,
   private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
     val result = JsonObjectSafe.create
     for ( token <- tokens ) {
-      val bucket: JsonObjectSafe = result.obj(token.bucket) match {
+      val bucket: JsonObjectSafe = result.obj(token.bucketName) match {
         case Success(bucket) => bucket
         case _ =>
           val out = JsonObjectSafe.create
-          result.put(token.bucket, out)
+          result.put(token.bucketName, out)
           out
       }
 
-      bucket.put(String.valueOf(token.vbucketID),
-        JsonArray(token.sequenceNumber, String.valueOf(token.vbucketUUID)))
+      bucket.put(String.valueOf(token.partitionID),
+        JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID)))
     }
 
     result.o

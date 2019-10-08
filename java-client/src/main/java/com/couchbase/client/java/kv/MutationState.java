@@ -90,7 +90,7 @@ public class MutationState implements Iterable<MutationToken> {
             ListIterator<MutationToken> tokenIterator = tokens.listIterator();
             while (tokenIterator.hasNext()) {
                 MutationToken t = tokenIterator.next();
-                if (t.vbucketID() == token.vbucketID() && t.bucket().equals(token.bucket())) {
+                if (t.partitionID() == token.partitionID() && t.bucketName().equals(token.bucketName())) {
                     if (token.sequenceNumber() > t.sequenceNumber()) {
                         tokenIterator.set(token);
                     }
@@ -116,15 +116,15 @@ public class MutationState implements Iterable<MutationToken> {
     public JsonObject export() {
         JsonObject result = JsonObject.create();
         for (MutationToken token : tokens) {
-            JsonObject bucket = result.getObject(token.bucket());
+            JsonObject bucket = result.getObject(token.bucketName());
             if (bucket == null) {
                 bucket = JsonObject.create();
-                result.put(token.bucket(), bucket);
+                result.put(token.bucketName(), bucket);
             }
 
             bucket.put(
-                String.valueOf(token.vbucketID()),
-                JsonArray.from(token.sequenceNumber(), String.valueOf(token.vbucketUUID()))
+                String.valueOf(token.partitionID()),
+                JsonArray.from(token.sequenceNumber(), String.valueOf(token.partitionUUID()))
             );
         }
         return result;
@@ -138,7 +138,7 @@ public class MutationState implements Iterable<MutationToken> {
     public JsonObject exportForSearch() {
         JsonObject result = JsonObject.create();
         for (MutationToken token : tokens) {
-            String tokenKey = token.vbucketID() + "/" + token.vbucketUUID();
+            String tokenKey = token.partitionID() + "/" + token.partitionUUID();
             Long seqno = result.getLong(tokenKey);
             if (seqno == null || seqno < token.sequenceNumber()) {
                 result.put(tokenKey, token.sequenceNumber());

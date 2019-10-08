@@ -271,16 +271,16 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
       val mutationState = JsonObjectSafe.create
 
       cw.foreach(token => {
-        val bucket: JsonObject = mutationState.obj(token.bucket) match {
+        val bucket: JsonObject = mutationState.obj(token.bucketName) match {
           case Success(bkt) => bkt.o
           case _ =>
             val bkt = JsonObject.create
-            mutationState.put(token.bucket(), bkt)
+            mutationState.put(token.bucketName(), bkt)
             bkt
         }
 
-        bucket.put(token.vbucketID().toString,
-          JsonArray(token.sequenceNumber -> String.valueOf(token.vbucketUUID)))
+        bucket.put(token.partitionID().toString,
+          JsonArray(token.sequenceNumber -> String.valueOf(token.partitionUUID)))
       })
       out.put("scan_vectors", mutationState.o)
       out.put("scan_consistency", "at_plus")

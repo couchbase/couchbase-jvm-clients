@@ -311,15 +311,15 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       if (consistentWith != null) {
         JsonObject mutationState = JsonObject.create();
         for (MutationToken token : consistentWith) {
-          JsonObject bucket = mutationState.getObject(token.bucket());
+          JsonObject bucket = mutationState.getObject(token.bucketName());
           if (bucket == null) {
             bucket = JsonObject.create();
-            mutationState.put(token.bucket(), bucket);
+            mutationState.put(token.bucketName(), bucket);
           }
 
           bucket.put(
-            String.valueOf(token.vbucketID()),
-            JsonArray.from(token.sequenceNumber(), String.valueOf(token.vbucketUUID()))
+            String.valueOf(token.partitionID()),
+            JsonArray.from(token.sequenceNumber(), String.valueOf(token.partitionUUID()))
           );
         }
         queryJson.put("scan_vectors", mutationState);

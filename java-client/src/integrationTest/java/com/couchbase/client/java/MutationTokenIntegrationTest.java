@@ -156,10 +156,10 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   void assertMutationToken(final Optional<MutationToken> token) {
     assertTrue(token.isPresent());
     token.ifPresent(t -> {
-      assertEquals(config().bucketname(), t.bucket());
-      assertTrue(t.vbucketID() >= 0);
+      assertEquals(config().bucketname(), t.bucketName());
+      assertTrue(t.partitionID() >= 0);
       assertTrue(t.sequenceNumber() > 0);
-      assertTrue(t.vbucketUUID() != 0);
+      assertTrue(t.partitionUUID() != 0);
     });
   }
 

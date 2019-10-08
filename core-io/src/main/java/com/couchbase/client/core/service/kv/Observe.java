@@ -73,13 +73,13 @@ public class Observe {
     List<ObserveViaSeqnoRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
       requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, 0, true,
-        mutationToken.vbucketUUID(), id));
+        mutationToken.partitionUUID(), id));
     }
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
         requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, i, false,
-          mutationToken.vbucketUUID(), id));
+          mutationToken.partitionUUID(), id));
       }
     }
 
