@@ -32,6 +32,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -364,6 +367,38 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       KeyNotFoundException.class,
       () -> collection.replace("some_doc", JsonObject.empty())
     );
+  }
+
+  /**
+   *  It seems the mock will not actually upsert a doc when the expiry exceeds 30 days.
+   *  So https://github.com/couchbase/CouchbaseMock/issues/58 needs to be fixed, at
+   *  which time we can remove the restriction on not running this test when mocked.
+   */
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  void checkExpiryBeyond2038() {
+    String id = UUID.randomUUID().toString();
+    JsonObject obj = JsonObject.create().put("foo", true);
+    // well...  to get past 2038, it is now 2019.  So there are about
+    // 60 * 60 * 24 * 360 seconds in a year, and so if we move 30 years
+    // into the future that seems reasonable.  The server claims to use
+    // and unsigned int, which should give 40 years of seconds.
+
+
+    // 30 years in the future...
+    LocalDate future = LocalDate.now().plusYears(30);
+    Duration futureDuration = Duration.ofSeconds(future.atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+
+    // make sure we are not insane.
+    assertTrue(future.getYear() > 2038);
+
+    collection.upsert(id, obj, UpsertOptions.upsertOptions().expiry(futureDuration));
+
+    GetResult result = collection.get(id, GetOptions.getOptions().withExpiry(true));
+    // so lets not calculate it exactly, but 30 years from now should be more
+    // than 360 * 30...
+    LocalDateTime expiry = LocalDateTime.ofEpochSecond(result.expiry().get().getSeconds(), 0, ZoneOffset.UTC);
+    assertEquals(future.getYear(), expiry.getYear());
   }
 
   /**
