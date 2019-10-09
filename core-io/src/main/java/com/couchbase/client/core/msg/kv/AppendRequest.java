@@ -74,7 +74,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
       ByteBuf request;
       if (syncReplicationType.isPresent()) {
         if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
           request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.APPEND, datatype, partition(),
             opaque, cas, flexibleExtras, noExtras(), key, content);
         }

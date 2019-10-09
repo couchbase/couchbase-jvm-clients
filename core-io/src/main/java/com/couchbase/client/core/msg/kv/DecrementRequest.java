@@ -77,7 +77,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
       ByteBuf request;
       if (syncReplicationType.isPresent()) {
         if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
           request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
             partition(), opaque, cas, flexibleExtras, extras, key, noBody());
         }

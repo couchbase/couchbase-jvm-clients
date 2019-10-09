@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
@@ -401,17 +403,23 @@ public enum MemcacheProtocol {
    */
   public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc,
                                                 final DurabilityLevel type,
-                                                final Duration timeout) {
+                                                final Duration timeout,
+                                                final CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
-    int deadline = userTimeout >= UNSIGNED_SHORT_MAX
+    int deadline;
+    if (userTimeout >= UNSIGNED_SHORT_MAX) {
       // -1 because 0xffff is going to be reserved by the cluster. 1ms less doesn't matter.
-      ? UNSIGNED_SHORT_MAX - 1
+      deadline = UNSIGNED_SHORT_MAX - 1;
+      ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
+    } else {
       // per spec 90% of the timeout is used as the deadline
-      : (int) (userTimeout * 0.9);
+      deadline = (int) (userTimeout * 0.9);
+    }
 
     if (deadline < SYNC_REPLICATION_TIMEOUT_FLOOR_MS) {
       deadline = SYNC_REPLICATION_TIMEOUT_FLOOR_MS;
+      ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
     }
 
     ByteBuf flexibleExtras = alloc.buffer(3);

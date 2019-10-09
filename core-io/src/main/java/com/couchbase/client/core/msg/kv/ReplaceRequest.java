@@ -92,7 +92,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
       ByteBuf request;
       if (syncReplicationType.isPresent()) {
         if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
           request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
             opaque, cas, flexibleExtras, extras, key, content);
         }

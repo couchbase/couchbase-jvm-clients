@@ -90,7 +90,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
       ByteBuf request;
       if (syncReplicationType.isPresent()) {
         if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout());
+          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
           request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.ADD, datatype,
             partition(), opaque, noCas(), flexibleExtras, extras, key, content);
         }
