@@ -1,0 +1,120 @@
+= How to Write Javadoc
+
+[abstract]
+A brief guide for style and content.
+
+== Language
+
+All Javadoc is written in English.
+
+== Guiding principles
+
+A Javadoc comment is written in such a way that it is rendered correctly in a web browser.
+
+Excessive formatting is avoided.
+A balance is struck between readable comments in the source code and nicely rendered Javadoc reference material.
+
+
+== Initial sentence
+
+The first sentence of a Javadoc comment briefly summarizes the behavior/purpose of the class, method, or field.
+It is written in the third person, as if it began with "This class/method/field".
+
+.Example:
+```java
+/**
+ * Calculates the discrete cosine transform.
+ */
+```
+
+== Paragraphs
+
+Standalone `<p>` tags are used to separate paragraphs.
+
+.Example:
+```java
+/**
+ * First paragraph.
+ * <p>
+ * Second paragraph.
+ */
+```
+
+== Inline tags
+
+=== link
+
+The `{@link}` inline tag is used the first time a linkable program element is referenced in a Javadoc comment.
+Subsequent references are not linked, and are instead marked up with the `{@code}` inline tag.
+Common classes such as boxed primitives, `String`, `List`, `Set`, `Map`, etc. are not linked.
+
+
+=== code
+
+The `{@code}` inline tag is used to mark up literal phrases, except for the simple literals `true`, `false`, and `null` which are not marked up.
+
+
+=== inheritDoc
+
+The `{@inheritDoc}` inline tag is used only if additional documentation is present.
+It never appears as the sole content of a Javadoc comment.
+
+
+== Code samples
+
+Multi-line code samples and other pre-formatted texts such as ASCII-art tables are enclosed in `<pre>` & `</pre>` tag pairs.
+
+.Example:
+```java
+/**
+ * Sample usage:
+ * <pre>
+ * int foo = someMethod();
+ * int bar = someOtherMethod(foo);
+ * </pre>
+ */
+```
+
+== Lists
+
+Lists are expressed using `<ol>` or `<ul>` tag pairs.
+Closing `<li`> tags are omitted.
+
+.Example:
+```java
+/**
+ * <ol>
+ * <li>It's just a jump to the left
+ * <li>And then a step to the right
+ * </ol>
+ */
+```
+
+== Asynchronous exceptions
+
+Javadoc for methods returning `CompletableFuture`, `Flux`, and `Mono` uses the `@throws` tag for each exception expected to be thrown asynchronously.
+The description of an asynchronous exception is prefixed with "(async) ".
+
+.Example:
+```java
+/**
+ * Asynchronously perform all tasks for a given day of the week.
+ *
+ * @param dayOfWeek integer in the range [0,6] where 0 = Monday
+ * @throws IllegalArgumentException if dayOfWeek is outside valid range
+ * @throws TaskFailedException (async) if async processing fails
+ */
+```
+
+== Nullability
+
+If `null` is a valid value for a parameter or return value, this is indicated by prefixing the description with "(nullable) ".
+The description should include a statement of how a null parameter is interpreted, or under what circumstances null is returned.
+
+.Example:
+```java
+/**
+ * @param foo (nullable) If null, the global default is used instead.
+ * @returns (nullable) Something or other, or null if the given foo is null and there is no global default.
+ */
+```
