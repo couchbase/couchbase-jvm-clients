@@ -22,7 +22,7 @@ import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv.handlers.RequestHandler
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
   *              opened in the normal way, starting from functions in [[Cluster]]
   *
   * @define Same             This reactive version performs the same functionality and takes the same parameters,
-  *                          but returns the same result object asynchronously in a `Mono`.
+  *                          but returns the same result object asynchronously in a `SMono`.
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -48,7 +48,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   private[scala] val kvTimeout = async.kvTimeout
   private[scala] val environment = async.environment
 
-  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): Mono[Res] = {
+  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): SMono[Res] = {
     in match {
       case Success(request) =>
         async.async.core.send[Resp](request)
@@ -56,7 +56,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
         FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
           .map(r => handler.response(id, r))
 
-      case Failure(err) => Mono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 

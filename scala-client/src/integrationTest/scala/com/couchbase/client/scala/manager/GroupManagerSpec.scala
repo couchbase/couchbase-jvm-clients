@@ -1,21 +1,13 @@
 package com.couchbase.client.scala.manager
 
-import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
-import com.couchbase.client.scala.util.CouchbasePickler._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test._
-import com.couchbase.mock.deps.org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
-import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider
-import com.couchbase.mock.deps.org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import com.couchbase.mock.deps.org.apache.http.impl.client.{BasicCredentialsProvider, CloseableHttpClient, HttpClientBuilder}
-import com.couchbase.mock.deps.org.apache.http.util.EntityUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
@@ -53,8 +45,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   private def dropUserQuietly(name: String): Unit = {
     users.dropUser(name)
       .onErrorResume(err => {
-        if (err.isInstanceOf[UserNotFoundException]) Mono.empty
-        else Mono.error(err)
+        if (err.isInstanceOf[UserNotFoundException]) SMono.empty
+        else SMono.raiseError(err)
       })
       .block()
   }
@@ -62,8 +54,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   private def dropGroupQuietly(groupName: String): Unit = {
     users.dropGroup(groupName)
       .onErrorResume(err => {
-        if (err.isInstanceOf[GroupNotFoundException]) Mono.empty
-        else Mono.error(err)
+        if (err.isInstanceOf[GroupNotFoundException]) SMono.empty
+        else SMono.raiseError(err)
       })
       .block()
   }

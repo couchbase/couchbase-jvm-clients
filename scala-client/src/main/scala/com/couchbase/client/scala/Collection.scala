@@ -16,24 +16,19 @@
 
 package com.couchbase.client.scala
 
-import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.datastructures._
-import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability.Durability
+import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import reactor.core.scala.publisher.Mono
-//import com.couchbase.client.scala.query.N1qlQueryResult
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.reflect.runtime.universe._
+import scala.util.{Failure, Try}
 
 object Collection {
   private[scala] def block[T](in: Future[T]): Try[T] = {

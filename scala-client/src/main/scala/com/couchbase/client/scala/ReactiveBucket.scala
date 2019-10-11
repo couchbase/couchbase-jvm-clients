@@ -21,11 +21,10 @@ import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.scala.query.handlers.ViewHandler
 import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.view._
-import reactor.core.scala.publisher.Mono
-import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase bucket resource.
@@ -50,18 +49,18 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     * @param scopeName the name of the scope
     */
   @Stability.Volatile
-  def scope(scopeName: String): Mono[ReactiveScope] = {
-    Mono.fromFuture(async.scope(scopeName)).map(v => new ReactiveScope(v, async.name))
+  def scope(scopeName: String): SMono[ReactiveScope] = {
+    SMono.fromFuture(async.scope(scopeName)).map(v => new ReactiveScope(v, async.name))
   }
 
   /** Opens and returns the default Couchbase scope. */
   @Stability.Volatile
-  def defaultScope: Mono[ReactiveScope] = {
+  def defaultScope: SMono[ReactiveScope] = {
     scope(DefaultResources.DefaultScope)
   }
 
   /** Returns the Couchbase default collection resource. */
-  def defaultCollection: Mono[ReactiveCollection] = {
+  def defaultCollection: SMono[ReactiveCollection] = {
     scope(DefaultResources.DefaultScope).flatMap(v => v.defaultCollection)
   }
 
@@ -72,7 +71,7 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     * @return a created collection resource
     */
   @Stability.Volatile
-  def collection(collectionName: String): Mono[ReactiveCollection] = {
+  def collection(collectionName: String): SMono[ReactiveCollection] = {
     scope(DefaultResources.DefaultScope).flatMap(v => v.collection(collectionName))
   }
 
@@ -89,22 +88,22 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     */
   def viewQuery(designDoc: String,
                 viewName: String,
-                options: ViewOptions = ViewOptions()): Mono[ReactiveViewResult] = {
+                options: ViewOptions = ViewOptions()): SMono[ReactiveViewResult] = {
     val req = viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
     viewQuery(req)
   }
 
-  private def viewQuery(req: Try[ViewRequest]): Mono[ReactiveViewResult] = {
+  private def viewQuery(req: Try[ViewRequest]): SMono[ReactiveViewResult] = {
     req match {
       case Failure(err) =>
-        Mono.error(err)
+        SMono.raiseError(err)
 
       case Success(request) =>
 
         FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
 
-            val rows: ScalaFlux[ViewRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
+            val rows: SFlux[ViewRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
 
               .map[ViewRow](bytes => ViewRow(bytes.data()))
 
@@ -116,8 +115,8 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
                 case Some(err) =>
                   val msg = "Encountered view error '" + err.error() + "' with reason '" + err.reason() + "'"
                   val error = new ViewServiceException(msg)
-                  Mono.error(error)
-                case _ => Mono.empty
+                  SMono.raiseError(error)
+                case _ => SMono.empty
               }
             })
 
@@ -125,7 +124,7 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
               response.header().debug().asScala.map(v => ViewDebug(v)),
               response.header().totalRows())
 
-            ReactiveViewResult(Mono.just(meta), rows)
+            ReactiveViewResult(SMono.just(meta), rows)
           })
     }
   }

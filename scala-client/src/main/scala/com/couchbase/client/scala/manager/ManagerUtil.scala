@@ -25,15 +25,15 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
+import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import com.couchbase.client.scala.util.DurationConversions._
 
 object ManagerUtil {
-   def sendRequest(core: Core, request: GenericManagerRequest): Mono[GenericManagerResponse] = {
+   def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
     core.send(request)
     FutureConversions.javaCFToScalaMono(request, request.response, true)
   }
@@ -42,7 +42,7 @@ object ManagerUtil {
                           method: HttpMethod,
                           path: String,
                           timeout: Duration,
-                          retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
+                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
      val idempotent = method == HttpMethod.GET
     sendRequest(core, new GenericManagerRequest(
       timeout,
@@ -57,7 +57,7 @@ object ManagerUtil {
                           path: String,
                           body: UrlQueryStringBuilder,
                           timeout: Duration,
-                          retryStrategy: RetryStrategy): Mono[GenericManagerResponse] = {
+                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
      val idempotent = method == HttpMethod.GET
     sendRequest(core, new GenericManagerRequest(timeout,
       core.context,

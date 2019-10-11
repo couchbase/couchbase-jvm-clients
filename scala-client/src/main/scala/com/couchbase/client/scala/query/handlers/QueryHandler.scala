@@ -17,30 +17,28 @@
 package com.couchbase.client.scala.query.handlers
 
 import java.nio.charset.StandardCharsets
-import java.util
-import java.util.{Collections, Map, Set}
+import java.util.Collections
 
-import com.couchbase.client.core.{Core, Reactor}
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.{CouchbaseException, QueryException}
+import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
 import com.couchbase.client.core.util.LRUCache
-import com.couchbase.client.scala.codec.{Conversions, DocumentFlags}
+import com.couchbase.client.core.{Core, Reactor}
+import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
-import reactor.core.scala.publisher.{Flux, Mono}
-import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import scala.compat.java8.OptionConverters._
 
 
 /**
@@ -143,9 +141,9 @@ private[scala] class QueryHandler(core: Core) {
     * @return a ReactiveQueryResult
     */
   private def convertResponse(response: QueryResponse): ReactiveQueryResult = {
-    val rows: Flux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
+    val rows: SFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
 
-    val meta: Mono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+    val meta: SMono[QueryMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
       .map(addl => {
         QueryMeta(
           response.header().requestId(),
@@ -196,7 +194,7 @@ private[scala] class QueryHandler(core: Core) {
     *
     * @return the mono once the result is complete.
     */
-  private def maybePrepareAndExecute(request: QueryRequest, options: QueryOptions): Mono[QueryResponse] = {
+  private def maybePrepareAndExecute(request: QueryRequest, options: QueryOptions): SMono[QueryResponse] = {
     val cacheEntry = queryCache.get(request.statement)
     val enhancedEnabled = enhancedPreparedEnabled
 
@@ -208,19 +206,19 @@ private[scala] class QueryHandler(core: Core) {
         .flatMap((qr: QueryResponse) => {
           val preparedName = qr.header().prepared()
           if (!preparedName.isPresent) {
-            Mono.error(new CouchbaseException("No prepared name present but must be, this is a query bug!"))
+            SMono.raiseError(new CouchbaseException("No prepared name present but must be, this is a query bug!"))
           }
           else {
             queryCache.put(
               request.statement(),
               QueryCacheEntry(preparedName.get(), fullPlan = false, None)
             )
-            return Mono.just(qr)
+            return SMono.just(qr)
           }
         })
     }
     else {
-      Mono.defer(() => {
+      SMono.defer(() => {
         val req = buildPrepareRequest(request, options)
         core.send(req)
         FutureConversions.javaMonoToScalaMono(Reactor.wrap(req, req.response, true))
@@ -245,7 +243,7 @@ private[scala] class QueryHandler(core: Core) {
 
         .`then`()
 
-        .`then`(Mono.defer(() => maybePrepareAndExecute(request, options)))
+        .`then`(SMono.defer(() => maybePrepareAndExecute(request, options)))
 
         .onErrorResume(err => {
           // The logic here is that if the prepare-execute
@@ -264,7 +262,7 @@ private[scala] class QueryHandler(core: Core) {
     *
     * @return the mono once the result is complete.
     */
-  private def queryReactive(request: QueryRequest, options: QueryOptions): Mono[ReactiveQueryResult] = {
+  private def queryReactive(request: QueryRequest, options: QueryOptions): SMono[ReactiveQueryResult] = {
     queryInternal(request, options, options.adhoc)
       .map(v => convertResponse(v))
   }
@@ -335,10 +333,10 @@ private[scala] class QueryHandler(core: Core) {
    */
   def queryReactive(statement: String,
                     options: QueryOptions,
-                    environment: ClusterEnvironment): Mono[ReactiveQueryResult] = {
+                    environment: ClusterEnvironment): SMono[ReactiveQueryResult] = {
     request(statement, options, environment) match {
       case Success(req) => queryReactive(req, options)
-      case Failure(err) => Mono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 

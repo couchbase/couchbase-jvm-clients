@@ -18,17 +18,14 @@ package com.couchbase.client.scala.manager
 import java.util.UUID
 
 import com.couchbase.client.core.error.KeyNotFoundException
-import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.bucket._
-import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
-import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
+import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.Util.waitUntilThrows
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.Mono
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))

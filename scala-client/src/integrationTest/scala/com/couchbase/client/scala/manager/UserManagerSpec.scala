@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.manager
 
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
 import com.couchbase.client.scala.util.CouchbasePickler._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -15,7 +14,7 @@ import com.couchbase.mock.deps.org.apache.http.util.EntityUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
@@ -58,8 +57,8 @@ class UserManagerSpec extends ScalaIntegrationTest {
   private def dropUserQuietly(name: String): Unit = {
     users.dropUser(name)
       .onErrorResume(err => {
-        if (err.isInstanceOf[UserNotFoundException]) Mono.empty
-        else Mono.error(err)
+        if (err.isInstanceOf[UserNotFoundException]) SMono.empty
+        else SMono.raiseError(err)
       })
       .block()
   }

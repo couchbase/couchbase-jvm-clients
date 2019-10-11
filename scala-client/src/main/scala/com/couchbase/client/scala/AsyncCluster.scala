@@ -19,11 +19,11 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoader}
+import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.error.AnalyticsException
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.{ConnectionString, ConnectionStringUtil, DnsSrv}
+import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
@@ -35,13 +35,13 @@ import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
+import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -125,8 +125,6 @@ class AsyncCluster(environment: => ClusterEnvironment,
       case Success(request) =>
         core.send(request)
 
-        import reactor.core.scala.publisher.{Mono => ScalaMono}
-
         val ret: Future[AnalyticsResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
           propagateCancellation = true)
           .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows())
@@ -148,8 +146,8 @@ class AsyncCluster(environment: => ClusterEnvironment,
           )
           .onErrorResume(err => {
             err match {
-              case e: AnalyticsException => ScalaMono.error(AnalyticsError(e.content))
-              case _ => ScalaMono.error(err)
+              case e: AnalyticsException => SMono.raiseError(AnalyticsError(e.content))
+              case _ => SMono.raiseError(err)
             }
           }).toFuture
 
@@ -197,7 +195,7 @@ class AsyncCluster(environment: => ClusterEnvironment,
           env.shutdownReactive()
         }
         else {
-          Mono.empty[Unit]
+          SMono.empty[Unit]
         }
       })
       .toFuture

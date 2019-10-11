@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.search.SearchChunkRow
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.JsonObjectSafe
-import reactor.core.scala.publisher.{Flux, Mono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -71,13 +71,13 @@ case class SearchResult(private[scala] val _rows: Seq[SearchQueryRow],
   *                        rows, it will be raised on this Flux
   * @param meta            any additional information related to the FTS query
   */
-case class ReactiveSearchResult(private[scala] val rows: Flux[SearchChunkRow],
-                                meta: Mono[SearchMeta]) {
+case class ReactiveSearchResult(private[scala] val rows: SFlux[SearchChunkRow],
+                                meta: SMono[SearchMeta]) {
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
     */
-  def rowsAs[T](implicit ev: Conversions.Decodable[T]): Flux[T] = {
+  def rowsAs[T](implicit ev: Conversions.Decodable[T]): SFlux[T] = {
     rows.map(row => ev.decode(row.data(), Conversions.JsonFlags) match {
       case Success(v) => v
       case Failure(err) => throw err

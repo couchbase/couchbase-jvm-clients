@@ -21,11 +21,9 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.util.{FunctionalUtil, RowTraversalUtil}
-import reactor.core.scala.publisher.{Flux, Mono}
+import com.couchbase.client.scala.util.RowTraversalUtil
+import reactor.core.scala.publisher.{SFlux, SMono}
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 /** The results of an Analytics query.
@@ -74,13 +72,13 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
   *                        be raised on this Flux
   * @param meta            any additional information related to the Analytics query
   */
-case class ReactiveAnalyticsResult(private[scala] val rows: Flux[AnalyticsChunkRow],
-                                   meta: Mono[AnalyticsMeta]) {
+case class ReactiveAnalyticsResult(private[scala] val rows: SFlux[AnalyticsChunkRow],
+                                   meta: SMono[AnalyticsMeta]) {
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
     */
-  def rowsAs[T](implicit ev: Conversions.Decodable[T]): Flux[T] = {
+  def rowsAs[T](implicit ev: Conversions.Decodable[T]): SFlux[T] = {
     rows.map(row => ev.decode(row.data(), Conversions.JsonFlags) match {
       case Success(v) => v
       case Failure(err) => throw err

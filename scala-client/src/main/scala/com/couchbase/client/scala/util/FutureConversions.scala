@@ -20,15 +20,12 @@ import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 
 import com.couchbase.client.core.msg.{CancellationReason, Request}
-import com.couchbase.client.scala.query.QueryResult
-import reactor.core.publisher.SignalType
+import reactor.core.publisher.{SignalType, Flux => JavaFlux, Mono => JavaMono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.Future
-import reactor.core.publisher.{Flux => JavaFlux, Mono => JavaMono}
-import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
-
 import scala.compat.java8.FutureConverters._
+import scala.concurrent.Future
 
 /** Convert between Java and Scala async and reactive APIs.
   *
@@ -46,19 +43,19 @@ private[scala] object FutureConversions {
     FutureConverters.toScala(in.toFuture)
   }
 
-  def javaMonoToScalaMono[T](in: JavaMono[T]): ScalaMono[T] = {
-    ScalaMono.from(in)
+  def javaMonoToScalaMono[T](in: JavaMono[T]): SMono[T] = {
+    SMono(in)
   }
 
-  def javaFluxToScalaFlux[T](in: JavaFlux[T]): ScalaFlux[T] = {
-    ScalaFlux.from(in)
+  def javaFluxToScalaFlux[T](in: JavaFlux[T]): SFlux[T] = {
+    SFlux(in)
   }
 
   def javaCFToScalaMono[T](request: Request[_],
                            response: CompletableFuture[T],
-                           propagateCancellation: Boolean): ScalaMono[T] = {
+                           propagateCancellation: Boolean): SMono[T] = {
     val javaMono = JavaMono.fromFuture(response)
-    val scalaMono = ScalaMono.from(javaMono)
+    val scalaMono = SMono(javaMono)
 
     if (propagateCancellation) {
       scalaMono.doFinally(st => {

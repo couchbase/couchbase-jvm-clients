@@ -17,11 +17,11 @@
 package com.couchbase.client.scala.view
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.logging.RedactableArgument.redactUser
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transformers.JacksonTransformers
-import reactor.core.scala.publisher.{Flux, Mono}
-import com.couchbase.client.core.logging.RedactableArgument.redactUser
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.util.{Success, Try}
 
@@ -42,8 +42,8 @@ case class ViewResult(meta: ViewMetaData,
   *                        rows, it will be raised on this Flux
   * @param meta            contains additional information related to the view.
   */
-case class ReactiveViewResult(meta: Mono[ViewMetaData],
-                              rows: Flux[ViewRow])
+case class ReactiveViewResult(meta: SMono[ViewMetaData],
+                              rows: SFlux[ViewRow])
 
 /** An individual view result row.
   *

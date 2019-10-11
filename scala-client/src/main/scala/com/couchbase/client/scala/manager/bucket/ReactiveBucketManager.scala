@@ -30,7 +30,7 @@ import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.util.CouchbasePickler
 import com.couchbase.client.scala.util.DurationConversions._
-import reactor.core.scala.publisher.{Flux, Mono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.Failure
@@ -59,7 +59,7 @@ class ReactiveBucketManager(core: Core) {
 
   def create(settings: CreateBucketSettings,
              timeout: Duration = defaultManagerTimeout,
-             retryStrategy: RetryStrategy = defaultRetryStrategy): Mono[Unit] = {
+             retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
     createUpdateBucketShared(settings, pathForBuckets, timeout, retryStrategy, update = false)
   }
 
@@ -67,7 +67,7 @@ class ReactiveBucketManager(core: Core) {
                                        path: String,
                                        timeout: Duration,
                                        retryStrategy: RetryStrategy,
-                                       update: Boolean): Mono[Unit] = {
+                                       update: Boolean): SMono[Unit] = {
     val params = convertSettingsToParams(settings, update)
 
     ManagerUtil.sendRequest(core, POST, path, params, timeout, retryStrategy)
@@ -75,16 +75,16 @@ class ReactiveBucketManager(core: Core) {
         if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
           val content = new String(response.content, StandardCharsets.UTF_8)
           if (content.contains("Bucket with given name already exists")) {
-            Mono.error(new BucketAlreadyExistsException(settings.name))
+            SMono.raiseError(new BucketAlreadyExistsException(settings.name))
           }
           else {
-            Mono.error(new CouchbaseException(content))
+            SMono.raiseError(new CouchbaseException(content))
           }
         }
         else {
           ManagerUtil.checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
-            case Failure(err) => Mono.error(err)
-            case _ => Mono.just(0)
+            case Failure(err) => SMono.raiseError(err)
+            case _ => SMono.just(0)
           }
         }
       })
@@ -92,7 +92,7 @@ class ReactiveBucketManager(core: Core) {
 
   def updateBucket(settings: CreateBucketSettings,
                    timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Mono[Unit] = {
+                   retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
 
     getAllBuckets(timeout, retryStrategy)
         .collectSeq()
@@ -122,16 +122,16 @@ class ReactiveBucketManager(core: Core) {
 
   def dropBucket(bucketName: String,
                  timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): Mono[Unit] = {
+                 retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
     ManagerUtil.sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          Mono.error(new BucketNotFoundException(bucketName))
+          SMono.raiseError(new BucketNotFoundException(bucketName))
         }
         else {
           ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => Mono.error(err)
-            case _ => Mono.just(0)
+            case Failure(err) => SMono.raiseError(err)
+            case _ => SMono.just(0)
           }
         }
       })
@@ -139,18 +139,18 @@ class ReactiveBucketManager(core: Core) {
 
   def getBucket(bucketName: String,
                 timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Mono[BucketSettings] = {
+                retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[BucketSettings] = {
     ManagerUtil.sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          Mono.error(new BucketNotFoundException(bucketName))
+          SMono.raiseError(new BucketNotFoundException(bucketName))
         }
         else {
           ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => Mono.error(err)
+            case Failure(err) => SMono.raiseError(err)
             case _ =>
               val value = CouchbasePickler.read[BucketSettings](response.content)
-              Mono.just(value)
+              SMono.just(value)
           }
         }
       })
@@ -158,30 +158,30 @@ class ReactiveBucketManager(core: Core) {
 
 
   def getAllBuckets(timeout: Duration = defaultManagerTimeout,
-                    retryStrategy: RetryStrategy = defaultRetryStrategy): Flux[BucketSettings] = {
+                    retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[BucketSettings] = {
     ManagerUtil.sendRequest(core, GET, pathForBuckets, timeout, retryStrategy)
       .flatMapMany(response => {
         ManagerUtil.checkStatus(response, "get all buckets") match {
-          case Failure(err) => Flux.error(err)
+          case Failure(err) => SFlux.raiseError(err)
           case _ =>
             val value = CouchbasePickler.read[Seq[BucketSettings]](response.content)
-            Flux.fromIterable(value)
+            SFlux.fromIterable(value)
         }
       })
   }
 
   def flushBucket(bucketName: String,
                   timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Mono[Unit] = {
+                  retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
     ManagerUtil.sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          Mono.error(new BucketNotFoundException(bucketName))
+          SMono.raiseError(new BucketNotFoundException(bucketName))
         }
         else {
           ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => Mono.error(err)
-            case _ => Mono.just(0)
+            case Failure(err) => SMono.raiseError(err)
+            case _ => SMono.just(0)
           }
         }
       })

@@ -17,27 +17,22 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
-import com.couchbase.client.core.error.{AnalyticsException, QueryException}
-import com.couchbase.client.core.msg.query.QueryChunkRow
+import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
-import com.couchbase.client.scala.Cluster.connect
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
-import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.ReactiveQueryResult
+import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query.handlers.SearchHandler
+import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMeta}
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.{Flux => ScalaFlux, Mono => ScalaMono}
+import reactor.core.scala.publisher.SMono
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -82,7 +77,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return a `Mono` containing a [[query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     **/
-  def query(statement: String, options: QueryOptions = QueryOptions()): ScalaMono[ReactiveQueryResult] = {
+  def query(statement: String, options: QueryOptions = QueryOptions()): SMono[ReactiveQueryResult] = {
     async.queryHandler.queryReactive(statement, options, env)
   }
 
@@ -98,7 +93,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *         returned rows
     */
   def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions())
-  : ScalaMono[ReactiveAnalyticsResult] = {
+  : SMono[ReactiveAnalyticsResult] = {
     async.analyticsHandler.request(statement, options, async.core, async.env) match {
       case Success(request) =>
 
@@ -106,7 +101,7 @@ class ReactiveCluster(val async: AsyncCluster) {
 
         FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: ScalaMono[AnalyticsMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[AnalyticsMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(trailer => {
                 AnalyticsMeta(
                   response.header().requestId(),
@@ -126,7 +121,7 @@ class ReactiveCluster(val async: AsyncCluster) {
             )
           })
 
-      case Failure(err) => ScalaMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -146,7 +141,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     */
   def searchQuery(query: SearchQuery,
                   timeout: Duration = async.searchTimeout,
-                  retryStrategy: RetryStrategy = async.retryStrategy): ScalaMono[ReactiveSearchResult] = {
+                  retryStrategy: RetryStrategy = async.retryStrategy): SMono[ReactiveSearchResult] = {
     async.searchHandler.request(query, timeout, retryStrategy, async.core, async.env) match {
       case Success(request) =>
 
@@ -154,7 +149,7 @@ class ReactiveCluster(val async: AsyncCluster) {
 
         FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: ScalaMono[SearchMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[SearchMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(trailer => {
                 val rawStatus = response.header.getStatus
                 val errors = SearchHandler.parseSearchErrors(rawStatus)
@@ -173,7 +168,7 @@ class ReactiveCluster(val async: AsyncCluster) {
           })
 
       case Failure(err) =>
-        ScalaMono.error(err)
+        SMono.raiseError(err)
     }
   }
 
@@ -181,22 +176,22 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @param bucketName the name of the bucket to open
     */
-  def bucket(bucketName: String): ScalaMono[ReactiveBucket] = {
-    ScalaMono.fromFuture(async.bucket(bucketName)).map(v => new ReactiveBucket(v))
+  def bucket(bucketName: String): SMono[ReactiveBucket] = {
+    SMono.fromFuture(async.bucket(bucketName)).map(v => new ReactiveBucket(v))
   }
 
   /** Shutdown all cluster resources.search
     *
     * This should be called before application exit.
     */
-  def disconnect(): ScalaMono[Unit] = {
+  def disconnect(): SMono[Unit] = {
     FutureConversions.javaMonoToScalaMono(async.core.shutdown())
-      .then(ScalaMono.defer(() => {
+      .`then`(SMono.defer(() => {
         if (env.owned) {
           env.shutdownReactive()
         }
         else {
-          ScalaMono.empty[Unit]
+          SMono.empty[Unit]
         }
       }))
   }
@@ -219,7 +214,7 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, username: String, password: String): ScalaMono[ReactiveCluster] = {
+  def connect(connectionString: String, username: String, password: String): SMono[ReactiveCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
@@ -232,13 +227,13 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, options: ClusterOptions): ScalaMono[ReactiveCluster] = {
+  def connect(connectionString: String, options: ClusterOptions): SMono[ReactiveCluster] = {
     extractClusterEnvironment(connectionString, options) match {
       case Success(ce) =>
         implicit val ec = ce.ec
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        ScalaMono.just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
-      case Failure(err) => ScalaMono.error(err)
+        SMono.just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 

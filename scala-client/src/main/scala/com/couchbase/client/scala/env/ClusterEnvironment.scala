@@ -19,11 +19,11 @@ package com.couchbase.client.scala.env
 import java.util.concurrent.{Executors, ThreadFactory}
 
 import com.couchbase.client.core
-import com.couchbase.client.core.env.{Authenticator, ConnectionStringPropertyLoader}
+import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.Mono
+import reactor.core.scala.publisher.SMono
 import reactor.core.scala.scheduler.ExecutionContextScheduler
 
 import scala.concurrent.ExecutionContext
@@ -203,13 +203,13 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     */
   def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = shutdownReactive(timeout).block()
 
-  def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Mono[Unit] = {
+  def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): SMono[Unit] = {
     FutureConversions.javaMonoToScalaMono(coreEnv
       .shutdownReactive(timeout))
-      .then(Mono.defer[Unit](() => {
+      .then(SMono.defer[Unit](() => {
         threadPool.shutdownNow()
         defaultScheduler.dispose()
-        Mono.empty
+        SMono.empty
       }))
       .timeout(timeout)
   }

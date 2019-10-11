@@ -18,11 +18,11 @@ package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryResponse}
+import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.util.{FunctionalUtil, RowTraversalUtil}
-import reactor.core.scala.publisher.{Flux, Mono}
+import com.couchbase.client.scala.util.RowTraversalUtil
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.util.{Failure, Success, Try}
 
@@ -69,15 +69,15 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
   *
   * @param meta            any additional information related to the query
   */
-case class ReactiveQueryResult(private[scala] val rows: Flux[QueryChunkRow],
-                               meta: Mono[QueryMeta]) {
+case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
+                               meta: SMono[QueryMeta]) {
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.
     *
     * $SupportedTypes
     */
   def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): Flux[T] = {
+  (implicit ev: Conversions.Decodable[T]): SFlux[T] = {
     rows.map(row => {
       // The .get will raise an exception as .onError on the flux
       ev.decode(row.data(), Conversions.JsonFlags).get

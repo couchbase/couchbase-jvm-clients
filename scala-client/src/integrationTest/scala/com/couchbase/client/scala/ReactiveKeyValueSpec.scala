@@ -1,16 +1,13 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
-import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.{Mono => ScalaMono}
+import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -36,7 +33,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
-  def wrap[T](in: ScalaMono[T]): Try[T] = {
+  def wrap[T](in: SMono[T]): Try[T] = {
     try {
       Success(in.block())
     }

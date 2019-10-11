@@ -30,9 +30,7 @@ import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.{FutureConversions, RowTraversalUtil}
-import org.reactivestreams.Publisher
-import reactor.core.Exceptions
-import reactor.core.scala.publisher.{Flux, Mono}
+import reactor.core.scala.publisher.SMono
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, _}
@@ -235,8 +233,8 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)
     import reactor.core.scala.publisher.PimpMyPublisher._
 
     FutureConversions.javaMonoToScalaMono(
-      Mono.defer(() => {
-        Mono.fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
+      SMono.defer(() => {
+        SMono.fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
           .doOnNext((allIndexes: Seq[QueryIndex]) => {
 
             val matchingIndexes: Seq[QueryIndex] = allIndexes
@@ -268,12 +266,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)
 
         .retryWhen(Retry.onlyIf((ctx: RetryContext[Unit]) => hasCause(ctx.exception, classOf[IndexesNotReadyException]))
           .exponentialBackoff(50.milliseconds, 1.seconds)
-          .timeout(timeout)))
+          .timeout(timeout))
 
-      .onErrorMap(err => {
-        if (err.isInstanceOf[RetryExhaustedException]) toWatchTimeoutException(err, timeout)
-        else err
-      })
+        .onErrorMap(err => {
+          if (err.isInstanceOf[RetryExhaustedException]) toWatchTimeoutException(err, timeout)
+          else err
+        }))
 
       .toFuture
       .map(_ => Unit)
