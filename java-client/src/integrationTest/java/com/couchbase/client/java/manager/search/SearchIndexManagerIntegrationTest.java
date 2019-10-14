@@ -70,6 +70,17 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  void upsertTwice() throws Exception {
+    String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
+    SearchIndex index = new SearchIndex(name, config().bucketname());
+    indexes.upsertIndex(index);
+
+    SearchIndex foundIndex = indexes.getIndex(name);
+
+    indexes.upsertIndex(foundIndex);
+  }
+
+  @Test
   void getAllIndexes() {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());

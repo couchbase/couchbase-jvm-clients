@@ -135,6 +135,10 @@ public class SearchIndex {
 
   public String toJson() {
     Map<String, Object> output = new HashMap<>();
+    // A UUID is server-assigned.  It must be specified on an update, and must not be specified on a create.
+    if (uuid != null) {
+      output.put("uuid", uuid);
+    }
     output.put("name", name);
     output.put("sourceName", sourceName);
     output.put("type", type == null ? "fulltext-index" : type);
