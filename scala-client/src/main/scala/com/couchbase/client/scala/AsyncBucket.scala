@@ -15,11 +15,19 @@
  */
 package com.couchbase.client.scala
 
+import java.util.UUID
+
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.diag.{HealthPinger, PingResult}
+import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
+import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Represents a Couchbase bucket resource.
@@ -39,6 +47,7 @@ class AsyncBucket private[scala](val name: String,
                                  private[scala] val core: Core,
                                  private[scala] val environment: ClusterEnvironment) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
+  private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig.kvTimeout())
   val reactive = new ReactiveBucket(this)
 
   /** Opens and returns a Couchbase scope resource.
@@ -102,6 +111,38 @@ class AsyncBucket private[scala](val name: String,
       .toFuture
   }
 
+  /** Performs a diagnostic active "ping" call against one or more services.
+    *
+    * Note that since each service has different timeouts, you need to provide a timeout that suits
+    * your needs (how long each individual service ping should take max before it times out).
+    *
+    * @param services        which services to ping.  Default (an empty Seq) means to fetch all of them.
+    * @param reportId        this will be returned in the [[PingResult]].  If not specified it defaults to a UUID.
+    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()`
+    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to
+    *                        FailFastRetryStrategy.
+    *
+    * @return a ping report once created.
+    */
+  @Stability.Volatile
+  def ping(services: Seq[ServiceType] = Seq(),
+           reportId: String = UUID.randomUUID.toString,
+           timeout: Duration = kvTimeout,
+           retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE): Future[PingResult] = {
+    import scala.collection.JavaConverters._
+    import com.couchbase.client.scala.util.DurationConversions._
+
+    val future = HealthPinger.ping(environment.coreEnv,
+      name,
+      core,
+      reportId,
+      timeout,
+      retryStrategy,
+      if (services.isEmpty) null else services.asJava).toFuture
+
+    FutureConversions.javaCFToScalaFuture(future)
+  }
 }
 
 

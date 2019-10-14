@@ -75,8 +75,6 @@ public class HealthPinger {
           final RetryStrategy retryStrategy,
           final List<ServiceType> types) {
 
-    //        List<Mono<PingServiceHealth>> services = new ArrayList<>();
-
     List<Mono<PingServiceHealth>> services = new ArrayList<>();
 
     core.clusterConfig()
