@@ -98,10 +98,9 @@ public class HealthPinger {
                                     case VIEWS:
                                       services.add(pingViews(bucket, core, timeout, retryStrategy));
                                       break;
-                                      // TODO
-//                                    case SEARCH:
-//                                      services.add(pingSearch(bucket, core, timeout, retryStrategy));
-//                                      break;
+                                    case SEARCH:
+                                      services.add(pingSearch(bucket, core, timeout, retryStrategy));
+                                      break;
                                     case QUERY:
                                       services.add(pingQuery(bucket, core, timeout, retryStrategy));
                                       break;

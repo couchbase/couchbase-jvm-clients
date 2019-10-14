@@ -74,7 +74,6 @@ class PingTest extends JavaIntegrationTest {
     assertEquals(PingServiceHealth.PingState.OK, psh.state());
   }
 
-  @Disabled // TBD
   @IgnoreWhen(missesCapabilities = {Capabilities.SEARCH})
   @Test
   void pingSearch() {
