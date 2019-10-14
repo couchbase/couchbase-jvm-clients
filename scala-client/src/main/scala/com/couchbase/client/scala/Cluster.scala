@@ -25,6 +25,7 @@ import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
+import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -67,6 +68,9 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
   @Stability.Volatile
   lazy val queryIndexes = new QueryIndexManager(async.queryIndexes)
 
+
+  @Stability.Volatile
+  val searchIndexes = new SearchIndexManager(async.searchIndexes)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

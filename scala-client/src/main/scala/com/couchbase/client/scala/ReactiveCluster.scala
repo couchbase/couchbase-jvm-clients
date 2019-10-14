@@ -23,6 +23,7 @@ import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedN
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
+import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
@@ -65,6 +66,8 @@ class ReactiveCluster(val async: AsyncCluster) {
   /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
 
+  @Stability.Volatile
+  val searchIndexes = new ReactiveSearchIndexManager(async.searchIndexes)
 
   /** Performs a N1QL query against the cluster.
     *
