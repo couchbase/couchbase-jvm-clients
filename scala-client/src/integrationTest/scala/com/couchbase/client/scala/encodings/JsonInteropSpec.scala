@@ -55,7 +55,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
     import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
     import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
-    implicit val codecJsoniter: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
+    implicit val codecJsoniter: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig)
 
     implicit val decoder: io.circe.Decoder[User] = io.circe.generic.semiauto.deriveDecoder[User]
     implicit val encoder: io.circe.Encoder[User] = io.circe.generic.semiauto.deriveEncoder[User]

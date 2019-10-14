@@ -55,7 +55,7 @@ private[scala] object CodecImplicits {
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterDecodeCodec: JsonValueCodec[$e] =
-        JsonCodecMaker.make[$e](CodecMakerConfig())
+        JsonCodecMaker.make[$e](CodecMakerConfig)
 
       override def decode(bytes: Array[Byte], params: codec.EncodeParams): scala.util.Try[$e] = {
         scala.util.Try(readFromArray(bytes))
@@ -73,7 +73,7 @@ private[scala] object CodecImplicits {
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterEncodeCodec: JsonValueCodec[$e] =
-       JsonCodecMaker.make[$e](CodecMakerConfig())
+       JsonCodecMaker.make[$e](CodecMakerConfig)
 
       override def encode(content: $e): scala.util.Try[(Array[Byte], com.couchbase.client.scala.codec.EncodeParams)] = {
         scala.util.Try((writeToArray(content), com.couchbase.client.scala.codec.Conversions.JsonFlags))
@@ -92,7 +92,7 @@ private[scala] object CodecImplicits {
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       val jsonIterCodec: JsonValueCodec[$e] =
-       JsonCodecMaker.make[$e](CodecMakerConfig())
+       JsonCodecMaker.make[$e](CodecMakerConfig)
 
       override def decode(bytes: Array[Byte], params: com.couchbase.client.scala.codec.EncodeParams): scala.util.Try[$e] = {
         scala.util.Try(readFromArray(bytes)(jsonIterCodec))

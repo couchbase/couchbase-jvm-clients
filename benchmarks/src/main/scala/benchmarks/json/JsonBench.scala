@@ -60,7 +60,7 @@ case class User2(name: String, age: Int)
 object Address {
   implicit val rw: upickle.default.ReadWriter[Address] = upickle.default.macroRW
   implicit val codec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Address] = 
-    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Address](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig())
+    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Address](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig)
   implicit val decoder: io.circe.Decoder[Address] = io.circe.generic.semiauto.deriveDecoder[Address]
   implicit val encoder: io.circe.Encoder[Address] = io.circe.generic.semiauto.deriveEncoder[Address]
 }
@@ -68,7 +68,7 @@ object Address {
 object User {
   implicit val rw: upickle.default.ReadWriter[User] = upickle.default.macroRW
   implicit val codec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[User] = 
-    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[User](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig())
+    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[User](com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig)
   implicit val decoder: io.circe.Decoder[User] = io.circe.generic.semiauto.deriveDecoder[User]
   implicit val encoder: io.circe.Encoder[User] = io.circe.generic.semiauto.deriveEncoder[User]
 }

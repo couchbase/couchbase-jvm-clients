@@ -39,13 +39,14 @@
         <dependency>
             <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
             <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
-            <version>0.39.0</version>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
             <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
-            <version>0.39.0</version>
+            <version>1.0.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <!--Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support-->
