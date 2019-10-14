@@ -87,6 +87,7 @@ public class Upsert extends MutateInSpec {
   public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
     JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
+    // TODO remove when transactions no longer depends on this (replace should be used instead)
     SubdocCommandType command = path.equals("") ? SubdocCommandType.SET_DOC : SubdocCommandType.DICT_UPSERT;
 
     return new SubdocMutateRequest.Command(

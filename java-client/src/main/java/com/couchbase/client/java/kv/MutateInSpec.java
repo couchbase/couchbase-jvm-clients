@@ -29,6 +29,10 @@ public abstract class MutateInSpec {
      * Creates a command with the intention of replacing an existing value in a JSON object.
      * <p>
      * Will error if the last element of the path does not exist.
+     * <p>
+     * If the path is empty (""), then the value will be used for the document's full body.  Whether the document is
+     * to be upserted or inserted is controlled by {@link MutateInOptions#upsertDocument(boolean)} and
+     * {@link MutateInOptions#insertDocument(boolean)}.
      *
      * @param path     the path identifying where to replace the value.
      * @param value the value to replace with
@@ -64,10 +68,6 @@ public abstract class MutateInSpec {
      * Creates a command with the intention of upserting a value in a JSON object.
      * <p>
      * That is, the value will be replaced if the path already exists, or inserted if not.
-     * <p>
-     * If the path is empty (""), then the value will be used for the document's full body.  Whether the document is
-     * to be upserted or inserted is controlled by {@link MutateInOptions#upsertDocument(boolean)} and
-     * {@link MutateInOptions#insertDocument(boolean)}.
      *
      * @param path     the path identifying where to upsert the value.
      * @param value the value to upsert

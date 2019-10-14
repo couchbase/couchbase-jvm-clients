@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Ported from the Scala SubdocMutateSpec tests.  Please keep in sync.
  */
-class SubdocMutateTest extends JavaIntegrationTest {
+class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
     private static Collection coll;
@@ -236,6 +236,29 @@ class SubdocMutateTest extends JavaIntegrationTest {
                 Arrays.asList(MutateInSpec.replace("foo", "bar2")));
 
         assertEquals("bar2", getContent(docId).getString("foo"));
+    }
+
+    @Test
+    public void replaceFullDocument() {
+        JsonObject content = JsonObject.create().put("foo", "bar");
+        String docId = prepare(content);
+
+        coll.mutateIn(docId,
+                Arrays.asList(MutateInSpec.replace("", JsonObject.create().put("foo2", "bar2"))));
+
+        assertEquals("bar2", getContent(docId).getString("foo2"));
+    }
+
+    // TODO remove when transactions no longer depends on this (replace should be used instead)
+    @Test
+    public void upsertFullDocument() {
+        JsonObject content = JsonObject.create().put("foo", "bar");
+        String docId = prepare(content);
+
+        coll.mutateIn(docId,
+                Arrays.asList(MutateInSpec.upsert("", JsonObject.create().put("foo2", "bar2"))));
+
+        assertEquals("bar2", getContent(docId).getString("foo2"));
     }
 
     @Test

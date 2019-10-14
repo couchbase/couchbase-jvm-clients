@@ -77,8 +77,10 @@ public class Replace extends MutateInSpec {
     public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
         JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
+        SubdocCommandType command = path.equals("") ? SubdocCommandType.SET_DOC : SubdocCommandType.DICT_UPSERT;
+
         return new SubdocMutateRequest.Command(
-            SubdocCommandType.REPLACE,
+            command,
             path,
             serializer.serialize(doc),
             false,
