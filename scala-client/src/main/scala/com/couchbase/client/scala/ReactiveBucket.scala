@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.ViewServiceException
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.manager.collection.{AsyncCollectionManager, ReactiveCollectionManager}
 import com.couchbase.client.scala.manager.view.{ReactiveViewIndexManager, ViewIndexManager}
 import com.couchbase.client.scala.query.handlers.ViewHandler
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
@@ -52,6 +53,9 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
   private[scala] val viewHandler = new ViewHandler
   private[scala] val kvTimeout = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
+
+  @Stability.Volatile
+  lazy val collections = new ReactiveCollectionManager(async)
 
   @Stability.Volatile
   lazy val viewIndexes = new ReactiveViewIndexManager(async.core, async.name)

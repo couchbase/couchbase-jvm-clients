@@ -23,6 +23,7 @@ import com.couchbase.client.core.diag.{HealthPinger, PingResult}
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.manager.collection.{AsyncCollectionManager, CollectionManager}
 import com.couchbase.client.scala.manager.view.{AsyncViewIndexManager}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.FutureConversions
@@ -50,6 +51,9 @@ class AsyncBucket private[scala](val name: String,
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig.kvTimeout())
   val reactive = new ReactiveBucket(this)
+
+  @Stability.Volatile
+  lazy val collections = new AsyncCollectionManager(reactive.collections)
 
   @Stability.Volatile
   lazy val viewIndexes = new AsyncViewIndexManager(reactive.viewIndexes)

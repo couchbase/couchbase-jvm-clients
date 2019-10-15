@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diag.PingResult
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.view.ViewIndexManager
 import com.couchbase.client.scala.util.AsyncUtils
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
@@ -50,6 +51,9 @@ class Bucket private[scala] (val async: AsyncBucket) {
 
   /** Provides a reactive version of this API. */
   lazy val reactive: ReactiveBucket = new ReactiveBucket(async)
+
+  @Stability.Volatile
+  lazy val collections = new CollectionManager(reactive.collections)
 
   @Stability.Volatile
   lazy val viewIndexes = new ViewIndexManager(reactive.viewIndexes)

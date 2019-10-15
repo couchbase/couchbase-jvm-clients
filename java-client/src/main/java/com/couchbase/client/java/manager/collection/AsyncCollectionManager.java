@@ -221,7 +221,7 @@ public class AsyncCollectionManager extends ManagerSupport {
 
     if (response.status() == ResponseStatus.INVALID_ARGS) {
       if (error.contains("Scope with this name already exists")) {
-        throw ScopeAlreaadyExistsException.forScope(scopeName);
+        throw ScopeAlreadyExistsException.forScope(scopeName);
       }
       if (error.contains("Collection with this name already exists")) {
         throw CollectionAlreadyExistsException.forCollection(collectionName);

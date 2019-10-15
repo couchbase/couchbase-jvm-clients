@@ -20,20 +20,19 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class ScopeAlreaadyExistsException extends CouchbaseException {
+public class ScopeAlreadyExistsException extends CouchbaseException {
   private final String scopeName;
 
-  public ScopeAlreaadyExistsException(String scopeName) {
+  public ScopeAlreadyExistsException(String scopeName) {
     super("Scope [" + redactMeta(scopeName) + "] already exists.");
     this.scopeName = requireNonNull(scopeName);
   }
 
-  public static ScopeAlreaadyExistsException forScope(String scopeName) {
-    return new ScopeAlreaadyExistsException(scopeName);
+  public static ScopeAlreadyExistsException forScope(String scopeName) {
+    return new ScopeAlreadyExistsException(scopeName);
   }
 
   public String scopeName() {

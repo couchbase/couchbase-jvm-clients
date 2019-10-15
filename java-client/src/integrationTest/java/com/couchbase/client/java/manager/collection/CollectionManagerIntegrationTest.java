@@ -92,7 +92,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
     collections.createScope(scopeSpec);
     waitUntilCondition(() -> collections.getAllScopes().contains(scopeSpec));
-    assertThrows(ScopeAlreaadyExistsException.class, () -> collections.createScope(scopeSpec));
+    assertThrows(ScopeAlreadyExistsException.class, () -> collections.createScope(scopeSpec));
   }
 
   @Test
