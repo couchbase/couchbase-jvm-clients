@@ -16,26 +16,32 @@
 
 package com.couchbase.client.scala
 
+import java.util.UUID
+import java.util.stream.Collectors
+
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.env.{Authenticator, OwnedSupplier, PasswordAuthenticator}
+import com.couchbase.client.core.diag.DiagnosticsResult
+import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.AsyncCluster.{connect, seedNodesFromConnectionString}
+import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
+import com.couchbase.client.scala.manager.bucket.BucketManager
+import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.manager.search.SearchIndexManager
+import com.couchbase.client.scala.manager.user.UserManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.search.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
+import scala.util.Try
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -150,6 +156,20 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     */
   def disconnect(): Unit = {
     reactive.disconnect().block()
+  }
+
+  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+    * cluster.
+    *
+    * @param reportId        this will be returned in the [[DiagnosticsResult]].  If not specified it defaults to a UUID.
+    *
+    * @return a { @link DiagnosticsResult}
+    */
+  @Stability.Volatile
+  def diagnostics(reportId: String = UUID.randomUUID.toString): Try[DiagnosticsResult] = {
+    Try(new DiagnosticsResult(async.core.diagnostics().collect(Collectors.toList()),
+      async.core.context().environment().userAgent().formattedShort(),
+      reportId))
   }
 }
 

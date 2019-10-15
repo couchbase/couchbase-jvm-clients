@@ -16,7 +16,11 @@
 
 package com.couchbase.client.scala
 
+import java.util.UUID
+import java.util.stream.Collectors
+
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.diag.DiagnosticsResult
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
@@ -35,7 +39,7 @@ import reactor.core.scala.publisher.SMono
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -206,6 +210,18 @@ class ReactiveCluster(val async: AsyncCluster) {
           SMono.empty[Unit]
         }
       }))
+  }
+
+  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+    * cluster.
+    *
+    * @param reportId        this will be returned in the [[DiagnosticsResult]].  If not specified it defaults to a UUID.
+    *
+    * @return a { @link DiagnosticsResult}
+    */
+  @Stability.Volatile
+  def diagnostics(reportId: String = UUID.randomUUID.toString): SMono[DiagnosticsResult] = {
+    SMono.fromFuture(async.diagnostics(reportId))
   }
 }
 

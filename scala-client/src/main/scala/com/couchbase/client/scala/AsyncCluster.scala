@@ -17,8 +17,12 @@ package com.couchbase.client.scala
 
 
 
+import java.util.UUID
+import java.util.stream.Collectors
+
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.diag.DiagnosticsResult
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.error.{AnalyticsException, ErrorCodeAndMessage}
 import com.couchbase.client.core.msg.search.SearchRequest
@@ -205,6 +209,20 @@ class AsyncCluster(environment: => ClusterEnvironment,
         }
       })
       .toFuture
+  }
+
+  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+    * cluster.
+    *
+    * @param reportId        this will be returned in the [[DiagnosticsResult]].  If not specified it defaults to a UUID.
+    *
+    * @return a { @link DiagnosticsResult}
+    */
+  @Stability.Volatile
+  def diagnostics(reportId: String = UUID.randomUUID.toString): Future[DiagnosticsResult] = {
+    Future(new DiagnosticsResult(core.diagnostics().collect(Collectors.toList()),
+      core.context().environment().userAgent().formattedShort(),
+      reportId))
   }
 }
 
