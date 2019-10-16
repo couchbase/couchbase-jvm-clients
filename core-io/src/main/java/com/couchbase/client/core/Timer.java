@@ -29,15 +29,21 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The {@link Timer} acts as the main timing facility for various operations, for
- * example to track and time out requests if they run for too long.
- *
- * <p>This is an internal class, so its API or behavior might change at any point in the future. It might even
- * go away!</p>
+ * example to track and time out requests if they run for too long or for rescheduling needs.
  *
  * @since 2.0.0
  */
 @Stability.Internal
 public class Timer {
+
+  /**
+   * We are using a default tick duration of 10ms instead of the netty-default 100ms because we are also
+   * retrying operations on this timer that have much lower resolution.
+   * <p>
+   * Based on our testing 10ms strikes a good balance, 1ms seems to be too noisy and 100ms has too much loss
+   * in accuracy.
+   */
+  private static final Duration DEFAULT_TICK_DURATION = Duration.ofMillis(10);
 
   /**
    * The internal timer.
@@ -73,7 +79,11 @@ public class Timer {
    * Internal timer constructor.
    */
   private Timer() {
-    wheelTimer = new HashedWheelTimer(new DefaultThreadFactory("cb-timer", true));
+    wheelTimer = new HashedWheelTimer(
+      new DefaultThreadFactory("cb-timer", true),
+      DEFAULT_TICK_DURATION.toMillis(),
+      TimeUnit.MILLISECONDS
+    );
   }
 
   /**
