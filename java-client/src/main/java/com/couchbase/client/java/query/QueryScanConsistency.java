@@ -17,17 +17,18 @@
 package com.couchbase.client.java.query;
 
 /**
- * The possible values for scan_consistency in a N1QL request.
+ * The possible values for scan consistency in a N1QL request.
  *
  * @since 3.0.0
  */
 public enum QueryScanConsistency {
 
 	/**
-	 * This is the default (for single-statement requests). No timestamp vector is used
-	 * in the index scan.
-	 * This is also the fastest mode, because we avoid the cost of obtaining the vector,
-	 * and we also avoid any wait for the index to catch up to the vector.
+	 * The indexer will return whatever state it has to the query engine at the time of query.
+	 * <p>
+	 * This is the default (for single-statement requests). No timestamp vector is used in the index scan. This is also
+	 * the fastest mode, because we avoid the cost of obtaining the vector, and we also avoid any wait for the index to
+	 * catch up to the vector.
 	 */
 	NOT_BOUNDED {
 		@Override
@@ -37,10 +38,12 @@ public enum QueryScanConsistency {
 	},
 
 	/**
-	 * This implements strong consistency per request.
-	 * Before processing the request, a current vector is obtained.
-	 * The vector is used as a lower bound for the statements in the request.
-	 * If there are DML statements in the request, RYOW is also applied within the request.
+	 * The indexer will wait until all mutations have been processed at the time of request before returning to the
+	 * query engine.
+	 * <p>
+	 * This implements strong consistency per request. Before processing the request, a current vector is obtained. The
+	 * vector is used as a lower bound for the statements in the request. If there are DML statements in the request,
+	 * RYOW ("read your own write") is also applied within the request.
 	 */
 	REQUEST_PLUS {
 		@Override

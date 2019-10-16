@@ -18,7 +18,7 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.core.annotation.Stability;
 
 /**
- * Query profiling information received from the query executing engine
+ * Query profiling information received from the server query engine.
  *
  * @since 3.0.0
  */
@@ -36,10 +36,11 @@ public enum QueryProfile {
 	},
 
 	/**
-	 * The query response includes a profile section with stats and details
-	 * about various phases of the query plan and execution.
-	 * Three phase times will be included in the system:active_requests and
-	 * system:completed_requests monitoring keyspaces.
+	 * The query response includes a profile section with stats and details about various phases of the query plan and
+	 * execution.
+	 * <p>
+	 * Three phase times will be included in the system:active_requests and system:completed_requests monitoring
+	 * keyspaces.
 	 */
 	PHASES {
 		@Override
@@ -49,10 +50,10 @@ public enum QueryProfile {
 	},
 
 	/**
-	 * Besides the phase times, the profile section of the query response document will
-	 * include a full query plan with timing and information about the number of processed
-	 * documents at each phase. This information will be included in the system:active_requests
-	 * and system:completed_requests keyspaces.
+	 * Besides the phase times, the profile section of the query response document will include a full query plan with
+	 * timing and information about the number of processed documents at each phase.
+	 * <p>
+	 * This information will be included in the system:active_requests and system:completed_requests keyspaces.
 	 */
 	TIMINGS {
 		@Override
