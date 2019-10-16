@@ -24,7 +24,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
-            <version>3.2.12.RELEASE</version>
+            <version>${reactor.version}</version>
         </dependency>
 
         <!-- External, Optional Dependencies -->
@@ -46,7 +46,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
-            <version>3.2.12.RELEASE</version>
+            <version>${reactor.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -188,7 +188,7 @@
                                 <!-- the part after couchbase- needs to match with the agent title in the env -->
                                 <name>couchbase-java-core</name>
                                 <manifestEntries>
-                                    <Impl-Version>${version}</Impl-Version>
+                                    <Impl-Version>${project.version}</Impl-Version>
                                     <Impl-Git-Revision>${buildNumber}</Impl-Git-Revision>
                                 </manifestEntries>
                             </manifestSection>
