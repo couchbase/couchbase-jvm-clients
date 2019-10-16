@@ -23,12 +23,14 @@ import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Ref;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,8 +42,8 @@ import static org.mockito.Mockito.*;
 class MemcacheProtocolTest {
 
   private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
-  CoreContext context;
-  EventBus eventBus;
+  private CoreContext context;
+  private EventBus eventBus;
 
   @BeforeEach
   void before() {
@@ -64,9 +66,9 @@ class MemcacheProtocolTest {
     assertEquals(0x13, result.getByte(0)); // sync replication id 1 and length 3
     assertEquals(0x02, result.getByte(1)); // majority and persist on master has id 2
     assertEquals(2700, result.getShort(2)); // 2700 -> 90% of the 3000ms user timeout
-    verify(eventBus, never()).publish(any(DurabilityTimeoutCoercedEvent.class));
 
-    result.release();
+    verify(eventBus, never()).publish(any(DurabilityTimeoutCoercedEvent.class));
+    ReferenceCountUtil.release(result);
   }
 
   @Test
@@ -80,7 +82,7 @@ class MemcacheProtocolTest {
     assertEquals(1500, result.getShort(2)); // we cannot go below 1500 per server spec so no 90%.
 
     verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));
-    result.release();
+    ReferenceCountUtil.release(result);
   }
 
   @Test
@@ -93,6 +95,8 @@ class MemcacheProtocolTest {
     assertEquals(1500, result.getShort(2)); // expect what you asked for (well, 90% of it)
     verify(eventBus, never()).publish(any(DurabilityTimeoutCoercedEvent.class));
 
+    ReferenceCountUtil.release(result);
+
     // 1666 actually will log...
     result = MemcacheProtocol.flexibleSyncReplication(ALLOC, DurabilityLevel.MAJORITY, Duration.ofMillis(1666), context);
     assertEquals(4, result.readableBytes()); // 4 bytes total for these flexible extras
@@ -100,6 +104,8 @@ class MemcacheProtocolTest {
     assertEquals(0x01, result.getByte(1)); // majority has id of 1
     assertEquals(1500, result.getShort(2)); // expect what you asked for
     verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));
+
+    ReferenceCountUtil.release(result);
   }
 
   @Test
@@ -109,13 +115,13 @@ class MemcacheProtocolTest {
     assertEquals(65534, result.getUnsignedShort(2));
     verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));
     reset(eventBus);
-    result.release();
+    ReferenceCountUtil.release(result);
 
     duration = Duration.ofMillis(Long.MAX_VALUE);
     result = MemcacheProtocol.flexibleSyncReplication(ALLOC, DurabilityLevel.MAJORITY, duration, context);
     assertEquals(65534, result.getUnsignedShort(2));
     verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));
-    result.release();
+    ReferenceCountUtil.release(result);
   }
 
 

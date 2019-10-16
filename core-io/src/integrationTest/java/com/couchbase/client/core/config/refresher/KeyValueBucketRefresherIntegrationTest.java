@@ -27,10 +27,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies the functionality of the {@link KeyValueBucketRefresher}.
@@ -49,7 +50,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .ioConfig(IoConfig.configPollInterval(Duration.ofMillis(500)))
+      .ioConfig(IoConfig.configPollInterval(Duration.ofMillis(100)))
       .build();
   }
 
@@ -72,16 +73,17 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
     };
 
     core.openBucket(config().bucketname()).block();
-
     refresher.register(config().bucketname()).block();
-
-    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 2);
-
     long expected = env.ioConfig().configPollInterval().toNanos();
 
-    assertTrue(
-      (inspectingProvider.proposedTimings().get(1) - inspectingProvider.proposedTimings().get(0)) > expected
-    );
+    Util.waitUntilCondition(() -> {
+      List<Long> timings = new ArrayList<>(inspectingProvider.proposedTimings());
+      int size = timings.size();
+      if (size < 2) {
+        return false; // we need at least 2 records to compare
+      }
+      return (timings.get(size - 1) - timings.get(size - 2)) >= expected;
+    });
 
     refresher.deregister(config().bucketname()).block();
 
