@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonSeriali
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.SerializerProvider;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.SimpleModule;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 import java.io.IOException;
 
@@ -42,6 +43,7 @@ public class JacksonTransformers {
         JSON_VALUE_MODULE.addDeserializer(JsonObject.class, new JacksonTransformers.JsonObjectDeserializer());
         JSON_VALUE_MODULE.addDeserializer(JsonArray.class, new JacksonTransformers.JsonArrayDeserializer());
         MAPPER.registerModule(JacksonTransformers.JSON_VALUE_MODULE);
+        MAPPER.registerModule(new AfterburnerModule());
     }
 
     static class JsonObjectSerializer extends JsonSerializer<JsonObject> {
