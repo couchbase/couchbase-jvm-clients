@@ -30,16 +30,13 @@ public class ViewChunkResponseParser
   extends BaseChunkResponseParser<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer> {
 
   private Long totalRows;
-  private Optional<byte[]> debug;
 
+  private Optional<byte[]> debug;
   private Optional<ViewError> error;
 
   private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
     .doOnValue("/total_rows", v -> totalRows = v.readLong())
     .doOnValue("/rows/-", v -> {
-      if (debug == null) {
-        debug = Optional.empty();
-      }
       emitRow(new ViewChunkRow(v.readBytes()));
     })
     .doOnValue("/debug_info", v -> debug = Optional.of(v.readBytes()))
@@ -64,13 +61,13 @@ public class ViewChunkResponseParser
   @Override
   protected void doCleanup() {
     totalRows = null;
-    debug = null;
+    debug = Optional.empty();
     error = Optional.empty();
   }
 
   @Override
   public Optional<ViewChunkHeader> header() {
-    return (totalRows != null && debug != null)
+    return (totalRows != null)
       ? Optional.of(new ViewChunkHeader(totalRows, debug))
       : Optional.empty();
   }
