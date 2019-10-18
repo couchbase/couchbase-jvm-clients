@@ -17,19 +17,22 @@
 package com.couchbase.client.scala.analytics
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage}
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
+import com.couchbase.client.core.util.Golang
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.util.RowTraversalUtil
+import com.couchbase.client.scala.query.QueryOptions
+import com.couchbase.client.scala.util.{DurationConversions, RowTraversalUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 /** The results of an Analytics query.
   *
   * @param rows            all rows returned from the analytics service
-  * @param meta            any additional information related to the Analytics query
+  * @param metaData            any additional information related to the Analytics query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
   *                        implicit `Decodable[T]` can be found, and can include
@@ -40,28 +43,17 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
-                           meta: AnalyticsMeta) {
-  /** Returns an `Iterator` of any returned rows.  All rows are buffered from the analytics service first.
-    *
-    * $SupportedTypes
-    *
-    * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See `rowsAs` for a more
-    * convenient interface that does not require handling individual row decode errors.
-    **/
-  def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): Iterator[Try[T]] = {
-    rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
-  }
-
+                           metaData: AnalyticsMetaData) {
   /** All returned rows.  All rows are buffered from the analytics service first.
     *
     * $SupportedTypes
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def allRowsAs[T]
+  def rowsAs[T]
   (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    RowTraversalUtil.traverse(rowsAs[T])
+    val all = rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+    RowTraversalUtil.traverse(all)
   }
 }
 
@@ -73,7 +65,7 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
   * @param meta            any additional information related to the Analytics query
   */
 case class ReactiveAnalyticsResult(private[scala] val rows: SFlux[AnalyticsChunkRow],
-                                   meta: SMono[AnalyticsMeta]) {
+                                   meta: SMono[AnalyticsMetaData]) {
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
@@ -86,70 +78,10 @@ case class ReactiveAnalyticsResult(private[scala] val rows: SFlux[AnalyticsChunk
   }
 }
 
-/** An error returned by the Analytics service. */
-case class AnalyticsError(private val content: Array[Byte]) extends CouchbaseException {
-  private lazy val str = new String(content, CharsetUtil.UTF_8)
-  private lazy val json = JsonObject.fromJson(str)
+case class AnalyticsWarning(private val inner: ErrorCodeAndMessage) {
+  def code: Int = inner.code
 
-  /** A human-readable error code. */
-  def msg: String = {
-    json.safe.str("msg") match {
-      case Success(msg) => msg
-      case Failure(_) => s"unknown error ($str)"
-    }
-  }
-
-  /** The raw error code returned by the Analytics service. */
-  def code: Try[Int] = {
-    json.safe.num("code")
-  }
-
-
-  override def toString: String = msg
-}
-
-/** Returns the signature information of a Analytics request, in JSON form. */
-case class AnalyticsSignature(private val _content: Array[Byte]) {
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = {
-    _content
-  }
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * The content is a JSON object, so a suitable default representation would be
-    * [[com.couchbase.client.scala.json.JsonObject]].
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-
-  override def toString: String = contentAs[JsonObject].get.toString
-}
-
-/** Returns any warnings of a Analytics request, in JSON form. */
-case class AnalyticsWarnings(private val _content: Array[Byte]) {
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = {
-    _content
-  }
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * The content is a JSON array, so a suitable default representation would be
-    * [[com.couchbase.client.scala.json.JsonArray]].
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-
-  override def toString: String = contentAs[JsonObject].get.toString
+  def message: String = inner.message
 }
 
 /** Metrics of a given Analytics request.
@@ -164,40 +96,37 @@ case class AnalyticsWarnings(private val _content: Array[Byte]) {
   *                      through LIMIT clause.
   * @param resultSize    the total number of returned rows.
   * @param processedObjects   the total number of processed objects.
-  * @param mutationCount the number of mutations that were made during the request.
-  * @param sortCount     the total number of results selected by the engine before restriction
-  *                      through LIMIT clause.
   * @param errorCount    the number of errors that occurred during the request.
   * @param warningCount  the number of warnings that occurred during the request.
   */
-case class AnalyticsMetrics(elapsedTime: String,
-                            executionTime: String,
-                            resultCount: Int,
-                            resultSize: Int,
-                            processedObjects: Int,
-                            mutationCount: Int,
-                            sortCount: Int,
-                            errorCount: Int,
-                            warningCount: Int)
+case class AnalyticsMetrics(elapsedTime: Duration,
+                            executionTime: Duration,
+                            resultCount: Long,
+                            resultSize: Long,
+                            processedObjects: Long,
+                            errorCount: Long,
+                            warningCount: Long)
 
 private[scala] object AnalyticsMetrics {
   def fromBytes(in: Array[Byte]): AnalyticsMetrics = {
     JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
       case Success(jo) =>
         AnalyticsMetrics(
-          jo.str("elapsedTime").getOrElse(""),
-          jo.str("executionTime").getOrElse(""),
-          jo.num("resultCount").getOrElse(0),
-          jo.num("resultSize").getOrElse(0),
-          jo.num("processedObjects").getOrElse(0),
-          jo.num("mutationCount").getOrElse(0),
-          jo.num("sortCount").getOrElse(0),
-          jo.num("errorCount").getOrElse(0),
-          jo.num("warningCount").getOrElse(0)
+          jo.str("elapsedTime").map(time => {
+            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+          }).getOrElse(Duration.Zero),
+          jo.str("executionTime").map(time => {
+            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+          }).getOrElse(Duration.Zero),
+          jo.numLong("resultCount").getOrElse(0l),
+          jo.numLong("resultSize").getOrElse(0l),
+          jo.numLong("sortCount").getOrElse(0l),
+          jo.numLong("errorCount").getOrElse(0l),
+          jo.numLong("warningCount").getOrElse(0l)
         )
 
       case Failure(err) =>
-        AnalyticsMetrics("", "", 0, 0, 0, 0, 0, 0, 0)
+        AnalyticsMetrics(Duration.Zero, Duration.Zero, 0, 0, 0, 0, 0)
     }
 
   }
@@ -209,9 +138,24 @@ private[scala] object AnalyticsMetrics {
   * @param warnings        any warnings returned from the Analytics service
   * @param status          the raw status string returned from the Analytics service
   */
-case class AnalyticsMeta(private[scala] val requestId: String,
-                         clientContextId: Option[String],
-                         signature: Option[AnalyticsSignature],
-                         metrics: Option[AnalyticsMetrics],
-                         warnings: Option[AnalyticsWarnings],
-                         status: String)
+case class AnalyticsMetaData(requestId: String,
+                             clientContextId: String,
+                             private val signatureContent: Option[Array[Byte]],
+                             metrics: AnalyticsMetrics,
+                             warnings: Seq[AnalyticsWarning],
+                             status: AnalyticsStatus) {
+  /** Return any signature content, converted into the application's preferred representation.
+    *
+    * @tparam T $SupportedTypes
+    */
+  def signatureAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    signatureContent match {
+      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case _ => Failure(new IllegalArgumentException("No signature is available"))
+    }
+  }
+}
+
+
+

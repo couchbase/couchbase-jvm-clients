@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.env.PasswordAuthenticator
+import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics._
@@ -32,6 +33,7 @@ import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMet
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
+import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -104,15 +106,22 @@ class ReactiveCluster(val async: AsyncCluster) {
 
         FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: SMono[AnalyticsMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[AnalyticsMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(trailer => {
-                AnalyticsMeta(
+                val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                  .map(warnings =>
+                    ErrorCodeAndMessage.fromJsonArray(warnings)
+                      .asScala
+                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage)))
+                  .getOrElse(Seq.empty)
+
+                AnalyticsMetaData(
                   response.header().requestId(),
-                  response.header().clientContextId().asScala,
-                  response.header().signature().asScala.map(AnalyticsSignature),
-                  Some(AnalyticsMetrics.fromBytes(trailer.metrics())),
-                  trailer.warnings.asScala.map(AnalyticsWarnings),
-                  trailer.status
+                  response.header().clientContextId().orElse(""),
+                  response.header().signature.asScala,
+                  AnalyticsMetrics.fromBytes(trailer.metrics()),
+                  warnings,
+                  AnalyticsStatus.from(trailer.status)
                 )
               })
 

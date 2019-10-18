@@ -20,7 +20,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.core.error.AnalyticsException
+import com.couchbase.client.core.error.{AnalyticsException, ErrorCodeAndMessage}
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.ConnectionStringUtil
@@ -136,24 +136,26 @@ class AsyncCluster(environment: => ClusterEnvironment,
             .flatMap(rows =>
 
               FutureConversions.javaMonoToScalaMono(response.trailer())
-                .map(trailer => AnalyticsResult(
-                  rows,
-                  AnalyticsMeta(
-                    response.header().requestId(),
-                    response.header().clientContextId().asScala,
-                    response.header().signature.asScala.map(bytes => AnalyticsSignature(bytes)),
-                    Some(AnalyticsMetrics.fromBytes(trailer.metrics)),
-                    trailer.warnings.asScala.map(bytes => AnalyticsWarnings(bytes)),
-                    trailer.status))
-                )
+                .map(trailer => {
+                  val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                    .map(warnings =>
+                      ErrorCodeAndMessage.fromJsonArray(warnings)
+                        .asScala
+                        .map(codeAndMessage => AnalyticsWarning(codeAndMessage)))
+                    .getOrElse(Seq.empty)
+
+                  AnalyticsResult(
+                    rows,
+                    AnalyticsMetaData(
+                      response.header().requestId(),
+                      response.header().clientContextId().orElse(""),
+                      response.header().signature.asScala,
+                      AnalyticsMetrics.fromBytes(trailer.metrics),
+                      warnings,
+                      AnalyticsStatus.from(trailer.status)))
+                })
             )
-          )
-          .onErrorResume(err => {
-            err match {
-              case e: AnalyticsException => SMono.raiseError(AnalyticsError(e.content))
-              case _ => SMono.raiseError(err)
-            }
-          }).toFuture
+          ).toFuture
 
         ret
 

@@ -16,10 +16,12 @@
 
 package com.couchbase.client.scala.analytics
 
+import java.util.UUID
+
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.query.QueryOptions
 
+import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 
 
@@ -28,23 +30,24 @@ import scala.concurrent.duration.Duration
   * @author Graham Pople
   * @since 1.0.0
   */
-case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
-                        private[scala] val positionalParameters: Option[List[Any]] = None,
+case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[String,Any]] = None,
+                        private[scala] val positionalParameters: Option[Seq[Any]] = None,
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val retryStrategy: Option[RetryStrategy] = None,
                         private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None,
                         private[scala] val priority: Boolean = false,
-                        private[scala] val readonly: Option[Boolean] = None
+                        private[scala] val readonly: Option[Boolean] = None,
+                        private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None
                        ) {
-  /** Provides a named parameter for queries parameterised that way.
+  /** Provides named parameters for queries parameterised that way.
     *
-    * Merged in with any previously provided named parameters.
+    * Overrides any previously-supplied named parameters.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def namedParameter(name: String, value: Any): AnalyticsOptions = {
-    copy(namedParameters = Some(namedParameters.getOrElse(Map()) + (name -> value)))
+  def parameters(values: Map[String,Any]): AnalyticsOptions = {
+    copy(namedParameters = Option(values), positionalParameters = None)
   }
 
   /** Provides named parameters for queries parameterised that way.
@@ -53,26 +56,24 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def namedParameters(values: (String, Any)*): AnalyticsOptions = {
-    copy(namedParameters = Option(values.toMap))
-  }
-
-  /** Provides named parameters for queries parameterised that way.
-    *
-    * Overrides any previously-supplied named parameters.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def namedParameters(values: Map[String,Any]): AnalyticsOptions = {
-    copy(namedParameters = Option(values))
+  def parameters(values: JsonObject): AnalyticsOptions = {
+    copy(namedParameters = Option(values.toMap), positionalParameters = None)
   }
 
   /** Provides positional parameters for queries parameterised that way.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def positionalParameters(values: Any*): AnalyticsOptions = {
-    copy(positionalParameters = Option(values.toList))
+  def parameters(values: Seq[Any]): AnalyticsOptions = {
+    copy(positionalParameters = Option(values), namedParameters = None)
+  }
+
+  /** Provides positional parameters for queries parameterised that way.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def parameters(values: JsonArray): AnalyticsOptions = {
+    copy(positionalParameters = Option(values.toSeq), namedParameters = None)
   }
 
   /** Adds a client context ID to the request, that will be sent back in the response, allowing clients
@@ -94,7 +95,7 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
     copy(timeout = Option(timeout))
   }
 
-  /** Specify that this is a high-priority request.  Th default is false.
+  /** Specify that this is a high-priority request.  The default is false.
     *
     * @return a copy of this with the change applied, for chaining.
     */
@@ -126,9 +127,21 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[Map[Strin
     })
     serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
 
-    clientContextId.foreach(v => out.put("client_context_id", v))
+    clientContextId
+      .getOrElse(UUID.randomUUID.toString)
+      .foreach(v => out.put("client_context_id", v))
 
     readonly.foreach(v => out.put("readonly", v))
+
+    scanConsistency match {
+      case Some(sc) =>
+        val toPut: String = sc match {
+          case AnalyticsScanConsistency.NotBounded => "not_bounded"
+          case AnalyticsScanConsistency.RequestPlus => "request_plus"
+        }
+        out.put("scan_consistency", toPut)
+      case _ =>
+    }
 
     out
   }

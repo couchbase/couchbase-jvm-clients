@@ -175,7 +175,7 @@ case class QueryMetaData(private[scala] val requestId: String,
                          status: QueryStatus,
                          private val _profileContent: Option[Array[Byte]]) {
 
-  /** Return the content, converted into the application's preferred representation.
+  /** Return the profile content, converted into the application's preferred representation.
     *
     * Note a profile must first be requested with [[QueryOptions.profile]].
     *
