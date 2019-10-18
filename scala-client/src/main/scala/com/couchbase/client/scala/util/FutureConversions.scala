@@ -54,17 +54,7 @@ private[scala] object FutureConversions {
   def javaCFToScalaMono[T](request: Request[_],
                            response: CompletableFuture[T],
                            propagateCancellation: Boolean): SMono[T] = {
-    val javaMono = JavaMono.fromFuture(response)
-    val scalaMono = SMono(javaMono)
-
-    if (propagateCancellation) {
-      scalaMono.doFinally(st => {
-        if (st == SignalType.CANCEL) {
-          request.cancel(CancellationReason.STOPPED_LISTENING)
-        }
-      })
-    }
-    else scalaMono
+    wrap(request, response, propagateCancellation)
   }
 
   def javaCFToJavaMono[T](request: Request[_],
@@ -96,15 +86,17 @@ private[scala] object FutureConversions {
     */
   def wrap[T](request: Request[_ <: Response],
               response: CompletableFuture[T],
-              propagateCancellation: Boolean)
-             (implicit ec: ExecutionContext): SMono[T] = {
-    val future = javaCFToScalaFuture(response)
-    var mono = SMono.fromFuture(future)
-    if (propagateCancellation) {
-      mono = mono.doFinally((st: SignalType) => {
-        if (st == SignalType.CANCEL) request.cancel(CancellationReason.STOPPED_LISTENING)
-      })
+              propagateCancellation: Boolean): SMono[T] = {
+    val javaMono = JavaMono.fromFuture(response)
+    val mono = {
+      if (propagateCancellation) {
+        SMono(javaMono).doFinally((st: SignalType) => {
+          if (st == SignalType.CANCEL) request.cancel(CancellationReason.STOPPED_LISTENING)
+        })
+      }
+      else SMono(javaMono)
     }
+
     mono.onErrorResume((err: Throwable) => {
       if (err.isInstanceOf[CompletionException]) SMono.raiseError(err.getCause)
       else SMono.raiseError(err)

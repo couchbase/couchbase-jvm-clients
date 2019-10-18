@@ -28,7 +28,7 @@ import org.junit.jupiter.api._
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-class BucketManagerSpec extends ScalaIntegrationTest {
+class PingSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
   private var bucket: Bucket = _
   private var bucketName: String = _

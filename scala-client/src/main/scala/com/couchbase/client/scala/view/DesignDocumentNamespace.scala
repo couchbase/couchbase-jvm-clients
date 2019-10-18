@@ -15,11 +15,46 @@
  */
 package com.couchbase.client.scala.view
 
-/** Specify's what namespace the design document is in, e.g. production or development.
+import com.couchbase.client.core.logging.RedactableArgument.redactMeta
+
+import scala.util.{Failure, Success, Try}
+
+/** Specifies what namespace the design document is in, e.g. production or development.
   */
-sealed trait DesignDocumentNamespace
+sealed trait DesignDocumentNamespace {
+
+  private[scala] def adjustName(name: String): String
+  private[scala] def contains(rawDesignDocName: String): Boolean
+}
 
 object DesignDocumentNamespace {
-  case object Development extends DesignDocumentNamespace
-  case object Production extends DesignDocumentNamespace
+  case object Development extends DesignDocumentNamespace {
+    private[scala] override def adjustName(name: String): String = {
+      if (name.startsWith(DevPrefix)) name else DevPrefix + name
+    }
+
+    private[scala] override def contains(rawDesignDocName: String): Boolean = {
+      rawDesignDocName.startsWith(DevPrefix)
+    }
+  }
+
+  case object Production extends DesignDocumentNamespace {
+    private[scala] override def adjustName(name: String): String = {
+      name.stripPrefix(DevPrefix)
+    }
+
+    private[scala] override def contains(rawDesignDocName: String): Boolean = {
+      !rawDesignDocName.startsWith(DevPrefix)
+    }
+  }
+
+  private val DevPrefix = "dev_"
+
+  private[scala] def requireUnqualified(name: String): Try[String] = {
+    if (name.startsWith(DevPrefix)) {
+      Failure(new IllegalArgumentException("Design document name '" + redactMeta(name) + "' must not start with '" +
+        DevPrefix + "'" + "; instead specify the Development namespace when referring to the document."))
+    }
+    else Success(name)
+  }
 }
