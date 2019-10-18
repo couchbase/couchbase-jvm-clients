@@ -33,7 +33,7 @@ class LazyCircuitBreakerTest {
   void failsIfDisabled() {
     assertThrows(
       IllegalArgumentException.class,
-      () -> new LazyCircuitBreaker(CircuitBreakerConfig.disabled())
+      () -> new LazyCircuitBreaker(CircuitBreakerConfig.enabled(false).build())
     );
   }
 
@@ -42,7 +42,7 @@ class LazyCircuitBreakerTest {
    */
   @Test
   void startsClosed() {
-    LazyCircuitBreaker cb = new LazyCircuitBreaker(CircuitBreakerConfig.create());
+    LazyCircuitBreaker cb = new LazyCircuitBreaker(CircuitBreakerConfig.builder().build());
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());
   }
@@ -53,7 +53,7 @@ class LazyCircuitBreakerTest {
    */
   @Test
   void opensOverVolumeThreshold() {
-    CircuitBreakerConfig config = CircuitBreakerConfig.create();
+    CircuitBreakerConfig config = CircuitBreakerConfig.builder().build();
     LazyCircuitBreaker cb = new LazyCircuitBreaker(config);
 
     for (int i = 0; i < config.volumeThreshold() - 1; i++) {
@@ -273,7 +273,7 @@ class LazyCircuitBreakerTest {
    */
   @Test
   void canResetFromClosedState() {
-    LazyCircuitBreaker cb = new LazyCircuitBreaker(CircuitBreakerConfig.create());
+    LazyCircuitBreaker cb = new LazyCircuitBreaker(CircuitBreakerConfig.builder().build());
     assertEquals(CircuitBreaker.State.CLOSED, cb.state());
     assertTrue(cb.allowsRequest());
     cb.reset();

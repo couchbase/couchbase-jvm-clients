@@ -16,6 +16,10 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.msg.Response;
+
+import java.util.function.BiFunction;
+
 /**
  * The {@link CircuitBreaker} interface defines the external integration points between an
  * implementation and its calling {@link BaseEndpoint}.
@@ -79,5 +83,12 @@ public interface CircuitBreaker {
      */
     OPEN
   }
+
+  /**
+   * Defines if a request is considered a success or a failure.
+   * <p>
+   * If the apply method returns true it is considered a success, if false then a failure.
+   */
+  interface CompletionCallback extends BiFunction<Response, Throwable, Boolean> { }
 
 }

@@ -401,7 +401,7 @@ class BaseEndpointTest {
 
     InstrumentedEndpoint(String hostname, int port, EventLoopGroup eventLoopGroup,
                          ServiceContext ctx, Supplier<Mono<Channel>> channelSupplier) {
-      super(hostname, port, eventLoopGroup, ctx, CircuitBreakerConfig.disabled(), ServiceType.KV, false);
+      super(hostname, port, eventLoopGroup, ctx, CircuitBreakerConfig.enabled(false).build(), ServiceType.KV, false);
       this.channelSupplier = channelSupplier;
     }
 

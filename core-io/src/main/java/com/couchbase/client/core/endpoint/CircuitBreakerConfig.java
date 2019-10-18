@@ -17,10 +17,13 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.TimeoutException;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Allows configuring a {@link CircuitBreaker}.
@@ -34,12 +37,15 @@ public class CircuitBreakerConfig {
   public static final int DEFAULT_ERROR_THRESHOLD_PERCENTAGE = 50;
   public static final Duration DEFAULT_SLEEP_WINDOW = Duration.ofSeconds(5);
   public static final Duration DEFAULT_ROLLING_WINDOW = Duration.ofMinutes(1);
+  public static final CircuitBreaker.CompletionCallback DEFAULT_COMPLETION_CALLBACK =
+    (response, throwable) -> !(throwable instanceof TimeoutException);
 
   private final boolean enabled;
   private final int volumeThreshold;
   private final int errorThresholdPercentage;
   private final Duration sleepWindow;
   private final Duration rollingWindow;
+  private final CircuitBreaker.CompletionCallback completionCallback;
 
   /**
    * Creates a new builder to customize the configuration properties.
@@ -50,22 +56,27 @@ public class CircuitBreakerConfig {
     return new Builder();
   }
 
-  /**
-   * Creates a new {@link CircuitBreakerConfig} with the default settings applied.
-   *
-   * @return a new {@link CircuitBreakerConfig} with defaults.
-   */
-  public static CircuitBreakerConfig create() {
-    return builder().build();
+  public static Builder enabled(boolean enabled) {
+    return builder().enabled(enabled);
   }
 
-  /**
-   * Creates a new {@link CircuitBreakerConfig} which disables the circuit breaker.
-   *
-   * @return a new disabled {@link CircuitBreakerConfig}.
-   */
-  public static CircuitBreakerConfig disabled() {
-    return builder().enabled(false).build();
+  public static Builder volumeThreshold(final int volumeThreshold) {
+    return builder().volumeThreshold(volumeThreshold);
+  }
+
+  public static Builder errorThresholdPercentage(final int errorThresholdPercentage) {
+    return builder().errorThresholdPercentage(errorThresholdPercentage);
+  }
+
+  public static Builder sleepWindow(final Duration sleepWindow) {
+    return builder().sleepWindow(sleepWindow);
+  }
+  public static Builder rollingWindow(final Duration rollingWindow) {
+    return builder().rollingWindow(rollingWindow);
+  }
+
+  public static Builder completionCallback(final CircuitBreaker.CompletionCallback completionCallback) {
+    return builder().completionCallback(completionCallback);
   }
 
   private CircuitBreakerConfig(final Builder builder) {
@@ -74,6 +85,7 @@ public class CircuitBreakerConfig {
     this.errorThresholdPercentage = builder.errorThresholdPercentage;
     this.sleepWindow = builder.sleepWindow;
     this.rollingWindow = builder.rollingWindow;
+    this.completionCallback = builder.completionCallback;
   }
 
   /**
@@ -111,6 +123,10 @@ public class CircuitBreakerConfig {
     return rollingWindow;
   }
 
+  public CircuitBreaker.CompletionCallback completionCallback() {
+    return completionCallback;
+  }
+
   @Stability.Volatile
   public Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
@@ -119,6 +135,7 @@ public class CircuitBreakerConfig {
     export.put("errorThresholdPercentage", errorThresholdPercentage);
     export.put("sleepWindowMs", sleepWindow.toMillis());
     export.put("rollingWindowMs", rollingWindow.toMillis());
+    export.put("completionCallback", completionCallback.getClass().getSimpleName());
     return export;
   }
 
@@ -129,6 +146,7 @@ public class CircuitBreakerConfig {
     private int errorThresholdPercentage = DEFAULT_ERROR_THRESHOLD_PERCENTAGE;
     private Duration sleepWindow = DEFAULT_SLEEP_WINDOW;
     private Duration rollingWindow = DEFAULT_ROLLING_WINDOW;
+    private CircuitBreaker.CompletionCallback completionCallback = DEFAULT_COMPLETION_CALLBACK;
 
     /**
      * Enables or disables this circuit breaker.
@@ -179,6 +197,7 @@ public class CircuitBreakerConfig {
      * @return this {@link Builder} for chaining purposes.
      */
     public Builder sleepWindow(final Duration sleepWindow) {
+      notNull(sleepWindow, "SleepWindow");
       this.sleepWindow = sleepWindow;
       return this;
     }
@@ -192,7 +211,20 @@ public class CircuitBreakerConfig {
      * @return this {@link Builder} for chaining purposes.
      */
     public Builder rollingWindow(final Duration rollingWindow) {
+      notNull(rollingWindow, "RollingWindow");
       this.rollingWindow = rollingWindow;
+      return this;
+    }
+
+    /**
+     * Allows customizing of the completion callback which defines what is considered a failure and what success.
+     *
+     * @param completionCallback the custom completion callback.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder completionCallback(final CircuitBreaker.CompletionCallback completionCallback) {
+      notNull(completionCallback, "CompletionCallback");
+      this.completionCallback = completionCallback;
       return this;
     }
 

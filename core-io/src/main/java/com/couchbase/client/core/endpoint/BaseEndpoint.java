@@ -75,7 +75,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -131,7 +130,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   private final EventLoopGroup eventLoopGroup;
 
-  private final RequestCompletionConsumer requestCompletionConsumer = new RequestCompletionConsumer();
+  private final CircuitBreaker.CompletionCallback circuitBreakerCallback;
 
   private final ServiceType serviceType;
 
@@ -171,6 +170,8 @@ public abstract class BaseEndpoint implements Endpoint {
       this.circuitBreaker = NoopCircuitBreaker.INSTANCE;
       this.circuitBreakerEnabled = false;
     }
+    this.circuitBreakerCallback = circuitBreakerConfig.completionCallback();
+
     this.endpointContext = new AtomicReference<>(
       new EndpointContext(serviceContext, new HostAndPort(hostname, port), circuitBreaker, serviceType,
         Optional.empty(), serviceContext.bucket(), Optional.empty())
@@ -468,11 +469,20 @@ public abstract class BaseEndpoint implements Endpoint {
       }
       if (circuitBreakerEnabled) {
         circuitBreaker.track();
-        request.response().whenComplete(requestCompletionConsumer);
+        request.response().whenComplete((response, throwable) -> {
+          if (circuitBreakerCallback.apply(response, throwable)) {
+            circuitBreaker.markSuccess();
+          } else {
+            circuitBreaker.markFailure();
+          }
+        });
       }
       channel.writeAndFlush(request);
     } else {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.ENDPOINT_NOT_WRITABLE);
+      RetryReason retryReason = circuitBreaker.allowsRequest()
+        ? RetryReason.ENDPOINT_NOT_WRITABLE
+        : RetryReason.ENDPOINT_CIRCUIT_OPEN;
+      RetryOrchestrator.maybeRetry(endpointContext.get(), request, retryReason);
     }
   }
 
@@ -564,24 +574,6 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   public boolean pipelined() {
     return pipelined;
-  }
-
-  /**
-   * This request completion consumer is cached in the parent class to reuse it
-   * across each request and not create garbage each and every time.
-   *
-   * <p>It gets called when a request is completed and updates the endpoints associated
-   * state i.e. circuit breakers, outstanding requests and last response timestamp.</p>
-   */
-  class RequestCompletionConsumer implements BiConsumer<Response, Throwable> {
-    @Override
-    public void accept(final Response r, final Throwable t) {
-      if (r != null) {
-        circuitBreaker.markSuccess();
-      } else {
-        circuitBreaker.markFailure();
-      }
-    }
   }
 
   /**

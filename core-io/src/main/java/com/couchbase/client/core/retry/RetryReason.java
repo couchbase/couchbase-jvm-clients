@@ -36,6 +36,10 @@ public enum RetryReason {
    */
   ENDPOINT_TEMPORARILY_NOT_AVAILABLE(true, true),
   /**
+   * Short circuits the endpoint write because the circuit breaker is open at the moment.
+   */
+  ENDPOINT_CIRCUIT_OPEN(true, false),
+  /**
    * Retried because at this point in time there is no service available to dispatch to.
    */
   SERVICE_NOT_AVAILABLE(true, false),

@@ -91,7 +91,7 @@ class BaseEndpointIntegrationTest extends CoreIntegrationTest {
     );
 
     BaseEndpoint endpoint = new BaseEndpoint("127.0.0.1", 1234, eventLoopGroup,
-      serviceContext, CircuitBreakerConfig.disabled(), ServiceType.QUERY, false) {
+      serviceContext, CircuitBreakerConfig.enabled(false).build(), ServiceType.QUERY, false) {
 
       @Override
       protected PipelineInitializer pipelineInitializer() {
