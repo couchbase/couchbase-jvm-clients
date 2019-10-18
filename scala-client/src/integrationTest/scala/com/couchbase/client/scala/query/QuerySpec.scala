@@ -265,7 +265,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
     cluster.query(
       s"""select * from `${bucketName}` where name=$$nval""",
-      QueryOptions().namedParameters(Map("nval" -> "Eric Wimp"))
+      QueryOptions().parameters(Map("nval" -> "Eric Wimp"))
         .scanConsistency(QueryScanConsistency.RequestPlus())) match {
       case Success(result) =>
         assert(result.rows.size > 0)
@@ -279,7 +279,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
     cluster.query(
       s"""select * from `${bucketName}` where name=$$1""",
-      QueryOptions().positionalParameters(Seq("Eric Wimp"))
+      QueryOptions().parameters(Seq("Eric Wimp"))
         .scanConsistency(QueryScanConsistency.RequestPlus())) match {
       case Success(result) => {
         assert(result.rows.size > 0)
@@ -318,7 +318,6 @@ class QuerySpec extends ScalaIntegrationTest {
         .pipelineCap(3)
         .pipelineBatch(6)
         .scanCap(8)
-        .serverSideTimeout(30.seconds)
         .timeout(30.seconds)
         .readonly(true)) match {
       case Success(result) =>
@@ -381,7 +380,7 @@ class QuerySpec extends ScalaIntegrationTest {
     val options: QueryOptions = QueryOptions()
       .scanConsistency(QueryScanConsistency.RequestPlus())
       .adhoc(false)
-      .namedParameters(Map("id" -> id))
+      .parameters(Map("id" -> id))
     val result: QueryResult = cluster.query("select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
       ".id=$id", options).get
     val rows = result.rowsAs[JsonObject].get
@@ -394,7 +393,7 @@ class QuerySpec extends ScalaIntegrationTest {
     val id: String = insertDoc
     val options: QueryOptions = QueryOptions()
       .scanConsistency(QueryScanConsistency.RequestPlus())
-      .positionalParameters(Seq(id))
+      .parameters(Seq(id))
     val st = "select `" + bucketName + "`.* from `" + bucketName + "` where meta().id=$1"
     val result: QueryResult = cluster.query(st, options).get
     val rows = result.rowsAs[JsonObject].get

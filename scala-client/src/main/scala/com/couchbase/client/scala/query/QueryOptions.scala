@@ -18,13 +18,15 @@ package com.couchbase.client.scala.query
 
 import java.util.UUID
 
+import com.couchbase.client.core.logging.RedactableArgument.redactUser
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.Golang
-import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query.QueryScanConsistency.{ConsistentWith, RequestPlus}
 import com.couchbase.client.scala.util.DurationConversions._
 
+import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.Success
 
@@ -34,7 +36,7 @@ import scala.util.Success
   * @author Graham Pople
   * @since 1.0.0
   */
-case class QueryOptions(private[scala] val namedParameters: Option[Map[String,Any]] = None,
+case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String,Any]] = None,
                         private[scala] val positionalParameters: Option[Seq[Any]] = None,
                         private[scala] val clientContextId: Option[String] = None,
                         private[scala] val credentials: Option[Map[String,String]] = None,
@@ -48,26 +50,71 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
                         private[scala] val scanCap: Option[Int] = None,
                         private[scala] val scanConsistency: Option[QueryScanConsistency] = None,
                         private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
-                        private[scala] val serverSideTimeout: Option[Duration] = None,
                         private[scala] val timeout: Option[Duration] = None,
-                        private[scala] val adhoc: Boolean = true
-                       ) {
+                        private[scala] val adhoc: Boolean = true,
+                        private[scala] val deferredException: Option[RuntimeException] = None) {
   /** Provides named parameters for queries parameterised that way.
     *
     * Overrides any previously-supplied named parameters.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def namedParameters(values: Map[String,Any]): QueryOptions = {
-    copy(namedParameters = Option(values), positionalParameters = None)
+  def parameters(values: Map[String,Any]): QueryOptions = {
+    copy(namedParameters = Option(values), positionalParameters = None,
+      deferredException = deferredException.orElse(checkTypes(values.values)))
+  }
+
+  /** Provides named parameters for queries parameterised that way.
+    *
+    * Overrides any previously-supplied named parameters.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def parameters(values: JsonObject): QueryOptions = {
+    copy(namedParameters = Option(values.toMap), positionalParameters = None)
   }
 
   /** Provides positional parameters for queries parameterised that way.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def positionalParameters(values: Seq[Any]): QueryOptions = {
-    copy(positionalParameters = Option(values), namedParameters = None)
+  def parameters(values: Seq[Any]): QueryOptions = {
+    copy(positionalParameters = Option(values), namedParameters = None,
+      deferredException = deferredException.orElse(checkTypes(values)))
+  }
+
+  /** Provides positional parameters for queries parameterised that way.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def parameters(values: JsonArray): QueryOptions = {
+    copy(positionalParameters = Option(values.toSeq), namedParameters = None)
+  }
+  
+  private def checkTypes(in: Iterable[Any]): Option[RuntimeException] = {
+    var out: Option[RuntimeException] = None
+
+    in.foreach(value => {
+      if (value != null) {
+        value match {
+          case _: String =>
+          case _: Int =>
+          case _: Long =>
+          case _: Double =>
+          case _: Float =>
+          case _: Short =>
+          case _: Boolean =>
+          case _: JsonObject =>
+          case _: JsonObjectSafe =>
+          case _: JsonArray =>
+          case _: JsonArraySafe =>
+          case _ =>
+            out = Some(new IllegalArgumentException(s"Value '${redactUser(value)}' is not a valid JSON type"))
+        }
+      }
+    })
+
+    out
   }
 
   /** Adds a client context ID to the request, that will be sent back in the response, allowing clients
@@ -163,14 +210,12 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     */
   def scanConsistency(scanConsistency: QueryScanConsistency): QueryOptions = copy(scanConsistency = Some(scanConsistency))
 
-  /** Sets a maximum timeout for processing on the server side.
+  /** Sets a maximum timeout for processing.
     *
-    * @param serverSideTimeout the duration of the timeout.
+    * @param timeout the duration of the timeout.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def serverSideTimeout(serverSideTimeout: Duration): QueryOptions = copy(serverSideTimeout = Option(serverSideTimeout))
-
   def timeout(timeout: Duration): QueryOptions = {
     copy(timeout = Option(timeout))
   }
@@ -208,7 +253,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
     encode(JsonObject.create)
   }
 
-  private[scala] def encode(out: JsonObject) = {
+  private[scala] def encode(out: JsonObject): JsonObject = {
     credentials.foreach(creds => {
       val credsArr = JsonArray.create
 
@@ -224,7 +269,12 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
 
     namedParameters.foreach(p => {
       p.foreach(k => {
-        out.put('$' + k._1, k._2)
+        if (k._1.startsWith("$")) {
+          out.put(k._1, k._2)
+        }
+        else {
+          out.put('$' + k._1, k._2)
+        }
       })
     })
     positionalParameters.foreach(p => {
@@ -262,7 +312,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[Map[String,An
       case _ =>
     }
     profile.foreach(v => out.put("profile", v.encoded))
-    serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
     val cciOut = clientContextId match {
       case Some(cci) => cci
       case _ => UUID.randomUUID().toString

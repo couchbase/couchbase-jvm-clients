@@ -104,7 +104,6 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
       _ <- Validate.optNotNull(options.scanCap, "scanCap")
       _ <- Validate.optNotNull(options.scanConsistency, "scanConsistency")
-      _ <- Validate.optNotNull(options.serverSideTimeout, "serverSideTimeout")
       _ <- Validate.optNotNull(options.timeout, "timeout")
     } yield null
 
@@ -112,25 +111,29 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       validations
     }
     else {
-      val params = options.encode()
-      params.put("statement", statement)
+      options.deferredException match {
+        case Some(deferredException) => Failure(deferredException)
+        case _ =>
+          val params = options.encode()
+          params.put("statement", statement)
 
-      Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
-        val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
+          Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
+            val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
-        val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+            val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
+            val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
-        val request = new QueryRequest(timeout,
-          core.context(),
-          retryStrategy,
-          core.context().authenticator(),
-          statement,
-          queryBytes,
-          options.readonly.getOrElse(false))
+            val request = new QueryRequest(timeout,
+              core.context(),
+              retryStrategy,
+              core.context().authenticator(),
+              statement,
+              queryBytes,
+              options.readonly.getOrElse(false))
 
-        request
-      })
+            request
+          })
+      }
     }
   }
 
