@@ -87,7 +87,7 @@ class QuerySpec extends ScalaIntegrationTest {
         assert(result.rows.size == 1)
         val rows = result.rowsAs[JsonObject].get
         assert(rows.head.str("Greeting") == "hello world 2")
-        val signature = result.metaData.signature.get.contentAs[JsonObject].get
+        val signature = result.metaData.signatureAs[JsonObject].get
         assert(signature.size > 0)
 
         val out = result.metaData
@@ -112,7 +112,7 @@ class QuerySpec extends ScalaIntegrationTest {
         assert(result.rows.size == 1)
         val rows = result.rowsAs[JsonObject].get
         assert(rows.head.str("Greeting") == "hello world 2")
-        val signature = result.metaData.signature.get.contentAs[JsonObject].get
+        val signature = result.metaData.signatureAs[JsonObject].get
         assert(signature.size > 0)
 
         val out = result.metaData

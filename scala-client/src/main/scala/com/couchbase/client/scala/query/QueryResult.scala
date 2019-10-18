@@ -103,25 +103,6 @@ case class QueryError(private val content: Array[Byte]) extends CouchbaseExcepti
   override def toString: String = msg
 }
 
-/** Returns the signature information of a query request, in JSON form. */
-case class QuerySignature(private val _content: Array[Byte]) {
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = {
-    _content
-  }
-
-  /** Return the content, converted into the application's preferred representation.
-    *
-    * The content is a JSON object, so a suitable representation would be [[JsonObject]].
-    *
-    * @tparam T $SupportedTypes
-    */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
-  }
-}
-
 /** A warning returned from the query service. */
 case class QueryWarning(code: Int, message: String)
 
@@ -188,7 +169,7 @@ private[scala] object QueryMetrics {
   */
 case class QueryMetaData(private[scala] val requestId: String,
                          clientContextId: String,
-                         signature: Option[QuerySignature],
+                         private val _signatureContent: Option[Array[Byte]],
                          metrics: Option[QueryMetrics],
                          warnings: Seq[QueryWarning],
                          status: QueryStatus,
@@ -205,6 +186,18 @@ case class QueryMetaData(private[scala] val requestId: String,
     _profileContent match {
       case Some(content) => ev.decode(content, Conversions.JsonFlags)
       case _ => Failure(new IllegalArgumentException("No profile is available"))
+    }
+  }
+
+  /** Return any signature content, converted into the application's preferred representation.
+    *
+    * @tparam T $SupportedTypes
+    */
+  def signatureAs[T]
+  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+    _signatureContent match {
+      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case _ => Failure(new IllegalArgumentException("No signature is available"))
     }
   }
 }

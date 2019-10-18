@@ -169,7 +169,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
         val out = QueryMetaData(
           response.header().requestId(),
           response.header().clientContextId().asScala.getOrElse(""),
-          response.header().signature().asScala.map(QuerySignature),
+          response.header().signature().asScala,
           addl.metrics().asScala.flatMap(QueryMetrics.fromBytes),
           warnings,
           status,
