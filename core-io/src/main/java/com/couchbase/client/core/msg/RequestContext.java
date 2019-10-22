@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -142,7 +143,7 @@ public class RequestContext extends CoreContext {
   }
 
   @Stability.Internal
-  public RequestContext dispatchedTo(String dispatchedTo) {
+  public RequestContext dispatchedTo(final String dispatchedTo) {
     this.dispatchedTo = dispatchedTo;
     return this;
   }
@@ -193,6 +194,9 @@ public class RequestContext extends CoreContext {
     }
     if (dispatchLatency != 0) {
       input.put("timings", new HashMap<>().put("dispatch", dispatchLatency));
+    }
+    if (dispatchedTo != null) {
+      input.put("lastDispatchedTo", redactSystem(dispatchedTo));
     }
   }
 

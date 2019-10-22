@@ -127,7 +127,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ctx.put("collection", redactMeta(collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION)));
     }
 
-    if (key != null) {
+    if (key != null && key.length > 0) {
       ctx.put("key", redactUser(new String(key, UTF_8)));
     }
 
