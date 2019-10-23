@@ -68,8 +68,8 @@ class ReactiveCluster(val async: AsyncCluster) {
   @Stability.Volatile
   lazy val buckets = new ReactiveBucketManager(async.core)
 
-  @Stability.Volatile
   /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
+  @Stability.Volatile
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
 
   @Stability.Volatile

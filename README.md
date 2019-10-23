@@ -101,3 +101,12 @@ runs against the mock. Recommended topologies:
  - 1 node, no replica
  - 2 nodes, 1 replica
  - 2 nodes, 2 replicas
+ 
+## IDE Configuration
+
+### IntelliJ
+Scala code is automatically formatted on compile with the tool `scalafmt`.  To make IntelliJ use the same settings:
+
+Editor -> Code Style -> Scala, change formatter to scalafmt
+
+(`mvn validate` can be used from command-line to force reformat)

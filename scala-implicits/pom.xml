@@ -201,6 +201,30 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
+                <version>1.0.1</version>
+                <configuration>
+                    <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
+                    <skipTestSources>false</skipTestSources>
+                    <skipSources>false</skipSources>
+                    <respectVersion>false</respectVersion>
+                    <sourceDirectories>
+                        <param>${project.basedir}/src/main/scala</param>
+                    </sourceDirectories>
+                    <validateOnly>false</validateOnly> <!-- check formatting without changing files -->
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!--Add src/main/java to source-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
