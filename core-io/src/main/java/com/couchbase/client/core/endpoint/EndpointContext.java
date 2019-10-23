@@ -18,8 +18,8 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 
-import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,14 +31,9 @@ public class EndpointContext extends CoreContext {
   /**
    * The hostname of this endpoint.
    */
-  private final String remoteHostname;
+  private final HostAndPort remoteSocket;
 
-  private final Optional<SocketAddress> localSocket;
-
-  /**
-   * The port of this endpoint.
-   */
-  private final int remotePort;
+  private final Optional<HostAndPort> localSocket;
 
   /**
    * The circuit breaker used for this endpoint.
@@ -56,17 +51,12 @@ public class EndpointContext extends CoreContext {
 
   /**
    * Creates a new {@link EndpointContext}.
-   *
-   * @param ctx the parent context to use.
-   * @param remoteHostname the remote hostname.
-   * @param remotePort the remote port.
    */
-  public EndpointContext(CoreContext ctx, String remoteHostname, int remotePort,
+  public EndpointContext(CoreContext ctx, HostAndPort remoteSocket,
                          CircuitBreaker circuitBreaker, ServiceType serviceType,
-                         Optional<SocketAddress> localSocket, Optional<String> bucket, Optional<String> channelId) {
+                         Optional<HostAndPort> localSocket, Optional<String> bucket, Optional<String> channelId) {
     super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
-    this.remoteHostname = remoteHostname;
-    this.remotePort = remotePort;
+    this.remoteSocket = remoteSocket;
     this.circuitBreaker = circuitBreaker;
     this.serviceType = serviceType;
     this.bucket = bucket;
@@ -77,7 +67,7 @@ public class EndpointContext extends CoreContext {
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", redactSystem(remoteHostname() + ":" + remotePort()));
+    input.put("remote", redactSystem(remoteSocket()));
     localSocket.ifPresent(s -> input.put("local", redactSystem(s)));
     input.put("circuitBreaker", circuitBreaker.state().toString());
     input.put("type", serviceType);
@@ -85,20 +75,16 @@ public class EndpointContext extends CoreContext {
     channelId.ifPresent(i -> input.put("channelId", i));
   }
 
-  public String remoteHostname() {
-    return remoteHostname;
-  }
-
-  public int remotePort() {
-    return remotePort;
-  }
-
   public CircuitBreaker circuitBreaker() {
     return circuitBreaker;
   }
 
-  public Optional<SocketAddress> localSocket() {
+  public Optional<HostAndPort> localSocket() {
     return localSocket;
+  }
+
+  public HostAndPort remoteSocket() {
+    return remoteSocket;
   }
 
   public ServiceType serviceType() {
@@ -108,4 +94,5 @@ public class EndpointContext extends CoreContext {
   public Optional<String> bucket() {
     return bucket;
   }
+
 }

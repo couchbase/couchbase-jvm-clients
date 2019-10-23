@@ -28,6 +28,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailed
 import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -350,6 +351,7 @@ class BaseEndpointTest {
     Request<Response> request = mock(Request.class);
     CompletableFuture<Response> response = new CompletableFuture<>();
     when(request.response()).thenReturn(response);
+    when(request.context()).thenReturn(new RequestContext(ctx, request));
 
     assertTrue(endpoint.free());
     endpoint.send(request);

@@ -37,7 +37,6 @@ import com.couchbase.client.core.io.netty.kv.ConnectTimings;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.util.AssignChannelInfo;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
@@ -59,6 +58,7 @@ import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
 import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.util.SingleStateful;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -170,7 +170,7 @@ public abstract class BaseEndpoint implements Endpoint {
       this.circuitBreakerEnabled = false;
     }
     this.endpointContext = new AtomicReference<>(
-      new EndpointContext(serviceContext, hostname, port, circuitBreaker, serviceType,
+      new EndpointContext(serviceContext, new HostAndPort(hostname, port), circuitBreaker, serviceType,
         Optional.empty(), serviceContext.bucket(), Optional.empty())
     );
     this.state = SingleStateful.fromInitial(
@@ -232,7 +232,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   protected SocketAddress remoteAddress() {
     final EndpointContext ctx = endpointContext.get();
-    return InetSocketAddress.createUnresolved(ctx.remoteHostname(), ctx.remotePort());
+    return InetSocketAddress.createUnresolved(ctx.remoteSocket().hostname(), ctx.remoteSocket().port());
   }
 
   /**
@@ -333,13 +333,20 @@ public abstract class BaseEndpoint implements Endpoint {
             closeChannel(channel);
           } else {
             this.channel = channel;
+
+            Optional<HostAndPort> localSocket = Optional.empty();
+            if (channel.localAddress() instanceof InetSocketAddress) {
+              // it will always be an inet socket address, but to safeguard for testing mocks...
+              InetSocketAddress so = (InetSocketAddress) channel.localAddress();
+              localSocket = Optional.of(new HostAndPort(so.getHostString(), so.getPort()));
+            }
+
             EndpointContext newContext = new EndpointContext(
               endpointContext,
-              endpointContext.remoteHostname(),
-              endpointContext.remotePort(),
+              endpointContext.remoteSocket(),
               endpointContext.circuitBreaker(),
               endpointContext.serviceType(),
-              Optional.of(channel.localAddress()),
+              localSocket,
               endpointContext.bucket(),
               Optional.ofNullable(channel.attr(ChannelAttributes.CHANNEL_ID_KEY).get())
             );
@@ -437,31 +444,20 @@ public abstract class BaseEndpoint implements Endpoint {
       return;
     }
 
+    final EndpointContext ctx = endpointContext.get();
     if (canWrite()) {
-      if (request instanceof AssignChannelInfo && channel != null) {
-        AssignChannelInfo resp = (AssignChannelInfo) request;
-        SocketAddress remoteAddr = channel.remoteAddress();
-        SocketAddress localAddr = channel.localAddress();
-        if (remoteAddr instanceof InetSocketAddress) {
-          InetSocketAddress ra = (InetSocketAddress) remoteAddr;
-          resp.remote(redactMeta(ra.getHostString()) + ":" + ra.getPort());
-        }
-        if (localAddr instanceof InetSocketAddress) {
-          InetSocketAddress la = (InetSocketAddress) localAddr;
-          resp.local(redactMeta(la.getHostString()) + ":" + la.getPort());
-        }
-      }
-
+      request.context().lastDispatchedFrom(ctx.localSocket().orElse(null));
+      request.context().lastDispatchedTo(ctx.remoteSocket());
       if (!pipelined) {
-          outstandingRequests.incrementAndGet();
-        }
-        if (circuitBreakerEnabled) {
-          circuitBreaker.track();
-          request.response().whenComplete(requestCompletionConsumer);
-        }
-        channel.writeAndFlush(request);
+        outstandingRequests.incrementAndGet();
+      }
+      if (circuitBreakerEnabled) {
+        circuitBreaker.track();
+        request.response().whenComplete(requestCompletionConsumer);
+      }
+      channel.writeAndFlush(request);
     } else {
-      RetryOrchestrator.maybeRetry(endpointContext.get(), request, RetryReason.ENDPOINT_NOT_WRITABLE);
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.ENDPOINT_NOT_WRITABLE);
     }
   }
 

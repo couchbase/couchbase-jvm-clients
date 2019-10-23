@@ -19,18 +19,14 @@ package com.couchbase.client.core.msg.diagnostics;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
-import com.couchbase.client.core.msg.kv.NoopResponse;
-import com.couchbase.client.core.msg.util.AssignChannelInfo;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -38,10 +34,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 
-public class PingKVRequest extends BaseKeyValueRequest<PingResponse> implements AssignChannelInfo {
-
-  private String local;
-  private String remote;
+public class PingKVRequest extends BaseKeyValueRequest<PingResponse> {
 
   public PingKVRequest(final Duration timeout, final CoreContext ctx,
                        final RetryStrategy retryStrategy, CollectionIdentifier collectionIdentifier) {
@@ -62,26 +55,6 @@ public class PingKVRequest extends BaseKeyValueRequest<PingResponse> implements 
   @Override
   public boolean idempotent() {
     return true;
-  }
-
-  public String local() {
-    return local;
-  }
-
-  @Override
-  public AssignChannelInfo local(String local) {
-    this.local = local;
-    return this;
-  }
-
-  public String remote() {
-    return remote;
-  }
-
-  @Override
-  public AssignChannelInfo remote(String remote) {
-    this.remote = remote;
-    return this;
   }
 
 }

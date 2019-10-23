@@ -25,25 +25,22 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.ScopedRequest;
-import com.couchbase.client.core.msg.util.AssignChannelInfo;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-import static java.util.Objects.requireNonNull;
 
 public class PingRequest
   extends BaseRequest<PingResponse>
-  implements NonChunkedHttpRequest<PingResponse>, ScopedRequest, AssignChannelInfo {
+  implements NonChunkedHttpRequest<PingResponse>, ScopedRequest {
 
   private final String bucket;
   private final String path;
   private final ServiceType type;
-  private String local;
-  private String remote;
 
   public PingRequest(final Duration timeout,
                      final CoreContext ctx,
@@ -84,32 +81,12 @@ public class PingRequest
     return bucket;
   }
 
-  public String local() {
-    return local;
-  }
-
-  @Override
-  public AssignChannelInfo local(String local) {
-    this.local = local;
-    return this;
-  }
-
-  public String remote() {
-    return remote;
-  }
-
-  @Override
-  public AssignChannelInfo remote(String remote) {
-    this.remote = remote;
-    return this;
-  }
-
   @Override
   public String toString() {
-    return "PingResponse{" +
-            ", local=" + redactSystem(local) +
-            ", remote=" + redactSystem(remote) +
-            '}';
+    return "PingRequest{" +
+      "bucket='" + redactMeta(bucket) + '\'' +
+      ", path='" + path + '\'' +
+      ", type=" + type +
+      '}';
   }
-
 }

@@ -27,6 +27,7 @@ import com.couchbase.client.core.endpoint.{BaseEndpoint, EndpointContext}
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
+import com.couchbase.client.core.util.HostAndPort
 import com.couchbase.client.core.{Core, CoreContext}
 import com.couchbase.client.scala.AsyncCluster
 import com.couchbase.client.scala.env.PasswordAuthenticator
@@ -92,7 +93,7 @@ object SearchMock {
     doReturn(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "localhost"), null).when(spiedReq).encode
 
     doAnswer((v) => {
-      val endpointContext = new EndpointContext(ctx, null, 0, null, null, null, Optional.of
+      val endpointContext = new EndpointContext(ctx, new HostAndPort(null, 0), null, null, null, Optional.of
       ("bucket"), null)
 
       val endpoint = mock(classOf[BaseEndpoint])

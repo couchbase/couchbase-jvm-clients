@@ -401,7 +401,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to extract the config from, potentially.
    */
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
-    final String origin = request.context().dispatchedTo();
+    final String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().hostname() : null;
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
     body(response)

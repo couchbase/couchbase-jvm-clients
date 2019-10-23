@@ -36,6 +36,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
@@ -117,7 +118,7 @@ public class SearchMock {
         doReturn(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "localhost")).when(spiedReq).encode();
 
         doAnswer(v -> {
-            EndpointContext endpointContext = new EndpointContext(ctx, null, 0, null, null, null,
+            EndpointContext endpointContext = new EndpointContext(ctx, new HostAndPort(null, 0), null, null, null,
                     Optional.of("bucket"), null);
 
             BaseEndpoint endpoint = mock(BaseEndpoint.class);

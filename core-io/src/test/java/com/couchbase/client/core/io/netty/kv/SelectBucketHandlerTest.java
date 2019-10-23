@@ -23,9 +23,9 @@ import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.util.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
@@ -77,7 +77,7 @@ class SelectBucketHandlerTest {
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(10));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
-    endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,
+    endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

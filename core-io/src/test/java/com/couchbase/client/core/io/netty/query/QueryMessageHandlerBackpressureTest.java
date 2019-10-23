@@ -49,6 +49,7 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -101,8 +102,7 @@ class QueryMessageHandlerBackpressureTest {
   void requestRecordsExplicitly() throws Exception {
     EndpointContext endpointContext = new EndpointContext(
       core.context(),
-      "127.0.0.1",
-      1234,
+      new HostAndPort("127.0.0.1", 1234),
       NoopCircuitBreaker.INSTANCE,
       ServiceType.QUERY,
       Optional.empty(),

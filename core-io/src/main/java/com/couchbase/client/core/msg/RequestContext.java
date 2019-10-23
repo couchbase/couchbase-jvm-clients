@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.util.HostAndPort;
 
 import java.time.Duration;
 import java.util.EnumSet;
@@ -62,7 +63,12 @@ public class RequestContext extends CoreContext {
   /**
    * The hostname/ip where this request got last dispatched to.
    */
-  private volatile String dispatchedTo;
+  private volatile HostAndPort lastDispatchedTo;
+
+  /**
+   * The hostname/ip where this request got last dispatched from.
+   */
+  private volatile HostAndPort lastDispatchedFrom;
 
   /**
    * Holds a set of retry reasons.
@@ -168,13 +174,23 @@ public class RequestContext extends CoreContext {
     return this;
   }
 
-  public String dispatchedTo() {
-    return dispatchedTo;
+  public HostAndPort lastDispatchedTo() {
+    return lastDispatchedTo;
   }
 
   @Stability.Internal
-  public RequestContext dispatchedTo(final String dispatchedTo) {
-    this.dispatchedTo = dispatchedTo;
+  public RequestContext lastDispatchedTo(final HostAndPort lastDispatchedTo) {
+    this.lastDispatchedTo = lastDispatchedTo;
+    return this;
+  }
+
+  public HostAndPort lastDispatchedFrom() {
+    return lastDispatchedFrom;
+  }
+
+  @Stability.Internal
+  public RequestContext lastDispatchedFrom(final HostAndPort lastDispatchedFrom) {
+    this.lastDispatchedFrom = lastDispatchedFrom;
     return this;
   }
 
@@ -233,8 +249,11 @@ public class RequestContext extends CoreContext {
       }
       input.put("timings", timings);
     }
-    if (dispatchedTo != null) {
-      input.put("lastDispatchedTo", redactSystem(dispatchedTo));
+    if (lastDispatchedTo != null) {
+      input.put("lastDispatchedTo", redactSystem(lastDispatchedTo));
+    }
+    if (lastDispatchedFrom != null) {
+      input.put("lastDispatchedFrom", redactSystem(lastDispatchedFrom));
     }
   }
 

@@ -35,6 +35,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,7 +80,7 @@ class KeyValueMessageHandlerTest {
     ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
     when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());
     when(core.configurationProvider()).thenReturn(configurationProvider);
-    CTX = new EndpointContext(coreContext, "127.0.0.1", 1234,
+    CTX = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

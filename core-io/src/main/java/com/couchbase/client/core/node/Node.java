@@ -344,7 +344,6 @@ public class Node implements Stateful<NodeState> {
       return;
     }
 
-    request.context().dispatchedTo(identifier.address());
     service.send(request);
   }
 

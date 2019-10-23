@@ -183,8 +183,8 @@ public class HealthPinger {
                       PingServiceHealth.PingState.OK,
                       id,
                       TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.local(),
-                      req.remote(),
+                      req.context().lastDispatchedFrom().toString(),
+                      req.context().lastDispatchedTo().toString(),
                       bucket);
             })
 
@@ -200,8 +200,8 @@ public class HealthPinger {
                       state,
                       id,
                       TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.local(),
-                      req.remote(),
+                      req.context().lastDispatchedFrom().toString(),
+                      req.context().lastDispatchedTo().toString(),
                       bucket));
             });
   }
@@ -229,8 +229,8 @@ public class HealthPinger {
                       PingServiceHealth.PingState.OK,
                       id,
                       TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.local(),
-                      req.remote(),
+                      req.context().lastDispatchedFrom().toString(),
+                      req.context().lastDispatchedTo().toString(),
                       bucket
               );
             })
@@ -247,8 +247,8 @@ public class HealthPinger {
                       state,
                       id,
                       TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.local(),
-                      req.remote(),
+                      req.context().lastDispatchedFrom().toString(),
+                      req.context().lastDispatchedTo().toString(),
                       bucket));
             });
   }

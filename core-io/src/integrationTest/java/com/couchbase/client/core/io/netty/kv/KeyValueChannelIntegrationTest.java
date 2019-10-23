@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
@@ -75,8 +76,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     Core core = Core.create(env, authenticator(), seedNodes());
     endpointContext = new EndpointContext(
       core.context(),
-      node.hostname(),
-      node.ports().get(Services.KV),
+      new HostAndPort(node.hostname(), node.ports().get(Services.KV)),
       null,
       ServiceType.KV,
       Optional.empty(),

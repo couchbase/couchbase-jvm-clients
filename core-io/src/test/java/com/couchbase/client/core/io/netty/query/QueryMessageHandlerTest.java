@@ -40,6 +40,7 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,7 @@ class QueryMessageHandlerTest {
   static void setup() {
     ENV = CoreEnvironment.create();
     CORE_CTX = new CoreContext(mock(Core.class), 1, ENV, PasswordAuthenticator.create("user", "pass"));
-    ENDPOINT_CTX = new EndpointContext(CORE_CTX, "127.0.0.1", 1234,
+    ENDPOINT_CTX = new EndpointContext(CORE_CTX, new HostAndPort("127.0.0.1", 1234),
       NoopCircuitBreaker.INSTANCE, ServiceType.QUERY, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

@@ -37,6 +37,7 @@ import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.util.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
@@ -92,7 +93,7 @@ class FeatureNegotiatingHandlerTest {
     when(env.userAgent()).thenReturn(new UserAgent("some", Optional.empty(), Optional.empty(), Optional.empty()));
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
-    endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,
+    endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

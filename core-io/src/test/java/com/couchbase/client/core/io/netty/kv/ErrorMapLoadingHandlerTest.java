@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.util.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
@@ -80,7 +81,7 @@ class ErrorMapLoadingHandlerTest {
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
-    endpointContext = new EndpointContext(coreContext, "127.0.0.1", 1234,
+    endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
 
@@ -126,7 +127,7 @@ class ErrorMapLoadingHandlerTest {
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(100));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     EndpointContext endpointContext = new EndpointContext(coreContext,
-      "127.0.0.1", 1234, null, ServiceType.KV,
+      new HostAndPort("127.0.0.1", 1234), null, ServiceType.KV,
       Optional.empty(), Optional.empty(), Optional.empty());
 
     ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
