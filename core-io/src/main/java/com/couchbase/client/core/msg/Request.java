@@ -140,6 +140,13 @@ public interface Request<R extends Response> {
   RetryStrategy retryStrategy();
 
   /**
+   * Holds the nanoTime when the request got created.
+   *
+   * @return the time when the request got created.
+   */
+  long createdAt();
+
+  /**
    * Returns if the given request is idempotent or not.
    *
    * <p>By default, this method always returns false for data consistency reasons. Only specific idempotent operations

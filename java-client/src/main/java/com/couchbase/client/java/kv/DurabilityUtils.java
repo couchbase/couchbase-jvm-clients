@@ -37,10 +37,11 @@ public enum DurabilityUtils {
                                                                      final Core core,
                                                                      final KeyValueRequest<?> request,
                                                                      boolean remove) {
+    CompletableFuture<T> finalResult;
     if (persistTo == PersistTo.NONE && replicateTo == ReplicateTo.NONE) {
-      return input;
+      finalResult = input;
     } else {
-      return input.thenCompose(result -> {
+      finalResult = input.thenCompose(result -> {
         final ObserveContext ctx = new ObserveContext(
           core.context(),
           persistTo.coreHandle(),
@@ -55,5 +56,8 @@ public enum DurabilityUtils {
         return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
     }
+
+    return finalResult.whenComplete((r, t) -> request.context().logicallyComplete());
   }
+
 }

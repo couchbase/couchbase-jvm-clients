@@ -76,6 +76,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   private final RetryStrategy retryStrategy;
 
   /**
+   * Stores the time when the request got created.
+   */
+  private final long createdAt;
+
+  /**
    * The {@link State} this {@link Request} is in at the moment.
    *
    * <p>Do not rename this field without updating the {@link #STATE_UPDATER}!</p>
@@ -103,7 +108,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
       throw new IllegalArgumentException("A CoreContext must be provided");
     }
     this.timeout = timeout;
-    this.absoluteTimeout = System.nanoTime() + timeout.toNanos();
+    this.createdAt = System.nanoTime();
+    this.absoluteTimeout = createdAt + timeout.toNanos();
     this.response = new CompletableFuture<>();
     this.id = REQUEST_ID.incrementAndGet();
     this.ctx = new RequestContext(ctx, this);
@@ -193,6 +199,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public Map<String, Object> serviceContext() {
     return null;
+  }
+
+  @Override
+  public long createdAt() {
+    return createdAt;
   }
 
   /**

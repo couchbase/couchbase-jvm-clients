@@ -25,9 +25,9 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.UnaryOperator;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -43,6 +43,11 @@ public class RequestContext extends CoreContext {
    * Holds the dispatch latency if set already (or at all).
    */
   private volatile long dispatchLatency;
+
+  /**
+   * The time when the request got logically completed.
+   */
+  private volatile long logicallyCompletedAt;
 
   /**
    * The request ID associated.
@@ -108,6 +113,16 @@ public class RequestContext extends CoreContext {
     return this;
   }
 
+  /**
+   * Signals that this request is completed fully, including streaming sections or logical sub-requests also being
+   * completed (i.e. observe polling).
+   */
+  @Stability.Internal
+  public RequestContext logicallyComplete() {
+    this.logicallyCompletedAt = System.nanoTime();
+    return this;
+  }
+
   public int retryAttempts() {
     return retryAttempts.get();
   }
@@ -118,6 +133,21 @@ public class RequestContext extends CoreContext {
 
   public Duration lastRetryDuration() {
     return lastRetryDuration;
+  }
+
+  /**
+   * Returns the absolute nano time when the request got logically completed.
+   */
+  public long logicallyCompletedAt() {
+    return logicallyCompletedAt;
+  }
+
+  /**
+   * Returns the request latency once logically completed (includes potential "inner" operations like observe
+   * calls).
+   */
+  public long logicalRequestLatency() {
+    return logicallyCompletedAt - request.createdAt();
   }
 
   @Stability.Internal
@@ -192,8 +222,16 @@ public class RequestContext extends CoreContext {
     if (retryReasons != null) {
       input.put("retryReasons", retryReasons);
     }
-    if (dispatchLatency != 0) {
-      input.put("timings", new HashMap<>().put("dispatch", dispatchLatency));
+    long logicalLatency = logicalRequestLatency();
+    if (dispatchLatency != 0 || logicalLatency != 0) {
+      HashMap<String, Long> timings = new HashMap<>();
+      if (dispatchLatency != 0) {
+        timings.put("dispatchMicros", TimeUnit.NANOSECONDS.toMicros(dispatchLatency));
+      }
+      if (logicalLatency != 0) {
+        timings.put("totalMicros", TimeUnit.NANOSECONDS.toMicros(logicalLatency));
+      }
+      input.put("timings", timings);
     }
     if (dispatchedTo != null) {
       input.put("lastDispatchedTo", redactSystem(dispatchedTo));
