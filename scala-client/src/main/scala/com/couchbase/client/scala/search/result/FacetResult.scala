@@ -19,20 +19,35 @@ package com.couchbase.client.scala.search.result
 /**
   * Base interface for all facet results.
   *
-  * @define $name    the name of the { @link SearchFacet} this result corresponds to.
-  * @define $field   the field the { @link SearchFacet} was targeting.
-  * @define $total   the total number of valued facet results (it doesn't include missing).
-  * @define $missing the number of results that couldn't be faceted, missing the
-  *                  adequate value. No matter how many more
-  *                  buckets are added to the original facet, these
-  *                  result won't ever be included in one.
-  * @define $other   the number of results that could have been faceted (because
-  *                  they have a value for the facet's field) but
-  *                  weren't, due to not having a bucket in which they belong.
-  *                  Adding a bucket can result in these results being faceted.
+  * @define name    the name of the { @link SearchFacet} this result corresponds to.
+  * @define field   the field the { @link SearchFacet} was targeting.
+  * @define total   the total number of valued facet results (it doesn't include missing).
+  * @define missing the number of results that couldn't be faceted, missing the
+  *                 adequate value. No matter how many more
+  *                 buckets are added to the original facet, these
+  *                 result won't ever be included in one.
+  * @define other   the number of results that could have been faceted (because
+  *                 they have a value for the facet's field) but
+  *                 weren't, due to not having a bucket in which they belong.
+  *                 Adding a bucket can result in these results being faceted.
   * @since 1.0.0
   */
-sealed trait FacetResult
+sealed trait FacetResult {
+  /** $name */
+  def name: String
+
+  /** $field */
+  def field: String
+
+  /** $total */
+  def total: Long
+
+  /** $missing */
+  def missing: Long
+
+  /** $other */
+  def other: Long
+}
 
 object FacetResult {
 
@@ -110,6 +125,6 @@ object FacetResult {
     *
     * @since 1.0.0
     */
-  case class TermRange(val name: String, val count: Long)
+  case class TermRange(name: String, count: Long)
 
 }

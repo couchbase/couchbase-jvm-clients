@@ -32,7 +32,7 @@ case class GeoBoundingBoxQuery(private[scala] val topLeftLon: Double,
                                private[scala] val bottomRightLon: Double,
                                private[scala] val bottomRightLat: Double,
                                private[scala] val field: Option[String] = None,
-                               private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                               private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

@@ -35,7 +35,8 @@ import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIn
 import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.manager.user.UserManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
-import com.couchbase.client.scala.search.SearchQuery
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
 
@@ -135,19 +136,18 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
     * [[Cluster.async]] for an asynchronous version.
     *
-    * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
-    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
-    *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
-    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param indexName         the name of the search index to use
+    * @param query             the FTS query to execute.  See
+    *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
+    * @param options           the FTS query to execute.  See [[SearchOptions]] for how to construct
     *
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  def searchQuery(query: SearchQuery,
-                  timeout: Duration = async.searchTimeout,
-                  retryStrategy: RetryStrategy = async.retryStrategy): Try[SearchResult] = {
-    AsyncUtils.block(async.searchQuery(query, timeout, retryStrategy))
+  def searchQuery(indexName: String,
+                  query: SearchQuery,
+                  options: SearchOptions = SearchOptions()): Try[SearchResult] = {
+    AsyncUtils.block(async.searchQuery(indexName, query, options))
   }
 
   /** Shutdown all cluster resources.

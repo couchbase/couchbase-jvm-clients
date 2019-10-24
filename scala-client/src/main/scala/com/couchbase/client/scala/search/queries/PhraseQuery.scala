@@ -27,7 +27,7 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   */
 case class PhraseQuery(private[scala] val terms: Seq[String],
                        private[scala] val field: Option[String] = None,
-                       private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                       private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

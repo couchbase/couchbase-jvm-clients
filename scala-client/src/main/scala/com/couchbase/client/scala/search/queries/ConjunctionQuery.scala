@@ -22,7 +22,7 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   *
   * @since 1.0.0
   */
-case class ConjunctionQuery(private[scala] val queries: Seq[AbstractFtsQuery] = Seq.empty,
+case class ConjunctionQuery(private[scala] val queries: Seq[SearchQuery] = Seq.empty,
                             private[scala] val field: Option[String] = None,
                             private[scala] val boost: Option[Double] = None) extends AbstractCompoundQuery {
 
@@ -41,7 +41,7 @@ case class ConjunctionQuery(private[scala] val queries: Seq[AbstractFtsQuery] = 
     *
     * @return a copy of this, for chaining
     */
-  def and(queries: AbstractFtsQuery*): ConjunctionQuery = {
+  def and(queries: SearchQuery*): ConjunctionQuery = {
     copy(this.queries ++ queries.toSeq)
   }
 

@@ -26,164 +26,96 @@ import com.couchbase.client.scala.search.util.SearchUtils
   *
   * @since 1.0.0
   */
-object SearchFacet {
-  /** Create a search facet that gives the number of occurrences of the most recurring terms in all rows.
-    *
-    * @param field the field to use for the facet
-    * @param limit the maximum number of facets to return
-    *
-    * @return a constructed facet
-    */
-  def term(field: String, limit: Int): TermFacet = {
-    new TermFacet(field, limit)
-  }
-
-  /** Create a search facet that categorizes rows into numerical ranges (or buckets) provided by the user.
-    *
-    * The application should supply at least one numerical range, using [[NumericRangeFacet.addRange]].
-    *
-    * @param field the field to use for the facet
-    * @param limit the maximum number of facets to return
-    *
-    * @return a constructed facet
-    */
-  def numeric(field: String, limit: Int): NumericRangeFacet = {
-    new NumericRangeFacet(field, limit, Map.empty)
-  }
-
-  /** Create a search facet that categorizes rows inside date ranges (or buckets) provided by the user.
-    *
-    * The application should supply at least one date range, using [[DateRangeFacet.addRange]].
-    *
-    * @param field the field to use for the facet
-    * @param limit the maximum number of facets to return
-    *
-    * @return a constructed facet
-    */
-  def date(field: String, limit: Int): DateRangeFacet = {
-    new DateRangeFacet(field, limit, Map.empty)
-  }
-}
-
-
-/** Base class for all FTS facets in querying.
-  *
-  * @since 1.0.0
-  */
-abstract class SearchFacet protected() {
+sealed trait SearchFacet {
   protected val field: String
-  protected val limit: Int
+  protected val size: Option[Int]
 
   def injectParams(queryJson: JsonObject): Unit = {
-    queryJson.put("size", limit)
+    size.foreach(v => queryJson.put("size", v))
     queryJson.put("field", field)
   }
 }
 
-/** A facet that gives the number of occurrences of the most recurring terms in all rows.
-  *
-  * @since 1.0.0
-  */
-class TermFacet private[facet](override protected val field: String,
-                               override protected val limit: Int) extends SearchFacet() {}
+object SearchFacet {
 
-
-/** A facet that categorizes rows into numerical ranges (or buckets) provided by the user.
-  *
-  * @since 1.0.0
-  */
-case class NumericRangeFacet private[facet](override protected val field: String,
-                                            override protected val limit: Int,
-                                            private val numericRanges: Map[String, NumericRangeFacet.NumericRange])
-  extends SearchFacet() {
-
-  /** Add a new range for the facet.
+  /** A search facet that gives the number of occurrences of the most recurring terms in all rows.
     *
-    * @param rangeName provide a name for the range to make it easier to find in the results
-    * @param min       inclusive lower bound for the range.  It is optional but at least one of min and max must be
-    *                  provided
-    * @param max       exclusive upper bound for the range.  It is optional but at least one of min and max must be
-    *                  provided
+    * @param field the field to use for the facet
+    * @param size the maximum number of facets to return
     *
-    * @return a copy of this, for chaining
+    * @return a constructed facet
     */
-  def addRange(rangeName: String, min: Option[Double], max: Option[Double]): NumericRangeFacet = {
-    val newRange = numericRanges + (rangeName -> NumericRangeFacet.NumericRange(min, max))
-    copy(numericRanges = newRange)
-  }
+  case class TermFacet(field: String, size: Option[Int] = None) extends SearchFacet
 
-  override def injectParams(queryJson: JsonObject): Unit = {
-    super.injectParams(queryJson)
-    val numericRange = JsonArray.create
-    for ( nr <- numericRanges ) {
-      val nrJson = JsonObject.create
-      nrJson.put("name", nr._1)
-      nr._2.min.foreach(v => nrJson.put("min", v))
-      nr._2.max.foreach(v => nrJson.put("max", v))
-      numericRange.add(nrJson)
+  /** A search facet that categorizes rows into numerical ranges (or buckets) provided by the user.
+    *
+    * @param field         the field to use for the facet
+    * @param size          the maximum number of facets to return
+    * @param numericRanges the ranges.  At least one should be specified.
+    *
+    * @return a constructed facet
+    */
+  case class NumericRangeFacet(field: String,
+                               size: Option[Int] = None,
+                               numericRanges: Seq[NumericRange]) extends SearchFacet {
+
+    override def injectParams(queryJson: JsonObject): Unit = {
+      super.injectParams(queryJson)
+      val numericRange = JsonArray.create
+      numericRanges.foreach(nr => {
+        val nrJson = JsonObject.create
+        nrJson.put("name", nr.name)
+        nr.min.foreach(v => nrJson.put("min", v))
+        nr.max.foreach(v => nrJson.put("max", v))
+        numericRange.add(nrJson)
+      })
+      queryJson.put("numeric_ranges", numericRange)
     }
-    queryJson.put("numeric_ranges", numericRange)
   }
-}
 
-object NumericRangeFacet {
-
-  case class NumericRange(min: Option[Double], max: Option[Double])
-
-}
-
-
-/**
-  * A facet that categorizes rows inside date ranges (or buckets) provided by the user.
-  *
-  * @since 1.0.0
-  */
-case class DateRangeFacet private[facet](override protected val field: String,
-                                         override protected val limit: Int,
-                                         private val dateRanges: Map[String, DateRangeFacet.DateRange])
-  extends SearchFacet() {
-
-  /** Add a new range for the facet.
+  /** Defines a numeric range.
     *
-    * @param rangeName provide a name for the range to make it easier to find in the results
-    * @param start     inclusive lower bound for the range.  Optional but at least one of start and end must be provided
-    * @param end       exclusive upper bound for the range.  Optional but at least one of start and end must be provided
+    * `min` and `max` are both optional, but at least one should be provided.
     *
-    * @return a copy of this, for chaining
+    * @param name the name of the range, to make it easier to find in the results
+    * @param min  the lower bound (optional)
+    * @param max  the upper bound (optional)
     */
-  def addDateRange(rangeName: String, start: Option[Date], end: Option[Date]): DateRangeFacet = {
-    addRange(rangeName, start.map(v => SearchUtils.toFtsUtcString(v)), end.map(v => SearchUtils.toFtsUtcString(v)))
-  }
+  case class NumericRange(name: String, min: Option[Float], max: Option[Float])
 
-  /** Add a new range for the facet.
+  /** A facet that categorizes rows inside date ranges (or buckets) provided by the user.
     *
-    * @param rangeName provide a name for the range to make it easier to find in the results
-    * @param start     inclusive lower bound for the range.  Optional but at least one of start and end must be provided
-    * @param end       exclusive upper bound for the range.  Optional but at least one of start and end must be provided
+    * @param field         the field to use for the facet
+    * @param size          the maximum number of facets to return
+    * @param dateRanges    the ranges.  At least one should be specified.
     *
-    * @return a copy of this, for chaining
+    * @since 1.0.0
     */
-  def addRange(rangeName: String, start: Option[String], end: Option[String]): DateRangeFacet = {
-    val newRange = dateRanges + (rangeName -> DateRangeFacet.DateRange(start, end))
-    copy(dateRanges = newRange)
-  }
+  case class DateRangeFacet(field: String,
+                            size: Option[Int] = None,
+                            dateRanges: Seq[DateRange]) extends SearchFacet {
 
-  override def injectParams(queryJson: JsonObject): Unit = {
-    super.injectParams(queryJson)
-    val dateRange = JsonArray.create
-    for ( dr <- dateRanges ) {
-      val drJson = JsonObject.create
-      drJson.put("name", dr._1)
-      dr._2.start.foreach(v => drJson.put("start", v))
-      dr._2.end.foreach(v => drJson.put("end", v))
-      dateRange.add(drJson)
+    override def injectParams(queryJson: JsonObject): Unit = {
+      super.injectParams(queryJson)
+      val dateRange = JsonArray.create
+      dateRanges.foreach(dr => {
+        val drJson = JsonObject.create
+        drJson.put("name", dr.name)
+        dr.start.foreach(v => drJson.put("start", v))
+        dr.end.foreach(v => drJson.put("end", v))
+        dateRange.add(drJson)
+      })
+      queryJson.put("date_ranges", dateRange)
     }
-    queryJson.put("date_ranges", dateRange)
   }
-}
 
-object DateRangeFacet {
-
-  case class DateRange(start: Option[String], end: Option[String])
-
+  /** Defines a date range.
+    *
+    * `start` and `end` are both optional, but at least one should be provided.
+    *
+    * @param name   the name of the range, to make it easier to find in the results
+    * @param start  the start of the range (optional)
+    * @param end    the start of the range (optional)
+    */
+  case class DateRange(name: String, start: Option[String], end: Option[String])
 }

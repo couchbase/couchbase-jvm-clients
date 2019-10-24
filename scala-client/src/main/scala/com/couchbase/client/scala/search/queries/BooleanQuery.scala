@@ -26,7 +26,7 @@ case class BooleanQuery(private[scala] val must: ConjunctionQuery = ConjunctionQ
                         private[scala] val should: DisjunctionQuery = DisjunctionQuery(),
                         private[scala] val mustNot: DisjunctionQuery = DisjunctionQuery(),
                         private[scala] val field: Option[String] = None,
-                        private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                        private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If a hit satisfies at least this many queries in the `should` section, its score will be boosted.  By default,
     * this is set to 1.
@@ -41,7 +41,7 @@ case class BooleanQuery(private[scala] val must: ConjunctionQuery = ConjunctionQ
     *
     * @return a copy of this, for chaining
     */
-  def must(mustQueries: AbstractFtsQuery*): BooleanQuery = {
+  def must(mustQueries: SearchQuery*): BooleanQuery = {
     copy(must = must.and(mustQueries: _*))
   }
 
@@ -49,7 +49,7 @@ case class BooleanQuery(private[scala] val must: ConjunctionQuery = ConjunctionQ
     *
     * @return a copy of this, for chaining
     */
-  def mustNot(mustNotQueries: AbstractFtsQuery*): BooleanQuery = {
+  def mustNot(mustNotQueries: SearchQuery*): BooleanQuery = {
     copy(mustNot = mustNot.or(mustNotQueries: _*))
   }
 
@@ -57,7 +57,7 @@ case class BooleanQuery(private[scala] val must: ConjunctionQuery = ConjunctionQ
     *
     * @return a copy of this, for chaining
     */
-  def should(shouldQueries: AbstractFtsQuery*): BooleanQuery = {
+  def should(shouldQueries: SearchQuery*): BooleanQuery = {
     copy(should = should.or(shouldQueries: _*))
   }
 

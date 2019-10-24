@@ -17,6 +17,8 @@
 package com.couchbase.client.scala.search
 
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.manager.search.SearchIndex
+import com.couchbase.client.scala.search.queries.{MatchAllQuery, SearchQuery}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
@@ -46,12 +48,14 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Test
   def simple() {
-    cluster.searchQuery(SearchQuery("travel-sample-index-unstored",
-      SearchQuery.queryString("united")).limit(10)) match {
+    cluster.searchQuery("travel-sample-index-unstored",
+      SearchQuery.queryString("united"),
+      SearchOptions().limit(10)) match {
       case Success(result) =>
         assert(result.errors.isEmpty)
-        assert(10 == result.allRowsOrErrors.get.size)
+        assert(10 == result.rows.size)
       case Failure(exception) =>
+        println(exception)
         assert(false)
     }
   }

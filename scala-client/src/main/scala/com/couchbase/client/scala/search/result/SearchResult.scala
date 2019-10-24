@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.search.result
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.search.SearchChunkRow
 import com.couchbase.client.scala.codec.Conversions
@@ -27,42 +28,21 @@ import scala.util.{Failure, Success, Try}
 
 /** The results of an FTS query.
   *
-  * @param rows            all rows returned from the FTS service
   * @param errors          any execution error that happened.  Note that it is possible to have both rows and errors.
-  * @param meta            any additional information related to the FTS query
+  * @param facets          any search facets returned
+  * @param metaData            any additional information related to the FTS query
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-case class SearchResult(private[scala] val _rows: Seq[SearchQueryRow],
+case class SearchResult(private[scala] val _rows: Seq[SearchRow],
                         errors: Seq[RuntimeException],
-                        meta: SearchMeta) {
-  /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the FTS service first.
-    *
-    * The return type is of `Iterator[Try[SearchQueryRow]]` in case any row cannot be decoded.  See `rowsAs` for a more
-    * convenient interface that does not require handling individual row decode errors.
-    */
-  def rows: Iterator[SearchQueryRow] = {
-    _rows.iterator
-  }
-
+                        metaData: SearchMetaData) {
   /** All returned rows.  All rows are buffered from the FTS service first.
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def allRows: Seq[SearchQueryRow] = _rows
-
-  /** All returned rows.  All rows are buffered from the FTS service first.
-    *
-    * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error.  Note
-    *         that if `errors` is nonEmpty, the first error from that will be returned.
-    */
-  def allRowsOrErrors: Try[Seq[SearchQueryRow]] = {
-    if (errors.nonEmpty) {
-      Failure(errors.head)
-    }
-    else Success(_rows)
-  }
+  def rows: Seq[SearchRow] = _rows
 }
 
 /** The results of an FTS query, as returned by the reactive API.
@@ -72,7 +52,7 @@ case class SearchResult(private[scala] val _rows: Seq[SearchQueryRow],
   * @param meta            any additional information related to the FTS query
   */
 case class ReactiveSearchResult(private[scala] val rows: SFlux[SearchChunkRow],
-                                meta: SMono[SearchMeta]) {
+                                meta: SMono[SearchMetaData]) {
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
@@ -115,8 +95,8 @@ case class SearchStatus(totalCount: Long,
   * @param warnings        any warnings returned from the FTS service
   * @param status          the raw status string returned from the FTS service
   */
-case class SearchMeta(status: SearchStatus,
-                      metrics: SearchMetrics)
+case class SearchMetaData(status: SearchStatus,
+                          metrics: SearchMetrics)
 
 private[scala] object SearchStatus {
   def fromBytes(in: Array[Byte]): SearchStatus = {

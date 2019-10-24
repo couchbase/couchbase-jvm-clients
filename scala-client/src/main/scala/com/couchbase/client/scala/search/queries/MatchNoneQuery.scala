@@ -22,7 +22,7 @@ import com.couchbase.client.scala.json.JsonObject
   * @since 1.0.0
   */
 case class MatchNoneQuery(private[scala] val field: Option[String] = None,
-                          private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                          private[scala] val boost: Option[Double] = None) extends SearchQuery {
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease
     * the relative weight (with a boost between 0 and 1)
     *

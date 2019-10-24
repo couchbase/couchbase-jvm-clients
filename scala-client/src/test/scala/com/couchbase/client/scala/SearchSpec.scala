@@ -17,30 +17,31 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.io.netty.search.SearchMock
-import com.couchbase.client.scala.search.SearchQuery
+import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.facet.SearchFacet
+import com.couchbase.client.scala.search.facet.SearchFacet.{DateRange, NumericRange}
+import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.sort.SearchSort
 import org.junit.jupiter.api.Test
 
 class SearchSpec {
-  val defaultQuery = SearchQuery.booleanField(true)
+  val defaultQuery: SearchQuery = SearchQuery.booleanField(true)
 
   @Test
   def sort() {
-    SearchQuery("index", defaultQuery).sort(SearchSort.byId)
-    SearchQuery("index", defaultQuery).sort(SearchSort.byField("test"))
-    SearchQuery("index", defaultQuery).sort(SearchSort.byField("test").descending(true))
+    SearchOptions().sort(Seq(SearchSort.IdSort()))
+    SearchOptions().sort(Seq(SearchSort.FieldSort("test")))
+    SearchOptions().sort(Seq(SearchSort.FieldSort("test", descending = Some(true))))
   }
 
   @Test
   def facets() {
-    val query = SearchQuery("index", defaultQuery)
-      .addFacet("facet1", SearchFacet.term("field1", 10))
-      .addFacet("facet2", SearchFacet.numeric("field2", 10)
-        .addRange("range1", Some(10), Some(20))
-        .addRange("range2", Some(20), None))
-      .addFacet("facet3", SearchFacet.date("field3", 10)
-        .addRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59")))
+    val facets = Map("facet1" -> SearchFacet.TermFacet("field1", Some(10)),
+      "facet2" -> SearchFacet.NumericRangeFacet("field2", Some(10), Seq(
+        NumericRange("range1", Some(10), Some(20)),
+        NumericRange("range2", Some(20), None))),
+      "facet3" -> SearchFacet.DateRangeFacet("field3", Some(10), Seq(
+        DateRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59")))))
   }
 
   @Test
@@ -49,9 +50,9 @@ class SearchSpec {
     val result = SearchMock.loadSearchTestCase(json)
 
     assert(6 == result.errors.size)
-    assert(6 == result.meta.status.errorCount)
-    assert(6 == result.meta.status.totalCount)
-    assert(0 == result.meta.status.successCount)
-    assert(!result.meta.status.isSuccess)
+    assert(6 == result.metaData.status.errorCount)
+    assert(6 == result.metaData.status.totalCount)
+    assert(0 == result.metaData.status.successCount)
+    assert(!result.metaData.status.isSuccess)
   }
 }

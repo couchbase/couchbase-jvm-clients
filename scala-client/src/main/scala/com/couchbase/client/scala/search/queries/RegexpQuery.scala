@@ -25,7 +25,7 @@ import com.couchbase.client.scala.json.JsonObject
   */
 case class RegexpQuery(private[scala] val regexp: String,
                        private[scala] val field: Option[String] = None,
-                       private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                       private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

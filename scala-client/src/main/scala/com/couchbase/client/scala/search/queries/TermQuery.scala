@@ -29,7 +29,7 @@ case class TermQuery(private[scala] val term: String,
                      private[scala] val fuzziness: Option[Int] = None,
                      private[scala] val prefixLength: Option[Int] = None,
                      private[scala] val field: Option[String] = None,
-                     private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                     private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If a fuzziness is specified, variations of the term can be searched. Additionally, if fuzziness is enabled then
     * the prefix_length parameter is also taken into account (see below).

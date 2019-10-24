@@ -28,7 +28,7 @@ import com.couchbase.client.scala.json.JsonObject
 case class MatchPhraseQuery(private[scala] val matchPhrase: String,
                             private[scala] val analyzer: Option[String] = None,
                             private[scala] val field: Option[String] = None,
-                            private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                            private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

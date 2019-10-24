@@ -36,8 +36,9 @@ import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
-import com.couchbase.client.scala.search.SearchQuery
-import com.couchbase.client.scala.search.result.{SearchQueryRow, SearchResult}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.queries.SearchQuery
+import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -174,20 +175,19 @@ class AsyncCluster(environment: => ClusterEnvironment,
     * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
     * [[Cluster]] for a blocking version.
     *
-    * @param query           the FTS query to execute.  See [[SearchQuery]] for how to construct
-    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
-    *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
-    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param indexName         the name of the search index to use
+    * @param query             the FTS query to execute.  See
+    *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
+    * @param options           the FTS query to execute.  See [[SearchOptions]] for how to construct
     *
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  def searchQuery(query: SearchQuery,
-                  timeout: Duration = searchTimeout,
-                  retryStrategy: RetryStrategy = retryStrategy): Future[SearchResult] = {
+  def searchQuery(indexName: String,
+                  query: SearchQuery,
+                  options: SearchOptions = SearchOptions()): Future[SearchResult] = {
 
-    searchHandler.request(query, timeout, retryStrategy, core, environment) match {
+    searchHandler.request(indexName, query, options, core, environment) match {
       case Success(request) => AsyncCluster.searchQuery(request, core)
       case Failure(err) => Future.failed(err)
     }
@@ -275,7 +275,7 @@ object AsyncCluster {
       FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
         .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
           // This can throw, which will return a failed Future as desired
-          .map(row => SearchQueryRow.fromResponse(row))
+          .map(row => SearchRow.fromResponse(row))
           .collectSeq()
           .flatMap(rows =>
 

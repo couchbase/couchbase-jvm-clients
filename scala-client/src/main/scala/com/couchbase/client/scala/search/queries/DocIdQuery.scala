@@ -26,7 +26,7 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   */
 case class DocIdQuery(private[scala] val docIds: Seq[String],
                       private[scala] val field: Option[String] = None,
-                      private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                      private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
 
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease

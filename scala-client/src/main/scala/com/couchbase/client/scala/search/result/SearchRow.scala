@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
   * @param index     The name of the FTS pindex that gave this result.
   * @param id        The id of the matching document.
   * @param score     The score of this hit.
-  * @param locations This rows's location, as an [[RowLocations]] map-like object.
+  * @param locations This rows's location, as a [[SearchRowLocations]].
   * @param fragments The fragments for each field that was requested as highlighted.  A fragment is an extract of the
   *                  field's value where the matching terms occur.  Matching terms are surrounded by a
   *                  <code>&lt;match&gt;</code> tag.
@@ -41,30 +41,30 @@ import scala.util.{Failure, Success, Try}
   *
   * @since 1.0.0
   */
-case class SearchQueryRow(index: String,
-                          id: String,
-                          score: Double,
-                          private val _explanation: Try[Array[Byte]],
-                          locations: Try[RowLocations],
-                          fragments: GenMap[String, Seq[String]],
-                          fields: GenMap[String, String]) {
+case class SearchRow(index: String,
+                     id: String,
+                     score: Double,
+                     private val _explanation: Try[Array[Byte]],
+                     locations: SearchRowLocations,
+                     fragments: GenMap[String, Seq[String]],
+                     fields: GenMap[String, String]) {
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.
     *
     * It can be returned in any support JSON type, e.g. [[com.couchbase.client.scala.json.JsonObject]].
     */
-  def explanation[T](implicit ev: Decodable[T]): Try[T] = {
+  def explanationAs[T](implicit ev: Decodable[T]): Try[T] = {
     _explanation.flatMap(v => ev.decode(v, Conversions.JsonFlags))
   }
 }
 
 
-object SearchQueryRow {
+object SearchRow {
   /* Converts a SearchChunkRow to a SearchQueryRow.
    *
    * Allowed to throw on failure.
    * */
-  private[scala] def fromResponse(row: SearchChunkRow): SearchQueryRow = try {
+  private[scala] def fromResponse(row: SearchChunkRow): SearchRow = try {
     val hit = JacksonTransformers.MAPPER.readValue(row.data, classOf[JsonObject])
     val safe = hit.safe
 
@@ -75,8 +75,8 @@ object SearchQueryRow {
       val explanationJson: Try[Array[Byte]] = safe.obj("explanation")
         .map(o => o.toString.getBytes(UTF_8))
 
-      val locations: Try[RowLocations] = safe.obj("locations")
-        .flatMap(x => RowLocations.from(x.o))
+      val locations: Try[SearchRowLocations] = safe.obj("locations")
+        .flatMap(x => SearchRowLocations.from(x.o))
 
     val fragments: GenMap[String, Seq[String]] = safe.obj("fragments") match {
       case Success(fragmentsJson) =>
@@ -98,7 +98,7 @@ object SearchQueryRow {
       case _ => Map.empty
     }
 
-    new SearchQueryRow(index, id, score, explanationJson, locations, fragments, fields)
+    new SearchRow(index, id, score, explanationJson, locations.get, fragments, fields)
   } catch {
     case e: IOException =>
       throw new DecodingFailedException("Failed to decode row '" + new String(row.data, UTF_8) + "'", e)

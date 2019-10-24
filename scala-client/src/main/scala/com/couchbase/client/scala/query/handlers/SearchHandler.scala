@@ -23,8 +23,9 @@ import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchRequest, 
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.search.SearchQuery
-import com.couchbase.client.scala.search.result.{SearchMeta, SearchMetrics, SearchStatus}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.queries.SearchQuery
+import com.couchbase.client.scala.search.result.{FacetResult, SearchMetaData, SearchMetrics, SearchStatus}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
 
@@ -42,45 +43,60 @@ private[scala] class SearchHandler() {
 
   import DurationConversions._
 
-  def request[T](query: SearchQuery,
-                 timeout: Duration,
-                 retryStrategy: RetryStrategy,
-                 core: Core, environment: ClusterEnvironment)
+  def request[T](indexName: String,
+                 query: SearchQuery,
+                 options: SearchOptions,
+                 core: Core,
+                 environment: ClusterEnvironment)
   : Try[SearchRequest] = {
 
     val validations: Try[SearchRequest] = for {
       _ <- Validate.notNull(query, "query")
-      _ <- Validate.notNull(timeout, "timeout")
-      _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(options.limit, "limit")
+      _ <- Validate.notNull(options.skip, "skip")
+      _ <- Validate.notNull(options.explain, "explain")
+      _ <- Validate.notNull(options.highlightStyle, "highlightStyle")
+      _ <- Validate.notNull(options.highlightFields, "highlightFields")
+      _ <- Validate.notNull(options.fields, "fields")
+      _ <- Validate.notNull(options.sort, "sort")
+      _ <- Validate.notNull(options.facets, "facets")
+      _ <- Validate.notNull(options.serverSideTimeout, "serverSideTimeout")
+      _ <- Validate.notNull(options.deferredError, "deferredError")
+      _ <- Validate.notNull(options.scanConsistency, "scanConsistency")
+      _ <- Validate.notNull(options.timeout, "timeout")
+      _ <- Validate.notNull(options.retryStrategy, "retryStrategy")
     } yield null
 
     if (validations.isFailure) {
       validations
     }
-    else if (query.deferredError.isDefined) {
-      Failure(query.deferredError.get)
+    else if (options.deferredError.isDefined) {
+      Failure(options.deferredError.get)
     }
     else {
-      val params = query.export()
+      val params = options.export(indexName, query)
 
       val queryBytes = params.toString.getBytes(CharsetUtil.UTF_8)
+
+      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.searchTimeout)
+      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       Try(new SearchRequest(timeout,
         core.context(),
         retryStrategy,
         core.context().authenticator(),
-        query.indexName,
+        indexName,
         queryBytes))
     }
   }
 }
 
 object SearchHandler {
-  private[scala] def parseSearchMeta(response: SearchResponse, trailer: SearchChunkTrailer) = {
+  private[scala] def parseSearchMeta(response: SearchResponse, trailer: SearchChunkTrailer): SearchMetaData = {
     val rawStatus = response.header.getStatus
     val status = SearchStatus.fromBytes(rawStatus)
     val metrics = SearchMetrics(Duration.fromNanos(trailer.took()), trailer.totalRows(), trailer.maxScore())
-    val meta = SearchMeta(status, metrics)
+    val meta = SearchMetaData(status, metrics)
     meta
   }
 

@@ -32,7 +32,7 @@ case class DateRangeQuery(private[scala] val start: Option[String] = None,
                           private[scala] val inclusiveEnd: Option[Boolean] = None,
                           private[scala] val dateTimeParser: Option[String] = None,
                           private[scala] val field: Option[String] = None,
-                          private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                          private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** Sets the lower boundary of the range, inclusive or not depending on the second parameter.
     */

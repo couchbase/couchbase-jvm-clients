@@ -32,8 +32,9 @@ import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
-import com.couchbase.client.scala.search.SearchQuery
-import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMeta}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.queries.SearchQuery
+import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData}
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
@@ -146,30 +147,29 @@ class ReactiveCluster(val async: AsyncCluster) {
     * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
     * [[Cluster]] for a blocking version.
     *
-    * @param query           the FTS query to execute.  See [[search.SearchQuery]] for how to construct
-    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().searchTimeout()` in the
-    *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
-    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+    * @param indexName         the name of the search index to use
+    * @param query             the FTS query to execute.  See
+    *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
+    * @param options           the FTS query to execute.  See [[SearchOptions]] for how to construct
     *
     * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  def searchQuery(query: SearchQuery,
-                  timeout: Duration = async.searchTimeout,
-                  retryStrategy: RetryStrategy = async.retryStrategy): SMono[ReactiveSearchResult] = {
-    async.searchHandler.request(query, timeout, retryStrategy, async.core, async.env) match {
+  def searchQuery(indexName: String,
+                  query: SearchQuery,
+                  options: SearchOptions = SearchOptions()): SMono[ReactiveSearchResult] = {
+    async.searchHandler.request(indexName, query, options, async.core, async.env) match {
       case Success(request) =>
 
         async.core.send(request)
 
         FutureConversions.javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: SMono[SearchMeta] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[SearchMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
               .map(trailer => {
                 val rawStatus = response.header.getStatus
                 val errors = SearchHandler.parseSearchErrors(rawStatus)
-                // TODO errors need to be raised...
+                // SCBC-46: errors need to be raised...
                 val meta = SearchHandler.parseSearchMeta(response, trailer)
 
                 meta

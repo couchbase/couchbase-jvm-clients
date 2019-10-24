@@ -24,7 +24,7 @@ import com.couchbase.client.scala.json.JsonObject
   */
 case class BooleanFieldQuery(private[scala] val value: Boolean,
                              private[scala] val field: Option[String] = None,
-                             private[scala] val boost: Option[Double] = None) extends AbstractFtsQuery {
+                             private[scala] val boost: Option[Double] = None) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *
