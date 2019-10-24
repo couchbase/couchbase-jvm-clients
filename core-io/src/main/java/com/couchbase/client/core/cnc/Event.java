@@ -145,7 +145,11 @@ public interface Event {
     /**
      * Represents an event from the upper level core subsystem.
      */
-    CORE(CATEGORY_PREFIX + "core");
+    CORE(CATEGORY_PREFIX + "core"),
+    /**
+     * Represents event that come from the tracing subsystem.
+     */
+    TRACING(CATEGORY_PREFIX + "tracing");
 
     private final String path;
 

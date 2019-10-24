@@ -109,6 +109,8 @@
         <module>scala-client</module>
         <module>test-utils</module>
         <module>benchmarks</module>
+        <module>tracing-opentracing</module>
+        <module>tracing-opentelemetry</module>
     </modules>
 
     <build>

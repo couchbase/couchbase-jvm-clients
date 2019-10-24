@@ -64,7 +64,7 @@ public enum GetAccessor {
           );
         }
         throw DefaultErrorUtil.defaultErrorForStatus(id, getResponse.status());
-      });
+      }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
   public static CompletableFuture<GetResult> getAndLock(final Core core, final String id,

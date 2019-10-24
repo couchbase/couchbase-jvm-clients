@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -75,6 +76,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    */
   private final RetryStrategy retryStrategy;
 
+  private final InternalSpan requestSpan;
+
   /**
    * Stores the time when the request got created.
    */
@@ -92,6 +95,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    */
   private volatile CancellationReason cancellationReason;
 
+  public BaseRequest(final Duration timeout, final CoreContext ctx,
+                     final RetryStrategy retryStrategy) {
+    this(timeout, ctx, retryStrategy, null);
+  }
+
   /**
    * Creates a basic request that has all the required properties to be
    * executed in general.
@@ -100,7 +108,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    * @param ctx the context if provided.
    */
   public BaseRequest(final Duration timeout, final CoreContext ctx,
-                     final RetryStrategy retryStrategy) {
+                     final RetryStrategy retryStrategy, final InternalSpan requestSpan) {
     if (timeout == null) {
       throw new IllegalArgumentException("A Timeout must be provided");
     }
@@ -114,6 +122,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.id = REQUEST_ID.incrementAndGet();
     this.ctx = new RequestContext(ctx, this);
     this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
+
+    if (requestSpan != null) {
+      requestSpan.requestContext(this.ctx);
+    }
+    this.requestSpan = requestSpan;
   }
 
   @Override
@@ -204,6 +217,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public long createdAt() {
     return createdAt;
+  }
+
+  @Override
+  public InternalSpan internalSpan() {
+    return requestSpan;
   }
 
   /**

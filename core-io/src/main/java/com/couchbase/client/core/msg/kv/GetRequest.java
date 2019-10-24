@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -26,7 +27,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
@@ -51,7 +51,12 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
                     final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+    this(key, timeout, ctx, collectionIdentifier, retryStrategy, null /*TODO REMOVE ME */);
+  }
+
+  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
+                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
   }
 
   @Override

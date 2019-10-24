@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.couchbase.client</groupId>
+        <artifactId>couchbase-jvm-clients</artifactId>
+        <version>1.8.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tracing-opentracing</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+
+    <name>OpenTracing Interoperability</name>
+    <description>Provides interoperability with OpenTracing</description>
+
+    <properties>
+        <opentracing.version>0.33.0</opentracing.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>core-io</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentracing</groupId>
+            <artifactId>opentracing-api</artifactId>
+            <version>${opentracing.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>java-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>test-utils</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentracing</groupId>
+            <artifactId>opentracing-mock</artifactId>
+            <version>${opentracing.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.11.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <source>8</source>
+                            <doclint>none</doclint>
+                            <quiet>true</quiet>
+                            <stylesheetfile>${project.basedir}/../config/javadoc/style.css</stylesheetfile>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <links>
+                        <link>https://projectreactor.io/docs/core/release/api/</link>
+                    </links>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>add-integration-test-source-as-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <!-- add the following sources in addition to the unit tests -->
+                                <source>${test-source-directory}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-integration-test-resource-as-test-resource</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${test-resource-directory}</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- by default, add also the int tests -->
+                <test-source-directory>src/integrationTest/java</test-source-directory>
+                <test-resource-directory>src/integrationTest/resources</test-resource-directory>
+            </properties>
+        </profile>
+        <profile>
+            <id>unit</id>
+            <activation>
+                <property>
+                    <name>unit</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <!-- just adding the unit tests again, noop. -->
+                <test-source-directory>src/test/java</test-source-directory>
+                <test-resource-directory>src/test/resources</test-resource-directory>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

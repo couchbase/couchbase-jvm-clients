@@ -200,6 +200,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       try {
         ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext), promise);
         writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
+        if (request.internalSpan() != null) {
+          request.internalSpan().startDispatch();
+        }
       }
       catch(RuntimeException err) {
         request.response().completeExceptionally(err);
@@ -255,6 +258,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       return;
     }
 
+    if (request.internalSpan() != null) {
+      request.internalSpan().stopDispatch();
+    }
     long start = writtenRequestDispatchTimings.remove(opaque);
     request.context().dispatchLatency(System.nanoTime() - start);
 

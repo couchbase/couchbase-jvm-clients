@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
@@ -47,12 +48,23 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   private final int flags;
   private final Optional<DurabilityLevel> syncReplicationType;
 
+  /*
+   * todo: remove me after all ops are converted
+   */
   public UpsertRequest(final String key, final byte[] content,
                        final long expiration, final int flags, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                        final RetryStrategy retryStrategy,
                        final Optional<DurabilityLevel> syncReplicationType) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+    this(key, content, expiration, flags, timeout, ctx, collectionIdentifier, retryStrategy, syncReplicationType, null);
+  }
+
+  public UpsertRequest(final String key, final byte[] content,
+                       final long expiration, final int flags, final Duration timeout,
+                       final CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                       final RetryStrategy retryStrategy,
+                       final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.content = content;
     this.expiration = expiration;
     this.flags = flags;

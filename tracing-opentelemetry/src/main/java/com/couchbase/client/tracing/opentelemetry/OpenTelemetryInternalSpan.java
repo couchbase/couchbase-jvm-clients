@@ -1,0 +1,93 @@
+/*
+ * Copyright (c) 2019 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.tracing.opentelemetry;
+
+import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.msg.RequestContext;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.trace.Span;
+import io.opentelemetry.trace.Tracer;
+
+/**
+ * The internal span which handles all the different SDK events and stores/handles the appropriate sub-spans.
+ */
+public class OpenTelemetryInternalSpan implements InternalSpan {
+
+  private final Tracer tracer;
+  private final Span span;
+  private volatile RequestContext ctx;
+  private volatile Span dispatchSpan;
+  private volatile Span encodingSpan;
+
+  OpenTelemetryInternalSpan(final Tracer tracer, final Span parent, final String operationName) {
+    this.tracer = tracer;
+
+    Span.Builder spanBuilder = tracer.spanBuilder(operationName);
+    if (parent != null) {
+      spanBuilder.setParent(parent);
+    } else {
+      spanBuilder.setNoParent();
+    }
+    span = spanBuilder.startSpan();
+    tracer.withSpan(span).close();
+  }
+
+  @Override
+  public void finish() {
+    try (Scope scope = tracer.withSpan(span)) {
+      span.end();
+    }
+  }
+
+  @Override
+  public void requestContext(RequestContext ctx) {
+    this.ctx = ctx;
+  }
+
+  @Override
+  public RequestContext requestContext() {
+    return ctx;
+  }
+
+  @Override
+  public void startDispatch() {
+    dispatchSpan = tracer.spanBuilder(RequestTracer.DISPATCH_SPAN_NAME).setParent(span).startSpan();
+    tracer.withSpan(dispatchSpan).close();
+  }
+
+  @Override
+  public void stopDispatch() {
+    try (Scope scope = tracer.withSpan(dispatchSpan)) {
+      dispatchSpan.end();
+    }
+  }
+
+  @Override
+  public void startPayloadEncoding() {
+    encodingSpan = tracer.spanBuilder(RequestTracer.PAYLOAD_ENCODING_SPAN_NAME).setParent(span).startSpan();
+    tracer.withSpan(encodingSpan).close();
+  }
+
+  @Override
+  public void stopPayloadEncoding() {
+    try (Scope scope = tracer.withSpan(encodingSpan)) {
+      encodingSpan.end();
+    }
+  }
+
+}

@@ -17,12 +17,11 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.error.CollectionDoesNotExistException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
@@ -57,8 +56,13 @@ public abstract class BaseKeyValueRequest<R extends Response>
   private volatile short partition;
 
   protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                      final String key, final CollectionIdentifier collectionIdentifier) {
-    super(timeout, ctx, retryStrategy);
+                                final String key, final CollectionIdentifier collectionIdentifier) {
+    this(timeout, ctx, retryStrategy, key, collectionIdentifier, null);
+  }
+
+  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+                                final String key, final CollectionIdentifier collectionIdentifier, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.key = encodeKey(key);
     this.collectionIdentifier = collectionIdentifier;
   }

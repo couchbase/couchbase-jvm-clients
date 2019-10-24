@@ -19,11 +19,13 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -270,7 +272,9 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+
+    InternalSpan span = environment.requestTracer().span("get", opts.parentSpan().orElse(null));
+    GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -521,7 +525,8 @@ public class AsyncCollection {
       int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
       List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
 
-      GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+      InternalSpan span = environment.requestTracer().span("get", null);
+      GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
       activeRequest.context().clientContext(opts.clientContext());
       requests.add(activeRequest);
 
@@ -723,10 +728,23 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    Transcoder.EncodedValue encoded = transcoder.encode(content);
-    UpsertRequest request = new UpsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
-      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
-    request.context().clientContext(opts.clientContext());
+    InternalSpan span = environment.requestTracer().span("upsert", opts.parentSpan().orElse(null));
+
+    long start = System.nanoTime();
+    Transcoder.EncodedValue encoded;
+    try {
+      span.startPayloadEncoding();
+      encoded = transcoder.encode(content);
+    } finally {
+      span.stopPayloadEncoding();
+    }
+    long end = System.nanoTime();
+
+    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
+    request.context()
+      .clientContext(opts.clientContext())
+      .encodeLatency(end - start);
     return request;
   }
 

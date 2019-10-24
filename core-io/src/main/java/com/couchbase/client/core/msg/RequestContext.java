@@ -51,6 +51,11 @@ public class RequestContext extends CoreContext {
   private volatile long logicallyCompletedAt;
 
   /**
+   * The time it took to encode the payload (if any).
+   */
+  private volatile long encodeLatency;
+
+  /**
    * The request ID associated.
    */
   private final Request<? extends Response> request;
@@ -119,6 +124,17 @@ public class RequestContext extends CoreContext {
     return this;
   }
 
+  @Stability.Volatile
+  public long encodeLatency() {
+    return encodeLatency;
+  }
+
+  @Stability.Internal
+  public RequestContext encodeLatency(long encodeLatency) {
+    this.encodeLatency = encodeLatency;
+    return this;
+  }
+
   /**
    * Signals that this request is completed fully, including streaming sections or logical sub-requests also being
    * completed (i.e. observe polling).
@@ -126,6 +142,9 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext logicallyComplete() {
     this.logicallyCompletedAt = System.nanoTime();
+    if (request.internalSpan() != null) {
+      request.internalSpan().finish();
+    }
     return this;
   }
 
@@ -216,6 +235,10 @@ public class RequestContext extends CoreContext {
     return this;
   }
 
+  public Request<? extends Response> request() {
+    return request;
+  }
+
   @Override
   protected void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
@@ -239,13 +262,16 @@ public class RequestContext extends CoreContext {
       input.put("retryReasons", retryReasons);
     }
     long logicalLatency = logicalRequestLatency();
-    if (dispatchLatency != 0 || logicalLatency != 0) {
+    if (dispatchLatency != 0 || logicalLatency != 0 || encodeLatency != 0) {
       HashMap<String, Long> timings = new HashMap<>();
       if (dispatchLatency != 0) {
         timings.put("dispatchMicros", TimeUnit.NANOSECONDS.toMicros(dispatchLatency));
       }
       if (logicalLatency != 0) {
         timings.put("totalMicros", TimeUnit.NANOSECONDS.toMicros(logicalLatency));
+      }
+      if (encodeLatency != 0) {
+        timings.put("encodingMicros", TimeUnit.NANOSECONDS.toMicros(encodeLatency));
       }
       input.put("timings", timings);
     }

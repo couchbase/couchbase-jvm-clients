@@ -40,7 +40,7 @@ public class ReplicaGetRequest extends GetRequest {
   public ReplicaGetRequest(final String key, final Duration timeout,
                            final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                            final RetryStrategy retryStrategy, final short replica) {
-    super(key, timeout, ctx, collectionIdentifier, retryStrategy);
+    super(key, timeout, ctx, collectionIdentifier, retryStrategy, null /* todo */);
     this.replica = replica;
   }
 

@@ -23,6 +23,8 @@ import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.publisher.Mono;
@@ -31,21 +33,16 @@ import reactor.core.scheduler.Schedulers;
 
 import java.net.URL;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -101,6 +98,7 @@ public class CoreEnvironment {
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
   private final ServiceConfig serviceConfig;
+  private final Supplier<RequestTracer> requestTracer;
 
   private final LoggerConfig loggerConfig;
   private final DiagnosticsMonitor diagnosticsMonitor;
@@ -148,6 +146,14 @@ public class CoreEnvironment {
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
     diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
     diagnosticsMonitor.start().block();
+
+    this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<RequestTracer>(
+      ThresholdRequestTracer.create(eventBus.get())
+    ));
+
+    if (requestTracer instanceof OwnedSupplier) {
+      requestTracer.get().start().block();
+    }
   }
 
   /**
@@ -274,6 +280,10 @@ public class CoreEnvironment {
     return scheduler.get();
   }
 
+  public RequestTracer requestTracer() {
+    return requestTracer.get();
+  }
+
   /**
    * Holds the timer which is used to schedule tasks and trigger their callback,
    * for example to time out requests.
@@ -333,14 +343,20 @@ public class CoreEnvironment {
       .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
-        return Mono.<Void>empty();
+        return Mono.empty();
       }))
       .then(ioEnvironment.shutdown(timeout))
       .then(Mono.defer(() -> {
         if (scheduler instanceof OwnedSupplier) {
           scheduler.get().dispose();
         }
-        return Mono.<Void>empty();
+        return Mono.empty();
+      }))
+      .then(Mono.defer(() -> {
+        if (requestTracer instanceof OwnedSupplier) {
+          return requestTracer.get().stop(timeout);
+        }
+        return Mono.empty();
       }))
       .timeout(timeout);
   }
@@ -392,6 +408,7 @@ public class CoreEnvironment {
     input.put("loggerConfig", loggerConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
+    input.put("requestTracer", requestTracer.getClass().getSimpleName());
 
     return format.apply(input);
   }
@@ -412,6 +429,7 @@ public class CoreEnvironment {
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
+    private Supplier<RequestTracer> requestTracer = null;
 
     private RetryStrategy retryStrategy;
 
@@ -500,6 +518,11 @@ public class CoreEnvironment {
 
     public SELF retryStrategy(final RetryStrategy retryStrategy) {
       this.retryStrategy = retryStrategy;
+      return self();
+    }
+
+    public SELF requestTracer(final RequestTracer requestTracer) {
+      this.requestTracer = new ExternalSupplier<>(requestTracer);
       return self();
     }
 
