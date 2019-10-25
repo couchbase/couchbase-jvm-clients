@@ -26,7 +26,6 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV regular get operations.
   *
@@ -34,12 +33,13 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetFullDocHandler(hp: HandlerParams)
-  extends RequestHandlerWithTranscoder[GetResponse, Option[GetResult]] {
+    extends RequestHandlerWithTranscoder[GetResponse, Option[GetResult]] {
 
-  def request[T](id: String,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[GetRequest] = {
+  def request[T](
+      id: String,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[GetRequest] = {
     val validations: Try[GetRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
@@ -48,20 +48,30 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new GetRequest(id,
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy))
+    } else {
+      Success(
+        new GetRequest(id, timeout, hp.core.context(), hp.collectionIdentifier, retryStrategy)
+      )
     }
   }
 
-  override def response(id: String, response: GetResponse, transcoder: Transcoder): Option[GetResult] = {
+  override def response(
+      id: String,
+      response: GetResponse,
+      transcoder: Transcoder
+  ): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty, transcoder))
+        Some(
+          GetResult(
+            id,
+            Left(response.content),
+            response.flags(),
+            response.cas,
+            Option.empty,
+            transcoder
+          )
+        )
 
       case ResponseStatus.NOT_FOUND => None
 

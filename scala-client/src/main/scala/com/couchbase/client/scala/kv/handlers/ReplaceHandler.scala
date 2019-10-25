@@ -29,7 +29,6 @@ import com.couchbase.client.scala.util.Validate
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
-
 /**
   * Handles requests and responses for KV replace operations.
   *
@@ -37,18 +36,19 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 private[scala] class ReplaceHandler(hp: HandlerParams)
-  extends RequestHandler[ReplaceResponse, MutationResult] {
+    extends RequestHandler[ReplaceResponse, MutationResult] {
 
-  def request[T](id: String,
-                 content: T,
-                 cas: Long,
-                 durability: Durability,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy,
-                 transcoder: Transcoder,
-                 serializer: JsonSerializer[T])
-  : Try[ReplaceRequest] = {
+  def request[T](
+      id: String,
+      content: T,
+      cas: Long,
+      durability: Durability,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy,
+      transcoder: Transcoder,
+      serializer: JsonSerializer[T]
+  ): Try[ReplaceRequest] = {
     val validations: Try[ReplaceRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(content, "content")
@@ -61,25 +61,28 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       val encoded: Try[EncodedValue] = transcoder match {
-        case x: TranscoderWithSerializer => x.encode(content, serializer)
+        case x: TranscoderWithSerializer    => x.encode(content, serializer)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
 
       encoded match {
         case Success(en) =>
-          Success(new ReplaceRequest(id,
-            en.encoded,
-            expiration.getSeconds,
-            en.flags,
-            timeout,
-            cas,
-            hp.core.context(),
-            hp.collectionIdentifier,
-            retryStrategy,
-            durability.toDurabilityLevel))
+          Success(
+            new ReplaceRequest(
+              id,
+              en.encoded,
+              expiration.getSeconds,
+              en.flags,
+              timeout,
+              cas,
+              hp.core.context(),
+              hp.collectionIdentifier,
+              retryStrategy,
+              durability.toDurabilityLevel
+            )
+          )
 
         case Failure(err) =>
           Failure(new EncodingFailedException(err))

@@ -34,19 +34,18 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.Failure
-
-
 @Stability.Volatile
 class BucketNotFoundException(val bucketName: String)
-  extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] not found.")
+    extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] not found.")
 
 @Stability.Volatile
 class BucketAlreadyExistsException(val bucketName: String)
-  extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] already exists.")
+    extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] already exists.")
 
 @Volatile
 class ReactiveBucketManager(core: Core) {
-  private[scala] val defaultManagerTimeout = core.context().environment().timeoutConfig().managementTimeout()
+  private[scala] val defaultManagerTimeout =
+    core.context().environment().timeoutConfig().managementTimeout()
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
 
   private def pathForBuckets = "/pools/default/buckets/"
@@ -57,49 +56,60 @@ class ReactiveBucketManager(core: Core) {
     "/pools/default/buckets/" + urlEncode(bucketName) + "/controller/doFlush"
   }
 
-  def create(settings: CreateBucketSettings,
-             timeout: Duration = defaultManagerTimeout,
-             retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def create(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
     createUpdateBucketShared(settings, pathForBuckets, timeout, retryStrategy, update = false)
   }
 
-  private def createUpdateBucketShared(settings: CreateBucketSettings,
-                                       path: String,
-                                       timeout: Duration,
-                                       retryStrategy: RetryStrategy,
-                                       update: Boolean): SMono[Unit] = {
+  private def createUpdateBucketShared(
+      settings: CreateBucketSettings,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy,
+      update: Boolean
+  ): SMono[Unit] = {
     val params = convertSettingsToParams(settings, update)
 
-    ManagerUtil.sendRequest(core, POST, path, params, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, POST, path, params, timeout, retryStrategy)
       .flatMap(response => {
         if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
           val content = new String(response.content, StandardCharsets.UTF_8)
           if (content.contains("Bucket with given name already exists")) {
             SMono.raiseError(new BucketAlreadyExistsException(settings.name))
-          }
-          else {
+          } else {
             SMono.raiseError(new CouchbaseException(content))
           }
-        }
-        else {
+        } else {
           ManagerUtil.checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _ => SMono.just(0)
+            case _            => SMono.just(0)
           }
         }
       })
   }
 
-  def updateBucket(settings: CreateBucketSettings,
-                   timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def updateBucket(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
 
     getAllBuckets(timeout, retryStrategy)
-        .collectSeq()
-        .map(buckets => buckets.exists(_.name == settings.name))
-        .flatMap(bucketExists => {
-          createUpdateBucketShared(settings, pathForBucket(settings.name), timeout, retryStrategy, bucketExists)
-        })
+      .collectSeq()
+      .map(buckets => buckets.exists(_.name == settings.name))
+      .flatMap(bucketExists => {
+        createUpdateBucketShared(
+          settings,
+          pathForBucket(settings.name),
+          timeout,
+          retryStrategy,
+          bucketExists
+        )
+      })
   }
 
   private def convertSettingsToParams(settings: CreateBucketSettings, update: Boolean) = {
@@ -120,32 +130,36 @@ class ReactiveBucketManager(core: Core) {
     params
   }
 
-  def dropBucket(bucketName: String,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
-    ManagerUtil.sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
+  def dropBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    ManagerUtil
+      .sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new BucketNotFoundException(bucketName))
-        }
-        else {
+        } else {
           ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _ => SMono.just(0)
+            case _            => SMono.just(0)
           }
         }
       })
   }
 
-  def getBucket(bucketName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[BucketSettings] = {
-    ManagerUtil.sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
+  def getBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[BucketSettings] = {
+    ManagerUtil
+      .sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new BucketNotFoundException(bucketName))
-        }
-        else {
+        } else {
           ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
             case _ =>
@@ -156,10 +170,12 @@ class ReactiveBucketManager(core: Core) {
       })
   }
 
-
-  def getAllBuckets(timeout: Duration = defaultManagerTimeout,
-                    retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[BucketSettings] = {
-    ManagerUtil.sendRequest(core, GET, pathForBuckets, timeout, retryStrategy)
+  def getAllBuckets(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[BucketSettings] = {
+    ManagerUtil
+      .sendRequest(core, GET, pathForBuckets, timeout, retryStrategy)
       .flatMapMany(response => {
         ManagerUtil.checkStatus(response, "get all buckets") match {
           case Failure(err) => SFlux.raiseError(err)
@@ -170,18 +186,20 @@ class ReactiveBucketManager(core: Core) {
       })
   }
 
-  def flushBucket(bucketName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
-    ManagerUtil.sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
+  def flushBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    ManagerUtil
+      .sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new BucketNotFoundException(bucketName))
-        }
-        else {
+        } else {
           ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _ => SMono.just(0)
+            case _            => SMono.just(0)
           }
         }
       })

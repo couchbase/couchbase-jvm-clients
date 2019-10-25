@@ -35,15 +35,16 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class BinaryAppendHandler(hp: HandlerParams)
-  extends RequestHandler[AppendResponse, MutationResult] {
+    extends RequestHandler[AppendResponse, MutationResult] {
 
-  def request(id: String,
-                 content: Array[Byte],
-                 cas: Long = 0,
-                 durability: Durability,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[AppendRequest] = {
+  def request(
+      id: String,
+      content: Array[Byte],
+      cas: Long = 0,
+      durability: Durability,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[AppendRequest] = {
 
     val validations: Try[AppendRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -56,9 +57,9 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-        Success(new AppendRequest(
+    } else {
+      Success(
+        new AppendRequest(
           timeout,
           hp.core.context(),
           hp.collectionIdentifier,
@@ -67,7 +68,8 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
           content,
           cas,
           durability.toDurabilityLevel
-        ))
+        )
+      )
     }
   }
 

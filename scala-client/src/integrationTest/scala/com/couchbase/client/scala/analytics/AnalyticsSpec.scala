@@ -29,8 +29,8 @@ import scala.util.{Failure, Success}
 @IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS))
 class AnalyticsSpec extends ScalaIntegrationTest {
 
-  private var cluster: Cluster = _
-  private var coll: Collection = _
+  private var cluster: Cluster   = _
+  private var coll: Collection   = _
   private var bucketName: String = _
 
   @BeforeAll
@@ -69,9 +69,9 @@ class AnalyticsSpec extends ScalaIntegrationTest {
   @Test
   def failsOnError(): Unit = {
     cluster.analyticsQuery("SELECT 1=") match {
-      case Success(result) => assert(false)
+      case Success(result)                  => assert(false)
       case Failure(err: AnalyticsException) =>
-      case Failure(err) => assert(false)
+      case Failure(err)                     => assert(false)
     }
   }
 }

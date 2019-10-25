@@ -34,9 +34,9 @@ private[scala] object JsonPathParser {
 
     try {
       var elemIdx = 0
-      var idx = 0
-      val len = path.length
-      val ret = ArrayBuffer.empty[PathElement]
+      var idx     = 0
+      val len     = path.length
+      val ret     = ArrayBuffer.empty[PathElement]
 
       // This implementation is imperative for performance
       while (idx < len) {
@@ -48,9 +48,8 @@ private[scala] object JsonPathParser {
           elemIdx = idx
           ret += PathObjectOrField(first)
 
-        }
-        else if (ch == '[') {
-          val arrayIdxStart = idx
+        } else if (ch == '[') {
+          val arrayIdxStart    = idx
           var out: Option[Int] = None
 
           while (idx < len && out.isEmpty) {
@@ -59,9 +58,10 @@ private[scala] object JsonPathParser {
             if (arrayIdxCh == ']') {
               val arrayIdxStr = path.substring(arrayIdxStart, idx)
               out = Some(arrayIdxStr.toInt)
-            }
-            else if (!(arrayIdxCh >= '0' && arrayIdxCh <= '9')) {
-              throw new IllegalArgumentException(s"Found unexpected non-digit in middle of array index at ${debugPos(idx)}")
+            } else if (!(arrayIdxCh >= '0' && arrayIdxCh <= '9')) {
+              throw new IllegalArgumentException(
+                s"Found unexpected non-digit in middle of array index at ${debugPos(idx)}"
+              )
             }
 
             idx += 1
@@ -91,8 +91,7 @@ private[scala] object JsonPathParser {
       }
 
       Success(ret)
-    }
-    catch {
+    } catch {
       case NonFatal(err) => Failure(err)
     }
   }

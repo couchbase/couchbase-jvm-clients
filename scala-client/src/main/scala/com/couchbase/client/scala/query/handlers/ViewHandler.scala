@@ -42,13 +42,14 @@ import scala.util.Try
 private[scala] class ViewHandler() {
   import DurationConversions._
 
-  def request[T](designDoc: String,
-                 viewName: String,
-                 options: ViewOptions,
-                 core: Core,
-                 environment: ClusterEnvironment,
-                 bucketName: String)
-  : Try[ViewRequest] = {
+  def request[T](
+      designDoc: String,
+      viewName: String,
+      options: ViewOptions,
+      core: Core,
+      environment: ClusterEnvironment,
+      bucketName: String
+  ): Try[ViewRequest] = {
     val validations: Try[ViewRequest] = for {
       _ <- Validate.notNullOrEmpty(designDoc, "designDoc")
       _ <- Validate.notNullOrEmpty(viewName, "viewName")
@@ -76,21 +77,22 @@ private[scala] class ViewHandler() {
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       val params = options.encode()
 
       val bytes = options.keys.map(s => s.getBytes(UTF_8))
 
-        val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
-        val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
+      val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
 
-        val isDevelopment = options.namespace match {
-          case Some(Development) => true
-          case _ => false
-        }
+      val isDevelopment = options.namespace match {
+        case Some(Development) => true
+        case _                 => false
+      }
 
-        Try(new ViewRequest(timeout,
+      Try(
+        new ViewRequest(
+          timeout,
           core.context(),
           retryStrategy,
           core.context().authenticator(),
@@ -99,7 +101,9 @@ private[scala] class ViewHandler() {
           viewName,
           params,
           bytes.asJava,
-          isDevelopment))
+          isDevelopment
+        )
+      )
     }
   }
 }

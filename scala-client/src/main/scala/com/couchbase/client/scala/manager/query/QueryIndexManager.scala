@@ -24,7 +24,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-
 /** Allows query indexes to be managed.
   *
   * @define Timeout        when the operation will timeout.  This will default to `timeoutConfig().managementTimeout
@@ -34,10 +33,10 @@ import scala.util.Try
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   */
 @Stability.Volatile
-class QueryIndexManager(async: AsyncQueryIndexManager)
-                       (implicit val ec: ExecutionContext) {
+class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: ExecutionContext) {
   private val core = async.cluster.core
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
   /** Retries all indexes on a bucket.
@@ -46,9 +45,11 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     */
-  def getAllIndexes(bucketName: String,
-                    timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Seq[QueryIndex]] = {
+  def getAllIndexes(
+      bucketName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Seq[QueryIndex]] = {
     Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy))
   }
 
@@ -63,24 +64,29 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     */
-  def createIndex(bucketName: String,
-                  indexName: String,
-                  fields: Seq[String],
-                  ignoreIfExists: Boolean = false,
-                  numReplicas: Option[Int] = None,
-                  deferred: Option[Boolean] = None,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.createIndex(bucketName,
-      indexName,
-      fields,
-      ignoreIfExists,
-      numReplicas,
-      deferred,
-      timeout,
-      retryStrategy))
+  def createIndex(
+      bucketName: String,
+      indexName: String,
+      fields: Seq[String],
+      ignoreIfExists: Boolean = false,
+      numReplicas: Option[Int] = None,
+      deferred: Option[Boolean] = None,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(
+      async.createIndex(
+        bucketName,
+        indexName,
+        fields,
+        ignoreIfExists,
+        numReplicas,
+        deferred,
+        timeout,
+        retryStrategy
+      )
+    )
   }
-
 
   /** Creates a new primary query index with the specified parameters.
     *
@@ -93,20 +99,26 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
     */
-  def createPrimaryIndex(bucketName: String,
-                         indexName: Option[String] = None,
-                         ignoreIfExists: Boolean = false,
-                         numReplicas: Option[Int] = None,
-                         deferred: Option[Boolean] = None,
-                         timeout: Duration = DefaultTimeout,
-                         retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.createPrimaryIndex(bucketName,
-      indexName,
-      ignoreIfExists,
-      numReplicas,
-      deferred,
-      timeout,
-      retryStrategy))
+  def createPrimaryIndex(
+      bucketName: String,
+      indexName: Option[String] = None,
+      ignoreIfExists: Boolean = false,
+      numReplicas: Option[Int] = None,
+      deferred: Option[Boolean] = None,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(
+      async.createPrimaryIndex(
+        bucketName,
+        indexName,
+        ignoreIfExists,
+        numReplicas,
+        deferred,
+        timeout,
+        retryStrategy
+      )
+    )
 
   }
 
@@ -118,16 +130,16 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
     */
-  def dropIndex(bucketName: String,
-                indexName: String,
-                ignoreIfNotExists: Boolean = false,
-                timeout: Duration = DefaultTimeout,
-                retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.dropIndex(bucketName,
-      indexName,
-      ignoreIfNotExists,
-      timeout,
-      retryStrategy))
+  def dropIndex(
+      bucketName: String,
+      indexName: String,
+      ignoreIfNotExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(
+      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy)
+    )
 
   }
 
@@ -138,14 +150,13 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
     */
-  def dropPrimaryIndex(bucketName: String,
-                       ignoreIfNotExists: Boolean = false,
-                       timeout: Duration = DefaultTimeout,
-                       retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.dropPrimaryIndex(bucketName,
-      ignoreIfNotExists,
-      timeout,
-      retryStrategy))
+  def dropPrimaryIndex(
+      bucketName: String,
+      ignoreIfNotExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy))
   }
 
   /** Polls the specified indexes until they are all online.
@@ -157,16 +168,16 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
     */
-  def watchIndexes(bucketName: String,
-                   indexNames: Seq[String],
-                   timeout: Duration,
-                   watchPrimary: Boolean = false,
-                   retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.watchIndexes(bucketName,
-      indexNames,
-      timeout,
-      watchPrimary,
-      retryStrategy))
+  def watchIndexes(
+      bucketName: String,
+      indexNames: Seq[String],
+      timeout: Duration,
+      watchPrimary: Boolean = false,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(
+      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy)
+    )
   }
 
   /** Build all deferred indexes.
@@ -175,11 +186,11 @@ class QueryIndexManager(async: AsyncQueryIndexManager)
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
     */
-  def buildDeferredIndexes(bucketName: String,
-                           timeout: Duration = DefaultTimeout,
-                           retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
-    Collection.block(async.buildDeferredIndexes(bucketName,
-      timeout,
-      retryStrategy))
+  def buildDeferredIndexes(
+      bucketName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(async.buildDeferredIndexes(bucketName, timeout, retryStrategy))
   }
 }

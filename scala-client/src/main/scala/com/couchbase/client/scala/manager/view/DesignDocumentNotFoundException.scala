@@ -20,8 +20,7 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.scala.view.DesignDocumentNamespace
 
-case class DesignDocumentNotFoundException(name: String,
-                                           namespace: DesignDocumentNamespace)
-  extends CouchbaseException(s"Design document [${redactMeta(name)}] not found in namespace $namespace.")
-
-
+case class DesignDocumentNotFoundException(name: String, namespace: DesignDocumentNamespace)
+    extends CouchbaseException(
+      s"Design document [${redactMeta(name)}] not found in namespace $namespace."
+    )

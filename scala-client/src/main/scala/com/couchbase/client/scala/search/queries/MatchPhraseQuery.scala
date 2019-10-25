@@ -22,13 +22,15 @@ import com.couchbase.client.scala.json.JsonObject
   * like analyzers to them.
   *
   * @param matchPhrase The input phrase to be matched against.
- *
+  *
   * @since 1.0.0
   */
-case class MatchPhraseQuery(private[scala] val matchPhrase: String,
-                            private[scala] val analyzer: Option[String] = None,
-                            private[scala] val field: Option[String] = None,
-                            private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class MatchPhraseQuery(
+    private[scala] val matchPhrase: String,
+    private[scala] val analyzer: Option[String] = None,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

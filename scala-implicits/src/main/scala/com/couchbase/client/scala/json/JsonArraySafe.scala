@@ -204,9 +204,9 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
   override def toString: String = super.toString
 }
 
-
 /** Methods to construct a `JsonArraySafe`. */
 object JsonArraySafe {
+
   /** Constructs an empty `JsonArraySafe`. */
   def create: JsonArraySafe = JsonArraySafe(JsonArray.create)
 

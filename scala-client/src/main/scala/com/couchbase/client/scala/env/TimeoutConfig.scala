@@ -31,14 +31,18 @@ import scala.concurrent.duration.Duration
   * @param connectTimeout    the default timeout to use for connection operations
   * @param disconnectTimeout the default timeout to use for disconnection operations
   */
-case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.TimeoutConfig.DEFAULT_KV_TIMEOUT,
-                         private[scala] val managementTimeout: Duration = core.env.TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT,
-                         private[scala] val queryTimeout: Duration = core.env.TimeoutConfig.DEFAULT_QUERY_TIMEOUT,
-                         private[scala] val viewTimeout: Duration = core.env.TimeoutConfig.DEFAULT_VIEW_TIMEOUT,
-                         private[scala] val searchTimeout: Duration = core.env.TimeoutConfig.DEFAULT_SEARCH_TIMEOUT,
-                         private[scala] val analyticsTimeout: Duration = core.env.TimeoutConfig.DEFAULT_ANALYTICS_TIMEOUT,
-                         private[scala] val connectTimeout: Duration = core.env.TimeoutConfig.DEFAULT_CONNECT_TIMEOUT,
-                         private[scala] val disconnectTimeout: Duration = core.env.TimeoutConfig.DEFAULT_DISCONNECT_TIMEOUT) {
+case class TimeoutConfig(
+    private[scala] val kvTimeout: Duration = core.env.TimeoutConfig.DEFAULT_KV_TIMEOUT,
+    private[scala] val managementTimeout: Duration =
+      core.env.TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT,
+    private[scala] val queryTimeout: Duration = core.env.TimeoutConfig.DEFAULT_QUERY_TIMEOUT,
+    private[scala] val viewTimeout: Duration = core.env.TimeoutConfig.DEFAULT_VIEW_TIMEOUT,
+    private[scala] val searchTimeout: Duration = core.env.TimeoutConfig.DEFAULT_SEARCH_TIMEOUT,
+    private[scala] val analyticsTimeout: Duration = core.env.TimeoutConfig.DEFAULT_ANALYTICS_TIMEOUT,
+    private[scala] val connectTimeout: Duration = core.env.TimeoutConfig.DEFAULT_CONNECT_TIMEOUT,
+    private[scala] val disconnectTimeout: Duration =
+      core.env.TimeoutConfig.DEFAULT_DISCONNECT_TIMEOUT
+) {
 
   private[scala] def toCore: core.env.TimeoutConfig.Builder = {
     val builder = new core.env.TimeoutConfig.Builder
@@ -54,7 +58,6 @@ case class TimeoutConfig(private[scala] val kvTimeout: Duration = core.env.Timeo
 
     builder
   }
-
 
   /** Sets the timeout to use for key-value operations.
     *

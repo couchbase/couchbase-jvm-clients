@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *//*
+ */ /*
  * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,9 +46,8 @@ private[scala] object SearchUtils {
   // Implementation note: this is a dumb auto-convert of the Java code to Scala, there's doubtless room for
   // improvement
 
-
   private val FTS_SIMPLE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZZZZ"
-  private val PATTERN = Pattern.compile("([\\+-])(\\d{1,2})(?::(\\d{1,2}))?$")
+  private val PATTERN                = Pattern.compile("([\\+-])(\\d{1,2})(?::(\\d{1,2}))?$")
 
   private val df = new ThreadLocal[DateFormat]() {
     override protected def initialValue: DateFormat = {
@@ -68,8 +67,8 @@ private[scala] object SearchUtils {
   def toFtsUtcString(date: Date): String = {
     if (date == null) return null
     val rfc3339 = df.get
-    val zDate = rfc3339.format(date)
-    val xDate = zDate.replaceFirst("\\+0000$", "Z")
+    val zDate   = rfc3339.format(date)
+    val xDate   = zDate.replaceFirst("\\+0000$", "Z")
     xDate
   }
 
@@ -90,8 +89,11 @@ private[scala] object SearchUtils {
     try df.get.parse(zDate)
     catch {
       case e: ParseException =>
-        throw new CouchbaseException("Cannot parse FTS date '" + date + "' despite convertion to RFC 822 timezone '"
-          + zDate + "'", e)
+        throw new CouchbaseException(
+          "Cannot parse FTS date '" + date + "' despite convertion to RFC 822 timezone '"
+            + zDate + "'",
+          e
+        )
     }
   }
 
@@ -101,15 +103,14 @@ private[scala] object SearchUtils {
     else {
       val matcher = PATTERN.matcher(xDate)
       if (matcher.find) {
-        val sign = matcher.group(1)
-        var hours = matcher.group(2)
+        val sign    = matcher.group(1)
+        var hours   = matcher.group(2)
         var minutes = "00"
         if (matcher.groupCount == 3 && matcher.group(3) != null) minutes = matcher.group(3)
         if (hours.length == 1) hours = "0" + hours
         if (minutes.length == 1) minutes = "0" + minutes
         zDate = matcher.replaceFirst(sign + hours + minutes)
-      }
-      else throw new CouchbaseException("Cannot convert timezone to RFC 822 in '" + xDate + "'")
+      } else throw new CouchbaseException("Cannot convert timezone to RFC 822 in '" + xDate + "'")
     }
     zDate
   }

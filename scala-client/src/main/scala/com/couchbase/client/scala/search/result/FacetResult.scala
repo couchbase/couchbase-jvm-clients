@@ -33,6 +33,7 @@ package com.couchbase.client.scala.search.result
   * @since 1.0.0
   */
 sealed trait FacetResult {
+
   /** $name */
   def name: String
 
@@ -57,10 +58,7 @@ object FacetResult {
     *
     * @since 1.0.0
     */
-  case class DateRange(name: String,
-                       start: String,
-                       end: String,
-                       count: Long)
+  case class DateRange(name: String, start: String, end: String, count: Long)
 
   /**
     * Represents the result for a [[com.couchbase.client.scala.search.facet.DateRangeFacet]].
@@ -73,12 +71,14 @@ object FacetResult {
     *
     * @since 1.0.0
     */
-  case class DateRangeFacetResult(name: String,
-                                  field: String,
-                                  total: Long,
-                                  missing: Long,
-                                  other: Long,
-                                  dateRanges: Seq[DateRange]) extends FacetResult
+  case class DateRangeFacetResult(
+      name: String,
+      field: String,
+      total: Long,
+      missing: Long,
+      other: Long,
+      dateRanges: Seq[DateRange]
+  ) extends FacetResult
 
   /**
     * Represents the result for a [[com.couchbase.client.scala.search.facet.NumericRangeFacet]].
@@ -91,12 +91,14 @@ object FacetResult {
     *
     * @since 1.0.0
     */
-  case class NumericRangeFacetResult(name: String,
-                                     field: String,
-                                     total: Long,
-                                     missing: Long,
-                                     other: Long,
-                                     numericRanges: Seq[NumericRange]) extends FacetResult
+  case class NumericRangeFacetResult(
+      name: String,
+      field: String,
+      total: Long,
+      missing: Long,
+      other: Long,
+      numericRanges: Seq[NumericRange]
+  ) extends FacetResult
 
   case class NumericRange(name: String, min: Double, max: Double, count: Long)
 
@@ -111,13 +113,14 @@ object FacetResult {
     *
     * @since 1.0.0
     */
-  case class TermFacetResult(name: String,
-                             field: String,
-                             total: Long,
-                             missing: Long,
-                             other: Long,
-                             terms: Seq[TermRange]) extends FacetResult
-  
+  case class TermFacetResult(
+      name: String,
+      field: String,
+      total: Long,
+      missing: Long,
+      other: Long,
+      terms: Seq[TermRange]
+  ) extends FacetResult
 
   /**
     * A range (or bucket) for a [[TermFacetResult]].

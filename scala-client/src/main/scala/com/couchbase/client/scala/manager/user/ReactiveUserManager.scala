@@ -35,15 +35,15 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Try}
-
-
 @Stability.Volatile
 class UserNotFoundException(val domain: AuthDomain, val username: String)
-  extends CouchbaseException("User [" + redactUser(username) + "] not found in " + domain + " domain.")
+    extends CouchbaseException(
+      "User [" + redactUser(username) + "] not found in " + domain + " domain."
+    )
 
 @Stability.Volatile
 class GroupNotFoundException(val groupName: String)
-  extends CouchbaseException("Group [" + redactSystem(groupName) + "] not found.")
+    extends CouchbaseException("Group [" + redactSystem(groupName) + "] not found.")
 
 object ReactiveUserManager {
   // Some roles have an odd \u0019 which causes upickle to die
@@ -57,7 +57,8 @@ object ReactiveUserManager {
 
 @Volatile
 class ReactiveUserManager(private val core: Core) {
-  private[scala] val defaultManagerTimeout = core.context().environment().timeoutConfig().managementTimeout()
+  private[scala] val defaultManagerTimeout =
+    core.context().environment().timeoutConfig().managementTimeout()
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
 
   private def pathForUsers = "/settings/rbac/users"
@@ -76,52 +77,57 @@ class ReactiveUserManager(private val core: Core) {
     ManagerUtil.sendRequest(core, request)
   }
 
-  private def sendRequest(method: HttpMethod,
-                          path: String,
-                          timeout: Duration,
-                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
+  private def sendRequest(
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[GenericManagerResponse] = {
     ManagerUtil.sendRequest(core, method, path, timeout, retryStrategy)
   }
 
-  private def sendRequest(method: HttpMethod,
-                          path: String,
-                          body: UrlQueryStringBuilder,
-                          timeout: Duration,
-                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
+  private def sendRequest(
+      method: HttpMethod,
+      path: String,
+      body: UrlQueryStringBuilder,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[GenericManagerResponse] = {
     ManagerUtil.sendRequest(core, method, path, body, timeout, retryStrategy)
   }
-
 
   protected def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {
     ManagerUtil.checkStatus(response, action)
   }
 
   // TODO check 'If the server response does not include an “origins” field for a role' logic
-  def getUser(username: String,
-              domain: AuthDomain = AuthDomain.Local,
-              timeout: Duration = defaultManagerTimeout,
-              retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[UserAndMetadata] = {
+  def getUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[UserAndMetadata] = {
     sendRequest(GET, pathForUser(domain, username), timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new UserNotFoundException(domain, username))
-        }
-        else checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]") match {
-          case Failure(err) => SMono.raiseError(err)
-          case _ =>
-            val value = CouchbasePickler.read[UserAndMetadata](response.content)
-            SMono.just(value)
-        }
+        } else
+          checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]") match {
+            case Failure(err) => SMono.raiseError(err)
+            case _ =>
+              val value = CouchbasePickler.read[UserAndMetadata](response.content)
+              SMono.just(value)
+          }
       })
   }
 
-  def getAllUsers(domain: AuthDomain = AuthDomain.Local,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[UserAndMetadata] = {
+  def getAllUsers(
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[UserAndMetadata] = {
     sendRequest(GET, pathForUsers, timeout, retryStrategy)
-
       .flatMapMany((response: GenericManagerResponse) => {
 
         checkStatus(response, "get all users") match {
@@ -133,11 +139,12 @@ class ReactiveUserManager(private val core: Core) {
       })
   }
 
-
-  def upsertUser(user: User,
-                 domain: AuthDomain = AuthDomain.Local,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def upsertUser(
+      user: User,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
 
     val params = UrlQueryStringBuilder.createForUrlSafeNames
       .add("name", user.displayName)
@@ -153,65 +160,64 @@ class ReactiveUserManager(private val core: Core) {
     user.password.foreach((pwd: String) => params.add("password", pwd))
 
     sendRequest(HttpMethod.PUT, pathForUser(domain, user.username), params, timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
 
         checkStatus(response, "create user [" + redactUser(user.username) + "]") match {
           case Failure(err) => SMono.raiseError(err)
-          case _ => SMono.just(0)
+          case _            => SMono.just(0)
         }
       })
   }
 
-  def dropUser(username: String,
-               domain: AuthDomain = AuthDomain.Local,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def dropUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
 
     sendRequest(HttpMethod.DELETE, pathForUser(domain, username), timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new UserNotFoundException(domain, username))
-        }
-        else {
+        } else {
           checkStatus(response, "drop user [" + redactUser(username) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _ => SMono.just(0)
+            case _            => SMono.just(0)
           }
         }
       })
   }
 
-
-  def availableRoles(timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[RoleAndDescription] = {
+  def availableRoles(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[RoleAndDescription] = {
     sendRequest(GET, pathForRoles, timeout, retryStrategy)
-
       .flatMapMany((response: GenericManagerResponse) => {
 
         checkStatus(response, "get all roles") match {
           case Failure(err) => SFlux.raiseError(err)
           case _ =>
             val converted = ReactiveUserManager.convertRoles(response.content())
-            val values = CouchbasePickler.read[Seq[RoleAndDescription]](converted)
+            val values    = CouchbasePickler.read[Seq[RoleAndDescription]](converted)
             SFlux.fromIterable(values)
         }
       })
   }
 
-  def getGroup(groupName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Group] = {
+  def getGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Group] = {
 
     sendRequest(HttpMethod.GET, pathForGroup(groupName), timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new GroupNotFoundException(groupName))
-        }
-        else {
+        } else {
           checkStatus(response, "get group [" + redactMeta(groupName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
             case _ =>
@@ -222,11 +228,12 @@ class ReactiveUserManager(private val core: Core) {
       })
   }
 
-  def getAllGroups(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[Group] = {
+  def getAllGroups(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[Group] = {
 
     sendRequest(HttpMethod.GET, pathForGroups, timeout, retryStrategy)
-
       .flatMapMany((response: GenericManagerResponse) => {
         checkStatus(response, "get all groups") match {
           case Failure(err) => SFlux.raiseError(err)
@@ -237,9 +244,11 @@ class ReactiveUserManager(private val core: Core) {
       })
   }
 
-  def upsertGroup(group: Group,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def upsertGroup(
+      group: Group,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
 
     val params = UrlQueryStringBuilder.createForUrlSafeNames
       .add("description", group.description)
@@ -248,31 +257,30 @@ class ReactiveUserManager(private val core: Core) {
     group.ldapGroupReference.foreach(lgr => params.add("ldap_group_ref", lgr))
 
     sendRequest(HttpMethod.PUT, pathForGroup(group.name), params, timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
 
         checkStatus(response, "create group [" + redactSystem(group.name) + "]") match {
           case Failure(err) => SMono.raiseError(err)
-          case _ => SMono.just(0)
+          case _            => SMono.just(0)
         }
       })
   }
 
-  def dropGroup(groupName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def dropGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
 
     sendRequest(HttpMethod.DELETE, pathForGroup(groupName), timeout, retryStrategy)
-
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
           SMono.raiseError(new GroupNotFoundException(groupName))
-        }
-        else {
+        } else {
           checkStatus(response, "drop group [" + redactUser(groupName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _ => SMono.just(0)
+            case _            => SMono.just(0)
           }
         }
       })

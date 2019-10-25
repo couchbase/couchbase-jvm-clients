@@ -25,64 +25,74 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 
-
 /** Presents a Scala Buffer interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
   */
-class CouchbaseBuffer[T](id: String,
-                         collection: Collection,
-                         options: Option[CouchbaseCollectionOptions] = None)
-                        (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
-  extends mutable.Buffer[T] {
+class CouchbaseBuffer[T](
+    id: String,
+    collection: Collection,
+    options: Option[CouchbaseCollectionOptions] = None
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+    extends mutable.Buffer[T] {
 
   protected val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
-    case _ => CouchbaseCollectionOptions(collection)
+    case _       => CouchbaseCollectionOptions(collection)
   }
 
   override def apply(index: Int): T = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.get("[" + index + "]")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[T](0))
 
     result match {
       case Success(value) => value
-      case Failure(err) => throw err
+      case Failure(err)   => throw err
     }
   }
 
   // A fast version of `remove` that does not have to return the element
   def removeAt(index: Int): Unit = {
-    collection.mutateIn(id,
-      Array(MutateInSpec.remove("[" + index + "]")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability).get
+    collection
+      .mutateIn(
+        id,
+        Array(MutateInSpec.remove("[" + index + "]")),
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
+      .get
   }
 
   // Note `remoteAt` is more performant as it does not have to return the removed element
   override def remove(index: Int): T = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.get("[" + index + "]")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[T](0))
 
     result match {
       case Success(value) =>
-        val mutateResult = collection.mutateIn(id,
+        val mutateResult = collection.mutateIn(
+          id,
           Array(MutateInSpec.remove("[" + index + "]")),
           cas = op.get.cas,
           timeout = opts.timeout,
           retryStrategy = opts.retryStrategy,
-          durability = opts.durability)
+          durability = opts.durability
+        )
 
         mutateResult match {
-          case Success(_) => value
+          case Success(_)                         => value
           case Failure(err: CASMismatchException) =>
             // Recurse to try again
             remove(index)
@@ -92,7 +102,6 @@ class CouchbaseBuffer[T](id: String,
       case Failure(err) => throw err
     }
   }
-
 
   private def retryIfDocDoesNotExist[_](f: () => Try[_]): Unit = {
     val result: Try[_] = f()
@@ -107,61 +116,72 @@ class CouchbaseBuffer[T](id: String,
   }
 
   def append(value: T): this.type = {
-    val f = () => collection.mutateIn(id,
-      Array(MutateInSpec.arrayAppend("", value)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+    val f = () =>
+      collection.mutateIn(
+        id,
+        Array(MutateInSpec.arrayAppend("", value)),
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
     retryIfDocDoesNotExist(f)
     this
   }
 
   def prepend(value: T): this.type = {
-    val f = () => collection.mutateIn(id,
-      Array(MutateInSpec.arrayPrepend("", value)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+    val f = () =>
+      collection.mutateIn(
+        id,
+        Array(MutateInSpec.arrayPrepend("", value)),
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
     retryIfDocDoesNotExist(f)
     this
   }
 
   private def initialize(): Unit = {
     // The .get will throw if anything goes wrong
-    collection.insert(id,
-      JsonArraySafe.create,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability).get
+    collection
+      .insert(
+        id,
+        JsonArraySafe.create,
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
+      .get
   }
 
   override def size(): Int = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.count("")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count) => count
+      case Success(count)                   => count
       case Failure(_: KeyNotFoundException) => 0
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 
   private def all(): Seq[T] = {
-    val op = collection.get(id,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
 
-    val result = op.flatMap(_.contentAs[JsonArraySafe])
+    val result = op
+      .flatMap(_.contentAs[JsonArraySafe])
       .map(array => array.toSeq.asInstanceOf[Seq[T]])
 
     result match {
-      case Success(values: Seq[T]) => values
+      case Success(values: Seq[T])          => values
       case Failure(_: KeyNotFoundException) => Seq.empty[T]
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 
@@ -176,11 +196,13 @@ class CouchbaseBuffer[T](id: String,
   override def length: Int = size()
 
   override def update(index: Int, value: T): Unit = {
-    val result = collection.mutateIn(id,
+    val result = collection.mutateIn(
+      id,
       Array(MutateInSpec.upsert("[" + index + "]", value)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+      durability = opts.durability
+    )
 
     result match {
       case Success(_) =>
@@ -194,24 +216,28 @@ class CouchbaseBuffer[T](id: String,
   override def +=(elem: T): this.type = append(elem)
 
   override def clear(): Unit = {
-    collection.remove(id,
+    collection.remove(
+      id,
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
-      durability = opts.durability) match {
+      durability = opts.durability
+    ) match {
       case Failure(_: KeyNotFoundException) =>
-      case Failure(err) => throw err
-      case _ =>
+      case Failure(err)                     => throw err
+      case _                                =>
     }
   }
 
   override def +=:(elem: T): this.type = prepend(elem)
 
   override def insertAll(index: Int, values: Traversable[T]): Unit = {
-    val result = collection.mutateIn(id,
+    val result = collection.mutateIn(
+      id,
       Array(MutateInSpec.arrayAppend("[" + index + "]", values.toSeq: _*)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+      durability = opts.durability
+    )
 
     result match {
       case Success(_) =>

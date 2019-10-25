@@ -41,21 +41,17 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def no_commands() {
     val docId = TestUtils.docId()
     coll.lookupIn(docId, Array[LookupInSpec]()) match {
-      case Success(result) => assert(false, s"unexpected success")
+      case Success(result)                        => assert(false, s"unexpected success")
       case Failure(err: IllegalArgumentException) =>
       case Failure(err) =>
         assert(false, s"unexpected error $err")
     }
   }
-
-
   @Test
   def lookupIn() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> "world",
-      "foo" -> "bar",
-      "age" -> 22)
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val insertResult = coll.insert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age"))) match {
@@ -72,10 +68,8 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def lookupInWithExpiration() {
-    val docId = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world",
-      "foo" -> "bar",
-      "age" -> 22)
+    val docId        = TestUtils.docId()
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val insertResult = coll.upsert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age")), withExpiry = true) match {
@@ -94,12 +88,15 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def get_array() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("animals" -> ujson.Arr("cat", "dog"))
+    val content      = ujson.Obj("animals" -> ujson.Arr("cat", "dog"))
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("animals"))) match {
       case Success(result) =>
-        assert(result.contentAs[Array[Byte]](0).get sameElements """["cat","dog"]""".getBytes(CharsetUtil.UTF_8))
+        assert(
+          result.contentAs[Array[Byte]](0).get sameElements """["cat","dog"]"""
+            .getBytes(CharsetUtil.UTF_8)
+        )
         assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat", "dog"))
         assert(result.contentAs[JsonArray](0).get == JsonArray("cat", "dog"))
 
@@ -113,13 +110,13 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def path_does_not_exist_single() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> "world")
+    val content      = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("not_exist"))) match {
-      case Success(result) => assert(false, s"should not succeed")
+      case Success(result)                     => assert(false, s"should not succeed")
       case Failure(err: PathNotFoundException) =>
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)                        => assert(false, s"unexpected error $err")
     }
   }
 
@@ -127,16 +124,16 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def path_does_not_exist_multi() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> "world")
+    val content      = ujson.Obj("hello" -> "world")
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("not_exist"), get("hello"))) match {
       case Success(result) =>
         assert(result.cas != 0)
         result.contentAs[String](0) match {
-          case Success(body) => assert(false, s"should not succeed")
+          case Success(body)                       => assert(false, s"should not succeed")
           case Failure(err: PathNotFoundException) =>
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[String](1).get == "world")
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -147,9 +144,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def lookupIn_with_doc() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> "world",
-      "foo" -> "bar",
-      "age" -> 22)
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age"), get(""))) match {
@@ -169,16 +164,15 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def exists_single() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> ujson.Arr("world"))
+    val content      = ujson.Obj("hello" -> ujson.Arr("world"))
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId,
-      Array(exists("does_not_exist"))) match {
+    coll.lookupIn(docId, Array(exists("does_not_exist"))) match {
       case Success(result) =>
         result.contentAs[Boolean](0) match {
           case Failure(err: PathNotFoundException) =>
-          case Success(v) => assert(false, s"should not succeed")
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Success(v)                          => assert(false, s"should not succeed")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
         }
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -188,13 +182,17 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def exists_multi() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> ujson.Arr("world"),
-      "foo" -> "bar",
-      "age" -> 22)
+    val content      = ujson.Obj("hello" -> ujson.Arr("world"), "foo" -> "bar", "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId,
-      Array(LookupInSpec.count("hello"), LookupInSpec.exists("age"), LookupInSpec.exists("does_not_exist"))) match {
+    coll.lookupIn(
+      docId,
+      Array(
+        LookupInSpec.count("hello"),
+        LookupInSpec.exists("age"),
+        LookupInSpec.exists("does_not_exist")
+      )
+    ) match {
       case Success(result) =>
         assert(result.exists(0))
         assert(result.exists(1))
@@ -202,13 +200,13 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         assert(result.contentAs[Boolean](1).get)
         result.contentAs[Boolean](2) match {
           case Failure(err: PathNotFoundException) =>
-          case Success(v) => assert(false, s"should not succeed")
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Success(v)                          => assert(false, s"should not succeed")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
           case Failure(err: DecodingFailedException) =>
-          case Success(v) => assert(false, s"should not succeed")
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Success(v)                            => assert(false, s"should not succeed")
+          case Failure(err)                          => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -219,24 +217,24 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def count() {
     val docId = TestUtils.docId()
     coll.remove(docId)
-    val content = ujson.Obj("hello" -> ujson.Arr("world"),
-      "foo" -> "bar",
-      "age" -> 22)
+    val content      = ujson.Obj("hello" -> ujson.Arr("world"), "foo" -> "bar", "age" -> 22)
     val insertResult = coll.insert(docId, content).get
 
-    coll.lookupIn(docId,
-      Array(LookupInSpec.count("hello"), exists("age"), exists("does_not_exist"))) match {
+    coll.lookupIn(
+      docId,
+      Array(LookupInSpec.count("hello"), exists("age"), exists("does_not_exist"))
+    ) match {
       case Success(result) =>
         assert(result.contentAs[Boolean](1).get)
         result.contentAs[Boolean](2) match {
           case Failure(err: PathNotFoundException) =>
-          case Success(v) => assert(false, s"should not succeed")
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Success(v)                          => assert(false, s"should not succeed")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
           case Failure(err: DecodingFailedException) =>
-          case Success(v) => assert(false, s"should not succeed")
-          case Failure(err) => assert(false, s"unexpected error $err")
+          case Success(v)                            => assert(false, s"should not succeed")
+          case Failure(err)                          => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")

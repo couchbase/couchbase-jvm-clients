@@ -28,7 +28,6 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Failure, Success, Try}
 
-
 /**
   * Handles requests and responses for KV get-from-replica operations.
   *
@@ -37,10 +36,11 @@ import scala.util.{Failure, Success, Try}
   */
 private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
 
-  def requestAll[T](id: String,
-                    timeout: java.time.Duration,
-                    retryStrategy: RetryStrategy)
-  : Try[Seq[GetRequest]] = {
+  def requestAll[T](
+      id: String,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[Seq[GetRequest]] = {
     val validations: Try[Seq[GetRequest]] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
@@ -49,25 +49,26 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       hp.core.clusterConfig().bucketConfig(hp.bucketName) match {
         case config: CouchbaseBucketConfig =>
           val numReplicas = config.numberOfReplicas()
 
           val replicaRequests: Seq[ReplicaGetRequest] = Range(0, numReplicas)
-            .map(replicaIndex => new ReplicaGetRequest(id,
-              timeout,
-              hp.core.context(),
-              hp.collectionIdentifier,
-              retryStrategy,
-              (replicaIndex + 1).shortValue()))
+            .map(
+              replicaIndex =>
+                new ReplicaGetRequest(
+                  id,
+                  timeout,
+                  hp.core.context(),
+                  hp.collectionIdentifier,
+                  retryStrategy,
+                  (replicaIndex + 1).shortValue()
+                )
+            )
 
-          val activeRequest = new GetRequest(id,
-            timeout,
-            hp.core.context(),
-            hp.collectionIdentifier,
-            retryStrategy)
+          val activeRequest =
+            new GetRequest(id, timeout, hp.core.context(), hp.collectionIdentifier, retryStrategy)
 
           val requests: Seq[GetRequest] = activeRequest +: replicaRequests
 
@@ -79,10 +80,25 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: GetResponse, isReplica: Boolean, transcoder: Transcoder): Option[GetReplicaResult] = {
+  def response(
+      id: String,
+      response: GetResponse,
+      isReplica: Boolean,
+      transcoder: Transcoder
+  ): Option[GetReplicaResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isReplica, transcoder))
+        Some(
+          new GetReplicaResult(
+            id,
+            Left(response.content),
+            response.flags(),
+            response.cas,
+            Option.empty,
+            isReplica,
+            transcoder
+          )
+        )
 
       case ResponseStatus.NOT_FOUND => None
 

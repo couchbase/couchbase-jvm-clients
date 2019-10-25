@@ -22,45 +22,52 @@ import com.couchbase.client.scala.view.DesignDocumentNamespace
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-
 class ViewIndexManager(private[scala] val reactive: ReactiveViewIndexManager) {
   private val core = reactive.core
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  def getDesignDocument(designDocName: String,
-                        namespace: DesignDocumentNamespace,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[DesignDocument] = {
+  def getDesignDocument(
+      designDocName: String,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[DesignDocument] = {
     Try(reactive.getDesignDocument(designDocName, namespace, timeout, retryStrategy).block())
   }
 
-  def getAllDesignDocuments(namespace: DesignDocumentNamespace,
-                            timeout: Duration = DefaultTimeout,
-                            retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Seq[DesignDocument]] = {
+  def getAllDesignDocuments(
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Seq[DesignDocument]] = {
     Try(reactive.getAllDesignDocuments(namespace, timeout, retryStrategy).collectSeq().block())
   }
 
-  def upsertDesignDocument(indexData: DesignDocument,
-                           namespace: DesignDocumentNamespace,
-                           timeout: Duration = DefaultTimeout,
-                           retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
+  def upsertDesignDocument(
+      indexData: DesignDocument,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.upsertDesignDocument(indexData, namespace, timeout, retryStrategy).block())
   }
 
-  def dropDesignDocument(designDocName: String,
-                         namespace: DesignDocumentNamespace,
-                         timeout: Duration = DefaultTimeout,
-                         retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
+  def dropDesignDocument(
+      designDocName: String,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.dropDesignDocument(designDocName, namespace, timeout, retryStrategy).block())
   }
 
-  def publishDesignDocument(designDocName: String,
-                            timeout: Duration = DefaultTimeout,
-                            retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
+  def publishDesignDocument(
+      designDocName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.publishDesignDocument(designDocName, timeout, retryStrategy).block())
   }
 }
-
-
-

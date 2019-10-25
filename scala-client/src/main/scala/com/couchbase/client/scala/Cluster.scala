@@ -29,7 +29,11 @@ import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.bucket.BucketManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
-import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.bucket.{
+  AsyncBucketManager,
+  BucketManager,
+  ReactiveBucketManager
+}
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.manager.search.SearchIndexManager
@@ -55,7 +59,11 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenticator, seedNodes: Set[SeedNode]) {
+class Cluster private[scala] (
+    env: => ClusterEnvironment,
+    authenticator: Authenticator,
+    seedNodes: Set[SeedNode]
+) {
 
   private[scala] implicit val ec: ExecutionContext = env.ec
 
@@ -84,7 +92,8 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): Bucket = {
-    AsyncUtils.block(async.bucket(bucketName))
+    AsyncUtils
+      .block(async.bucket(bucketName))
       .map(new Bucket(_))
       .get
   }
@@ -105,7 +114,7 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _ => env.timeoutConfig.queryTimeout()
+      case _       => env.timeoutConfig.queryTimeout()
     }
 
     AsyncUtils.block(async.query(statement, options))
@@ -122,10 +131,13 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Try[AnalyticsResult] = {
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions()
+  ): Try[AnalyticsResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _ => env.timeoutConfig.queryTimeout()
+      case _       => env.timeoutConfig.queryTimeout()
     }
 
     AsyncUtils.block(async.analyticsQuery(statement, options), timeout)
@@ -144,9 +156,11 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  def searchQuery(indexName: String,
-                  query: SearchQuery,
-                  options: SearchOptions = SearchOptions()): Try[SearchResult] = {
+  def searchQuery(
+      indexName: String,
+      query: SearchQuery,
+      options: SearchOptions = SearchOptions()
+  ): Try[SearchResult] = {
     AsyncUtils.block(async.searchQuery(indexName, query, options))
   }
 
@@ -167,9 +181,13 @@ class Cluster private[scala](env: => ClusterEnvironment, authenticator: Authenti
     */
   @Stability.Volatile
   def diagnostics(reportId: String = UUID.randomUUID.toString): Try[DiagnosticsResult] = {
-    Try(new DiagnosticsResult(async.core.diagnostics().collect(Collectors.toList()),
-      async.core.context().environment().userAgent().formattedShort(),
-      reportId))
+    Try(
+      new DiagnosticsResult(
+        async.core.diagnostics().collect(Collectors.toList()),
+        async.core.context().environment().userAgent().formattedShort(),
+        reportId
+      )
+    )
   }
 }
 
@@ -202,11 +220,11 @@ object Cluster {
     * @return a [[Cluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, options: ClusterOptions): Try[Cluster] = {
-    AsyncCluster.extractClusterEnvironment(connectionString, options)
+    AsyncCluster
+      .extractClusterEnvironment(connectionString, options)
       .map(ce => {
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
         new Cluster(ce, options.authenticator, seedNodes)
       })
   }
 }
-

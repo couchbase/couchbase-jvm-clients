@@ -27,7 +27,10 @@ import scala.util.{Success, Try}
   *
   * @since 1.0.0
   */
-case class SearchRowLocations(private val locations: GenMap[String, GenMap[String, Seq[SearchRowLocation]]]) {
+case class SearchRowLocations(
+    private val locations: GenMap[String, GenMap[String, Seq[SearchRowLocation]]]
+) {
+
   /** Gets all locations, for any field and term. */
   def getAll: Seq[SearchRowLocation] = {
     locations.flatMap(_._2).flatMap(_._2).seq.toSeq
@@ -35,13 +38,17 @@ case class SearchRowLocations(private val locations: GenMap[String, GenMap[Strin
 
   /** Gets all locations for a given field (any term). */
   def get(field: String): Seq[SearchRowLocation] = {
-    locations.get(field).map(_.flatMap(_._2).seq.toSeq)
+    locations
+      .get(field)
+      .map(_.flatMap(_._2).seq.toSeq)
       .getOrElse(Seq.empty)
   }
 
   /** Gets all locations for a given field and term. */
   def get(field: String, term: String): Seq[SearchRowLocation] = {
-    locations.get(field).flatMap(_.get(term))
+    locations
+      .get(field)
+      .flatMap(_.get(term))
       .getOrElse(Seq.empty)
   }
 
@@ -57,7 +64,9 @@ case class SearchRowLocations(private val locations: GenMap[String, GenMap[Strin
 
   /** Gets all terms for a given field. */
   def termsFor(field: String): Seq[String] = {
-    locations.get(field).map(_.keys.seq.toSeq)
+    locations
+      .get(field)
+      .map(_.keys.seq.toSeq)
       .getOrElse(Seq.empty)
   }
 }
@@ -65,29 +74,36 @@ case class SearchRowLocations(private val locations: GenMap[String, GenMap[Strin
 object SearchRowLocations {
   private[scala] def from(locationsJson: JsonObject): Try[SearchRowLocations] = {
     Try({
-      val hitLocations = collection.mutable.Map.empty[String, collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]]]
+      val hitLocations = collection.mutable.Map
+        .empty[String, collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]]]
 
-      for ( field <- locationsJson.names ) {
+      for (field <- locationsJson.names) {
         val termsJson = locationsJson.obj(field)
 
-        for ( term <- termsJson.names ) {
+        for (term <- termsJson.names) {
           val locsJson = termsJson.arr(term)
-          for ( i <- 0 until locsJson.size ) {
-            val loc = locsJson.obj(i)
-            val pos = loc.num("pos")
+          for (i <- 0 until locsJson.size) {
+            val loc   = locsJson.obj(i)
+            val pos   = loc.num("pos")
             val start = loc.num("start")
-            val end = loc.num("end")
+            val end   = loc.num("end")
             val arrayPositions: Option[Seq[Int]] = loc.safe.arr("array_positions") match {
               case Success(arrayPositionsJson) =>
-                Some(Range(0, arrayPositionsJson.size)
-                  .map(j => arrayPositionsJson.num(j).get))
+                Some(
+                  Range(0, arrayPositionsJson.size)
+                    .map(j => arrayPositionsJson.num(j).get)
+                )
               case _ => None
             }
 
-            val byTerm: collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]] = hitLocations.getOrElseUpdate(field,
-              collection.mutable.Map.empty[String, ArrayBuffer[SearchRowLocation]])
+            val byTerm: collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]] =
+              hitLocations.getOrElseUpdate(
+                field,
+                collection.mutable.Map.empty[String, ArrayBuffer[SearchRowLocation]]
+              )
 
-            val list: ArrayBuffer[SearchRowLocation] = byTerm.getOrElseUpdate(term, ArrayBuffer.empty)
+            val list: ArrayBuffer[SearchRowLocation] =
+              byTerm.getOrElseUpdate(term, ArrayBuffer.empty)
 
             list += SearchRowLocation(field, term, pos, start, end, arrayPositions)
           }
@@ -106,9 +122,11 @@ object SearchRowLocations {
   *
   * @since 1.0.0
   */
-case class SearchRowLocation(field: String,
-                             term: String,
-                             pos: Int,
-                             start: Int,
-                             end: Int,
-                             arrayPositions: Option[Seq[Int]])
+case class SearchRowLocation(
+    field: String,
+    term: String,
+    pos: Int,
+    start: Int,
+    end: Int,
+    arrayPositions: Option[Seq[Int]]
+)

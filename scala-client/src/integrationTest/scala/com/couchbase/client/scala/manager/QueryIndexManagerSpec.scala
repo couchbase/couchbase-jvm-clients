@@ -18,7 +18,12 @@ package com.couchbase.client.scala.manager
 import java.util.concurrent.TimeUnit.SECONDS
 
 import com.couchbase.client.core.error.RequestTimeoutException
-import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexAlreadyExistsException, QueryIndexManager, QueryIndexNotFoundException}
+import com.couchbase.client.scala.manager.query.{
+  QueryIndex,
+  QueryIndexAlreadyExistsException,
+  QueryIndexManager,
+  QueryIndexNotFoundException
+}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test._
@@ -34,9 +39,9 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
-  private var coll: Collection = _
-  private var bucketName: String = _
+  private var cluster: Cluster           = _
+  private var coll: Collection           = _
+  private var bucketName: String         = _
   private var indexes: QueryIndexManager = _
 
   @BeforeAll
@@ -55,7 +60,9 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
   @BeforeEach
   def cleanup() = {
-    cluster.queryIndexes.getAllIndexes(config.bucketname).get
+    cluster.queryIndexes
+      .getAllIndexes(config.bucketname)
+      .get
       .foreach(index => cluster.queryIndexes.dropIndex(config.bucketname, index.name).get)
   }
 
@@ -64,7 +71,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()).get
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()) match {
-      case Success(value) => assert(false)
+      case Success(value)                                 => assert(false)
       case Failure(err: QueryIndexAlreadyExistsException) =>
       case Failure(err) =>
         assert(false)
@@ -72,19 +79,19 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname(), ignoreIfExists = true) match {
       case Success(value) =>
-      case Failure(err) => assert(false)
+      case Failure(err)   => assert(false)
     }
   }
 
   @Test
   def createDuplicateSecondaryIndex(): Unit = {
     val indexName = "myIndex"
-    val fields = Seq("fieldA", "fieldB")
+    val fields    = Seq("fieldA", "fieldB")
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields)
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields) match {
-      case Success(value) => assert(false)
+      case Success(value)                                 => assert(false)
       case Failure(err: QueryIndexAlreadyExistsException) =>
       case Failure(err) =>
         assert(false)
@@ -92,7 +99,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields, ignoreIfExists = true) match {
       case Success(value) =>
-      case Failure(err) => assert(false)
+      case Failure(err)   => assert(false)
     }
   }
 
@@ -106,14 +113,16 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   }
 
   private def getIndex(name: String): Option[QueryIndex] = {
-    cluster.queryIndexes.getAllIndexes(config.bucketname()).get
+    cluster.queryIndexes
+      .getAllIndexes(config.bucketname())
+      .get
       .find(index => name == index.name)
   }
 
   @Test
   def createIndex(): Unit = {
     val indexName = "myIndex"
-    val fields = Seq("fieldB.foo", "`fieldB`.`bar`")
+    val fields    = Seq("fieldB.foo", "`fieldB`.`bar`")
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields)
 
@@ -126,7 +135,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def dropPrimaryIndex() = {
     cluster.queryIndexes.dropPrimaryIndex(config.bucketname()) match {
-      case Success(value) => assert(false)
+      case Success(value)                            => assert(false)
       case Failure(err: QueryIndexNotFoundException) =>
       case Failure(err) =>
         assert(false)
@@ -144,7 +153,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def dropIndex() = {
     cluster.queryIndexes.dropIndex(config.bucketname(), "foo") match {
-      case Success(value) => assert(false)
+      case Success(value)                            => assert(false)
       case Failure(err: QueryIndexNotFoundException) =>
       case Failure(err) =>
         assert(false)
@@ -190,22 +199,30 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   }
 
   private def createDeferredIndex(indexName: String): Unit = {
-    cluster.queryIndexes.createIndex(config.bucketname, indexName, Seq("someField"), deferred = Some(true)).get
+    cluster.queryIndexes
+      .createIndex(config.bucketname, indexName, Seq("someField"), deferred = Some(true))
+      .get
   }
 
   private def createDeferredPrimaryIndex(indexName: String): Unit = {
-    cluster.queryIndexes.createPrimaryIndex(config.bucketname, indexName = Some(indexName), deferred = Some(true)).get
+    cluster.queryIndexes
+      .createPrimaryIndex(config.bucketname, indexName = Some(indexName), deferred = Some(true))
+      .get
   }
 
   private def assertAllIndexesComeOnline(bucketName: String): Unit = {
-    val states = cluster.queryIndexes.getAllIndexes(bucketName).get
-        .map(_.state)
-        .toSet
+    val states = cluster.queryIndexes
+      .getAllIndexes(bucketName)
+      .get
+      .map(_.state)
+      .toSet
     if (states != Set("online")) assertAllIndexesComeOnline(bucketName)
   }
 
   private def assertAllIndexesAlreadyOnline(bucketName: String): Unit = {
-    val states = cluster.queryIndexes.getAllIndexes(bucketName).get
+    val states = cluster.queryIndexes
+      .getAllIndexes(bucketName)
+      .get
       .map(_.state)
       .toSet
     assert(states == Set("online"))
@@ -235,18 +252,18 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def watchingAbsentIndexThrowsException(): Unit = {
     indexes.watchIndexes(bucketName, Seq("doesNotExist"), 3.seconds) match {
-      case Success(value) => assert(false)
+      case Success(value)                            => assert(false)
       case Failure(err: QueryIndexNotFoundException) =>
-      case Failure(err) => assert(false)
+      case Failure(err)                              => assert(false)
     }
   }
 
   @Test
   def watchingAbsentPrimaryIndexThrowsException(): Unit = {
     indexes.watchIndexes(bucketName, Seq(), 3.seconds, watchPrimary = true) match {
-      case Success(value) => assert(false)
+      case Success(value)                            => assert(false)
       case Failure(err: QueryIndexNotFoundException) =>
-      case Failure(err) => assert(false)
+      case Failure(err)                              => assert(false)
     }
   }
 
@@ -263,7 +280,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     indexes.watchIndexes(bucketName, Seq("indexOne"), 3.seconds)
     createDeferredIndex("indexTwo")
     indexes.watchIndexes(bucketName, Seq("indexOne", "indexTwo"), 0.seconds) match {
-      case Success(value) => assert(false)
+      case Success(value)                        => assert(false)
       case Failure(err: RequestTimeoutException) =>
       case Failure(err) =>
         println(err)

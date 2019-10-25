@@ -12,7 +12,7 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class BinarySpec extends ScalaIntegrationTest {
 
-  private var cluster: Cluster = _
+  private var cluster: Cluster       = _
   private var coll: BinaryCollection = _
 
   @BeforeAll
@@ -32,7 +32,7 @@ class BinarySpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.increment(docId, 3, Option(0)) match {
       case Success(result) => assert(result.content == 0) // initial value returned
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 
@@ -42,7 +42,7 @@ class BinarySpec extends ScalaIntegrationTest {
     coll.increment(docId, 0, Option(0))
     coll.increment(docId, 5, Option(999)) match {
       case Success(result) => assert(result.content == 5) // new value value returned
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 
@@ -52,7 +52,7 @@ class BinarySpec extends ScalaIntegrationTest {
     coll.increment(docId, 0, Option(0))
     coll.increment(docId, 5) match {
       case Success(result) => assert(result.content == 5) // new value value returned
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 
@@ -60,19 +60,17 @@ class BinarySpec extends ScalaIntegrationTest {
   def blocking_increment_no_initial() {
     val docId = TestUtils.docId()
     coll.increment(docId, 3) match {
-      case Success(result) => assert(false, s"success not expected")
+      case Success(result)                    => assert(false, s"success not expected")
       case Failure(err: KeyNotFoundException) =>
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)                       => assert(false, s"unexpected error $err")
     }
   }
-
-
   @Test
   def blocking_decrement() {
     val docId = TestUtils.docId()
     coll.decrement(docId, 3, Option(0)) match {
       case Success(result) => assert(result.content == 0) // initial value returned
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 
@@ -94,7 +92,7 @@ class BinarySpec extends ScalaIntegrationTest {
     coll.decrement(docId, 0, Option(100))
     coll.decrement(docId, 5, Option(999)) match {
       case Success(result) => assert(result.content == 95)
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 
@@ -114,11 +112,10 @@ class BinarySpec extends ScalaIntegrationTest {
   def blocking_decrement_no_initial() {
     val docId = TestUtils.docId()
     coll.decrement(docId, 3) match {
-      case Success(result) => assert(false, s"success not expected")
+      case Success(result)                    => assert(false, s"success not expected")
       case Failure(err: KeyNotFoundException) =>
-      case Failure(err) => assert(false, s"unexpected error $err")
+      case Failure(err)                       => assert(false, s"unexpected error $err")
     }
   }
-
 
 }

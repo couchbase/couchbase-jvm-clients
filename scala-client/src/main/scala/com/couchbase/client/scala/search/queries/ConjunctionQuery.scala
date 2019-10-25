@@ -22,9 +22,11 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   *
   * @since 1.0.0
   */
-case class ConjunctionQuery(private[scala] val queries: Seq[SearchQuery] = Seq.empty,
-                            private[scala] val field: Option[String] = None,
-                            private[scala] val boost: Option[Double] = None) extends AbstractCompoundQuery {
+case class ConjunctionQuery(
+    private[scala] val queries: Seq[SearchQuery] = Seq.empty,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends AbstractCompoundQuery {
 
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease
     * the relative weight (with a boost between 0 and 1)
@@ -47,7 +49,7 @@ case class ConjunctionQuery(private[scala] val queries: Seq[SearchQuery] = Seq.e
 
   override protected def injectParams(input: JsonObject): Unit = {
     val conjuncts = JsonArray.create
-    for ( childQuery <- queries ) {
+    for (childQuery <- queries) {
       val childJson = JsonObject.create
       childQuery.injectParamsAndBoost(childJson)
       conjuncts.add(childJson)

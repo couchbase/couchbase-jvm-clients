@@ -18,10 +18,12 @@ package com.couchbase.client.scala.env
 import com.couchbase.client.core
 import com.couchbase.client.core.cnc.LoggingEventConsumer
 
-case class LoggerConfig(private[scala] val customLogger: Option[LoggingEventConsumer.Logger] = None,
-                        private[scala] val fallbackToConsole: Boolean = false,
-                        private[scala] val disableSlf4J: Boolean = false,
-                        private[scala] val loggerName: Option[String] = None) {
+case class LoggerConfig(
+    private[scala] val customLogger: Option[LoggingEventConsumer.Logger] = None,
+    private[scala] val fallbackToConsole: Boolean = false,
+    private[scala] val disableSlf4J: Boolean = false,
+    private[scala] val loggerName: Option[String] = None
+) {
 
   private[scala] def toCore: core.env.LoggerConfig.Builder = {
     val builder = new core.env.LoggerConfig.Builder

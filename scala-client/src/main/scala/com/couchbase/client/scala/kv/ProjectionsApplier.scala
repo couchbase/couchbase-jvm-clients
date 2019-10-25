@@ -26,8 +26,9 @@ private[scala] object ProjectionsApplier {
       case 'n' => Success(null)
       case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
         val str = new String(content, CharsetUtil.UTF_8)
-        val out = try { if (str.contains('.')) str.toDouble else str.toLong }
-        catch {
+        val out = try {
+          if (str.contains('.')) str.toDouble else str.toLong
+        } catch {
           // Try it as a number and fallback to a string
           case NonFatal(_) => str
         }
@@ -40,7 +41,7 @@ private[scala] object ProjectionsApplier {
 
   def parse(in: JsonObject, path: String, content: Array[Byte]): Try[JsonObject] = {
     (for {
-      parsed <- JsonPathParser.parse(path)
+      parsed  <- JsonPathParser.parse(path)
       content <- parseContent(content)
     } yield (parsed, content)) match {
       case Success((parsedPath, parsedContent)) =>
@@ -56,7 +57,11 @@ private[scala] object ProjectionsApplier {
 
   // Will follow `path`, constructing JSON as it does, and inserting `content` at the leaf
   @tailrec
-  private def parseRec(in: Either[JsonObject, JsonArray], path: List[PathElement], content: Any): Try[Unit] = {
+  private def parseRec(
+      in: Either[JsonObject, JsonArray],
+      path: List[PathElement],
+      content: Any
+  ): Try[Unit] = {
     path match {
       case Nil => Success()
 
@@ -65,7 +70,7 @@ private[scala] object ProjectionsApplier {
           case PathArray(str, idx) =>
             val toInsert = JsonArray.create.add(content)
             in match {
-              case Left(obj) => Success(obj.put(str, toInsert))
+              case Left(obj)  => Success(obj.put(str, toInsert))
               case Right(arr) => Success(arr.add(toInsert))
             }
           case PathObjectOrField(str) =>

@@ -29,11 +29,9 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS))
 class CollectionManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
+  private var cluster: Cluster               = _
   private var collections: CollectionManager = _
-  private var bucketName: String = _
-
-
+  private var bucketName: String             = _
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
@@ -60,16 +58,16 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def createCollection(): Unit = {
-    val scope = randomString
+    val scope      = randomString
     val collection = randomString
-    val collSpec = CollectionSpec(collection, scope)
+    val collSpec   = CollectionSpec(collection, scope)
 
     assert(!collections.collectionExists(collSpec).get)
 
     collections.createCollection(collSpec) match {
-      case Success(_) => assert(false)
+      case Success(_)                           => assert(false)
       case Failure(err: ScopeNotFoundException) =>
-      case Failure(_) => assert(false)
+      case Failure(_)                           => assert(false)
     }
 
     collections.createScope(scope).get
@@ -84,25 +82,25 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createScope(scope).get
 
     collections.createScope(scope) match {
-      case Success(_) => assert(false)
+      case Success(_)                                => assert(false)
       case Failure(err: ScopeAlreadyExistsException) =>
-      case Failure(_) => assert(false)
+      case Failure(_)                                => assert(false)
     }
   }
 
   @Test
   def createCollectionTwice(): Unit = {
-    val scope = randomString
+    val scope      = randomString
     val collection = randomString
-    val collSpec = CollectionSpec(collection, scope)
+    val collSpec   = CollectionSpec(collection, scope)
 
     collections.createScope(scope).get
     collections.createCollection(collSpec).get
 
     collections.createCollection(collSpec) match {
-      case Success(_) => assert(false)
+      case Success(_)                                     => assert(false)
       case Failure(err: CollectionAlreadyExistsException) =>
-      case Failure(_) => assert(false)
+      case Failure(_)                                     => assert(false)
     }
   }
 
@@ -120,9 +118,9 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def dropCollection(): Unit = {
-    val scope = randomString
+    val scope      = randomString
     val collection = randomString
-    val collSpec = CollectionSpec(collection, scope)
+    val collSpec   = CollectionSpec(collection, scope)
 
     collections.createScope(scope).get
     collections.createCollection(collSpec).get

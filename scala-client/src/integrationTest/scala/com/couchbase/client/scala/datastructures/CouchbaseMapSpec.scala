@@ -31,7 +31,7 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _
   private var coll: Collection = _
-  private val docId = "test"
+  private val docId            = "test"
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -86,8 +86,6 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
     assert(l("key1") == 6)
     assert(l.size() == 1)
   }
-
-
   @Test
   def remove(): Unit = {
     val l = makeCollection
@@ -125,7 +123,7 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
 
   @Test
   def foreach(): Unit = {
-    val l = makeCollection
+    val l      = makeCollection
     val values = ArrayBuffer.empty[Int]
 
     l.foreach(v => values += v._2)
@@ -171,8 +169,8 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
     l += "key1" -> 5
     l += "key2" -> 6
 
-    assert (l("key1") == 5)
-    assert (l.head._2 == 5)
-    assert (l("key2") == 6)
+    assert(l("key1") == 5)
+    assert(l.head._2 == 5)
+    assert(l("key2") == 6)
   }
 }

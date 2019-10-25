@@ -52,9 +52,12 @@ object DesignDocumentNamespace {
 
   private[scala] def requireUnqualified(name: String): Try[String] = {
     if (name.startsWith(DevPrefix)) {
-      Failure(new IllegalArgumentException("Design document name '" + redactMeta(name) + "' must not start with '" +
-        DevPrefix + "'" + "; instead specify the Development namespace when referring to the document."))
-    }
-    else Success(name)
+      Failure(
+        new IllegalArgumentException(
+          "Design document name '" + redactMeta(name) + "' must not start with '" +
+            DevPrefix + "'" + "; instead specify the Development namespace when referring to the document."
+        )
+      )
+    } else Success(name)
   }
 }

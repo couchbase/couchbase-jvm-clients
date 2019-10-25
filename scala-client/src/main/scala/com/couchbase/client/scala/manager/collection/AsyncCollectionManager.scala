@@ -21,55 +21,71 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
-  private val bucket = reactive.bucket
-  private val core = bucket.core
+  private val bucket                       = reactive.bucket
+  private val core                         = bucket.core
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy = reactive.defaultRetryStrategy
+  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
 
-  def collectionExists(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Boolean] = {
+  def collectionExists(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Boolean] = {
     reactive.collectionExists(collection, timeout, retryStrategy).toFuture
   }
 
-  def scopeExists(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Boolean] = {
+  def scopeExists(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Boolean] = {
     reactive.scopeExists(scopeName, timeout, retryStrategy).toFuture
   }
 
-  def getScope(scopeName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Future[ScopeSpec] = {
+  def getScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[ScopeSpec] = {
     reactive.getScope(scopeName, timeout, retryStrategy).toFuture
   }
 
-  def getAllScopes(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Seq[ScopeSpec]] = {
+  def getAllScopes(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Seq[ScopeSpec]] = {
     reactive.getAllScopes(timeout, retryStrategy).collectSeq.toFuture
   }
 
-  def createCollection(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def createCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.createCollection(collection, timeout, retryStrategy).toFuture
   }
 
-  def dropCollection(collection: CollectionSpec,
-                     timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def dropCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.dropCollection(collection, timeout, retryStrategy).toFuture
   }
 
-  def createScope(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def createScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.createScope(scopeName, timeout, retryStrategy).toFuture
   }
 
-  def dropScope(scopeName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def dropScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.dropScope(scopeName, timeout, retryStrategy).toFuture
   }
 }

@@ -207,7 +207,8 @@
                 <version>1.0.1</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
-                    <skipTestSources>false</skipTestSources>
+                    <!-- there are no tests for this project currently, disabling to remove a warning about no sourcess -->
+                    <skipTestSources>true</skipTestSources>
                     <skipSources>false</skipSources>
                     <respectVersion>false</respectVersion>
                     <sourceDirectories>

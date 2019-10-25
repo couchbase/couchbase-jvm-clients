@@ -20,6 +20,7 @@ sealed trait QueryProfile {
 }
 
 object QueryProfile {
+
   /** Provides no profiling information. */
   case object Off extends QueryProfile {
     private[scala] def encoded: String = "off"
@@ -35,4 +36,3 @@ object QueryProfile {
     private[scala] def encoded: String = "timings"
   }
 }
-

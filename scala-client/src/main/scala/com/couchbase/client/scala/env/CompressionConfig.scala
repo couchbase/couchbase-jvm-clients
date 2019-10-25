@@ -27,10 +27,11 @@ import com.couchbase.client.core
   *
   * @since 1.0.0
   */
-case class CompressionConfig(private[scala] val enabled: Boolean = core.env.CompressionConfig.DEFAULT_ENABLED,
-                             private[scala] val minSize: Int = core.env.CompressionConfig.DEFAULT_MIN_SIZE,
-                             private[scala] val minRatio: Double = core.env.CompressionConfig.DEFAULT_MIN_RATIO
-                            ) {
+case class CompressionConfig(
+    private[scala] val enabled: Boolean = core.env.CompressionConfig.DEFAULT_ENABLED,
+    private[scala] val minSize: Int = core.env.CompressionConfig.DEFAULT_MIN_SIZE,
+    private[scala] val minRatio: Double = core.env.CompressionConfig.DEFAULT_MIN_RATIO
+) {
 
   private[scala] def toCore: core.env.CompressionConfig.Builder = {
     val builder = new core.env.CompressionConfig.Builder
@@ -51,7 +52,6 @@ case class CompressionConfig(private[scala] val enabled: Boolean = core.env.Comp
   def enable(enabled: Boolean): CompressionConfig = {
     copy(enabled = enabled)
   }
-
 
   /** The minimum size after which compression is performed.
     *

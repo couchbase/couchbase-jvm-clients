@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.util
 
-
 import java.util.concurrent.{CompletableFuture, CompletionException}
 import java.util.function.Consumer
 
@@ -51,15 +50,19 @@ private[scala] object FutureConversions {
     SFlux(in)
   }
 
-  def javaCFToScalaMono[T](request: Request[_],
-                           response: CompletableFuture[T],
-                           propagateCancellation: Boolean): SMono[T] = {
+  def javaCFToScalaMono[T](
+      request: Request[_],
+      response: CompletableFuture[T],
+      propagateCancellation: Boolean
+  ): SMono[T] = {
     wrap(request, response, propagateCancellation)
   }
 
-  def javaCFToJavaMono[T](request: Request[_],
-                           response: CompletableFuture[T],
-                           propagateCancellation: Boolean): JavaMono[T] = {
+  def javaCFToJavaMono[T](
+      request: Request[_],
+      response: CompletableFuture[T],
+      propagateCancellation: Boolean
+  ): JavaMono[T] = {
     val javaMono = JavaMono.fromFuture(response)
 
     if (propagateCancellation) {
@@ -70,8 +73,7 @@ private[scala] object FutureConversions {
           }
         }
       })
-    }
-    else javaMono
+    } else javaMono
   }
 
   /**
@@ -84,17 +86,18 @@ private[scala] object FutureConversions {
     *
     * @return the mono that wraps the request.
     */
-  def wrap[T](request: Request[_ <: Response],
-              response: CompletableFuture[T],
-              propagateCancellation: Boolean): SMono[T] = {
+  def wrap[T](
+      request: Request[_ <: Response],
+      response: CompletableFuture[T],
+      propagateCancellation: Boolean
+  ): SMono[T] = {
     val javaMono = JavaMono.fromFuture(response)
     val mono = {
       if (propagateCancellation) {
         SMono(javaMono).doFinally((st: SignalType) => {
           if (st == SignalType.CANCEL) request.cancel(CancellationReason.STOPPED_LISTENING)
         })
-      }
-      else SMono(javaMono)
+      } else SMono(javaMono)
     }
 
     mono.onErrorResume((err: Throwable) => {
@@ -102,6 +105,5 @@ private[scala] object FutureConversions {
       else SMono.raiseError(err)
     })
   }
-
 
 }

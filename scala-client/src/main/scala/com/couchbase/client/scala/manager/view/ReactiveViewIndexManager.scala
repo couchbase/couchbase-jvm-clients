@@ -22,7 +22,11 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.Object
 import com.couchbase.client.core.deps.io.netty.buffer.{ByteBuf, Unpooled}
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.error.{CouchbaseException, HttpStatusCodeException, ViewServiceException}
+import com.couchbase.client.core.error.{
+  CouchbaseException,
+  HttpStatusCodeException,
+  ViewServiceException
+}
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.msg.ResponseStatus
@@ -42,16 +46,17 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import scala.compat.java8.OptionConverters._
 
-
-class ReactiveViewIndexManager(private[scala] val core: Core,
-                               bucket: String) {
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  def getDesignDocument(designDocName: String,
-                        namespace: DesignDocumentNamespace,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[DesignDocument] = {
+  def getDesignDocument(
+      designDocName: String,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[DesignDocument] = {
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
         sendRequest(HttpMethod.GET, path, timeout, retryStrategy)
@@ -61,15 +66,19 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
               case ResponseStatus.SUCCESS =>
                 val parsed: Try[DesignDocument] = Try {
                   upickle.default.read[ujson.Obj](response.content)
-                }.flatMap(json =>
-                  ReactiveViewIndexManager.parseDesignDocument(designDocName, json))
+                }.flatMap(json => ReactiveViewIndexManager.parseDesignDocument(designDocName, json))
 
                 parsed match {
                   case Success(designDoc) => SMono.just(designDoc)
-                  case Failure(err) => SMono.raiseError(err)
+                  case Failure(err)       => SMono.raiseError(err)
                 }
-              case _ => SMono.raiseError(new CouchbaseException("Failed to drop design document [" +
-                redactMeta(designDocName) + "] from namespace " + namespace))
+              case _ =>
+                SMono.raiseError(
+                  new CouchbaseException(
+                    "Failed to drop design document [" +
+                      redactMeta(designDocName) + "] from namespace " + namespace
+                  )
+                )
             }
           })
       case Failure(err) =>
@@ -77,53 +86,68 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
     }
   }
 
-  def getAllDesignDocuments(namespace: DesignDocumentNamespace,
-                            timeout: Duration = DefaultTimeout,
-                            retryStrategy: RetryStrategy = DefaultRetryStrategy): SFlux[DesignDocument] = {
+  def getAllDesignDocuments(
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SFlux[DesignDocument] = {
     // This particular request goes to port 8091 not 8092, hence use of ManagerUtil.getRequest
-    ManagerUtil.sendRequest(core, HttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, HttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
       .flatMapMany(response => {
         response.status match {
           case ResponseStatus.SUCCESS =>
-            ReactiveViewIndexManager.parseAllDesignDocuments(new String(response.content(), UTF_8), namespace) match {
+            ReactiveViewIndexManager
+              .parseAllDesignDocuments(new String(response.content(), UTF_8), namespace) match {
               case Success(docs) => SFlux.fromIterable(docs)
-              case Failure(err) => SFlux.raiseError(err)
+              case Failure(err)  => SFlux.raiseError(err)
             }
           case _ =>
-            SFlux.raiseError(new CouchbaseException("Failed to get all design documents; response status=" + response
-              .status + "; response body=" + new String(response.content, UTF_8)))
+            SFlux.raiseError(
+              new CouchbaseException(
+                "Failed to get all design documents; response status=" + response.status + "; response body=" + new String(
+                  response.content,
+                  UTF_8
+                )
+              )
+            )
 
         }
       })
   }
 
-  def upsertDesignDocument(indexData: DesignDocument,
-                           namespace: DesignDocumentNamespace,
-                           timeout: Duration = DefaultTimeout,
-                           retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def upsertDesignDocument(
+      indexData: DesignDocument,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     pathForDesignDocument(indexData.name, namespace) match {
       case Success(path) =>
         val body = toJson(indexData)
         val request = new GenericViewRequest(timeout, core.context, retryStrategy, () => {
           val content: ByteBuf = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-          val req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, path, content)
+          val req              = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, path, content)
           req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
           req.headers.add("Content-Length", content.readableBytes)
           req
         }, false, bucket)
 
         core.send(request)
-        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+        FutureConversions
+          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
           .map(_ => Unit)
       case Failure(err) =>
         SMono.raiseError(err)
     }
   }
 
-  def dropDesignDocument(designDocName: String,
-                         namespace: DesignDocumentNamespace,
-                         timeout: Duration = DefaultTimeout,
-                         retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def dropDesignDocument(
+      designDocName: String,
+      namespace: DesignDocumentNamespace,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
         sendRequest(HttpMethod.DELETE, path, timeout, retryStrategy)
@@ -131,8 +155,13 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
           .flatMap(response => {
             response.status match {
               case ResponseStatus.SUCCESS => SMono.just(Unit)
-              case _ => SMono.raiseError(new CouchbaseException("Failed to drop design document [" +
-                redactMeta(designDocName) + "] from namespace " + namespace))
+              case _ =>
+                SMono.raiseError(
+                  new CouchbaseException(
+                    "Failed to drop design document [" +
+                      redactMeta(designDocName) + "] from namespace " + namespace
+                  )
+                )
             }
           })
       case Failure(err) =>
@@ -140,32 +169,43 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
     }
   }
 
-  def mapNotFoundError(in: Throwable,
-                       designDocName: String,
-                       namespace: DesignDocumentNamespace): Throwable = {
+  def mapNotFoundError(
+      in: Throwable,
+      designDocName: String,
+      namespace: DesignDocumentNamespace
+  ): Throwable = {
     def default = () => {
-      new CouchbaseException(s"Failed to drop design document [${redactMeta(designDocName)}] from namespace $namespace")
+      new CouchbaseException(
+        s"Failed to drop design document [${redactMeta(designDocName)}] from namespace $namespace"
+      )
     }
 
     in match {
       case x: ViewServiceException =>
         if (x.content.contains("not_found")) {
           DesignDocumentNotFoundException(designDocName, namespace)
-        }
-        else default()
+        } else default()
       case _ => default()
     }
   }
 
-  def publishDesignDocument(designDocName: String,
-                            timeout: Duration = DefaultTimeout,
-                            retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def publishDesignDocument(
+      designDocName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     getDesignDocument(designDocName, DesignDocumentNamespace.Development, timeout, retryStrategy)
-      .map(doc => upsertDesignDocument(doc, DesignDocumentNamespace.Production, timeout, retryStrategy))
+      .map(
+        doc => upsertDesignDocument(doc, DesignDocumentNamespace.Production, timeout, retryStrategy)
+      )
   }
 
-  private def pathForDesignDocument(name: String, namespace: DesignDocumentNamespace): Try[String] = {
-    DesignDocumentNamespace.requireUnqualified(name)
+  private def pathForDesignDocument(
+      name: String,
+      namespace: DesignDocumentNamespace
+  ): Try[String] = {
+    DesignDocumentNamespace
+      .requireUnqualified(name)
       .map(unqualifiedName => {
         val adjusted = namespace.adjustName(unqualifiedName)
         "/" + urlEncode(bucket) + "/_design/" + urlEncode(adjusted)
@@ -177,11 +217,11 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
   }
 
   private def toJson(doc: DesignDocument): ObjectNode = {
-    val root = JacksonTransformers.MAPPER.createObjectNode
+    val root  = JacksonTransformers.MAPPER.createObjectNode
     val views = root.putObject("views")
     doc.views.foreach(x => {
-      val key = x._1
-      val value = x._2
+      val key      = x._1
+      val value    = x._2
       val viewNode = JacksonTransformers.MAPPER.createObjectNode
       viewNode.put("map", value.map)
       value.reduce.foreach((r: String) => viewNode.put("reduce", r))
@@ -195,52 +235,60 @@ class ReactiveViewIndexManager(private[scala] val core: Core,
     FutureConversions.wrap(request, request.response, propagateCancellation = true)
   }
 
-  private def sendRequest(method: HttpMethod,
-                          path: String,
-                          timeout: Duration,
-                          retryStrategy: RetryStrategy): SMono[GenericViewResponse] = {
-    sendRequest(new GenericViewRequest(timeout,
-      core.context,
-      retryStrategy,
-      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-      method == GET,
-      bucket))
+  private def sendRequest(
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[GenericViewResponse] = {
+    sendRequest(
+      new GenericViewRequest(
+        timeout,
+        core.context,
+        retryStrategy,
+        () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
+        method == GET,
+        bucket
+      )
+    )
   }
 
-  private def sendJsonRequest(method: HttpMethod,
-                              path: String,
-                              timeout: Duration,
-                              retryStrategy: RetryStrategy,
-                              body: Any): SMono[GenericViewResponse] = {
-    sendRequest(new GenericViewRequest(timeout,
-      core.context,
-      retryStrategy, () => {
-        val content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-        val req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-        req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
-        req.headers.add("Content-Length", content.readableBytes)
-        req
-      },
-      method == GET,
-      bucket))
+  private def sendJsonRequest(
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy,
+      body: Any
+  ): SMono[GenericViewResponse] = {
+    sendRequest(new GenericViewRequest(timeout, core.context, retryStrategy, () => {
+      val content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
+      val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
+      req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
+      req.headers.add("Content-Length", content.readableBytes)
+      req
+    }, method == GET, bucket))
   }
 }
 
 object ReactiveViewIndexManager {
-  private[scala] def parseAllDesignDocuments(in: String, namespace: DesignDocumentNamespace): Try[Seq[DesignDocument]] = {
+  private[scala] def parseAllDesignDocuments(
+      in: String,
+      namespace: DesignDocumentNamespace
+  ): Try[Seq[DesignDocument]] = {
     Try {
       val json = upickle.default.read[ujson.Obj](in)
       val rows = json("rows").arr
-      rows.map(row => {
-        val doc = row("doc").obj
-        val metaId = doc("meta").obj("id").str
-        val designDocName = metaId.stripPrefix("_design/")
-        if (namespace.contains(designDocName)) {
-          val designDoc = doc("json").obj
-          parseDesignDocument(designDocName, designDoc).toOption
-        }
-        else None
-      }).filter(_.isDefined)
+      rows
+        .map(row => {
+          val doc           = row("doc").obj
+          val metaId        = doc("meta").obj("id").str
+          val designDocName = metaId.stripPrefix("_design/")
+          if (namespace.contains(designDocName)) {
+            val designDoc = doc("json").obj
+            parseDesignDocument(designDocName, designDoc).toOption
+          } else None
+        })
+        .filter(_.isDefined)
         .map(_.get)
     }
   }
@@ -249,8 +297,8 @@ object ReactiveViewIndexManager {
     Try {
       val views = node("views").obj
       val v: GenMap[String, View] = views.map(n => {
-        val viewName = n._1
-        val viewMap = n._2.obj("map").str
+        val viewName   = n._1
+        val viewMap    = n._2.obj("map").str
         val viewReduce = n._2.obj.get("reduce").map(_.str)
         viewName -> View(viewMap, viewReduce)
       })
@@ -258,4 +306,3 @@ object ReactiveViewIndexManager {
     }
   }
 }
-

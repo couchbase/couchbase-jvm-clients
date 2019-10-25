@@ -27,19 +27,28 @@ class RawJsonTranscoder extends TranscoderWithoutSerializer {
   override def encode[T](value: T): Try[EncodedValue] = {
     value match {
       case x: Array[Byte] => Success(EncodedValue(x, CodecFlags.JSON_COMPAT_FLAGS))
-      case x: String => Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.JSON_COMPAT_FLAGS))
-      case _ => Failure(new IllegalArgumentException("Only Array[Byte] and String types are supported for the RawJsonTranscoder!"))
+      case x: String =>
+        Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.JSON_COMPAT_FLAGS))
+      case _ =>
+        Failure(
+          new IllegalArgumentException(
+            "Only Array[Byte] and String types are supported for the RawJsonTranscoder!"
+          )
+        )
     }
   }
 
-  override def decode[T](value: Array[Byte], flags: Int)(implicit tag: universe.TypeTag[T]): Try[T] = {
+  override def decode[T](value: Array[Byte], flags: Int)(
+      implicit tag: universe.TypeTag[T]
+  ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
       Success(value.asInstanceOf[T])
-    }
-    else if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
+    } else if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])
-    }
-    else Failure(new DecodingFailedException("RawJsonTranscoder can only decode into Array[Byte] or String!"))
+    } else
+      Failure(
+        new DecodingFailedException("RawJsonTranscoder can only decode into Array[Byte] or String!")
+      )
   }
 }
 

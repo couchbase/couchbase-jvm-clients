@@ -23,67 +23,81 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
-
-
 @Volatile
-class UserManager(val async: AsyncUserManager,
-                  val reactive: ReactiveUserManager) {
+class UserManager(val async: AsyncUserManager, val reactive: ReactiveUserManager) {
   private val defaultManagerTimeout = async.defaultManagerTimeout
-  private val defaultRetryStrategy = async.defaultRetryStrategy
+  private val defaultRetryStrategy  = async.defaultRetryStrategy
 
-  def getUser(username: String,
-              domain: AuthDomain = AuthDomain.Local,
-              timeout: Duration = defaultManagerTimeout,
-              retryStrategy: RetryStrategy = defaultRetryStrategy): Try[UserAndMetadata] = {
+  def getUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[UserAndMetadata] = {
     Collection.block(async.getUser(username, domain, timeout, retryStrategy))
   }
 
-  def getAllUsers(domain: AuthDomain = AuthDomain.Local,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[UserAndMetadata]] = {
+  def getAllUsers(
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Seq[UserAndMetadata]] = {
     Collection.block(async.getAllUsers(domain, timeout, retryStrategy))
   }
 
-
-  def upsertUser(user: User,
-                 domain: AuthDomain = AuthDomain.Local,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def upsertUser(
+      user: User,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.upsertUser(user, domain, timeout, retryStrategy))
   }
 
-  def dropUser(username: String,
-               domain: AuthDomain = AuthDomain.Local,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def dropUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.dropUser(username, domain, timeout, retryStrategy))
   }
 
-  def availableRoles(timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[RoleAndDescription]] = {
+  def availableRoles(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Seq[RoleAndDescription]] = {
     Collection.block(async.availableRoles(timeout, retryStrategy))
   }
 
-  def getGroup(groupName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Group] = {
+  def getGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Group] = {
     Collection.block(async.getGroup(groupName, timeout, retryStrategy))
   }
 
-  def getAllGroups(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[Group]] = {
+  def getAllGroups(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Seq[Group]] = {
     Collection.block(async.getAllGroups(timeout, retryStrategy))
   }
 
-  def upsertGroup(group: Group,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def upsertGroup(
+      group: Group,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.upsertGroup(group, timeout, retryStrategy))
   }
 
-  def dropGroup(groupName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def dropGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.dropGroup(groupName, timeout, retryStrategy))
   }
 }

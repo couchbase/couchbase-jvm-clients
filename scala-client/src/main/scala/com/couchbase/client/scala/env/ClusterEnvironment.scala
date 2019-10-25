@@ -30,7 +30,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-
 /** Functions to create a ClusterEnvironment, which provides configuration options for connecting to a Couchbase
   * cluster.
   *
@@ -49,16 +48,18 @@ object ClusterEnvironment {
     builder.build.get
   }
 
-  case class Builder(private[scala] val owned: Boolean,
-                     private[scala] val connectionString: Option[String] = None,
-                     private[scala] val ioEnvironment: Option[IoEnvironment] = None,
-                     private[scala] val ioConfig: Option[IoConfig] = None,
-                     private[scala] val compressionConfig: Option[CompressionConfig] = None,
-                     private[scala] val securityConfig: Option[SecurityConfig] = None,
-                     private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
-                     private[scala] val serviceConfig: Option[ServiceConfig] = None,
-                     private[scala] val loggerConfig: Option[LoggerConfig] = None,
-                     private[scala] val retryStrategy: Option[RetryStrategy] = None) {
+  case class Builder(
+      private[scala] val owned: Boolean,
+      private[scala] val connectionString: Option[String] = None,
+      private[scala] val ioEnvironment: Option[IoEnvironment] = None,
+      private[scala] val ioConfig: Option[IoConfig] = None,
+      private[scala] val compressionConfig: Option[CompressionConfig] = None,
+      private[scala] val securityConfig: Option[SecurityConfig] = None,
+      private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
+      private[scala] val serviceConfig: Option[ServiceConfig] = None,
+      private[scala] val loggerConfig: Option[LoggerConfig] = None,
+      private[scala] val retryStrategy: Option[RetryStrategy] = None
+  ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
 
@@ -132,10 +133,11 @@ object ClusterEnvironment {
 }
 
 private[scala] class CoreEnvironmentWrapper()
-  extends core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper]() {}
+    extends core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper]() {}
 
-private[scala] class CoreEnvironment(builder: core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper])
-  extends core.env.CoreEnvironment(builder) {
+private[scala] class CoreEnvironment(
+    builder: core.env.CoreEnvironment.Builder[CoreEnvironmentWrapper]
+) extends core.env.CoreEnvironment(builder) {
 
   override protected def defaultAgentTitle(): String = "scala"
 
@@ -172,9 +174,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
       thread
     }
   })
-  private[scala] implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  private[scala] implicit val ec      = ExecutionContext.fromExecutor(threadPool)
   private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
-
 
   private val coreBuilder = new CoreEnvironmentWrapper()
 
@@ -201,11 +202,15 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     *
     * @param timeout the timeout to wait maximum.
     */
-  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = shutdownReactive(timeout).block()
+  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit =
+    shutdownReactive(timeout).block()
 
   def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): SMono[Unit] = {
-    FutureConversions.javaMonoToScalaMono(coreEnv
-      .shutdownReactive(timeout))
+    FutureConversions
+      .javaMonoToScalaMono(
+        coreEnv
+          .shutdownReactive(timeout)
+      )
       .then(SMono.defer[Unit](() => {
         threadPool.shutdownNow()
         defaultScheduler.dispose()
@@ -215,7 +220,3 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   }
 
 }
-
-
-
-

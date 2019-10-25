@@ -23,7 +23,10 @@ import com.couchbase.client.core.error.ViewServiceException
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.manager.collection.{AsyncCollectionManager, ReactiveCollectionManager}
+import com.couchbase.client.scala.manager.collection.{
+  AsyncCollectionManager,
+  ReactiveCollectionManager
+}
 import com.couchbase.client.scala.manager.view.{ReactiveViewIndexManager, ViewIndexManager}
 import com.couchbase.client.scala.query.handlers.ViewHandler
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
@@ -49,10 +52,10 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveBucket private[scala](val async: AsyncBucket) {
+class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private[scala] val viewHandler = new ViewHandler
-  private[scala] val kvTimeout = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
+  private[scala] val viewHandler                   = new ViewHandler
+  private[scala] val kvTimeout                     = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
 
   @Stability.Volatile
   lazy val collections = new ReactiveCollectionManager(async)
@@ -102,10 +105,13 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     *
     * @return a `Mono` containing a [[view.ViewResult]] (which includes any returned rows)
     */
-  def viewQuery(designDoc: String,
-                viewName: String,
-                options: ViewOptions = ViewOptions()): SMono[ReactiveViewResult] = {
-    val req = viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      options: ViewOptions = ViewOptions()
+  ): SMono[ReactiveViewResult] = {
+    val req =
+      viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
     viewQuery(req)
   }
 
@@ -115,30 +121,31 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
         SMono.raiseError(err)
 
       case Success(request) =>
-
-        FutureConversions.javaCFToScalaMono(request, request.response(), false)
+        FutureConversions
+          .javaCFToScalaMono(request, request.response(), false)
           .map(response => {
 
-            val rows: SFlux[ViewRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
-
+            val rows: SFlux[ViewRow] = FutureConversions
+              .javaFluxToScalaFlux(response.rows())
               .map[ViewRow](bytes => ViewRow(bytes.data()))
-
               .flatMap(_ => FutureConversions.javaMonoToScalaMono(response.trailer()))
 
               // Check for errors
               .flatMap(trailer => {
-              trailer.error().asScala match {
-                case Some(err) =>
-                  val msg = "Encountered view error '" + err.error() + "' with reason '" + err.reason() + "'"
-                  val error = new ViewServiceException(msg)
-                  SMono.raiseError(error)
-                case _ => SMono.empty
-              }
-            })
+                trailer.error().asScala match {
+                  case Some(err) =>
+                    val msg = "Encountered view error '" + err.error() + "' with reason '" + err
+                      .reason() + "'"
+                    val error = new ViewServiceException(msg)
+                    SMono.raiseError(error)
+                  case _ => SMono.empty
+                }
+              })
 
             val meta = ViewMetaData(
               response.header().debug().asScala.getOrElse(Array.empty),
-              response.header().totalRows())
+              response.header().totalRows()
+            )
 
             ReactiveViewResult(SMono.just(meta), rows)
           })
@@ -160,10 +167,12 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
     * @return a ping report once created.
     */
   @Stability.Volatile
-  def ping(services: Seq[ServiceType] = Seq(),
-           reportId: String = UUID.randomUUID.toString,
-           timeout: Duration = kvTimeout,
-           retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE): SMono[PingResult] = {
+  def ping(
+      services: Seq[ServiceType] = Seq(),
+      reportId: String = UUID.randomUUID.toString,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE
+  ): SMono[PingResult] = {
     SMono.fromFuture(async.ping(services, reportId, timeout, retryStrategy))
   }
 

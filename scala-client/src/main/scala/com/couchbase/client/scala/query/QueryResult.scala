@@ -40,8 +40,8 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
-                       metaData: QueryMetaData) {
+case class QueryResult(private[scala] val rows: Seq[QueryChunkRow], metaData: QueryMetaData) {
+
   /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the query service first.
     *
     * $SupportedTypes
@@ -49,8 +49,7 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
     * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See rowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
     **/
-  def rowsAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
     RowTraversalUtil.traverse(rows.iterator.map(row => {
       deserializer.deserialize(row.data())
     }))
@@ -61,15 +60,17 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
   *
   * @param metaData            any additional information related to the query
   */
-case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
-                               metaData: SMono[QueryMetaData]) {
+case class ReactiveQueryResult(
+    private[scala] val rows: SFlux[QueryChunkRow],
+    metaData: SMono[QueryMetaData]
+) {
+
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.
     *
     * $SupportedTypes
     */
-  def rowsAs[T]
-  (implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(row => {
       // The .get will raise an exception as .onError on the flux
       deserializer.deserialize(row.data()).get
@@ -79,7 +80,7 @@ case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
 
 /** If an error is returned by the query service as it is processing rows, this will be raised. */
 case class QueryError(private val content: Array[Byte]) extends CouchbaseException {
-  private lazy val str = new String(content, CharsetUtil.UTF_8)
+  private lazy val str  = new String(content, CharsetUtil.UTF_8)
   private lazy val json = JsonObjectSafe.fromJson(str)
 
   /** A human-readable error code. */
@@ -88,7 +89,7 @@ case class QueryError(private val content: Array[Byte]) extends CouchbaseExcepti
       case Success(j) =>
         j.str("msg") match {
           case Success(msg) => msg
-          case Failure(_) => s"unknown error ($str)"
+          case Failure(_)   => s"unknown error ($str)"
         }
       case Failure(err) => s"unknown error ($str)"
     }
@@ -99,13 +100,11 @@ case class QueryError(private val content: Array[Byte]) extends CouchbaseExcepti
     json.flatMap(_.num("code"))
   }
 
-
   override def toString: String = msg
 }
 
 /** A warning returned from the query service. */
 case class QueryWarning(code: Int, message: String)
-
 
 /** Metrics of a given query request.
   *
@@ -122,14 +121,16 @@ case class QueryWarning(code: Int, message: String)
   * @param errorCount    the number of errors that occurred during the request.
   * @param warningCount  the number of warnings that occurred during the request.
   */
-case class QueryMetrics(elapsedTime: Duration,
-                        executionTime: Duration,
-                        resultCount: Long,
-                        resultSize: Long,
-                        mutationCount: Long,
-                        sortCount: Long,
-                        errorCount: Long,
-                        warningCount: Long)
+case class QueryMetrics(
+    elapsedTime: Duration,
+    executionTime: Duration,
+    resultCount: Long,
+    resultSize: Long,
+    mutationCount: Long,
+    sortCount: Long,
+    errorCount: Long,
+    warningCount: Long
+)
 
 private[scala] object QueryMetrics {
   import com.couchbase.client.scala.util.DurationConversions._
@@ -137,21 +138,26 @@ private[scala] object QueryMetrics {
   def fromBytes(in: Array[Byte]): Option[QueryMetrics] = {
     JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
       case Success(jo) =>
-
-        Some(QueryMetrics(
-          jo.str("elapsedTime").map(time => {
-            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
-          }).getOrElse(Duration.Zero),
-          jo.str("executionTime").map(time => {
-            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
-          }).getOrElse(Duration.Zero),
-          jo.numLong("resultCount").getOrElse(0l),
-          jo.numLong("resultSize").getOrElse(0l),
-          jo.numLong("mutationCount").getOrElse(0l),
-          jo.numLong("sortCount").getOrElse(0l),
-          jo.numLong("errorCount").getOrElse(0l),
-          jo.numLong("warningCount").getOrElse(0l)
-        ))
+        Some(
+          QueryMetrics(
+            jo.str("elapsedTime")
+              .map(time => {
+                DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+              })
+              .getOrElse(Duration.Zero),
+            jo.str("executionTime")
+              .map(time => {
+                DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+              })
+              .getOrElse(Duration.Zero),
+            jo.numLong("resultCount").getOrElse(0L),
+            jo.numLong("resultSize").getOrElse(0L),
+            jo.numLong("mutationCount").getOrElse(0L),
+            jo.numLong("sortCount").getOrElse(0L),
+            jo.numLong("errorCount").getOrElse(0L),
+            jo.numLong("warningCount").getOrElse(0L)
+          )
+        )
 
       case Failure(err) =>
         None
@@ -167,13 +173,15 @@ private[scala] object QueryMetrics {
   * @param warnings        any warnings returned from the query service
   * @param status          the status returned from the query service
   */
-case class QueryMetaData(private[scala] val requestId: String,
-                         clientContextId: String,
-                         private val _signatureContent: Option[Array[Byte]],
-                         metrics: Option[QueryMetrics],
-                         warnings: Seq[QueryWarning],
-                         status: QueryStatus,
-                         private val _profileContent: Option[Array[Byte]]) {
+case class QueryMetaData(
+    private[scala] val requestId: String,
+    clientContextId: String,
+    private val _signatureContent: Option[Array[Byte]],
+    metrics: Option[QueryMetrics],
+    warnings: Seq[QueryWarning],
+    status: QueryStatus,
+    private val _profileContent: Option[Array[Byte]]
+) {
 
   /** Return the profile content, converted into the application's preferred representation.
     *
@@ -181,11 +189,10 @@ case class QueryMetaData(private[scala] val requestId: String,
     *
     * @tparam T $SupportedTypes
     */
-  def profileAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def profileAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _profileContent match {
       case Some(content) => deserializer.deserialize(content)
-      case _ => Failure(new IllegalArgumentException("No profile is available"))
+      case _             => Failure(new IllegalArgumentException("No profile is available"))
     }
   }
 
@@ -193,27 +200,25 @@ case class QueryMetaData(private[scala] val requestId: String,
     *
     * @tparam T $SupportedTypes
     */
-  def signatureAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def signatureAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _signatureContent match {
       case Some(content) => deserializer.deserialize(content)
-      case _ => Failure(new IllegalArgumentException("No signature is available"))
+      case _             => Failure(new IllegalArgumentException("No signature is available"))
     }
   }
 }
 
-
 sealed trait QueryStatus
 
 object QueryStatus {
-  case object Running extends QueryStatus
-  case object Success extends QueryStatus
-  case object Errors extends QueryStatus
+  case object Running   extends QueryStatus
+  case object Success   extends QueryStatus
+  case object Errors    extends QueryStatus
   case object Completed extends QueryStatus
-  case object Stopped extends QueryStatus
-  case object Timeout extends QueryStatus
-  case object Closed extends QueryStatus
-  case object Fatal extends QueryStatus
-  case object Aborted extends QueryStatus
-  case object Unknown extends QueryStatus
+  case object Stopped   extends QueryStatus
+  case object Timeout   extends QueryStatus
+  case object Closed    extends QueryStatus
+  case object Fatal     extends QueryStatus
+  case object Aborted   extends QueryStatus
+  case object Unknown   extends QueryStatus
 }

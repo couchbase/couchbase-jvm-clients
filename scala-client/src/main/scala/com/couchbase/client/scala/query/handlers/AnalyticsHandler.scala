@@ -36,8 +36,12 @@ import scala.util.Try
 private[scala] class AnalyticsHandler() {
   import DurationConversions._
 
-  def request[T](statement: String, options: AnalyticsOptions, core: Core, environment: ClusterEnvironment)
-  : Try[AnalyticsRequest] = {
+  def request[T](
+      statement: String,
+      options: AnalyticsOptions,
+      core: Core,
+      environment: ClusterEnvironment
+  ): Try[AnalyticsRequest] = {
 
     val validations: Try[AnalyticsRequest] = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")
@@ -54,24 +58,26 @@ private[scala] class AnalyticsHandler() {
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       val params = options.encode()
       params.put("statement", statement)
 
       Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
-        val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.analyticsTimeout())
+        val timeout: Duration =
+          options.timeout.getOrElse(environment.timeoutConfig.analyticsTimeout())
         val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
-        new AnalyticsRequest(timeout,
+        new AnalyticsRequest(
+          timeout,
           core.context(),
           retryStrategy,
           core.context().authenticator(),
           queryBytes,
           if (options.priority) -1 else 0,
-          options.readonly.getOrElse(false))
+          options.readonly.getOrElse(false)
+        )
       })
     }
   }

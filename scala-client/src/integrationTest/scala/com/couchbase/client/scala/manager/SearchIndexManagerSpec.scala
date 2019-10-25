@@ -35,11 +35,9 @@ import scala.util.Failure
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 class SearchIndexManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
-  private var bucketName: String = _
+  private var cluster: Cluster            = _
+  private var bucketName: String          = _
   private var indexes: SearchIndexManager = _
-
-
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
@@ -60,13 +58,13 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
     result match {
       case Failure(err: SearchIndexNotFoundException) =>
-      case _ => assert(false)
+      case _                                          => assert(false)
     }
   }
 
   @Test
   def upsertIndex(): Unit = {
-    val name = "idx-" + UUID.randomUUID.toString.substring(0, 8)
+    val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
 
@@ -77,7 +75,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def upsertIndexTwice(): Unit = {
-    val name = "idx-" + UUID.randomUUID.toString.substring(0, 8)
+    val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
 
@@ -90,7 +88,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def upsertIndexIsUnchanged(): Unit = {
-    val name = "idx-" + UUID.randomUUID.toString.substring(0, 8)
+    val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
 
@@ -106,7 +104,8 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def parseIndex(): Unit = {
-    val raw = """{"status":"ok","indexDef":{"type":"fulltext-index","name":"idx-18e0bf85","uuid":"6390517f1fa06371",
+    val raw =
+      """{"status":"ok","indexDef":{"type":"fulltext-index","name":"idx-18e0bf85","uuid":"6390517f1fa06371",
              "sourceType":"couchbase","sourceName":"1ccd5c20-73fd-44f1-8111-46bcac9203a2",
              "planParams":{"maxPartitionsPerPIndex":171},"params":{"doc_config":{"docid_prefix_delim":"",
              "docid_regexp":"","mode":"type_field","type_field":"type"},"mapping":{"analysis":{},
@@ -126,7 +125,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def getAllIndexes: Unit = {
-    val name = "idx-" + UUID.randomUUID.toString.substring(0, 8)
+    val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
 
@@ -136,7 +135,8 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def parseAllIndexes(): Unit = {
-    val raw = """{"status":"ok","indexDefs":{"uuid":"1893929e4a47ae29",
+    val raw =
+      """{"status":"ok","indexDefs":{"uuid":"1893929e4a47ae29",
              "indexDefs":{"idx-3b687670":{"type":"fulltext-index","name":"idx-3b687670","uuid":"1893929e4a47ae29",
              "sourceType":"couchbase","sourceName":"e12c3ee1-2fb7-41b6-825a-4397865548dc",
              "planParams":{"maxPartitionsPerPIndex":171},"params":{"doc_config":{"docid_prefix_delim":"",
@@ -151,7 +151,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def dropIndex(): Unit = {
-    val name = "idx-" + UUID.randomUUID.toString.substring(0, 8)
+    val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
 
@@ -159,7 +159,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
 
     indexes.getIndex(name) match {
       case Failure(err: SearchIndexNotFoundException) =>
-      case _ => assert(false)
+      case _                                          => assert(false)
     }
   }
 

@@ -45,15 +45,20 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   import com.couchbase.client.scala.util.DurationConversions._
 
-  private[scala] val kvTimeout = async.kvTimeout
+  private[scala] val kvTimeout   = async.kvTimeout
   private[scala] val environment = async.environment
 
-  private def wrap[Resp <: Response,Res](in: Try[Request[Resp]], id: String, handler: RequestHandler[Resp,Res]): SMono[Res] = {
+  private def wrap[Resp <: Response, Res](
+      in: Try[Request[Resp]],
+      id: String,
+      handler: RequestHandler[Resp, Res]
+  ): SMono[Res] = {
     in match {
       case Success(request) =>
         async.async.core.send[Resp](request)
 
-        FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+        FutureConversions
+          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
           .map(r => handler.response(id, r))
 
       case Failure(err) => SMono.raiseError(err)
@@ -64,13 +69,16 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
     *
     * See [[BinaryCollection.append]] for details.  $Same
     */
-  def append(id: String,
-             content: Array[Byte],
-             cas: Long = 0,
-             durability: Durability = Disabled,
-             timeout: Duration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy): Future[MutationResult] = {
-    val req = async.binaryAppendHandler.request(id, content, cas, durability, timeout, retryStrategy)
+  def append(
+      id: String,
+      content: Array[Byte],
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Future[MutationResult] = {
+    val req =
+      async.binaryAppendHandler.request(id, content, cas, durability, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryAppendHandler, durability, false, timeout)
   }
 
@@ -78,13 +86,16 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
     *
     * See [[BinaryCollection.prepend]] for details.  $Same
     * */
-  def prepend(id: String,
-              content: Array[Byte],
-              cas: Long = 0,
-              durability: Durability = Disabled,
-              timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = environment.retryStrategy): Future[MutationResult] = {
-    val req = async.binaryPrependHandler.request(id, content, cas, durability, timeout, retryStrategy)
+  def prepend(
+      id: String,
+      content: Array[Byte],
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Future[MutationResult] = {
+    val req =
+      async.binaryPrependHandler.request(id, content, cas, durability, timeout, retryStrategy)
     async.async.wrapWithDurability(req, id, async.binaryPrependHandler, durability, false, timeout)
   }
 
@@ -92,31 +103,67 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
     *
     * See [[BinaryCollection.increment]] for details.  $Same
     * */
-  def increment(id: String,
-                delta: Long,
-                initial: Option[Long] = None,
-                cas: Long = 0,
-                durability: Durability = Disabled,
-                expiry: Duration = 0.seconds,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = async.binaryIncrementHandler.request(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
-    async.async.wrapWithDurability(req, id, async.binaryIncrementHandler, durability, false, timeout)
+  def increment(
+      id: String,
+      delta: Long,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Future[CounterResult] = {
+    val req = async.binaryIncrementHandler.request(
+      id,
+      delta,
+      initial,
+      cas,
+      durability,
+      expiry,
+      timeout,
+      retryStrategy
+    )
+    async.async.wrapWithDurability(
+      req,
+      id,
+      async.binaryIncrementHandler,
+      durability,
+      false,
+      timeout
+    )
   }
 
   /** Decrement a Couchbase 'counter' document.
     *
     * See [[BinaryCollection.increment]] for details.  $Same
     * */
-  def decrement(id: String,
-                delta: Long,
-                initial: Option[Long] = None,
-                cas: Long = 0,
-                durability: Durability = Disabled,
-                expiry: Duration = 0.seconds,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy): Future[CounterResult] = {
-    val req = async.binaryDecrementHandler.request(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
-    async.async.wrapWithDurability(req, id, async.binaryDecrementHandler, durability, false, timeout)
+  def decrement(
+      id: String,
+      delta: Long,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Future[CounterResult] = {
+    val req = async.binaryDecrementHandler.request(
+      id,
+      delta,
+      initial,
+      cas,
+      durability,
+      expiry,
+      timeout,
+      retryStrategy
+    )
+    async.async.wrapWithDurability(
+      req,
+      id,
+      async.binaryDecrementHandler,
+      durability,
+      false,
+      timeout
+    )
   }
 }

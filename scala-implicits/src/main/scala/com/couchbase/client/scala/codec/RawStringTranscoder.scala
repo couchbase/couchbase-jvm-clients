@@ -25,16 +25,21 @@ import scala.util.{Failure, Success, Try}
 class RawStringTranscoder extends TranscoderWithoutSerializer {
   override def encode[T](value: T): Try[EncodedValue] = {
     value match {
-      case x: String => Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS))
-      case _ => Failure(new IllegalArgumentException("Only String is supported for the RawStringTranscoder!"))
+      case x: String =>
+        Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS))
+      case _ =>
+        Failure(
+          new IllegalArgumentException("Only String is supported for the RawStringTranscoder!")
+        )
     }
   }
 
-  override def decode[T](value: Array[Byte], flags: Int)(implicit tag: universe.TypeTag[T]): Try[T] = {
+  override def decode[T](value: Array[Byte], flags: Int)(
+      implicit tag: universe.TypeTag[T]
+  ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])
-    }
-    else Failure(new DecodingFailedException("RawStringTranscoder can only decode into String!"))
+    } else Failure(new DecodingFailedException("RawStringTranscoder can only decode into String!"))
   }
 }
 

@@ -21,55 +21,71 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 class CollectionManager(reactive: ReactiveCollectionManager) {
-  private val bucket = reactive.bucket
-  private val core = bucket.core
+  private val bucket                       = reactive.bucket
+  private val core                         = bucket.core
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy = reactive.defaultRetryStrategy
+  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
 
-  def collectionExists(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Boolean] = {
+  def collectionExists(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Boolean] = {
     Try(reactive.collectionExists(collection, timeout, retryStrategy).block())
   }
 
-  def scopeExists(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Boolean] = {
+  def scopeExists(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Boolean] = {
     Try(reactive.scopeExists(scopeName, timeout, retryStrategy).block())
   }
 
-  def getScope(scopeName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Try[ScopeSpec] = {
+  def getScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[ScopeSpec] = {
     Try(reactive.getScope(scopeName, timeout, retryStrategy).block())
   }
 
-  def getAllScopes(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[ScopeSpec]] = {
+  def getAllScopes(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Seq[ScopeSpec]] = {
     Try(reactive.getAllScopes(timeout, retryStrategy).collectSeq.block())
   }
 
-  def createCollection(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def createCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.createCollection(collection, timeout, retryStrategy).block())
   }
 
-  def dropCollection(collection: CollectionSpec,
-                     timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def dropCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.dropCollection(collection, timeout, retryStrategy).block())
   }
 
-  def createScope(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def createScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.createScope(scopeName, timeout, retryStrategy).block())
   }
 
-  def dropScope(scopeName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def dropScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Try(reactive.dropScope(scopeName, timeout, retryStrategy).block())
   }
 }

@@ -40,13 +40,15 @@ import scala.util.{Success, Try}
   *
   * @since 1.0.0
   */
-case class SearchRow(index: String,
-                     id: String,
-                     score: Double,
-                     private val _explanation: Try[Array[Byte]],
-                     locations: SearchRowLocations,
-                     fragments: GenMap[String, Seq[String]],
-                     fields: GenMap[String, String]) {
+case class SearchRow(
+    index: String,
+    id: String,
+    score: Double,
+    private val _explanation: Try[Array[Byte]],
+    locations: SearchRowLocations,
+    fragments: GenMap[String, Seq[String]],
+    fields: GenMap[String, String]
+) {
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.
     *
@@ -57,50 +59,57 @@ case class SearchRow(index: String,
   }
 }
 
-
 object SearchRow {
   /* Converts a SearchChunkRow to a SearchQueryRow.
    *
    * Allowed to throw on failure.
    * */
-  private[scala] def fromResponse(row: SearchChunkRow): SearchRow = try {
-    val hit = JacksonTransformers.MAPPER.readValue(row.data, classOf[JsonObject])
-    val safe = hit.safe
+  private[scala] def fromResponse(row: SearchChunkRow): SearchRow =
+    try {
+      val hit  = JacksonTransformers.MAPPER.readValue(row.data, classOf[JsonObject])
+      val safe = hit.safe
 
       val index = hit.str("index")
-      val id = hit.str("id")
+      val id    = hit.str("id")
       val score = hit.numDouble("score")
 
-      val explanationJson: Try[Array[Byte]] = safe.obj("explanation")
+      val explanationJson: Try[Array[Byte]] = safe
+        .obj("explanation")
         .map(o => o.toString.getBytes(UTF_8))
 
-      val locations: Try[SearchRowLocations] = safe.obj("locations")
+      val locations: Try[SearchRowLocations] = safe
+        .obj("locations")
         .flatMap(x => SearchRowLocations.from(x.o))
 
-    val fragments: GenMap[String, Seq[String]] = safe.obj("fragments") match {
-      case Success(fragmentsJson) =>
-        fragmentsJson.names.map(field => {
-          val fragment: Seq[String] = fragmentsJson.arr(field) match {
-            case Success(fragmentJson) => fragmentJson.toSeq.map(_.toString)
-            case _ => Seq.empty
-          }
+      val fragments: GenMap[String, Seq[String]] = safe.obj("fragments") match {
+        case Success(fragmentsJson) =>
+          fragmentsJson.names
+            .map(field => {
+              val fragment: Seq[String] = fragmentsJson.arr(field) match {
+                case Success(fragmentJson) => fragmentJson.toSeq.map(_.toString)
+                case _                     => Seq.empty
+              }
 
-          field -> fragment
-        }).toMap
-      case _ => Map.empty
+              field -> fragment
+            })
+            .toMap
+        case _ => Map.empty
+      }
+
+      val fields: GenMap[String, String] = safe.obj("fields") match {
+        case Success(fieldsJson) =>
+          val obj = fieldsJson.o
+          obj.names.map(name => name -> obj.str(name)).toMap
+        case _ => Map.empty
+      }
+
+      new SearchRow(index, id, score, explanationJson, locations.get, fragments, fields)
+    } catch {
+      case e: IOException =>
+        throw new DecodingFailedException(
+          "Failed to decode row '" + new String(row.data, UTF_8) + "'",
+          e
+        )
     }
-
-    val fields: GenMap[String, String] = safe.obj("fields") match {
-      case Success(fieldsJson) =>
-        val obj = fieldsJson.o
-        obj.names.map(name => name -> obj.str(name)).toMap
-      case _ => Map.empty
-    }
-
-    new SearchRow(index, id, score, explanationJson, locations.get, fragments, fields)
-  } catch {
-    case e: IOException =>
-      throw new DecodingFailedException("Failed to decode row '" + new String(row.data, UTF_8) + "'", e)
-  }
 
 }

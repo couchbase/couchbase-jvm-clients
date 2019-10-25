@@ -30,24 +30,27 @@ import scala.reflect.runtime.universe._
 /** Presents a Scala Map interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
   */
-class CouchbaseMap[T](id: String,
-                      collection: Collection,
-                      options: Option[CouchbaseCollectionOptions] = None)
-                     (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
-  extends mutable.Map[String, T] {
+class CouchbaseMap[T](
+    id: String,
+    collection: Collection,
+    options: Option[CouchbaseCollectionOptions] = None
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+    extends mutable.Map[String, T] {
 
   private val Values = "values."
 
   private val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
-    case _ => CouchbaseCollectionOptions(collection)
+    case _       => CouchbaseCollectionOptions(collection)
   }
 
   override def get(key: String): Option[T] = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.get(key)),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result: Try[Option[T]] = op.map(result => {
       if (!result.exists(0)) None
@@ -58,48 +61,56 @@ class CouchbaseMap[T](id: String,
     })
 
     result match {
-      case Success(value) => value
+      case Success(value)                      => value
       case Failure(err: PathNotFoundException) => None
-      case Failure(err) => throw err
+      case Failure(err)                        => throw err
     }
   }
 
   override def apply(key: String): T = {
     get(key) match {
       case Some(value) => value
-      case _ => throw new NoSuchElementException(s"Key ${key} not found")
+      case _           => throw new NoSuchElementException(s"Key ${key} not found")
     }
   }
 
   // A fast version of `remove` that does not have to return the element
   def removeAt(key: String): Unit = {
-    collection.mutateIn(id,
-      Array(MutateInSpec.remove(key)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability).get
+    collection
+      .mutateIn(
+        id,
+        Array(MutateInSpec.remove(key)),
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
+      .get
   }
 
   // Note `remoteAt` is more performant as it does not have to return the removed element
   override def remove(key: String): Option[T] = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.get(key)),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[T](0))
 
     result match {
       case Success(value) =>
-        val mutateResult = collection.mutateIn(id,
+        val mutateResult = collection.mutateIn(
+          id,
           Array(MutateInSpec.remove(key)),
           cas = op.get.cas,
           timeout = opts.timeout,
           retryStrategy = opts.retryStrategy,
-          durability = opts.durability)
+          durability = opts.durability
+        )
 
         mutateResult match {
-          case Success(_) => Some(value)
+          case Success(_)                         => Some(value)
           case Failure(err: CASMismatchException) =>
             // Recurse to try again
             remove(key)
@@ -128,51 +139,57 @@ class CouchbaseMap[T](id: String,
   }
 
   override def size(): Int = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.count("")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count) => count
+      case Success(count)                   => count
       case Failure(_: KeyNotFoundException) => 0
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 
   private def all(): Map[String, T] = {
-    val op = collection.get(id,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
 
-    val result = op.flatMap(_.contentAs[JsonObjectSafe])
+    val result = op
+      .flatMap(_.contentAs[JsonObjectSafe])
       .map(obj => obj.toMap.asInstanceOf[mutable.AnyRefMap[String, T]])
 
     result match {
       case Success(values: mutable.AnyRefMap[String, T]) => values.toMap
-      case Failure(_: KeyNotFoundException) => Map.empty[String, T]
-      case Failure(err) => throw err
+      case Failure(_: KeyNotFoundException)              => Map.empty[String, T]
+      case Failure(err)                                  => throw err
     }
   }
 
   override def +=(kv: (String, T)): CouchbaseMap.this.type = {
-    val f = () => collection.mutateIn(id,
-      Array(MutateInSpec.upsert(kv._1, kv._2)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+    val f = () =>
+      collection.mutateIn(
+        id,
+        Array(MutateInSpec.upsert(kv._1, kv._2)),
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
     retryIfDocDoesNotExist(f)
     this
   }
 
   override def -=(key: String): CouchbaseMap.this.type = {
-    val result = collection.mutateIn(id,
+    val result = collection.mutateIn(
+      id,
       Array(MutateInSpec.remove(key)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+      durability = opts.durability
+    )
 
     result match {
       case Success(_) => this
@@ -180,7 +197,7 @@ class CouchbaseMap[T](id: String,
         if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) this
         else throw err
       case Failure(_: KeyNotFoundException) => this
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 

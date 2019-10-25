@@ -28,7 +28,6 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV get-and-touch operations.
   *
@@ -36,13 +35,14 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndTouchHandler(hp: HandlerParams)
-  extends RequestHandlerWithTranscoder[GetAndTouchResponse, Option[GetResult]] {
+    extends RequestHandlerWithTranscoder[GetAndTouchResponse, Option[GetResult]] {
 
-  def request[T](id: String,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[GetAndTouchRequest] = {
+  def request[T](
+      id: String,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[GetAndTouchRequest] = {
     val validations: Try[GetAndTouchRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(expiration, "expiration")
@@ -52,22 +52,38 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
 
-      Success(new GetAndTouchRequest(id,
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        expiration))
+      Success(
+        new GetAndTouchRequest(
+          id,
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          expiration
+        )
+      )
     }
   }
 
-  override def response(id: String, response: GetAndTouchResponse, transcoder: Transcoder): Option[GetResult] = {
+  override def response(
+      id: String,
+      response: GetAndTouchResponse,
+      transcoder: Transcoder
+  ): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty, transcoder))
+        Some(
+          GetResult(
+            id,
+            Left(response.content),
+            response.flags(),
+            response.cas,
+            Option.empty,
+            transcoder
+          )
+        )
 
       case ResponseStatus.NOT_FOUND => None
 

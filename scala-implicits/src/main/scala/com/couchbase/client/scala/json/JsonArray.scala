@@ -27,6 +27,7 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
+
   /** Adds a value into this object, which should be of one of the supported types (though, for performance, this is
     * not checked).
     *
@@ -139,7 +140,6 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     ValueConvertor.bool(values.get(idx), "array index")
   }
 
-
   /** Gets a `JsonObject` value from this array.
     *
     * If that value is `null`, then `null` will be returned.
@@ -185,15 +185,15 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     */
   def toSeq: Seq[Any] = {
     val copy = ArrayBuffer.empty[Any]
-    val it = iterator
+    val it   = iterator
     while (it.hasNext) {
       val value = it.next()
       copy += (value match {
-        case v: JsonObject => v.toMap
+        case v: JsonObject     => v.toMap
         case v: JsonObjectSafe => v.toMap
-        case v: JsonArray => v.toSeq
-        case v: JsonArraySafe => v.toSeq
-        case _ => value
+        case v: JsonArray      => v.toSeq
+        case v: JsonArraySafe  => v.toSeq
+        case _                 => value
       })
     }
     copy
@@ -218,6 +218,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
 
 /** Methods to construct a `JsonArray`. */
 object JsonArray {
+
   /** Constructs an empty `JsonArray`. */
   def create: JsonArray = new JsonArray(new util.ArrayList[Any])
 
@@ -228,8 +229,7 @@ object JsonArray {
   def fromJson(json: String): Try[JsonArray] = {
     try {
       Success(JacksonTransformers.stringToJsonArray(json))
-    }
-    catch {
+    } catch {
       case NonFatal(err) => Failure(new IllegalArgumentException(err))
     }
   }

@@ -26,13 +26,15 @@ import com.couchbase.client.scala.search.util.SearchUtils
   *
   * @since 1.0.0
   */
-case class DateRangeQuery(private[scala] val start: Option[String] = None,
-                          private[scala] val inclusiveStart: Option[Boolean] = None,
-                          private[scala] val end: Option[String] = None,
-                          private[scala] val inclusiveEnd: Option[Boolean] = None,
-                          private[scala] val dateTimeParser: Option[String] = None,
-                          private[scala] val field: Option[String] = None,
-                          private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class DateRangeQuery(
+    private[scala] val start: Option[String] = None,
+    private[scala] val inclusiveStart: Option[Boolean] = None,
+    private[scala] val end: Option[String] = None,
+    private[scala] val inclusiveEnd: Option[Boolean] = None,
+    private[scala] val dateTimeParser: Option[String] = None,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** Sets the lower boundary of the range, inclusive or not depending on the second parameter.
     */

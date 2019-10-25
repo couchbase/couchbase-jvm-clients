@@ -30,11 +30,12 @@ private[scala] object FunctionalUtil {
   def traverse[T](in: List[Try[T]]): Try[List[T]] = {
     in match {
       case x :: Nil => x.map(List(_))
-      case x :: xs => x.flatMap(v => {
-        val rest: Try[List[T]] = traverse(xs)
-        val y: List[T] = List(v)
-        rest.map(z => y ++ z)
-      })
+      case x :: xs =>
+        x.flatMap(v => {
+          val rest: Try[List[T]] = traverse(xs)
+          val y: List[T]         = List(v)
+          rest.map(z => y ++ z)
+        })
     }
   }
 
@@ -42,11 +43,12 @@ private[scala] object FunctionalUtil {
   def traverse[T](in: Seq[Try[T]]): Try[Seq[T]] = {
     in match {
       case x +: Nil => x.map(Seq(_))
-      case x +: xs => x.flatMap(v => {
-        val rest: Try[Seq[T]] = traverse(xs)
-        val y: Seq[T] = Seq(v)
-        rest.map(z => y ++ z)
-      })
+      case x +: xs =>
+        x.flatMap(v => {
+          val rest: Try[Seq[T]] = traverse(xs)
+          val y: Seq[T]         = Seq(v)
+          rest.map(z => y ++ z)
+        })
     }
   }
 

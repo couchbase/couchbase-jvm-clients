@@ -22,11 +22,13 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 
-case class ServiceConfig(private[scala] val keyValueServiceConfig: Option[KeyValueServiceConfig] = None,
-                          private[scala] val queryServiceConfig: Option[QueryServiceConfig] = None,
-                          private[scala] val viewServiceConfig: Option[ViewServiceConfig] = None,
-                          private[scala] val searchServiceConfig: Option[SearchServiceConfig] = None,
-                          private[scala] val analyticsServiceConfig: Option[AnalyticsServiceConfig] = None) {
+case class ServiceConfig(
+    private[scala] val keyValueServiceConfig: Option[KeyValueServiceConfig] = None,
+    private[scala] val queryServiceConfig: Option[QueryServiceConfig] = None,
+    private[scala] val viewServiceConfig: Option[ViewServiceConfig] = None,
+    private[scala] val searchServiceConfig: Option[SearchServiceConfig] = None,
+    private[scala] val analyticsServiceConfig: Option[AnalyticsServiceConfig] = None
+) {
 
   private[scala] def toCore: core.env.ServiceConfig.Builder = {
     val builder = new core.env.ServiceConfig.Builder
@@ -39,7 +41,6 @@ case class ServiceConfig(private[scala] val keyValueServiceConfig: Option[KeyVal
 
     builder
   }
-
 
   /** Sets the configuration for key-value operations.
     *
@@ -85,7 +86,8 @@ case class ServiceConfig(private[scala] val keyValueServiceConfig: Option[KeyVal
 case class KeyValueServiceConfig(private[scala] val endpoints: Option[Int] = None) {
 
   private[scala] def toCore: service.KeyValueServiceConfig.Builder = {
-    service.KeyValueServiceConfig.builder()
+    service.KeyValueServiceConfig
+      .builder()
       .endpoints(endpoints.getOrElse(service.KeyValueServiceConfig.DEFAULT_ENDPOINTS))
   }
 
@@ -94,13 +96,18 @@ case class KeyValueServiceConfig(private[scala] val endpoints: Option[Int] = Non
   }
 }
 
-case class QueryServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                              private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                              private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
+case class QueryServiceConfig(
+    private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+    private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+    private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME
+) {
 
   private[scala] def toCore: service.QueryServiceConfig.Builder = {
-    service.QueryServiceConfig.builder()
-      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
+    service.QueryServiceConfig
+      .builder()
+      .minEndpoints(minEndpoints)
+      .maxEndpoints(maxEndpoints)
+      .idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): QueryServiceConfig = {
@@ -116,13 +123,18 @@ case class QueryServiceConfig(private[scala] val minEndpoints: Int = AbstractPoo
   }
 }
 
-case class ViewServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                             private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                             private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
+case class ViewServiceConfig(
+    private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+    private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+    private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME
+) {
 
   private[scala] def toCore: service.ViewServiceConfig.Builder = {
-    service.ViewServiceConfig.builder()
-      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
+    service.ViewServiceConfig
+      .builder()
+      .minEndpoints(minEndpoints)
+      .maxEndpoints(maxEndpoints)
+      .idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): ViewServiceConfig = {
@@ -138,13 +150,18 @@ case class ViewServiceConfig(private[scala] val minEndpoints: Int = AbstractPool
   }
 }
 
-case class SearchServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                               private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                               private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
+case class SearchServiceConfig(
+    private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+    private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+    private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME
+) {
 
   private[scala] def toCore: service.SearchServiceConfig.Builder = {
-    service.SearchServiceConfig.builder()
-      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
+    service.SearchServiceConfig
+      .builder()
+      .minEndpoints(minEndpoints)
+      .maxEndpoints(maxEndpoints)
+      .idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): SearchServiceConfig = {
@@ -160,13 +177,18 @@ case class SearchServiceConfig(private[scala] val minEndpoints: Int = AbstractPo
   }
 }
 
-case class AnalyticsServiceConfig(private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
-                                  private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
-                                  private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME) {
+case class AnalyticsServiceConfig(
+    private[scala] val minEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MIN_ENDPOINTS,
+    private[scala] val maxEndpoints: Int = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS,
+    private[scala] val idleTime: Duration = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME
+) {
 
   private[scala] def toCore: service.AnalyticsServiceConfig.Builder = {
-    service.AnalyticsServiceConfig.builder()
-      .minEndpoints(minEndpoints).maxEndpoints(maxEndpoints).idleTime(idleTime)
+    service.AnalyticsServiceConfig
+      .builder()
+      .minEndpoints(minEndpoints)
+      .maxEndpoints(maxEndpoints)
+      .idleTime(idleTime)
   }
 
   def minEndpoints(value: Int): AnalyticsServiceConfig = {
@@ -181,4 +203,3 @@ case class AnalyticsServiceConfig(private[scala] val minEndpoints: Int = Abstrac
     copy(idleTime = value)
   }
 }
-

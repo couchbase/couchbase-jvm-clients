@@ -24,29 +24,30 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 
-
 /** Customize the execution of an analytics query.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[String,Any]] = None,
-                        private[scala] val positionalParameters: Option[Seq[Any]] = None,
-                        private[scala] val clientContextId: Option[String] = None,
-                        private[scala] val retryStrategy: Option[RetryStrategy] = None,
-                        private[scala] val serverSideTimeout: Option[Duration] = None,
-                        private[scala] val timeout: Option[Duration] = None,
-                        private[scala] val priority: Boolean = false,
-                        private[scala] val readonly: Option[Boolean] = None,
-                        private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None
-                       ) {
+case class AnalyticsOptions(
+    private[scala] val namedParameters: Option[GenMap[String, Any]] = None,
+    private[scala] val positionalParameters: Option[Seq[Any]] = None,
+    private[scala] val clientContextId: Option[String] = None,
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val serverSideTimeout: Option[Duration] = None,
+    private[scala] val timeout: Option[Duration] = None,
+    private[scala] val priority: Boolean = false,
+    private[scala] val readonly: Option[Boolean] = None,
+    private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None
+) {
+
   /** Provides named parameters for queries parameterised that way.
     *
     * Overrides any previously-supplied named parameters.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def parameters(values: Map[String,Any]): AnalyticsOptions = {
+  def parameters(values: Map[String, Any]): AnalyticsOptions = {
     copy(namedParameters = Option(values), positionalParameters = None)
   }
 
@@ -81,7 +82,8 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[St
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def clientContextId(contextId: String): AnalyticsOptions = copy(clientContextId = Option(contextId))
+  def clientContextId(contextId: String): AnalyticsOptions =
+    copy(clientContextId = Option(contextId))
 
   /** Sets a maximum timeout for processing on the server side.
     *
@@ -89,7 +91,8 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[St
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def serverSideTimeout(serverSideTimeout: Duration): AnalyticsOptions = copy(serverSideTimeout = Option(serverSideTimeout))
+  def serverSideTimeout(serverSideTimeout: Duration): AnalyticsOptions =
+    copy(serverSideTimeout = Option(serverSideTimeout))
 
   def timeout(timeout: Duration): AnalyticsOptions = {
     copy(timeout = Option(timeout))
@@ -136,7 +139,7 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[St
     scanConsistency match {
       case Some(sc) =>
         val toPut: String = sc match {
-          case AnalyticsScanConsistency.NotBounded => "not_bounded"
+          case AnalyticsScanConsistency.NotBounded  => "not_bounded"
           case AnalyticsScanConsistency.RequestPlus => "request_plus"
         }
         out.put("scan_consistency", toPut)
@@ -146,8 +149,3 @@ case class AnalyticsOptions(private[scala] val namedParameters: Option[GenMap[St
     out
   }
 }
-
-
-
-
-

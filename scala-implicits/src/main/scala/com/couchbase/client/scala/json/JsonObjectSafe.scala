@@ -25,7 +25,6 @@ import scala.language.dynamics
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-
 /** A 'safe' alternative interface for [[JsonObject]] that does all operations with Try rather than throwing
   * exceptions.
   *
@@ -225,9 +224,9 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
   override def toString: String = o.toString
 }
 
-
 /** Methods to construct a `JsonObjectSafe`. */
 object JsonObjectSafe {
+
   /** Constructs a `JsonObjectSafe` from a String representing valid JSON ("""{"foo":"bar"}""").
     *
     * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`

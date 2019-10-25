@@ -28,33 +28,42 @@ import scala.util.Try
 /** Allows indexes for Full Text Search (FTS) to be managed.
   */
 @Stability.Volatile
-class ReactiveSearchIndexManager(private[scala] val async: AsyncSearchIndexManager)
-                                (implicit val ec: ExecutionContext) {
+class ReactiveSearchIndexManager(private[scala] val async: AsyncSearchIndexManager)(
+    implicit val ec: ExecutionContext
+) {
   private val core = async.cluster.core
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  def getIndex(indexName: String,
-               timeout: Duration = DefaultTimeout,
-               retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[SearchIndex] = {
+  def getIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[SearchIndex] = {
     SMono.fromFuture(async.getIndex(indexName, timeout, retryStrategy))
   }
 
-  def getAllIndexes(timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Seq[SearchIndex]] = {
+  def getAllIndexes(
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Seq[SearchIndex]] = {
     SMono.fromFuture(async.getAllIndexes(timeout, retryStrategy))
   }
 
-  def upsertIndex(indexDefinition: SearchIndex,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def upsertIndex(
+      indexDefinition: SearchIndex,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     SMono.fromFuture(async.upsertIndex(indexDefinition, timeout, retryStrategy))
   }
 
-  def dropIndex(indexName: String,
-                timeout: Duration = DefaultTimeout,
-                retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def dropIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     SMono.fromFuture(async.dropIndex(indexName, timeout, retryStrategy))
   }
 }
-

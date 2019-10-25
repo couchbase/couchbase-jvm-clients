@@ -1,7 +1,11 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.core.msg.kv.{SubDocumentOpResponseStatus, SubdocCommandType, SubdocField}
+import com.couchbase.client.core.msg.kv.{
+  SubDocumentOpResponseStatus,
+  SubdocCommandType,
+  SubdocField
+}
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonTranscoder, Transcoder}
 
 import scala.concurrent.duration.Duration
@@ -16,7 +20,7 @@ import scala.reflect.runtime.universe._
   *
   * @param id  the unique identifier of the document
   * @param cas the document's CAS value at the time of the lookup
- *
+  *
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
   * @define SupportedTypes this can be of any type for which an implicit
   *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
@@ -25,12 +29,13 @@ import scala.reflect.runtime.universe._
   * @since 1.0.0
   **/
 case class LookupInResult(
-                           id: String,
-                           private val content: Seq[SubdocField],
-                           private[scala] val flags: Int,
-                           cas: Long,
-                           expiry: Option[Duration],
-                           transcoder: Transcoder) {
+    id: String,
+    private val content: Seq[SubdocField],
+    private[scala] val flags: Int,
+    cas: Long,
+    expiry: Option[Duration],
+    transcoder: Transcoder
+) {
 
   /** Retrieve the content returned for a particular `LookupInSpec`, converted into the application's preferred
     * representation.
@@ -38,12 +43,12 @@ case class LookupInResult(
     * @param index $Index
     * @tparam T $SupportedTypes.  For an `exists` operation, only an output type of `Boolean` is supported.
     */
-  def contentAs[T](index: Int)
-                  (implicit deserializer: JsonDeserializer[T], tag: TypeTag[T]): Try[T] = {
+  def contentAs[T](
+      index: Int
+  )(implicit deserializer: JsonDeserializer[T], tag: TypeTag[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
       Failure(new IllegalArgumentException(s"$index is out of bounds"))
-    }
-    else {
+    } else {
       val field = content(index)
       field.error().asScala match {
         case Some(err) => Failure(err)
@@ -53,16 +58,16 @@ case class LookupInResult(
               if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Boolean])) {
                 val exists = field.status == SubDocumentOpResponseStatus.SUCCESS
                 Success(exists.asInstanceOf[T])
-              }
-              else {
-                Failure(new DecodingFailedException("Exists results can only be returned as Boolean"))
+              } else {
+                Failure(
+                  new DecodingFailedException("Exists results can only be returned as Boolean")
+                )
               }
             case _ => deserializer.deserialize(field.value)
           }
       }
     }
   }
-
 
   /** Returns whether content has successfully been returned for a particular `LookupInSpec`.
     *
@@ -75,12 +80,11 @@ case class LookupInResult(
   def exists(index: Int): Boolean = {
     if (index < 0 || index >= content.size) {
       false
-    }
-    else {
+    } else {
       val field = content(index)
       field.error().asScala match {
         case Some(err) => false
-        case _ => true
+        case _         => true
       }
     }
   }

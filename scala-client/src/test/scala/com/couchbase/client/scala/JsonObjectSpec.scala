@@ -11,12 +11,10 @@ class JsonObjectSpec {
       |"age":29,
       |"address":[{"address":"123 Fake Street","regional":{"county:":"essex"}}]}""".stripMargin
   val json = JsonObject.fromJson(raw)
-
-
   @Test
   def decode() {
     val encoded = Conversions.encode(json).get
-    val str = new String(encoded)
+    val str     = new String(encoded)
     val decoded = Conversions.decode[JsonObject](encoded).get
 
     assert(decoded.str("name") == "John Smith")

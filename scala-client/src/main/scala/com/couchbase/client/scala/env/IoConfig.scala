@@ -22,15 +22,17 @@ import scala.concurrent.duration.Duration
 import scala.collection.JavaConverters._
 import com.couchbase.client.scala.util.DurationConversions._
 
-case class IoConfig(private[scala] val mutationTokensEnabled: Boolean = true,
-                    private[scala] val allowedSaslMechanisms: Option[Set[SaslMechanism]] = None,
-                    private[scala] val configPollInterval: Option[Duration] = None,
-                    private[scala] val kvCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
-                    private[scala] val queryCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
-                    private[scala] val viewCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
-                    private[scala] val searchCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
-                    private[scala] val analyticsCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
-                    private[scala] val managerCircuitBreakerConfig: Option[CircuitBreakerConfig] = None) {
+case class IoConfig(
+    private[scala] val mutationTokensEnabled: Boolean = true,
+    private[scala] val allowedSaslMechanisms: Option[Set[SaslMechanism]] = None,
+    private[scala] val configPollInterval: Option[Duration] = None,
+    private[scala] val kvCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
+    private[scala] val queryCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
+    private[scala] val viewCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
+    private[scala] val searchCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
+    private[scala] val analyticsCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
+    private[scala] val managerCircuitBreakerConfig: Option[CircuitBreakerConfig] = None
+) {
 
   private[scala] def toCore: core.env.IoConfig.Builder = {
     val builder = core.env.IoConfig.builder()
@@ -47,7 +49,6 @@ case class IoConfig(private[scala] val mutationTokensEnabled: Boolean = true,
 
     builder
   }
-
 
   /** Configures whether mutation tokens will be returned from the server for all mutation operations.
     *

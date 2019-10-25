@@ -55,15 +55,16 @@ object Codec {
 /** A Codec conveniently combines an [[com.couchbase.client.scala.codec.JsonSerializer]] and
   * [[JsonDeserializer]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
   */
-trait CodecWrapper[-A,B] extends JsonSerializer[A] with JsonDeserializer[B]
-trait Codec[A] extends CodecWrapper[A,A]
+trait CodecWrapper[-A, B] extends JsonSerializer[A] with JsonDeserializer[B]
+trait Codec[A]            extends CodecWrapper[A, A]
 
 private[scala] object CodecImplicits {
   // Implementation detail: the excellent JSON library Jsoniter, with the extensions from com.github.plokhotnyuk.jsoniter_scala,
   // is currently used to encode and decode case classes.  This is purely an implementation detail and should not be
   // relied upon.
-  def makeDeserializer[T](c: scala.reflect.macros.blackbox.Context)
-                    (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
+  def makeDeserializer[T](
+      c: scala.reflect.macros.blackbox.Context
+  )(implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
     new JsonDeserializer[${e}] {
@@ -80,8 +81,9 @@ private[scala] object CodecImplicits {
     """
   }
 
-  def makeSerializer[T](c: scala.reflect.macros.blackbox.Context)
-                    (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
+  def makeSerializer[T](
+      c: scala.reflect.macros.blackbox.Context
+  )(implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
     new JsonSerializer[$e] {
@@ -98,8 +100,9 @@ private[scala] object CodecImplicits {
     """
   }
 
-  def makeCodec[T](c: scala.reflect.macros.blackbox.Context)
-                  (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
+  def makeCodec[T](
+      c: scala.reflect.macros.blackbox.Context
+  )(implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
     new Codec[$e] {

@@ -28,30 +28,38 @@ import scala.util.Try
 @Stability.Volatile
 class SearchIndexManager(private[scala] val async: AsyncSearchIndexManager) {
   private val core = async.cluster.core
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  def getIndex(indexName: String,
-               timeout: Duration = DefaultTimeout,
-               retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[SearchIndex] = {
+  def getIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[SearchIndex] = {
     Collection.block(async.getIndex(indexName, timeout, retryStrategy))
   }
 
-  def getAllIndexes(timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Seq[SearchIndex]] = {
+  def getAllIndexes(
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Seq[SearchIndex]] = {
     Collection.block(async.getAllIndexes(timeout, retryStrategy))
   }
 
-  def upsertIndex(indexDefinition: SearchIndex,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
+  def upsertIndex(
+      indexDefinition: SearchIndex,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.upsertIndex(indexDefinition, timeout, retryStrategy))
   }
 
-  def dropIndex(indexName: String,
-                timeout: Duration = DefaultTimeout,
-                retryStrategy: RetryStrategy = DefaultRetryStrategy): Try[Unit] = {
+  def dropIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.dropIndex(indexName, timeout, retryStrategy))
   }
 }
-

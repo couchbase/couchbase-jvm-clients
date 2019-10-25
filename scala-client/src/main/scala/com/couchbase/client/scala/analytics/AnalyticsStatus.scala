@@ -41,16 +41,16 @@ object AnalyticsStatus {
 
   private[scala] def from(in: String): AnalyticsStatus = {
     in.toLowerCase match {
-      case "running" => Running
-      case "success" => Success
-      case "errors" => Errors
+      case "running"   => Running
+      case "success"   => Success
+      case "errors"    => Errors
       case "completed" => Completed
-      case "stopped" => Stopped
-      case "timeout" => Timeout
-      case "closed" => Closed
-      case "fatal" => Fatal
-      case "aborted" => Aborted
-      case _ => Unknown
+      case "stopped"   => Stopped
+      case "timeout"   => Timeout
+      case "closed"    => Closed
+      case "fatal"     => Fatal
+      case "aborted"   => Aborted
+      case _           => Unknown
     }
   }
 }

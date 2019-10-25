@@ -31,7 +31,7 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _
   private var coll: Collection = _
-  private val docId = "test"
+  private val docId            = "test"
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -109,7 +109,7 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
 
   @Test
   def foreach(): Unit = {
-    val l = makeCollection
+    val l      = makeCollection
     val values = ArrayBuffer.empty[Int]
 
     l.foreach(v => values += v)
@@ -151,9 +151,9 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
     l.append(5)
     l.append(6)
 
-    assert (l(0) == 5)
-    assert (l.head == 5)
-    assert (l(1) == 6)
+    assert(l(0) == 5)
+    assert(l.head == 5)
+    assert(l(1) == 6)
   }
 
   @Test
@@ -164,9 +164,9 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
     l.append(6)
     l.append(7)
 
-    assert (l.indexOf(5) == 0)
-    assert (l.indexOf(6) == 1)
-    assert (l.indexOf(100) == -1)
+    assert(l.indexOf(5) == 0)
+    assert(l.indexOf(6) == 1)
+    assert(l.indexOf(100) == -1)
   }
 
   @Test
@@ -197,10 +197,9 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
     try {
       l(0)
       assert(false)
-    }
-    catch {
+    } catch {
       case err: KeyNotFoundException =>
-      case NonFatal(err) => assert(false)
+      case NonFatal(err)             => assert(false)
     }
   }
 }

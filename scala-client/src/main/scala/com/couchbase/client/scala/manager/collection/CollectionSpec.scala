@@ -15,5 +15,4 @@
  */
 package com.couchbase.client.scala.manager.collection
 
-case class CollectionSpec(name: String,
-                          scopeName: String)
+case class CollectionSpec(name: String, scopeName: String)

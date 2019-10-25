@@ -27,12 +27,14 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   *
   * @since 1.0.0
   */
-case class GeoBoundingBoxQuery(private[scala] val topLeftLon: Double,
-                               private[scala] val topLeftLat: Double,
-                               private[scala] val bottomRightLon: Double,
-                               private[scala] val bottomRightLat: Double,
-                               private[scala] val field: Option[String] = None,
-                               private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class GeoBoundingBoxQuery(
+    private[scala] val topLeftLon: Double,
+    private[scala] val topLeftLat: Double,
+    private[scala] val bottomRightLon: Double,
+    private[scala] val bottomRightLat: Double,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

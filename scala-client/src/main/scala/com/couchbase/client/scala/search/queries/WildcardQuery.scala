@@ -22,9 +22,11 @@ import com.couchbase.client.scala.json.JsonObject
   *
   * @since 1.0.0
   */
-case class WildcardQuery(private[scala] val wildcard: String,
-                         private[scala] val field: Option[String] = None,
-                         private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class WildcardQuery(
+    private[scala] val wildcard: String,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** If specified, only terms in this field will be matched.
     *

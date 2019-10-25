@@ -34,6 +34,7 @@ import scala.util.{Failure, Success, Try}
   * type then this is very simple.  Check out the JsonDeserializers in this file for examples.
   */
 trait JsonDeserializer[T] {
+
   /** Decodes an Array[Byte] into a `T`.
     *
     * @param bytes bytes representing a documented, to be decoded
@@ -65,6 +66,7 @@ object JsonDeserializer {
   }
 
   object Passthrough {
+
     /** An alternative `JsonDeserializer` for `String`, that simply returns the raw bytes as a String.
       */
     implicit object StringConvert extends JsonDeserializer[String] {
@@ -79,7 +81,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[JsonObject] = {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
       out match {
-        case Success(_) => out
+        case Success(_)   => out
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -90,7 +92,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[JsonObjectSafe] = {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
       out match {
-        case Success(v) => Success(v.safe)
+        case Success(v)   => Success(v.safe)
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -101,7 +103,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[JsonArray] = {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
       out match {
-        case Success(_) => out
+        case Success(_)   => out
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -112,7 +114,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[JsonArraySafe] = {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
       out match {
-        case Success(v) => Success(v.safe)
+        case Success(v)   => Success(v.safe)
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -127,7 +129,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[Value] = {
       val out = Try(upickle.default.read[ujson.Value](bytes))
       out match {
-        case Success(_) => out
+        case Success(_)   => out
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -142,7 +144,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[Obj] = {
       val out = Try(upickle.default.read[ujson.Obj](bytes))
       out match {
-        case Success(_) => out
+        case Success(_)   => out
         case Failure(err) => Failure(new DecodingFailedException(err))
       }
     }
@@ -162,7 +164,7 @@ object JsonDeserializer {
   private[scala] def tryDecode[T](in: => T) = {
     val out = Try(in)
     out match {
-      case Success(_) => out
+      case Success(_)   => out
       case Failure(err) => Failure(new DecodingFailedException(err))
     }
   }
@@ -196,7 +198,8 @@ object JsonDeserializer {
     */
   implicit object JawnConvert extends JsonDeserializer[org.typelevel.jawn.ast.JValue] {
     override def deserialize(bytes: Array[Byte]): Try[ast.JValue] = {
-      org.typelevel.jawn.Parser.parseFromString[org.typelevel.jawn.ast.JValue](new String(bytes, StandardCharsets.UTF_8))
+      org.typelevel.jawn.Parser
+        .parseFromString[org.typelevel.jawn.ast.JValue](new String(bytes, StandardCharsets.UTF_8))
     }
   }
 
@@ -211,7 +214,7 @@ object JsonDeserializer {
       val out = io.circe.parser.decode[io.circe.Json](str)
       out match {
         case Right(result) => Success(result)
-        case Left(err) => Failure(new DecodingFailedException(err))
+        case Left(err)     => Failure(new DecodingFailedException(err))
       }
     }
   }

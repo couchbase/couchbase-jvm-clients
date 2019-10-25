@@ -19,8 +19,10 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.env.{Authenticator}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator}
 
-case class ClusterOptions(authenticator: Authenticator,
-                          environment: Option[ClusterEnvironment] = None) {
+case class ClusterOptions(
+    authenticator: Authenticator,
+    environment: Option[ClusterEnvironment] = None
+) {
   def environment(environment: ClusterEnvironment): ClusterOptions = {
     copy(environment = Some(environment))
   }

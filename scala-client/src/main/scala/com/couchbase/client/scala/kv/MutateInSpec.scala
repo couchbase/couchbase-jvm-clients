@@ -30,13 +30,13 @@ object MutateInSpec {
     * @param value      the value to insert.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def insert[T](path: String, value: T)
-               (implicit serializer: JsonSerializer[T]): Insert = {
+  def insert[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Insert = {
     val expandMacro = value match {
       case v: MutateInMacro => true
-      case _ => false
+      case _                => false
     }
-    if (path == "") Insert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
+    if (path == "")
+      Insert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
     else Insert(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
@@ -50,11 +50,10 @@ object MutateInSpec {
     * @param value the value to replace.  $SupportedTypes
     * @param ev    $JsonSerializer
     */
-  def replace[T](path: String, value: T)
-                (implicit serializer: JsonSerializer[T]): Replace = {
+  def replace[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Replace = {
     val expandMacro = value match {
       case v: MutateInMacro => true
-      case _ => false
+      case _                => false
     }
     Replace(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
@@ -67,13 +66,13 @@ object MutateInSpec {
     * @param value      the value to upsert.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def upsert[T](path: String, value: T)
-               (implicit serializer: JsonSerializer[T]): Upsert = {
+  def upsert[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Upsert = {
     val expandMacro = value match {
       case v: MutateInMacro => true
-      case _ => false
+      case _                => false
     }
-    if (path == "") Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
+    if (path == "")
+      Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
     else Upsert(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
@@ -95,17 +94,17 @@ object MutateInSpec {
     * @param values     the values to append.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayAppend[T](path: String, values: T*)
-                    (implicit serializer: JsonSerializer[T]): ArrayAppend = {
+  def arrayAppend[T](path: String, values: T*)(
+      implicit serializer: JsonSerializer[T]
+  ): ArrayAppend = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
-        case _ => false
+        case _                => false
       }
       ArrayAppend(path, serializer.serialize(value), _expandMacro = expandMacro)
-    }
-    else {
+    } else {
       ArrayAppend(path, encodeMulti(serializer, values: _*))
     }
   }
@@ -114,8 +113,7 @@ object MutateInSpec {
   private def encodeMulti[T](serializer: JsonSerializer[T], values: T*): Try[Array[Byte]] = {
     if (values.isEmpty) {
       Failure(new IllegalArgumentException("Empty set of values provided"))
-    }
-    else {
+    } else {
       val encoded = values.map(value => {
         serializer.serialize(value)
       })
@@ -150,17 +148,17 @@ object MutateInSpec {
     * @param values     the value(s) to prepend.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayPrepend[T](path: String, values: T*)
-                     (implicit serializer: JsonSerializer[T]): ArrayPrepend = {
+  def arrayPrepend[T](path: String, values: T*)(
+      implicit serializer: JsonSerializer[T]
+  ): ArrayPrepend = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
-        case _ => false
+        case _                => false
       }
       ArrayPrepend(path, serializer.serialize(value), _expandMacro = expandMacro)
-    }
-    else {
+    } else {
       ArrayPrepend(path, encodeMulti(serializer, values: _*))
     }
   }
@@ -173,17 +171,17 @@ object MutateInSpec {
     * @param value      the value(s) to insert.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayInsert[T](path: String, values: T*)
-                    (implicit serializer: JsonSerializer[T]): ArrayInsert = {
+  def arrayInsert[T](path: String, values: T*)(
+      implicit serializer: JsonSerializer[T]
+  ): ArrayInsert = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
-        case _ => false
+        case _                => false
       }
       ArrayInsert(path, serializer.serialize(value), _expandMacro = expandMacro)
-    }
-    else {
+    } else {
       ArrayInsert(path, encodeMulti(serializer, values: _*))
     }
   }
@@ -196,11 +194,12 @@ object MutateInSpec {
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
     * @param value      the value to insert.  $SupportedTypes
     */
-  def arrayAddUnique[T](path: String, value: T)
-                       (implicit serializer: JsonSerializer[T]): ArrayAddUnique = {
+  def arrayAddUnique[T](path: String, value: T)(
+      implicit serializer: JsonSerializer[T]
+  ): ArrayAddUnique = {
     val expandMacro = value match {
       case v: MutateInMacro => true
-      case _ => false
+      case _                => false
     }
     ArrayAddUnique(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
@@ -228,7 +227,6 @@ object MutateInSpec {
   }
 }
 
-
 /** Represents an intent to perform a single SubDocument mutation. */
 sealed trait MutateInSpec {
   private[scala] def convert: SubdocMutateRequest.Command
@@ -244,17 +242,19 @@ trait MutateInSpecStandard extends MutateInSpec {
   private[scala] val _createPath: Boolean
   private[scala] val _expandMacro: Boolean
 
-  private[scala] def convert = new SubdocMutateRequest.Command(typ, path, value, _createPath, _xattr, _expandMacro)
+  private[scala] def convert =
+    new SubdocMutateRequest.Command(typ, path, value, _createPath, _xattr, _expandMacro)
 
   private[scala] def value = fragment.get
 }
 
-case class Insert(path: String,
-                  fragment: Try[Array[Byte]],
-                  private[scala] override val _xattr: Boolean = false,
-                  private[scala] override val _createPath: Boolean = false,
-                  private[scala] override val _expandMacro: Boolean = false
-                 ) extends MutateInSpecStandard {
+case class Insert(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.DICT_ADD
 
   /** $Xattr */
@@ -268,14 +268,15 @@ case class Insert(path: String,
   }
 }
 
-case class Replace(path: String,
-                   fragment: Try[Array[Byte]],
-                   private[scala] val _xattr: Boolean = false,
-                   private[scala] val _expandMacro: Boolean = false
-                  ) extends MutateInSpec {
+case class Replace(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] val _xattr: Boolean = false,
+    private[scala] val _expandMacro: Boolean = false
+) extends MutateInSpec {
   override val typ: SubdocCommandType = path match {
     case "" => SubdocCommandType.SET_DOC
-    case _ =>  SubdocCommandType.REPLACE
+    case _  => SubdocCommandType.REPLACE
   }
 
   /** $Xattr */
@@ -283,15 +284,17 @@ case class Replace(path: String,
     copy(path, fragment, _xattr = true, _expandMacro = _expandMacro)
   }
 
-  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get, false, _xattr, _expandMacro)
+  def convert =
+    new SubdocMutateRequest.Command(typ, path, fragment.get, false, _xattr, _expandMacro)
 }
 
-case class Upsert(path: String,
-                  fragment: Try[Array[Byte]],
-                  private[scala] override val _xattr: Boolean = false,
-                  private[scala] override val _createPath: Boolean = false,
-                  private[scala] override val _expandMacro: Boolean = false
-                 ) extends MutateInSpecStandard {
+case class Upsert(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
 
   /** $Xattr */
@@ -305,8 +308,7 @@ case class Upsert(path: String,
   }
 }
 
-case class Remove(path: String,
-                  private[scala] val _xattr: Boolean = false) extends MutateInSpec {
+case class Remove(path: String, private[scala] val _xattr: Boolean = false) extends MutateInSpec {
   override val typ: SubdocCommandType = SubdocCommandType.DELETE
 
   /** $Xattr */
@@ -317,12 +319,13 @@ case class Remove(path: String,
   def convert = new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, _xattr, false)
 }
 
-case class ArrayAppend(path: String,
-                       fragment: Try[Array[Byte]],
-                       private[scala] override val _xattr: Boolean = false,
-                       private[scala] override val _createPath: Boolean = false,
-                       private[scala] override val _expandMacro: Boolean = false
-                      ) extends MutateInSpecStandard {
+case class ArrayAppend(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_LAST
 
   /** $Xattr */
@@ -336,12 +339,13 @@ case class ArrayAppend(path: String,
   }
 }
 
-case class ArrayPrepend(path: String,
-                        fragment: Try[Array[Byte]],
-                        private[scala] override val _xattr: Boolean = false,
-                        private[scala] override val _createPath: Boolean = false,
-                        private[scala] override val _expandMacro: Boolean = false
-                       ) extends MutateInSpecStandard {
+case class ArrayPrepend(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_FIRST
 
   /** $Xattr */
@@ -355,12 +359,13 @@ case class ArrayPrepend(path: String,
   }
 }
 
-case class ArrayInsert(path: String,
-                       fragment: Try[Array[Byte]],
-                       private[scala] override val _xattr: Boolean = false,
-                       private[scala] override val _createPath: Boolean = false,
-                       private[scala] override val _expandMacro: Boolean = false
-                      ) extends MutateInSpecStandard {
+case class ArrayInsert(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_INSERT
 
   /** $Xattr */
@@ -374,12 +379,13 @@ case class ArrayInsert(path: String,
   }
 }
 
-case class ArrayAddUnique(path: String,
-                          fragment: Try[Array[Byte]],
-                          private[scala] override val _xattr: Boolean = false,
-                          private[scala] override val _createPath: Boolean = false,
-                          private[scala] override val _expandMacro: Boolean = false
-                         ) extends MutateInSpecStandard {
+case class ArrayAddUnique(
+    path: String,
+    fragment: Try[Array[Byte]],
+    private[scala] override val _xattr: Boolean = false,
+    private[scala] override val _createPath: Boolean = false,
+    private[scala] override val _expandMacro: Boolean = false
+) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
 
   /** $Xattr */
@@ -393,11 +399,12 @@ case class ArrayAddUnique(path: String,
   }
 }
 
-case class Increment(path: String,
-                     delta: Long,
-                     private[scala] val _xattr: Boolean = false,
-                     private[scala] val _createPath: Boolean = false
-                    ) extends MutateInSpec {
+case class Increment(
+    path: String,
+    delta: Long,
+    private[scala] val _xattr: Boolean = false,
+    private[scala] val _createPath: Boolean = false
+) extends MutateInSpec {
   override val typ: SubdocCommandType = SubdocCommandType.COUNTER
 
   /** $Xattr */
@@ -415,4 +422,3 @@ case class Increment(path: String,
     new SubdocMutateRequest.Command(typ, path, bytes, _createPath, _xattr, false)
   }
 }
-

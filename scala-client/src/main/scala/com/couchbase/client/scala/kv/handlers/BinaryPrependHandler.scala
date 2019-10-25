@@ -35,15 +35,16 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class BinaryPrependHandler(hp: HandlerParams)
-  extends RequestHandler[PrependResponse, MutationResult] {
+    extends RequestHandler[PrependResponse, MutationResult] {
 
-  def request(id: String,
-                 content: Array[Byte],
-                 cas: Long = 0,
-                 durability: Durability,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[PrependRequest] = {
+  def request(
+      id: String,
+      content: Array[Byte],
+      cas: Long = 0,
+      durability: Durability,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[PrependRequest] = {
 
     val validations: Try[PrependRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -56,9 +57,9 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-        Success(new PrependRequest(
+    } else {
+      Success(
+        new PrependRequest(
           timeout,
           hp.core.context(),
           hp.collectionIdentifier,
@@ -67,7 +68,8 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
           content,
           cas,
           durability.toDurabilityLevel
-        ))
+        )
+      )
     }
   }
 

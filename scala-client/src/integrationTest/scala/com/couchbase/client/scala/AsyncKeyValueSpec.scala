@@ -16,8 +16,8 @@ import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
 class AsyncKeyValueSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
-  private var blocking: Collection = _
+  private var cluster: Cluster      = _
+  private var blocking: Collection  = _
   private var coll: AsyncCollection = _
 
   // All async operations, including onComplete, map, flatMap, require an ec
@@ -43,16 +43,17 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
   @Test
   def upsert(): Unit = {
     val latch = new CountDownLatch(1)
-    val id = TestUtils.docId()
-    val json = JsonObject("foo" -> "bar", "baz" -> "qux")
+    val id    = TestUtils.docId()
+    val json  = JsonObject("foo" -> "bar", "baz" -> "qux")
 
-    val result = coll.upsert(id, json)
+    val result = coll
+      .upsert(id, json)
       .flatMap(_ => coll.get(id))
       .map(_.contentAs[JsonObjectSafe].get)
       .map(_.str("does_not_exist").get)
 
     result onComplete {
-      case Success(value)     => assert(false)
+      case Success(value) => assert(false)
       case Failure(err: NoSuchElementException) =>
         latch.countDown()
       case Failure(exception) =>

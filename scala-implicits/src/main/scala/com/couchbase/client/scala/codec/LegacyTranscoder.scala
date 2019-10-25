@@ -26,22 +26,23 @@ class LegacyTranscoder() extends TranscoderWithSerializer {
   override def encode[T](value: T, serializer: JsonSerializer[T]): Try[EncodedValue] = {
     value match {
       case x: Array[Byte] => Success(EncodedValue(x, CodecFlags.BINARY_COMPAT_FLAGS))
-      case x: String => Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS))
+      case x: String =>
+        Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS))
       case _ =>
-        serializer.serialize(value)
+        serializer
+          .serialize(value)
           .map(bytes => EncodedValue(bytes, CodecFlags.JSON_COMPAT_FLAGS))
     }
   }
 
-  override def decode[T](input: Array[Byte], flags: Int, serializer: JsonDeserializer[T])
-                        (implicit tag: TypeTag[T]): Try[T] = {
+  override def decode[T](input: Array[Byte], flags: Int, serializer: JsonDeserializer[T])(
+      implicit tag: TypeTag[T]
+  ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
       Success(input.asInstanceOf[T])
-    }
-    else if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
+    } else if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
       Success(new String(input, StandardCharsets.UTF_8).asInstanceOf[T])
-    }
-    else {
+    } else {
       serializer.deserialize(input)
     }
   }

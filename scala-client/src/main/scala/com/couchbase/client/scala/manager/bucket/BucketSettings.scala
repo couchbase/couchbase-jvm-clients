@@ -43,16 +43,18 @@ object BucketType {
     override def alias: String = "ephemeral"
   }
 
-  implicit val rw: CouchbasePickler.ReadWriter[BucketType] = CouchbasePickler.readwriter[String].bimap[BucketType](
-    x => x.alias,
-    str => str match {
-      case "membase" => Couchbase
-      case "memcached" => Memcached
-      case "ephemeral" => Ephemeral
-    })
+  implicit val rw: CouchbasePickler.ReadWriter[BucketType] = CouchbasePickler
+    .readwriter[String]
+    .bimap[BucketType](
+      x => x.alias,
+      str =>
+        str match {
+          case "membase"   => Couchbase
+          case "memcached" => Memcached
+          case "ephemeral" => Ephemeral
+        }
+    )
 }
-
-
 @Volatile
 sealed trait EjectionMethod {
   def alias: String
@@ -68,13 +70,16 @@ object EjectionMethod {
     override def alias: String = "valueOnly"
   }
 
-  implicit val rw: CouchbasePickler.ReadWriter[EjectionMethod] = CouchbasePickler.readwriter[String]
+  implicit val rw: CouchbasePickler.ReadWriter[EjectionMethod] = CouchbasePickler
+    .readwriter[String]
     .bimap[EjectionMethod](
-    x => x.alias,
-    str => str match {
-      case "fullEviction" => FullEviction
-      case "valueOnly" => ValueOnly
-    })
+      x => x.alias,
+      str =>
+        str match {
+          case "fullEviction" => FullEviction
+          case "valueOnly"    => ValueOnly
+        }
+    )
 }
 
 @Volatile
@@ -96,14 +101,17 @@ object CompressionMode {
     override def alias: String = "active"
   }
 
-  implicit val rw: CouchbasePickler.ReadWriter[CompressionMode] = CouchbasePickler.readwriter[String]
+  implicit val rw: CouchbasePickler.ReadWriter[CompressionMode] = CouchbasePickler
+    .readwriter[String]
     .bimap[CompressionMode](
-    x => x.alias,
-    str => str match {
-      case "off" => Off
-      case "passive" => Passive
-      case "active" => Active
-    })
+      x => x.alias,
+      str =>
+        str match {
+          case "off"     => Off
+          case "passive" => Passive
+          case "active"  => Active
+        }
+    )
 
 }
 
@@ -122,27 +130,30 @@ object ConflictResolutionType {
     override def alias: String = "seqno"
   }
 
-  implicit val rw: CouchbasePickler.ReadWriter[ConflictResolutionType] = CouchbasePickler.readwriter[String]
+  implicit val rw: CouchbasePickler.ReadWriter[ConflictResolutionType] = CouchbasePickler
+    .readwriter[String]
     .bimap[ConflictResolutionType](
-    x => x.alias,
-    str => str match {
-      case "lww" => Timestamp
-      case "seqno" => SequenceNumber
-    })
+      x => x.alias,
+      str =>
+        str match {
+          case "lww"   => Timestamp
+          case "seqno" => SequenceNumber
+        }
+    )
 }
-
-
 @Volatile
-case class CreateBucketSettings(private[scala] val name: String,
-                                private[scala] val ramQuotaMB: Int,
-                                private[scala] val flushEnabled: Option[Boolean] = None,
-                                private[scala] val numReplicas: Option[Int] = None,
-                                private[scala] val replicaIndexes: Option[Boolean] = None,
-                                private[scala] val bucketType: Option[BucketType] = None,
-                                private[scala] val ejectionMethod: Option[EjectionMethod] = None,
-                                private[scala] val maxTTL: Option[Int] = None,
-                                private[scala] val compressionMode: Option[CompressionMode] = None,
-                                private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None) {
+case class CreateBucketSettings(
+    private[scala] val name: String,
+    private[scala] val ramQuotaMB: Int,
+    private[scala] val flushEnabled: Option[Boolean] = None,
+    private[scala] val numReplicas: Option[Int] = None,
+    private[scala] val replicaIndexes: Option[Boolean] = None,
+    private[scala] val bucketType: Option[BucketType] = None,
+    private[scala] val ejectionMethod: Option[EjectionMethod] = None,
+    private[scala] val maxTTL: Option[Int] = None,
+    private[scala] val compressionMode: Option[CompressionMode] = None,
+    private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None
+) {
   def flushEnabled(value: Boolean): CreateBucketSettings = {
     copy(flushEnabled = Some(value))
   }
@@ -185,21 +196,24 @@ object CreateBucketSettings {
 }
 
 @Volatile
-case class BucketSettings(name: String,
-                          @upickle.implicits.key("flush")
-                          flushEnabled: Boolean,
-                          @upickle.implicits.key("quota")
-                          ramQuotaMB: Int,
-                          numReplicas: Int,
-                          @upickle.implicits.key("replicaIndex")
-                          replicaIndexes: Boolean,
-                          bucketType: BucketType,
-                          @upickle.implicits.key("evictionPolicy")
-                          ejectionMethod: EjectionMethod,
-                          maxTTL: Int,
-                          compressionMode: CompressionMode) {
+case class BucketSettings(
+    name: String,
+    @upickle.implicits.key("flush")
+    flushEnabled: Boolean,
+    @upickle.implicits.key("quota")
+    ramQuotaMB: Int,
+    numReplicas: Int,
+    @upickle.implicits.key("replicaIndex")
+    replicaIndexes: Boolean,
+    bucketType: BucketType,
+    @upickle.implicits.key("evictionPolicy")
+    ejectionMethod: EjectionMethod,
+    maxTTL: Int,
+    compressionMode: CompressionMode
+) {
   def toCreateBucketSettings: CreateBucketSettings = {
-    CreateBucketSettings(name,
+    CreateBucketSettings(
+      name,
       ramQuotaMB,
       Some(flushEnabled),
       Some(numReplicas),
@@ -207,33 +221,36 @@ case class BucketSettings(name: String,
       Some(bucketType),
       Some(ejectionMethod),
       Some(maxTTL),
-      Some(compressionMode))
+      Some(compressionMode)
+    )
   }
 }
 
 object BucketSettings {
-  implicit val rw: CouchbasePickler.ReadWriter[BucketSettings] = CouchbasePickler.readwriter[ujson.Obj]
+  implicit val rw: CouchbasePickler.ReadWriter[BucketSettings] = CouchbasePickler
+    .readwriter[ujson.Obj]
     .bimap[BucketSettings](
-    (x: BucketSettings) => {
-      // Serialization not used
-      ujson.Obj()
-    },
-    (json: ujson.Obj) => {
-      val flushEnabled = Try(json("flush").bool).toOption.getOrElse(false)
-      val rawRAM = json("quota")("rawRAM").num.toInt
-      val ramMB = rawRAM / (1024 * 1024)
-      val numReplicas = json("replicaNumber").num.toInt
+      (x: BucketSettings) => {
+        // Serialization not used
+        ujson.Obj()
+      },
+      (json: ujson.Obj) => {
+        val flushEnabled = Try(json("flush").bool).toOption.getOrElse(false)
+        val rawRAM       = json("quota")("rawRAM").num.toInt
+        val ramMB        = rawRAM / (1024 * 1024)
+        val numReplicas  = json("replicaNumber").num.toInt
 
-      BucketSettings(
-        json("name").str,
-        flushEnabled,
-        ramMB,
-        numReplicas,
-        Try(json("replicaIndex").bool).toOption.getOrElse(false),
-        CouchbasePickler.read[BucketType](json("bucketType")),
-        CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
-        json("maxTTL").num.toInt,
-        CouchbasePickler.read[CompressionMode](json("compressionMode")))
-    }
-  )
+        BucketSettings(
+          json("name").str,
+          flushEnabled,
+          ramMB,
+          numReplicas,
+          Try(json("replicaIndex").bool).toOption.getOrElse(false),
+          CouchbasePickler.read[BucketType](json("bucketType")),
+          CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
+          json("maxTTL").num.toInt,
+          CouchbasePickler.read[CompressionMode](json("compressionMode"))
+        )
+      }
+    )
 }

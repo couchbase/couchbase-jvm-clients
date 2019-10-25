@@ -24,16 +24,12 @@ import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, Igno
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-
-
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class PingSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
-  private var bucket: Bucket = _
+  private var cluster: Cluster   = _
+  private var bucket: Bucket     = _
   private var bucketName: String = _
-
-
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()

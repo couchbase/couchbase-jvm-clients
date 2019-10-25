@@ -26,18 +26,18 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV exists operations.
   *
   * @author Graham Pople
   */
 private[scala] class ExistsHandler(hp: HandlerParams)
-  extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
-  def request(id: String,
-              timeout: java.time.Duration,
-              retryStrategy: RetryStrategy
-             ): Try[ObserveViaCasRequest] = {
+    extends RequestHandler[ObserveViaCasResponse, ExistsResult] {
+  def request(
+      id: String,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[ObserveViaCasRequest] = {
     val validations: Try[ObserveViaCasRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
@@ -46,16 +46,18 @@ private[scala] class ExistsHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new ObserveViaCasRequest(timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        id,
-        true,
-        0
-      ))
+    } else {
+      Success(
+        new ObserveViaCasRequest(
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          id,
+          true,
+          0
+        )
+      )
     }
   }
 
@@ -63,7 +65,9 @@ private[scala] class ExistsHandler(hp: HandlerParams)
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val exists: Boolean = response.observeStatus() match {
-          case ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED | ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED => true
+          case ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED |
+              ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED =>
+            true
           case _ => false
         }
 

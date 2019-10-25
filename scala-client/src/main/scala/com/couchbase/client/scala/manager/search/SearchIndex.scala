@@ -24,33 +24,33 @@ import com.couchbase.client.scala.util.CouchbasePickler
 
 import scala.util.{Failure, Try}
 
-private[scala] case class SearchIndexWrapper private(indexDef: SearchIndex)
+private[scala] case class SearchIndexWrapper private (indexDef: SearchIndex)
 
 private[scala] object SearchIndexWrapper {
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndexWrapper] = CouchbasePickler.macroRW
 }
 
-private[scala] case class SearchIndexesWrapper private(indexDefs: Map[String, SearchIndex])
-
+private[scala] case class SearchIndexesWrapper private (indexDefs: Map[String, SearchIndex])
 
 private[scala] object SearchIndexesWrapper {
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndexesWrapper] = CouchbasePickler.macroRW
 }
 
-case class SearchIndex private(name: String,
-                               sourceName: String,
-                              // The UUID is server-assigned. It should not be present on a created index, but must
-                              // be present on an updated index.
-                               uuid: Option[String] = None,
-                               @upickle.implicits.key("type") typ: Option[String] = None,
-                               private[scala] val params: Option[ujson.Obj] = None,
-                               @upickle.implicits.key("uuid") sourceUUID: Option[String] = None,
-                               private[scala] val sourceParams: Option[ujson.Obj] = None,
-                               sourceType: Option[String] = None,
-                               private[scala] val planParams: Option[ujson.Obj] = None
-                              ) {
+case class SearchIndex private (
+    name: String,
+    sourceName: String,
+    // The UUID is server-assigned. It should not be present on a created index, but must
+    // be present on an updated index.
+    uuid: Option[String] = None,
+    @upickle.implicits.key("type") typ: Option[String] = None,
+    private[scala] val params: Option[ujson.Obj] = None,
+    @upickle.implicits.key("uuid") sourceUUID: Option[String] = None,
+    private[scala] val sourceParams: Option[ujson.Obj] = None,
+    sourceType: Option[String] = None,
+    private[scala] val planParams: Option[ujson.Obj] = None
+) {
   private val DefaultSouceType = "couchbase"
-  private val DefaultType = "fulltext-index"
+  private val DefaultType      = "fulltext-index"
 
   private[scala] def toJson: String = {
     val output = JsonObject.create
@@ -62,11 +62,14 @@ case class SearchIndex private(name: String,
     output.toString
   }
 
-  def planParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(planParams, deserializer)
+  def planParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] =
+    convert(planParams, deserializer)
 
-  def paramsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(params, deserializer)
+  def paramsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] =
+    convert(params, deserializer)
 
-  def sourceParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(sourceParams, deserializer)
+  def sourceParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] =
+    convert(sourceParams, deserializer)
 
   private def convert[T](value: Option[ujson.Obj], deserializer: JsonDeserializer[T]) = {
     value match {
@@ -85,5 +88,3 @@ object SearchIndex {
 
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndex] = CouchbasePickler.macroRW
 }
-
-

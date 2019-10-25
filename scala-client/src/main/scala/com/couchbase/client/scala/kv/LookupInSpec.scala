@@ -26,6 +26,7 @@ package com.couchbase.client.scala.kv
   * @since 1.0.0
   */
 object LookupInSpec {
+
   /** Gets a field from a JSON document.
     *
     * To fetch the full document, use an empty path of "".
@@ -56,24 +57,24 @@ object LookupInSpec {
 /** Represents a single SubDocument lookup operation, such as fetching a particular field. */
 sealed trait LookupInSpec
 
-case class Get(path: String,
-               private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Get(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+
   /** $Xattr */
   def xattr: Get = {
     copy(path, _xattr = true)
   }
 }
 
-case class Exists(path: String,
-                  private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Exists(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+
   /** $Xattr */
   def xattr: Exists = {
     copy(path, _xattr = true)
   }
 }
 
-case class Count(path: String,
-                 private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Count(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+
   /** $Xattr */
   def xattr: Count = {
     copy(path, _xattr = true)

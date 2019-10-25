@@ -28,19 +28,21 @@ import scala.util.Success
 
 /** Options to be used with a Full Text Search query.
   */
-case class SearchOptions(private[scala] val limit: Option[Int] = None,
-                         private[scala] val skip: Option[Int] = None,
-                         private[scala] val explain: Option[Boolean] = None,
-                         private[scala] val highlightStyle: Option[HighlightStyle] = None,
-                         private[scala] val highlightFields: Option[Seq[String]] = None,
-                         private[scala] val fields: Option[Seq[String]] = None,
-                         private[scala] val sort: Option[JsonArray] = None,
-                         private[scala] val facets: Option[Map[String, SearchFacet]] = None,
-                         private[scala] val serverSideTimeout: Option[Duration] = None,
-                         private[scala] val deferredError: Option[RuntimeException] = None,
-                         private[scala] val scanConsistency: Option[SearchScanConsistency] = None,
-                         private[scala] val timeout: Option[Duration] = None,
-                         private[scala] val retryStrategy: Option[RetryStrategy] = None) {
+case class SearchOptions(
+    private[scala] val limit: Option[Int] = None,
+    private[scala] val skip: Option[Int] = None,
+    private[scala] val explain: Option[Boolean] = None,
+    private[scala] val highlightStyle: Option[HighlightStyle] = None,
+    private[scala] val highlightFields: Option[Seq[String]] = None,
+    private[scala] val fields: Option[Seq[String]] = None,
+    private[scala] val sort: Option[JsonArray] = None,
+    private[scala] val facets: Option[Map[String, SearchFacet]] = None,
+    private[scala] val serverSideTimeout: Option[Duration] = None,
+    private[scala] val deferredError: Option[RuntimeException] = None,
+    private[scala] val scanConsistency: Option[SearchScanConsistency] = None,
+    private[scala] val timeout: Option[Duration] = None,
+    private[scala] val retryStrategy: Option[RetryStrategy] = None
+) {
 
   /** Add a limit to the query on the number of rows it can return.
     *
@@ -185,8 +187,7 @@ case class SearchOptions(private[scala] val limit: Option[Int] = None,
     *
     * @param queryJson the prepared { @link JsonObject} for the whole query.
     */
-  private[scala] def injectParams(indexName: String,
-                                  queryJson: JsonObject): Unit = {
+  private[scala] def injectParams(indexName: String, queryJson: JsonObject): Unit = {
     limit.foreach(v => if (v > 0) queryJson.put("size", v))
     skip.foreach(v => if (v > 0) queryJson.put("from", v))
     explain.foreach(v => queryJson.put("explain", v))
@@ -195,8 +196,8 @@ case class SearchOptions(private[scala] val limit: Option[Int] = None,
       val highlight = JsonObject.create
       hs match {
         case HighlightStyle.ServerDefault =>
-        case HighlightStyle.HTML => highlight.put("style", "html")
-        case HighlightStyle.ANSI => highlight.put("style", "ansi")
+        case HighlightStyle.HTML          => highlight.put("style", "html")
+        case HighlightStyle.ANSI          => highlight.put("style", "ansi")
       }
 
       highlightFields.foreach(hf => {
@@ -212,7 +213,7 @@ case class SearchOptions(private[scala] val limit: Option[Int] = None,
     sort.foreach(v => queryJson.put("sort", v))
     facets.foreach(f => {
       val facets = JsonObject.create
-      for ( entry <- f ) {
+      for (entry <- f) {
         val facetJson = JsonObject.create
         entry._2.injectParams(facetJson)
         facets.put(entry._1, facetJson)
@@ -235,7 +236,7 @@ case class SearchOptions(private[scala] val limit: Option[Int] = None,
 
   private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
     val result = JsonObjectSafe.create
-    for ( token <- tokens ) {
+    for (token <- tokens) {
       val bucket: JsonObjectSafe = result.obj(token.bucketName) match {
         case Success(bucket) => bucket
         case _ =>
@@ -244,11 +245,12 @@ case class SearchOptions(private[scala] val limit: Option[Int] = None,
           out
       }
 
-      bucket.put(String.valueOf(token.partitionID),
-        JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID)))
+      bucket.put(
+        String.valueOf(token.partitionID),
+        JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID))
+      )
     }
 
     result.o
   }
 }
-

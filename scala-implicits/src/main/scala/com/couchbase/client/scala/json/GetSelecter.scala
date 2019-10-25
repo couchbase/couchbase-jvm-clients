@@ -6,41 +6,43 @@ import scala.annotation.tailrec
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}
 
-
 /** Allows dynamically traversing a [[JsonObject]] using Scala's `Dynamic` feature, such as:
-  * 
+  *
   * {{{
   *   val json: JsonObject = // ...
   *   val str: String = json.dyn.someObject.someArray(3).someField.str
   * }}}
-  * 
+  *
   * It can be thought of as building up a cursor, which is only evaluated when pulling out a particular value.
-  * 
+  *
   * It is accessed through [[JsonObject.dyn]] and [[JsonArray.dyn]].
-  * 
+  *
   * This is one of the few APIs that can throw exceptions.  If a functional interface that returns `Try` is preferred,
   * then use [[GetSelecterSafe]].
-  * 
+  *
   * @define SupportedNumTypes the supported number types (Int, Double, Float, Long, Short)
-  *                           
+  *
   * @author Graham Pople
-  * @since 1.0.0        
+  * @since 1.0.0
   */
-case class GetSelecter(private val in: Either[JsonObject, JsonArray],
-                       private val path: Seq[PathElement]) extends Dynamic {
+case class GetSelecter(
+    private val in: Either[JsonObject, JsonArray],
+    private val path: Seq[PathElement]
+) extends Dynamic {
   private val mapped = in.left.map(_.safe).right.map(_.safe)
 
   def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ PathObjectOrField(name))
 
-  def applyDynamic(name: String)(index: Int): GetSelecter = GetSelecter(in, path :+ PathArray(name, index))
+  def applyDynamic(name: String)(index: Int): GetSelecter =
+    GetSelecter(in, path :+ PathArray(name, index))
 
   private def pathStr = path.toString()
 
   /** Returns the value at the current cursor as a `String`.
-    * 
+    *
     * If that value is not itself a String, its `toString` value will be returned.  If the value is `null`, then
     * `null` will be returned.
-    * 
+    *
     * @throws DecodingFailedException if path established by the cursor could not be evaluated
     */
   def str: String = GetSelecter.eval(mapped, path).map(v => ValueConvertor.str(v, pathStr)).get
@@ -65,7 +67,8 @@ case class GetSelecter(private val in: Either[JsonObject, JsonArray],
     * @throws DecodingFailedException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
-  def numDouble: Double = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numDouble(v, pathStr)).get
+  def numDouble: Double =
+    GetSelecter.eval(mapped, path).map(v => ValueConvertor.numDouble(v, pathStr)).get
 
   /** Returns the value at the current cursor as a `Float`.
     *
@@ -76,7 +79,8 @@ case class GetSelecter(private val in: Either[JsonObject, JsonArray],
     * @throws DecodingFailedException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
-  def numFloat: Float = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numFloat(v, pathStr)).get
+  def numFloat: Float =
+    GetSelecter.eval(mapped, path).map(v => ValueConvertor.numFloat(v, pathStr)).get
 
   /** Returns the value at the current cursor as a `Long`.
     *
@@ -87,7 +91,8 @@ case class GetSelecter(private val in: Either[JsonObject, JsonArray],
     * @throws DecodingFailedException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
-  def numLong: Long = GetSelecter.eval(mapped, path).map(v => ValueConvertor.numLong(v, pathStr)).get
+  def numLong: Long =
+    GetSelecter.eval(mapped, path).map(v => ValueConvertor.numLong(v, pathStr)).get
 
   /** Returns the value at the current cursor as a `Boolean`.
     *
@@ -118,14 +123,20 @@ case class GetSelecter(private val in: Either[JsonObject, JsonArray],
 }
 
 private[scala] object GetSelecter {
-  private def couldNotFindKey(name: String) = new DecodingFailedException(s"Could not find key $name")
-  private def expectedObjectButFoundArray(name: String) = new DecodingFailedException(s"Expected object or field for '$name' but found an array")
-  private def expectedArrayButFoundObject(name: String) = new DecodingFailedException(s"Expected array for '$name' but found an object")
+  private def couldNotFindKey(name: String) =
+    new DecodingFailedException(s"Could not find key $name")
+  private def expectedObjectButFoundArray(name: String) =
+    new DecodingFailedException(s"Expected object or field for '$name' but found an array")
+  private def expectedArrayButFoundObject(name: String) =
+    new DecodingFailedException(s"Expected array for '$name' but found an object")
 
-  /** The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that 
+  /** The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that
     * path. */
   @tailrec
-  private[scala] def eval(cursor: Either[JsonObjectSafe, JsonArraySafe], path: Seq[PathElement]): Try[Any] = {
+  private[scala] def eval(
+      cursor: Either[JsonObjectSafe, JsonArraySafe],
+      path: Seq[PathElement]
+  ): Try[Any] = {
     path match {
       // x is what we're looking for next, cursor is what out cursor's on
 
@@ -136,7 +147,7 @@ private[scala] object GetSelecter {
               case Left(obj) =>
                 obj.get(name) match {
                   case Success(o) => Success(o)
-                  case _ => Failure(couldNotFindKey(name))
+                  case _          => Failure(couldNotFindKey(name))
                 }
 
               case Right(arr) =>
@@ -150,9 +161,13 @@ private[scala] object GetSelecter {
                   case Success(arr) =>
                     arr.get(idx) match {
                       case Success(v) => Success(v)
-                      case Failure(err) => Failure(new DecodingFailedException(s"Could not get idx $idx in array '$name'"))
+                      case Failure(err) =>
+                        Failure(
+                          new DecodingFailedException(s"Could not get idx $idx in array '$name'")
+                        )
                     }
-                  case Failure(err) => Failure(new DecodingFailedException(s"Could not find array '$name'"))
+                  case Failure(err) =>
+                    Failure(new DecodingFailedException(s"Could not find array '$name'"))
                 }
               case Right(arr) =>
                 Failure(expectedObjectButFoundArray(name))
@@ -162,19 +177,23 @@ private[scala] object GetSelecter {
       case x :: xs =>
         x match {
           case PathObjectOrField(name) =>
-
             cursor match {
               case Left(obj) =>
                 val inObj = obj.get(name)
 
                 inObj match {
                   case Success(o: JsonObjectSafe) => eval(Left(o), xs)
-                  case Success(a: JsonArraySafe) => eval(Right(a), xs)
-                  case Success(o: JsonObject) => eval(Left(JsonObjectSafe(o)), xs)
-                  case Success(a: JsonArray) => eval(Right(JsonArraySafe(a)), xs)
+                  case Success(a: JsonArraySafe)  => eval(Right(a), xs)
+                  case Success(o: JsonObject)     => eval(Left(JsonObjectSafe(o)), xs)
+                  case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
                   case Success(v: Any) =>
-                    Failure(new DecodingFailedException(s"Needed object or array at $name, but found '${v}'"))
-                  case _ => Failure(new DecodingFailedException(s"Could not find anything matching $name"))
+                    Failure(
+                      new DecodingFailedException(
+                        s"Needed object or array at $name, but found '${v}'"
+                      )
+                    )
+                  case _ =>
+                    Failure(new DecodingFailedException(s"Could not find anything matching $name"))
                 }
 
               case Right(arr) =>
@@ -190,12 +209,21 @@ private[scala] object GetSelecter {
 
                     atIdx match {
                       case Success(o: JsonObjectSafe) => eval(Left(o), xs)
-                      case Success(a: JsonArraySafe) => eval(Right(a), xs)
-                      case Success(o: JsonObject) => eval(Left(JsonObjectSafe(o)), xs)
-                      case Success(a: JsonArray) => eval(Right(JsonArraySafe(a)), xs)
+                      case Success(a: JsonArraySafe)  => eval(Right(a), xs)
+                      case Success(o: JsonObject)     => eval(Left(JsonObjectSafe(o)), xs)
+                      case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
                       case Success(v: Any) =>
-                        Failure(new DecodingFailedException(s"Needed object or array at $name[$idx], but found '${v}'"))
-                      case _ => Failure(new DecodingFailedException(s"Found array $name but nothing at index $idx"))
+                        Failure(
+                          new DecodingFailedException(
+                            s"Needed object or array at $name[$idx], but found '${v}'"
+                          )
+                        )
+                      case _ =>
+                        Failure(
+                          new DecodingFailedException(
+                            s"Found array $name but nothing at index $idx"
+                          )
+                        )
                     }
 
                   case _ => Failure(new DecodingFailedException(s"Could not find array '$name'"))
@@ -207,4 +235,3 @@ private[scala] object GetSelecter {
     }
   }
 }
-

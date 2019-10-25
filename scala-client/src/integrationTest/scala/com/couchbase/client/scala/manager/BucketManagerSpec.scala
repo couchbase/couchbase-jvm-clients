@@ -30,11 +30,9 @@ import org.junit.jupiter.api._
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class BucketManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
+  private var cluster: Cluster       = _
   private var buckets: BucketManager = _
-  private var bucketName: String = _
-
-
+  private var bucketName: String     = _
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
@@ -50,9 +48,9 @@ class BucketManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def access() {
-    val buckets: BucketManager = cluster.buckets
+    val buckets: BucketManager          = cluster.buckets
     val reactive: ReactiveBucketManager = cluster.reactive.buckets
-    val async: AsyncBucketManager = cluster.async.buckets
+    val async: AsyncBucketManager       = cluster.async.buckets
   }
 
   /**
@@ -72,7 +70,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def getAllBuckets(): Unit = {
     val allBucketSettings = buckets.getAllBuckets().get
     assertFalse(allBucketSettings.isEmpty)
-    for ( entry <- allBucketSettings ) {
+    for (entry <- allBucketSettings) {
       if (entry.name == bucketName) assertCreatedBucket(entry)
     }
   }
@@ -80,7 +78,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @Test
   def createAndDropBucketWithDefaults(): Unit = {
     val name: String = UUID.randomUUID.toString
-    val bucket = CreateBucketSettings(name, 100)
+    val bucket       = CreateBucketSettings(name, 100)
     buckets.create(bucket).get
     val found = buckets.getAllBuckets().get.find(_.name == name).get
     assert(!found.flushEnabled)
@@ -126,9 +124,9 @@ class BucketManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def flushBucket(): Unit = {
-    val bucket = cluster.bucket(bucketName)
+    val bucket                 = cluster.bucket(bucketName)
     val collection: Collection = bucket.defaultCollection
-    val id: String = UUID.randomUUID.toString
+    val id: String             = UUID.randomUUID.toString
     collection.upsert(id, "value").get
     assert(collection.exists(id).get.exists)
     buckets.flushBucket(bucketName).get
@@ -138,15 +136,17 @@ class BucketManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def createShouldFailWhenPresent(): Unit = {
-    assertThrows(classOf[BucketAlreadyExistsException],
-      () => buckets.create(CreateBucketSettings(bucketName, 100)).get)
+    assertThrows(
+      classOf[BucketAlreadyExistsException],
+      () => buckets.create(CreateBucketSettings(bucketName, 100)).get
+    )
   }
 
   @Test
   def upsertShouldOverrideWhenPresent(): Unit = {
     val loaded: BucketSettings = buckets.getBucket(bucketName).get
-    val newQuota: Int = loaded.ramQuotaMB + 10
-    val newSettings = loaded.toCreateBucketSettings.ramQuotaMB(newQuota)
+    val newQuota: Int          = loaded.ramQuotaMB + 10
+    val newSettings            = loaded.toCreateBucketSettings.ramQuotaMB(newQuota)
     buckets.updateBucket(newSettings).get
     val modified: BucketSettings = buckets.getBucket(bucketName).get
     assertEquals(newQuota, modified.ramQuotaMB)

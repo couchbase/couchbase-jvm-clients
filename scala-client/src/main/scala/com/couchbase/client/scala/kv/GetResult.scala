@@ -30,20 +30,22 @@ import scala.util.{Failure, Success, Try}
   * @param cas        the document's CAS value at the time of the lookup
   * @param expiry     if the document was fetched with the `withExpiry` flag set then this will contain the
   *                   document's expiration value.  Otherwise it will be None.
- *
+  *
   * @define SupportedTypes this can be of any type for which an implicit
   *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @author Graham Pople
   * @since 1.0.0
   */
-case class GetResult(id: String,
-                     // It's Right only in the case where projections were requested
-                     private val _content: Either[Array[Byte], JsonObject],
-                     private[scala] val flags: Int,
-                     cas: Long,
-                     expiry: Option[Duration],
-                     transcoder: Transcoder) {
+case class GetResult(
+    id: String,
+    // It's Right only in the case where projections were requested
+    private val _content: Either[Array[Byte], JsonObject],
+    private[scala] val flags: Int,
+    cas: Long,
+    expiry: Option[Duration],
+    transcoder: Transcoder
+) {
 
   /** Return the content, converted into the application's preferred representation.
     *
@@ -54,13 +56,16 @@ case class GetResult(id: String,
     *
     * @tparam T $SupportedTypes
     */
-  def contentAs[T]
-  (implicit deserializer: JsonDeserializer[T], tt: TypeTag[T], tag: ClassTag[T]): Try[T] = {
+  def contentAs[T](
+      implicit deserializer: JsonDeserializer[T],
+      tt: TypeTag[T],
+      tag: ClassTag[T]
+  ): Try[T] = {
     _content match {
       case Left(bytes) =>
         // Regular case
         transcoder match {
-          case t: TranscoderWithSerializer => t.decode(bytes, flags, deserializer)
+          case t: TranscoderWithSerializer    => t.decode(bytes, flags, deserializer)
           case t: TranscoderWithoutSerializer => t.decode(bytes, flags)
         }
 
@@ -68,10 +73,14 @@ case class GetResult(id: String,
         // Projection
         tag.unapply(obj) match {
           case Some(o) => Success(o)
-          case _ => Failure(new IllegalArgumentException("Projection results can currently only be returned with " +
-            "contentAs[JsonObject]"))
+          case _ =>
+            Failure(
+              new IllegalArgumentException(
+                "Projection results can currently only be returned with " +
+                  "contentAs[JsonObject]"
+              )
+            )
         }
     }
   }
 }
-

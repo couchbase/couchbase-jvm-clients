@@ -16,13 +16,17 @@ package com.couchbase.client.scala.util
  * limitations under the License.
  */
 
-
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services, TestClusterConfig, TestNodeConfig}
+import com.couchbase.client.test.{
+  ClusterAwareIntegrationTest,
+  Services,
+  TestClusterConfig,
+  TestNodeConfig
+}
 import org.junit.jupiter.api.Timeout
 
 import scala.collection.JavaConverters._
@@ -32,12 +36,11 @@ import scala.collection.JavaConverters._
   *
   * @since 3.0.0
   */
-object ScalaIntegrationTest {
-
-}
+object ScalaIntegrationTest {}
 
 @Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
+
   /**
     * Creates a {@link ClusterEnvironment.Builder} which already has the seed nodes and
     * credentials plugged and ready to use depending on the environment.
@@ -57,7 +60,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     val strings = seedNodes.map((s: SeedNode) => {
       s.kvPort match {
         case Some(kvPort) => s.address + ":" + kvPort
-        case _ => s.address
+        case _            => s.address
       }
     })
 
@@ -65,10 +68,9 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
   }
 
   private def seedNodes: Set[SeedNode] = {
-    config
-      .nodes.asScala
+    config.nodes.asScala
       .map((cfg: TestNodeConfig) => {
-        val kvPort = Some(cfg.ports.get(Services.KV).toInt)
+        val kvPort   = Some(cfg.ports.get(Services.KV).toInt)
         val httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
 
         SeedNode(cfg.hostname, kvPort, httpPort)

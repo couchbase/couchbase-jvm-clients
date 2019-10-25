@@ -25,21 +25,20 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV unlock operations.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class UnlockHandler(hp: HandlerParams)
-  extends RequestHandler[UnlockResponse, Unit] {
+private[scala] class UnlockHandler(hp: HandlerParams) extends RequestHandler[UnlockResponse, Unit] {
 
-  def request[T](id: String,
-                 cas: Long,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[UnlockRequest] = {
+  def request[T](
+      id: String,
+      cas: Long,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[UnlockRequest] = {
     val validations: Try[UnlockRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
@@ -49,22 +48,24 @@ private[scala] class UnlockHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new UnlockRequest(
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        id,
-        cas))
+    } else {
+      Success(
+        new UnlockRequest(
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          id,
+          cas
+        )
+      )
     }
   }
 
   def response(id: String, response: UnlockResponse): Unit = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _                      => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
   }
 }

@@ -32,11 +32,7 @@ trait TranscoderWithoutSerializer extends Transcoder {
 trait TranscoderWithSerializer extends Transcoder {
   def encode[A](value: A, serializer: JsonSerializer[A]): Try[EncodedValue]
 
-  def decode[A](value: Array[Byte], flags: Int, serializer: JsonDeserializer[A])
-               (implicit tag: TypeTag[A]): Try[A]
+  def decode[A](value: Array[Byte], flags: Int, serializer: JsonDeserializer[A])(
+      implicit tag: TypeTag[A]
+  ): Try[A]
 }
-
-
-
-
-

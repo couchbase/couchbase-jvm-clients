@@ -34,10 +34,11 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class ViewIndexManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
+  private var cluster: Cluster        = _
   private var views: ViewIndexManager = _
-  private var bucketName: String = _
-  private val Namespaces = Seq(DesignDocumentNamespace.Development, DesignDocumentNamespace.Production)
+  private var bucketName: String      = _
+  private val Namespaces =
+    Seq(DesignDocumentNamespace.Development, DesignDocumentNamespace.Production)
   private val OneExampleDesignDoc = DesignDocument("foo")
     .putView("a", View("function (doc, meta) { emit(doc.city, doc.sales); }", Some("_sum")))
     .putView("x", View("function (doc, meta) { emit(doc.a, doc.b); }"))
@@ -66,9 +67,9 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
     Namespaces.foreach(namespace => {
       ExampleDesignDocuments.foreach(doc => {
         views.dropDesignDocument(doc.name, namespace) match {
-          case Success(_) =>
+          case Success(_)                                    =>
           case Failure(err: DesignDocumentNotFoundException) => // ignore
-          case _ => assert(false)
+          case _                                             => assert(false)
         }
       })
     })
@@ -79,27 +80,27 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
     val x = views.dropDesignDocument("doesNotExist", DesignDocumentNamespace.Development)
 
     x match {
-      case Success(_) => assert(false)
+      case Success(_)                                    => assert(false)
       case Failure(err: DesignDocumentNotFoundException) =>
-      case _ => assert(false)
+      case _                                             => assert(false)
     }
   }
 
   @Test
   def publishAbsentDesignDoc(): Unit = {
     views.publishDesignDocument("doesNotExist") match {
-      case Success(_) => assert(false)
+      case Success(_)                                    => assert(false)
       case Failure(err: DesignDocumentNotFoundException) =>
-      case _ => assert(false)
+      case _                                             => assert(false)
     }
   }
 
   @Test
   def getAbsentDesignDoc(): Unit = {
     views.getDesignDocument("doesNotExist", DesignDocumentNamespace.Development) match {
-      case Success(_) => assert(false)
+      case Success(_)                                    => assert(false)
       case Failure(err: DesignDocumentNotFoundException) =>
-      case _ => assert(false)
+      case _                                             => assert(false)
     }
   }
 
@@ -138,14 +139,16 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
   def upsert(): Unit = {
     views.upsertDesignDocument(OneExampleDesignDoc, DesignDocumentNamespace.Development).get
 
-    val fetched = views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
+    val fetched =
+      views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
     assert(fetched == OneExampleDesignDoc)
   }
 
   @Test
   def getSingle(): Unit = {
     views.upsertDesignDocument(OneExampleDesignDoc, DesignDocumentNamespace.Development).get
-    val doc = views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
+    val doc =
+      views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
 
     assert(doc == OneExampleDesignDoc)
   }

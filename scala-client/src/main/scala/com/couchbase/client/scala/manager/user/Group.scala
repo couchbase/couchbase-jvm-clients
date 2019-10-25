@@ -24,10 +24,12 @@ import com.couchbase.client.scala.util.CouchbasePickler
   * @param description the group's description
   * @param roles       any roles associated with the group
   */
-case class Group(@upickle.implicits.key("id") name: String,
-                 description: String = "",
-                 roles: Seq[Role] = Seq(),
-                 @upickle.implicits.key("ldap_group_ref") ldapGroupReference: Option[String] = None) {
+case class Group(
+    @upickle.implicits.key("id") name: String,
+    description: String = "",
+    roles: Seq[Role] = Seq(),
+    @upickle.implicits.key("ldap_group_ref") ldapGroupReference: Option[String] = None
+) {
 
   /** Creates a copy of this Group with a new name. */
   def name(name: String): Group = {

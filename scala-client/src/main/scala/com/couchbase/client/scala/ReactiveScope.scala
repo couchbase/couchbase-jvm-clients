@@ -35,8 +35,7 @@ import scala.concurrent.ExecutionContext
   * @since 1.0.0
   */
 @Volatile
-class ReactiveScope(async: AsyncScope,
-                    bucketName: String) {
+class ReactiveScope(async: AsyncScope, bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
   /** The name of this scope. */

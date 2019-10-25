@@ -25,11 +25,14 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   *
   * @since 1.0.0
   */
-case class GeoDistanceQuery(private[scala] val locationLon: Double,
-                            private[scala] val locationLat: Double,
-                            private[scala] val distance: String,
-                            private[scala] val field: Option[String] = None,
-                            private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class GeoDistanceQuery(
+    private[scala] val locationLon: Double,
+    private[scala] val locationLat: Double,
+    private[scala] val distance: String,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
+
   /** If specified, only this field will be matched.
     *
     * @return a copy of this, for chaining

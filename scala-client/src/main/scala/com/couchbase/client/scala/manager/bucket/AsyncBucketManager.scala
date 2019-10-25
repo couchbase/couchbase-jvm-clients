@@ -21,47 +21,55 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-
-
 @Volatile
-class AsyncBucketManager(val reactive: ReactiveBucketManager)
-                        (implicit val ec: ExecutionContext) {
+class AsyncBucketManager(val reactive: ReactiveBucketManager)(implicit val ec: ExecutionContext) {
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy = reactive.defaultRetryStrategy
+  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
 
-  def create(settings: CreateBucketSettings,
-             timeout: Duration = defaultManagerTimeout,
-             retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def create(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.create(settings, timeout, retryStrategy).toFuture
   }
 
-  def updateBucket(settings: CreateBucketSettings,
-                   timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def updateBucket(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.updateBucket(settings, timeout, retryStrategy).toFuture
   }
 
-  def dropBucket(bucketName: String,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def dropBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.dropBucket(bucketName, timeout, retryStrategy).toFuture
   }
 
-  def getBucket(bucketName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Future[BucketSettings] = {
+  def getBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[BucketSettings] = {
     reactive.getBucket(bucketName, timeout, retryStrategy).toFuture
   }
 
-
-  def getAllBuckets(timeout: Duration = defaultManagerTimeout,
-                    retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Seq[BucketSettings]] = {
+  def getAllBuckets(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Seq[BucketSettings]] = {
     reactive.getAllBuckets(timeout, retryStrategy).collectSeq().toFuture
   }
 
-  def flushBucket(bucketName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def flushBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.flushBucket(bucketName, timeout, retryStrategy).toFuture
   }
 }

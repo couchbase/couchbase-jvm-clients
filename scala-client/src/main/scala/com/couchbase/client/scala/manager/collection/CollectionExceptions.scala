@@ -19,13 +19,13 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 
 case class ScopeNotFoundException(scopeName: String)
-  extends CouchbaseException(s"Scope [${redactMeta(scopeName)}] not found.")
+    extends CouchbaseException(s"Scope [${redactMeta(scopeName)}] not found.")
 
 case class CollectionNotFoundException(collectionName: String)
-  extends CouchbaseException(s"Collection [${redactMeta(collectionName)}] not found.")
+    extends CouchbaseException(s"Collection [${redactMeta(collectionName)}] not found.")
 
 case class ScopeAlreadyExistsException(scopeName: String)
-  extends CouchbaseException(s"Scope [${redactMeta(scopeName)}] already exists.")
+    extends CouchbaseException(s"Scope [${redactMeta(scopeName)}] already exists.")
 
 case class CollectionAlreadyExistsException(collectionName: String)
-  extends CouchbaseException(s"Collection [${redactMeta(collectionName)}] already exists.")
+    extends CouchbaseException(s"Collection [${redactMeta(collectionName)}] already exists.")

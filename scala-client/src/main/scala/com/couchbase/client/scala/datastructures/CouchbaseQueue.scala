@@ -23,37 +23,41 @@ import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 import scala.util.{Failure, Success}
 import scala.reflect.runtime.universe._
 
-
 /** Presents a Scala Queue interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
   */
-class CouchbaseQueue[T](id: String,
-                        collection: Collection,
-                        options: Option[CouchbaseCollectionOptions] = None)
-                       (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
-  extends CouchbaseBuffer(id, collection, options) {
+class CouchbaseQueue[T](
+    id: String,
+    collection: Collection,
+    options: Option[CouchbaseCollectionOptions] = None
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+    extends CouchbaseBuffer(id, collection, options) {
 
   def enqueue(elems: T*): Unit = this ++= elems
 
   def dequeue(): T = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.get("[-1]")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[T](0))
 
     result match {
       case Success(value) =>
-        val mutateResult = collection.mutateIn(id,
+        val mutateResult = collection.mutateIn(
+          id,
           Array(MutateInSpec.remove("[-1]")),
-            timeout = opts.timeout,
-            retryStrategy = opts.retryStrategy,
-            cas = op.get.cas,
-            durability = opts.durability)
+          timeout = opts.timeout,
+          retryStrategy = opts.retryStrategy,
+          cas = op.get.cas,
+          durability = opts.durability
+        )
 
         mutateResult match {
-          case Success(_) => value
+          case Success(_)                         => value
           case Failure(err: CASMismatchException) =>
             // Recurse to try again
             dequeue()

@@ -20,11 +20,9 @@ import com.couchbase.client.scala.json._
 
 import scala.util.Try
 
-
-
 /** Flags to indicate the content type of a document. */
 object DocumentFlags {
-  val Json: Int = CodecFlags.JSON_COMPAT_FLAGS
+  val Json: Int   = CodecFlags.JSON_COMPAT_FLAGS
   val Binary: Int = CodecFlags.BINARY_COMPAT_FLAGS
 
   // Non-JSON String, utf-8 encoded, no BOM: "hello world"
@@ -66,18 +64,10 @@ object Conversions {
     serializer.serialize(in)
   }
 
-  private[scala] def decode[T](bytes: Array[Byte])
-                              (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  private[scala] def decode[T](
+      bytes: Array[Byte]
+  )(implicit deserializer: JsonDeserializer[T]): Try[T] = {
     deserializer.deserialize(bytes)
   }
 
 }
-
-
-
-
-
-
-
-
-

@@ -7,7 +7,7 @@ object RowTraversalUtil {
   def traverse[T](it: Iterator[Try[T]]): Try[Seq[T]] = {
     // Not a functional implementation, going for performance
     var outFail: Try[_] = null
-    val out = ArrayBuffer.empty[T]
+    val out             = ArrayBuffer.empty[T]
     while (it.hasNext && outFail == null) {
       val next = it.next()
       next match {

@@ -12,15 +12,15 @@ import reactor.core.scala.publisher.SMono
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class GroupManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster = _
+  private var cluster: Cluster           = _
   private var users: ReactiveUserManager = _
-  private var coll: Collection = _
+  private var coll: Collection           = _
 
-  private val Username = "integration-test-user"
-  private val GroupA = "group-a"
-  private val GroupB = "group-b"
-  private val SecurityAdmin = Role("SecurityAdmin")
-  private val ReadOnlyAdmin = Role("ro_admin")
+  private val Username                 = "integration-test-user"
+  private val GroupA                   = "group-a"
+  private val GroupB                   = "group-b"
+  private val SecurityAdmin            = Role("SecurityAdmin")
+  private val ReadOnlyAdmin            = Role("ro_admin")
   private val BucketFullAccessWildcard = Role("bucket_full_access", Some("*"))
 
   @BeforeAll
@@ -37,13 +37,14 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {
-    val expectedRolesAndOrigins = expected.toSet
+    val expectedRolesAndOrigins            = expected.toSet
     val actualRolesAndOrigins: Set[String] = userMeta.effectiveRolesAndOrigins.map(_.toString).toSet
     assert(expectedRolesAndOrigins == actualRolesAndOrigins)
   }
 
   private def dropUserQuietly(name: String): Unit = {
-    users.dropUser(name)
+    users
+      .dropUser(name)
       .onErrorResume(err => {
         if (err.isInstanceOf[UserNotFoundException]) SMono.empty
         else SMono.raiseError(err)
@@ -52,7 +53,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   private def dropGroupQuietly(groupName: String): Unit = {
-    users.dropGroup(groupName)
+    users
+      .dropGroup(groupName)
       .onErrorResume(err => {
         if (err.isInstanceOf[GroupNotFoundException]) SMono.empty
         else SMono.raiseError(err)
@@ -64,8 +66,6 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     val allUsers = users.getAllGroups().collectSeq().block()
     assert(!allUsers.exists(_.name == groupName))
   }
-
-
   @AfterEach
   @BeforeEach
   def dropTestUser(): Unit = {
@@ -98,8 +98,16 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   @Test
   def create(): Unit = {
     val fakeLdapRef = "ou=Users"
-    users.upsertGroup(new Group(GroupA).description("a").roles(ReadOnlyAdmin).ldapGroupReference(fakeLdapRef)).block()
-    users.upsertGroup(new Group(GroupB).description("b").roles(ReadOnlyAdmin, BucketFullAccessWildcard)).block()
+    users
+      .upsertGroup(
+        new Group(GroupA).description("a").roles(ReadOnlyAdmin).ldapGroupReference(fakeLdapRef)
+      )
+      .block()
+    users
+      .upsertGroup(
+        new Group(GroupB).description("b").roles(ReadOnlyAdmin, BucketFullAccessWildcard)
+      )
+      .block()
 
     assertEquals("a", users.getGroup(GroupA).block().description)
     assertEquals("b", users.getGroup(GroupB).block().description)
@@ -108,21 +116,33 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     assertEquals(Option.empty, users.getGroup(GroupB).block().ldapGroupReference)
 
     assertEquals(Set(ReadOnlyAdmin), users.getGroup(GroupA).block().roles.toSet)
-    assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), users.getGroup(GroupB).block().roles.toSet)
+    assertEquals(
+      Set(ReadOnlyAdmin, BucketFullAccessWildcard),
+      users.getGroup(GroupB).block().roles.toSet
+    )
 
-    users.upsertUser(User(Username)
-      .password("password")
-      .roles(SecurityAdmin, BucketFullAccessWildcard)
-      .groups(GroupA, GroupB))
+    users.upsertUser(
+      User(Username)
+        .password("password")
+        .roles(SecurityAdmin, BucketFullAccessWildcard)
+        .groups(GroupA, GroupB)
+    )
 
     var userMeta = users.getUser(Username, AuthDomain.Local).block()
 
     assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin), userMeta.effectiveRoles.toSet)
+    assertEquals(
+      Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin),
+      userMeta.effectiveRoles.toSet
+    )
 
     // xxx possibly flaky, depends on order of origins reported by server?
-    checkRoleOrigins(userMeta, "SecurityAdmin<-[user]", "ro_admin<-[group:group-a, group:group-b]",
-      "bucket_full_access[*]<-[group:group-b, user]")
+    checkRoleOrigins(
+      userMeta,
+      "SecurityAdmin<-[user]",
+      "ro_admin<-[group:group-a, group:group-b]",
+      "bucket_full_access[*]<-[group:group-b, user]"
+    )
 
     users.upsertGroup(users.getGroup(GroupA).block().roles(SecurityAdmin)).block()
     users.upsertGroup(users.getGroup(GroupB).block().roles(SecurityAdmin)).block()
@@ -134,7 +154,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   @Test
   def dropAbsentGroup(): Unit = {
     val name = "doesnotexist"
-    val e = assertThrows(classOf[GroupNotFoundException], () => users.dropGroup(name).block())
+    val e    = assertThrows(classOf[GroupNotFoundException], () => users.dropGroup(name).block())
     assertEquals(name, e.groupName)
   }
 
@@ -155,7 +175,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def parseGroup(): Unit = {
-    val raw = """{"id":"group-a","roles":[{"role":"ro_admin"}],"ldap_group_ref":"ou=Users","description":"a"}"""
+    val raw =
+      """{"id":"group-a","roles":[{"role":"ro_admin"}],"ldap_group_ref":"ou=Users","description":"a"}"""
     val group = CouchbasePickler.read[Group](raw)
     assert(group.roles.size == 1)
     assert(group.ldapGroupReference.contains("ou=Users"))

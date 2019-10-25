@@ -45,12 +45,14 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author Graham Pople
   * @since 1.0.0
   */
-class AsyncBucket private[scala](val name: String,
-                                 private[scala] val core: Core,
-                                 private[scala] val environment: ClusterEnvironment) {
+class AsyncBucket private[scala] (
+    val name: String,
+    private[scala] val core: Core,
+    private[scala] val environment: ClusterEnvironment
+) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  private[scala] val kvTimeout = javaDurationToScala(environment.timeoutConfig.kvTimeout())
-  val reactive = new ReactiveBucket(this)
+  private[scala] val kvTimeout                     = javaDurationToScala(environment.timeoutConfig.kvTimeout())
+  val reactive                                     = new ReactiveBucket(this)
 
   @Stability.Volatile
   lazy val collections = new AsyncCollectionManager(reactive.collections)
@@ -103,11 +105,13 @@ class AsyncBucket private[scala](val name: String,
     * @return a `Future` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  def viewQuery(designDoc: String,
-                viewName: String,
-                options: ViewOptions = ViewOptions()): Future[ViewResult] = {
-    reactive.viewQuery(designDoc, viewName, options)
-
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      options: ViewOptions = ViewOptions()
+  ): Future[ViewResult] = {
+    reactive
+      .viewQuery(designDoc, viewName, options)
       .flatMap(response => {
         response.rows
           .collectSeq()
@@ -115,7 +119,6 @@ class AsyncBucket private[scala](val name: String,
             response.meta.map(meta => ViewResult(meta, rows))
           })
       })
-
       .toFuture
   }
 
@@ -134,24 +137,28 @@ class AsyncBucket private[scala](val name: String,
     * @return a ping report once created.
     */
   @Stability.Volatile
-  def ping(services: Seq[ServiceType] = Seq(),
-           reportId: String = UUID.randomUUID.toString,
-           timeout: Duration = kvTimeout,
-           retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE): Future[PingResult] = {
+  def ping(
+      services: Seq[ServiceType] = Seq(),
+      reportId: String = UUID.randomUUID.toString,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE
+  ): Future[PingResult] = {
     import scala.collection.JavaConverters._
     import com.couchbase.client.scala.util.DurationConversions._
 
-    val future = HealthPinger.ping(environment.coreEnv,
-      name,
-      core,
-      reportId,
-      timeout,
-      retryStrategy,
-      if (services.isEmpty) null else services.asJava).toFuture
+    val future = HealthPinger
+      .ping(
+        environment.coreEnv,
+        name,
+        core,
+        reportId,
+        timeout,
+        retryStrategy,
+        if (services.isEmpty) null
+        else services.asJava
+      )
+      .toFuture
 
     FutureConversions.javaCFToScalaFuture(future)
   }
 }
-
-
-

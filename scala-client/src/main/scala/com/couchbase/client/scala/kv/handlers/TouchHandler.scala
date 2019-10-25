@@ -29,20 +29,20 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import com.couchbase.client.scala.util.DurationConversions._
 
-
 /**
   * Handles requests and responses for KV touch operations.
   *
   * @since 1.0.0
   */
 private[scala] class TouchHandler(hp: HandlerParams)
-  extends RequestHandler[TouchResponse, MutationResult] {
+    extends RequestHandler[TouchResponse, MutationResult] {
 
-  def request[T](id: String,
-                 expiry: Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[TouchRequest] = {
+  def request[T](
+      id: String,
+      expiry: Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[TouchRequest] = {
     val validations: Try[TouchRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(expiry, "expiry")
@@ -52,15 +52,17 @@ private[scala] class TouchHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new TouchRequest(
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        id,
-        expiry.toSeconds))
+    } else {
+      Success(
+        new TouchRequest(
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          id,
+          expiry.toSeconds
+        )
+      )
     }
   }
 

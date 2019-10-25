@@ -27,47 +27,47 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
 
-
 /** Presents a Scala Set interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
   */
-class CouchbaseSet[T](id: String,
-                      collection: Collection,
-                      options: Option[CouchbaseCollectionOptions] = None)
-                     (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
-  extends mutable.Set[T] {
+class CouchbaseSet[T](
+    id: String,
+    collection: Collection,
+    options: Option[CouchbaseCollectionOptions] = None
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+    extends mutable.Set[T] {
 
   private val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
-    case _ => CouchbaseCollectionOptions(collection)
+    case _       => CouchbaseCollectionOptions(collection)
   }
 
   override def remove(elem: T): Boolean = {
     var out = false
 
-    val op = collection.get(id,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
 
-    val result = op.flatMap(_.contentAs[JsonArraySafe])
+    val result = op
+      .flatMap(_.contentAs[JsonArraySafe])
       .map(array => array.toSeq)
 
     result match {
       case Success(values: Seq[T]) =>
-
         val zipped: Seq[(T, Int)] = values.toSeq.zipWithIndex
 
-        for ( eAndIndex <- zipped ) {
-          val e: T = eAndIndex._1
+        for (eAndIndex <- zipped) {
+          val e: T       = eAndIndex._1
           val index: Int = eAndIndex._2
 
           if (e == elem) {
-            val mutateResult = collection.mutateIn(id,
+            val mutateResult = collection.mutateIn(
+              id,
               Array(MutateInSpec.remove("[" + index + "]")),
               cas = op.get.cas,
               timeout = opts.timeout,
               retryStrategy = opts.retryStrategy,
-              durability = opts.durability)
+              durability = opts.durability
+            )
 
             out = mutateResult match {
               case Success(value) => true
@@ -78,18 +78,17 @@ class CouchbaseSet[T](id: String,
                 // Recurse to try again
                 remove(elem)
               case Failure(err: KeyNotFoundException) => false
-              case Failure(err) => throw err
+              case Failure(err)                       => throw err
             }
           }
         }
 
       case Failure(_: KeyNotFoundException) => false
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
 
     out
   }
-
 
   private def retryIfDocDoesNotExist[_](f: () => Try[_]): Unit = {
     val result: Try[_] = f()
@@ -105,40 +104,45 @@ class CouchbaseSet[T](id: String,
 
   private def initialize(): Unit = {
     // The .get will throw if anything goes wrong
-    collection.insert(id,
-      JsonArraySafe.create,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability).get
+    collection
+      .insert(
+        id,
+        JsonArraySafe.create,
+        timeout = opts.timeout,
+        retryStrategy = opts.retryStrategy,
+        durability = opts.durability
+      )
+      .get
   }
 
   override def size(): Int = {
-    val op = collection.lookupIn(id,
+    val op = collection.lookupIn(
+      id,
       Array(LookupInSpec.count("")),
       timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+      retryStrategy = opts.retryStrategy
+    )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count) => count
+      case Success(count)                   => count
       case Failure(_: KeyNotFoundException) => 0
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 
   private def all(): Set[T] = {
-    val op = collection.get(id,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
 
-    val result = op.flatMap(_.contentAs[JsonArraySafe])
+    val result = op
+      .flatMap(_.contentAs[JsonArraySafe])
       .map(array => array.toSeq.toSet.asInstanceOf[Set[T]])
 
     result match {
-      case Success(values: Set[T]) => values
+      case Success(values: Set[T])          => values
       case Failure(_: KeyNotFoundException) => Set.empty[T]
-      case Failure(err) => throw err
+      case Failure(err)                     => throw err
     }
   }
 
@@ -151,11 +155,13 @@ class CouchbaseSet[T](id: String,
   }
 
   override def +=(elem: T): this.type = {
-    val result = collection.mutateIn(id,
+    val result = collection.mutateIn(
+      id,
       Array(MutateInSpec.arrayAddUnique("", elem)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
-      durability = opts.durability)
+      durability = opts.durability
+    )
 
     result match {
       case Success(_) => this

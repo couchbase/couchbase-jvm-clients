@@ -19,7 +19,6 @@ package com.couchbase.client.scala.search.queries
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.search.SearchOptions
 
-
 /** Base class for FTS queries that are composite, compounding several other [[SearchQuery]].
   *
   * @since 1.0.0
@@ -162,10 +161,12 @@ object SearchQuery {
     * @param bottomRightLon the longitude of the bottom-right point of the box
     * @param bottomRightLat the latitude of the bottom-right point of the box
     */
-  def geoBoundingBox(topLeftLon: Double,
-                     topLeftLat: Double,
-                     bottomRightLon: Double,
-                     bottomRightLat: Double): GeoBoundingBoxQuery = {
+  def geoBoundingBox(
+      topLeftLon: Double,
+      topLeftLat: Double,
+      bottomRightLon: Double,
+      bottomRightLat: Double
+  ): GeoBoundingBoxQuery = {
     GeoBoundingBoxQuery(topLeftLon, topLeftLat, bottomRightLon, bottomRightLat)
   }
 

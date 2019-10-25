@@ -24,12 +24,14 @@ import com.couchbase.client.scala.json.JsonObject
   *
   * @since 1.0.0
   */
-case class TermRangeQuery(private[scala] val min: Option[String] = None,
-                          private[scala] val inclusiveMin: Option[Boolean] = None,
-                          private[scala] val max: Option[String] = None,
-                          private[scala] val inclusiveMax: Option[Boolean] = None,
-                          private[scala] val field: Option[String] = None,
-                          private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class TermRangeQuery(
+    private[scala] val min: Option[String] = None,
+    private[scala] val inclusiveMin: Option[Boolean] = None,
+    private[scala] val max: Option[String] = None,
+    private[scala] val inclusiveMax: Option[Boolean] = None,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** Sets the lower boundary of the range, inclusive or not depending on the second parameter.
     *

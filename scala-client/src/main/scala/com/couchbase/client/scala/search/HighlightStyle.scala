@@ -23,7 +23,7 @@ package com.couchbase.client.scala.search
 sealed trait HighlightStyle
 
 object HighlightStyle {
-  case object HTML extends HighlightStyle
-  case object ANSI extends HighlightStyle
+  case object HTML          extends HighlightStyle
+  case object ANSI          extends HighlightStyle
   case object ServerDefault extends HighlightStyle
 }

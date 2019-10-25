@@ -27,7 +27,6 @@ import com.couchbase.client.scala.util.Validate
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV remove operations.
   *
@@ -35,14 +34,15 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class RemoveHandler(hp: HandlerParams)
-  extends RequestHandler[RemoveResponse, MutationResult] {
+    extends RequestHandler[RemoveResponse, MutationResult] {
 
-  def request[T](id: String,
-                 cas: Long,
-                 durability: Durability,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[RemoveRequest] = {
+  def request[T](
+      id: String,
+      cas: Long,
+      durability: Durability,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[RemoveRequest] = {
     val validations: Try[RemoveRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
@@ -53,15 +53,18 @@ private[scala] class RemoveHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new RemoveRequest(id,
-        cas,
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        durability.toDurabilityLevel))
+    } else {
+      Success(
+        new RemoveRequest(
+          id,
+          cas,
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          durability.toDurabilityLevel
+        )
+      )
     }
   }
 

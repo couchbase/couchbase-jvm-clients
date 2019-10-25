@@ -22,9 +22,11 @@ import com.couchbase.client.scala.json.JsonObject
   *
   * @since 1.0.0
   */
-case class PrefixQuery(private[scala] val prefix: String,
-                       private[scala] val field: Option[String] = None,
-                       private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class PrefixQuery(
+    private[scala] val prefix: String,
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** If specified, only this field will be matched.
     *

@@ -31,11 +31,13 @@ import upickle.default.{macroRW, ReadWriter => RW}
   * @param roles       any roles directly assigned to the user (not those inherited through groups)
   */
 @Volatile
-case class User(username: String,
-                displayName: String = "",
-                groups: Seq[String] = Seq(),
-                private val _roles: Seq[Role] = Seq(),
-                private[scala] val password: Option[String] = None) {
+case class User(
+    username: String,
+    displayName: String = "",
+    groups: Seq[String] = Seq(),
+    private val _roles: Seq[Role] = Seq(),
+    private[scala] val password: Option[String] = None
+) {
 
   /** Creates a copy of this User with the new username. */
   def username(username: String): User = {
@@ -65,17 +67,19 @@ case class User(username: String,
   }
 }
 
-
 /** Associates a [[User]] with any derived properties, such as the effective roles inherited from groups.
   */
 @Volatile
-case class UserAndMetadata(@upickle.implicits.key("domain") domain: AuthDomain,
-                           @upickle.implicits.key("id") username: String,
-                           @upickle.implicits.key("name") displayName: String,
-                           @upickle.implicits.key("roles") private[scala] val _effectiveRoles: Seq[RoleAndOrigins],
-                           @upickle.implicits.key("password_change_date") _passwordChanged: Option[String],
-                           @upickle.implicits.key("groups") groups: Seq[String],
-                           @upickle.implicits.key("external_groups") externalGroups: Seq[String]) {
+case class UserAndMetadata(
+    @upickle.implicits.key("domain") domain: AuthDomain,
+    @upickle.implicits.key("id") username: String,
+    @upickle.implicits.key("name") displayName: String,
+    @upickle.implicits.key("roles") private[scala] val _effectiveRoles: Seq[RoleAndOrigins],
+    @upickle.implicits.key("password_change_date") _passwordChanged: Option[String],
+    @upickle.implicits.key("groups") groups: Seq[String],
+    @upickle.implicits.key("external_groups") externalGroups: Seq[String]
+) {
+
   /** Returns the roles assigned specifically to the user. Excludes roles that are
     * only inherited from groups.
     */
@@ -98,10 +102,7 @@ case class UserAndMetadata(@upickle.implicits.key("domain") domain: AuthDomain,
   }
 
   def user: User = {
-    User(username,
-      displayName,
-      groups,
-      innateRoles)
+    User(username, displayName, groups, innateRoles)
   }
 }
 

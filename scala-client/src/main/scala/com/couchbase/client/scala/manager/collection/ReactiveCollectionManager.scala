@@ -36,52 +36,67 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
-
-
 class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
   private val core = bucket.core
-  private[scala] val defaultManagerTimeout = javaDurationToScala(core.context().environment().timeoutConfig().managementTimeout())
+  private[scala] val defaultManagerTimeout = javaDurationToScala(
+    core.context().environment().timeoutConfig().managementTimeout()
+  )
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
 
-  def collectionExists(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Boolean] = {
+  def collectionExists(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Boolean] = {
     loadManifest(timeout, retryStrategy)
       .map(manifest => {
-        val foundCollection = manifest.scopes().asScala
+        val foundCollection = manifest
+          .scopes()
+          .asScala
           .find(_.name == collection.scopeName)
-          .flatMap(scope => scope.collections.asScala
-            .find(_.name == collection.name))
+          .flatMap(
+            scope =>
+              scope.collections.asScala
+                .find(_.name == collection.name)
+          )
 
         foundCollection.isDefined
       })
   }
 
-  def scopeExists(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Boolean] = {
+  def scopeExists(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Boolean] = {
     loadManifest(timeout, retryStrategy)
       .map(_.scopes().asScala.exists(_.name == scopeName))
   }
 
-  def getScope(scopeName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[ScopeSpec] = {
+  def getScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[ScopeSpec] = {
     getAllScopes(timeout, retryStrategy)
       .collectSeq()
       .flatMap(scopes => {
         scopes.find(_.name == scopeName) match {
           case Some(scope) => SMono.just(scope)
-          case _ => SMono.raiseError(ScopeNotFoundException(scopeName))
+          case _           => SMono.raiseError(ScopeNotFoundException(scopeName))
         }
       })
   }
 
-  def getAllScopes(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): SFlux[ScopeSpec] = {
+  def getAllScopes(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[ScopeSpec] = {
     loadManifest(timeout, retryStrategy)
       .flatMapMany(manifest => {
-        val scopes = manifest.scopes().asScala
+        val scopes = manifest
+          .scopes()
+          .asScala
           .map(scope => {
             val collections: Seq[CollectionSpec] = scope.collections.asScala
               .map(coll => CollectionSpec(coll.name, scope.name))
@@ -92,47 +107,59 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       })
   }
 
-  def createCollection(collection: CollectionSpec,
-                       timeout: Duration = defaultManagerTimeout,
-                       retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def createCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
     val body = UrlQueryStringBuilder.create.add("name", collection.name)
     val path = pathForScope(bucket.name, collection.scopeName)
 
-    ManagerUtil.sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
       .flatMap(response => {
         SMono.fromTry(checkForErrors(response, collection.scopeName, collection.name))
       })
   }
 
-  def dropCollection(collection: CollectionSpec,
-                     timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def dropCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
     val path = pathForCollection(bucket.name, collection.scopeName, collection.name)
 
-    ManagerUtil.sendRequest(core, HttpMethod.DELETE, path, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, HttpMethod.DELETE, path, timeout, retryStrategy)
       .flatMap(response => {
         SMono.fromTry(checkForErrors(response, collection.scopeName, collection.name))
       })
   }
 
-  def createScope(scopeName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def createScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
     val body = UrlQueryStringBuilder.create.add("name", scopeName)
     val path = pathForManifest(bucket.name)
 
-    ManagerUtil.sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
       .flatMap(response => {
         SMono.fromTry(checkForErrors(response, scopeName, collectionName = null))
       })
   }
 
-  def dropScope(scopeName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): SMono[Unit] = {
+  def dropScope(
+      scopeName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
     val path = pathForScope(bucket.name, scopeName)
 
-    ManagerUtil.sendRequest(core, HttpMethod.DELETE, path, timeout, retryStrategy)
+    ManagerUtil
+      .sendRequest(core, HttpMethod.DELETE, path, timeout, retryStrategy)
       .flatMap(response => {
         SMono.fromTry(checkForErrors(response, scopeName, collectionName = null))
       })
@@ -150,22 +177,31 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
     "/pools/default/buckets/" + urlEncode(bucketName) + "/collections"
   }
 
-  private def loadManifest(timeout: Duration,
-                           retryStrategy: RetryStrategy): SMono[CollectionsManifest] = {
-    ManagerUtil.sendRequest(core, HttpMethod.GET, pathForManifest(bucket.name), timeout, retryStrategy)
+  private def loadManifest(
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[CollectionsManifest] = {
+    ManagerUtil
+      .sendRequest(core, HttpMethod.GET, pathForManifest(bucket.name), timeout, retryStrategy)
       .flatMap(response => {
         val error = new String(response.content, StandardCharsets.UTF_8)
 
         if (response.status == ResponseStatus.INVALID_ARGS) {
           if (error.contains("Not allowed on this version of cluster")) {
-            SMono.raiseError(new IllegalArgumentException("This version of Couchbase Server does not support this operation"))
-          }
-          else {
+            SMono.raiseError(
+              new IllegalArgumentException(
+                "This version of Couchbase Server does not support this operation"
+              )
+            )
+          } else {
             SMono.raiseError(new IllegalArgumentException(error))
           }
-        }
-        else {
-          SMono.fromTry(Try(JacksonTransformers.MAPPER.readValue(response.content(), classOf[CollectionsManifest])))
+        } else {
+          SMono.fromTry(
+            Try(
+              JacksonTransformers.MAPPER.readValue(response.content(), classOf[CollectionsManifest])
+            )
+          )
         }
       })
   }
@@ -175,40 +211,35 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
     *
     * @param response the response to check.
     */
-  private def checkForErrors(response: GenericManagerResponse, scopeName: String, collectionName: String): Try[Unit] = {
+  private def checkForErrors(
+      response: GenericManagerResponse,
+      scopeName: String,
+      collectionName: String
+  ): Try[Unit] = {
     if (response.status.success) {
       Success(Unit)
-    }
-    else {
+    } else {
       val error = new String(response.content, StandardCharsets.UTF_8)
 
       if (response.status == ResponseStatus.NOT_FOUND) {
         if (error.contains("Scope with this name is not found")) {
           Failure(ScopeNotFoundException(scopeName))
-        }
-        else if (error.contains("Collection with this name is not found")) {
+        } else if (error.contains("Collection with this name is not found")) {
           Failure(CollectionNotFoundException(collectionName))
-        }
-        else {
+        } else {
           Failure(new CouchbaseException("Unknown error in CollectionManager: " + error))
         }
-      }
-      else if (response.status == ResponseStatus.INVALID_ARGS) {
+      } else if (response.status == ResponseStatus.INVALID_ARGS) {
         if (error.contains("Scope with this name already exists")) {
           Failure(ScopeAlreadyExistsException(scopeName))
-        }
-        else if (error.contains("Collection with this name already exists")) {
+        } else if (error.contains("Collection with this name already exists")) {
           Failure(CollectionAlreadyExistsException(collectionName))
-        }
-        else {
+        } else {
           Failure(new IllegalArgumentException("Unknown error in CollectionManager: " + error))
         }
-      }
-      else {
+      } else {
         Failure(new CouchbaseException("Unknown error in CollectionManager: " + error))
       }
     }
   }
 }
-
-

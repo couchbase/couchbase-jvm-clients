@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.scala
 
-
-
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -63,21 +61,24 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class AsyncCluster(environment: => ClusterEnvironment,
-                   private[scala] val authenticator: Authenticator,
-                   private[scala] val seedNodes: Set[SeedNode]) {
+class AsyncCluster(
+    environment: => ClusterEnvironment,
+    private[scala] val authenticator: Authenticator,
+    private[scala] val seedNodes: Set[SeedNode]
+) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  private[scala] val core = Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
-  private[scala] val env = environment
-  private[scala] val kvTimeout = javaDurationToScala(env.timeoutConfig.kvTimeout())
-  private[scala] val searchTimeout = javaDurationToScala(env.timeoutConfig.searchTimeout())
-  private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
-  private[scala] val retryStrategy = env.retryStrategy
-  private[scala] val queryHandler = new QueryHandler(core)
-  private[scala] val analyticsHandler = new AnalyticsHandler()
-  private[scala] val searchHandler = new SearchHandler()
+  private[scala] val core =
+    Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
+  private[scala] val env                 = environment
+  private[scala] val kvTimeout           = javaDurationToScala(env.timeoutConfig.kvTimeout())
+  private[scala] val searchTimeout       = javaDurationToScala(env.timeoutConfig.searchTimeout())
+  private[scala] val analyticsTimeout    = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
+  private[scala] val retryStrategy       = env.retryStrategy
+  private[scala] val queryHandler        = new QueryHandler(core)
+  private[scala] val analyticsHandler    = new AnalyticsHandler()
+  private[scala] val searchHandler       = new SearchHandler()
   private[scala] val reactiveUserManager = new ReactiveUserManager(core)
-  private val reactiveBucketManager = new ReactiveBucketManager(core)
+  private val reactiveBucketManager      = new ReactiveBucketManager(core)
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
   @Stability.Volatile
@@ -98,7 +99,8 @@ class AsyncCluster(environment: => ClusterEnvironment,
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): Future[AsyncBucket] = {
-    FutureConversions.javaMonoToScalaFuture(core.openBucket(bucketName))
+    FutureConversions
+      .javaMonoToScalaFuture(core.openBucket(bucketName))
       .map(v => new AsyncBucket(bucketName, core, environment))
   }
 
@@ -128,45 +130,56 @@ class AsyncCluster(environment: => ClusterEnvironment,
     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions()): Future[AnalyticsResult] = {
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions()
+  ): Future[AnalyticsResult] = {
 
     analyticsHandler.request(statement, options, core, environment) match {
       case Success(request) =>
         core.send(request)
 
-        val ret: Future[AnalyticsResult] = FutureConversions.javaCFToScalaMono(request, request.response(),
-          propagateCancellation = true)
-          .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows())
-            .collectSeq()
-            .flatMap(rows =>
+        val ret: Future[AnalyticsResult] = FutureConversions
+          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .flatMap(
+            response =>
+              FutureConversions
+                .javaFluxToScalaFlux(response.rows())
+                .collectSeq()
+                .flatMap(
+                  rows =>
+                    FutureConversions
+                      .javaMonoToScalaMono(response.trailer())
+                      .map(trailer => {
+                        val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                          .map(
+                            warnings =>
+                              ErrorCodeAndMessage
+                                .fromJsonArray(warnings)
+                                .asScala
+                                .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                          )
+                          .getOrElse(Seq.empty)
 
-              FutureConversions.javaMonoToScalaMono(response.trailer())
-                .map(trailer => {
-                  val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
-                    .map(warnings =>
-                      ErrorCodeAndMessage.fromJsonArray(warnings)
-                        .asScala
-                        .map(codeAndMessage => AnalyticsWarning(codeAndMessage)))
-                    .getOrElse(Seq.empty)
-
-                  AnalyticsResult(
-                    rows,
-                    AnalyticsMetaData(
-                      response.header().requestId(),
-                      response.header().clientContextId().orElse(""),
-                      response.header().signature.asScala,
-                      AnalyticsMetrics.fromBytes(trailer.metrics),
-                      warnings,
-                      AnalyticsStatus.from(trailer.status)))
-                })
-            )
-          ).toFuture
+                        AnalyticsResult(
+                          rows,
+                          AnalyticsMetaData(
+                            response.header().requestId(),
+                            response.header().clientContextId().orElse(""),
+                            response.header().signature.asScala,
+                            AnalyticsMetrics.fromBytes(trailer.metrics),
+                            warnings,
+                            AnalyticsStatus.from(trailer.status)
+                          )
+                        )
+                      })
+                )
+          )
+          .toFuture
 
         ret
 
-
-      case Failure(err)
-      => Future.failed(err)
+      case Failure(err) => Future.failed(err)
     }
   }
 
@@ -183,28 +196,29 @@ class AsyncCluster(environment: => ClusterEnvironment,
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  def searchQuery(indexName: String,
-                  query: SearchQuery,
-                  options: SearchOptions = SearchOptions()): Future[SearchResult] = {
+  def searchQuery(
+      indexName: String,
+      query: SearchQuery,
+      options: SearchOptions = SearchOptions()
+  ): Future[SearchResult] = {
 
     searchHandler.request(indexName, query, options, core, environment) match {
       case Success(request) => AsyncCluster.searchQuery(request, core)
-      case Failure(err) => Future.failed(err)
+      case Failure(err)     => Future.failed(err)
     }
   }
-
 
   /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
     */
   def disconnect(): Future[Unit] = {
-    FutureConversions.javaMonoToScalaMono(core.shutdown())
+    FutureConversions
+      .javaMonoToScalaMono(core.shutdown())
       .flatMap(_ => {
         if (env.owned) {
           env.shutdownReactive()
-        }
-        else {
+        } else {
           SMono.empty[Unit]
         }
       })
@@ -220,9 +234,13 @@ class AsyncCluster(environment: => ClusterEnvironment,
     */
   @Stability.Volatile
   def diagnostics(reportId: String = UUID.randomUUID.toString): Future[DiagnosticsResult] = {
-    Future(new DiagnosticsResult(core.diagnostics().collect(Collectors.toList()),
-      core.context().environment().userAgent().formattedShort(),
-      reportId))
+    Future(
+      new DiagnosticsResult(
+        core.diagnostics().collect(Collectors.toList()),
+        core.context().environment().userAgent().formattedShort(),
+        reportId
+      )
+    )
   }
 }
 
@@ -243,7 +261,11 @@ object AsyncCluster {
     *
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, username: String, password: String): Future[AsyncCluster] = {
+  def connect(
+      connectionString: String,
+      username: String,
+      password: String
+  ): Future[AsyncCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator(username, password)))
   }
 
@@ -267,47 +289,58 @@ object AsyncCluster {
     }
   }
 
-
   private[client] def searchQuery(request: SearchRequest, core: Core): Future[SearchResult] = {
     core.send(request)
 
     val ret: Future[SearchResult] =
-      FutureConversions.javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-        .flatMap(response => FutureConversions.javaFluxToScalaFlux(response.rows)
-          // This can throw, which will return a failed Future as desired
-          .map(row => SearchRow.fromResponse(row))
-          .collectSeq()
-          .flatMap(rows =>
+      FutureConversions
+        .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+        .flatMap(
+          response =>
+            FutureConversions
+              .javaFluxToScalaFlux(response.rows)
+              // This can throw, which will return a failed Future as desired
+              .map(row => SearchRow.fromResponse(row))
+              .collectSeq()
+              .flatMap(
+                rows =>
+                  FutureConversions
+                    .javaMonoToScalaMono(response.trailer())
+                    .map(trailer => {
 
-            FutureConversions.javaMonoToScalaMono(response.trailer())
-              .map(trailer => {
+                      val rawStatus = response.header.getStatus
+                      val errors    = SearchHandler.parseSearchErrors(rawStatus)
+                      val meta      = SearchHandler.parseSearchMeta(response, trailer)
 
-                val rawStatus = response.header.getStatus
-                val errors = SearchHandler.parseSearchErrors(rawStatus)
-                val meta = SearchHandler.parseSearchMeta(response, trailer)
-
-                SearchResult(
-                  rows,
-                  errors,
-                  meta
-                )
-              })
-          )
+                      SearchResult(
+                        rows,
+                        errors,
+                        meta
+                      )
+                    })
+              )
         )
         .toFuture
 
     ret
   }
 
-  private[client] def extractClusterEnvironment(connectionString: String, opts: ClusterOptions): Try[ClusterEnvironment] = {
+  private[client] def extractClusterEnvironment(
+      connectionString: String,
+      opts: ClusterOptions
+  ): Try[ClusterEnvironment] = {
     opts.environment match {
       case Some(env) => Success(env)
-      case _ => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
+      case _         => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
     }
   }
 
-  private[client] def seedNodesFromConnectionString(cs: String, environment: ClusterEnvironment): Set[SeedNode] = {
-    ConnectionStringUtil.seedNodesFromConnectionString(cs, environment.coreEnv.ioConfig.dnsSrvEnabled)
+  private[client] def seedNodesFromConnectionString(
+      cs: String,
+      environment: ClusterEnvironment
+  ): Set[SeedNode] = {
+    ConnectionStringUtil
+      .seedNodesFromConnectionString(cs, environment.coreEnv.ioConfig.dnsSrvEnabled)
       .asScala
       .map(sn => SeedNode.fromCore(sn))
       .toSet

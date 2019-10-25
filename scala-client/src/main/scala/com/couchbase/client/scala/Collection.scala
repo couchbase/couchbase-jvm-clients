@@ -96,9 +96,10 @@ object Collection {
   *                        for a detailed discussion.
   **/
 class Collection(
-                  /** Provides access to an async version of this API. */
-                  val async: AsyncCollection,
-                  bucketName: String) {
+    /** Provides access to an async version of this API. */
+    val async: AsyncCollection,
+    bucketName: String
+) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
   def name: String = async.name
@@ -109,7 +110,7 @@ class Collection(
   /** Provides access to less-commonly used methods. */
   val binary = new BinaryCollection(async.binary)
 
-  private[scala] val kvTimeout = async.kvTimeout
+  private[scala] val kvTimeout     = async.kvTimeout
   private[scala] val retryStrategy = async.retryStrategy
 
   private def block[T](in: Future[T]) =
@@ -130,13 +131,13 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def get(
-           id: String,
-           withExpiry: Boolean = false,
-           project: Seq[String] = Seq.empty,
-           timeout: Duration = kvTimeout,
-           retryStrategy: RetryStrategy = retryStrategy,
-           transcoder: Transcoder = JsonTranscoder.Instance
-         ): Try[GetResult] =
+      id: String,
+      withExpiry: Boolean = false,
+      project: Seq[String] = Seq.empty,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Try[GetResult] =
     block(
       async
         .get(id, withExpiry, project, timeout, retryStrategy, transcoder)
@@ -155,14 +156,14 @@ class Collection(
     *         $ErrorHandling
     **/
   def insert[T](
-                 id: String,
-                 content: T,
-                 durability: Durability = Disabled,
-                 expiry: Duration = 0.seconds,
-                 timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy,
-                 transcoder: Transcoder = JsonTranscoder.Instance
-               )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+      id: String,
+      content: T,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.insert(
         id,
@@ -174,7 +175,6 @@ class Collection(
         transcoder
       )
     )
-
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
@@ -190,15 +190,15 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def replace[T](
-                  id: String,
-                  content: T,
-                  cas: Long = 0,
-                  durability: Durability = Disabled,
-                  expiry: Duration = 0.seconds,
-                  timeout: Duration = kvTimeout,
-                  retryStrategy: RetryStrategy = retryStrategy,
-                  transcoder: Transcoder = JsonTranscoder.Instance
-                )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+      id: String,
+      content: T,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.replace(
         id,
@@ -225,14 +225,14 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
     */
   def upsert[T](
-                 id: String,
-                 content: T,
-                 durability: Durability = Disabled,
-                 expiry: Duration = 0.seconds,
-                 timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy,
-                 transcoder: Transcoder = JsonTranscoder.Instance
-               )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+      id: String,
+      content: T,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.upsert(
         id,
@@ -257,12 +257,12 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def remove(
-              id: String,
-              cas: Long = 0,
-              durability: Durability = Disabled,
-              timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = retryStrategy
-            ): Try[MutationResult] =
+      id: String,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy
+  ): Try[MutationResult] =
     block(
       async.remove(id, cas, durability, timeout, retryStrategy)
     )
@@ -288,17 +288,17 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def mutateIn(
-                id: String,
-                spec: Seq[MutateInSpec],
-                cas: Long = 0,
-                document: StoreSemantics = StoreSemantics.Replace,
-                durability: Durability = Disabled,
-                expiry: Duration = 0.seconds,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = retryStrategy,
-                transcoder: Transcoder = JsonTranscoder.Instance,
-                @Stability.Internal accessDeleted: Boolean = false
-              ): Try[MutateInResult] =
+      id: String,
+      spec: Seq[MutateInSpec],
+      cas: Long = 0,
+      document: StoreSemantics = StoreSemantics.Replace,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance,
+      @Stability.Internal accessDeleted: Boolean = false
+  ): Try[MutateInResult] =
     block(
       async.mutateIn(
         id,
@@ -327,11 +327,13 @@ class Collection(
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
-  def getAndLock(id: String,
-                 lockTime: Duration,
-                 timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy,
-                 transcoder: Transcoder = JsonTranscoder.Instance): Try[GetResult] =
+  def getAndLock(
+      id: String,
+      lockTime: Duration,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Try[GetResult] =
     block(
       async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder)
     )
@@ -348,11 +350,11 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def unlock(
-              id: String,
-              cas: Long,
-              timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = retryStrategy
-            ): Try[Unit] =
+      id: String,
+      cas: Long,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy
+  ): Try[Unit] =
     block(async.unlock(id, cas, timeout, retryStrategy))
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -365,11 +367,13 @@ class Collection(
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
-  def getAndTouch(id: String,
-                  expiry: Duration,
-                  timeout: Duration = kvTimeout,
-                  retryStrategy: RetryStrategy = retryStrategy,
-                  transcoder: Transcoder = JsonTranscoder.Instance): Try[GetResult] =
+  def getAndTouch(
+      id: String,
+      expiry: Duration,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Try[GetResult] =
     block(
       async.getAndTouch(
         id,
@@ -397,13 +401,13 @@ class Collection(
     *         found. $ErrorHandling
     **/
   def lookupIn(
-                id: String,
-                spec: Seq[LookupInSpec],
-                withExpiry: Boolean = false,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = retryStrategy,
-                transcoder: Transcoder = JsonTranscoder.Instance
-              ): Try[LookupInResult] =
+      id: String,
+      spec: Seq[LookupInSpec],
+      withExpiry: Boolean = false,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Try[LookupInResult] =
     block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder))
 
   /** Retrieves any available version of the document.
@@ -422,13 +426,17 @@ class Collection(
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
-  def getAnyReplica(id: String,
-                    timeout: Duration = kvTimeout,
-                    retryStrategy: RetryStrategy = retryStrategy,
-                    transcoder: Transcoder = JsonTranscoder.Instance): Try[GetReplicaResult] =
-    Try(reactive
-      .getAnyReplica(id, timeout, retryStrategy, transcoder)
-      .block(timeout))
+  def getAnyReplica(
+      id: String,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Try[GetReplicaResult] =
+    Try(
+      reactive
+        .getAnyReplica(id, timeout, retryStrategy, transcoder)
+        .block(timeout)
+    )
 
   /** Retrieves all available versions of the document.
     *
@@ -445,10 +453,12 @@ class Collection(
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
     **/
-  def getAllReplicas(id: String,
-                     timeout: Duration = kvTimeout,
-                     retryStrategy: RetryStrategy = retryStrategy,
-                     transcoder: Transcoder = JsonTranscoder.Instance): Iterable[GetReplicaResult] =
+  def getAllReplicas(
+      id: String,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy,
+      transcoder: Transcoder = JsonTranscoder.Instance
+  ): Iterable[GetReplicaResult] =
     reactive.getAllReplicas(id, timeout, retryStrategy, transcoder).toIterable()
 
   /** Checks if a document exists.
@@ -464,10 +474,10 @@ class Collection(
     *         found.  $ErrorHandling
     **/
   def exists[T](
-                 id: String,
-                 timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy
-               ): Try[ExistsResult] =
+      id: String,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy
+  ): Try[ExistsResult] =
     block(async.exists(id, timeout, retryStrategy))
 
   /** Updates the expiry of the document with the given id.
@@ -479,11 +489,12 @@ class Collection(
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     */
-  def touch(id: String,
-            expiry: Duration,
-            timeout: Duration = kvTimeout,
-            retryStrategy: RetryStrategy = retryStrategy
-           ): Try[MutationResult] = {
+  def touch(
+      id: String,
+      expiry: Duration,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = retryStrategy
+  ): Try[MutationResult] = {
     block(async.touch(id, expiry, timeout, retryStrategy))
   }
 
@@ -492,9 +503,11 @@ class Collection(
     * @param id id of the document underyling the datastructure
     * @param options options for controlling the behaviour of the datastructure
     */
-  def buffer[T](id: String,
-                options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseBuffer[T] = {
+  def buffer[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: TypeTag[T]
+  ): CouchbaseBuffer[T] = {
     new CouchbaseBuffer[T](id, this)
   }
 
@@ -503,9 +516,11 @@ class Collection(
     * @param id id of the document underyling the datastructure
     * @param options options for controlling the behaviour of the datastructure
     */
-  def set[T](id: String,
-                options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseSet[T] = {
+  def set[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: TypeTag[T]
+  ): CouchbaseSet[T] = {
     new CouchbaseSet[T](id, this)
   }
 
@@ -514,9 +529,11 @@ class Collection(
     * @param id id of the document underyling the datastructure
     * @param options options for controlling the behaviour of the datastructure
     */
-  def map[T](id: String,
-                options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseMap[T] = {
+  def map[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: TypeTag[T]
+  ): CouchbaseMap[T] = {
     new CouchbaseMap[T](id, this)
   }
 
@@ -525,11 +542,11 @@ class Collection(
     * @param id id of the document underyling the datastructure
     * @param options options for controlling the behaviour of the datastructure
     */
-  def queue[T](id: String,
-                options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseQueue[T] = {
+  def queue[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: TypeTag[T]
+  ): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
   }
 }
-
-

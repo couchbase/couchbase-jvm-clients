@@ -74,8 +74,8 @@ import scala.util.Try
   */
 class BinaryCollection(val async: AsyncBinaryCollection) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private val kvTimeout = async.kvTimeout
-  private val environment = async.environment
+  private val kvTimeout                            = async.kvTimeout
+  private val environment                          = async.environment
 
   /** A reactive version of this API. */
   lazy val reactive = new ReactiveBinaryCollection(async)
@@ -95,12 +95,14 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
     * */
-  def append(id: String,
-             value: Array[Byte],
-             cas: Long = 0,
-             durability: Durability = Disabled,
-             timeout: Duration = kvTimeout,
-             retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
+  def append(
+      id: String,
+      value: Array[Byte],
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Try[MutationResult] = {
     Collection.block(async.append(id, value, cas, durability, timeout, retryStrategy))
 
   }
@@ -120,12 +122,14 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
     * */
-  def prepend(id: String,
-              value: Array[Byte],
-              cas: Long = 0,
-              durability: Durability = Disabled,
-              timeout: Duration = kvTimeout,
-              retryStrategy: RetryStrategy = environment.retryStrategy): Try[MutationResult] = {
+  def prepend(
+      id: String,
+      value: Array[Byte],
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Try[MutationResult] = {
     Collection.block(async.prepend(id, value, cas, durability, timeout, retryStrategy))
   }
 
@@ -147,16 +151,19 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
     * */
-  def increment(id: String,
-                delta: Long = 1,
-                initial: Option[Long] = None,
-                cas: Long = 0,
-                durability: Durability = Disabled,
-                expiry: Duration = 0.seconds,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.increment(id, delta, initial, cas, durability, expiry, timeout,
-      retryStrategy))
+  def increment(
+      id: String,
+      delta: Long = 1,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Try[CounterResult] = {
+    Collection.block(
+      async.increment(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
+    )
   }
 
   /** Decrement a Couchbase 'counter' document.  $CounterDoc
@@ -177,16 +184,19 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
     *         found.  $ErrorHandling
     * */
-  def decrement(id: String,
-                delta: Long = 1,
-                initial: Option[Long] = None,
-                cas: Long = 0,
-                durability: Durability = Disabled,
-                expiry: Duration = 0.seconds,
-                timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy): Try[CounterResult] = {
-    Collection.block(async.decrement(id, delta, initial, cas, durability, expiry, timeout,
-      retryStrategy))
+  def decrement(
+      id: String,
+      delta: Long = 1,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      expiry: Duration = 0.seconds,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Try[CounterResult] = {
+    Collection.block(
+      async.decrement(id, delta, initial, cas, durability, expiry, timeout, retryStrategy)
+    )
   }
 
 }

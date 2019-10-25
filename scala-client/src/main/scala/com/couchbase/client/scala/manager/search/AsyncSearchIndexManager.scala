@@ -36,18 +36,22 @@ import scala.util.{Failure, Success}
 
 @Stability.Volatile
 case class SearchIndexNotFoundException(indexName: String)
-  extends CouchbaseException(s"Search index [${redactSystem(indexName)}] not found.")
+    extends CouchbaseException(s"Search index [${redactSystem(indexName)}] not found.")
 
 @Stability.Volatile
-class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
-                             (implicit val ec: ExecutionContext) {
+class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
+    implicit val ec: ExecutionContext
+) {
   private val core = cluster.core
-  private val DefaultTimeout: Duration = core.context().environment().timeoutConfig().managementTimeout()
+  private val DefaultTimeout: Duration =
+    core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  def getIndex(indexName: String,
-               timeout: Duration = DefaultTimeout,
-               retryStrategy: RetryStrategy = DefaultRetryStrategy): Future[SearchIndex] = {
+  def getIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Future[SearchIndex] = {
     val request = getIndexRequest(indexName, timeout, retryStrategy)
     core.send(request)
     request.response.toScala
@@ -58,13 +62,14 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
       case Failure(err) =>
         if (err.getMessage.contains("index not found")) {
           Failure(SearchIndexNotFoundException(indexName))
-        }
-        else Failure(err)
+        } else Failure(err)
     }
   }
 
-  def getAllIndexes(timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): Future[Seq[SearchIndex]] = {
+  def getAllIndexes(
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Future[Seq[SearchIndex]] = {
     val request = searchRequest(HttpMethod.GET, indexesPath, timeout, retryStrategy)
 
     core.send(request)
@@ -74,12 +79,19 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
       })
   }
 
-  def upsertIndex(indexDefinition: SearchIndex,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): Future[Unit] = {
+  def upsertIndex(
+      indexDefinition: SearchIndex,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Future[Unit] = {
     val req: DefaultFullHttpRequest = {
       val payload = Unpooled.wrappedBuffer(indexDefinition.toJson.getBytes(StandardCharsets.UTF_8))
-      val request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, indexPath(indexDefinition.name), payload)
+      val request = new DefaultFullHttpRequest(
+        HttpVersion.HTTP_1_1,
+        HttpMethod.PUT,
+        indexPath(indexDefinition.name),
+        payload
+      )
       request.headers.set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
       request.headers.set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
       request.headers.set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes)
@@ -91,9 +103,11 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
     request.response.toScala.map(_ => Unit)
   }
 
-  def dropIndex(indexName: String,
-                timeout: Duration = DefaultTimeout,
-                retryStrategy: RetryStrategy = DefaultRetryStrategy): Future[Unit] = {
+  def dropIndex(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): Future[Unit] = {
     val request = searchRequest(HttpMethod.DELETE, indexPath(indexName), timeout, retryStrategy)
 
     core.send(request)
@@ -106,31 +120,35 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
 
   private def indexCountPath(indexName: String) = indexPath(indexName) + "/count"
 
-  private def getIndexRequest(name: String,
-                              timeout: Duration,
-                              retryStrategy: RetryStrategy): GenericSearchRequest = {
+  private def getIndexRequest(
+      name: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): GenericSearchRequest = {
     searchRequest(HttpMethod.GET, indexPath(name), timeout, retryStrategy)
   }
 
-  private def searchRequest(method: HttpMethod,
-                            path: String,
-                            timeout: Duration,
-                            retryStrategy: RetryStrategy): GenericSearchRequest = {
-    searchRequest(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
+  private def searchRequest(
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): GenericSearchRequest = {
+    searchRequest(
+      new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
       method == HttpMethod.GET,
       timeout,
-      retryStrategy)
+      retryStrategy
+    )
   }
 
-  private def searchRequest(httpRequest: => FullHttpRequest,
-                            idempotent: Boolean,
-                            timeout: Duration,
-                            retryStrategy: RetryStrategy): GenericSearchRequest = {
-    new GenericSearchRequest(timeout,
-      core.context,
-      retryStrategy,
-      () => httpRequest,
-      idempotent)
+  private def searchRequest(
+      httpRequest: => FullHttpRequest,
+      idempotent: Boolean,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): GenericSearchRequest = {
+    new GenericSearchRequest(timeout, core.context, retryStrategy, () => httpRequest, idempotent)
   }
 
 }
@@ -138,8 +156,8 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)
 object AsyncSearchIndexManager {
   // This can throw, so should be called inside a Future operator
   private[scala] def parseIndexes(in: Array[Byte]): Seq[SearchIndex] = {
-    val json = CouchbasePickler.read[ujson.Obj](in)
-    val indexDefs = json.obj("indexDefs")
+    val json                             = CouchbasePickler.read[ujson.Obj](in)
+    val indexDefs                        = json.obj("indexDefs")
     val allIndexes: SearchIndexesWrapper = CouchbasePickler.read[SearchIndexesWrapper](indexDefs)
     allIndexes.indexDefs.values.toSeq
   }

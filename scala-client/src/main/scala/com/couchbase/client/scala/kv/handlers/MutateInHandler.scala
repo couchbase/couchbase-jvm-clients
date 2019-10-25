@@ -31,7 +31,6 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Try}
 
-
 /**
   * Handles requests and responses for KV SubDocument mutation operations.
   *
@@ -40,17 +39,18 @@ import scala.util.{Failure, Try}
   */
 private[scala] class MutateInHandler(hp: HandlerParams) {
 
-  def request[T](id: String,
-                 spec: Seq[MutateInSpec],
-                 cas: Long,
-                 document: StoreSemantics = StoreSemantics.Replace,
-                 durability: Durability,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy,
-                 accessDeleted: Boolean,
-                 transcoder: Transcoder)
-  : Try[SubdocMutateRequest] = {
+  def request[T](
+      id: String,
+      spec: Seq[MutateInSpec],
+      cas: Long,
+      document: StoreSemantics = StoreSemantics.Replace,
+      durability: Durability,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy,
+      accessDeleted: Boolean,
+      transcoder: Transcoder
+  ): Try[SubdocMutateRequest] = {
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
@@ -62,8 +62,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       // Find any decode failure
       val failed: Option[MutateInSpec] = spec
         .filter(_.isInstanceOf[MutateInSpecStandard])
@@ -75,37 +74,40 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
           Failure(failed.fragment.failed.get)
 
         case _ =>
-
           val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
           spec.map(_.convert).foreach(commands.add)
 
           if (commands.isEmpty) {
             Failure(SubdocMutateRequest.errIfNoCommands())
-          }
-          else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+          } else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
             Failure(SubdocMutateRequest.errIfNoCommands())
-          }
-          else {
-            Try(new SubdocMutateRequest(timeout,
-              hp.core.context(),
-              hp.collectionIdentifier,
-              retryStrategy,
-              id,
-              document == StoreSemantics.Insert,
-              document == StoreSemantics.Upsert,
-              accessDeleted,
-              commands,
-              expiration.getSeconds,
-              cas,
-              durability.toDurabilityLevel))
+          } else {
+            Try(
+              new SubdocMutateRequest(
+                timeout,
+                hp.core.context(),
+                hp.collectionIdentifier,
+                retryStrategy,
+                id,
+                document == StoreSemantics.Insert,
+                document == StoreSemantics.Upsert,
+                accessDeleted,
+                commands,
+                expiration.getSeconds,
+                cas,
+                durability.toDurabilityLevel
+              )
+            )
           }
       }
     }
   }
 
-  def response(id: String,
-               document: StoreSemantics = StoreSemantics.Replace,
-               response: SubdocMutateResponse): MutateInResult = {
+  def response(
+      id: String,
+      document: StoreSemantics = StoreSemantics.Replace,
+      response: SubdocMutateResponse
+  ): MutateInResult = {
     response.status() match {
 
       case ResponseStatus.SUCCESS =>
@@ -114,16 +116,15 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
         MutateInResult(id, values, response.cas(), response.mutationToken().asScala)
 
       case ResponseStatus.SUBDOC_FAILURE =>
-
         response.error().asScala match {
           case Some(err) => throw err
-          case _ => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+          case _         => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
         }
 
       case ResponseStatus.EXISTS =>
         document match {
           case StoreSemantics.Insert => throw KeyExistsException.forKey(id)
-          case _ => throw CASMismatchException.forKey(id)
+          case _                     => throw CASMismatchException.forKey(id)
         }
 
       case _ => throw DefaultErrors.throwOnBadResult(id, response.status())

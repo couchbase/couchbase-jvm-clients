@@ -22,8 +22,6 @@ import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.util.Try
 
-
-
 /** Many functions look for an implicit `JsonSerializer[T]`.  These define how to convert a T into an Array[Byte] for sending
   * to the Couchbase Server.
   *
@@ -31,6 +29,7 @@ import scala.util.Try
   * type then this is very simple.  Check out the JsonSerializers in this file for examples.
   */
 trait JsonSerializer[-T] {
+
   /** Encodes a `T` into an Array[Byte].
     *
     * @param content the content to encode

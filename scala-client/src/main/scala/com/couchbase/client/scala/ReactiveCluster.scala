@@ -24,7 +24,10 @@ import com.couchbase.client.core.diag.DiagnosticsResult
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
+import com.couchbase.client.scala.AsyncCluster.{
+  extractClusterEnvironment,
+  seedNodesFromConnectionString
+}
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
@@ -59,7 +62,7 @@ import scala.util.{Failure, Success}
   */
 class ReactiveCluster(val async: AsyncCluster) {
   private[scala] implicit val ec: ExecutionContext = async.env.ec
-  private val env = async.env
+  private val env                                  = async.env
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
   @Stability.Volatile
@@ -87,7 +90,10 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return a `Mono` containing a [[query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     **/
-  def query(statement: String, options: QueryOptions = QueryOptions()): SMono[ReactiveQueryResult] = {
+  def query(
+      statement: String,
+      options: QueryOptions = QueryOptions()
+  ): SMono[ReactiveQueryResult] = {
     async.queryHandler.queryReactive(statement, options, env)
   }
 
@@ -102,22 +108,28 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return a `Mono` containing a [[analytics.ReactiveAnalyticsResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  def analyticsQuery(statement: String, options: AnalyticsOptions = AnalyticsOptions())
-  : SMono[ReactiveAnalyticsResult] = {
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions()
+  ): SMono[ReactiveAnalyticsResult] = {
     async.analyticsHandler.request(statement, options, async.core, async.env) match {
       case Success(request) =>
-
         async.core.send(request)
 
-        FutureConversions.javaCFToScalaMono(request, request.response(), false)
+        FutureConversions
+          .javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: SMono[AnalyticsMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[AnalyticsMetaData] = FutureConversions
+              .javaMonoToScalaMono(response.trailer())
               .map(trailer => {
                 val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
-                  .map(warnings =>
-                    ErrorCodeAndMessage.fromJsonArray(warnings)
-                      .asScala
-                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage)))
+                  .map(
+                    warnings =>
+                      ErrorCodeAndMessage
+                        .fromJsonArray(warnings)
+                        .asScala
+                        .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                  )
                   .getOrElse(Seq.empty)
 
                 AnalyticsMetaData(
@@ -155,20 +167,23 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  def searchQuery(indexName: String,
-                  query: SearchQuery,
-                  options: SearchOptions = SearchOptions()): SMono[ReactiveSearchResult] = {
+  def searchQuery(
+      indexName: String,
+      query: SearchQuery,
+      options: SearchOptions = SearchOptions()
+  ): SMono[ReactiveSearchResult] = {
     async.searchHandler.request(indexName, query, options, async.core, async.env) match {
       case Success(request) =>
-
         async.core.send(request)
 
-        FutureConversions.javaCFToScalaMono(request, request.response(), false)
+        FutureConversions
+          .javaCFToScalaMono(request, request.response(), false)
           .map(response => {
-            val meta: SMono[SearchMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
+            val meta: SMono[SearchMetaData] = FutureConversions
+              .javaMonoToScalaMono(response.trailer())
               .map(trailer => {
                 val rawStatus = response.header.getStatus
-                val errors = SearchHandler.parseSearchErrors(rawStatus)
+                val errors    = SearchHandler.parseSearchErrors(rawStatus)
                 // SCBC-46: errors need to be raised...
                 val meta = SearchHandler.parseSearchMeta(response, trailer)
 
@@ -201,12 +216,12 @@ class ReactiveCluster(val async: AsyncCluster) {
     * This should be called before application exit.
     */
   def disconnect(): SMono[Unit] = {
-    FutureConversions.javaMonoToScalaMono(async.core.shutdown())
+    FutureConversions
+      .javaMonoToScalaMono(async.core.shutdown())
       .`then`(SMono.defer(() => {
         if (env.owned) {
           env.shutdownReactive()
-        }
-        else {
+        } else {
           SMono.empty[Unit]
         }
       }))
@@ -242,7 +257,11 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, username: String, password: String): SMono[ReactiveCluster] = {
+  def connect(
+      connectionString: String,
+      username: String,
+      password: String
+  ): SMono[ReactiveCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
@@ -259,7 +278,7 @@ object ReactiveCluster {
     extractClusterEnvironment(connectionString, options) match {
       case Success(ce) =>
         implicit val ec = ce.ec
-        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+        val seedNodes   = seedNodesFromConnectionString(connectionString, ce)
         SMono.just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
       case Failure(err) => SMono.raiseError(err)
     }

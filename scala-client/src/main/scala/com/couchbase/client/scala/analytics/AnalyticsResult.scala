@@ -42,16 +42,18 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
-                           metaData: AnalyticsMetaData) {
+case class AnalyticsResult(
+    private[scala] val rows: Seq[AnalyticsChunkRow],
+    metaData: AnalyticsMetaData
+) {
+
   /** All returned rows.  All rows are buffered from the analytics service first.
     *
     * $SupportedTypes
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def rowsAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
     val all = rows.iterator.map(row => deserializer.deserialize(row.data()))
     RowTraversalUtil.traverse(all)
   }
@@ -64,17 +66,23 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
   *                        be raised on this Flux
   * @param meta            any additional information related to the Analytics query
   */
-case class ReactiveAnalyticsResult(private[scala] val rows: SFlux[AnalyticsChunkRow],
-                                   meta: SMono[AnalyticsMetaData]) {
+case class ReactiveAnalyticsResult(
+    private[scala] val rows: SFlux[AnalyticsChunkRow],
+    meta: SMono[AnalyticsMetaData]
+) {
+
   /** Return all rows, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
-    rows.map(row => deserializer.deserialize(row.data()) match {
-      case Success(v) => v
-      case Failure(err) => throw err
-    })
+    rows.map(
+      row =>
+        deserializer.deserialize(row.data()) match {
+          case Success(v)   => v
+          case Failure(err) => throw err
+        }
+    )
   }
 }
 
@@ -99,30 +107,36 @@ case class AnalyticsWarning(private val inner: ErrorCodeAndMessage) {
   * @param errorCount    the number of errors that occurred during the request.
   * @param warningCount  the number of warnings that occurred during the request.
   */
-case class AnalyticsMetrics(elapsedTime: Duration,
-                            executionTime: Duration,
-                            resultCount: Long,
-                            resultSize: Long,
-                            processedObjects: Long,
-                            errorCount: Long,
-                            warningCount: Long)
+case class AnalyticsMetrics(
+    elapsedTime: Duration,
+    executionTime: Duration,
+    resultCount: Long,
+    resultSize: Long,
+    processedObjects: Long,
+    errorCount: Long,
+    warningCount: Long
+)
 
 private[scala] object AnalyticsMetrics {
   def fromBytes(in: Array[Byte]): AnalyticsMetrics = {
     JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
       case Success(jo) =>
         AnalyticsMetrics(
-          jo.str("elapsedTime").map(time => {
-            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
-          }).getOrElse(Duration.Zero),
-          jo.str("executionTime").map(time => {
-            DurationConversions.javaDurationToScala(Golang.parseDuration(time))
-          }).getOrElse(Duration.Zero),
-          jo.numLong("resultCount").getOrElse(0l),
-          jo.numLong("resultSize").getOrElse(0l),
-          jo.numLong("sortCount").getOrElse(0l),
-          jo.numLong("errorCount").getOrElse(0l),
-          jo.numLong("warningCount").getOrElse(0l)
+          jo.str("elapsedTime")
+            .map(time => {
+              DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+            })
+            .getOrElse(Duration.Zero),
+          jo.str("executionTime")
+            .map(time => {
+              DurationConversions.javaDurationToScala(Golang.parseDuration(time))
+            })
+            .getOrElse(Duration.Zero),
+          jo.numLong("resultCount").getOrElse(0L),
+          jo.numLong("resultSize").getOrElse(0L),
+          jo.numLong("sortCount").getOrElse(0L),
+          jo.numLong("errorCount").getOrElse(0L),
+          jo.numLong("warningCount").getOrElse(0L)
         )
 
       case Failure(err) =>
@@ -138,24 +152,23 @@ private[scala] object AnalyticsMetrics {
   * @param warnings        any warnings returned from the Analytics service
   * @param status          the raw status string returned from the Analytics service
   */
-case class AnalyticsMetaData(requestId: String,
-                             clientContextId: String,
-                             private val signatureContent: Option[Array[Byte]],
-                             metrics: AnalyticsMetrics,
-                             warnings: Seq[AnalyticsWarning],
-                             status: AnalyticsStatus) {
+case class AnalyticsMetaData(
+    requestId: String,
+    clientContextId: String,
+    private val signatureContent: Option[Array[Byte]],
+    metrics: AnalyticsMetrics,
+    warnings: Seq[AnalyticsWarning],
+    status: AnalyticsStatus
+) {
+
   /** Return any signature content, converted into the application's preferred representation.
     *
     * @tparam T $SupportedTypes
     */
-  def signatureAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def signatureAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     signatureContent match {
       case Some(content) => deserializer.deserialize(content)
-      case _ => Failure(new IllegalArgumentException("No signature is available"))
+      case _             => Failure(new IllegalArgumentException("No signature is available"))
     }
   }
 }
-
-
-

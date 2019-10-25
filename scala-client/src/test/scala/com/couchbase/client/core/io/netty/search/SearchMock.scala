@@ -47,9 +47,9 @@ import scala.concurrent.duration.Duration
 object SearchMock {
 
   private def toByteArray(in: InputStream): Array[Byte] = {
-    val os = new ByteArrayOutputStream
+    val os     = new ByteArrayOutputStream
     val buffer = new Array[Byte](1024)
-    var len = 0
+    var len    = 0
     // read bytes from the input stream and store them in buffer
     while (len != -1) { // write bytes from the buffer into output stream
       len = in.read(buffer)
@@ -57,7 +57,6 @@ object SearchMock {
     }
     os.toByteArray
   }
-
 
   /**
     * Given JSON in the form expected, e.g. those from https://github.com/chvck/sdk-testcases which contains the
@@ -68,33 +67,48 @@ object SearchMock {
 
     // The idea is to fake packets that have come from the search service.
     // Start by preparing the packets.
-    val jo = JsonObject.fromJson(new String(toByteArray(json)))
+    val jo   = JsonObject.fromJson(new String(toByteArray(json)))
     val data = jo.obj("data")
 
-    val b = data.toString.getBytes(StandardCharsets.UTF_8)
+    val b     = data.toString.getBytes(StandardCharsets.UTF_8)
     val bytes = Unpooled.wrappedBuffer(b)
 
     val content = new DefaultLastHttpContent(bytes)
-    val resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+    val resp    = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
 
     // Fake some core stuff
     val mockedCore = mock(classOf[Core])
-    val env = CoreEnvironment.create()
-    val ctx = new CoreContext(mockedCore, 0, env, PasswordAuthenticator("not", "used"))
+    val env        = CoreEnvironment.create()
+    val ctx        = new CoreContext(mockedCore, 0, env, PasswordAuthenticator("not", "used"))
 
     // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest
     // through it
-    val req = new SearchRequest(java.time.Duration.ofSeconds(10), ctx, BestEffortRetryStrategy.INSTANCE, null,
-      null, null)
+    val req = new SearchRequest(
+      java.time.Duration.ofSeconds(10),
+      ctx,
+      BestEffortRetryStrategy.INSTANCE,
+      null,
+      null,
+      null
+    )
 
     // ChunkedSearchMessageHandler will try to encode() the SearchRequest.  Rather than mocking everything required
     // to get that working, just mock the encode method.
     val spiedReq = spy(req)
-    doReturn(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "localhost"), null).when(spiedReq).encode
+    doReturn(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "localhost"), null)
+      .when(spiedReq)
+      .encode
 
     doAnswer((v) => {
-      val endpointContext = new EndpointContext(ctx, new HostAndPort(null, 0), null, null, null, Optional.of
-      ("bucket"), null)
+      val endpointContext = new EndpointContext(
+        ctx,
+        new HostAndPort(null, 0),
+        null,
+        null,
+        null,
+        Optional.of("bucket"),
+        null
+      )
 
       val endpoint = mock(classOf[BaseEndpoint])
       when(endpoint.pipelined).thenReturn(false)

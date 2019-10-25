@@ -106,7 +106,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def get(name: String): Any = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     check
   }
 
@@ -121,7 +123,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def str(name: String): String = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.str(check, name)
   }
 
@@ -138,7 +142,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def num(name: String): Int = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.num(check, name)
   }
 
@@ -153,7 +159,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def bool(name: String): Boolean = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.bool(check, name)
   }
 
@@ -170,7 +178,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def numLong(name: String): Long = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.numLong(check, name)
   }
 
@@ -187,7 +197,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def numDouble(name: String): Double = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.numDouble(check, name)
   }
 
@@ -204,7 +216,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def numFloat(name: String): Float = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.numFloat(check, name)
   }
 
@@ -219,7 +233,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def obj(name: String): JsonObject = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.obj(check, name)
   }
 
@@ -234,7 +250,9 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     */
   def arr(name: String): JsonArray = {
     val check = content.get(name)
-    if (check == null) if (!content.containsKey(name)) throw new NoSuchElementException(s"Field $name does not exist")
+    if (check == null)
+      if (!content.containsKey(name))
+        throw new NoSuchElementException(s"Field $name does not exist")
     ValueConvertor.arr(check, name)
   }
 
@@ -287,11 +305,11 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     for (entry <- content.entrySet.asScala) {
       val content = entry.getValue
       content match {
-        case v: JsonObject => copy.put(entry.getKey, v.toMap)
+        case v: JsonObject     => copy.put(entry.getKey, v.toMap)
         case v: JsonObjectSafe => copy.put(entry.getKey, v.toMap)
-        case v: JsonArray => copy.put(entry.getKey, v.toSeq)
-        case v: JsonArraySafe => copy.put(entry.getKey, v.toSeq)
-        case _ => copy.put(entry.getKey, content)
+        case v: JsonArray      => copy.put(entry.getKey, v.toSeq)
+        case v: JsonArraySafe  => copy.put(entry.getKey, v.toSeq)
+        case _                 => copy.put(entry.getKey, content)
       }
     }
     copy
@@ -326,8 +344,7 @@ object JsonObject {
   def fromJson(json: String): JsonObject = {
     try {
       JacksonTransformers.stringToJsonObject(json)
-    }
-    catch {
+    } catch {
       case NonFatal(err) => throw new IllegalArgumentException(err)
     }
   }

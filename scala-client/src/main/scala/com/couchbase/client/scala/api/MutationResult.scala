@@ -34,7 +34,8 @@ private[scala] trait HasDurabilityTokens {
   * @author Graham Pople
   * @since 1.0.0
   */
-case class MutationResult(cas: Long, mutationToken: Option[MutationToken]) extends HasDurabilityTokens
+case class MutationResult(cas: Long, mutationToken: Option[MutationToken])
+    extends HasDurabilityTokens
 
 /** Contains the result of a successful mutation against a counter document or field.
   *
@@ -45,6 +46,5 @@ case class MutationResult(cas: Long, mutationToken: Option[MutationToken]) exten
   *                      `MutationToken` providing additional context on the mutation.
   * @param content       the post-update content of the counter
   */
-case class CounterResult(cas: Long,
-                         mutationToken: Option[MutationToken],
-                         content: Long) extends HasDurabilityTokens
+case class CounterResult(cas: Long, mutationToken: Option[MutationToken], content: Long)
+    extends HasDurabilityTokens

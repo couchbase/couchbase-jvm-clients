@@ -12,10 +12,8 @@ class JsonObjectDynamicSpec {
     """{"name":"John Smith",
       |"age":29,
       |"address":[{"address":"123 Fake Street","regional":{"county":"essex"}}]}""".stripMargin
-  val json = JsonObject.fromJson(raw)
+  val json     = JsonObject.fromJson(raw)
   val jsonSafe = json.safe
-
-
   @Test
   def safe_root_incorrectly_read_as_object() {
     assert(jsonSafe.dyn.address.obj.isFailure)
@@ -45,8 +43,6 @@ class JsonObjectDynamicSpec {
   def safe_age_str() {
     assert(jsonSafe.dyn.age.str.get == "29")
   }
-
-
   @Test
   def safe_address_arr() {
     assert(jsonSafe.dyn.address.arr.isSuccess)
@@ -75,7 +71,7 @@ class JsonObjectDynamicSpec {
   @Test
   def safe_address_0_obj() {
     jsonSafe.dyn.address(0).obj match {
-      case Success(v) =>
+      case Success(v)   =>
       case Failure(err) => Assertions.fail(err)
     }
   }
@@ -104,13 +100,15 @@ class JsonObjectDynamicSpec {
   def safe_address_0_regional_county_int() {
     assert(jsonSafe.dyn.address(0).regional.county.num.isFailure)
   }
-
-
   @Test
   def root_incorrectly_read_as_object() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.address.obj
-    ))
+    Assertions.assertThrows(
+      classOf[DecodingFailedException],
+      () =>
+        (
+          json.dyn.address.obj
+        )
+    )
   }
 
   @Test
@@ -120,9 +118,13 @@ class JsonObjectDynamicSpec {
 
   @Test
   def name_int() {
-    Assertions.assertThrows(classOf[NumberFormatException], () => (
-      json.dyn.name.num
-    ))
+    Assertions.assertThrows(
+      classOf[NumberFormatException],
+      () =>
+        (
+          json.dyn.name.num
+        )
+    )
   }
 
   @Test
@@ -139,8 +141,6 @@ class JsonObjectDynamicSpec {
   def age_str() {
     assert(json.dyn.age.str == "29")
   }
-
-
   @Test
   def address_arr() {
     json.dyn.address.arr
@@ -148,16 +148,24 @@ class JsonObjectDynamicSpec {
 
   @Test
   def name_arr() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.name.arr
-    ))
+    Assertions.assertThrows(
+      classOf[DecodingFailedException],
+      () =>
+        (
+          json.dyn.name.arr
+        )
+    )
   }
 
   @Test
   def name_0_str() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.name(0).str
-    ))
+    Assertions.assertThrows(
+      classOf[DecodingFailedException],
+      () =>
+        (
+          json.dyn.name(0).str
+        )
+    )
   }
 
   @Test
@@ -167,9 +175,13 @@ class JsonObjectDynamicSpec {
 
   @Test
   def address_0_no_exist_str() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.address(0).no_exist.str
-    ))
+    Assertions.assertThrows(
+      classOf[DecodingFailedException],
+      () =>
+        (
+          json.dyn.address(0).no_exist.str
+        )
+    )
   }
 
   @Test
@@ -179,14 +191,12 @@ class JsonObjectDynamicSpec {
 
   @Test
   def address_1_obj() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.address(1).obj))
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (json.dyn.address(1).obj))
   }
 
   @Test
   def address_minus1_obj() {
-    Assertions.assertThrows(classOf[DecodingFailedException], () => (
-      json.dyn.address(-1).obj))
+    Assertions.assertThrows(classOf[DecodingFailedException], () => (json.dyn.address(-1).obj))
   }
 
   @Test
@@ -201,7 +211,9 @@ class JsonObjectDynamicSpec {
 
   @Test
   def address_0_regional_county_int() {
-    Assertions.assertThrows(classOf[NumberFormatException], () => (
-      json.dyn.address(0).regional.county.num))
+    Assertions.assertThrows(
+      classOf[NumberFormatException],
+      () => (json.dyn.address(0).regional.county.num)
+    )
   }
 }

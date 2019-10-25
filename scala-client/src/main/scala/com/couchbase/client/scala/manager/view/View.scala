@@ -16,5 +16,4 @@
 
 package com.couchbase.client.scala.manager.view
 
-case class View(map: String,
-               reduce: Option[String] = None)
+case class View(map: String, reduce: Option[String] = None)

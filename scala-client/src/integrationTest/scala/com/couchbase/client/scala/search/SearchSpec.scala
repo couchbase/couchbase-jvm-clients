@@ -48,9 +48,11 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Test
   def simple() {
-    cluster.searchQuery("travel-sample-index-unstored",
+    cluster.searchQuery(
+      "travel-sample-index-unstored",
       SearchQuery.queryString("united"),
-      SearchOptions().limit(10)) match {
+      SearchOptions().limit(10)
+    ) match {
       case Success(result) =>
         assert(result.errors.isEmpty)
         assert(10 == result.rows.size)

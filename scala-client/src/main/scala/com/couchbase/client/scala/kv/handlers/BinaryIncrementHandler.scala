@@ -37,17 +37,18 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class BinaryIncrementHandler(hp: HandlerParams)
-  extends RequestHandler[IncrementResponse, CounterResult] {
+    extends RequestHandler[IncrementResponse, CounterResult] {
 
-  def request[T](id: String,
-                 delta: Long,
-                 initial: Option[Long] = None,
-                 cas: Long = 0,
-                 durability: Durability,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[IncrementRequest] = {
+  def request[T](
+      id: String,
+      delta: Long,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[IncrementRequest] = {
 
     val validations: Try[IncrementRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -61,25 +62,26 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       val i: Optional[java.lang.Long] = initial match {
         case Some(x) => Optional.of(x.asInstanceOf[java.lang.Long])
-        case _ => Optional.empty()
+        case _       => Optional.empty()
       }
 
-      Success(new IncrementRequest(
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        id,
-        cas,
-        delta,
-        i,
-        expiration.getSeconds.toInt,
-        durability.toDurabilityLevel
-      ))
+      Success(
+        new IncrementRequest(
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          id,
+          cas,
+          delta,
+          i,
+          expiration.getSeconds.toInt,
+          durability.toDurabilityLevel
+        )
+      )
     }
   }
 

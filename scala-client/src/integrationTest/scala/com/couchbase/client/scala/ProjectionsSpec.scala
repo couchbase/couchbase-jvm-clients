@@ -15,7 +15,7 @@ class ProjectionsSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _
   private var coll: Collection = _
-  private val docId = "projection-test"
+  private val docId            = "projection-test"
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -61,7 +61,6 @@ class ProjectionsSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
-
   private def wrap(project: Seq[String]): JsonObject = {
     coll.get(docId, project = project) match {
       case Success(result) =>
@@ -92,7 +91,7 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   @Test
   def animals() {
     val json = wrap(Seq("animals"))
-    val arr = json.arr("animals")
+    val arr  = json.arr("animals")
     assert(arr.size == 3)
     assert(arr.toSeq == Seq("cat", "dog", "parrot"))
   }
@@ -100,20 +99,20 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   @Test
   def animals0() {
     val json = wrap(Seq("animals[0]"))
-    val arr = json.arr("animals")
+    val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("cat"))
   }
 
   @Test
   def animals2() {
     val json = wrap(Seq("animals[2]"))
-    val arr = json.arr("animals")
+    val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("parrot"))
   }
 
   @Test
   def attributes() {
-    val json = wrap(Seq("attributes"))
+    val json  = wrap(Seq("attributes"))
     val field = json.obj("attributes")
     assert(field.size == 3)
     assert(field.arr("hobbies").obj(1).str("type") == "summer sports")

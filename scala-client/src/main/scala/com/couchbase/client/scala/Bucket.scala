@@ -44,7 +44,7 @@ import scala.util.Try
   */
 class Bucket private[scala] (val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private[scala] val kvTimeout = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
+  private[scala] val kvTimeout                     = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
 
   /** Returns the name of this bucket. */
   def name: String = async.name
@@ -79,7 +79,8 @@ class Bucket private[scala] (val async: AsyncBucket) {
     */
   @Stability.Volatile
   def scope(scopeName: String): Scope = {
-    AsyncUtils.block(async.scope(scopeName))
+    AsyncUtils
+      .block(async.scope(scopeName))
       .map(asyncScope => new Scope(asyncScope, async.name))
       .get
   }
@@ -102,9 +103,11 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  def viewQuery(designDoc: String,
-                viewName: String,
-                options: ViewOptions = ViewOptions()): Try[ViewResult] = {
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      options: ViewOptions = ViewOptions()
+  ): Try[ViewResult] = {
     AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
   }
 
@@ -123,10 +126,12 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * @return a ping report once created.
     */
   @Stability.Volatile
-  def ping(services: Seq[ServiceType] = Seq(),
-           reportId: String = UUID.randomUUID.toString,
-           timeout: Duration = kvTimeout,
-           retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE): Try[PingResult] = {
+  def ping(
+      services: Seq[ServiceType] = Seq(),
+      reportId: String = UUID.randomUUID.toString,
+      timeout: Duration = kvTimeout,
+      retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE
+  ): Try[PingResult] = {
     AsyncUtils.block(async.ping(services, reportId, timeout, retryStrategy))
   }
 }

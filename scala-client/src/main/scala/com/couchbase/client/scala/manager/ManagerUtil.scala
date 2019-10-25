@@ -19,7 +19,12 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.{DefaultFullHttpRequest, HttpHeaderValues, HttpMethod, HttpVersion}
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.{
+  DefaultFullHttpRequest,
+  HttpHeaderValues,
+  HttpMethod,
+  HttpVersion
+}
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
@@ -33,50 +38,60 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 object ManagerUtil {
-   def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
+  def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
     core.send(request)
     FutureConversions.javaCFToScalaMono(request, request.response, true)
   }
 
-   def sendRequest(core: Core,
-                          method: HttpMethod,
-                          path: String,
-                          timeout: Duration,
-                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
-     val idempotent = method == HttpMethod.GET
-    sendRequest(core, new GenericManagerRequest(
-      timeout,
-      core.context,
-      retryStrategy,
-      () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-      idempotent))
+  def sendRequest(
+      core: Core,
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[GenericManagerResponse] = {
+    val idempotent = method == HttpMethod.GET
+    sendRequest(
+      core,
+      new GenericManagerRequest(
+        timeout,
+        core.context,
+        retryStrategy,
+        () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
+        idempotent
+      )
+    )
   }
 
-   def sendRequest(core: Core,
-                          method: HttpMethod,
-                          path: String,
-                          body: UrlQueryStringBuilder,
-                          timeout: Duration,
-                          retryStrategy: RetryStrategy): SMono[GenericManagerResponse] = {
-     val idempotent = method == HttpMethod.GET
-    sendRequest(core, new GenericManagerRequest(timeout,
-      core.context,
-      retryStrategy,
-      () => {
+  def sendRequest(
+      core: Core,
+      method: HttpMethod,
+      path: String,
+      body: UrlQueryStringBuilder,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[GenericManagerResponse] = {
+    val idempotent = method == HttpMethod.GET
+    sendRequest(
+      core,
+      new GenericManagerRequest(timeout, core.context, retryStrategy, () => {
         val content = Unpooled.copiedBuffer(body.build, UTF_8)
-        val req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
+        val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
         req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
         req.headers.add("Content-Length", content.readableBytes)
         req
-      },
-      idempotent))
+      }, idempotent)
+    )
   }
 
-   def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {
+  def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {
     if (response.status != ResponseStatus.SUCCESS) {
-      Failure(new CouchbaseException("Failed to " + action + "; response status=" + response.status + "; response " +
-        "body=" + new String(response.content, UTF_8)))
-    }
-    else Success()
+      Failure(
+        new CouchbaseException(
+          "Failed to " + action + "; response status=" + response.status + "; response " +
+            "body=" + new String(response.content, UTF_8)
+        )
+      )
+    } else Success()
   }
 }

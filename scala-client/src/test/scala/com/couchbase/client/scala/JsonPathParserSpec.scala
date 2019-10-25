@@ -14,44 +14,46 @@ class JsonPathParserSpec {
 
   @Test
   def foo_2() {
-    assert(JsonPathParser.parse("foo[2]").get == Seq(
-      PathArray("foo", 2)))
+    assert(JsonPathParser.parse("foo[2]").get == Seq(PathArray("foo", 2)))
   }
 
   @Test
   def foo_bar() {
-    assert(JsonPathParser.parse("foo.bar").get == Seq(
-      PathObjectOrField("foo"),
-      PathObjectOrField("bar")))
+    assert(
+      JsonPathParser.parse("foo.bar").get == Seq(PathObjectOrField("foo"), PathObjectOrField("bar"))
+    )
   }
 
   @Test
   def foo_bar_2() {
-    assert(JsonPathParser.parse("foo.bar[2]").get == Seq(
-      PathObjectOrField("foo"),
-      PathArray("bar", 2)))
+    assert(
+      JsonPathParser.parse("foo.bar[2]").get == Seq(PathObjectOrField("foo"), PathArray("bar", 2))
+    )
   }
 
   @Test
   def foo_2_bar() {
-    assert(JsonPathParser.parse("foo[2].bar").get == Seq(
-      PathArray("foo", 2),
-      PathObjectOrField("bar")))
+    assert(
+      JsonPathParser.parse("foo[2].bar").get == Seq(PathArray("foo", 2), PathObjectOrField("bar"))
+    )
   }
 
   @Test
   def foo_9999_bar() {
-    assert(JsonPathParser.parse("foo[9999].bar").get == Seq(
-      PathArray("foo", 9999),
-      PathObjectOrField("bar")))
+    assert(
+      JsonPathParser
+        .parse("foo[9999].bar")
+        .get == Seq(PathArray("foo", 9999), PathObjectOrField("bar"))
+    )
   }
 
   @Test
   def foo_2_bar_80_baz() {
-    assert(JsonPathParser.parse("foo[2].bar[80].baz").get == Seq(
-      PathArray("foo", 2),
-      PathArray("bar", 80),
-      PathObjectOrField("baz")))
+    assert(
+      JsonPathParser
+        .parse("foo[2].bar[80].baz")
+        .get == Seq(PathArray("foo", 2), PathArray("bar", 80), PathObjectOrField("baz"))
+    )
   }
 
   @Test

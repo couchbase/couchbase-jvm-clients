@@ -22,10 +22,12 @@ import scala.compat.java8.OptionConverters._
   * @author Graham Pople
   * @since 1.0.0
   * */
-case class MutateInResult(id: String,
-                          private val content: Seq[SubdocField],
-                          cas: Long,
-                          mutationToken: Option[MutationToken]) extends HasDurabilityTokens {
+case class MutateInResult(
+    id: String,
+    private val content: Seq[SubdocField],
+    cas: Long,
+    mutationToken: Option[MutationToken]
+) extends HasDurabilityTokens {
 
   /** Retrieve the content returned for a particular `MutateInSpec`, converted into the application's preferred
     * representation.
@@ -35,16 +37,14 @@ case class MutateInResult(id: String,
     * @param index $Index
     * @tparam T as this is only applicable for counters, the application should pass T=Long
     */
-  def contentAs[T](index: Int)
-                  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def contentAs[T](index: Int)(implicit deserializer: JsonDeserializer[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
       Failure(new IllegalArgumentException(s"$index is out of bounds"))
-    }
-    else {
+    } else {
       val field = content(index)
       field.error().asScala match {
         case Some(err) => Failure(err)
-        case _ => deserializer.deserialize(field.value)
+        case _         => deserializer.deserialize(field.value)
       }
     }
   }

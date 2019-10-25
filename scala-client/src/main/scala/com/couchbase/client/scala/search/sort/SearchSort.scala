@@ -17,7 +17,6 @@ package com.couchbase.client.scala.search.sort
 
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 
-
 /** Base class for all FTS sort options in querying.
   *
   * @since 1.0.0
@@ -74,11 +73,13 @@ object SearchSort {
     * @param descending whether the search results should be sorted in descending order.  If None (the default) is
     *                   specified, it is left to the server (which sorts descending by default)
     */
-  case class FieldSort(field: String,
-                       typ: Option[FieldSortType] = None,
-                       mode: Option[FieldSortMode] = None,
-                       missing: Option[FieldSortMissing] = None,
-                       descending: Option[Boolean] = None) extends SearchSort {
+  case class FieldSort(
+      field: String,
+      typ: Option[FieldSortType] = None,
+      mode: Option[FieldSortMode] = None,
+      missing: Option[FieldSortMissing] = None,
+      descending: Option[Boolean] = None
+  ) extends SearchSort {
     override protected def identifier = "field"
 
     override def injectParams(queryJson: JsonObject): Unit = {
@@ -104,10 +105,12 @@ object SearchSort {
     *
     * @since 1.0.0
     */
-  case class GeoDistanceSort(location: Seq[Float],
-                             field: String,
-                             descending: Option[Boolean] = None,
-                             unit: Option[String] = None) extends SearchSort {
+  case class GeoDistanceSort(
+      location: Seq[Float],
+      field: String,
+      descending: Option[Boolean] = None,
+      unit: Option[String] = None
+  ) extends SearchSort {
 
     override protected def identifier = "geo_distance"
 
@@ -129,10 +132,10 @@ object SearchSort {
 sealed trait FieldSortType
 
 object FieldSortType {
-  case object Auto extends FieldSortType
+  case object Auto   extends FieldSortType
   case object String extends FieldSortType
   case object Number extends FieldSortType
-  case object Date extends FieldSortType
+  case object Date   extends FieldSortType
 }
 
 /** The mode of a [[FieldSort]]. */
@@ -140,8 +143,8 @@ sealed trait FieldSortMode
 
 object FieldSortMode {
   case object Default extends FieldSortMode
-  case object Min extends FieldSortMode
-  case object Max extends FieldSortMode
+  case object Min     extends FieldSortMode
+  case object Max     extends FieldSortMode
 }
 
 /** The missing behaviour for a [[FieldSort]]. */
@@ -149,5 +152,5 @@ sealed trait FieldSortMissing
 
 object FieldSortMissing {
   case object First extends FieldSortMissing
-  case object Last extends FieldSortMissing
+  case object Last  extends FieldSortMissing
 }

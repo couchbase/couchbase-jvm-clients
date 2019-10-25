@@ -25,16 +25,17 @@ import scala.concurrent.duration.Duration
   *
   * @since 1.0.0
   */
-case class CircuitBreakerConfig(private[scala] val enabled: Boolean =
-                                core.endpoint.CircuitBreakerConfig.DEFAULT_ENABLED,
-                                private[scala] val volumeThreshold: Int =
-                                core.endpoint.CircuitBreakerConfig.DEFAULT_VOLUME_THRESHOLD,
-                                private[scala] val errorThresholdPercentage: Int =
-                                core.endpoint.CircuitBreakerConfig.DEFAULT_ERROR_THRESHOLD_PERCENTAGE,
-                                private[scala] val sleepWindow: Duration =
-                                core.endpoint.CircuitBreakerConfig.DEFAULT_SLEEP_WINDOW,
-                                private[scala] val rollingWindow: Duration =
-                                core.endpoint.CircuitBreakerConfig.DEFAULT_ROLLING_WINDOW) {
+case class CircuitBreakerConfig(
+    private[scala] val enabled: Boolean = core.endpoint.CircuitBreakerConfig.DEFAULT_ENABLED,
+    private[scala] val volumeThreshold: Int =
+      core.endpoint.CircuitBreakerConfig.DEFAULT_VOLUME_THRESHOLD,
+    private[scala] val errorThresholdPercentage: Int =
+      core.endpoint.CircuitBreakerConfig.DEFAULT_ERROR_THRESHOLD_PERCENTAGE,
+    private[scala] val sleepWindow: Duration =
+      core.endpoint.CircuitBreakerConfig.DEFAULT_SLEEP_WINDOW,
+    private[scala] val rollingWindow: Duration =
+      core.endpoint.CircuitBreakerConfig.DEFAULT_ROLLING_WINDOW
+) {
 
   private[scala] def toCore: endpoint.CircuitBreakerConfig.Builder = {
     val builder = endpoint.CircuitBreakerConfig.builder()

@@ -22,12 +22,14 @@ import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup
   *
   * @since 1.0.0
   */
-case class IoEnvironment(private[scala] val managerEventLoopGroup: Option[EventLoopGroup] = None,
-                         private[scala] val kvEventLoopGroup: Option[EventLoopGroup] = None,
-                         private[scala] val queryEventLoopGroup: Option[EventLoopGroup] = None,
-                         private[scala] val analyticsEventLoopGroup: Option[EventLoopGroup] = None,
-                         private[scala] val searchEventLoopGroup: Option[EventLoopGroup] = None,
-                         private[scala] val viewEventLoopGroup: Option[EventLoopGroup] = None) {
+case class IoEnvironment(
+    private[scala] val managerEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val kvEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val queryEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val analyticsEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val searchEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val viewEventLoopGroup: Option[EventLoopGroup] = None
+) {
 
   /** Sets the [[EventLoopGroup]] to be used for config traffic.
     *
@@ -90,7 +92,3 @@ case class IoEnvironment(private[scala] val managerEventLoopGroup: Option[EventL
     builder
   }
 }
-
-
-
-

@@ -22,6 +22,7 @@ sealed trait ViewScanConsistency {
 }
 
 object ViewScanConsistency {
+
   /** The view should be updated with all outstanding mutations before the query returns. */
   case object RequestPlus extends ViewScanConsistency {
     private[scala] def encoded: String = "false"

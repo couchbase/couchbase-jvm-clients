@@ -34,8 +34,7 @@ import scala.concurrent.ExecutionContext
   * @since 1.0.0
   */
 @Volatile
-class Scope private[scala] (val async: AsyncScope,
-            bucketName: String) {
+class Scope private[scala] (val async: AsyncScope, bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
   /** Access a Reactive version of this API. */
@@ -46,7 +45,8 @@ class Scope private[scala] (val async: AsyncScope,
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): Collection = {
-    AsyncUtils.block(async.collection(collectionName))
+    AsyncUtils
+      .block(async.collection(collectionName))
       .map(asyncCollection => new Collection(asyncCollection, bucketName))
       .get
   }
@@ -56,4 +56,3 @@ class Scope private[scala] (val async: AsyncScope,
     collection(DefaultResources.DefaultCollection)
   }
 }
-

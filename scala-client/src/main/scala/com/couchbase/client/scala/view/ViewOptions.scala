@@ -24,34 +24,32 @@ import com.couchbase.client.scala.transformers.JacksonTransformers
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-
-
 /** Customize the execution of a view.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
 case class ViewOptions(
-                        private[scala] val namespace: Option[DesignDocumentNamespace] = None,
-                        private[scala] val reduce: Option[Boolean] = None,
-                        private[scala] val limit: Option[Int] = None,
-                        private[scala] val group: Option[Boolean] = None,
-                        private[scala] val groupLevel: Option[Int] = None,
-                        private[scala] val inclusiveEnd: Option[Boolean] = None,
-                        private[scala] val skip: Option[Int] = None,
-                        private[scala] val onError: Option[ViewErrorMode] = None,
-                        private[scala] val debug: Option[Boolean] = None,
-                        private[scala] val order: Option[ViewOrdering] = None,
-                        private[scala] val key: Option[String] = None,
-                        private[scala] val startKeyDocId: Option[String] = None,
-                        private[scala] val endKeyDocId: Option[String] = None,
-                        private[scala] val endKey: Option[String] = None,
-                        private[scala] val startKey: Option[String] = None,
-                        private[scala] val keys: Option[String] = None,
-                        private[scala] val retryStrategy: Option[RetryStrategy] = None,
-                        private[scala] val timeout: Option[Duration] = None,
-                        private[scala] val scanConsistency: Option[ViewScanConsistency] = None
-                      ) {
+    private[scala] val namespace: Option[DesignDocumentNamespace] = None,
+    private[scala] val reduce: Option[Boolean] = None,
+    private[scala] val limit: Option[Int] = None,
+    private[scala] val group: Option[Boolean] = None,
+    private[scala] val groupLevel: Option[Int] = None,
+    private[scala] val inclusiveEnd: Option[Boolean] = None,
+    private[scala] val skip: Option[Int] = None,
+    private[scala] val onError: Option[ViewErrorMode] = None,
+    private[scala] val debug: Option[Boolean] = None,
+    private[scala] val order: Option[ViewOrdering] = None,
+    private[scala] val key: Option[String] = None,
+    private[scala] val startKeyDocId: Option[String] = None,
+    private[scala] val endKeyDocId: Option[String] = None,
+    private[scala] val endKey: Option[String] = None,
+    private[scala] val startKey: Option[String] = None,
+    private[scala] val keys: Option[String] = None,
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val timeout: Option[Duration] = None,
+    private[scala] val scanConsistency: Option[ViewScanConsistency] = None
+) {
 
   def namespace(value: DesignDocumentNamespace): ViewOptions = {
     copy(namespace = Some(value))
@@ -146,7 +144,7 @@ case class ViewOptions(
   def key(value: Any): ViewOptions = {
     value match {
       case s: String => copy(key = Some('"' + s + "'"))
-      case _ => copy(key = Some(value.toString))
+      case _         => copy(key = Some(value.toString))
     }
   }
 
@@ -160,23 +158,25 @@ case class ViewOptions(
 
   def endKey(value: Any): ViewOptions = {
     value match {
-      case s: String => copy(endKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
+      case s: String =>
+        copy(endKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
       case _ => copy(endKey = Some(value.toString))
     }
   }
 
   def startKey(value: Any): ViewOptions = {
     value match {
-      case s: String => copy(startKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
+      case s: String =>
+        copy(startKey = Try(JacksonTransformers.MAPPER.writeValueAsString(value)).toOption)
       case _ => copy(startKey = Some(value.toString))
     }
   }
 
   def keys(value: Any): ViewOptions = {
     value match {
-      case v: String => copy(keys = Some(v))
+      case v: String                 => copy(keys = Some(v))
       case JsonArray | JsonArraySafe => copy(keys = Some(value.toString))
-      case _ =>
+      case _                         =>
         // This will trigger a validation failure later
         copy(keys = null)
     }
@@ -309,8 +309,3 @@ case class ViewOptions(
     sb.toString.stripSuffix("&")
   }
 }
-
-
-
-
-

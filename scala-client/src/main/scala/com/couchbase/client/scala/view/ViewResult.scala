@@ -33,8 +33,7 @@ import scala.util.{Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-case class ViewResult(meta: ViewMetaData,
-                      rows: Seq[ViewRow])
+case class ViewResult(meta: ViewMetaData, rows: Seq[ViewRow])
 
 /** The results of a N1QL view, as returned by the reactive API.
   *
@@ -42,8 +41,7 @@ case class ViewResult(meta: ViewMetaData,
   *                        rows, it will be raised on this Flux
   * @param meta            contains additional information related to the view.
   */
-case class ReactiveViewResult(meta: SMono[ViewMetaData],
-                              rows: SFlux[ViewRow])
+case class ReactiveViewResult(meta: SMono[ViewMetaData], rows: SFlux[ViewRow])
 
 /** An individual view result row.
   *
@@ -59,8 +57,7 @@ case class ViewRow(private val _content: Array[Byte]) {
     *
     * @tparam T $SupportedTypes
     */
-  def valueAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def valueAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("value"))
       .flatMap(key => deserializer.deserialize(key.binaryValue()))
@@ -70,8 +67,7 @@ case class ViewRow(private val _content: Array[Byte]) {
     *
     * @tparam T $SupportedTypes
     */
-  def keyAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def keyAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("key"))
       .flatMap(key => deserializer.deserialize(key.binaryValue()))
@@ -86,18 +82,16 @@ case class ViewRow(private val _content: Array[Byte]) {
 
   override def toString: String = rootNode match {
     case Success(rn) => redactUser(rn.toString).toString
-    case _ => "could not decode"
+    case _           => "could not decode"
   }
 }
-
 
 /** Additional information returned by the view service aside from any rows and errors.
   *
   * @param debug            any debug information available from the view service
   * @param totalRows        the total number of returned rows
   */
-case class ViewMetaData(private val debug: Array[Byte],
-                        totalRows: Long) {
+case class ViewMetaData(private val debug: Array[Byte], totalRows: Long) {
 
   /** Return the content, converted into the application's preferred representation.
     *
@@ -106,9 +100,7 @@ case class ViewMetaData(private val debug: Array[Byte],
     *
     * @tparam T $SupportedTypes
     */
-  def debugAs[T]
-  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+  def debugAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     deserializer.deserialize(debug)
   }
 }
-

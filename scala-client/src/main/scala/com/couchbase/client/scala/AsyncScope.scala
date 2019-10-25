@@ -37,17 +37,20 @@ import scala.concurrent.{ExecutionContext, Future}
   * @since 1.0.0
   */
 @Volatile
-class AsyncScope private[scala] (scopeName: String,
-                 bucketName: String,
-                 private val core: Core,
-                 private[scala] val environment: ClusterEnvironment) {
+class AsyncScope private[scala] (
+    scopeName: String,
+    bucketName: String,
+    private val core: Core,
+    private[scala] val environment: ClusterEnvironment
+) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
 
   /** The name of this scope. */
   def name = scopeName
 
   /** Opens and returns the default collection on this scope. */
-  private[scala] def defaultCollection: Future[AsyncCollection] = collection(DefaultResources.DefaultCollection)
+  private[scala] def defaultCollection: Future[AsyncCollection] =
+    collection(DefaultResources.DefaultCollection)
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): Future[AsyncCollection] = {
@@ -55,8 +58,7 @@ class AsyncScope private[scala] (scopeName: String,
       Future {
         new AsyncCollection(collectionName, bucketName, scopeName, core, environment)
       }
-    }
-    else {
+    } else {
       FutureConverters
         .toScala(core.configurationProvider().refreshCollectionMap(bucketName, false).toFuture)
         .map(_ => new AsyncCollection(collectionName, bucketName, scopeName, core, environment))

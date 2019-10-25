@@ -22,7 +22,6 @@ import com.couchbase.client.core.msg.kv.{DurabilityLevel => CoreLevel}
 import com.couchbase.client.core.service.kv.Observe
 import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
 
-
 /** Writes in Couchbase are written to a single node, and from there the Couchbase Server will
   * take care of sending that mutation to any configured replicas.  This option provides
   * some control over ensuring the success of the mutation's replication.
@@ -34,9 +33,10 @@ sealed trait Durability {
 
   private[scala] def toDurabilityLevel: Optional[CoreLevel] = {
     this match {
-      case Durability.Majority => Optional.of(CoreLevel.MAJORITY)
+      case Durability.Majority          => Optional.of(CoreLevel.MAJORITY)
       case Durability.PersistToMajority => Optional.of(CoreLevel.PERSIST_TO_MAJORITY)
-      case Durability.MajorityAndPersistOnMaster => Optional.of(CoreLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+      case Durability.MajorityAndPersistOnMaster =>
+        Optional.of(CoreLevel.MAJORITY_AND_PERSIST_ON_MASTER)
       case _ => Optional.empty()
     }
   }
@@ -56,8 +56,10 @@ object Durability {
     * @param replicateTo the number of replicas to wait for on which the mutation will be available in-memory
     * @param persistTo   the number of replicas to wait for on which the mutation has been written to storage
     */
-  case class ClientVerified(replicateTo: ReplicateTo.Value,
-                            persistTo: PersistTo.Value = PersistTo.None) extends Durability
+  case class ClientVerified(
+      replicateTo: ReplicateTo.Value,
+      persistTo: PersistTo.Value = PersistTo.None
+  ) extends Durability
 
   /** The server will ensure that the change is available in memory on the majority of configured replicas, before
     * returning success to the SDK.
@@ -88,9 +90,9 @@ object ReplicateTo extends Enumeration {
   val None, One, Two, Three = Value
 
   private[scala] def asCore(v: ReplicateTo.Value): Observe.ObserveReplicateTo = v match {
-    case None => ObserveReplicateTo.NONE
-    case One => ObserveReplicateTo.ONE
-    case Two => ObserveReplicateTo.TWO
+    case None  => ObserveReplicateTo.NONE
+    case One   => ObserveReplicateTo.ONE
+    case Two   => ObserveReplicateTo.TWO
     case Three => ObserveReplicateTo.THREE
   }
 
@@ -101,11 +103,11 @@ object PersistTo extends Enumeration {
   val None, Active, One, Two, Three, Four = Value
 
   private[scala] def asCore(v: PersistTo.Value): Observe.ObservePersistTo = v match {
-    case None => ObservePersistTo.NONE
+    case None   => ObservePersistTo.NONE
     case Active => ObservePersistTo.ACTIVE
-    case One => ObservePersistTo.ONE
-    case Two => ObservePersistTo.TWO
-    case Three => ObservePersistTo.THREE
-    case Four => ObservePersistTo.FOUR
+    case One    => ObservePersistTo.ONE
+    case Two    => ObservePersistTo.TWO
+    case Three  => ObservePersistTo.THREE
+    case Four   => ObservePersistTo.FOUR
   }
 }

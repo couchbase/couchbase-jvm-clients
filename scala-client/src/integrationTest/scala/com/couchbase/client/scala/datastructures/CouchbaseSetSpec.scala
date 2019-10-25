@@ -32,7 +32,7 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _
   private var coll: Collection = _
-  private val docId = "test"
+  private val docId            = "test"
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -85,8 +85,6 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
 
     assert(l.toSeq == Seq())
   }
-
-
   @Test
   def count(): Unit = {
 
@@ -105,7 +103,7 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
 
   @Test
   def foreach(): Unit = {
-    val l = makeCollection
+    val l      = makeCollection
     val values = ArrayBuffer.empty[Int]
 
     l.foreach(v => values += v)
@@ -158,8 +156,8 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
     l += 5
     l += 6
 
-    assert (l(5))
-    assert (l(6))
-    assert (!l(7))
+    assert(l(5))
+    assert(l(6))
+    assert(!l(7))
   }
 }

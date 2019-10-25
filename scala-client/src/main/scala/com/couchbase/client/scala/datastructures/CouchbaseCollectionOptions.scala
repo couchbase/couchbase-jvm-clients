@@ -22,16 +22,18 @@ import com.couchbase.client.scala.util.DurationConversions
 
 import scala.concurrent.duration.Duration
 
-case class CouchbaseCollectionOptions(timeout: Duration,
-                                      retryStrategy: RetryStrategy,
-                                      durability: Durability = Durability.Disabled
-                                     )
+case class CouchbaseCollectionOptions(
+    timeout: Duration,
+    retryStrategy: RetryStrategy,
+    durability: Durability = Durability.Disabled
+)
 
 object CouchbaseCollectionOptions {
   def apply(collection: Collection): CouchbaseCollectionOptions = {
     CouchbaseCollectionOptions(
       timeout = DurationConversions.javaDurationToScala(
-        collection.async.environment.timeoutConfig.kvTimeout()),
+        collection.async.environment.timeoutConfig.kvTimeout()
+      ),
       retryStrategy = collection.async.environment.retryStrategy
     )
   }

@@ -19,6 +19,7 @@ package com.couchbase.client.scala.kv
 sealed class StoreSemantics
 
 object StoreSemantics {
+
   /** If the document does not exist then do nothing, and fail the operation with `DocumentDoesNotExistException`. */
   case object Replace extends StoreSemantics
 

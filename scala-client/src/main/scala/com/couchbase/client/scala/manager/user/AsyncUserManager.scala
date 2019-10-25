@@ -22,67 +22,81 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-
-
 @Volatile
 class AsyncUserManager(val reactive: ReactiveUserManager) {
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy = reactive.defaultRetryStrategy
+  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
 
-  def getUser(username: String,
-              domain: AuthDomain = AuthDomain.Local,
-              timeout: Duration = defaultManagerTimeout,
-              retryStrategy: RetryStrategy = defaultRetryStrategy): Future[UserAndMetadata] = {
+  def getUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[UserAndMetadata] = {
     reactive.getUser(username, domain, timeout, retryStrategy).toFuture
   }
 
-  def getAllUsers(domain: AuthDomain = AuthDomain.Local,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Seq[UserAndMetadata]] = {
+  def getAllUsers(
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Seq[UserAndMetadata]] = {
     reactive.getAllUsers(domain, timeout, retryStrategy).collectSeq().toFuture
   }
 
-
-  def upsertUser(user: User,
-                 domain: AuthDomain = AuthDomain.Local,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def upsertUser(
+      user: User,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.upsertUser(user, domain, timeout, retryStrategy).toFuture
   }
 
-  def dropUser(username: String,
-               domain: AuthDomain = AuthDomain.Local,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def dropUser(
+      username: String,
+      domain: AuthDomain = AuthDomain.Local,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.dropUser(username, domain, timeout, retryStrategy).toFuture
   }
 
-
-  def availableRoles(timeout: Duration = defaultManagerTimeout,
-                     retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Seq[RoleAndDescription]] = {
+  def availableRoles(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Seq[RoleAndDescription]] = {
     reactive.availableRoles(timeout, retryStrategy).collectSeq().toFuture
   }
 
-  def getGroup(groupName: String,
-               timeout: Duration = defaultManagerTimeout,
-               retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Group] = {
+  def getGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Group] = {
     reactive.getGroup(groupName, timeout, retryStrategy).toFuture
   }
 
-  def getAllGroups(timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Seq[Group]] = {
+  def getAllGroups(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Seq[Group]] = {
     reactive.getAllGroups(timeout, retryStrategy).collectSeq().toFuture
   }
 
-  def upsertGroup(group: Group,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def upsertGroup(
+      group: Group,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.upsertGroup(group, timeout, retryStrategy).toFuture
   }
 
-  def dropGroup(groupName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Future[Unit] = {
+  def dropGroup(
+      groupName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
     reactive.dropGroup(groupName, timeout, retryStrategy).toFuture
   }
 }

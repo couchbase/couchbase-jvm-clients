@@ -25,7 +25,12 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{FacetResult, SearchMetaData, SearchMetrics, SearchStatus}
+import com.couchbase.client.scala.search.result.{
+  FacetResult,
+  SearchMetaData,
+  SearchMetrics,
+  SearchStatus
+}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
 
@@ -43,12 +48,13 @@ private[scala] class SearchHandler() {
 
   import DurationConversions._
 
-  def request[T](indexName: String,
-                 query: SearchQuery,
-                 options: SearchOptions,
-                 core: Core,
-                 environment: ClusterEnvironment)
-  : Try[SearchRequest] = {
+  def request[T](
+      indexName: String,
+      query: SearchQuery,
+      options: SearchOptions,
+      core: Core,
+      environment: ClusterEnvironment
+  ): Try[SearchRequest] = {
 
     val validations: Try[SearchRequest] = for {
       _ <- Validate.notNull(query, "query")
@@ -69,45 +75,54 @@ private[scala] class SearchHandler() {
 
     if (validations.isFailure) {
       validations
-    }
-    else if (options.deferredError.isDefined) {
+    } else if (options.deferredError.isDefined) {
       Failure(options.deferredError.get)
-    }
-    else {
+    } else {
       val params = options.export(indexName, query)
 
       val queryBytes = params.toString.getBytes(CharsetUtil.UTF_8)
 
       val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.searchTimeout)
-      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+      val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
 
-      Try(new SearchRequest(timeout,
-        core.context(),
-        retryStrategy,
-        core.context().authenticator(),
-        indexName,
-        queryBytes))
+      Try(
+        new SearchRequest(
+          timeout,
+          core.context(),
+          retryStrategy,
+          core.context().authenticator(),
+          indexName,
+          queryBytes
+        )
+      )
     }
   }
 }
 
 object SearchHandler {
-  private[scala] def parseSearchMeta(response: SearchResponse, trailer: SearchChunkTrailer): SearchMetaData = {
+  private[scala] def parseSearchMeta(
+      response: SearchResponse,
+      trailer: SearchChunkTrailer
+  ): SearchMetaData = {
     val rawStatus = response.header.getStatus
-    val status = SearchStatus.fromBytes(rawStatus)
-    val metrics = SearchMetrics(Duration.fromNanos(trailer.took()), trailer.totalRows(), trailer.maxScore())
+    val status    = SearchStatus.fromBytes(rawStatus)
+    val metrics =
+      SearchMetrics(Duration.fromNanos(trailer.took()), trailer.totalRows(), trailer.maxScore())
     val meta = SearchMetaData(status, metrics)
     meta
   }
 
   private[scala] def parseSearchErrors(status: Array[Byte]): Seq[RuntimeException] = {
     val jsonStatus = JacksonTransformers.MAPPER.readValue(status, classOf[JsonObject])
-    val errorsRaw = jsonStatus.safe.get("errors")
+    val errorsRaw  = jsonStatus.safe.get("errors")
     errorsRaw match {
-      case Success(errorsJson: JsonArray) => errorsJson.toSeq.map(v => new RuntimeException(v.toString))
+      case Success(errorsJson: JsonArray) =>
+        errorsJson.toSeq.map(v => new RuntimeException(v.toString))
       case Success(errorsJson: JsonObject) =>
-        errorsJson.names.toSeq.seq.map(key => new RuntimeException(key + ": " + errorsJson.get(key)))
-      case _ => Seq(new RuntimeException("Server error: errors field returned, but contained no errors"))
+        errorsJson.names.toSeq.seq
+          .map(key => new RuntimeException(key + ": " + errorsJson.get(key)))
+      case _ =>
+        Seq(new RuntimeException("Server error: errors field returned, but contained no errors"))
     }
   }
 }

@@ -24,11 +24,13 @@ import scala.concurrent.duration.Duration
   *
   * @param isReplica whether this came from a replica (as opposed to the active vbucket)
   */
-class GetReplicaResult(id: String,
-                       // It's Right only in the case where projections were requested
-                       private val _content: Either[Array[Byte], JsonObject],
-                       flags: Int,
-                       cas: Long,
-                       expiry: Option[Duration],
-                       val isReplica: Boolean,
-                       transcoder: Transcoder) extends GetResult(id, _content, flags, cas, expiry, transcoder)
+class GetReplicaResult(
+    id: String,
+    // It's Right only in the case where projections were requested
+    private val _content: Either[Array[Byte], JsonObject],
+    flags: Int,
+    cas: Long,
+    expiry: Option[Duration],
+    val isReplica: Boolean,
+    transcoder: Transcoder
+) extends GetResult(id, _content, flags, cas, expiry, transcoder)

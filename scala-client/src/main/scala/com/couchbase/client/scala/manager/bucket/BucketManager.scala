@@ -22,47 +22,56 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
-
-
 @Volatile
 class BucketManager(val async: AsyncBucketManager) {
   private val defaultManagerTimeout = async.defaultManagerTimeout
-  private val defaultRetryStrategy = async.defaultRetryStrategy
+  private val defaultRetryStrategy  = async.defaultRetryStrategy
 
-  def create(settings: CreateBucketSettings,
-             timeout: Duration = defaultManagerTimeout,
-             retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def create(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     val future = async.create(settings, timeout, retryStrategy)
     Collection.block(future)
   }
 
-  def updateBucket(settings: CreateBucketSettings,
-                   timeout: Duration = defaultManagerTimeout,
-                   retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def updateBucket(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.updateBucket(settings, timeout, retryStrategy))
   }
 
-  def dropBucket(bucketName: String,
-                 timeout: Duration = defaultManagerTimeout,
-                 retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def dropBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.dropBucket(bucketName, timeout, retryStrategy))
   }
 
-  def getBucket(bucketName: String,
-                timeout: Duration = defaultManagerTimeout,
-                retryStrategy: RetryStrategy = defaultRetryStrategy): Try[BucketSettings] = {
+  def getBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[BucketSettings] = {
     Collection.block(async.getBucket(bucketName, timeout, retryStrategy))
   }
 
-
-  def getAllBuckets(timeout: Duration = defaultManagerTimeout,
-                    retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Seq[BucketSettings]] = {
+  def getAllBuckets(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Seq[BucketSettings]] = {
     Collection.block(async.getAllBuckets(timeout, retryStrategy))
   }
 
-  def flushBucket(bucketName: String,
-                  timeout: Duration = defaultManagerTimeout,
-                  retryStrategy: RetryStrategy = defaultRetryStrategy): Try[Unit] = {
+  def flushBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
     Collection.block(async.flushBucket(bucketName, timeout, retryStrategy))
   }
 }

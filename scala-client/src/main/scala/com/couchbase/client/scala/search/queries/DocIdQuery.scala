@@ -24,10 +24,11 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   *
   * @since 1.0.0
   */
-case class DocIdQuery(private[scala] val docIds: Seq[String],
-                      private[scala] val field: Option[String] = None,
-                      private[scala] val boost: Option[Double] = None) extends SearchQuery {
-
+case class DocIdQuery(
+    private[scala] val docIds: Seq[String],
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease
     * the relative weight (with a boost between 0 and 1)

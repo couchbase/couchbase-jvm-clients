@@ -25,7 +25,6 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}
 
-
 /**
   * Handles requests and responses for KV get-and-lock operations.
   *
@@ -33,13 +32,14 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndLockHandler(hp: HandlerParams)
-  extends RequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
+    extends RequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
 
-  def request[T](id: String,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-  : Try[GetAndLockRequest] = {
+  def request[T](
+      id: String,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy
+  ): Try[GetAndLockRequest] = {
     val validations: Try[GetAndLockRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(expiration, "expiration")
@@ -49,21 +49,37 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
-      Success(new GetAndLockRequest(id,
-        timeout,
-        hp.core.context(),
-        hp.collectionIdentifier,
-        retryStrategy,
-        expiration))
+    } else {
+      Success(
+        new GetAndLockRequest(
+          id,
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          expiration
+        )
+      )
     }
   }
 
-  override def response(id: String, response: GetAndLockResponse, transcoder: Transcoder): Option[GetResult] = {
+  override def response(
+      id: String,
+      response: GetAndLockResponse,
+      transcoder: Transcoder
+  ): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty, transcoder))
+        Some(
+          new GetResult(
+            id,
+            Left(response.content),
+            response.flags(),
+            response.cas,
+            Option.empty,
+            transcoder
+          )
+        )
 
       case ResponseStatus.NOT_FOUND => None
 

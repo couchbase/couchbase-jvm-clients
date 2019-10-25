@@ -37,17 +37,18 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 private[scala] class UpsertHandler(hp: HandlerParams)
-  extends RequestHandler[UpsertResponse, MutationResult] {
+    extends RequestHandler[UpsertResponse, MutationResult] {
 
-  def request[T](id: String,
-                 content: T,
-                 durability: Durability,
-                 expiration: java.time.Duration,
-                 timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy,
-                 transcoder: Transcoder,
-                 serializer: JsonSerializer[T])
-  : Try[UpsertRequest] = {
+  def request[T](
+      id: String,
+      content: T,
+      durability: Durability,
+      expiration: java.time.Duration,
+      timeout: java.time.Duration,
+      retryStrategy: RetryStrategy,
+      transcoder: Transcoder,
+      serializer: JsonSerializer[T]
+  ): Try[UpsertRequest] = {
     val validations: Try[UpsertRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(content, "content")
@@ -59,24 +60,27 @@ private[scala] class UpsertHandler(hp: HandlerParams)
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       val encoded: Try[EncodedValue] = transcoder match {
-        case x: TranscoderWithSerializer => x.encode(content, serializer)
+        case x: TranscoderWithSerializer    => x.encode(content, serializer)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
 
       encoded match {
         case Success(en) =>
-          Success(new UpsertRequest(id,
-            en.encoded,
-            expiration.getSeconds,
-            en.flags,
-            timeout,
-            hp.core.context(),
-            hp.collectionIdentifier,
-            retryStrategy,
-            durability.toDurabilityLevel))
+          Success(
+            new UpsertRequest(
+              id,
+              en.encoded,
+              expiration.getSeconds,
+              en.flags,
+              timeout,
+              hp.core.context(),
+              hp.collectionIdentifier,
+              retryStrategy,
+              durability.toDurabilityLevel
+            )
+          )
 
         case Failure(err) =>
           Failure(new EncodingFailedException(err))

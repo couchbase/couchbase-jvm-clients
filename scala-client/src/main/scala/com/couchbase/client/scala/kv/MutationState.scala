@@ -13,7 +13,7 @@ case class MutationState(tokens: Seq[MutationToken]) {
   def add(mutationResult: MutationResult): MutationState = {
     mutationResult.mutationToken match {
       case Some(mt) => copy(tokens :+ mt)
-      case _ => this
+      case _        => this
     }
   }
 

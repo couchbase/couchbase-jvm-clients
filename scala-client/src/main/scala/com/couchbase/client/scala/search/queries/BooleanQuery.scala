@@ -22,11 +22,13 @@ import com.couchbase.client.scala.json.JsonObject
   *
   * @since 1.0.0
   */
-case class BooleanQuery(private[scala] val must: ConjunctionQuery = ConjunctionQuery(),
-                        private[scala] val should: DisjunctionQuery = DisjunctionQuery(),
-                        private[scala] val mustNot: DisjunctionQuery = DisjunctionQuery(),
-                        private[scala] val field: Option[String] = None,
-                        private[scala] val boost: Option[Double] = None) extends SearchQuery {
+case class BooleanQuery(
+    private[scala] val must: ConjunctionQuery = ConjunctionQuery(),
+    private[scala] val should: DisjunctionQuery = DisjunctionQuery(),
+    private[scala] val mustNot: DisjunctionQuery = DisjunctionQuery(),
+    private[scala] val field: Option[String] = None,
+    private[scala] val boost: Option[Double] = None
+) extends SearchQuery {
 
   /** If a hit satisfies at least this many queries in the `should` section, its score will be boosted.  By default,
     * this is set to 1.

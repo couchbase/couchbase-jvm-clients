@@ -40,7 +40,6 @@ import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
-
 /**
   * Holds a cache entry, which might either be the full plan or just the name, depending on the
   * cluster state.
@@ -66,27 +65,32 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
   import DurationConversions._
 
   private val QueryCacheSize = 5000
-  private val queryCache = Collections.synchronizedMap(new LRUCache[String, QueryCacheEntry](QueryCacheSize))
+  private val queryCache =
+    Collections.synchronizedMap(new LRUCache[String, QueryCacheEntry](QueryCacheSize))
   @volatile private var enhancedPreparedEnabled = false
 
   updateEnhancedPreparedEnabled(core.clusterConfig())
 
   // Subscribe to cluster config changes
-  core.configurationProvider()
+  core
+    .configurationProvider()
     .configs()
     .subscribe(config => updateEnhancedPreparedEnabled(config))
 
   private def updateEnhancedPreparedEnabled(config: ClusterConfig): Unit = {
     if (!enhancedPreparedEnabled) {
       val caps = config.clusterCapabilities.get(ServiceType.QUERY)
-      enhancedPreparedEnabled = caps != null && caps.contains(ClusterCapabilities.ENHANCED_PREPARED_STATEMENTS)
+      enhancedPreparedEnabled = caps != null && caps.contains(
+        ClusterCapabilities.ENHANCED_PREPARED_STATEMENTS
+      )
     }
   }
 
-  private def request[T](statement: String,
-                         options: QueryOptions,
-                         environment: ClusterEnvironment)
-  : Try[QueryRequest] = {
+  private def request[T](
+      statement: String,
+      options: QueryOptions,
+      environment: ClusterEnvironment
+  ): Try[QueryRequest] = {
 
     val validations = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")
@@ -109,8 +113,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
 
     if (validations.isFailure) {
       validations
-    }
-    else {
+    } else {
       options.deferredException match {
         case Some(deferredException) => Failure(deferredException)
         case _ =>
@@ -120,16 +123,19 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
           Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
             val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
-            val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
+            val timeout: Duration =
+              options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
             val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
-            val request = new QueryRequest(timeout,
+            val request = new QueryRequest(
+              timeout,
               core.context(),
               retryStrategy,
               core.context().authenticator(),
               statement,
               queryBytes,
-              options.readonly.getOrElse(false))
+              options.readonly.getOrElse(false)
+            )
 
             request
           })
@@ -148,25 +154,30 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
 
     val rows: SFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
 
-    val meta: SMono[QueryMetaData] = FutureConversions.javaMonoToScalaMono(response.trailer())
+    val meta: SMono[QueryMetaData] = FutureConversions
+      .javaMonoToScalaMono(response.trailer())
       .map(addl => {
-        val warnings: Seq[QueryWarning] = addl.warnings.asScala.map(warnings =>
-          ErrorCodeAndMessage.fromJsonArray(warnings)
-            .asScala
-            .map(warning => QueryWarning(warning.code(), warning.message())))
+        val warnings: Seq[QueryWarning] = addl.warnings.asScala
+          .map(
+            warnings =>
+              ErrorCodeAndMessage
+                .fromJsonArray(warnings)
+                .asScala
+                .map(warning => QueryWarning(warning.code(), warning.message()))
+          )
           .getOrElse(Seq())
 
         val status: QueryStatus = addl.status match {
-          case "running" => QueryStatus.Running
-          case "success" => QueryStatus.Success
-          case "errors" => QueryStatus.Errors
+          case "running"   => QueryStatus.Running
+          case "success"   => QueryStatus.Success
+          case "errors"    => QueryStatus.Errors
           case "completed" => QueryStatus.Completed
-          case "stopped" => QueryStatus.Stopped
-          case "timeout" => QueryStatus.Timeout
-          case "closed" => QueryStatus.Closed
-          case "fatal" => QueryStatus.Fatal
-          case "aborted" => QueryStatus.Aborted
-          case _ => QueryStatus.Unknown
+          case "stopped"   => QueryStatus.Stopped
+          case "timeout"   => QueryStatus.Timeout
+          case "closed"    => QueryStatus.Closed
+          case "fatal"     => QueryStatus.Fatal
+          case "aborted"   => QueryStatus.Aborted
+          case _           => QueryStatus.Unknown
         }
 
         val out = QueryMetaData(
@@ -201,8 +212,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
     if (adhoc) {
       core.send(request)
       FutureConversions.wrap(request, request.response, propagateCancellation = true)
-    }
-    else maybePrepareAndExecute(request, options)
+    } else maybePrepareAndExecute(request, options)
   }
 
   /**
@@ -220,21 +230,24 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
     *
     * @return the mono once the result is complete.
     */
-  private def maybePrepareAndExecute(request: QueryRequest, options: QueryOptions): SMono[QueryResponse] = {
-    val cacheEntry = queryCache.get(request.statement)
+  private def maybePrepareAndExecute(
+      request: QueryRequest,
+      options: QueryOptions
+  ): SMono[QueryResponse] = {
+    val cacheEntry      = queryCache.get(request.statement)
     val enhancedEnabled = enhancedPreparedEnabled
 
     if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
       queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true)
-    }
-    else if (enhancedEnabled) {
+    } else if (enhancedEnabled) {
       queryInternal(buildPrepareRequest(request, options), options, true)
         .flatMap((qr: QueryResponse) => {
           val preparedName = qr.header().prepared()
           if (!preparedName.isPresent) {
-            SMono.raiseError(new CouchbaseException("No prepared name present but must be, this is a query bug!"))
-          }
-          else {
+            SMono.raiseError(
+              new CouchbaseException("No prepared name present but must be, this is a query bug!")
+            )
+          } else {
             queryCache.put(
               request.statement(),
               QueryCacheEntry(preparedName.get(), fullPlan = false, None)
@@ -242,34 +255,32 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
             SMono.just(qr)
           }
         })
-    }
-    else {
-      SMono.defer(() => {
-        val req = buildPrepareRequest(request, options)
-        core.send(req)
-        FutureConversions.wrap(req, req.response, propagateCancellation = true)
-      })
-
+    } else {
+      SMono
+        .defer(() => {
+          val req = buildPrepareRequest(request, options)
+          core.send(req)
+          FutureConversions.wrap(req, req.response, propagateCancellation = true)
+        })
         .flatMapMany(result => result.rows())
 
         // Only expect one row back, but no harm handling multiple
         .doOnNext(row => {
-        val json: Try[JsonObjectSafe] = JsonDeserializer.JsonObjectSafeConvert.deserialize(row.data())
-        val nameOpt: Option[String] = json.flatMap(_.str("name")).toOption
-        val plan: Option[String] = if (enhancedEnabled) None else json.flatMap(_.str("encoded_plan")).toOption
+          val json: Try[JsonObjectSafe] =
+            JsonDeserializer.JsonObjectSafeConvert.deserialize(row.data())
+          val nameOpt: Option[String] = json.flatMap(_.str("name")).toOption
+          val plan: Option[String] =
+            if (enhancedEnabled) None else json.flatMap(_.str("encoded_plan")).toOption
 
-        nameOpt match {
-          case Some(name) =>
-            val entry = QueryCacheEntry(name, !enhancedEnabled, plan)
-            queryCache.put(request.statement, entry)
-          case _ =>
-        }
-      })
-
+          nameOpt match {
+            case Some(name) =>
+              val entry = QueryCacheEntry(name, !enhancedEnabled, plan)
+              queryCache.put(request.statement, entry)
+            case _ =>
+          }
+        })
         .`then`()
-
         .`then`(SMono.defer(() => maybePrepareAndExecute(request, options)))
-
         .onErrorResume(err => {
           // The logic here is that if the prepare-execute
           // phase fails, the user isn't interested.  So just perform the query as an adhoc one
@@ -287,7 +298,10 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
     *
     * @return the mono once the result is complete.
     */
-  private def queryReactive(request: QueryRequest, options: QueryOptions): SMono[ReactiveQueryResult] = {
+  private def queryReactive(
+      request: QueryRequest,
+      options: QueryOptions
+  ): SMono[ReactiveQueryResult] = {
     queryInternal(request, options, options.adhoc)
       .map(v => convertResponse(v))
   }
@@ -310,8 +324,15 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       options.encode(query)
     }
 
-    new QueryRequest(original.timeout, original.context, original.retryStrategy, original.credentials,
-      statement, query.toString.getBytes(StandardCharsets.UTF_8), true)
+    new QueryRequest(
+      original.timeout,
+      original.context,
+      original.retryStrategy,
+      original.credentials,
+      statement,
+      query.toString.getBytes(StandardCharsets.UTF_8),
+      true
+    )
   }
 
   /**
@@ -323,21 +344,26 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
     *
     * @return the created request, ready to be sent over the wire.
     */
-  private def buildExecuteRequest(cacheEntry: QueryCacheEntry, original: QueryRequest,
-                                  originalOptions: QueryOptions): QueryRequest = {
+  private def buildExecuteRequest(
+      cacheEntry: QueryCacheEntry,
+      original: QueryRequest,
+      originalOptions: QueryOptions
+  ): QueryRequest = {
     val query = cacheEntry.export
 
     query.put("timeout", encodeDurationToMs(original.timeout))
 
     originalOptions.encode(query)
 
-    new QueryRequest(original.timeout,
+    new QueryRequest(
+      original.timeout,
       original.context,
       original.retryStrategy,
       original.credentials,
       original.statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
-      originalOptions.readonly.getOrElse(false))
+      originalOptions.readonly.getOrElse(false)
+    )
   }
 
   /**
@@ -356,9 +382,11 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
    *
    * Rows are not buffered in-memory, they are streamed back.
    */
-  def queryReactive(statement: String,
-                    options: QueryOptions,
-                    environment: ClusterEnvironment): SMono[ReactiveQueryResult] = {
+  def queryReactive(
+      statement: String,
+      options: QueryOptions,
+      environment: ClusterEnvironment
+  ): SMono[ReactiveQueryResult] = {
     request(statement, options, environment) match {
       case Success(req) => queryReactive(req, options)
       case Failure(err) => SMono.raiseError(err)
@@ -369,22 +397,28 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
    *
    * Rows are buffered in-memory.
    */
-  def queryAsync(statement: String,
-                 options: QueryOptions,
-                 environment: ClusterEnvironment): Future[QueryResult] = {
+  def queryAsync(
+      statement: String,
+      options: QueryOptions,
+      environment: ClusterEnvironment
+  ): Future[QueryResult] = {
 
     request(statement, options, environment) match {
       case Success(req) =>
         queryReactive(req, options)
-          // Buffer the responses
-          .flatMap(response => response.rows.collectSeq().flatMap(rows => {
-          response.metaData
-            .map(meta => {
-              QueryResult(
-                rows,
-                meta)
-            })
-        })).toFuture
+        // Buffer the responses
+          .flatMap(
+            response =>
+              response.rows
+                .collectSeq()
+                .flatMap(rows => {
+                  response.metaData
+                    .map(meta => {
+                      QueryResult(rows, meta)
+                    })
+                })
+          )
+          .toFuture
 
       case Failure(err) => Future.failed(err)
     }

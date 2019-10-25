@@ -30,38 +30,43 @@ import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.Success
 
-
 /** Customize the execution of a N1QL query.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String,Any]] = None,
-                        private[scala] val positionalParameters: Option[Seq[Any]] = None,
-                        private[scala] val clientContextId: Option[String] = None,
-                        private[scala] val credentials: Option[Map[String,String]] = None,
-                        private[scala] val maxParallelism: Option[Int] = None,
-                        private[scala] val metrics: Boolean = false,
-                        private[scala] val pipelineBatch: Option[Int] = None,
-                        private[scala] val pipelineCap: Option[Int] = None,
-                        private[scala] val profile: Option[QueryProfile] = None,
-                        private[scala] val readonly: Option[Boolean] = None,
-                        private[scala] val retryStrategy: Option[RetryStrategy] = None,
-                        private[scala] val scanCap: Option[Int] = None,
-                        private[scala] val scanConsistency: Option[QueryScanConsistency] = None,
-                        private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
-                        private[scala] val timeout: Option[Duration] = None,
-                        private[scala] val adhoc: Boolean = true,
-                        private[scala] val deferredException: Option[RuntimeException] = None) {
+case class QueryOptions(
+    private[scala] val namedParameters: Option[GenMap[String, Any]] = None,
+    private[scala] val positionalParameters: Option[Seq[Any]] = None,
+    private[scala] val clientContextId: Option[String] = None,
+    private[scala] val credentials: Option[Map[String, String]] = None,
+    private[scala] val maxParallelism: Option[Int] = None,
+    private[scala] val metrics: Boolean = false,
+    private[scala] val pipelineBatch: Option[Int] = None,
+    private[scala] val pipelineCap: Option[Int] = None,
+    private[scala] val profile: Option[QueryProfile] = None,
+    private[scala] val readonly: Option[Boolean] = None,
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val scanCap: Option[Int] = None,
+    private[scala] val scanConsistency: Option[QueryScanConsistency] = None,
+    private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
+    private[scala] val timeout: Option[Duration] = None,
+    private[scala] val adhoc: Boolean = true,
+    private[scala] val deferredException: Option[RuntimeException] = None
+) {
+
   /** Provides named parameters for queries parameterised that way.
     *
     * Overrides any previously-supplied named parameters.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def parameters(values: Map[String,Any]): QueryOptions = {
-    copy(namedParameters = Option(values), positionalParameters = None,
-      deferredException = deferredException.orElse(checkTypes(values.values)))
+  def parameters(values: Map[String, Any]): QueryOptions = {
+    copy(
+      namedParameters = Option(values),
+      positionalParameters = None,
+      deferredException = deferredException.orElse(checkTypes(values.values))
+    )
   }
 
   /** Provides named parameters for queries parameterised that way.
@@ -79,8 +84,11 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     * @return a copy of this with the change applied, for chaining.
     */
   def parameters(values: Seq[Any]): QueryOptions = {
-    copy(positionalParameters = Option(values), namedParameters = None,
-      deferredException = deferredException.orElse(checkTypes(values)))
+    copy(
+      positionalParameters = Option(values),
+      namedParameters = None,
+      deferredException = deferredException.orElse(checkTypes(values))
+    )
   }
 
   /** Provides positional parameters for queries parameterised that way.
@@ -90,26 +98,28 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
   def parameters(values: JsonArray): QueryOptions = {
     copy(positionalParameters = Option(values.toSeq), namedParameters = None)
   }
-  
+
   private def checkTypes(in: Iterable[Any]): Option[RuntimeException] = {
     var out: Option[RuntimeException] = None
 
     in.foreach(value => {
       if (value != null) {
         value match {
-          case _: String =>
-          case _: Int =>
-          case _: Long =>
-          case _: Double =>
-          case _: Float =>
-          case _: Short =>
-          case _: Boolean =>
-          case _: JsonObject =>
+          case _: String         =>
+          case _: Int            =>
+          case _: Long           =>
+          case _: Double         =>
+          case _: Float          =>
+          case _: Short          =>
+          case _: Boolean        =>
+          case _: JsonObject     =>
           case _: JsonObjectSafe =>
-          case _: JsonArray =>
-          case _: JsonArraySafe =>
+          case _: JsonArray      =>
+          case _: JsonArraySafe  =>
           case _ =>
-            out = Some(new IllegalArgumentException(s"Value '${redactUser(value)}' is not a valid JSON type"))
+            out = Some(
+              new IllegalArgumentException(s"Value '${redactUser(value)}' is not a valid JSON type")
+            )
         }
       }
     })
@@ -131,7 +141,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def credentials(user: String, password: String): QueryOptions = copy(credentials = Option(Map(user -> password)))
+  def credentials(user: String, password: String): QueryOptions =
+    copy(credentials = Option(Map(user -> password)))
 
   /** Allows to override the default maximum parallelism for the query execution on the server side.
     *
@@ -139,7 +150,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def maxParallelism(maxParallelism: Int): QueryOptions = copy(maxParallelism = Option(maxParallelism))
+  def maxParallelism(maxParallelism: Int): QueryOptions =
+    copy(maxParallelism = Option(maxParallelism))
 
   /** Advanced: Maximum number of items each execution operator can buffer between various operators.
     *
@@ -190,7 +202,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def readonly(readonly: Boolean): QueryOptions= copy(readonly = Option(readonly))
+  def readonly(readonly: Boolean): QueryOptions = copy(readonly = Option(readonly))
 
   /** Advanced: Maximum buffered channel size between the indexer client and the query service for index scans.
     *
@@ -208,7 +220,8 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def scanConsistency(scanConsistency: QueryScanConsistency): QueryOptions = copy(scanConsistency = Some(scanConsistency))
+  def scanConsistency(scanConsistency: QueryScanConsistency): QueryOptions =
+    copy(scanConsistency = Some(scanConsistency))
 
   /** Sets a maximum timeout for processing.
     *
@@ -248,7 +261,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     else duration.toNanos + "ns"
   }
 
-
   private[scala] def encode(): JsonObject = {
     encode(JsonObject.create)
   }
@@ -271,8 +283,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
       p.foreach(k => {
         if (k._1.startsWith("$")) {
           out.put(k._1, k._2)
-        }
-        else {
+        } else {
           out.put('$' + k._1, k._2)
         }
       })
@@ -290,15 +301,18 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
         val mutationState = JsonObject.create
 
         x.consistentWith.tokens.foreach(token => {
-          val bucket: JsonObject = if (mutationState.containsKey(token.bucketName)) mutationState.obj(token.bucketName)
-          else {
-            val out = JsonObject.create
-            mutationState.put(token.bucketName, out)
-            out
-          }
+          val bucket: JsonObject =
+            if (mutationState.containsKey(token.bucketName)) mutationState.obj(token.bucketName)
+            else {
+              val out = JsonObject.create
+              mutationState.put(token.bucketName, out)
+              out
+            }
 
-          bucket.put(token.partitionID.toString,
-            JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID)))
+          bucket.put(
+            token.partitionID.toString,
+            JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID))
+          )
         })
         out.put("scan_vectors", mutationState)
 
@@ -314,7 +328,7 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     profile.foreach(v => out.put("profile", v.encoded))
     val cciOut = clientContextId match {
       case Some(cci) => cci
-      case _ => UUID.randomUUID().toString
+      case _         => UUID.randomUUID().toString
     }
     out.put("client_context_id", cciOut)
     maxParallelism.foreach(v => out.put("max_parallelism", v.toString))
@@ -327,7 +341,6 @@ case class QueryOptions(private[scala] val namedParameters: Option[GenMap[String
     out
   }
 }
-
 
 object QueryOptions {
   def apply() = new QueryOptions()

@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 private[scala] object DefaultResources {
-  val DefaultScope = "_default"
-  val DefaultCollection = "_default"
+  val DefaultScope        = "_default"
+  val DefaultCollection   = "_default"
   val DefaultCollectionId = 0
 }

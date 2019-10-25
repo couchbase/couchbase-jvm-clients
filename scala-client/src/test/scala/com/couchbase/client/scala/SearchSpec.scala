@@ -36,17 +36,24 @@ class SearchSpec {
 
   @Test
   def facets() {
-    val facets = Map("facet1" -> SearchFacet.TermFacet("field1", Some(10)),
-      "facet2" -> SearchFacet.NumericRangeFacet("field2", Some(10), Seq(
-        NumericRange("range1", Some(10), Some(20)),
-        NumericRange("range2", Some(20), None))),
-      "facet3" -> SearchFacet.DateRangeFacet("field3", Some(10), Seq(
-        DateRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59")))))
+    val facets = Map(
+      "facet1" -> SearchFacet.TermFacet("field1", Some(10)),
+      "facet2" -> SearchFacet.NumericRangeFacet(
+        "field2",
+        Some(10),
+        Seq(NumericRange("range1", Some(10), Some(20)), NumericRange("range2", Some(20), None))
+      ),
+      "facet3" -> SearchFacet.DateRangeFacet(
+        "field3",
+        Some(10),
+        Seq(DateRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59")))
+      )
+    )
   }
 
   @Test
   def alltimeouts() {
-    val json = getClass.getClassLoader.getResourceAsStream("sdk-testcases/search/alltimeouts.json")
+    val json   = getClass.getClassLoader.getResourceAsStream("sdk-testcases/search/alltimeouts.json")
     val result = SearchMock.loadSearchTestCase(json)
 
     assert(6 == result.errors.size)
