@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryResponse}
 import com.couchbase.client.core.util.Golang
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.util.{DurationConversions, FunctionalUtil, RowTraversalUtil}
 import com.couchbase.client.scala.util.RowTraversalUtil
@@ -35,7 +35,7 @@ import scala.util.{Failure, Success, Try}
   * @param metaData            any additional information related to the query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
-  *                        implicit `Decodable[T]` can be found, and can include [[JsonObject]], a case class, String,
+  *                        implicit `JsonDeserializer[T]` can be found, and can include [[JsonObject]], a case class, String,
   *                        or one of a number of supported third-party JSON libraries.
   * @author Graham Pople
   * @since 1.0.0
@@ -50,9 +50,9 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow],
     * convenient interface that does not require handling individual row decode errors.
     **/
   def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
     RowTraversalUtil.traverse(rows.iterator.map(row => {
-      ev.decode(row.data(), Conversions.JsonFlags)
+      deserializer.deserialize(row.data())
     }))
   }
 }
@@ -69,10 +69,10 @@ case class ReactiveQueryResult(private[scala] val rows: SFlux[QueryChunkRow],
     * $SupportedTypes
     */
   def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): SFlux[T] = {
+  (implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(row => {
       // The .get will raise an exception as .onError on the flux
-      ev.decode(row.data(), Conversions.JsonFlags).get
+      deserializer.deserialize(row.data()).get
     })
   }
 }
@@ -182,9 +182,9 @@ case class QueryMetaData(private[scala] val requestId: String,
     * @tparam T $SupportedTypes
     */
   def profileAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _profileContent match {
-      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case Some(content) => deserializer.deserialize(content)
       case _ => Failure(new IllegalArgumentException("No profile is available"))
     }
   }
@@ -194,9 +194,9 @@ case class QueryMetaData(private[scala] val requestId: String,
     * @tparam T $SupportedTypes
     */
   def signatureAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _signatureContent match {
-      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case Some(content) => deserializer.deserialize(content)
       case _ => Failure(new IllegalArgumentException("No signature is available"))
     }
   }

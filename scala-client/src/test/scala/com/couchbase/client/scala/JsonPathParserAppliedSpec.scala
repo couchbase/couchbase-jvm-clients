@@ -16,12 +16,12 @@ class ProjectionsApplierSpec {
   }
 
   private def wrap(path: String, content: JsonObject): JsonObject = {
-    val bytes: Array[Byte] = Conversions.encode[JsonObject](content).get._1
+    val bytes: Array[Byte] = Conversions.encode[JsonObject](content).get
     ProjectionsApplier.parse(path, bytes).get
   }
 
   private def wrap(path: String, content: JsonArray): JsonObject = {
-    val bytes: Array[Byte] = Conversions.encode[JsonArray](content).get._1
+    val bytes: Array[Byte] = Conversions.encode[JsonArray](content).get
     ProjectionsApplier.parse(path, bytes).get
   }
 

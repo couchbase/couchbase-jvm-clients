@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, ReplicaGetRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.kv.{DefaultErrors, GetReplicaResult, GetResult}
 import com.couchbase.client.scala.util.Validate
 
@@ -78,10 +79,10 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: GetResponse, isReplica: Boolean): Option[GetReplicaResult] = {
+  def response(id: String, response: GetResponse, isReplica: Boolean, transcoder: Transcoder): Option[GetReplicaResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isReplica))
+        Some(new GetReplicaResult(id, Left(response.content), response.flags(), response.cas, Option.empty, isReplica, transcoder))
 
       case ResponseStatus.NOT_FOUND => None
 

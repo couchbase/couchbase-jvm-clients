@@ -27,7 +27,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
 import com.couchbase.client.core.util.LRUCache
 import com.couchbase.client.core.{Core, Reactor}
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query._
@@ -254,8 +254,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
 
         // Only expect one row back, but no harm handling multiple
         .doOnNext(row => {
-        val json: Try[JsonObjectSafe] = Conversions.Decodable.JsonObjectSafeConvert.decode(row.data(),
-          Conversions.JsonFlags)
+        val json: Try[JsonObjectSafe] = JsonDeserializer.JsonObjectSafeConvert.deserialize(row.data())
         val nameOpt: Option[String] = json.flatMap(_.str("name")).toOption
         val plan: Option[String] = if (enhancedEnabled) None else json.flatMap(_.str("encoded_plan")).toOption
 

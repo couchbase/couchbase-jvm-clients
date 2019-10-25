@@ -16,8 +16,8 @@ private[scala] object ProjectionsApplier {
   def parseContent[T](content: Array[Byte]): Try[Any] = {
     val first = content(0)
     first match {
-      case '{' => Conversions.decode[JsonObject](content, Conversions.JsonFlags)
-      case '[' => Conversions.decode[JsonArray](content, Conversions.JsonFlags)
+      case '{' => Conversions.decode[JsonObject](content)
+      case '[' => Conversions.decode[JsonArray](content)
       case '"' =>
         val str = new String(content, CharsetUtil.UTF_8)
         Success(str.substring(1, str.size - 1))

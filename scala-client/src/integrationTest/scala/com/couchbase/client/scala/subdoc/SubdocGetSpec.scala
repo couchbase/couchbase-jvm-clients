@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
+import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonArray
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
@@ -98,10 +99,12 @@ class SubdocGetSpec extends ScalaIntegrationTest {
 
     coll.lookupIn(docId, Array(get("animals"))) match {
       case Success(result) =>
-        assert(result.contentAsBytes(0).get sameElements """["cat","dog"]""".getBytes(CharsetUtil.UTF_8))
-        assert(result.contentAs[String](0).get == """["cat","dog"]""")
+        assert(result.contentAs[Array[Byte]](0).get sameElements """["cat","dog"]""".getBytes(CharsetUtil.UTF_8))
         assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat", "dog"))
         assert(result.contentAs[JsonArray](0).get == JsonArray("cat", "dog"))
+
+        import Passthrough._
+        assert(result.contentAs[String](0).get == """["cat","dog"]""")
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }

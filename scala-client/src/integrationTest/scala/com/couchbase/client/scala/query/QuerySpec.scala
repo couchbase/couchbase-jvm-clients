@@ -85,6 +85,7 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
+        import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough._
         val rows = result.rowsAs[String].get
         assert(rows.head == """{"Greeting":"hello world"}""")
         // Should be an implicit client context id if none provided
@@ -146,6 +147,7 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster.query("""select "hello world" as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
+        import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough._
         val rows = result.rowsAs[String].get
         assert(rows.head == """{"Greeting":"hello world"}""")
       case Failure(err) => throw err
@@ -186,6 +188,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
   @Test
   def reactive_hello_world() {
+    import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough._
 
     cluster.reactive.query("""select 'hello world' as Greeting""")
       .flatMap(result => {

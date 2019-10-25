@@ -1,6 +1,21 @@
+/*
+ * Copyright (c) 2019 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.couchbase.client.scala.implicits
 
-import com.couchbase.client.scala.codec.Conversions.{Decodable, Encodable}
+import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
 
 import scala.language.experimental.macros
 
@@ -9,7 +24,7 @@ import scala.language.experimental.macros
   * But to do this, it needs to be told how to encode and decode the case class to and from JSON.
   *
   * More technically, if you are dealing with a case class `User`, you need an
-  * `Encodable[User]` to send it the SDK, and a `Decodable[User]` to retrieve it.  Or a `Codec[User]`, which conveniently
+  * `JsonSerializer[User]` to send it the SDK, and a `JsonDeserializer[User]` to retrieve it.  Or a `Codec[User]`, which conveniently
   * is both.
   *
   * A `Codec[User]` can easily be created like this:
@@ -31,75 +46,77 @@ import scala.language.experimental.macros
   */
 object Codec {
 
-  /** Creates a `Codec` for the given type `T`, which is both a `Decodable[T]` and `Encodable[T]`.  This is everything
+  /** Creates a `Codec` for the given type `T`, which is both a `JsonDeserializer[T]` and `JsonSerializer[T]`.  This is everything
     * required to send a case class directly to the Scala SDK, and retrieve results as it.
     */
   def codec[T]: Codec[T] = macro CodecImplicits.makeCodec[T]
 }
 
-/** A Codec conveniently combines an [[com.couchbase.client.scala.codec.Conversions.Encodable]] and
-  * [[Decodable]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
+/** A Codec conveniently combines an [[com.couchbase.client.scala.codec.JsonSerializer]] and
+  * [[JsonDeserializer]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
   */
-trait Codec[T] extends Encodable[T] with Decodable[T]
+trait CodecWrapper[-A,B] extends JsonSerializer[A] with JsonDeserializer[B]
+trait Codec[A] extends CodecWrapper[A,A]
 
 private[scala] object CodecImplicits {
   // Implementation detail: the excellent JSON library Jsoniter, with the extensions from com.github.plokhotnyuk.jsoniter_scala,
   // is currently used to encode and decode case classes.  This is purely an implementation detail and should not be
   // relied upon.
-  def makeDecoder[T](c: scala.reflect.macros.blackbox.Context)
-                    (implicit e: c.WeakTypeTag[T]) = {
+  def makeDeserializer[T](c: scala.reflect.macros.blackbox.Context)
+                    (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
-    new Decodable[${e}] {
+    new JsonDeserializer[${e}] {
       import com.github.plokhotnyuk.jsoniter_scala.core._
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterDecodeCodec: JsonValueCodec[$e] =
         JsonCodecMaker.make[$e](CodecMakerConfig)
 
-      override def decode(bytes: Array[Byte], params: codec.EncodeParams): scala.util.Try[$e] = {
+      override def deserialize(bytes: Array[Byte]): scala.util.Try[$e] = {
         scala.util.Try(readFromArray(bytes))
       }
     }
     """
   }
 
-  def makeEncoder[T](c: scala.reflect.macros.blackbox.Context)
-                    (implicit e: c.WeakTypeTag[T]) = {
+  def makeSerializer[T](c: scala.reflect.macros.blackbox.Context)
+                    (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
-    new Encodable[$e] {
+    new JsonSerializer[$e] {
       import com.github.plokhotnyuk.jsoniter_scala.core._
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterEncodeCodec: JsonValueCodec[$e] =
        JsonCodecMaker.make[$e](CodecMakerConfig)
 
-      override def encode(content: $e): scala.util.Try[(Array[Byte], com.couchbase.client.scala.codec.EncodeParams)] = {
-        scala.util.Try((writeToArray(content), com.couchbase.client.scala.codec.Conversions.JsonFlags))
+      override def serialize(content: $e): scala.util.Try[Array[Byte]] = {
+        scala.util.Try(writeToArray(content))
       }
     }
     """
   }
 
-
   def makeCodec[T](c: scala.reflect.macros.blackbox.Context)
-                  (implicit e: c.WeakTypeTag[T]) = {
+                  (implicit e: c.WeakTypeTag[T]): c.universe.Tree = {
     import c.universe._
     q"""
     new Codec[$e] {
       import com.github.plokhotnyuk.jsoniter_scala.core._
       import com.github.plokhotnyuk.jsoniter_scala.macros._
+      import scala.reflect.runtime.universe._
+      import scala.util.{Failure, Success, Try}
 
       val jsonIterCodec: JsonValueCodec[$e] =
        JsonCodecMaker.make[$e](CodecMakerConfig)
 
-      override def decode(bytes: Array[Byte], params: com.couchbase.client.scala.codec.EncodeParams): scala.util.Try[$e] = {
-        scala.util.Try(readFromArray(bytes)(jsonIterCodec))
+      override def serialize(input: $e): Try[Array[Byte]] = {
+        scala.util.Try(writeToArray(input)(jsonIterCodec))
       }
 
-      override def encode(content: $e): scala.util.Try[(Array[Byte], com.couchbase.client.scala.codec.EncodeParams)] = {
-        scala.util.Try((writeToArray(content)(jsonIterCodec), com.couchbase.client.scala.codec.Conversions.JsonFlags))
+      override def deserialize(input: Array[Byte]): Try[$e] = {
+        scala.util.Try(readFromArray(input)(jsonIterCodec))
       }
     }
     """

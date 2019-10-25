@@ -16,8 +16,9 @@
 
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.json.JsonObject
+import scala.reflect.runtime.universe._
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -29,10 +30,10 @@ import scala.util.{Failure, Success, Try}
   * @param cas        the document's CAS value at the time of the lookup
   * @param expiry     if the document was fetched with the `withExpiry` flag set then this will contain the
   *                   document's expiration value.  Otherwise it will be None.
+ *
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.Conversions.Decodable]] can be found: a list
+  *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
-  *
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -41,7 +42,8 @@ case class GetResult(id: String,
                      private val _content: Either[Array[Byte], JsonObject],
                      private[scala] val flags: Int,
                      cas: Long,
-                     expiry: Option[Duration]) {
+                     expiry: Option[Duration],
+                     transcoder: Transcoder) {
 
   /** Return the content, converted into the application's preferred representation.
     *
@@ -53,11 +55,14 @@ case class GetResult(id: String,
     * @tparam T $SupportedTypes
     */
   def contentAs[T]
-  (implicit ev: Conversions.Decodable[T], tag: ClassTag[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T], tt: TypeTag[T], tag: ClassTag[T]): Try[T] = {
     _content match {
       case Left(bytes) =>
         // Regular case
-        ev.decode(bytes, EncodeParams(flags))
+        transcoder match {
+          case t: TranscoderWithSerializer => t.decode(bytes, flags, deserializer)
+          case t: TranscoderWithoutSerializer => t.decode(bytes, flags)
+        }
 
       case Right(obj) =>
         // Projection
@@ -68,14 +73,5 @@ case class GetResult(id: String,
         }
     }
   }
-
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = _content match {
-    case Left(bytes) => bytes
-    case Right(obj) =>
-      // A JsonObject can always be converted to Array[Byte], so the get is safe
-      Conversions.encode(obj).map(_._1).get
-  }
-
-  override def toString: String = contentAs[JsonObject].get.toString
 }
+

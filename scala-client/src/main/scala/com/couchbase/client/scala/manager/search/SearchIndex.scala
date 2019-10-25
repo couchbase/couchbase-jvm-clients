@@ -16,14 +16,12 @@
 package com.couchbase.client.scala.manager.search
 
 import java.nio.charset.StandardCharsets
-import java.util.UUID
 
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.codec.{Conversions, EncodeParams}
+import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.CouchbasePickler
 
-import scala.collection.GenMap
 import scala.util.{Failure, Try}
 
 private[scala] case class SearchIndexWrapper private(indexDef: SearchIndex)
@@ -64,17 +62,17 @@ case class SearchIndex private(name: String,
     output.toString
   }
 
-  def planParamsAs[T](implicit ev: Conversions.Decodable[T]): Try[T] = convert(planParams, ev)
+  def planParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(planParams, deserializer)
 
-  def paramsAs[T](implicit ev: Conversions.Decodable[T]): Try[T] = convert(params, ev)
+  def paramsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(params, deserializer)
 
-  def sourceParamsAs[T](implicit ev: Conversions.Decodable[T]): Try[T] = convert(sourceParams, ev)
+  def sourceParamsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = convert(sourceParams, deserializer)
 
-  private def convert[T](value: Option[ujson.Obj], ev: Conversions.Decodable[T]) = {
+  private def convert[T](value: Option[ujson.Obj], deserializer: JsonDeserializer[T]) = {
     value match {
       case Some(pp) =>
         val bytes = upickle.default.write(pp).getBytes(StandardCharsets.UTF_8)
-        ev.decode(bytes, Conversions.JsonFlags)
+        deserializer.deserialize(bytes)
       case _ => Failure(new CouchbaseException("Index does not contain this field"))
     }
   }

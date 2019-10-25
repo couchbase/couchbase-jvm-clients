@@ -16,6 +16,12 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.scala.codec.Transcoder
+
 private[scala] trait RequestHandler[Resp,Res] {
   def response(id: String, response: Resp): Res
+}
+
+private[scala] trait RequestHandlerWithTranscoder[Resp,Res] {
+  def response(id: String, response: Resp, transcoder: Transcoder): Res
 }

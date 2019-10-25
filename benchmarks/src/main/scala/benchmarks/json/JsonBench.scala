@@ -26,8 +26,8 @@ package benchmarks.json
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.java.codec.DefaultJsonSerializer
-import com.couchbase.client.scala.codec.Conversions.{Decodable, Encodable, JsonFlags}
-import com.couchbase.client.scala.codec.EncodeParams
+import com.couchbase.client.scala.codec.Conversions.JsonFlags
+import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
 import org.scalameter
 import org.scalameter.CurveData
 import org.scalameter.api._
@@ -106,13 +106,13 @@ object JsonBench extends Bench.LocalTime {
   private val FieldAddress = "123 Fake Street"
   private val FieldName = "John Smith"
 
-  def encode[T](in: T)(implicit ev: Encodable[T]): Try[(Array[Byte], EncodeParams)] = {
-    ev.encode(in)
+  def encode[T](in: T)(implicit serializer: JsonSerializer[T]): Try[Array[Byte]] = {
+    serializer.serialize(in)
   }
 
-  def decode[T](bytes: Array[Byte], params: EncodeParams = JsonFlags)
-                              (implicit ev: Decodable[T]): Try[T] = {
-    ev.decode(bytes, params)
+  def decode[T](bytes: Array[Byte])
+                              (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+    deserializer.deserialize(bytes)
   }
 
   performance of "Decoding byte array to JSON AST" in {
@@ -173,7 +173,7 @@ object JsonBench extends Bench.LocalTime {
         val json = obj("name" -> FieldName,
           "address" -> arr(obj("address" -> FieldAddress)),
           "age" -> 29)
-        encode(json).get._1
+        encode(json).get
       }
 
       import org.json4s.JsonAST._
@@ -189,7 +189,7 @@ object JsonBench extends Bench.LocalTime {
 
     performance of "upickle" in {
       val json = ujson.Obj("name" -> FieldName, "address" -> ujson.Arr(ujson.Obj("address" -> FieldAddress)), "age" -> 29)
-      val encoded: Array[Byte] = encode(json).get._1
+      val encoded: Array[Byte] = encode(json).get
 
       using(gen) in {
         r => {
@@ -264,7 +264,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = upickle.default.transform(content).to(ujson.BytesRenderer()).toBytes
-          val encoded: Array[Byte] = encode(bytes)(Encodable.BytesConvert).get._1
+          val encoded: Array[Byte] = encode(bytes)(JsonSerializer.BytesConvert).get
         }
       }
     }
@@ -273,7 +273,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = com.github.plokhotnyuk.jsoniter_scala.core.writeToArray(content)
-          val encoded: Array[Byte] = encode(bytes)(Encodable.BytesConvert).get._1
+          val encoded: Array[Byte] = encode(bytes)(JsonSerializer.BytesConvert).get
         }
       }
     }
@@ -284,7 +284,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = Jackson.jacksonToBytes()
-          val encoded: Array[Byte] = encode(bytes)(Encodable.BytesConvert).get._1
+          val encoded: Array[Byte] = encode(bytes)(JsonSerializer.BytesConvert).get
         }
       }
     }
@@ -294,7 +294,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val json: String = Jackson.mapper.writeValueAsString(content)
-          val encoded: Array[Byte] = encode(json)(Encodable.StringConvert).get._1
+          val encoded: Array[Byte] = encode(json)(JsonSerializer.StringConvert).get
         }
       }
     }
@@ -303,7 +303,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = upickle.default.transform(content).to(ujson.BytesRenderer()).toBytes
-          val encoded: Array[Byte] = encode(bytes).get._1
+          val encoded: Array[Byte] = encode(bytes).get
         }
       }
     }
@@ -312,7 +312,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = com.github.plokhotnyuk.jsoniter_scala.core.writeToArray(content)
-          val encoded: Array[Byte] = encode(bytes).get._1
+          val encoded: Array[Byte] = encode(bytes).get
         }
       }
     }
@@ -322,7 +322,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val bytes: Array[Byte] = Jackson.mapper.writeValueAsBytes(content)
-          val encoded: Array[Byte] = encode(bytes).get._1
+          val encoded: Array[Byte] = encode(bytes).get
         }
       }
     }
@@ -331,7 +331,7 @@ object JsonBench extends Bench.LocalTime {
       using(gen) in {
         r => {
           val json: String = Jackson.mapper.writeValueAsString(content)
-          val encoded: Array[Byte] = encode(json).get._1
+          val encoded: Array[Byte] = encode(json).get
         }
       }
     }
@@ -342,7 +342,7 @@ object JsonBench extends Bench.LocalTime {
               using(gen) in {
                 r => {
                   val json: io.circe.Json  = content.asJson
-                  val encoded: Array[Byte] = encode(json).get._1
+                  val encoded: Array[Byte] = encode(json).get
                 }
               }
             }
@@ -355,7 +355,7 @@ object JsonBench extends Bench.LocalTime {
 
     val origContent = User(FieldName, 29, List(Address(FieldAddress)))
     val encodedBytes: Array[Byte] = upickle.default.transform(origContent).to(ujson.BytesRenderer()).toBytes
-    val encoded: Array[Byte] = encode(encodedBytes).get._1
+    val encoded: Array[Byte] = encode(encodedBytes).get
 
     performance of "upickle" in {
       using(gen) in {
@@ -400,7 +400,7 @@ object JsonBench extends Bench.LocalTime {
           val json = ujson.Obj("name" -> FieldName,
             "age" -> 29,
             "address" -> ujson.Arr(ujson.Obj("address" -> FieldAddress)))
-          val encoded: Array[Byte] = encode(json).get._1
+          val encoded: Array[Byte] = encode(json).get
         }
       }
     }
@@ -426,7 +426,7 @@ object JsonBench extends Bench.LocalTime {
             .put("name", FieldName)
             .put("address", JsonArray(JsonObject.create.put("address", FieldAddress)))
             .put("age", 29)
-          val encoded: Array[Byte] = encode(json).get._1
+          val encoded: Array[Byte] = encode(json).get
         }
       }
     }
@@ -440,7 +440,7 @@ object JsonBench extends Bench.LocalTime {
           val json = obj("name" -> FieldName,
             "address" -> arr(obj("address" -> FieldAddress)),
             "age" -> 29)
-          val encoded: Array[Byte] = encode(json).get._1
+          val encoded: Array[Byte] = encode(json).get
         }
       }
     }
@@ -453,7 +453,7 @@ object JsonBench extends Bench.LocalTime {
           val json = JObject.fromSeq(Seq("name" -> JString(FieldName),
             "address" -> JArray(Array(JObject.fromSeq(Seq("address" -> JString(FieldAddress))))),
             "age" -> JNum(29)))
-          val encoded: Array[Byte] = encode(json).get._1
+          val encoded: Array[Byte] = encode(json).get
         }
       }
     }

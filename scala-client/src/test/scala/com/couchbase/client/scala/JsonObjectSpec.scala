@@ -16,8 +16,8 @@ class JsonObjectSpec {
   @Test
   def decode() {
     val encoded = Conversions.encode(json).get
-    val str = new String(encoded._1)
-    val decoded = Conversions.decode[JsonObject](encoded._1, Conversions.JsonFlags).get
+    val str = new String(encoded)
+    val decoded = Conversions.decode[JsonObject](encoded).get
 
     assert(decoded.str("name") == "John Smith")
   }

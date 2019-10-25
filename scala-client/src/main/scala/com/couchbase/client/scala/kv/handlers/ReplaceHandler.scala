@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
@@ -45,8 +45,9 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
                  durability: Durability,
                  expiration: java.time.Duration,
                  timeout: java.time.Duration,
-                 retryStrategy: RetryStrategy)
-                (implicit ev: Conversions.Encodable[T])
+                 retryStrategy: RetryStrategy,
+                 transcoder: Transcoder,
+                 serializer: JsonSerializer[T])
   : Try[ReplaceRequest] = {
     val validations: Try[ReplaceRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -62,12 +63,17 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       validations
     }
     else {
-      ev.encode(content) match {
-        case Success(encoded) =>
+      val encoded: Try[EncodedValue] = transcoder match {
+        case x: TranscoderWithSerializer => x.encode(content, serializer)
+        case x: TranscoderWithoutSerializer => x.encode(content)
+      }
+
+      encoded match {
+        case Success(en) =>
           Success(new ReplaceRequest(id,
-            encoded._1,
+            en.encoded,
             expiration.getSeconds,
-            encoded._2.flags,
+            en.flags,
             timeout,
             cas,
             hp.core.context(),

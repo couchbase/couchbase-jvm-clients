@@ -20,6 +20,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetAndTouchRequest, GetAndTouchResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv.{DefaultErrors, GetResult}
@@ -35,7 +36,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndTouchHandler(hp: HandlerParams)
-  extends RequestHandler[GetAndTouchResponse, Option[GetResult]] {
+  extends RequestHandlerWithTranscoder[GetAndTouchResponse, Option[GetResult]] {
 
   def request[T](id: String,
                  expiration: java.time.Duration,
@@ -63,10 +64,10 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: GetAndTouchResponse): Option[GetResult] = {
+  override def response(id: String, response: GetAndTouchResponse, transcoder: Transcoder): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty))
+        Some(GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty, transcoder))
 
       case ResponseStatus.NOT_FOUND => None
 

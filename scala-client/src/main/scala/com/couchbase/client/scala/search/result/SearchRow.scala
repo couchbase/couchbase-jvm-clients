@@ -20,13 +20,12 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.search.SearchChunkRow
-import com.couchbase.client.scala.codec.Conversions
-import com.couchbase.client.scala.codec.Conversions.Decodable
+import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.collection.GenMap
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 /** An FTS row (or "hit")
   *
@@ -53,8 +52,8 @@ case class SearchRow(index: String,
     *
     * It can be returned in any support JSON type, e.g. [[com.couchbase.client.scala.json.JsonObject]].
     */
-  def explanationAs[T](implicit ev: Decodable[T]): Try[T] = {
-    _explanation.flatMap(v => ev.decode(v, Conversions.JsonFlags))
+  def explanationAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
+    _explanation.flatMap(v => deserializer.deserialize(v))
   }
 }
 

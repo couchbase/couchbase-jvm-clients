@@ -18,7 +18,7 @@ package com.couchbase.client.scala.view
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
 import com.couchbase.client.core.logging.RedactableArgument.redactUser
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import reactor.core.scala.publisher.{SFlux, SMono}
@@ -48,7 +48,7 @@ case class ReactiveViewResult(meta: SMono[ViewMetaData],
 /** An individual view result row.
   *
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.Conversions.Decodable]] can be found: a list
+  *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   */
 case class ViewRow(private val _content: Array[Byte]) {
@@ -60,10 +60,10 @@ case class ViewRow(private val _content: Array[Byte]) {
     * @tparam T $SupportedTypes
     */
   def valueAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("value"))
-      .flatMap(key => ev.decode(key.binaryValue(), Conversions.JsonFlags))
+      .flatMap(key => deserializer.deserialize(key.binaryValue()))
   }
 
   /** Return the key, converted into the application's preferred representation.
@@ -71,10 +71,10 @@ case class ViewRow(private val _content: Array[Byte]) {
     * @tparam T $SupportedTypes
     */
   def keyAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("key"))
-      .flatMap(key => ev.decode(key.binaryValue(), Conversions.JsonFlags))
+      .flatMap(key => deserializer.deserialize(key.binaryValue()))
   }
 
   /** The id of this row.
@@ -90,12 +90,14 @@ case class ViewRow(private val _content: Array[Byte]) {
   }
 }
 
-/** Returns any debug information from a view request. */
-case class ViewDebug(private val _content: Array[Byte]) {
-  /** Return the content as an `Array[Byte]` */
-  def contentAsBytes: Array[Byte] = {
-    _content
-  }
+
+/** Additional information returned by the view service aside from any rows and errors.
+  *
+  * @param debug            any debug information available from the view service
+  * @param totalRows        the total number of returned rows
+  */
+case class ViewMetaData(private val debug: Array[Byte],
+                        totalRows: Long) {
 
   /** Return the content, converted into the application's preferred representation.
     *
@@ -104,20 +106,9 @@ case class ViewDebug(private val _content: Array[Byte]) {
     *
     * @tparam T $SupportedTypes
     */
-  def contentAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
-    ev.decode(_content, Conversions.JsonFlags)
+  def debugAs[T]
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
+    deserializer.deserialize(debug)
   }
-
-  override def toString: String = contentAs[JsonObject].get.toString
 }
-
-
-/** Additional information returned by the view service aside from any rows and errors.
-  *
-  * @param debug            any debug information available from the view service
-  * @param totalRows        the total number of returned rows
-  */
-case class ViewMetaData(debug: Option[ViewDebug],
-                        totalRows: Long)
 

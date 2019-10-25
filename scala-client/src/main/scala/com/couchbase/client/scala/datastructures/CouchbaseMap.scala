@@ -19,12 +19,13 @@ import com.couchbase.client.core.error.{CASMismatchException, KeyNotFoundExcepti
 import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.{JsonArraySafe, JsonObjectSafe}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
+import scala.reflect.runtime.universe._
 
 /** Presents a Scala Map interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
@@ -32,8 +33,7 @@ import scala.util.{Failure, Success, Try}
 class CouchbaseMap[T](id: String,
                       collection: Collection,
                       options: Option[CouchbaseCollectionOptions] = None)
-                     (implicit decode: Conversions.Decodable[T],
-                      encode: Conversions.Encodable[T])
+                     (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
   extends mutable.Map[String, T] {
 
   private val Values = "values."

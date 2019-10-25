@@ -1,14 +1,12 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
-import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.couchbase.client.scala.codec.{Conversions, DocumentFlags, EncodeParams}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
+import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.util.RowTraversalUtil
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
 /** Methods to allow constructing a sequence of `MutateInSpec`s.
   *
@@ -16,9 +14,9 @@ import scala.util.{Failure, Success, Try}
   * @define Xattr          Sets that this is an extended attribute (xattr) field (default is false).  Extended
   *                        Attributes (xattrs) are an advanced feature in which additional fields can be stored
   *                        alongside a document.  See **CHANGEME** for a more detailed description.
-  * @define SupportedTypes this can be of any type for which an implicit Encodable can be found: a list
+  * @define SupportedTypes this can be of any type for which an implicit JsonSerializer can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
-  * @define Encodable      an implicit Encodable.  For any supported type T this will be found automatically.
+  * @define JsonSerializer      an implicit JsonSerializer.  For any supported type T this will be found automatically.
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -30,16 +28,16 @@ object MutateInSpec {
     *
     * @param path       the path identifying where to insert the value.
     * @param value      the value to insert.  $SupportedTypes
-    * @param ev         $Encodable
+    * @param ev         $JsonSerializer
     */
   def insert[T](path: String, value: T)
-               (implicit ev: Encodable[T]): Insert = {
+               (implicit serializer: JsonSerializer[T]): Insert = {
     val expandMacro = value match {
       case v: MutateInMacro => true
       case _ => false
     }
     if (path == "") Insert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
-    else Insert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    else Insert(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of replacing an existing value in a JSON object.
@@ -50,15 +48,15 @@ object MutateInSpec {
     *
     * @param path  the path identifying where to replace the value.
     * @param value the value to replace.  $SupportedTypes
-    * @param ev    $Encodable
+    * @param ev    $JsonSerializer
     */
   def replace[T](path: String, value: T)
-                (implicit ev: Encodable[T]): Replace = {
+                (implicit serializer: JsonSerializer[T]): Replace = {
     val expandMacro = value match {
       case v: MutateInMacro => true
       case _ => false
     }
-    Replace(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    Replace(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of upserting a value into a JSON object.
@@ -67,16 +65,16 @@ object MutateInSpec {
     *
     * @param path       the path identifying where to upsert the value.
     * @param value      the value to upsert.  $SupportedTypes
-    * @param ev         $Encodable
+    * @param ev         $JsonSerializer
     */
   def upsert[T](path: String, value: T)
-               (implicit ev: Encodable[T]): Upsert = {
+               (implicit serializer: JsonSerializer[T]): Upsert = {
     val expandMacro = value match {
       case v: MutateInMacro => true
       case _ => false
     }
     if (path == "") Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
-    else Upsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    else Upsert(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of removing a value from a JSON object.
@@ -95,36 +93,31 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to append the value.
     * @param values     the values to append.  $SupportedTypes
-    * @param ev         $Encodable
+    * @param ev         $JsonSerializer
     */
   def arrayAppend[T](path: String, values: T*)
-                    (implicit ev: Encodable[T]): ArrayAppend = {
+                    (implicit serializer: JsonSerializer[T]): ArrayAppend = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
       }
-      ArrayAppend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+      ArrayAppend(path, serializer.serialize(value), _expandMacro = expandMacro)
     }
     else {
-      encodeMulti(ev, values: _*) match {
-        case Success(ret) =>
-          ArrayAppend(path, Success(ret, EncodeParams(DocumentFlags.Json)))
-        case Failure(err) =>
-          ArrayAppend(path, Failure(err))
-      }
+      ArrayAppend(path, encodeMulti(serializer, values: _*))
     }
   }
 
   /** Encode all provided values into one, comma-separated, Array[Byte] */
-  private def encodeMulti[T](ev: Encodable[T], values: T*): Try[Array[Byte]] = {
+  private def encodeMulti[T](serializer: JsonSerializer[T], values: T*): Try[Array[Byte]] = {
     if (values.isEmpty) {
       Failure(new IllegalArgumentException("Empty set of values provided"))
     }
     else {
       val encoded = values.map(value => {
-        ev.encodeSubDocumentField(value)
+        serializer.serialize(value)
       })
 
       // Turn Seq[Try] to Try[Seq]
@@ -134,7 +127,7 @@ object MutateInSpec {
         val out = new ArrayBuffer[Byte]()
 
         v.foreach(value => {
-          val bytes = value._1
+          val bytes = value
           out.append(bytes: _*)
           out.append(',') // multiple values are comma separated
         })
@@ -155,25 +148,20 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to prepend the value.
     * @param values     the value(s) to prepend.  $SupportedTypes
-    * @param ev         $Encodable
+    * @param ev         $JsonSerializer
     */
   def arrayPrepend[T](path: String, values: T*)
-                     (implicit ev: Encodable[T]): ArrayPrepend = {
+                     (implicit serializer: JsonSerializer[T]): ArrayPrepend = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
       }
-      ArrayPrepend(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+      ArrayPrepend(path, serializer.serialize(value), _expandMacro = expandMacro)
     }
     else {
-      encodeMulti(ev, values: _*) match {
-        case Success(ret) =>
-          ArrayPrepend(path, Success(ret, EncodeParams(DocumentFlags.Json)))
-        case Failure(err) =>
-          ArrayPrepend(path, Failure(err))
-      }
+      ArrayPrepend(path, encodeMulti(serializer, values: _*))
     }
   }
 
@@ -183,25 +171,20 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
     * @param value      the value(s) to insert.  $SupportedTypes
-    * @param ev         $Encodable
+    * @param ev         $JsonSerializer
     */
   def arrayInsert[T](path: String, values: T*)
-                    (implicit ev: Encodable[T]): ArrayInsert = {
+                    (implicit serializer: JsonSerializer[T]): ArrayInsert = {
     if (values.size == 1) {
       val value = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _ => false
       }
-      ArrayInsert(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+      ArrayInsert(path, serializer.serialize(value), _expandMacro = expandMacro)
     }
     else {
-      encodeMulti(ev, values: _*) match {
-        case Success(ret) =>
-          ArrayInsert(path, Success(ret, EncodeParams(DocumentFlags.Json)))
-        case Failure(err) =>
-          ArrayInsert(path, Failure(err))
-      }
+      ArrayInsert(path, encodeMulti(serializer, values: _*))
     }
   }
 
@@ -214,12 +197,12 @@ object MutateInSpec {
     * @param value      the value to insert.  $SupportedTypes
     */
   def arrayAddUnique[T](path: String, value: T)
-                       (implicit ev: Encodable[T]): ArrayAddUnique = {
+                       (implicit serializer: JsonSerializer[T]): ArrayAddUnique = {
     val expandMacro = value match {
       case v: MutateInMacro => true
       case _ => false
     }
-    ArrayAddUnique(path, ev.encodeSubDocumentField(value), _expandMacro = expandMacro)
+    ArrayAddUnique(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
   /** Returns a `MutateInSpec` with the intent of incrementing a numerical field in a JSON object.
@@ -256,18 +239,18 @@ sealed trait MutateInSpec {
 /** Most SubDocument mutations are pretty similar, encapsulate the similarities here. */
 trait MutateInSpecStandard extends MutateInSpec {
   private[scala] val path: String
-  private[scala] val fragment: Try[(Array[Byte], EncodeParams)]
+  private[scala] val fragment: Try[Array[Byte]]
   private[scala] val _xattr: Boolean
   private[scala] val _createPath: Boolean
   private[scala] val _expandMacro: Boolean
 
   private[scala] def convert = new SubdocMutateRequest.Command(typ, path, value, _createPath, _xattr, _expandMacro)
 
-  private[scala] def value = fragment.get._1
+  private[scala] def value = fragment.get
 }
 
 case class Insert(path: String,
-                  fragment: Try[(Array[Byte], EncodeParams)],
+                  fragment: Try[Array[Byte]],
                   private[scala] override val _xattr: Boolean = false,
                   private[scala] override val _createPath: Boolean = false,
                   private[scala] override val _expandMacro: Boolean = false
@@ -286,7 +269,7 @@ case class Insert(path: String,
 }
 
 case class Replace(path: String,
-                   fragment: Try[(Array[Byte], EncodeParams)],
+                   fragment: Try[Array[Byte]],
                    private[scala] val _xattr: Boolean = false,
                    private[scala] val _expandMacro: Boolean = false
                   ) extends MutateInSpec {
@@ -300,11 +283,11 @@ case class Replace(path: String,
     copy(path, fragment, _xattr = true, _expandMacro = _expandMacro)
   }
 
-  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get._1, false, _xattr, _expandMacro)
+  def convert = new SubdocMutateRequest.Command(typ, path, fragment.get, false, _xattr, _expandMacro)
 }
 
 case class Upsert(path: String,
-                  fragment: Try[(Array[Byte], EncodeParams)],
+                  fragment: Try[Array[Byte]],
                   private[scala] override val _xattr: Boolean = false,
                   private[scala] override val _createPath: Boolean = false,
                   private[scala] override val _expandMacro: Boolean = false
@@ -335,7 +318,7 @@ case class Remove(path: String,
 }
 
 case class ArrayAppend(path: String,
-                       fragment: Try[(Array[Byte], EncodeParams)],
+                       fragment: Try[Array[Byte]],
                        private[scala] override val _xattr: Boolean = false,
                        private[scala] override val _createPath: Boolean = false,
                        private[scala] override val _expandMacro: Boolean = false
@@ -354,7 +337,7 @@ case class ArrayAppend(path: String,
 }
 
 case class ArrayPrepend(path: String,
-                        fragment: Try[(Array[Byte], EncodeParams)],
+                        fragment: Try[Array[Byte]],
                         private[scala] override val _xattr: Boolean = false,
                         private[scala] override val _createPath: Boolean = false,
                         private[scala] override val _expandMacro: Boolean = false
@@ -373,7 +356,7 @@ case class ArrayPrepend(path: String,
 }
 
 case class ArrayInsert(path: String,
-                       fragment: Try[(Array[Byte], EncodeParams)],
+                       fragment: Try[Array[Byte]],
                        private[scala] override val _xattr: Boolean = false,
                        private[scala] override val _createPath: Boolean = false,
                        private[scala] override val _expandMacro: Boolean = false
@@ -392,7 +375,7 @@ case class ArrayInsert(path: String,
 }
 
 case class ArrayAddUnique(path: String,
-                          fragment: Try[(Array[Byte], EncodeParams)],
+                          fragment: Try[Array[Byte]],
                           private[scala] override val _xattr: Boolean = false,
                           private[scala] override val _createPath: Boolean = false,
                           private[scala] override val _expandMacro: Boolean = false

@@ -27,7 +27,7 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
 import com.couchbase.client.scala.AsyncCollection.wrap
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -111,13 +111,12 @@ class AsyncCollection(val name: String,
                 durability: Durability = Disabled,
                 expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy)
-               (implicit ev: Conversions.Encodable[T])
-  : Future[MutationResult] = {
-    val req = insertHandler.request(id, content, durability, expiry, timeout, retryStrategy)
+                retryStrategy: RetryStrategy = environment.retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance)
+                (implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val req = insertHandler.request(id, content, durability, expiry, timeout, retryStrategy, transcoder, serializer)
     wrapWithDurability(req, id, insertHandler, durability, false, timeout)
   }
-
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
     * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
@@ -127,9 +126,10 @@ class AsyncCollection(val name: String,
                  durability: Durability = Disabled,
                  expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = environment.retryStrategy)
-                (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
-    val req = replaceHandler.request(id, content, cas, durability, expiry, timeout, retryStrategy)
+                 retryStrategy: RetryStrategy = environment.retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance)
+                (implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val req = replaceHandler.request(id, content, cas, durability, expiry, timeout, retryStrategy, transcoder, serializer)
     wrapWithDurability(req, id, replaceHandler, durability, false, timeout)
   }
 
@@ -141,9 +141,10 @@ class AsyncCollection(val name: String,
                 durability: Durability = Disabled,
                 expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = environment.retryStrategy)
-               (implicit ev: Conversions.Encodable[T]): Future[MutationResult] = {
-    val req = upsertHandler.request(id, content, durability, expiry, timeout, retryStrategy)
+                retryStrategy: RetryStrategy = environment.retryStrategy,
+                transcoder: Transcoder = JsonTranscoder.Instance)
+               (implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val req = upsertHandler.request(id, content, durability, expiry, timeout, retryStrategy, transcoder, serializer)
     wrapWithDurability(req, id, upsertHandler, durability, false, timeout)
   }
 
@@ -166,7 +167,8 @@ class AsyncCollection(val name: String,
           withExpiry: Boolean = false,
           project: Seq[String] = Seq.empty,
           timeout: Duration = kvTimeout,
-          retryStrategy: RetryStrategy = environment.retryStrategy)
+          retryStrategy: RetryStrategy = environment.retryStrategy,
+          transcoder: Transcoder = JsonTranscoder.Instance)
   : Future[GetResult] = {
 
     if (project.nonEmpty) {
@@ -176,7 +178,7 @@ class AsyncCollection(val name: String,
 
           val out: Future[GetResult] = FutureConverters.toScala(request.response())
             .flatMap(response => {
-              val ret = getSubDocHandler.responseProject(id, response) match {
+              val ret = getSubDocHandler.responseProject(id, response, transcoder) match {
                 case Success(v: Option[GetResult]) =>
                   v match {
                     case Some(x) => Future.successful(x)
@@ -196,40 +198,41 @@ class AsyncCollection(val name: String,
 
     }
     else if (withExpiry) {
-      getSubDoc(id, AsyncCollection.getFullDoc, withExpiry, timeout, retryStrategy)
+      getSubDoc(id, AsyncCollection.getFullDoc, withExpiry, timeout, retryStrategy, transcoder)
         .map(lookupInResult =>
-          GetResult(id, Left(lookupInResult.contentAsBytes(0).get),
-            lookupInResult.flags, lookupInResult.cas, lookupInResult.expiry))
+          GetResult(id, Left(lookupInResult.contentAs[Array[Byte]](0).get),
+            lookupInResult.flags, lookupInResult.cas, lookupInResult.expiry, transcoder))
     }
     else {
-      getFullDoc(id, timeout, retryStrategy)
+      getFullDoc(id, timeout, retryStrategy, transcoder)
     }
   }
 
   private def getFullDoc(id: String,
                          timeout: Duration = kvTimeout,
-                         retryStrategy: RetryStrategy = environment.retryStrategy): Future[GetResult] = {
+                         retryStrategy: RetryStrategy = environment.retryStrategy,
+                         transcoder: Transcoder): Future[GetResult] = {
     val req = getFullDocHandler.request(id, timeout, retryStrategy)
-    wrap(req, id, getFullDocHandler)
+    AsyncCollection.wrap(req, id, getFullDocHandler, transcoder, core)
       .map {
         case Some(x) => x
         case _ => throw KeyNotFoundException.forKey(id)
       }
   }
 
-
   private def getSubDoc(id: String,
                         spec: Seq[LookupInSpec],
                         withExpiry: Boolean,
                         timeout: Duration = kvTimeout,
-                        retryStrategy: RetryStrategy = environment.retryStrategy): Future[LookupInResult] = {
+                        retryStrategy: RetryStrategy = environment.retryStrategy,
+                        transcoder: Transcoder): Future[LookupInResult] = {
     val req = getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy)
     req match {
       case Success(request) =>
         core.send(request)
 
         FutureConverters.toScala(request.response())
-          .map(response => getSubDocHandler.response(id, response, withExpiry))
+          .map(response => getSubDocHandler.response(id, response, withExpiry, transcoder))
           .map {
             case Some(x) => x
             case _ => throw KeyNotFoundException.forKey(id)
@@ -251,9 +254,10 @@ class AsyncCollection(val name: String,
                expiry: Duration = 0.seconds,
                timeout: Duration = kvTimeout,
                retryStrategy: RetryStrategy = environment.retryStrategy,
+               transcoder: Transcoder = JsonTranscoder.Instance,
                @Stability.Internal accessDeleted: Boolean = false): Future[MutateInResult] = {
     val req = mutateInHandler.request(id, spec, cas, document, durability, expiry, timeout,
-      retryStrategy, accessDeleted)
+      retryStrategy, accessDeleted, transcoder)
 
     req match {
       case Success(request) =>
@@ -299,10 +303,11 @@ class AsyncCollection(val name: String,
   def getAndLock(id: String,
                  lockTime: Duration = 30.seconds,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = environment.retryStrategy
+                 retryStrategy: RetryStrategy = environment.retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance
                 ): Future[GetResult] = {
     val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
-    wrap(req, id, getAndLockHandler)
+    AsyncCollection.wrap(req, id, getAndLockHandler, transcoder, core)
       .map {
         case Some(x) => x
         case _ => throw KeyNotFoundException.forKey(id)
@@ -327,10 +332,11 @@ class AsyncCollection(val name: String,
   def getAndTouch(id: String,
                   expiry: Duration,
                   timeout: Duration = kvTimeout,
-                  retryStrategy: RetryStrategy = environment.retryStrategy
+                  retryStrategy: RetryStrategy = environment.retryStrategy,
+                  transcoder: Transcoder = JsonTranscoder.Instance
                  ): Future[GetResult] = {
     val req = getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
-    wrap(req, id, getAndTouchHandler)
+    AsyncCollection.wrap(req, id, getAndTouchHandler, transcoder, core)
       .map {
         case Some(x) => x
         case _ => throw KeyNotFoundException.forKey(id)
@@ -345,9 +351,10 @@ class AsyncCollection(val name: String,
                spec: Seq[LookupInSpec],
                withExpiry: Boolean = false,
                timeout: Duration = kvTimeout,
-               retryStrategy: RetryStrategy = environment.retryStrategy
+               retryStrategy: RetryStrategy = environment.retryStrategy,
+               transcoder: Transcoder = JsonTranscoder.Instance
               ): Future[LookupInResult] = {
-    getSubDoc(id, spec, withExpiry, timeout, retryStrategy)
+    getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder)
   }
 
   /** Retrieves any available version of the document.
@@ -355,9 +362,10 @@ class AsyncCollection(val name: String,
     * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(id: String,
                     timeout: Duration = kvTimeout,
-                    retryStrategy: RetryStrategy = environment.retryStrategy
+                    retryStrategy: RetryStrategy = environment.retryStrategy,
+                    transcoder: Transcoder = JsonTranscoder.Instance
                    ): Future[GetReplicaResult] = {
-    getAllReplicas(id, timeout, retryStrategy).take(1).head
+    getAllReplicas(id, timeout, retryStrategy, transcoder).take(1).head
   }
 
   /** Retrieves all available versions of the document.
@@ -365,7 +373,8 @@ class AsyncCollection(val name: String,
     * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(id: String,
                      timeout: Duration = kvTimeout,
-                     retryStrategy: RetryStrategy = environment.retryStrategy
+                     retryStrategy: RetryStrategy = environment.retryStrategy,
+                     transcoder: Transcoder = JsonTranscoder.Instance
                     ): Seq[Future[GetReplicaResult]] = {
     val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.requestAll(id, timeout, retryStrategy)
 
@@ -382,7 +391,7 @@ class AsyncCollection(val name: String,
                 case _: GetRequest => false
                 case _ => true
               }
-              getFromReplicaHandler.response(id, response, isReplica)
+              getFromReplicaHandler.response(id, response, isReplica, transcoder)
             })
             .map {
               case Some(x) => x
@@ -431,6 +440,25 @@ object AsyncCollection {
 
         val out = FutureConverters.toScala(request.response())
           .map(response => handler.response(id, response))
+
+        out
+
+      case Failure(err) => Future.failed(err)
+    }
+  }
+
+  private def wrap[Resp <: Response, Res](in: Try[Request[Resp]],
+                                          id: String,
+                                          handler: RequestHandlerWithTranscoder[Resp, Res],
+                                          transcoder: Transcoder,
+                                          core: Core)
+                                         (implicit ec: ExecutionContext): Future[Res] = {
+    in match {
+      case Success(request) =>
+        core.send[Resp](request)
+
+        val out = FutureConverters.toScala(request.response())
+          .map(response => handler.response(id, response, transcoder))
 
         out
 

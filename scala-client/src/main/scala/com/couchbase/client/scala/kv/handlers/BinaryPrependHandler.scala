@@ -16,19 +16,17 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.EncodingFailedException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{PrependRequest, PrependResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
-import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv.DefaultErrors
 import com.couchbase.client.scala.util.Validate
 
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 /**
   * Handles requests and responses for KV prepend operations.
@@ -39,13 +37,12 @@ import scala.util.{Failure, Success, Try}
 private[scala] class BinaryPrependHandler(hp: HandlerParams)
   extends RequestHandler[PrependResponse, MutationResult] {
 
-  def request[T](id: String,
-                 content: T,
+  def request(id: String,
+                 content: Array[Byte],
                  cas: Long = 0,
                  durability: Durability,
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy)
-                (implicit ev: Conversions.Encodable[T])
   : Try[PrependRequest] = {
 
     val validations: Try[PrependRequest] = for {
@@ -61,21 +58,16 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
       validations
     }
     else {
-      ev.encode(content) match {
-        case Success(encoded) =>
-          Success(new PrependRequest(
-            timeout,
-            hp.core.context(),
-            hp.collectionIdentifier,
-            retryStrategy,
-            id,
-            encoded._1,
-            cas,
-            durability.toDurabilityLevel
-          ))
-        case Failure(err) =>
-          Failure(new EncodingFailedException(err))
-      }
+        Success(new PrependRequest(
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          id,
+          content,
+          cas,
+          durability.toDurabilityLevel
+        ))
     }
   }
 

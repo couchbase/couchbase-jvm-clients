@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage}
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.core.util.Golang
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.util.{DurationConversions, RowTraversalUtil}
@@ -35,7 +35,7 @@ import scala.util.{Failure, Success, Try}
   * @param metaData            any additional information related to the Analytics query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
-  *                        implicit `Decodable[T]` can be found, and can include
+  *                        implicit `JsonDeserializer[T]` can be found, and can include
   *                        [[com.couchbase.client.scala.json.JsonObject]], a case class, String,
   *                        or one of a number of supported third-party JSON libraries.
   *
@@ -51,8 +51,8 @@ case class AnalyticsResult(private[scala] val rows: Seq[AnalyticsChunkRow],
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
   def rowsAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[Seq[T]] = {
-    val all = rows.iterator.map(row => ev.decode(row.data(), Conversions.JsonFlags))
+  (implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
+    val all = rows.iterator.map(row => deserializer.deserialize(row.data()))
     RowTraversalUtil.traverse(all)
   }
 }
@@ -70,8 +70,8 @@ case class ReactiveAnalyticsResult(private[scala] val rows: SFlux[AnalyticsChunk
     *
     * @tparam T $SupportedTypes
     */
-  def rowsAs[T](implicit ev: Conversions.Decodable[T]): SFlux[T] = {
-    rows.map(row => ev.decode(row.data(), Conversions.JsonFlags) match {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
+    rows.map(row => deserializer.deserialize(row.data()) match {
       case Success(v) => v
       case Failure(err) => throw err
     })
@@ -149,9 +149,9 @@ case class AnalyticsMetaData(requestId: String,
     * @tparam T $SupportedTypes
     */
   def signatureAs[T]
-  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     signatureContent match {
-      case Some(content) => ev.decode(content, Conversions.JsonFlags)
+      case Some(content) => deserializer.deserialize(content)
       case _ => Failure(new IllegalArgumentException("No signature is available"))
     }
   }

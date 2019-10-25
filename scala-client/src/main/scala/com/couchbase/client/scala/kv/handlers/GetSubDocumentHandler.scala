@@ -23,7 +23,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
-import com.couchbase.client.scala.codec.DocumentFlags
+import com.couchbase.client.scala.codec.{DocumentFlags, Transcoder}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
@@ -113,7 +113,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     }
   }
 
-  def response(id: String, response: SubdocGetResponse, withExpiration: Boolean): Option[LookupInResult] = {
+  def response(id: String, response: SubdocGetResponse, withExpiration: Boolean, transcoder: Transcoder): Option[LookupInResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
@@ -130,10 +130,10 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
             else true
           })
 
-          Some(LookupInResult(id, removingExpTime, DocumentFlags.Json, response.cas(), exptime))
+          Some(LookupInResult(id, removingExpTime, DocumentFlags.Json, response.cas(), exptime, transcoder))
         }
         else {
-          Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), None))
+          Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), None, transcoder))
         }
 
 
@@ -150,7 +150,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     }
   }
 
-  def responseProject(id: String, response: SubdocGetResponse): Try[Option[GetResult]] = {
+  def responseProject(id: String, response: SubdocGetResponse, transcoder: Transcoder): Try[Option[GetResult]] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubdocField] = response.values().asScala
@@ -164,7 +164,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         // If any op failed, return the first failure
         val y: Try[Seq[JsonObject]] = FunctionalUtil.traverse(x.toList)
 
-        y.map(_ => Some(GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None)))
+        y.map(_ => Some(GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None, transcoder)))
 
       case ResponseStatus.NOT_FOUND => Success(None)
 

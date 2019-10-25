@@ -19,6 +19,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetAndLockRequest, GetAndLockResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.kv.{DefaultErrors, GetResult}
 import com.couchbase.client.scala.util.Validate
 
@@ -32,7 +33,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndLockHandler(hp: HandlerParams)
-  extends RequestHandler[GetAndLockResponse, Option[GetResult]] {
+  extends RequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
 
   def request[T](id: String,
                  expiration: java.time.Duration,
@@ -59,10 +60,10 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: GetAndLockResponse): Option[GetResult] = {
+  override def response(id: String, response: GetAndLockResponse, transcoder: Transcoder): Option[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty))
+        Some(new GetResult(id, Left(response.content), response.flags(), response.cas, Option.empty, transcoder))
 
       case ResponseStatus.NOT_FOUND => None
 

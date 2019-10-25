@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.json.JsonObject
 
 import scala.concurrent.duration.Duration
@@ -29,4 +30,5 @@ class GetReplicaResult(id: String,
                        flags: Int,
                        cas: Long,
                        expiry: Option[Duration],
-                       val isReplica: Boolean) extends GetResult(id, _content, flags, cas, expiry)
+                       val isReplica: Boolean,
+                       transcoder: Transcoder) extends GetResult(id, _content, flags, cas, expiry, transcoder)

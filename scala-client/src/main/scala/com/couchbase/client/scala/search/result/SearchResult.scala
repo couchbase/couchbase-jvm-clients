@@ -19,7 +19,7 @@ package com.couchbase.client.scala.search.result
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.search.SearchChunkRow
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.json.JsonObjectSafe
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -57,8 +57,8 @@ case class ReactiveSearchResult(private[scala] val rows: SFlux[SearchChunkRow],
     *
     * @tparam T $SupportedTypes
     */
-  def rowsAs[T](implicit ev: Conversions.Decodable[T]): SFlux[T] = {
-    rows.map(row => ev.decode(row.data(), Conversions.JsonFlags) match {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
+    rows.map(row => deserializer.deserialize(row.data()) match {
       case Success(v) => v
       case Failure(err) => throw err
     })

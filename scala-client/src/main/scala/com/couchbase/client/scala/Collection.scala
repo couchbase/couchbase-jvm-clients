@@ -19,7 +19,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
@@ -29,6 +29,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
+import scala.reflect.runtime.universe._
 
 object Collection {
   private[scala] def block[T](in: Future[T]): Try[T] = {
@@ -86,7 +87,7 @@ object Collection {
   *                        then this is indicative of a more
   *                        permanent error or an application bug, that probably needs human review.
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        `com.couchbase.client.scala.codec.Conversions.Encodable` can be found: a list
+  *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
   *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
   * @define Durability     writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                        take care of sending that mutation to any configured replicas.  This parameter provides
@@ -133,11 +134,12 @@ class Collection(
            withExpiry: Boolean = false,
            project: Seq[String] = Seq.empty,
            timeout: Duration = kvTimeout,
-           retryStrategy: RetryStrategy = retryStrategy
+           retryStrategy: RetryStrategy = retryStrategy,
+           transcoder: Transcoder = JsonTranscoder.Instance
          ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiry, project, timeout, retryStrategy)
+        .get(id, withExpiry, project, timeout, retryStrategy, transcoder)
     )
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -158,8 +160,9 @@ class Collection(
                  durability: Durability = Disabled,
                  expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy
-               )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
+                 retryStrategy: RetryStrategy = retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance
+               )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.insert(
         id,
@@ -167,9 +170,11 @@ class Collection(
         durability,
         expiry,
         timeout,
-        retryStrategy
+        retryStrategy,
+        transcoder
       )
     )
+
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
@@ -191,8 +196,9 @@ class Collection(
                   durability: Durability = Disabled,
                   expiry: Duration = 0.seconds,
                   timeout: Duration = kvTimeout,
-                  retryStrategy: RetryStrategy = retryStrategy
-                )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
+                  retryStrategy: RetryStrategy = retryStrategy,
+                  transcoder: Transcoder = JsonTranscoder.Instance
+                )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.replace(
         id,
@@ -201,7 +207,8 @@ class Collection(
         durability,
         expiry,
         timeout,
-        retryStrategy
+        retryStrategy,
+        transcoder
       )
     )
 
@@ -223,8 +230,9 @@ class Collection(
                  durability: Durability = Disabled,
                  expiry: Duration = 0.seconds,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy
-               )(implicit ev: Conversions.Encodable[T]): Try[MutationResult] =
+                 retryStrategy: RetryStrategy = retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance
+               )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.upsert(
         id,
@@ -232,7 +240,8 @@ class Collection(
         durability,
         expiry,
         timeout,
-        retryStrategy
+        retryStrategy,
+        transcoder
       )
     )
 
@@ -287,6 +296,7 @@ class Collection(
                 expiry: Duration = 0.seconds,
                 timeout: Duration = kvTimeout,
                 retryStrategy: RetryStrategy = retryStrategy,
+                transcoder: Transcoder = JsonTranscoder.Instance,
                 @Stability.Internal accessDeleted: Boolean = false
               ): Try[MutateInResult] =
     block(
@@ -299,6 +309,7 @@ class Collection(
         expiry,
         timeout,
         retryStrategy,
+        transcoder,
         accessDeleted
       )
     )
@@ -319,9 +330,10 @@ class Collection(
   def getAndLock(id: String,
                  lockTime: Duration,
                  timeout: Duration = kvTimeout,
-                 retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
+                 retryStrategy: RetryStrategy = retryStrategy,
+                 transcoder: Transcoder = JsonTranscoder.Instance): Try[GetResult] =
     block(
-      async.getAndLock(id, lockTime, timeout, retryStrategy)
+      async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder)
     )
 
   /** Unlock a locked document.
@@ -356,13 +368,15 @@ class Collection(
   def getAndTouch(id: String,
                   expiry: Duration,
                   timeout: Duration = kvTimeout,
-                  retryStrategy: RetryStrategy = retryStrategy): Try[GetResult] =
+                  retryStrategy: RetryStrategy = retryStrategy,
+                  transcoder: Transcoder = JsonTranscoder.Instance): Try[GetResult] =
     block(
       async.getAndTouch(
         id,
         expiry,
         timeout,
-        retryStrategy
+        retryStrategy,
+        transcoder
       )
     )
 
@@ -387,9 +401,10 @@ class Collection(
                 spec: Seq[LookupInSpec],
                 withExpiry: Boolean = false,
                 timeout: Duration = kvTimeout,
-                retryStrategy: RetryStrategy = retryStrategy
+                retryStrategy: RetryStrategy = retryStrategy,
+                transcoder: Transcoder = JsonTranscoder.Instance
               ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy))
+    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder))
 
   /** Retrieves any available version of the document.
     *
@@ -409,9 +424,10 @@ class Collection(
     **/
   def getAnyReplica(id: String,
                     timeout: Duration = kvTimeout,
-                    retryStrategy: RetryStrategy = retryStrategy): Try[GetReplicaResult] =
+                    retryStrategy: RetryStrategy = retryStrategy,
+                    transcoder: Transcoder = JsonTranscoder.Instance): Try[GetReplicaResult] =
     Try(reactive
-      .getAnyReplica(id, timeout, retryStrategy)
+      .getAnyReplica(id, timeout, retryStrategy, transcoder)
       .block(timeout))
 
   /** Retrieves all available versions of the document.
@@ -431,8 +447,9 @@ class Collection(
     **/
   def getAllReplicas(id: String,
                      timeout: Duration = kvTimeout,
-                     retryStrategy: RetryStrategy = retryStrategy): Iterable[GetReplicaResult] =
-    reactive.getAllReplicas(id, timeout, retryStrategy).toIterable()
+                     retryStrategy: RetryStrategy = retryStrategy,
+                     transcoder: Transcoder = JsonTranscoder.Instance): Iterable[GetReplicaResult] =
+    reactive.getAllReplicas(id, timeout, retryStrategy, transcoder).toIterable()
 
   /** Checks if a document exists.
     *
@@ -477,8 +494,7 @@ class Collection(
     */
   def buffer[T](id: String,
                 options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: Conversions.Decodable[T],
-                encode: Conversions.Encodable[T]): CouchbaseBuffer[T] = {
+               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseBuffer[T] = {
     new CouchbaseBuffer[T](id, this)
   }
 
@@ -489,8 +505,7 @@ class Collection(
     */
   def set[T](id: String,
                 options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: Conversions.Decodable[T],
-                encode: Conversions.Encodable[T]): CouchbaseSet[T] = {
+               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseSet[T] = {
     new CouchbaseSet[T](id, this)
   }
 
@@ -501,8 +516,7 @@ class Collection(
     */
   def map[T](id: String,
                 options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: Conversions.Decodable[T],
-                encode: Conversions.Encodable[T]): CouchbaseMap[T] = {
+               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseMap[T] = {
     new CouchbaseMap[T](id, this)
   }
 
@@ -513,8 +527,7 @@ class Collection(
     */
   def queue[T](id: String,
                 options: Option[CouchbaseCollectionOptions] = None)
-               (implicit decode: Conversions.Decodable[T],
-                encode: Conversions.Encodable[T]): CouchbaseQueue[T] = {
+               (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T]): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
   }
 }

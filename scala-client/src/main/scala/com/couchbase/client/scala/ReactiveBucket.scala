@@ -137,7 +137,7 @@ class ReactiveBucket private[scala](val async: AsyncBucket) {
             })
 
             val meta = ViewMetaData(
-              response.header().debug().asScala.map(v => ViewDebug(v)),
+              response.header().debug().asScala.getOrElse(Array.empty),
               response.header().totalRows())
 
             ReactiveViewResult(SMono.just(meta), rows)

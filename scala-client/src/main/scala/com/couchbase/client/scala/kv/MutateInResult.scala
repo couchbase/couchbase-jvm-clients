@@ -2,7 +2,7 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.msg.kv.{MutationToken, SubdocField}
 import com.couchbase.client.scala.api.HasDurabilityTokens
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 
 import scala.util.{Failure, Try}
 import scala.compat.java8.OptionConverters._
@@ -36,7 +36,7 @@ case class MutateInResult(id: String,
     * @tparam T as this is only applicable for counters, the application should pass T=Long
     */
   def contentAs[T](index: Int)
-                  (implicit ev: Conversions.Decodable[T]): Try[T] = {
+                  (implicit deserializer: JsonDeserializer[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
       Failure(new IllegalArgumentException(s"$index is out of bounds"))
     }
@@ -44,7 +44,7 @@ case class MutateInResult(id: String,
       val field = content(index)
       field.error().asScala match {
         case Some(err) => Failure(err)
-        case _ => ev.decodeSubDocumentField(field, Conversions.JsonFlags)
+        case _ => deserializer.deserialize(field.value)
       }
     }
   }

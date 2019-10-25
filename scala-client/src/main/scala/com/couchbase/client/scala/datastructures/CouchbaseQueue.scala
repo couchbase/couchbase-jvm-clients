@@ -17,10 +17,11 @@ package com.couchbase.client.scala.datastructures
 
 import com.couchbase.client.core.error.CASMismatchException
 import com.couchbase.client.scala.Collection
-import com.couchbase.client.scala.codec.Conversions
+import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 
 import scala.util.{Failure, Success}
+import scala.reflect.runtime.universe._
 
 
 /** Presents a Scala Queue interface on top of a mutable persistent data structure, in the form of a document stored
@@ -29,8 +30,7 @@ import scala.util.{Failure, Success}
 class CouchbaseQueue[T](id: String,
                         collection: Collection,
                         options: Option[CouchbaseCollectionOptions] = None)
-                       (implicit decode: Conversions.Decodable[T],
-                      encode: Conversions.Encodable[T])
+                       (implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
   extends CouchbaseBuffer(id, collection, options) {
 
   def enqueue(elems: T*): Unit = this ++= elems

@@ -1,6 +1,7 @@
 package com.couchbase.client.scala.encodings
 
 import com.couchbase.client.scala._
+import com.couchbase.client.scala.codec.{RawBinaryTranscoder, RawJsonTranscoder}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
@@ -94,7 +95,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         import upickle.default._
 
         val bytes: Array[Byte] = transform(ReferenceUser).to(BytesRenderer()).toBytes
-        assert(coll.insert(id, bytes).isSuccess)
+        assert(coll.insert(id, bytes, transcoder = RawJsonTranscoder.Instance).isSuccess)
       }
     }
 
@@ -103,7 +104,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         import User._
         import com.github.plokhotnyuk.jsoniter_scala.core._
 
-        assert(coll.insert(id, writeToArray(ReferenceUser)).isSuccess)
+        assert(coll.insert(id, writeToArray(ReferenceUser), transcoder = RawJsonTranscoder.Instance).isSuccess)
       }
     }
 
@@ -128,8 +129,9 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
         val mapper = new ObjectMapper()
         mapper.registerModule(DefaultScalaModule)
+        val json = mapper.writeValueAsString(ReferenceUser)
 
-        assert(coll.insert(id, mapper.writeValueAsString(ReferenceUser)).isSuccess)
+        assert(coll.insert(id, json, transcoder = RawJsonTranscoder.Instance).isSuccess)
       }
     }
 
@@ -140,8 +142,9 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
         val mapper = new ObjectMapper()
         mapper.registerModule(DefaultScalaModule)
+        val bytes = mapper.writeValueAsBytes(ReferenceUser)
 
-        assert(coll.insert(id, mapper.writeValueAsBytes(ReferenceUser)).isSuccess)
+        assert(coll.insert(id, bytes, transcoder = RawJsonTranscoder.Instance).isSuccess)
       }
     }
 
@@ -161,7 +164,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
           """{"name":"John Smith",
             |"age":29,
             |"addresses":[{"address":"123 Fake Street"}]}""".stripMargin
-        assert(coll.insert(id, json).isSuccess)
+        assert(coll.insert(id, json, transcoder = RawJsonTranscoder.Instance).isSuccess)
       }
     }
 
@@ -213,13 +216,14 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
 
   trait Sink {
-    def decode(in: GetResult)
+    def decode(docId: String)
   }
 
   object Sink {
 
     case object JsonObjectAST extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[JsonObject].get
         assert(c.str("name") == "John Smith")
         assert(c.num("age") == 29)
@@ -228,7 +232,8 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     }
 
     case object UpickleAST extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[ujson.Obj].get
         assert(c("name").str == "John Smith")
         assert(c("age").num == 29)
@@ -237,21 +242,24 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     }
 
     case object Jsoniter extends Sink {
-      def decode(in: GetResult): Unit = {
-        val c = com.github.plokhotnyuk.jsoniter_scala.core.readFromArray[User](in.contentAsBytes)
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId, transcoder = RawJsonTranscoder.Instance).get
+        val c = com.github.plokhotnyuk.jsoniter_scala.core.readFromArray[User](in.contentAs[Array[Byte]].get)
         assert(c == ReferenceUser)
       }
     }
 
     case object Upickle extends Sink {
-      def decode(in: GetResult): Unit = {
-        val c = upickle.default.read[User](in.contentAsBytes)
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId, transcoder = RawJsonTranscoder.Instance).get
+        val c = upickle.default.read[User](in.contentAs[Array[Byte]].get)
         assert(c == ReferenceUser)
       }
     }
 
     case object CouchbaseCaseClass extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[User].get
         assert(c == ReferenceUser)
       }
@@ -261,16 +269,18 @@ class JsonInteropSpec extends ScalaIntegrationTest {
       import com.fasterxml.jackson.databind.ObjectMapper
       import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId, transcoder = RawJsonTranscoder.Instance).get
         val mapper = new ObjectMapper()
         mapper.registerModule(DefaultScalaModule)
-        val c = mapper.readValue(in.contentAsBytes, classOf[User])
+        val c = mapper.readValue(in.contentAs[Array[Byte]].get, classOf[User])
         assert(c == ReferenceUser)
       }
     }
 
     case object CirceAST extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[io.circe.Json].get
         assert(c.hcursor.downField("name").as[String].right.get == "John Smith")
         assert(c.hcursor.downField("age").as[Int].right.get == 29)
@@ -280,7 +290,8 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
 
     case object String extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId, transcoder = RawJsonTranscoder.Instance).get
         val raw = in.contentAs[String].get
 
         val c = upickle.default.read[ujson.Obj](raw)
@@ -291,9 +302,11 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     }
 
     case object PlayAST extends Sink {
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[play.api.libs.json.JsValue].get
-        val address = (c \ "addresses" \ 0 \ "address").get
+        val addressOpt = (c \ "addresses" \ 0 \ "address")
+        val address = addressOpt.get
         assert(c("name").as[String] == "John Smith")
         assert(c("age").as[Int] == 29)
         assert(address.as[String] == "123 Fake Street")
@@ -304,7 +317,8 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
       import org.typelevel.jawn.ast._
 
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[org.typelevel.jawn.ast.JValue].get
         assert(c.get("name").asString == "John Smith")
         assert(c.get("age").asInt == 29)
@@ -316,7 +330,8 @@ class JsonInteropSpec extends ScalaIntegrationTest {
 
       import org.json4s.JsonAST._
 
-      def decode(in: GetResult): Unit = {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
         val c = in.contentAs[JValue].get
         val JString(name) = c \ "name"
         assert(name.toString == "John Smith")
@@ -369,11 +384,10 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   private def compare(source: Source, sink: Sink): Unit = {
-    val docId = TestUtils.docId()
+      val docId = TestUtils.docId()
 
-    source.insert(docId)
-    val result = coll.get(docId).get
-    sink.decode(result)
+      source.insert(docId)
+      sink.decode(docId)
   }
 
   @Test
@@ -411,4 +425,10 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     compare(source, sink)
   }
 
+  @Test
+  def UpickleCaseClassToBytes_to_JsonObjectAST() {
+    val source = Source.UpickleCaseClassToBytes
+    val sink = Sink.JsonObjectAST
+    compare(source, sink)
+  }
 }

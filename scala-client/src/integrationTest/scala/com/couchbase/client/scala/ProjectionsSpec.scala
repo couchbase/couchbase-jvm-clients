@@ -1,5 +1,6 @@
 package com.couchbase.client.scala
 
+import com.couchbase.client.scala.codec.RawJsonTranscoder
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -51,7 +52,7 @@ class ProjectionsSpec extends ScalaIntegrationTest {
         |    }
         |}
         |""".stripMargin
-    coll.upsert(docId, raw)
+    coll.upsert(docId, raw, transcoder = RawJsonTranscoder.Instance)
 
   }
 

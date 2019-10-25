@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
+import com.couchbase.client.scala.codec.{JsonSerializer, Transcoder}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.Validate
@@ -47,7 +48,8 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                  expiration: java.time.Duration,
                  timeout: java.time.Duration,
                  retryStrategy: RetryStrategy,
-                 accessDeleted: Boolean)
+                 accessDeleted: Boolean,
+                 transcoder: Transcoder)
   : Try[SubdocMutateRequest] = {
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")

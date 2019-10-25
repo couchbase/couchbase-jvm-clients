@@ -10,6 +10,7 @@ import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, Igno
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -215,6 +216,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
+
 
   @Test
   def upsert_when_doc_does_not_exist() {

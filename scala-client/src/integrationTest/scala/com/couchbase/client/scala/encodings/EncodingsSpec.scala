@@ -1,12 +1,10 @@
 package com.couchbase.client.scala.encodings
 
 import com.couchbase.client.core.error.DecodingFailedException
-import com.couchbase.client.scala.codec.Conversions.Encodable
-import com.couchbase.client.scala.codec.DocumentFlags
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.codec.JsonSerializer
+import com.couchbase.client.scala.codec.{DocumentFlags, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.ClusterAwareIntegrationTest
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -61,7 +59,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   def encode_encoded_json_string_directly_as_string() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
+    coll.insert(docId, content, transcoder = RawStringTranscoder.Instance).get
 
     val doc = coll.get(docId).get
 
@@ -75,21 +73,37 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out) =>
-        assert(out("hello").str == "world")
+      case Success(out) => assert(false)
+      case Failure(err: DecodingFailedException) => // ujson.Str cannot be cast to ujson.Obj
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
   @Test
-  def decode_encoded_json_string_as_string() {
+  def decode_encoded_json_string() {
     val content = """{"hello":"world"}"""
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, content, transcoder = RawJsonTranscoder.Instance).get
+
+    coll.get(docId).get.contentAs[ujson.Obj] match {
+      case Success(out) =>
+        assert(out("hello").str == "world")
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
 
     coll.get(docId).get.contentAs[String] match {
-      case Success(out) =>
-        assert(out == content)
+      case Success(out) => assert(false)
+      case Failure(err: DecodingFailedException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.get(docId, transcoder = RawJsonTranscoder.Instance).get.contentAs[String] match {
+      case Success(out) => assert(out == content)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.get(docId, transcoder = RawStringTranscoder.Instance).get.contentAs[String] match {
+      case Success(out) => assert(out == content)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -103,7 +117,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
 
     val doc = coll.get(docId).get
 
-    // This is a bad assumption, the app should have specified string type
+    // The content is legal Json, but app probably meant to use RawStringTranscoder
     assert(doc.flags == DocumentFlags.Json)
   }
 
@@ -112,7 +126,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   def encode_raw_string_directly_as_string() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
+    coll.insert(docId, content, transcoder = RawStringTranscoder.Instance).get
 
     val doc = coll.get(docId).get
 
@@ -134,40 +148,19 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_raw_string_written_directly_as_json_into_json() {
+  def decode_raw_string() {
     val content = """hello, world!"""
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, content, transcoder = RawStringTranscoder.Instance).get
 
-    coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out) => assert(false, "should not succeed")
+    coll.get(docId).get.contentAs[String] match {
+      case Success(out) => assert(false)
       case Failure(err: DecodingFailedException) =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
-  }
 
-  @Test
-  def decode_raw_string_as_string() {
-    val content = """hello, world!"""
-    val docId = TestUtils.docId()
-    coll.insert(docId, content).get
-
-    coll.get(docId).get.contentAs[String] match {
-      case Success(out) =>
-        assert(out == content)
-      case Failure(err) => assert(false, s"unexpected error $err")
-    }
-  }
-
-  @Test
-  def decode_raw_string_written_directly_as_string_into() {
-    val content = """hello, world!"""
-    val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsValue.StringConvert).get
-
-    coll.get(docId).get.contentAs[String] match {
-      case Success(out) =>
-        assert(out == content)
+    coll.get(docId, transcoder = RawStringTranscoder.Instance).get.contentAs[String] match {
+      case Success(out) => assert(out == content)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -178,7 +171,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
 
     val doc = coll.get(docId).get
 
@@ -190,7 +183,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
@@ -204,11 +197,29 @@ class EncodingsSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[String] match {
-      case Success(out) =>
-        assert(out == """{"hello":"world"}""")
+      case Success(out) => assert(false)
+      case Failure(err: DecodingFailedException) =>
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+
+    coll.get(docId, transcoder = RawJsonTranscoder.Instance).get.contentAs[String] match {
+      case Success(out) => assert(out == content.toString)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  def decode_json_bytes_as_string_with_transcoder() {
+    val content = ujson.Obj("hello" -> "world")
+    val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
+    val docId = TestUtils.docId()
+    coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
+
+    coll.get(docId, transcoder = RawStringTranscoder.Instance).get.contentAs[String] match {
+      case Success(out) => assert(out == """{"hello":"world"}""")
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -218,7 +229,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, encoded).get
+    coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
@@ -232,7 +243,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId = TestUtils.docId()
-    coll.insert(docId, encoded)(Encodable.AsValue.BytesConvert).get
+    coll.insert(docId, encoded, transcoder = RawBinaryTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) =>
@@ -245,32 +256,18 @@ class EncodingsSpec extends ScalaIntegrationTest {
   def encode_raw_bytes() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, content, transcoder = RawBinaryTranscoder.Instance).get
 
     val doc = coll.get(docId).get
 
-    // This is a bad assumption, the app should have specified binary type
-    assert(doc.flags == DocumentFlags.Json)
+    assert(doc.flags == DocumentFlags.Binary)
   }
 
   @Test
   def raw_json_bytes_as_json_should_fail() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
-
-    coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out) => assert(false, "should not succeed")
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err) => assert(false, s"unexpected error $err")
-    }
-  }
-
-  @Test
-  def decode_raw_bytes_as_string_should_fail() {
-    val content = Array[Byte](1, 2, 3, 4)
-    val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, content, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) => assert(false, "should not succeed")
@@ -283,7 +280,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   def decode_raw_bytes_written_directly_as_binary_as_string() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsValue.BytesConvert).get
+    coll.insert(docId, content, transcoder = RawBinaryTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
       case Success(out) => assert(false, "should not succeed")
@@ -296,17 +293,17 @@ class EncodingsSpec extends ScalaIntegrationTest {
   def decode_raw_bytes_as_bytes() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
-    coll.insert(docId, content).get
+    coll.insert(docId, content, transcoder = RawJsonTranscoder.Instance).get
 
-    assert(coll.get(docId).get.contentAsBytes sameElements content)
+    assert(coll.get(docId, transcoder = RawJsonTranscoder.Instance).get.contentAs[Array[Byte]].get sameElements content)
   }
 
   @Test
   def decode_raw_bytes_written_directly_as_binary_as() {
     val content = Array[Byte](1, 2, 3, 4)
     val docId = TestUtils.docId()
-    coll.insert(docId, content)(Encodable.AsValue.BytesConvert).get
+    coll.insert(docId, content, transcoder = RawBinaryTranscoder.Instance).get
 
-    assert(coll.get(docId).get.contentAsBytes sameElements content)
+    assert(coll.get(docId, transcoder = RawBinaryTranscoder.Instance).get.contentAs[Array[Byte]].get sameElements content)
   }
 }
