@@ -42,6 +42,7 @@ public class EndpointConnectionFailedEvent extends AbstractEvent {
     return attempt;
   }
 
+  @Override
   public Throwable cause() {
     return cause;
   }

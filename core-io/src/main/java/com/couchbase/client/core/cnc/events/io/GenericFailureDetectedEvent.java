@@ -30,7 +30,8 @@ public class GenericFailureDetectedEvent extends AbstractEvent {
     this.throwable = throwable;
   }
 
-  public Throwable throwable() {
+  @Override
+  public Throwable cause() {
     return throwable;
   }
 

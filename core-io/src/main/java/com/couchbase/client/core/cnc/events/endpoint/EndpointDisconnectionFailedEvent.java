@@ -46,6 +46,7 @@ public class EndpointDisconnectionFailedEvent extends AbstractEvent {
   /**
    * Returns the cause of the failure.
    */
+  @Override
   public Throwable cause() {
     return cause;
   }

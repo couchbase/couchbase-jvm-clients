@@ -38,7 +38,8 @@ public class ServiceReconfigurationFailedEvent extends AbstractEvent {
     this.serviceType = serviceType;
   }
 
-  public Throwable reason() {
+  @Override
+  public Throwable cause() {
     return reason;
   }
 

@@ -40,8 +40,9 @@ public class ConfigIgnoredEvent extends AbstractEvent {
     return reason;
   }
 
-  public Optional<Exception> cause() {
-    return cause;
+  @Override
+  public Exception cause() {
+    return cause.orElse(null);
   }
 
   public Optional<String> config() {

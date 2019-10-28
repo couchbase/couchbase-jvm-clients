@@ -34,6 +34,11 @@ public class CollectionMapRefreshFailedEvent extends AbstractEvent {
   }
 
   @Override
+  public Throwable cause() {
+    return reason;
+  }
+
+  @Override
   public String description() {
     return "Collection Map refresh failed: " + reason;
   }

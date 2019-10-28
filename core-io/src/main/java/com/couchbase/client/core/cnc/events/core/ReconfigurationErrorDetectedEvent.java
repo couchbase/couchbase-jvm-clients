@@ -40,4 +40,8 @@ public class ReconfigurationErrorDetectedEvent extends AbstractEvent {
     return "Reconfiguration attempt failed because of: " + error;
   }
 
+  @Override
+  public Throwable cause() {
+    return error;
+  }
 }

@@ -42,6 +42,7 @@ public class UnexpectedEndpointConnectionFailedEvent extends AbstractEvent {
    *
    * @return the cause.
    */
+  @Override
   public Throwable cause() {
     return cause;
   }

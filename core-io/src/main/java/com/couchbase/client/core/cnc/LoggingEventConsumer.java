@@ -133,20 +133,40 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     switch (event.severity()) {
       case VERBOSE:
-        logger.trace(logLine);
+        if (event.cause() != null) {
+          logger.trace(logLine, event.cause());
+        } else {
+          logger.trace(logLine);
+        }
         break;
       case DEBUG:
-        logger.debug(logLine);
+        if (event.cause() != null) {
+          logger.debug(logLine, event.cause());
+        } else {
+          logger.debug(logLine);
+        }
         break;
       case INFO:
-        logger.info(logLine);
+        if (event.cause() != null) {
+          logger.info(logLine, event.cause());
+        } else {
+          logger.info(logLine);
+        }
         break;
       case WARN:
-        logger.warn(logLine);
+        if (event.cause() != null) {
+          logger.warn(logLine, event.cause());
+        } else {
+          logger.warn(logLine);
+        }
         break;
       case ERROR:
+        if (event.cause() != null) {
+          logger.error(logLine, event.cause());
+        } else {
+          logger.error(logLine);
+        }
       default:
-        logger.error(logLine);
     }
 
     if (diagnosticContext) {

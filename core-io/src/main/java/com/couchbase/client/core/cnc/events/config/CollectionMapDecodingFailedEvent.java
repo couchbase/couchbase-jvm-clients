@@ -39,4 +39,9 @@ public class CollectionMapDecodingFailedEvent extends AbstractEvent {
     return "Collection Map decoding failed: " + reason;
   }
 
+  @Override
+  public Throwable cause() {
+    return reason;
+  }
+
 }

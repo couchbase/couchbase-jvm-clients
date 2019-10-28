@@ -83,6 +83,7 @@ public abstract class AbstractEvent implements Event {
       + ", createdAt=" + createdAt
       + ", description=" + description()
       + ", context=" + context
+      + ", cause=" + cause()
       + '}';
   }
 }

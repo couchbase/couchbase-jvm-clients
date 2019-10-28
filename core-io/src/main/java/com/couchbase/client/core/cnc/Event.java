@@ -67,6 +67,15 @@ public interface Event {
   String description();
 
   /**
+   * If present, holds the cause for this event. Usually present if raised because of an excetion.
+   *
+   * @return the throwable if present.
+   */
+  default Throwable cause() {
+    return null;
+  }
+
+  /**
    * Describes the severity of any given event.
    */
   enum Severity {
