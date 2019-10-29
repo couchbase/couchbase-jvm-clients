@@ -71,4 +71,6 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
 
   CollectionIdentifier collectionIdentifier();
 
+  int opaque();
+
 }

@@ -30,6 +30,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
 
 import javax.security.auth.callback.Callback;
@@ -181,7 +182,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_LIST_MECHS,
       noDatatype(),
       noPartition(),
-      Utils.opaque(ctx.channel(), true),
+      BaseKeyValueRequest.nextOpaque(),
       noCas(),
       noExtras(),
       noKey(),
@@ -289,7 +290,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_AUTH,
       noDatatype(),
       noPartition(),
-      Utils.opaque(ctx.channel(), true),
+      BaseKeyValueRequest.nextOpaque(),
       noCas(),
       noExtras(),
       key,
@@ -371,7 +372,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.Opcode.SASL_STEP,
       noDatatype(),
       noPartition(),
-      Utils.opaque(ctx.channel(), true),
+      BaseKeyValueRequest.nextOpaque(),
       noCas(),
       noExtras(),
       key,

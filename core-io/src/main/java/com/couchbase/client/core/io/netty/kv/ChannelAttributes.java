@@ -49,12 +49,6 @@ public class ChannelAttributes {
     AttributeKey.newInstance("ErrorMap");
 
   /**
-   * Holds the opaques used for this channel.
-   */
-  static final AttributeKey<Integer> OPAQUE_KEY =
-    AttributeKey.newInstance("Opaque");
-
-  /**
    * Holds the channel ID negotiated with KV engine once set.
    */
   public static final AttributeKey<String> CHANNEL_ID_KEY =

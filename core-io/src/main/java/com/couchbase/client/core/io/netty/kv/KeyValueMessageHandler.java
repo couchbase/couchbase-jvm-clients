@@ -108,11 +108,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private IoContext ioContext;
 
   /**
-   * Stores the current opaque value.
-   */
-  private int opaque;
-
-  /**
    * Once connected/active, holds the channel context.
    */
   private ChannelContext channelContext;
@@ -156,8 +151,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       endpointContext.bucket()
     );
 
-    opaque = Utils.opaque(ctx.channel(), false);
-
     errorMap = ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).get();
 
     List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
@@ -191,15 +184,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     if (msg instanceof KeyValueRequest) {
       KeyValueRequest<Response> request = (KeyValueRequest<Response>) msg;
 
-      int nextOpaque;
-      do {
-        nextOpaque = ++opaque;
-      } while (writtenRequests.containsKey(nextOpaque));
-
-      writtenRequests.put(nextOpaque, request);
+      int opaque = request.opaque();
+      writtenRequests.put(opaque, request);
       try {
-        ctx.write(request.encode(ctx.alloc(), nextOpaque, channelContext), promise);
-        writtenRequestDispatchTimings.put(nextOpaque, (Long) System.nanoTime());
+        ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
+        writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.internalSpan() != null) {
           request.internalSpan().startDispatch();
         }

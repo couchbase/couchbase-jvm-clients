@@ -32,6 +32,7 @@ import com.couchbase.client.core.util.Bytes;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -47,8 +48,20 @@ public abstract class BaseKeyValueRequest<R extends Response>
   extends BaseRequest<R>
   implements KeyValueRequest<R> {
 
+  /**
+   * The opaque identifier used in the binary protocol to track requests/responses.
+   *
+   * No overflow control is applied, since once it overflows it starts with negative values again.
+   */
+  private static final AtomicInteger GLOBAL_OPAQUE = new AtomicInteger(0);
+
   private final byte[] key;
   private final CollectionIdentifier collectionIdentifier;
+
+  /**
+   * Holds the opaque for this request.
+   */
+  private final int opaque;
 
   /**
    * Once set, stores the partition where this request should be dispatched against.
@@ -65,6 +78,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
     super(timeout, ctx, retryStrategy, span);
     this.key = encodeKey(key);
     this.collectionIdentifier = collectionIdentifier;
+    this.opaque = nextOpaque();
+  }
+
+  public static int nextOpaque() {
+    return GLOBAL_OPAQUE.getAndIncrement();
   }
 
   @Override
@@ -120,10 +138,15 @@ public abstract class BaseKeyValueRequest<R extends Response>
     return ServiceType.KV;
   }
 
+  public int opaque() {
+    return opaque;
+  }
+
   @Override
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("type", serviceType().ident());
+    ctx.put("opaque", "0x" + Integer.toHexString(opaque));
 
     if (collectionIdentifier != null) {
       ctx.put("bucket", redactMeta(collectionIdentifier.bucket()));

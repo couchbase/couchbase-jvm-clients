@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -213,7 +214,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.ERROR_MAP,
       noDatatype(),
       noPartition(),
-      Utils.opaque(ctx.channel(), true),
+      BaseKeyValueRequest.nextOpaque(),
       noCas(),
       noExtras(),
       noKey(),

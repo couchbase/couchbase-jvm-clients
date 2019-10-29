@@ -30,6 +30,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -198,7 +199,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
       MemcacheProtocol.Opcode.SELECT_BUCKET,
       noDatatype(),
       noPartition(),
-      Utils.opaque(ctx.channel(), true),
+      BaseKeyValueRequest.nextOpaque(),
       noCas(),
       noExtras(),
       key,

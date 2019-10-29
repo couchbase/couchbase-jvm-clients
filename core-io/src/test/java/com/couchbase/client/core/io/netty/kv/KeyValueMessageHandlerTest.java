@@ -103,7 +103,8 @@ class KeyValueMessageHandlerTest {
       channel.flushOutbound();
 
       ByteBuf request = channel.readOutbound();
-      assertEquals(1, MemcacheProtocol.opaque(request));
+      int firstOpaque = MemcacheProtocol.opaque(request);
+      assertTrue(firstOpaque > 0);
       ReferenceCountUtil.release(request);
 
       channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
@@ -111,43 +112,13 @@ class KeyValueMessageHandlerTest {
       channel.flushOutbound();
 
       request = channel.readOutbound();
-      assertEquals(2, MemcacheProtocol.opaque(request));
+      int secondOpaque = MemcacheProtocol.opaque(request);
+      assertTrue(secondOpaque > firstOpaque);
       ReferenceCountUtil.release(request);
     } finally {
       channel.finishAndReleaseAll();
     }
 
-  }
-
-  /**
-   * To make it easier to compare full streams of requests and responses, the opaque is per
-   * channel and not global.
-   */
-  @Test
-  void opaqueIsPerChannel() {
-    EmbeddedChannel channel1 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
-    EmbeddedChannel channel2 = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
-
-    try {
-      channel1.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
-        CTX, CID, null));
-      channel1.flushOutbound();
-
-      ByteBuf request = channel1.readOutbound();
-      assertEquals(1, MemcacheProtocol.opaque(request));
-      ReferenceCountUtil.release(request);
-
-      channel2.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
-        CTX, CID, null));
-      channel2.flushOutbound();
-
-      request = channel2.readOutbound();
-      assertEquals(1, MemcacheProtocol.opaque(request));
-      ReferenceCountUtil.release(request);
-    } finally {
-      channel1.finishAndReleaseAll();
-      channel2.finishAndReleaseAll();
-    }
   }
 
   /**
@@ -175,7 +146,7 @@ class KeyValueMessageHandlerTest {
       channel.writeOutbound(request);
 
       ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
-        (short) 0xFF, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+        (short) 0xFF, request.opaque(), 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
       channel.writeInbound(getResponse);
 
       assertThrows(RequestCanceledException.class, () -> request.response().get());
@@ -239,7 +210,7 @@ class KeyValueMessageHandlerTest {
         channel.writeOutbound(request1);
 
         ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
-          status.status(), 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+          status.status(), request1.opaque(), 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
         channel.writeInbound(getResponse);
 
         assertFalse(channel.isOpen());
@@ -278,7 +249,7 @@ class KeyValueMessageHandlerTest {
         channel.writeOutbound(request);
 
         ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
-          status.status(), 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+          status.status(), request.opaque(), 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
         channel.writeInbound(getResponse);
 
         assertEquals(CancellationReason.noMoreRetries(retryReasons.get(i)), request.cancellationReason());
