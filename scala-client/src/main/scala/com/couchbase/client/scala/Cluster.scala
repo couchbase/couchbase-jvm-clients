@@ -44,7 +44,7 @@ import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -205,6 +205,7 @@ object Cluster {
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param username         the name of a user with appropriate permissions on the cluster.
     * @param password         the password of a user with appropriate permissions on the cluster.
+    *
     * @return a [[Cluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
@@ -217,6 +218,7 @@ object Cluster {
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param options custom options used when connecting to the cluster.
+    *
     * @return a [[Cluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, options: ClusterOptions): Try[Cluster] = {
@@ -224,7 +226,9 @@ object Cluster {
       .extractClusterEnvironment(connectionString, options)
       .map(ce => {
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        new Cluster(ce, options.authenticator, seedNodes)
+        val cluster   = new Cluster(ce, options.authenticator, seedNodes)
+        cluster.async.performGlobalConnect().block()
+        cluster
       })
   }
 }

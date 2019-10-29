@@ -173,7 +173,7 @@ class AsyncCluster(
                           )
                         )
                       })
-                )
+              )
           )
           .toFuture
 
@@ -242,6 +242,13 @@ class AsyncCluster(
       )
     )
   }
+
+  private[scala] def performGlobalConnect(): SMono[Void] = {
+    SMono(
+      core
+        .initGlobalConfig()
+        .timeout(env.timeoutConfig.connectTimeout))
+  }
 }
 
 /** Functions to allow creating an `AsyncCluster`, which represents a connection to a Couchbase cluster.
@@ -275,6 +282,7 @@ object AsyncCluster {
     *
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param options custom options used when connecting to the cluster.
+    *
     * @return a [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(connectionString: String, options: ClusterOptions): Future[AsyncCluster] = {
@@ -283,7 +291,9 @@ object AsyncCluster {
         implicit val ec = ce.ec
         Future {
           val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-          new AsyncCluster(ce, options.authenticator, seedNodes)
+          val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+          cluster.performGlobalConnect().block()
+          cluster
         }
       case Failure(err) => Future.failed(err)
     }
@@ -318,7 +328,7 @@ object AsyncCluster {
                         meta
                       )
                     })
-              )
+            )
         )
         .toFuture
 

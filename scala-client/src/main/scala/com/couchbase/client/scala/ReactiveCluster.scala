@@ -43,7 +43,7 @@ import reactor.core.scala.publisher.SMono
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -277,9 +277,15 @@ object ReactiveCluster {
   def connect(connectionString: String, options: ClusterOptions): SMono[ReactiveCluster] = {
     extractClusterEnvironment(connectionString, options) match {
       case Success(ce) =>
-        implicit val ec = ce.ec
-        val seedNodes   = seedNodesFromConnectionString(connectionString, ce)
-        SMono.just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
+        implicit val ec: ExecutionContextExecutor = ce.ec
+        val seedNodes                             = seedNodesFromConnectionString(connectionString, ce)
+        SMono
+          .just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
+          .flatMap(
+            cluster =>
+              cluster.async
+                .performGlobalConnect()
+                .`then`(SMono.just(cluster)))
       case Failure(err) => SMono.raiseError(err)
     }
   }
