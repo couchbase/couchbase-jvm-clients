@@ -338,23 +338,20 @@ public class ThresholdRequestTracer implements RequestTracer {
           entry.put("last_local_id", redactSystem(localId).toString());
         }
 
-        long encode_duration = request.context().encodeLatency();
-        if (encode_duration > 0) {
-          entry.put(KEY_ENCODE_MICROS, encode_duration);
+        long encodeDuration = request.context().encodeLatency();
+        if (encodeDuration > 0) {
+          entry.put(KEY_ENCODE_MICROS, encodeDuration);
         }
 
-        long dispatch_duration = request.context().dispatchLatency();
-        if (dispatch_duration > 0) {
-          entry.put(KEY_DISPATCH_MICROS, TimeUnit.NANOSECONDS.toMicros(dispatch_duration));
+        long dispatchDuration = request.context().dispatchLatency();
+        if (dispatchDuration > 0) {
+          entry.put(KEY_DISPATCH_MICROS, TimeUnit.NANOSECONDS.toMicros(dispatchDuration));
         }
 
-        // TODO
-        /*
-        String server_duration = span.getBaggageItem(KEY_SERVER_MICROS);
-        if (server_duration != null) {
-          entry.put(KEY_SERVER_MICROS, Long.parseLong(server_duration));
+        long serverDuration = request.context().serverLatency();
+        if (serverDuration > 0) {
+          entry.put(KEY_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(serverDuration));
         }
-         */
 
         top.add(entry);
       }

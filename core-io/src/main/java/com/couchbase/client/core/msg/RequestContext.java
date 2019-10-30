@@ -47,6 +47,11 @@ public class RequestContext extends CoreContext {
   private volatile long dispatchLatency;
 
   /**
+   * Holds the server latency if reported.
+   */
+  private volatile long serverLatency;
+
+  /**
    * The time when the request got logically completed.
    */
   private volatile long logicallyCompletedAt;
@@ -149,6 +154,17 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext lastChannelId(final String lastChannelId) {
     this.lastChannelId = lastChannelId;
+    return this;
+  }
+
+  @Stability.Volatile
+  public long serverLatency() {
+    return serverLatency;
+  }
+
+  @Stability.Internal
+  public RequestContext serverLatency(long serverLatency) {
+    this.serverLatency = serverLatency;
     return this;
   }
 
@@ -279,10 +295,13 @@ public class RequestContext extends CoreContext {
       input.put("retryReasons", retryReasons);
     }
     long logicalLatency = logicalRequestLatency();
-    if (dispatchLatency != 0 || logicalLatency != 0 || encodeLatency != 0) {
+    if (dispatchLatency != 0 || logicalLatency != 0 || encodeLatency != 0 || serverLatency != 0) {
       HashMap<String, Long> timings = new HashMap<>();
       if (dispatchLatency != 0) {
         timings.put("dispatchMicros", TimeUnit.NANOSECONDS.toMicros(dispatchLatency));
+      }
+      if (serverLatency != 0) {
+        timings.put("serverMicros", TimeUnit.NANOSECONDS.toMicros(serverLatency));
       }
       if (logicalLatency != 0) {
         timings.put("totalMicros", TimeUnit.NANOSECONDS.toMicros(logicalLatency));

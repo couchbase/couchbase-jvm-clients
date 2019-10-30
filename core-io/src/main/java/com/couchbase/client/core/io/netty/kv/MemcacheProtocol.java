@@ -97,6 +97,11 @@ public enum MemcacheProtocol {
   public static final short SYNC_REPLICATION_TIMEOUT_FLOOR_MS = 1500;
 
   /**
+   * The byte used to signal this is a tracing extras frame.
+   */
+  public static final byte FRAMING_EXTRAS_TRACING = 0x00;
+
+  /**
    * Create a flexible memcached protocol request with all fields necessary.
    */
   public static ByteBuf flexibleRequest(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
@@ -280,6 +285,20 @@ public enum MemcacheProtocol {
     }
   }
 
+  public static Optional<ByteBuf> flexibleExtras(final ByteBuf message) {
+    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
+    if (flexible) {
+      int flexibleExtrasLength = message.getByte(2);
+      if (flexibleExtrasLength > 0) {
+        return Optional.of(message.slice(MemcacheProtocol.HEADER_SIZE, flexibleExtrasLength));
+      } else {
+        return Optional.empty();
+      }
+    } else {
+      return Optional.empty();
+    }
+  }
+
   /**
    * Performs simple sanity checking of a key/value request.
    *
@@ -427,6 +446,40 @@ public enum MemcacheProtocol {
     flexibleExtras.writeByte(type.code());
     flexibleExtras.writeShort(deadline);
     return flexibleExtras;
+  }
+
+  /**
+   * Parses the server duration from the frame.
+   *
+   * It reads through the byte stream looking for the tracing frame and if
+   * found extracts the info. If a different frame is found it is just
+   * skipped.
+   *
+   * Per algorithm, the found server duration is round up/down using
+   * the {@link Math#round(float)} function and has microsecond
+   * precision.
+   *
+   * @param response the response to extract it from.
+   * @return the extracted duration, 0 if not found.
+   */
+  public static long parseServerDurationFromResponse(final ByteBuf response) {
+    Optional<ByteBuf> frames = flexibleExtras(response);
+    if (frames.isPresent()) {
+      ByteBuf frame = frames.get();
+      while (frame.readableBytes() > 0) {
+        byte control = frame.readByte();
+        byte id = (byte) (control & 0xF0);
+        byte len = (byte) (control & 0x0F);
+        if (id == FRAMING_EXTRAS_TRACING) {
+          return Math.round(Math.pow(frame.readUnsignedShort(), 1.74) / 2);
+        } else {
+          frame.skipBytes(len);
+        }
+      }
+    } else {
+      return 0;
+    }
+    return 0;
   }
 
   /**

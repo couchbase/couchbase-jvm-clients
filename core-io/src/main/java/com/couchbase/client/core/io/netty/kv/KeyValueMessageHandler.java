@@ -247,9 +247,13 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       return;
     }
 
+    long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
+    request.context().serverLatency(serverTime);
+
     if (request.internalSpan() != null) {
       request.internalSpan().stopDispatch();
     }
+
     long start = writtenRequestDispatchTimings.remove(opaque);
     request.context().dispatchLatency(System.nanoTime() - start);
 

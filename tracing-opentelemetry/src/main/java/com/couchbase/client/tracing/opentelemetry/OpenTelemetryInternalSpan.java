@@ -102,6 +102,10 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
   @Override
   public void stopDispatch() {
     try (Scope scope = tracer.withSpan(dispatchSpan)) {
+      long serverLatency = ctx.serverLatency();
+      if (serverLatency > 0) {
+        dispatchSpan.setAttribute("peer.latency", serverLatency);
+      }
       dispatchSpan.end();
     }
   }

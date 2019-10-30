@@ -101,6 +101,10 @@ public class OpenTracingInternalSpan implements InternalSpan {
   @Override
   public void stopDispatch() {
     try (Scope scope = tracer.activateSpan(dispatchSpan)) {
+      long serverLatency = ctx.serverLatency();
+      if (serverLatency > 0) {
+        dispatchSpan.setTag("peer.latency", serverLatency);
+      }
       dispatchSpan.finish();
     }
   }
