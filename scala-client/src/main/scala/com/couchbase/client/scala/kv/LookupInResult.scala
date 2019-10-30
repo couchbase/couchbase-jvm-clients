@@ -45,7 +45,7 @@ case class LookupInResult(
     */
   def contentAs[T](
       index: Int
-  )(implicit deserializer: JsonDeserializer[T], tag: TypeTag[T]): Try[T] = {
+  )(implicit deserializer: JsonDeserializer[T], tag: WeakTypeTag[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
       Failure(new IllegalArgumentException(s"$index is out of bounds"))
     } else {

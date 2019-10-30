@@ -58,9 +58,13 @@ case class GetResult(
     */
   def contentAs[T](
       implicit deserializer: JsonDeserializer[T],
-      tt: TypeTag[T],
+      tt: WeakTypeTag[T],
       tag: ClassTag[T]
   ): Try[T] = {
+    // Both WeakTypeTag and ClassTag are used, WeakTypeTag can be removed if find a way to do tag.unapply(obj) below with
+    // ClassTag.
+    // WeakTypeTag is used over TypeTag so app does not have make every case class top-level.
+
     _content match {
       case Left(bytes) =>
         // Regular case

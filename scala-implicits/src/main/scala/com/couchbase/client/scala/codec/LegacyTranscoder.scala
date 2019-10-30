@@ -36,7 +36,7 @@ class LegacyTranscoder() extends TranscoderWithSerializer {
   }
 
   override def decode[T](input: Array[Byte], flags: Int, serializer: JsonDeserializer[T])(
-      implicit tag: TypeTag[T]
+      implicit tag: WeakTypeTag[T]
   ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
       Success(input.asInstanceOf[T])

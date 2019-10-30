@@ -30,7 +30,7 @@ class CouchbaseQueue[T](
     id: String,
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
-)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
     extends CouchbaseBuffer(id, collection, options) {
 
   def enqueue(elems: T*): Unit = this ++= elems

@@ -506,7 +506,7 @@ class Collection(
   def buffer[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: TypeTag[T]
+      tag: WeakTypeTag[T]
   ): CouchbaseBuffer[T] = {
     new CouchbaseBuffer[T](id, this)
   }
@@ -519,7 +519,7 @@ class Collection(
   def set[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: TypeTag[T]
+      tag: WeakTypeTag[T]
   ): CouchbaseSet[T] = {
     new CouchbaseSet[T](id, this)
   }
@@ -532,7 +532,7 @@ class Collection(
   def map[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: TypeTag[T]
+      tag: WeakTypeTag[T]
   ): CouchbaseMap[T] = {
     new CouchbaseMap[T](id, this)
   }
@@ -545,7 +545,7 @@ class Collection(
   def queue[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: TypeTag[T]
+      tag: WeakTypeTag[T]
   ): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
   }

@@ -35,7 +35,7 @@ class RawStringTranscoder extends TranscoderWithoutSerializer {
   }
 
   override def decode[T](value: Array[Byte], flags: Int)(
-      implicit tag: universe.TypeTag[T]
+      implicit tag: universe.WeakTypeTag[T]
   ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])

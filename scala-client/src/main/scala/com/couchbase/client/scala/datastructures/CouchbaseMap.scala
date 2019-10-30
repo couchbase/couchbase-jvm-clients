@@ -34,7 +34,7 @@ class CouchbaseMap[T](
     id: String,
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
-)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: TypeTag[T])
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
     extends mutable.Map[String, T] {
 
   private val Values = "values."

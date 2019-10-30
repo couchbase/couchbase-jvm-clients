@@ -33,7 +33,7 @@ class RawBinaryTranscoder extends TranscoderWithoutSerializer {
   }
 
   override def decode[A](value: Array[Byte], flags: Int)(
-      implicit tag: universe.TypeTag[A]
+      implicit tag: universe.WeakTypeTag[A]
   ): Try[A] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
       Success(value.asInstanceOf[A])
