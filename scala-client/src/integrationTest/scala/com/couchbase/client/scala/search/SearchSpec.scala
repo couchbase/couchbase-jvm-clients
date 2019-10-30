@@ -17,7 +17,9 @@
 package com.couchbase.client.scala.search
 
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.manager.search.SearchIndex
+import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.kv.MutationState
+import com.couchbase.client.scala.manager.search.{SearchIndex, SearchIndexNotFoundException}
 import com.couchbase.client.scala.search.queries.{MatchAllQuery, SearchQuery}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
@@ -31,14 +33,42 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 class SearchSpec extends ScalaIntegrationTest {
 
-  private var cluster: Cluster = _
-  private var coll: Collection = _
+  private var cluster: Cluster  = _
+  private var coll: Collection  = _
+  private val IndexName         = "test-index"
+  private var ms: MutationState = _
 
   @BeforeAll
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+
+    val result =
+      coll.insert("test", JsonObject("name" -> "John Smith", "address" -> "123 Fake Street")).get
+
+    ms = MutationState(Seq(result.mutationToken.get))
+
+    // The index may be pre-existing but on an old bucket that's been deleted.  Start again.
+    cluster.searchIndexes.dropIndex(IndexName) match {
+      case Success(_) =>
+      case Failure(err: SearchIndexNotFoundException) =>
+    }
+
+    val index = SearchIndex(IndexName, config.bucketname)
+    cluster.searchIndexes.upsertIndex(index).get
+
+    var done = false
+    while (!done) {
+      val result = cluster.searchIndexes.getIndex(IndexName)
+      if (result.isSuccess) done = true
+      else Thread.sleep(100)
+    }
+
+    // grahamp: Above still doesn't seem enough to solve these errors:
+    // Search Query Failed: "rest_index: Query, indexName: test-index, err: bleve: bleveIndexTargets, err: pindex: no planPIndexes for indexName: test-index"
+    // Adding a sleep until a better solution presents itself.
+    Thread.sleep(2000)
   }
 
   @AfterAll
@@ -49,13 +79,17 @@ class SearchSpec extends ScalaIntegrationTest {
   @Test
   def simple() {
     cluster.searchQuery(
-      "travel-sample-index-unstored",
-      SearchQuery.queryString("united"),
-      SearchOptions().limit(10)
+      IndexName,
+      SearchQuery.matchPhrase("John Smith"),
+      SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
     ) match {
       case Success(result) =>
         assert(result.errors.isEmpty)
-        assert(10 == result.rows.size)
+        assert(1 == result.rows.size)
+        result.rows.foreach(row => {
+          val fields = row.fieldsAs[JsonObject]
+          assert(fields.isFailure)
+        })
       case Failure(exception) =>
         println(exception)
         assert(false)

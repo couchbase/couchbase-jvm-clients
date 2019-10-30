@@ -32,7 +32,7 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 @Stability.Volatile
 case class SearchIndexNotFoundException(indexName: String)
@@ -46,6 +46,15 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+
+  /** Maps any raw errors into more useful ones. */
+  private def transformer(indexName: String): Try[GenericSearchResponse] => Try[GenericSearchResponse] = {
+    case s @ Success(_) => s
+    case Failure(err) =>
+      if (err.getMessage.contains("index not found")) {
+        Failure(SearchIndexNotFoundException(indexName))
+      } else Failure(err)
+  }
 
   def getIndex(
       indexName: String,
@@ -100,7 +109,9 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     val request = searchRequest(req, idempotent = false, timeout, retryStrategy)
 
     core.send(request)
-    request.response.toScala.map(_ => Unit)
+    request.response.toScala
+      .transform[GenericSearchResponse](transformer(indexDefinition.name))
+      .map(_ => Unit)
   }
 
   def dropIndex(
@@ -111,7 +122,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     val request = searchRequest(HttpMethod.DELETE, indexPath(indexName), timeout, retryStrategy)
 
     core.send(request)
-    request.response.toScala.map(_ => Unit)
+    val out = request.response.toScala
+    out
+      .transform[GenericSearchResponse](transformer(indexName))
+      .map(_ => Unit)
   }
 
   private def indexesPath = "/api/index"

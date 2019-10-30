@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.search.result
 
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.error.DecodingFailedException
@@ -45,9 +46,9 @@ case class SearchRow(
     id: String,
     score: Double,
     private val _explanation: Try[Array[Byte]],
-    locations: SearchRowLocations,
+    locations: Option[SearchRowLocations],
     fragments: GenMap[String, Seq[String]],
-    fields: GenMap[String, String]
+    private[scala] val fields: Try[Array[Byte]]
 ) {
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.
@@ -56,6 +57,10 @@ case class SearchRow(
     */
   def explanationAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _explanation.flatMap(v => deserializer.deserialize(v))
+  }
+
+  def fieldsAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
+    fields.flatMap(f => deserializer.deserialize(f))
   }
 }
 
@@ -96,14 +101,9 @@ object SearchRow {
         case _ => Map.empty
       }
 
-      val fields: GenMap[String, String] = safe.obj("fields") match {
-        case Success(fieldsJson) =>
-          val obj = fieldsJson.o
-          obj.names.map(name => name -> obj.str(name)).toMap
-        case _ => Map.empty
-      }
+      val fields = safe.obj("fields").map(fields => fields.toString.getBytes(StandardCharsets.UTF_8))
 
-      new SearchRow(index, id, score, explanationJson, locations.get, fragments, fields)
+      new SearchRow(index, id, score, explanationJson, locations.toOption, fragments, fields)
     } catch {
       case e: IOException =>
         throw new DecodingFailedException(

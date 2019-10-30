@@ -237,18 +237,17 @@ case class SearchOptions(
   private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
     val result = JsonObjectSafe.create
     for (token <- tokens) {
-      val bucket: JsonObjectSafe = result.obj(token.bucketName) match {
-        case Success(bucket) => bucket
-        case _ =>
-          val out = JsonObjectSafe.create
-          result.put(token.bucketName, out)
-          out
-      }
+      val tokenKey = token.partitionID.toString
 
-      bucket.put(
-        String.valueOf(token.partitionID),
-        JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID))
-      )
+      result.numLong(tokenKey) match {
+        case Success(seqno) =>
+          // Only store the highest seqno for each vbucket
+          if (seqno < token.sequenceNumber) {
+            result.put(tokenKey, token.sequenceNumber)
+          }
+        case _ =>
+          result.put(tokenKey, token.sequenceNumber)
+      }
     }
 
     result.o

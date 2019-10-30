@@ -121,6 +121,7 @@ object SearchHandler {
       case Success(errorsJson: JsonObject) =>
         errorsJson.names.toSeq.seq
           .map(key => new RuntimeException(key + ": " + errorsJson.get(key)))
+      case Failure(err: NoSuchElementException) => Seq.empty
       case _ =>
         Seq(new RuntimeException("Server error: errors field returned, but contained no errors"))
     }

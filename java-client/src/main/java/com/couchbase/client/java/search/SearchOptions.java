@@ -306,6 +306,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       JsonObject control = JsonObject.empty();
 
       //check need for consistency
+      // TODO JCBC-1495
       /*
       if (consistency != null || mutationState != null) {
         JsonObject consistencyJson = JsonObject.create();
@@ -314,7 +315,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
           consistencyJson.put("level", "");
         } else if (mutationState != null) {
           consistencyJson.put("level", "at_plus");
-          // TODO consistencyJson.put("vectors", JsonObject.create().put(this.indexName, mutationState.exportForFts()));
+          consistencyJson.put("vectors", JsonObject.create().put(this.indexName, mutationState.exportForFts()));
         }
         control.put("consistency", consistencyJson);
       }*/
