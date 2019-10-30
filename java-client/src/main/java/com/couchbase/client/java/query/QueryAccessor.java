@@ -235,7 +235,8 @@ public class QueryAccessor {
           original.credentials(),
           statement,
           query.toString().getBytes(StandardCharsets.UTF_8),
-          true
+          true,
+          query.getString("client_context_id")
         );
     }
 
@@ -260,7 +261,8 @@ public class QueryAccessor {
           original.credentials(),
           original.statement(),
           query.toString().getBytes(StandardCharsets.UTF_8),
-          originalOptions.readonly()
+          originalOptions.readonly(),
+          query.getString("client_context_id")
         );
     }
 

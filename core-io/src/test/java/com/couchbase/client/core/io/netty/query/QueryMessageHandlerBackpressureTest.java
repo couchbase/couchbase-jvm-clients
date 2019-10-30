@@ -134,7 +134,8 @@ class QueryMessageHandlerBackpressureTest {
       endpointContext.authenticator(),
       "select 1=1",
       "myquery".getBytes(UTF_8),
-      true
+      true,
+      null
     );
     channel.writeAndFlush(request);
 

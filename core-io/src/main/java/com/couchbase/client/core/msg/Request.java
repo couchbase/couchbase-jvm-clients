@@ -162,4 +162,16 @@ public interface Request<R extends Response> {
     return false;
   }
 
+  /**
+   * Returns a potentially non-unique identifier that is useful for tracing output.
+   * <p>
+   * Note: might be null! It depends on the type of operation. It is also different from the unqiue operation ID
+   * that increments to provide additional context (i.e in query the context uuid, in kv the opaque value).
+   *
+   * @return if present, the operation id. Null otherwise.
+   */
+  default String operationId() {
+    return null;
+  }
+
 }

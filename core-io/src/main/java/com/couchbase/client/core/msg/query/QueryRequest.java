@@ -45,14 +45,17 @@ public class QueryRequest
   private final String statement;
   private final boolean idempotent;
   private final Authenticator authenticator;
+  private final String contextId;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                      final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent) {
+                      final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
+                      final String contextId) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.statement = statement;
     this.authenticator = authenticator;
     this.idempotent = idempotent;
+    this.contextId = contextId;
   }
 
   @Override
@@ -88,6 +91,11 @@ public class QueryRequest
 
   public Authenticator credentials() {
     return authenticator;
+  }
+
+  @Override
+  public String operationId() {
+    return contextId;
   }
 
   @Override

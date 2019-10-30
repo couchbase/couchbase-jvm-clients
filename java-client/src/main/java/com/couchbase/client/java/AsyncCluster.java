@@ -274,7 +274,7 @@ public class AsyncCluster {
     options.injectParams(query);
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator,
-      statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly());
+      statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly(), query.getString("client_context_id"));
     request.context().clientContext(options.clientContext());
     return request;
   }

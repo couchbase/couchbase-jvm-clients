@@ -316,7 +316,10 @@ public class ThresholdRequestTracer implements RequestTracer {
         Map<String, Object> entry = new HashMap<>();
         entry.put(KEY_TOTAL_MICROS, TimeUnit.NANOSECONDS.toMicros(request.context().logicalRequestLatency()));
 
-        entry.put("last_operation_id", request.id());
+        String operationId = request.operationId();
+        if (operationId != null) {
+          entry.put("last_operation_id", operationId);
+        }
 
         // todo: does this need to be improved?
         entry.put("operation_name", request.getClass().getSimpleName());

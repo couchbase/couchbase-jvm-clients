@@ -97,7 +97,7 @@ class QueryMessageHandlerTest {
 
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request = new QueryRequest(
-      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), CORE_CTX.authenticator(), "statement", query, false
+      ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), CORE_CTX.authenticator(), "statement", query, false, null
     );
     channel.writeAndFlush(request);
 
@@ -150,11 +150,11 @@ class QueryMessageHandlerTest {
     byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
     QueryRequest request1 = new QueryRequest(
       ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, CORE_CTX.authenticator(), "statement", query,
-      true
+      true, null
     );
     QueryRequest request2 = new QueryRequest(
       ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, CORE_CTX.authenticator(), "statement", query,
-      true
+      true, null
     );
     channel.writeAndFlush(request1);
     channel.writeAndFlush(request2);

@@ -146,7 +146,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("type", serviceType().ident());
-    ctx.put("opaque", "0x" + Integer.toHexString(opaque));
+    ctx.put("opaque", operationId());
 
     if (collectionIdentifier != null) {
       ctx.put("bucket", redactMeta(collectionIdentifier.bucket()));
@@ -174,6 +174,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public CollectionIdentifier collectionIdentifier() {
     return collectionIdentifier;
+  }
+
+  @Override
+  public String operationId() {
+    return "0x" + Integer.toHexString(opaque);
   }
 
 }

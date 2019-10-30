@@ -134,7 +134,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
               core.context().authenticator(),
               statement,
               queryBytes,
-              options.readonly.getOrElse(false)
+              options.readonly.getOrElse(false),
+              params.str("client_context_id")
             )
 
             request
@@ -331,7 +332,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       original.credentials,
       statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
-      true
+      true,
+      query.str("client_context_id")
     )
   }
 
@@ -362,7 +364,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       original.credentials,
       original.statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
-      originalOptions.readonly.getOrElse(false)
+      originalOptions.readonly.getOrElse(false),
+      query.str("client_context_id")
     )
   }
 

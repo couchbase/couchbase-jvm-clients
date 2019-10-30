@@ -19,9 +19,16 @@ package com.couchbase.client.tracing.opentelemetry;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.service.ServiceType;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.trace.Span;
 import io.opentelemetry.trace.Tracer;
+
+import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_ANALYTICS;
+import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_KV;
+import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_QUERY;
+import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_SEARCH;
+import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_VIEW;
 
 /**
  * The internal span which handles all the different SDK events and stores/handles the appropriate sub-spans.
@@ -50,7 +57,29 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
   @Override
   public void finish() {
     try (Scope scope = tracer.withSpan(span)) {
+      span.setAttribute("peer.service", mapServiceType(ctx.request().serviceType()));
+      String operationId = ctx.request().operationId();
+      if (operationId != null) {
+        span.setAttribute("couchbase.operation_id", operationId);
+      }
       span.end();
+    }
+  }
+
+  private String mapServiceType(final ServiceType serviceType) {
+    switch (serviceType) {
+      case KV:
+        return SERVICE_IDENTIFIER_KV;
+      case QUERY:
+        return SERVICE_IDENTIFIER_QUERY;
+      case ANALYTICS:
+        return SERVICE_IDENTIFIER_ANALYTICS;
+      case VIEWS:
+        return SERVICE_IDENTIFIER_VIEW;
+      case SEARCH:
+        return SERVICE_IDENTIFIER_SEARCH;
+      default:
+        return null;
     }
   }
 

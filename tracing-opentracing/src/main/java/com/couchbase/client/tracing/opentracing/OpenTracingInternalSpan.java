@@ -57,6 +57,10 @@ public class OpenTracingInternalSpan implements InternalSpan {
   public void finish() {
     try (Scope scope = tracer.activateSpan(span)) {
       span.setTag(Tags.PEER_SERVICE, mapServiceType(ctx.request().serviceType()));
+      String operationId = ctx.request().operationId();
+      if (operationId != null) {
+        span.setTag("couchbase.operation_id", operationId);
+      }
       span.finish();
     }
   }
