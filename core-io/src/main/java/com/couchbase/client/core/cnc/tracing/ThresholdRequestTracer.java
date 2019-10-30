@@ -333,13 +333,10 @@ public class ThresholdRequestTracer implements RequestTracer {
           entry.put("last_remote_address", redactSystem(peer).toString());
         }
 
-        // TODO
-        /*
-        String localId = span.request().lastLocalId();
+        String localId = request.context().lastChannelId();
         if (localId != null) {
           entry.put("last_local_id", redactSystem(localId).toString());
         }
-         */
 
         long encode_duration = request.context().encodeLatency();
         if (encode_duration > 0) {

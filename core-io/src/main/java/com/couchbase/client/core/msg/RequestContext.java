@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -54,6 +55,11 @@ public class RequestContext extends CoreContext {
    * The time it took to encode the payload (if any).
    */
   private volatile long encodeLatency;
+
+  /**
+   * The channel id where this request was last written to, if at all.
+   */
+  private volatile String lastChannelId;
 
   /**
    * The request ID associated.
@@ -132,6 +138,17 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext encodeLatency(long encodeLatency) {
     this.encodeLatency = encodeLatency;
+    return this;
+  }
+
+  @Stability.Volatile
+  public String lastChannelId() {
+    return lastChannelId;
+  }
+
+  @Stability.Internal
+  public RequestContext lastChannelId(final String lastChannelId) {
+    this.lastChannelId = lastChannelId;
     return this;
   }
 
@@ -280,6 +297,9 @@ public class RequestContext extends CoreContext {
     }
     if (lastDispatchedFrom != null) {
       input.put("lastDispatchedFrom", redactSystem(lastDispatchedFrom));
+    }
+    if (lastChannelId != null) {
+      input.put("lastChannelId", redactMeta(lastChannelId));
     }
   }
 

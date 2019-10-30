@@ -446,8 +446,11 @@ public abstract class BaseEndpoint implements Endpoint {
 
     final EndpointContext ctx = endpointContext.get();
     if (canWrite()) {
-      request.context().lastDispatchedFrom(ctx.localSocket().orElse(null));
-      request.context().lastDispatchedTo(ctx.remoteSocket());
+      request.context()
+        .lastDispatchedFrom(ctx.localSocket().orElse(null))
+        .lastDispatchedTo(ctx.remoteSocket())
+        .lastChannelId(ctx.channelId().orElse(null));
+
       if (!pipelined) {
         outstandingRequests.incrementAndGet();
       }

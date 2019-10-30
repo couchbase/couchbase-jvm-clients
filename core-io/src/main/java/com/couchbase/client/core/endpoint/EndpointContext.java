@@ -95,4 +95,7 @@ public class EndpointContext extends CoreContext {
     return bucket;
   }
 
+  public Optional<String> channelId() {
+    return channelId;
+  }
 }
