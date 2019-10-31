@@ -22,12 +22,13 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.ReplayProcessor;
 
 import java.util.concurrent.ExecutorService;
 
 public class BucketConfigStreamingResponse extends BaseResponse {
 
-  private final DirectProcessor<String> configs = DirectProcessor.create();
+  private final ReplayProcessor<String> configs = ReplayProcessor.create(1);
   private final FluxSink<String> configsSink = configs.sink();
   private final String address;
 
