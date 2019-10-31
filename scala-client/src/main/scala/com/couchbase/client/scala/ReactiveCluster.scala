@@ -285,7 +285,8 @@ object ReactiveCluster {
             cluster =>
               cluster.async
                 .performGlobalConnect()
-                .`then`(SMono.just(cluster)))
+                .`then`(SMono.just(cluster))
+          )
       case Failure(err) => SMono.raiseError(err)
     }
   }

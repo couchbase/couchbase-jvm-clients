@@ -173,7 +173,7 @@ class AsyncCluster(
                           )
                         )
                       })
-              )
+                )
           )
           .toFuture
 
@@ -247,7 +247,8 @@ class AsyncCluster(
     SMono(
       core
         .initGlobalConfig()
-        .timeout(env.timeoutConfig.connectTimeout))
+        .timeout(env.timeoutConfig.connectTimeout)
+    )
   }
 }
 
@@ -291,7 +292,7 @@ object AsyncCluster {
         implicit val ec = ce.ec
         Future {
           val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-          val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+          val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes)
           cluster.performGlobalConnect().block()
           cluster
         }
@@ -328,7 +329,7 @@ object AsyncCluster {
                         meta
                       )
                     })
-            )
+              )
         )
         .toFuture
 

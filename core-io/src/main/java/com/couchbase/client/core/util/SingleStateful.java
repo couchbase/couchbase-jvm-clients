@@ -16,9 +16,9 @@
 
 package com.couchbase.client.core.util;
 
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.ReplayProcessor;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -30,8 +30,8 @@ import static com.couchbase.client.core.util.Validators.notNull;
  */
 public class SingleStateful<S> implements Stateful<S> {
 
-  private final DirectProcessor<S> configs = DirectProcessor.create();
-  private final FluxSink<S> configsSink = configs.sink();
+  private final ReplayProcessor<S> states = ReplayProcessor.create(1);
+  private final FluxSink<S> statesSink = states.sink();
   private final AtomicReference<S> currentState;
   private final BiConsumer<S, S> beforeTransitionCallback;
 
@@ -41,7 +41,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     this.currentState = new AtomicReference<>(initialState);
     this.beforeTransitionCallback = beforeTransitionCallback;
-    configsSink.next(initialState);
+    statesSink.next(initialState);
   }
 
   /**
@@ -71,7 +71,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
   @Override
   public Flux<S> states() {
-    return configs;
+    return states;
   }
 
   /**
@@ -87,7 +87,7 @@ public class SingleStateful<S> implements Stateful<S> {
     if (!currentState.get().equals(newState)) {
       beforeTransitionCallback.accept(currentState.get(), newState);
       currentState.set(newState);
-      configsSink.next(newState);
+      statesSink.next(newState);
     }
   }
 
@@ -104,7 +104,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     if (currentState.compareAndSet(expectedState, newState)) {
       beforeTransitionCallback.accept(expectedState, newState);
-      configsSink.next(newState);
+      statesSink.next(newState);
       return true;
     }
     return false;
@@ -114,7 +114,7 @@ public class SingleStateful<S> implements Stateful<S> {
    * Doesn't have to be called, added for good measure.
    */
   public void close() {
-    configsSink.complete();
+    statesSink.complete();
   }
 
 }

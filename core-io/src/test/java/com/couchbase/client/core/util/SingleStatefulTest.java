@@ -33,6 +33,7 @@ class SingleStatefulTest {
   void loadsWithInitialState() {
     SingleStateful<Integer> stateful = SingleStateful.fromInitial(1);
     assertEquals(1, stateful.state());
+    assertEquals(1, stateful.states().blockFirst());
   }
 
   @Test
@@ -58,7 +59,7 @@ class SingleStatefulTest {
 
     List<Long> collectedStates = stateful.states().collectList().block();
     assertNotNull(collectedStates);
-    assertEquals(5, collectedStates.size());
+    assertEquals(6, collectedStates.size());
   }
 
 }

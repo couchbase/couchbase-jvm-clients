@@ -120,6 +120,7 @@ class BaseEndpointIntegrationTest extends CoreIntegrationTest {
     localServerController.channel.get().close().awaitUninterruptibly();
 
     List<EndpointState> expectedTransitions = Arrays.asList(
+      EndpointState.DISCONNECTED, // initial state
       EndpointState.CONNECTING, // initial connect attempt
       EndpointState.CONNECTED, // properly connected the first time
       EndpointState.DISCONNECTED, // disconnected when we kill the channel from the server side
