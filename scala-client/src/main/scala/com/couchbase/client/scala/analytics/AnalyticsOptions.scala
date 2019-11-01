@@ -34,7 +34,6 @@ case class AnalyticsOptions(
     private[scala] val positionalParameters: Option[Seq[Any]] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
-    private[scala] val serverSideTimeout: Option[Duration] = None,
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val priority: Boolean = false,
     private[scala] val readonly: Option[Boolean] = None,
@@ -82,20 +81,26 @@ case class AnalyticsOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def clientContextId(contextId: String): AnalyticsOptions =
+  def clientContextId(contextId: String): AnalyticsOptions = {
     copy(clientContextId = Option(contextId))
+  }
 
-  /** Sets a maximum timeout for processing on the server side.
+  /** Sets a maximum timeout for processing.
     *
-    * @param serverSideTimeout the duration of the timeout.
+    * @param timeout the duration of the timeout.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def serverSideTimeout(serverSideTimeout: Duration): AnalyticsOptions =
-    copy(serverSideTimeout = Option(serverSideTimeout))
-
   def timeout(timeout: Duration): AnalyticsOptions = {
     copy(timeout = Option(timeout))
+  }
+
+  /** Sets the [[RetryStrategy]] to use.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def retryStrategy(retryStrategy: RetryStrategy): AnalyticsOptions = {
+    copy(retryStrategy = Option(retryStrategy))
   }
 
   /** Specify that this is a high-priority request.  The default is false.
@@ -106,6 +111,12 @@ case class AnalyticsOptions(
     copy(priority = value)
   }
 
+  /** Specify whether this is a readonly request, e.g. one that performs no mutations.
+    *
+    * The default is false.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
   def readonly(readonly: Boolean): AnalyticsOptions = copy(readonly = Option(readonly))
 
   private[scala] def durationToN1qlFormat(duration: Duration) = {
@@ -128,7 +139,6 @@ case class AnalyticsOptions(
       })
       out.put("args", arr)
     })
-    serverSideTimeout.foreach(v => out.put("timeout", durationToN1qlFormat(v)))
 
     clientContextId
       .getOrElse(UUID.randomUUID.toString)

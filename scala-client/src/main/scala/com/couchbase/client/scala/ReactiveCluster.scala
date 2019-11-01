@@ -24,11 +24,9 @@ import com.couchbase.client.core.diag.DiagnosticsResult
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.AsyncCluster.{
-  extractClusterEnvironment,
-  seedNodesFromConnectionString
-}
+import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics._
+import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -77,7 +75,10 @@ class ReactiveCluster(val async: AsyncCluster) {
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
 
   @Stability.Volatile
-  val searchIndexes = new ReactiveSearchIndexManager(async.searchIndexes)
+  lazy val searchIndexes = new ReactiveSearchIndexManager(async.searchIndexes)
+
+  @Stability.Volatile
+  lazy val analyticsIndexes = new ReactiveAnalyticsIndexManager(this)
 
   /** Performs a N1QL query against the cluster.
     *

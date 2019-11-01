@@ -28,6 +28,10 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
+import com.couchbase.client.scala.manager.analytics.{
+  AsyncAnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
@@ -69,16 +73,18 @@ class AsyncCluster(
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val core =
     Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
-  private[scala] val env                 = environment
-  private[scala] val kvTimeout           = javaDurationToScala(env.timeoutConfig.kvTimeout())
-  private[scala] val searchTimeout       = javaDurationToScala(env.timeoutConfig.searchTimeout())
-  private[scala] val analyticsTimeout    = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
-  private[scala] val retryStrategy       = env.retryStrategy
-  private[scala] val queryHandler        = new QueryHandler(core)
-  private[scala] val analyticsHandler    = new AnalyticsHandler()
-  private[scala] val searchHandler       = new SearchHandler()
-  private[scala] val reactiveUserManager = new ReactiveUserManager(core)
-  private val reactiveBucketManager      = new ReactiveBucketManager(core)
+  private[scala] val env                        = environment
+  private[scala] val kvTimeout                  = javaDurationToScala(env.timeoutConfig.kvTimeout())
+  private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
+  private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
+  private[scala] val retryStrategy              = env.retryStrategy
+  private[scala] val queryHandler               = new QueryHandler(core)
+  private[scala] val analyticsHandler           = new AnalyticsHandler()
+  private[scala] val searchHandler              = new SearchHandler()
+  private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
+  private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core)
+  private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
+    new ReactiveCluster(this))
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
   @Stability.Volatile
@@ -92,7 +98,10 @@ class AsyncCluster(
   lazy val queryIndexes = new AsyncQueryIndexManager(this)
 
   @Stability.Volatile
-  val searchIndexes = new AsyncSearchIndexManager(this)
+  lazy val searchIndexes = new AsyncSearchIndexManager(this)
+
+  @Stability.Volatile
+  lazy val analyticsIndexes = new AsyncAnalyticsIndexManager(reactiveAnalyticsIndexManager)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

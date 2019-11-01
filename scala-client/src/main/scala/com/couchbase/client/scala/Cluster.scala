@@ -26,14 +26,11 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
+import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
-import com.couchbase.client.scala.manager.bucket.{
-  AsyncBucketManager,
-  BucketManager,
-  ReactiveBucketManager
-}
+import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.manager.search.SearchIndexManager
@@ -86,6 +83,9 @@ class Cluster private[scala] (
 
   @Stability.Volatile
   lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
+
+  @Stability.Volatile
+  lazy val analyticsIndexes = new AnalyticsIndexManager(reactive.analyticsIndexes)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

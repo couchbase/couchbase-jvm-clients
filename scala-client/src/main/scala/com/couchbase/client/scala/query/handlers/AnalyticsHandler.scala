@@ -50,7 +50,6 @@ private[scala] class AnalyticsHandler() {
       _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
       _ <- Validate.optNotNull(options.clientContextId, "clientContextId")
       _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
-      _ <- Validate.optNotNull(options.serverSideTimeout, "serverSideTimeout")
       _ <- Validate.optNotNull(options.timeout, "timeout")
       _ <- Validate.notNull(options.priority, "priority")
       _ <- Validate.optNotNull(options.readonly, "readonly")
