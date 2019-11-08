@@ -27,10 +27,12 @@ public class HostAndPort {
 
   private final String hostname;
   private final int port;
+  private final String stringified;
 
   public HostAndPort(final String hostname, final int port) {
     this.hostname = hostname;
     this.port = port;
+    this.stringified = redactSystem(hostname + ":" + port).toString();
   }
 
   public String hostname() {
@@ -57,6 +59,7 @@ public class HostAndPort {
 
   @Override
   public String toString() {
-    return redactSystem(hostname + ":" + port).toString();
+    return stringified;
   }
+
 }
