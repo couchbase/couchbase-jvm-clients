@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -65,7 +66,8 @@ class RetryOrchestratorTest {
   @SuppressWarnings({"unchecked"})
   void cancelIfNoMoreRetriesAllowed() {
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
-    when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(RetryAction.noRetry());
+    when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class)))
+      .thenReturn(CompletableFuture.completedFuture(RetryAction.noRetry()));
     Request<?> request = mock(Request.class);
     when(request.completed()).thenReturn(false);
     when(request.retryStrategy()).thenReturn(retryStrategy);
@@ -94,7 +96,7 @@ class RetryOrchestratorTest {
 
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
     when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(
-      RetryAction.withDuration(Duration.ofMillis(200))
+      CompletableFuture.completedFuture(RetryAction.withDuration(Duration.ofMillis(200)))
     );
     Request<?> request = mock(Request.class);
     RequestContext requestContext = mock(RequestContext.class);
@@ -113,7 +115,8 @@ class RetryOrchestratorTest {
     long start = System.nanoTime();
     RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);
 
-    verify(requestContext, times(1)).incrementRetryAttempts(Duration.ofMillis(200), RetryReason.UNKNOWN);
+    verify(requestContext, times(1))
+      .incrementRetryAttempts(Duration.ofMillis(200), RetryReason.UNKNOWN);
     verify(request, never()).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
 
     waitUntilCondition(() -> !Mockito.mockingDetails(core).getInvocations().isEmpty());

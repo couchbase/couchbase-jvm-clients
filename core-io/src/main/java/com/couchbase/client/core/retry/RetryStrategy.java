@@ -21,6 +21,7 @@ import com.couchbase.client.core.msg.Response;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public interface RetryStrategy {
 
@@ -32,6 +33,6 @@ public interface RetryStrategy {
    * @return If empty, no retry should be done. If a duration is returned it determines
    *         the retry delay.
    */
-  RetryAction shouldRetry(Request<? extends Response> request, RetryReason reason);
+  CompletableFuture<RetryAction> shouldRetry(Request<? extends Response> request, RetryReason reason);
 
 }

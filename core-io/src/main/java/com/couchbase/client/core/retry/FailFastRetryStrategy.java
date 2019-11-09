@@ -16,9 +16,21 @@
 
 package com.couchbase.client.core.retry;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * An internal strategy to fail fast any request that goes through it.
+ * <p>
+ * This class is considered internal! For external purposes we recommend extending the {@link BestEffortRetryStrategy}
+ * and only failing on certain {@link RetryReason} as needed or based on a request context or external property. Using
+ * this strategy here directly, if not used carefully, will lead to lot of copy/pasting of try/catch blocks and not
+ * to clean code.
+ */
+@Stability.Internal
 public class FailFastRetryStrategy implements RetryStrategy {
 
   public static final FailFastRetryStrategy INSTANCE = new FailFastRetryStrategy();
@@ -26,8 +38,8 @@ public class FailFastRetryStrategy implements RetryStrategy {
   private FailFastRetryStrategy() { }
 
   @Override
-  public RetryAction shouldRetry(Request<? extends Response> request, RetryReason reason) {
-    return RetryAction.noRetry();
+  public CompletableFuture<RetryAction> shouldRetry(Request<? extends Response> request, RetryReason reason) {
+    return CompletableFuture.completedFuture(RetryAction.noRetry());
   }
 
   @Override

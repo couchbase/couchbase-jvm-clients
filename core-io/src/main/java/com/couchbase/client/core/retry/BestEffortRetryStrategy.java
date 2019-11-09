@@ -23,6 +23,7 @@ import com.couchbase.client.core.retry.reactor.Backoff;
 import com.couchbase.client.core.retry.reactor.IterationContext;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 public class BestEffortRetryStrategy implements RetryStrategy {
 
@@ -41,14 +42,14 @@ public class BestEffortRetryStrategy implements RetryStrategy {
   }
 
   @Override
-  public RetryAction shouldRetry(final Request<? extends Response> request, final RetryReason reason) {
+  public CompletableFuture<RetryAction> shouldRetry(final Request<? extends Response> request, final RetryReason reason) {
     if (request.idempotent() || reason.allowsNonIdempotentRetry()) {
       RequestContext ctx = request.context();
-      return RetryAction.withDuration(
+      return CompletableFuture.completedFuture(RetryAction.withDuration(
         backoff.apply(new RetryStrategyIterationContext(ctx.retryAttempts(), ctx.lastRetryDuration())).delay()
-      );
+      ));
     }
-    return RetryAction.noRetry();
+    return CompletableFuture.completedFuture(RetryAction.noRetry());
   }
 
   @Override

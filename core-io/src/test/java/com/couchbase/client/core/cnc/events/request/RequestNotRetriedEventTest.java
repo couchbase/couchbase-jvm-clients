@@ -28,7 +28,7 @@ class RequestNotRetriedEventTest {
 
   @Test
   void verifyDescription() {
-    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class), RetryReason.UNKNOWN);
+    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class), RetryReason.UNKNOWN, null);
     assertEquals("Request GetRequest not retried per RetryStrategy (Reason: UNKNOWN)", event.description());
   }
 

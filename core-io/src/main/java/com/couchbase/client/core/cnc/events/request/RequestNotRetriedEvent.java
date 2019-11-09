@@ -30,16 +30,23 @@ public class RequestNotRetriedEvent extends AbstractEvent {
 
   private final Class<? extends Request> clazz;
   private final RetryReason retryReason;
+  private final Throwable throwable;
 
   public RequestNotRetriedEvent(final Class<? extends Request> clazz, final RequestContext context,
-                                final RetryReason reason) {
+                                final RetryReason reason, final Throwable throwable) {
     super(Severity.INFO, Category.REQUEST, Duration.ZERO, context);
     this.clazz = clazz;
     this.retryReason = reason;
+    this.throwable = throwable;
   }
 
   public RetryReason retryReason() {
     return retryReason;
+  }
+
+  @Override
+  public Throwable cause() {
+    return throwable;
   }
 
   @Override

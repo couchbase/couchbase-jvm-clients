@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.Response;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
  * The {@link RetryOrchestrator} is responsible for checking if a request is eligible for retry
@@ -57,14 +58,23 @@ public class RetryOrchestrator {
       return;
     }
 
-    RetryAction retryAction = request.retryStrategy().shouldRetry(request, reason);
-    Optional<Duration> duration = retryAction.duration();
-    if (duration.isPresent()) {
-      retryWithDuration(ctx, request, duration.get(), reason);
-    } else {
-      ctx.environment().eventBus().publish(new RequestNotRetriedEvent(request.getClass(), request.context(), reason));
-      request.cancel(CancellationReason.noMoreRetries(reason));
-    }
+    request.retryStrategy().shouldRetry(request, reason).whenComplete((retryAction, throwable) -> {
+      if (throwable != null) {
+        ctx.environment().eventBus().publish(
+          new RequestNotRetriedEvent(request.getClass(), request.context(), reason, throwable)
+        );
+      }
+
+      Optional<Duration> duration = retryAction.duration();
+      if (duration.isPresent()) {
+        retryWithDuration(ctx, request, duration.get(), reason);
+      } else {
+        ctx.environment().eventBus().publish(
+          new RequestNotRetriedEvent(request.getClass(), request.context(), reason, null)
+        );
+        request.cancel(CancellationReason.noMoreRetries(reason));
+      }
+    });
   }
 
   /**
