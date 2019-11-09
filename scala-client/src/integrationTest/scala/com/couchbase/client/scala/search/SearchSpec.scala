@@ -51,7 +51,7 @@ class SearchSpec extends ScalaIntegrationTest {
 
     // The index may be pre-existing but on an old bucket that's been deleted.  Start again.
     cluster.searchIndexes.dropIndex(IndexName) match {
-      case Success(_) =>
+      case Success(_)                                 =>
       case Failure(err: SearchIndexNotFoundException) =>
     }
 

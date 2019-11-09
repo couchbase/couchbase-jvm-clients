@@ -48,7 +48,9 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
   /** Maps any raw errors into more useful ones. */
-  private def transformer(indexName: String): Try[GenericSearchResponse] => Try[GenericSearchResponse] = {
+  private def transformer(
+      indexName: String
+  ): Try[GenericSearchResponse] => Try[GenericSearchResponse] = {
     case s @ Success(_) => s
     case Failure(err) =>
       if (err.getMessage.contains("index not found")) {

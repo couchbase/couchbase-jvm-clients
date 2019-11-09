@@ -101,7 +101,8 @@ object SearchRow {
         case _ => Map.empty
       }
 
-      val fields = safe.obj("fields").map(fields => fields.toString.getBytes(StandardCharsets.UTF_8))
+      val fields =
+        safe.obj("fields").map(fields => fields.toString.getBytes(StandardCharsets.UTF_8))
 
       new SearchRow(index, id, score, explanationJson, locations.toOption, fragments, fields)
     } catch {
