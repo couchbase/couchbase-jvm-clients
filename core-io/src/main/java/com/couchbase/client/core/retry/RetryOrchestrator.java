@@ -19,14 +19,13 @@ package com.couchbase.client.core.retry;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
-import com.couchbase.client.core.cnc.events.request.RequestRetriedEvent;
+import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 
 /**
  * The {@link RetryOrchestrator} is responsible for checking if a request is eligible for retry
@@ -67,7 +66,8 @@ public class RetryOrchestrator {
 
       Optional<Duration> duration = retryAction.duration();
       if (duration.isPresent()) {
-        retryWithDuration(ctx, request, duration.get(), reason);
+        final Duration cappedDuration = capDuration(duration.get(), request);
+        retryWithDuration(ctx, request, cappedDuration, reason);
       } else {
         ctx.environment().eventBus().publish(
           new RequestNotRetriedEvent(request.getClass(), request.context(), reason, null)
@@ -75,6 +75,29 @@ public class RetryOrchestrator {
         request.cancel(CancellationReason.noMoreRetries(reason));
       }
     });
+  }
+
+  /**
+   * Calculates the potentially capped retry duration so we do not schedule a longer retry than the actual
+   * total timeout.
+   *
+   * @param uncappedDuration the uncapped proposed duration.
+   * @param request the request information.
+   * @return the capped duration if needed, otherwise the uncapped duration.
+   */
+  private static Duration capDuration(final Duration uncappedDuration, final Request<? extends Response> request) {
+    long theoreticalTimeout = System.nanoTime() + uncappedDuration.toNanos();
+    long absoluteTimeout = request.absoluteTimeout();
+    long timeoutDelta = theoreticalTimeout - absoluteTimeout;
+    if (timeoutDelta > 0) {
+      Duration cappedDuration = uncappedDuration.minus(Duration.ofNanos(timeoutDelta));
+      if (cappedDuration.isNegative()) {
+        return uncappedDuration; // something went wrong, return the uncapped one as a safety net
+      }
+      return cappedDuration;
+
+    }
+    return uncappedDuration;
   }
 
   /**
@@ -112,11 +135,15 @@ public class RetryOrchestrator {
   private static void retryWithDuration(final CoreContext ctx, final Request<? extends Response> request,
                                         final Duration duration, final RetryReason reason) {
     ctx.environment().eventBus().publish(
-      new RequestRetriedEvent(duration, request.context(), request.getClass(), reason)
+      new RequestRetryScheduledEvent(duration, request.context(), request.getClass(), reason)
     );
     request.context().incrementRetryAttempts(duration, reason);
     ctx.environment().timer().schedule(
-      () -> ctx.core().send(request,false),
+      () -> {
+        if (!request.completed()) {
+          ctx.core().send(request, false);
+        }
+      },
       duration
     );
   }

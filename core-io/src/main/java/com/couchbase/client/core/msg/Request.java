@@ -150,6 +150,13 @@ public interface Request<R extends Response> {
   long createdAt();
 
   /**
+   * The absolute timestamp when the request should time out.
+   *
+   * @return the absolute timeout in nanoseconds.
+   */
+  long absoluteTimeout();
+
+  /**
    * Returns if the given request is idempotent or not.
    *
    * <p>By default, this method always returns false for data consistency reasons. Only specific idempotent operations

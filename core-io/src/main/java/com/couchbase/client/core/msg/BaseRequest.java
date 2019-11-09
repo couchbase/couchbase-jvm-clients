@@ -201,6 +201,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   }
 
   @Override
+  public long absoluteTimeout() {
+    return absoluteTimeout;
+  }
+
+  @Override
   public long id() {
     return id;
   }

@@ -22,7 +22,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.couchbase.client.core.cnc.events.request.RequestRetriedEvent;
+import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.env.LoggerConfig;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -101,7 +101,7 @@ class LoggingEventConsumerTest {
     userContext.put("hello", "world");
     when(context.clientContext()).thenReturn(userContext);
 
-    RequestRetriedEvent retryEvent = new RequestRetriedEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
+    RequestRetryScheduledEvent retryEvent = new RequestRetryScheduledEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
     loggingEventConsumer.accept(retryEvent);
 
     verify(logger, times(1)).attachContext(userContext);
@@ -114,7 +114,7 @@ class LoggingEventConsumerTest {
     userContext.put("hello", "world");
     when(context.clientContext()).thenReturn(userContext);
 
-    RequestRetriedEvent retryEvent = new RequestRetriedEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
+    RequestRetryScheduledEvent retryEvent = new RequestRetryScheduledEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
     loggingEventConsumer.accept(retryEvent);
 
     verify(logger, never()).attachContext(userContext);

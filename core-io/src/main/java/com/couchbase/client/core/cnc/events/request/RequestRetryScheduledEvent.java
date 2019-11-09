@@ -22,12 +22,12 @@ import com.couchbase.client.core.retry.RetryReason;
 
 import java.time.Duration;
 
-public class RequestRetriedEvent extends AbstractEvent {
+public class RequestRetryScheduledEvent extends AbstractEvent {
 
   private final Class<?> request;
   private final RetryReason retryReason;
 
-  public RequestRetriedEvent(Duration duration, RequestContext context, Class<?> request, final RetryReason reason) {
+  public RequestRetryScheduledEvent(Duration duration, RequestContext context, Class<?> request, final RetryReason reason) {
     super(Severity.DEBUG, Category.REQUEST, duration, context);
     this.request = request;
     this.retryReason = reason;
@@ -43,6 +43,6 @@ public class RequestRetriedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Request " + request.getSimpleName() + " retried per RetryStrategy (Reason: " + retryReason + ")";
+    return "Request " + request.getSimpleName() + " retry scheduled per RetryStrategy (Reason: " + retryReason + ")";
   }
 }
