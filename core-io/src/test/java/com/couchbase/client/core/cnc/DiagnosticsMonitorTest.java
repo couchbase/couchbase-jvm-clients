@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.cnc.events.diagnostics.GarbageCollectionsDetectedEvent;
+import com.couchbase.client.core.env.DiagnosticsConfig;
 import com.couchbase.client.util.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
@@ -42,9 +43,7 @@ class DiagnosticsMonitorTest {
     assumeTrue(explicitGcEnabled(), "-XX:+DisableExplicitGC set");
 
     SimpleEventBus eventBus = new SimpleEventBus(false);
-    DiagnosticsMonitor monitor = DiagnosticsMonitor.builder(eventBus)
-      .emitInterval(Duration.ofMillis(100))
-      .build();
+    DiagnosticsMonitor monitor = DiagnosticsMonitor.create(eventBus, DiagnosticsConfig.enabled(true).emitInterval(Duration.ofMillis(100)).build());
 
     monitor.start().block();
     Supplier<Optional<GarbageCollectionsDetectedEvent>> s = () -> new ArrayList<>(eventBus.publishedEvents())

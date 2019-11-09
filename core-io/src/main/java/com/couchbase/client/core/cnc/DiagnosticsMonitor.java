@@ -16,9 +16,11 @@
 
 package com.couchbase.client.core.cnc;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.diagnostics.Analyzer;
 import com.couchbase.client.core.cnc.diagnostics.GcAnalyzer;
 import com.couchbase.client.core.cnc.diagnostics.PauseAnalyzer;
+import com.couchbase.client.core.env.DiagnosticsConfig;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -38,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @since 2.0.0
  */
+@Stability.Volatile
 public class DiagnosticsMonitor {
 
   /**
@@ -46,60 +49,57 @@ public class DiagnosticsMonitor {
    * @param eventBus the event bus to dispatch the events into.
    * @return a new {@link DiagnosticsMonitor}.
    */
-  public static DiagnosticsMonitor create(final EventBus eventBus) {
-    return builder(eventBus).build();
+  public static DiagnosticsMonitor create(final EventBus eventBus, final DiagnosticsConfig config) {
+    return new DiagnosticsMonitor(eventBus, config);
   }
-
-  /**
-   * Creates a new {@link DiagnosticsMonitor} with custom settings.
-   *
-   * @param eventBus the event bus to dispatch the events into.
-   * @return a builder to configure the monitor.
-   */
-  public static DiagnosticsMonitor.Builder builder(EventBus eventBus) {
-    return new Builder(eventBus);
-  }
-
-  /**
-   * The parent event bus.
-   */
-  private final EventBus eventBus;
 
   private final Duration emitInterval;
 
   private final Thread diagnosticsThread;
   private final AtomicBoolean diagnosticsRunning = new AtomicBoolean(true);
   private final List<Analyzer> analyzers;
+  private final boolean enabled;
+  private final DiagnosticsConfig config;
 
   /**
    * Internal method to create the new monitor from a builder config.
    *
-   * @param builder the builder config.
+   * @param eventBus the event bus to use.
+   * @param config the config to use.
    */
-  private DiagnosticsMonitor(final Builder builder) {
-    this.eventBus = builder.eventBus;
+  private DiagnosticsMonitor(final EventBus eventBus, final DiagnosticsConfig config) {
     this.analyzers = Collections.synchronizedList(new ArrayList<>());
-    this.emitInterval = builder.emitInterval;
+    this.emitInterval = config.emitInterval();
+    this.enabled = config.enabled();
+    this.config = config;
 
-    diagnosticsThread = new Thread(() -> {
-      try {
-        while(diagnosticsRunning.get()) {
-          Thread.sleep(emitInterval.toMillis());
-          for (Analyzer analyzer : analyzers) {
-            eventBus.publish(analyzer.fetchEvent(Event.Severity.INFO, context()));
+    if (enabled) {
+      diagnosticsThread = new Thread(() -> {
+        try {
+          while (diagnosticsRunning.get()) {
+            Thread.sleep(emitInterval.toMillis());
+            for (Analyzer analyzer : analyzers) {
+              eventBus.publish(analyzer.fetchEvent(Event.Severity.INFO, context()));
+            }
           }
+        } catch (InterruptedException e) {
+          // bail out on the interrupt.
         }
-      } catch (InterruptedException e) {
-        // bail out on the interrupt.
-      }
-    }, "cb-diagnostics");
-    diagnosticsThread.setDaemon(true);
+      }, "cb-diagnostics");
+      diagnosticsThread.setDaemon(true);
+    } else {
+      diagnosticsThread = null;
+    }
   }
 
   /**
    * Starts this {@link DiagnosticsMonitor}.
    */
   public Mono<Void> start() {
+    if (!enabled) {
+      return Mono.empty();
+    }
+
     return Mono.defer(() -> {
         diagnosticsThread.start();
         return Mono.empty();
@@ -120,6 +120,10 @@ public class DiagnosticsMonitor {
    * Stops the {@link DiagnosticsMonitor}.
    */
   public Mono<Void> stop() {
+    if (!enabled) {
+      return Mono.empty();
+    }
+
     return Flux
       .fromIterable(analyzers)
       .flatMap(Analyzer::stop)
@@ -135,31 +139,11 @@ public class DiagnosticsMonitor {
     return null;
   }
 
-  /**
-   * Allows to configure the diagnostics monitor.
-   */
-  public static class Builder {
-
-    private final EventBus eventBus;
-
-    /**
-     * By default, emit every 30 minutes.
-     */
-    private Duration emitInterval = Duration.ofMinutes(30);
-
-    public Builder(final EventBus eventBus) {
-      this.eventBus = eventBus;
-    }
-
-    public Builder emitInterval(Duration emitInterval) {
-      this.emitInterval = emitInterval;
-      return this;
-    }
-
-    public DiagnosticsMonitor build() {
-      return new DiagnosticsMonitor(this);
-    }
-
+  @Override
+  public String toString() {
+    return "DiagnosticsMonitor{" +
+      "diagnosticsRunning=" + diagnosticsRunning +
+      ", config=" + config +
+      '}';
   }
-
 }

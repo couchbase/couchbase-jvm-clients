@@ -98,6 +98,7 @@ public class CoreEnvironment {
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
   private final ServiceConfig serviceConfig;
+  private final DiagnosticsConfig diagnosticsConfig;
   private final Supplier<RequestTracer> requestTracer;
 
   private final LoggerConfig loggerConfig;
@@ -139,12 +140,14 @@ public class CoreEnvironment {
     this.serviceConfig = builder.serviceConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
+    this.diagnosticsConfig = builder.diagnosticsConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
     }
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
-    diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get());
+
+    diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get(), diagnosticsConfig);
     diagnosticsMonitor.start().block();
 
     this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<RequestTracer>(
@@ -339,7 +342,7 @@ public class CoreEnvironment {
    * @param timeout the timeout to wait maximum.
    */
   public Mono<Void> shutdownReactive(final Duration timeout) {
-    return diagnosticsMonitor.stop()
+    return Mono.defer(diagnosticsMonitor::stop)
       .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty()))
       .then(Mono.defer(() -> {
         timer.stop();
@@ -406,6 +409,7 @@ public class CoreEnvironment {
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
     input.put("serviceConfig", serviceConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
+    input.put("diagnosticsConfig", diagnosticsConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
     input.put("requestTracer", requestTracer.getClass().getSimpleName());
@@ -427,6 +431,7 @@ public class CoreEnvironment {
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
     private ServiceConfig.Builder serviceConfig = ServiceConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
+    private DiagnosticsConfig.Builder diagnosticsConfig = DiagnosticsConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
@@ -502,6 +507,16 @@ public class CoreEnvironment {
 
     public LoggerConfig.Builder loggerConfig() {
       return loggerConfig;
+    }
+
+    @Stability.Volatile
+    public SELF diagnosticsConfig(final DiagnosticsConfig.Builder diagnosticsConfig) {
+      this.diagnosticsConfig = requireNonNull(diagnosticsConfig);
+      return self();
+    }
+
+    public DiagnosticsConfig.Builder diagnosticsConfig() {
+      return diagnosticsConfig;
     }
 
     @Stability.Uncommitted
