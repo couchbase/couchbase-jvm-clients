@@ -475,6 +475,7 @@ class QueryIndexAlreadyExistsException(cause: QueryException) extends QueryExcep
 case class QueryIndex(
     name: String,
     private val is_primary: Option[Boolean],
+    private val `type`: QueryIndexType,
     state: String,
     private val keyspace_id: String,
     private val index_key: Seq[String],
@@ -485,8 +486,18 @@ case class QueryIndex(
   def isPrimary: Boolean = is_primary.getOrElse(false)
 
   def indexKey: Seq[String] = index_key
+
+  def typ: QueryIndexType = `type`
 }
 
 object QueryIndex {
   implicit val codec: Codec[QueryIndex] = Codec.codec[QueryIndex]
+}
+
+sealed trait QueryIndexType
+
+object QueryIndexType {
+  case object View extends QueryIndexType
+
+  case object GSI extends QueryIndexType
 }
