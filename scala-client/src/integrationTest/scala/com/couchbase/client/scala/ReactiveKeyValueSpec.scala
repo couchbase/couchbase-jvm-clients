@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
+import com.couchbase.client.core.error.{DocumentNotFoundException, DocumentLockedException}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -138,10 +138,10 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
 
     wrap(coll.getAndLock(docId, 30.seconds)) match {
-      case Success(Some(result))       => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: LockException) =>
-      case Failure(err)                => assert(false, s"unexpected error $err")
-      case _                           => assert(false, s"unexpected error")
+      case Success(Some(result))                 => assert(false, "should not have been able to relock locked doc")
+      case Failure(err: DocumentLockedException) =>
+      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case _                                     => assert(false, s"unexpected error")
     }
   }
 
@@ -239,9 +239,9 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val upsertResult = wrap(coll.replace(docId, content))
 
     upsertResult match {
-      case Success(result)                    => assert(false, s"doc should not exist")
-      case Failure(err: KeyNotFoundException) =>
-      case Failure(err)                       => assert(false, s"unexpected error $err")
+      case Success(result)                         => assert(false, s"doc should not exist")
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
   @Test

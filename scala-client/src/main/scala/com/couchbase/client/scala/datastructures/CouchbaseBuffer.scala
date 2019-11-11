@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CASMismatchException, KeyNotFoundException}
+import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
@@ -108,7 +108,7 @@ class CouchbaseBuffer[T](
 
     result match {
       case Success(_) =>
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         retryIfDocDoesNotExist(f)
       case Failure(err) => throw err
@@ -165,9 +165,9 @@ class CouchbaseBuffer[T](
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count)                   => count
-      case Failure(_: KeyNotFoundException) => 0
-      case Failure(err)                     => throw err
+      case Success(count)                        => count
+      case Failure(_: DocumentNotFoundException) => 0
+      case Failure(err)                          => throw err
     }
   }
 
@@ -179,9 +179,9 @@ class CouchbaseBuffer[T](
       .map(array => array.toSeq.asInstanceOf[Seq[T]])
 
     result match {
-      case Success(values: Seq[T])          => values
-      case Failure(_: KeyNotFoundException) => Seq.empty[T]
-      case Failure(err)                     => throw err
+      case Success(values: Seq[T])               => values
+      case Failure(_: DocumentNotFoundException) => Seq.empty[T]
+      case Failure(err)                          => throw err
     }
   }
 
@@ -206,7 +206,7 @@ class CouchbaseBuffer[T](
 
     result match {
       case Success(_) =>
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         update(index, value)
       case Failure(err) => throw err
@@ -222,9 +222,9 @@ class CouchbaseBuffer[T](
       retryStrategy = opts.retryStrategy,
       durability = opts.durability
     ) match {
-      case Failure(_: KeyNotFoundException) =>
-      case Failure(err)                     => throw err
-      case _                                =>
+      case Failure(_: DocumentNotFoundException) =>
+      case Failure(err)                          => throw err
+      case _                                     =>
     }
   }
 
@@ -241,7 +241,7 @@ class CouchbaseBuffer[T](
 
     result match {
       case Success(_) =>
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         insertAll(index, values)
       case Failure(err) => throw err

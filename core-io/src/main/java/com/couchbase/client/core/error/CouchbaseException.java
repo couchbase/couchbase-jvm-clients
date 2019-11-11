@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.cnc.Context;
+
 /**
  * The parent class for all exceptions created by this SDK (or clients using it).
  *
@@ -23,24 +25,54 @@ package com.couchbase.client.core.error;
  */
 public class CouchbaseException extends RuntimeException {
 
+  private final ErrorContext ctx;
+
+  /**
+   * Keeping it in there to not break left and right, but must be removed eventually to force good errors.
+   */
+  @Deprecated
   public CouchbaseException() {
+    this.ctx = null;
   }
 
-  public CouchbaseException(String message) {
-    super(message);
-  }
-
-  public CouchbaseException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
+  /**
+   * Keeping it in there to not break left and right, but must be removed eventually to force good errors.
+   */
+  @Deprecated
   public CouchbaseException(Throwable cause) {
     super(cause);
+    this.ctx = null;
   }
 
-  public CouchbaseException(String message, Throwable cause, boolean enableSuppression,
-                            boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
+  public CouchbaseException(final String message) {
+    this(message, (ErrorContext) null);
+  }
+
+  public CouchbaseException(final String message, final ErrorContext ctx) {
+    super(message);
+    this.ctx = ctx;
+  }
+
+  public CouchbaseException(final String message, final Throwable cause) {
+    this(message, cause, null);
+  }
+
+  public CouchbaseException(final String message, final Throwable cause, final ErrorContext ctx) {
+    super(message, cause);
+    this.ctx = ctx;
+  }
+
+  @Override
+  public String toString() {
+    final String output = super.toString();
+    return ctx != null ? output + " " + ctx.exportAsString(Context.ExportFormat.JSON) : output;
+  }
+
+  /**
+   * Returns the error context, if present.
+   */
+  public ErrorContext context() {
+    return ctx;
   }
 
 }

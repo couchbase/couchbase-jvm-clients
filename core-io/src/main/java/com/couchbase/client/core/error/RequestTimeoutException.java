@@ -16,12 +16,15 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.msg.RequestContext;
+public class RequestTimeoutException extends CouchbaseException {
 
-public class RequestTimeoutException extends RequestCanceledException implements RetryableOperationException {
+  public RequestTimeoutException(String message, CancellationErrorContext ctx) {
+    super(message, ctx);
+  }
 
-  public RequestTimeoutException(String name, RequestContext context) {
-    super(name, context);
+  @Override
+  public CancellationErrorContext context() {
+    return (CancellationErrorContext) super.context();
   }
 
 }

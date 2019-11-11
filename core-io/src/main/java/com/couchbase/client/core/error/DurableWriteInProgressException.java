@@ -21,7 +21,7 @@ package com.couchbase.client.core.error;
  * @author Graham Pople
  * @since 2.0.0
  */
-public class DurableWriteInProgressException extends CouchbaseException implements RetryableOperationException {
+public class DurableWriteInProgressException extends CouchbaseException {
 
     public DurableWriteInProgressException() {
         super();

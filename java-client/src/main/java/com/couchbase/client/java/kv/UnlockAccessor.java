@@ -35,8 +35,8 @@ public class UnlockAccessor {
           case SUCCESS:
             return null;
           // Special Case for backwards compatibility (see MB-13087)
-          case TEMPORARY_FAILURE:
-            throw LockException.forKey(key);
+          /*case TEMPORARY_FAILURE:
+            throw new DocumentLockedException.forKey(key);*/
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

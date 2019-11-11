@@ -18,7 +18,7 @@ package com.couchbase.client.core.error;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
-public class DocumentMutationLostException extends CouchbaseException implements RetryableOperationException {
+public class DocumentMutationLostException extends CouchbaseException {
   private final String key;
 
   private DocumentMutationLostException(String key) {

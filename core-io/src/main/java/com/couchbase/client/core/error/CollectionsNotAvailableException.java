@@ -42,7 +42,4 @@ public class CollectionsNotAvailableException extends CouchbaseException {
     super(cause);
   }
 
-  public CollectionsNotAvailableException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
-  }
 }

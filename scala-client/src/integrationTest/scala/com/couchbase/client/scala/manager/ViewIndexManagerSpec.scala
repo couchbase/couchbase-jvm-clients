@@ -17,7 +17,7 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 
-import com.couchbase.client.core.error.{KeyNotFoundException, ViewServiceException}
+import com.couchbase.client.core.error.{DocumentNotFoundException, ViewServiceException}
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.manager.view._
 import com.couchbase.client.scala.util.ScalaIntegrationTest

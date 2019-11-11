@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.couchbase.client.core.annotation.Stability;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Bucket;
@@ -32,7 +32,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.kv.GetOptions;
@@ -41,7 +41,6 @@ import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MapOptions;
-import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.UpsertOptions;
 
@@ -128,7 +127,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                     }
                 } catch (PathNotFoundException e) {
                     // that's ok, we will just upsert anyways, and return null
-                } catch (KeyNotFoundException e) {
+                } catch (DocumentNotFoundException e) {
                     // we will create an empty doc and remember the cas
                     returnCas = createEmpty();
                 }
@@ -153,7 +152,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                     .contentAs(0, entityTypeClass);
         } catch (PathNotFoundException e) {
             return null;
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return null;
         }
     }
@@ -174,7 +173,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         mapOptions.mutateInOptions().cas(returnCas));
                 return result;
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 return null;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
@@ -199,7 +198,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         JsonObject obj;
         try {
             obj = collection.get(id, getOptions).contentAsObject();
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             obj = JsonObject.empty();
         }
         // don't actually create the doc, yet.
@@ -214,7 +213,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                     Collections.singletonList(LookupInSpec.exists(idx)),
                     lookupInOptions)
                     .exists(0);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return false;
         }
 
@@ -232,7 +231,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                     Collections.singletonList(LookupInSpec.count("")),
                     lookupInOptions);
             return current.contentAs(0, Integer.class);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return 0;
         }
     }
@@ -374,7 +373,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     protected long createEmpty() {
         try {
             return collection.insert(id, JsonObject.empty(), insertOptions).cas();
-        } catch (KeyExistsException ex) {
+        } catch (DocumentExistsException ex) {
             // Ignore concurrent creations, keep on moving.
             // but we need the cas, so...
             return collection.get(id, getOptions).cas();

@@ -273,7 +273,7 @@ public class RequestContext extends CoreContext {
   }
 
   @Override
-  protected void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("requestId", request.id());
     input.put("retried", retryAttempts());

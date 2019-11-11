@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.java.datastructures;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -68,7 +68,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     void after() {
         try {
             collection.remove(uuid);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             // we lazy create, so that's ok
         }
     }
@@ -76,7 +76,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     @Test
     void canCreateEmptyQueue() {
         CouchbaseQueue<Integer> queue = collection.queue(uuid, Integer.class);
-        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
+        assertThrows(DocumentNotFoundException.class, () -> {collection.get(uuid);});
     }
     @Test
     void canCreateSimpleFifoQueue() {
@@ -140,7 +140,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         assertEquals(5, queue.size());
         queue.clear();
         assertEquals(0, queue.size());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void canUseJsonObjects() {

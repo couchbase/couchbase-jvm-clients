@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.datastructures;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
@@ -68,7 +68,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
     void after() {
         try {
             collection.remove(uuid);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             // that's ok, we lazy create.
         }
     }
@@ -76,7 +76,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
     @Test
     void shouldNotCreateEmptyDoc() {
         CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class);
-        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
+        assertThrows(DocumentNotFoundException.class, () -> {collection.get(uuid);});
     }
 
     @Test
@@ -145,7 +145,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         assertFalse(set.isEmpty());
         set.clear();
         assertTrue(set.isEmpty());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldIterate() {

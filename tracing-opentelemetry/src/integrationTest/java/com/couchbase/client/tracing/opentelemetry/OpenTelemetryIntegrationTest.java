@@ -16,7 +16,7 @@
 
 package com.couchbase.client.tracing.opentelemetry;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -30,7 +30,6 @@ import io.opentelemetry.sdk.trace.TracerSdk;
 import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
@@ -74,7 +73,7 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
     for (int i = 0; i < 100; i++) {
       try {
         collection.get("foo-" + i);
-      } catch (KeyNotFoundException x) {
+      } catch (DocumentNotFoundException x) {
         // expected
       }
     }

@@ -16,13 +16,24 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
+import reactor.core.CoreSubscriber;
+import reactor.core.Exceptions;
+import reactor.core.Fuseable;
+import reactor.core.Scannable;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Operators;
 import reactor.core.publisher.SignalType;
+import reactor.util.context.Context;
 
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 /**
@@ -46,7 +57,7 @@ public class Reactor {
    */
   public static <T> Mono<T> wrap(final Request<?> request, final CompletableFuture<T> response,
                                  final boolean propagateCancellation) {
-    Mono<T> mono = Mono.fromFuture(response);
+    Mono<T> mono = MyLittleAssemblyFactory.callOnAssembly(new SilentMonoCompletionStage<>(response));
     if (propagateCancellation) {
       mono = mono.doFinally(st -> {
         if (st == SignalType.CANCEL) {
@@ -57,8 +68,7 @@ public class Reactor {
     return mono.onErrorResume(err -> {
       if (err instanceof CompletionException) {
         return Mono.error(err.getCause());
-      }
-      else {
+      } else {
         return Mono.error(err);
       }
     });
@@ -75,4 +85,103 @@ public class Reactor {
     return Mono.fromFuture(input)
         .onErrorMap(t -> t instanceof CompletionException ? t.getCause() : t);
   }
+
+   /**
+   * Emits the value or error produced by the wrapped CompletionStage.
+   * <p>
+   * Note that if Subscribers cancel their subscriptions, the CompletionStage
+   * is not cancelled.
+   * <p>
+   * COUCHBASE NOTE: This class is an exact copy from the MonoCompletionStage that ships with reactor. The only changes
+   * made to it are that we need to check for a specific exception when the downstream consumer is cancelled. See the
+   * reasoning in that codeblock below. The code is copied from reactor-core version 3.3.0.RELEASE.
+   *
+   * @param <T> the value type
+   */
+  private static final class SilentMonoCompletionStage<T> extends Mono<T>
+    implements Fuseable, Scannable {
+
+    final CompletionStage<? extends T> future;
+
+    SilentMonoCompletionStage(CompletionStage<? extends T> future) {
+      this.future = Objects.requireNonNull(future, "future");
+    }
+
+    @Override
+    public void subscribe(CoreSubscriber<? super T> actual) {
+      Operators.MonoSubscriber<T, T>
+        sds = new Operators.MonoSubscriber<>(actual);
+
+      actual.onSubscribe(sds);
+
+      if (sds.isCancelled()) {
+        return;
+      }
+
+      future.whenComplete((v, e) -> {
+        if (sds.isCancelled()) {
+          //nobody is interested in the Mono anymore, don't risk dropping errors
+          Context ctx = sds.currentContext();
+          if (e == null || e instanceof CancellationException) {
+            //we discard any potential value and ignore Future cancellations
+            Operators.onDiscard(v, ctx);
+          }
+          else {
+            //we make sure we keep _some_ track of a Future failure AFTER the Mono cancellation
+
+            // COUCHBASE NOTE: We changed this code because in the base class we explicitly call STOPPED_LISTENING
+            // if the downstream consumer closes. Do not call onErrorDropped in this case, since we expect this
+            // case to be happening. Default reactor only suppresses this for cancellations, but our exception
+            // hierachy doesn't allow for it, hence the workaround.
+            if (e instanceof RequestCanceledException) {
+              RequestContext requestContext = ((RequestCanceledException) e).context().requestContext();
+              if (requestContext.request().cancellationReason() != CancellationReason.STOPPED_LISTENING) {
+                Operators.onErrorDropped(e, ctx);
+              }
+            } else {
+              Operators.onErrorDropped(e, ctx);
+            }
+
+            //and we discard any potential value just in case both e and v are not null
+            Operators.onDiscard(v, ctx);
+          }
+
+          return;
+        }
+        try {
+          if (e instanceof CompletionException) {
+            actual.onError(e.getCause());
+          }
+          else if (e != null) {
+            actual.onError(e);
+          }
+          else if (v != null) {
+            sds.complete(v);
+          }
+          else {
+            actual.onComplete();
+          }
+        }
+        catch (Throwable e1) {
+          Operators.onErrorDropped(e1, actual.currentContext());
+          throw Exceptions.bubble(e1);
+        }
+      });
+    }
+
+    @Override
+    public Object scanUnsafe(Attr key) {
+      return null; //no particular key to be represented, still useful in hooks
+    }
+  }
+
+  /**
+   * We have or own little pony eeeh factory because onAssembly is protected inside the mono, so we need to expose it!
+   */
+  private abstract static class MyLittleAssemblyFactory<T> extends Mono<T> {
+    static <T> Mono<T> callOnAssembly(Mono<T> source) {
+      return onAssembly(source);
+    }
+  }
+
 }

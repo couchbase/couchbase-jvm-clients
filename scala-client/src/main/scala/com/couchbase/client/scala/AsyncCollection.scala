@@ -231,7 +231,10 @@ class AsyncCollection(
                 case Success(v: Option[GetResult]) =>
                   v match {
                     case Some(x) => Future.successful(x)
-                    case _       => Future.failed(KeyNotFoundException.forKey(id))
+                    case _ => {
+                      val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+                      Future.failed(new DocumentNotFoundException(ctx))
+                    }
                   }
 
                 case Failure(err) => Future.failed(err)
@@ -274,7 +277,9 @@ class AsyncCollection(
       .wrap(req, id, getFullDocHandler, transcoder, core)
       .map {
         case Some(x) => x
-        case _       => throw KeyNotFoundException.forKey(id)
+        // TODO
+        case _ =>
+          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
       }
   }
 
@@ -296,7 +301,9 @@ class AsyncCollection(
           .map(response => getSubDocHandler.response(id, response, withExpiry, transcoder))
           .map {
             case Some(x) => x
-            case _       => throw KeyNotFoundException.forKey(id)
+            // TODO
+            case _ =>
+              throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
           }
 
       case Failure(err) => Future.failed(err)
@@ -388,7 +395,9 @@ class AsyncCollection(
       .wrap(req, id, getAndLockHandler, transcoder, core)
       .map {
         case Some(x) => x
-        case _       => throw KeyNotFoundException.forKey(id)
+        // TODO
+        case _ =>
+          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
       }
   }
 
@@ -420,7 +429,9 @@ class AsyncCollection(
       .wrap(req, id, getAndTouchHandler, transcoder, core)
       .map {
         case Some(x) => x
-        case _       => throw KeyNotFoundException.forKey(id)
+        // TODO
+        case _ =>
+          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
       }
   }
 
@@ -480,7 +491,11 @@ class AsyncCollection(
             })
             .map {
               case Some(x) => x
-              case _       => throw KeyNotFoundException.forKey(id)
+              // TODO: FIXME
+              case _ =>
+                throw new DocumentNotFoundException(
+                  KeyValueErrorContext.completedRequest(null, null)
+                )
             }
         })
 

@@ -18,7 +18,7 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
-import com.couchbase.client.core.error.KeyNotFoundException
+import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.manager.search._

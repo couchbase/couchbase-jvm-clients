@@ -26,6 +26,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -50,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -149,7 +151,8 @@ class KeyValueMessageHandlerTest {
         (short) 0xFF, request.opaque(), 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
       channel.writeInbound(getResponse);
 
-      assertThrows(RequestCanceledException.class, () -> request.response().get());
+      ExecutionException exception = assertThrows(ExecutionException.class, () -> request.response().get());
+      assertTrue(exception.getCause() instanceof RequestCanceledException);
       assertEquals("NO_MORE_RETRIES", request.cancellationReason().identifier());
       assertEquals(RetryReason.KV_ERROR_MAP_INDICATED, request.cancellationReason().innerReason());
       assertEquals(0, getResponse.refCnt());
@@ -177,9 +180,9 @@ class KeyValueMessageHandlerTest {
         (short) 0xFF, 1234, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
       channel.writeInbound(getResponse);
 
-      assertThrows(RequestCanceledException.class, () -> request1.response().get());
+      assertThrows(ExecutionException.class, () -> request1.response().get());
       assertEquals(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT, request1.cancellationReason().innerReason());
-      assertThrows(RequestCanceledException.class, () -> request2.response().get());
+      assertThrows(ExecutionException.class, () -> request2.response().get());
       assertEquals(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT, request2.cancellationReason().innerReason());
 
       assertFalse(channel.isOpen());

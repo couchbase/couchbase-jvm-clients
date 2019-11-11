@@ -117,7 +117,8 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
       CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
     core.send(getRequest);
 
-    assertThrows(RequestTimeoutException.class, () -> getRequest.response().get());
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> getRequest.response().get());
+    assertTrue(exception.getCause() instanceof RequestTimeoutException);
   }
 
 }

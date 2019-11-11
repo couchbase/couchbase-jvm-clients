@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 
@@ -26,7 +26,6 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,7 +58,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   @Test
   void emptyIfNotFound() {
     assertThrows(
-      KeyNotFoundException.class,
+      DocumentNotFoundException.class,
       () -> collection.lookupIn("does_not_exist", Collections.singletonList(LookupInSpec.get("foo")))
     );
   }

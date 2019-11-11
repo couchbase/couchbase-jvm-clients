@@ -16,7 +16,7 @@
 
 package com.couchbase.client.tracing.opentracing;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -25,7 +25,6 @@ import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
-import com.couchbase.client.tracing.opentracing.OpenTracingRequestTracer;
 import io.opentracing.mock.MockTracer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,7 +69,7 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
     for (int i = 0; i < 100; i++) {
       try {
         collection.get("foo-" + i);
-      } catch (KeyNotFoundException x) {
+      } catch (DocumentNotFoundException x) {
         // expected
       }
     }

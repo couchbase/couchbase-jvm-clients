@@ -65,7 +65,7 @@ public class EndpointContext extends CoreContext {
   }
 
   @Override
-  protected void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteSocket()));
     localSocket.ifPresent(s -> input.put("local", redactSystem(s)));

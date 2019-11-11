@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{KeyNotFoundException, LockException}
+import com.couchbase.client.core.error.{DocumentNotFoundException, DocumentLockedException}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
@@ -146,9 +146,9 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
 
     coll.getAndLock(docId, 30.seconds) match {
-      case Success(result)             => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: LockException) =>
-      case Failure(err)                => assert(false, s"unexpected error $err")
+      case Success(result)                       => assert(false, "should not have been able to relock locked doc")
+      case Failure(err: DocumentLockedException) =>
+      case Failure(err)                          => assert(false, s"unexpected error $err")
     }
   }
 
@@ -207,9 +207,9 @@ class KeyValueSpec extends ScalaIntegrationTest {
     assert(coll.remove(docId).isSuccess)
 
     coll.get(docId) match {
-      case Success(result)                    => assert(false, s"doc $docId exists and should not")
-      case Failure(err: KeyNotFoundException) =>
-      case Failure(err)                       => assert(false, s"unexpected error $err")
+      case Success(result)                         => assert(false, s"doc $docId exists and should not")
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
   @Test
@@ -268,9 +268,9 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val upsertResult = coll.replace(docId, content)
 
     upsertResult match {
-      case Success(result)                    => assert(false, s"doc should not exist")
-      case Failure(err: KeyNotFoundException) =>
-      case Failure(err)                       => assert(false, s"unexpected error $err")
+      case Success(result)                         => assert(false, s"doc should not exist")
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
   @Test

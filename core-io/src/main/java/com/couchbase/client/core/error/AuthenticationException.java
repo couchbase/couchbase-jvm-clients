@@ -39,7 +39,4 @@ public class AuthenticationException extends CouchbaseException {
     super(cause);
   }
 
-  public AuthenticationException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
-  }
 }

@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -32,7 +32,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.error.KeyExistsException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.kv.GetOptions;
@@ -130,7 +130,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 throw new IndexOutOfBoundsException("Index: " + index);
             }
             return result.contentAs(0, entityTypeClass);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             // that's ok, we are lazy.  ArrayList will throw if you clear the list
             // then try to get or remove, so lets do same.
             throw new IndexOutOfBoundsException("Index: " + index);
@@ -145,7 +145,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                     lookupInOptions);
 
             return result.contentAs(0, Integer.class);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return 0;
         }
     }
@@ -158,7 +158,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                     lookupInOptions);
 
             return !current.exists(0);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return true;
         }
     }
@@ -184,7 +184,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                         Collections.singletonList(MutateInSpec.replace(idx, element)),
                         arrayListOptions.mutateInOptions().cas(returnCas));
                 return result;
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 createEmptyList();
             } catch (CASMismatchException ex) {
                 //will need to retry get-and-set
@@ -212,7 +212,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                             Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)),
                             arrayListOptions.mutateInOptions());
                     return;
-                } catch (KeyNotFoundException e) {
+                } catch (DocumentNotFoundException e) {
                     // empty list, create empty one and try again
                     createEmptyList();
                     retry += 1;
@@ -248,7 +248,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         arrayListOptions.mutateInOptions().cas(returnCas));
                 return result;
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 // ArrayList will throw if underlying list was cleared before a remove.
                 throw new IndexOutOfBoundsException("Index:" + index);
             } catch (CASMismatchException ex) {
@@ -287,7 +287,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
     public void clear() {
        try {
            collection.remove(id);
-       } catch (KeyNotFoundException e) {
+       } catch (DocumentNotFoundException e) {
            // could be we called this twice, that's ok
        }
     }
@@ -306,7 +306,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 GetResult result = collection.get(id, getOptions);
                 current = result.contentAs(JsonArray.class);
                 this.cas = result.cas();
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 current = JsonArray.empty();
                 this.cas = 0;
             }
@@ -375,7 +375,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException | KeyNotFoundException ex) {
+            } catch (CASMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -401,7 +401,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 this.cas = updated.cas();
                 //also correctly reset the state:
                 delegate.set(e);
-            } catch (CASMismatchException | KeyNotFoundException ex) {
+            } catch (CASMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -426,7 +426,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 delegate.add(e);
                 this.cursor++;
                 this.lastVisited = -1;
-            } catch (KeyNotFoundException ex) {
+            } catch (DocumentNotFoundException ex) {
                 if (delegate.nextIndex() == 0 && !delegate.hasNext()) {
                     // ok, so we just tried to add to a doc we have not
                     // created yet.
@@ -449,7 +449,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
         try {
             MutationResult resp = collection.insert(id, JsonArray.empty(), insertOptions);
             return resp.cas();
-        } catch (KeyExistsException ex) {
+        } catch (DocumentExistsException ex) {
             // Ignore concurrent creations, keep on moving.
             return 0;
         }

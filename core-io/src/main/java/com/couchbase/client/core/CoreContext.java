@@ -124,7 +124,7 @@ public class CoreContext extends AbstractContext {
   }
 
   @Override
-  protected void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
     input.put("coreId", id);
     alternateAddress.ifPresent(a -> input.put("alternateIdentifier", a));
   }

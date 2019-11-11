@@ -24,6 +24,8 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
@@ -248,12 +250,12 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<GetResult> get(final String id, final GetOptions options) {
-    notNull(options, "GetOptions");
-    GetOptions.Built opts = options.build();
+    notNull(options, "GetOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    final GetOptions.Built opts = options.build();
 
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
     if (opts.projections().isEmpty() && !opts.withExpiry()) {
-      return GetAccessor.get(core, id, fullGetRequest(id, opts), transcoder);
+      return GetAccessor.get(core, fullGetRequest(id, opts), transcoder);
     } else {
       return GetAccessor.subdocGet(core, id, subdocGetRequest(id, opts), transcoder);
     }
@@ -268,8 +270,7 @@ public class AsyncCollection {
    */
   @Stability.Internal
   GetRequest fullGetRequest(final String id, final GetOptions.Built opts) {
-    notNullOrEmpty(id, "Id");
-
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
@@ -288,11 +289,30 @@ public class AsyncCollection {
    */
   @Stability.Internal
   SubdocGetRequest subdocGetRequest(final String id, final GetOptions.Built opts) {
-    notNullOrEmpty(id, "Id");
+    try {
+      notNullOrEmpty(id, "Id");
+
+      if (opts.withExpiry()) {
+        if (opts.projections().size() > 15) {
+          throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+            + "projected per request due to a server limitation (includes the expiration macro as one field).");
+        }
+      } else {
+        if (opts.projections().size() > 16) {
+          throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+            + "projected per request due to a server limitation.");
+        }
+      }
+    } catch (Exception cause) {
+      throw new InvalidArgumentException(
+        "Argument validation failed",
+        cause,
+        ReducedKeyValueErrorContext.create(id, collectionIdentifier)
+      );
+    }
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
     List<SubdocGetRequest.Command> commands = new ArrayList<>();
 
     if (opts.withExpiry()) {
@@ -304,11 +324,6 @@ public class AsyncCollection {
     }
 
     if (!opts.projections().isEmpty()) {
-      if (opts.projections().size() > 16) {
-        throw new UnsupportedOperationException("Only a maximum of 16 fields can be "
-          + "projected per request.");
-      }
-
       commands.addAll(opts
         .projections()
         .stream()
@@ -353,10 +368,10 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndLock(final String id, final Duration lockTime,
                                                  final GetAndLockOptions options) {
-    notNull(options, "GetAndLockOptions");
+    notNull(options, "GetAndLockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndLockOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return GetAccessor.getAndLock(core, id, getAndLockRequest(id, lockTime, opts), transcoder);
+    return GetAccessor.getAndLock(core, getAndLockRequest(id, lockTime, opts), transcoder);
   }
 
   /**
@@ -370,7 +385,8 @@ public class AsyncCollection {
    */
   @Stability.Internal
   GetAndLockRequest getAndLockRequest(final String id, final Duration lockTime, final GetAndLockOptions.Built opts) {
-    notNullOrEmpty(id, "Id");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(lockTime, "LockTime", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
@@ -404,7 +420,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndTouch(final String id, final Duration expiry,
                                                   final GetAndTouchOptions options) {
-    notNull(options, "GetAndTouchOptions");
+    notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndTouchOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
     return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiry, opts), transcoder);
@@ -420,13 +436,14 @@ public class AsyncCollection {
    */
   @Stability.Internal
   GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiry, final GetAndTouchOptions.Built opts) {
-    notNullOrEmpty(id, "Id");
-    notNull(expiry, "Expiry");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetAndTouchRequest request = new GetAndTouchRequest(id, timeout, coreContext,
-      collectionIdentifier, retryStrategy, expiry);
+    GetAndTouchRequest request = new GetAndTouchRequest(
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, expiry
+    );
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -453,7 +470,7 @@ public class AsyncCollection {
     return getAllReplicasRequests(id, options)
       .map(request ->
               GetAccessor
-                .get(core, id, request, environment.transcoder())
+                .get(core, request, environment.transcoder())
                 .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
       .collect(Collectors.toList());
   }

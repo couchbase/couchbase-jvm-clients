@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.KeyNotFoundException
+import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}

@@ -155,7 +155,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     }
 
     if (key != null && key.length > 0) {
-      ctx.put("key", redactUser(new String(key, UTF_8)));
+      ctx.put("documentId", redactUser(new String(key, UTF_8)));
     }
 
     return ctx;

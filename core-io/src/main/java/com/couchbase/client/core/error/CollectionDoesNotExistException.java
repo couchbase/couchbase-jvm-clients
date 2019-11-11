@@ -39,7 +39,4 @@ public class CollectionDoesNotExistException extends CouchbaseException {
     super(cause);
   }
 
-  public CollectionDoesNotExistException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
-  }
 }

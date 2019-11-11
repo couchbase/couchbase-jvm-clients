@@ -56,8 +56,10 @@ public class GetOptions extends CommonOptions<GetOptions> {
     return new GetOptions();
   }
 
+  /**
+   * Holds the transcoder used for decoding.
+   */
   private Transcoder transcoder;
-
 
   private GetOptions() {
     withExpiry = false;
@@ -77,6 +79,9 @@ public class GetOptions extends CommonOptions<GetOptions> {
 
   /**
    * Allows to specify a custom list paths to fetch from the document instead of the whole.
+   * <p>
+   * Note that a maximum of 16 individual paths can be projected at a time due to a server limitation. If you need
+   * more than that, think about fetching less-generic paths or the full document straight away.
    *
    * @param path a path that should be loaded if present.
    * @param morePaths additional paths that should be loaded if present.
@@ -89,6 +94,9 @@ public class GetOptions extends CommonOptions<GetOptions> {
 
   /**
    * Allows to specify a custom list paths to fetch from the document instead of the whole.
+   * <p>
+   * Note that a maximum of 16 individual paths can be projected at a time due to a server limitation. If you need
+   * more than that, think about fetching less-generic paths or the full document straight away.
    *
    * @param paths each individual path that should be loaded if present.
    * @return the {@link GetOptions} to allow method chaining.
@@ -107,6 +115,12 @@ public class GetOptions extends CommonOptions<GetOptions> {
     return this;
   }
 
+  /**
+   * Allows to specify a custom transcoder that is used to decode the content of the result.
+   *
+   * @param transcoder the custom transcoder that should be used for decoding.
+   * @return the {@link GetOptions} to allow method chaining.
+   */
   public GetOptions transcoder(final Transcoder transcoder) {
     notNull(transcoder, "Transcoder");
     this.transcoder = transcoder;
@@ -118,6 +132,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
     return new Built();
   }
 
+  @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
     public boolean withExpiry() {

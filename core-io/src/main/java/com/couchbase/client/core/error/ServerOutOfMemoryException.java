@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,16 @@
  */
 package com.couchbase.client.core.error;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-
 /**
- * Indicates an operation failed because the key does not exist.
+ * Thrown when Couchbase Server returns with an Out of Memory error.
  *
- * @since 2.0
+ * @author Michael Nitschinger
+ * @since 2.1.0
  */
-public class KeyNotFoundException extends CouchbaseException {
-  private final String key;
+public class ServerOutOfMemoryException extends CouchbaseException {
 
-  private KeyNotFoundException(String key) {
-    super("Document with key [" + redactUser(key) + "] does not exist");
-    this.key = key;
-  }
+    public ServerOutOfMemoryException(final KeyValueErrorContext ctx) {
+        super("The server is currently out of memory and cannot service the request", ctx);
+    }
 
-  public static KeyNotFoundException forKey(String key) {
-    return new KeyNotFoundException(key);
-  }
-
-  public String key() {
-    return key;
-  }
 }

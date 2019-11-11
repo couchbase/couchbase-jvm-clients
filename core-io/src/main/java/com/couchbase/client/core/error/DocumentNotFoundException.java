@@ -15,26 +15,15 @@
  */
 package com.couchbase.client.core.error;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-
 /**
- * Indicates an operation failed because the key already exists.
+ * Indicates an operation failed because the key does not exist.
  *
  * @since 2.0
  */
-public class KeyExistsException extends CouchbaseException {
-  private final String key;
+public class DocumentNotFoundException extends CouchbaseException {
 
-  private KeyExistsException(String key) {
-    super("Document with key [" + redactUser(key) + " already exists");
-    this.key = key;
+  public DocumentNotFoundException(final KeyValueErrorContext ctx) {
+    super("Document with the given id not found", ctx);
   }
 
-  public static KeyExistsException forKey(String key) {
-    return new KeyExistsException(key);
-  }
-
-  public String key() {
-    return key;
-  }
 }

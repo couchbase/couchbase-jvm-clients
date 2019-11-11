@@ -22,8 +22,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.KeyExistsException;
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -121,7 +120,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                     Collections.singletonList(LookupInSpec.count("")),
                     lookupInOptions);
             return result.contentAs(0, Integer.class);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return 0;
         }
     }
@@ -133,7 +132,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                     Collections.singletonList(LookupInSpec.exists("[0]")),
                     lookupInOptions);
             return !current.exists(0);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return true;
         }
     }
@@ -152,7 +151,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 }
             }
             return false;
-        } catch(KeyNotFoundException e) {
+        } catch(DocumentNotFoundException e) {
             return false;
         }
     }
@@ -173,7 +172,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 // removed item matches the index in the actual document in
                 // the server
                 this.cas = result.cas();
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 current = JsonArray.empty();
                 this.cas = 0;
             }
@@ -221,7 +220,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException | KeyNotFoundException ex) {
+            } catch (CASMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -287,7 +286,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 }
             } catch (CASMismatchException e) {
                 //retry
-            } catch (KeyNotFoundException ex) {
+            } catch (DocumentNotFoundException ex) {
                 return false;
             }
         }

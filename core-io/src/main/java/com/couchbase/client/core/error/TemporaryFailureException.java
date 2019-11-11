@@ -23,21 +23,10 @@ package com.couchbase.client.core.error;
  * @author Michael Nitschinger
  * @since 2.1.0
  */
-public class TemporaryFailureException extends CouchbaseException implements RetryableOperationException {
+public class TemporaryFailureException extends CouchbaseException {
 
-    public TemporaryFailureException() {
-        super();
+    public TemporaryFailureException(final KeyValueErrorContext ctx) {
+        super("The document is temporarily not accessible on the server", ctx);
     }
 
-    public TemporaryFailureException(String message) {
-        super(message);
-    }
-
-    public TemporaryFailureException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public TemporaryFailureException(Throwable cause) {
-        super(cause);
-    }
 }

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.{EncodingFailedException, KeyExistsException}
+import com.couchbase.client.core.error.{EncodingFailedException, DocumentExistsException}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{InsertRequest, InsertResponse}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -91,7 +91,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
   def response(id: String, response: InsertResponse): MutationResult = {
     response.status() match {
       case ResponseStatus.EXISTS =>
-        throw KeyExistsException.forKey(id);
+        throw DocumentExistsException.forKey(id);
 
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)

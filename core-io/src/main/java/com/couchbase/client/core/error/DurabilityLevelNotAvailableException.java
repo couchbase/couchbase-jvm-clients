@@ -40,10 +40,6 @@ public class DurabilityLevelNotAvailableException extends CouchbaseException {
     super(cause);
   }
 
-  public DurabilityLevelNotAvailableException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
-  }
-
   public DurabilityLevelNotAvailableException(DurabilityLevel level) {
     super("Durability level " + level + " is not supported by this version of the server");
   }

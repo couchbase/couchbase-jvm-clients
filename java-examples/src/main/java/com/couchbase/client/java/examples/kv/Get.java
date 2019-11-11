@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.examples.kv;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -41,7 +41,7 @@ public class Get {
 
     try {
       System.out.println("Found Airport: " + collection.get("airport_1291"));
-    } catch (KeyNotFoundException ex) {
+    } catch (DocumentNotFoundException ex) {
       System.out.println("Airport not found!");
     }
 

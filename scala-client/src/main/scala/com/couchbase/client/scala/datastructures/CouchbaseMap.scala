@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CASMismatchException, KeyNotFoundException}
+import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
 import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
@@ -126,7 +126,7 @@ class CouchbaseMap[T](
 
     result match {
       case Success(_) =>
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         retryIfDocDoesNotExist(f)
       case Failure(err) => throw err
@@ -149,9 +149,9 @@ class CouchbaseMap[T](
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count)                   => count
-      case Failure(_: KeyNotFoundException) => 0
-      case Failure(err)                     => throw err
+      case Success(count)                        => count
+      case Failure(_: DocumentNotFoundException) => 0
+      case Failure(err)                          => throw err
     }
   }
 
@@ -164,7 +164,7 @@ class CouchbaseMap[T](
 
     result match {
       case Success(values: mutable.AnyRefMap[String, T]) => values.toMap
-      case Failure(_: KeyNotFoundException)              => Map.empty[String, T]
+      case Failure(_: DocumentNotFoundException)         => Map.empty[String, T]
       case Failure(err)                                  => throw err
     }
   }
@@ -196,8 +196,8 @@ class CouchbaseMap[T](
       case Failure(err: MultiMutationException) =>
         if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) this
         else throw err
-      case Failure(_: KeyNotFoundException) => this
-      case Failure(err)                     => throw err
+      case Failure(_: DocumentNotFoundException) => this
+      case Failure(err)                          => throw err
     }
   }
 

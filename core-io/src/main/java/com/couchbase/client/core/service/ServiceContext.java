@@ -60,7 +60,7 @@ public class ServiceContext extends CoreContext {
   }
 
   @Override
-  protected void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteHostname() + ":" + remotePort()));
     input.put("type", serviceType);

@@ -1,13 +1,13 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.KeyExistsException
+import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.subdoc.MultiMutationException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
-import com.couchbase.client.scala.kv.{StoreSemantics, MutateInMacro, MutateInSpec}
+import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec, StoreSemantics}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{
@@ -139,9 +139,9 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val (docId, cas) = prepare(content)
 
     coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Insert) match {
-      case Success(result)                  => assert(false)
-      case Failure(err: KeyExistsException) =>
-      case Failure(err)                     => assert(false, s"unexpected error $err")
+      case Success(result)                       => assert(false)
+      case Failure(err: DocumentExistsException) =>
+      case Failure(err)                          => assert(false, s"unexpected error $err")
     }
   }
 

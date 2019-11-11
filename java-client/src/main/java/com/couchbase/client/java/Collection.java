@@ -18,6 +18,14 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentLockedException;
+import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.ServerOutOfMemoryException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
@@ -159,33 +167,41 @@ public class Collection {
   }
 
   /**
-   * Fetches a full Document from a collection with default options.
+   * Fetches the full document from this collection.
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id) {
     return block(async().get(id));
   }
 
   /**
-   * Fetches a full Document from a collection with custom options.
+   * Fetches the full document from this collection with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param options custom options to change the default behavior.
+   * @param options options to customize the get request.
    * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id, final GetOptions options) {
     return block(async().get(id, options));
   }
 
   /**
-   * Fetches a full document and write-locks it for the given duration with default options.
+   * Fetches a full document and write-locks it for the given duration.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
-   *                 treated as 30 seconds.
-   * @return a {@link GetResult} once the document has been loaded.
+   * @param lockTime how long to lock the document for (values over 30 seconds will be capped).
+   * @return a {@link GetResult} once the document has been locked and loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime) {
     return block(async().getAndLock(id, lockTime));
@@ -195,36 +211,41 @@ public class Collection {
    * Fetches a full document and write-locks it for the given duration with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
-   *                 treated as 30 seconds.
-   * @param options custom options to change the default behavior.
+   * @param lockTime how long to lock the document for (values over 30 seconds will be capped).
+   * @param options options to customize the get and lock request.
    * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
     return block(async().getAndLock(id, lockTime, options));
   }
 
-
   /**
-   * Fetches a full document and resets its expiration time to the value provided with default
-   * options.
+   * Fetches a full document and resets its expiration time to the expiry provided.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param expiry the new expiration time for the document.
-   * @return a {@link GetResult} completing once loaded or failed.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry) {
     return block(async().getAndTouch(id, expiry));
   }
 
   /**
-   * Fetches a full document and resets its expiration time to the value provided with custom
-   * options.
+   * Fetches a full document and resets its expiration time to the expiry provided with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param expiry the new expiration time for the document.
-   * @param options custom options to change the default behavior.
-   * @return a {@link GetResult} completing once loaded or failed.
+   * @param options options to customize the get and touch request.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
     return block(async().getAndTouch(id, expiry, options));

@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -35,7 +34,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static com.couchbase.client.test.Util.waitUntilThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

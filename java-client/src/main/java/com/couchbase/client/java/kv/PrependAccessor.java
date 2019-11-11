@@ -35,13 +35,15 @@ public class PrependAccessor {
     final CompletableFuture<MutationResult> mutationResult = request
       .response()
       .thenApply(response -> {
+        if (response.status().success()) {
+          return new MutationResult(response.cas(), response.mutationToken());
+        }
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
         switch (response.status()) {
-          case SUCCESS:
-            return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
             throw CASMismatchException.forKey(key);
           case NOT_STORED:
-            throw KeyNotFoundException.forKey(key);
+            throw new DocumentNotFoundException(ctx);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

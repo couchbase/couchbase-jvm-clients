@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,26 @@
  */
 package com.couchbase.client.core.error;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
 /**
- * Thrown when Couchbase Server returns with an Out of Memory error.
+ * Indicates an operation failed because the key already exists.
  *
- * @author Michael Nitschinger
- * @since 2.1.0
+ * @since 2.0
  */
-public class CouchbaseOutOfMemoryException extends CouchbaseException {
+public class DocumentExistsException extends CouchbaseException {
+  private final String key;
 
-    public CouchbaseOutOfMemoryException() {
-        super();
-    }
+  private DocumentExistsException(String key) {
+    super("Document with key [" + redactUser(key) + " already exists");
+    this.key = key;
+  }
 
-    public CouchbaseOutOfMemoryException(String message) {
-        super(message);
-    }
+  public static DocumentExistsException forKey(String key) {
+    return new DocumentExistsException(key);
+  }
 
-    public CouchbaseOutOfMemoryException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public CouchbaseOutOfMemoryException(Throwable cause) {
-        super(cause);
-    }
+  public String key() {
+    return key;
+  }
 }

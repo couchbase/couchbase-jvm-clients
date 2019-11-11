@@ -35,7 +35,7 @@ public abstract class AbstractContext implements Context {
    *
    * @param input pass exportable params in here.
    */
-  protected void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
   }
 
   @Override

@@ -20,20 +20,10 @@ package com.couchbase.client.core.error;
  *
  * @since 2.0.0
  */
-public class DurableWriteReCommitInProgressException extends CouchbaseException implements RetryableOperationException {
+public class DurableWriteReCommitInProgressException extends CouchbaseException {
 
-    public DurableWriteReCommitInProgressException() {
+    public DurableWriteReCommitInProgressException(final KeyValueErrorContext ctx) {
+        super("The server cannot serve the request document because a durable write re-commit is in progress", ctx);
     }
 
-    public DurableWriteReCommitInProgressException(String message) {
-        super(message);
-    }
-
-    public DurableWriteReCommitInProgressException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public DurableWriteReCommitInProgressException(Throwable cause) {
-        super(cause);
-    }
 }

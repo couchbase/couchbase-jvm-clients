@@ -18,7 +18,6 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.DefaultErrorUtil;
-import com.couchbase.client.core.error.KeyNotFoundException;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 

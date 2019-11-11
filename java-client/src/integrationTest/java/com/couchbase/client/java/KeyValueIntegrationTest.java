@@ -17,8 +17,8 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CASMismatchException;
-import com.couchbase.client.core.error.KeyExistsException;
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
@@ -113,7 +113,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void emptyIfGetNotFound() {
-    assertThrows(KeyNotFoundException.class, () -> collection.get(UUID.randomUUID().toString()));
+    assertThrows(DocumentNotFoundException.class, () -> collection.get(UUID.randomUUID().toString()));
   }
 
   @Test
@@ -206,16 +206,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertFalse(decoded.containsKey("age"));
   }
 
-  @Test
-  void failsIfOverMaxProjectionsInList() {
-    assertThrows(UnsupportedOperationException.class, () ->
-      collection.get("some_id", getOptions().project(
-        "1", "2", "3", "4", "5", "6", "7", "8", "9",
-        "10", "11", "12", "13", "14", "15", "16", "17"
-      ))
-    );
-  }
-
   /**
    * We need to ignore this test on the mock because the mock returns TMPFAIL instead of LOCKED when the
    * document is locked (which used to be the old functionality but now since XERROR is negotiated it
@@ -243,8 +233,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       RequestTimeoutException.class,
       () -> collection.getAndLock(id, Duration.ofSeconds(30), getAndLockOptions().timeout(Duration.ofMillis(100)))
     );
-    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
-    assertThrows(KeyNotFoundException.class, () -> collection.getAndLock("some_doc", Duration.ofSeconds(30)));
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
+    assertThrows(DocumentNotFoundException.class, () -> collection.getAndLock("some_doc", Duration.ofSeconds(30)));
   }
 
   /**
@@ -282,7 +272,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       try {
         collection.get(id);
         return false;
-      } catch (KeyNotFoundException knf) {
+      } catch (DocumentNotFoundException knf) {
         return true;
       }
     });
@@ -308,7 +298,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult result = collection.remove(id);
     assertTrue(result.cas() != insert.cas());
 
-    assertThrows(KeyNotFoundException.class, () -> collection.remove(id));
+    assertThrows(DocumentNotFoundException.class, () -> collection.remove(id));
   }
 
   @Test
@@ -319,7 +309,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult insert = collection.insert(id, expected);
     assertTrue(insert.cas() != 0);
 
-    assertThrows(KeyExistsException.class, () -> collection.insert(id, expected));
+    assertThrows(DocumentExistsException.class, () -> collection.insert(id, expected));
   }
 
   @Test
@@ -364,7 +354,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals(expected, collection.get(id).contentAsObject());
 
     assertThrows(
-      KeyNotFoundException.class,
+      DocumentNotFoundException.class,
       () -> collection.replace("some_doc", JsonObject.empty())
     );
   }
@@ -436,7 +426,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       try {
         collection.get(id);
         return false;
-      } catch (KeyNotFoundException knf) {
+      } catch (DocumentNotFoundException knf) {
         return true;
       }
     });
@@ -458,13 +448,13 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     RequestTimeoutException exception = assertThrows(
       RequestTimeoutException.class,
       () -> collection.upsert(id, JsonObject.empty(), upsertOptions().timeout(Duration.ofMillis(100))));
-    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
 
     exception = assertThrows(
       RequestTimeoutException.class,
       () -> collection.unlock(id, locked.cas() + 1, unlockOptions().timeout(Duration.ofMillis(100)))
     );
-    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.requestContext().retryReasons());
+    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
 
     collection.unlock(id, locked.cas());
 
@@ -484,7 +474,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
-      KeyNotFoundException.class,
+      DocumentNotFoundException.class,
       () -> collection.binary().append(id, helloBytes)
     );
 
@@ -514,7 +504,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
     assertThrows(
-            KeyNotFoundException.class,
+            DocumentNotFoundException.class,
             () -> collection.reactive().binary().append(id, helloBytes).block()
     );
 
@@ -575,7 +565,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] worldHelloBytes = "World!Hello, ".getBytes(UTF_8);
 
     assertThrows(
-      KeyNotFoundException.class,
+      DocumentNotFoundException.class,
       () -> collection.binary().prepend(id, helloBytes)
     );
 
@@ -600,7 +590,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void increment() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(KeyNotFoundException.class, () -> collection.binary().increment(id));
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().increment(id));
 
     CounterResult result = collection.binary().increment(
       id,
@@ -632,7 +622,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void decrement() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(KeyNotFoundException.class, () -> collection.binary().decrement(id));
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().decrement(id));
 
     CounterResult result = collection.binary().decrement(
       id,

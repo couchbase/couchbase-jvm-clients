@@ -16,31 +16,15 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.cnc.Context;
-import com.couchbase.client.core.msg.RequestContext;
+public class RequestCanceledException extends CouchbaseException {
 
-import java.util.concurrent.CancellationException;
-
-public class RequestCanceledException extends CancellationException implements RetryableOperationException {
-
-  private final String name;
-  private final RequestContext requestContext;
-
-  public RequestCanceledException(String name, RequestContext context) {
-    this.requestContext = context;
-    this.name = name;
-  }
-
-  public String name() {
-    return name;
-  }
-
-  public RequestContext requestContext() {
-    return requestContext;
+  public RequestCanceledException(String message, CancellationErrorContext ctx) {
+    super(message, ctx);
   }
 
   @Override
-  public String getMessage() {
-    return name + " " + requestContext.exportAsString(Context.ExportFormat.JSON);
+  public CancellationErrorContext context() {
+    return (CancellationErrorContext) super.context();
   }
+
 }

@@ -24,8 +24,7 @@ import java.util.Queue;
 import com.couchbase.client.core.annotation.Stability;
 
 
-import com.couchbase.client.core.error.KeyExistsException;
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -125,7 +124,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                     Collections.singletonList(LookupInSpec.count("")),
                     lookupInOptions);
             return result.contentAs(0, Integer.class);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return 0;
         }
     }
@@ -160,7 +159,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         queueOptions.mutateInOptions().cas(returnCas));
                 return current;
-            } catch (KeyNotFoundException ex) {
+            } catch (DocumentNotFoundException ex) {
                 return null;
             } catch (CASMismatchException ex) {
                 //will have to retry get-and-remove
@@ -182,7 +181,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                     Collections.singletonList(LookupInSpec.get("[-1]")),
                     lookupInOptions);
             return result.contentAs(0, entityTypeClass);
-        } catch (KeyNotFoundException e) {
+        } catch (DocumentNotFoundException e) {
             return null;
         } catch (PathNotFoundException e) {
                 return null; //the queue is empty
@@ -202,7 +201,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 GetResult result = collection.get(id);
                 this.cas = result.cas();
                 content = result.contentAsArray();
-            } catch (KeyNotFoundException e) {
+            } catch (DocumentNotFoundException e) {
                 this.cas = 0;
                 content = JsonArray.empty();
             }
@@ -243,7 +242,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 delegate.remove();
                 doneRemove = true;
                 lastVisited--;
-            } catch (CASMismatchException | KeyNotFoundException e) {
+            } catch (CASMismatchException | DocumentNotFoundException e) {
                 throw new ConcurrentModificationException("Couldn't remove while iterating: " + e);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {

@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.KeyNotFoundException
+import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -60,9 +60,9 @@ class BinarySpec extends ScalaIntegrationTest {
   def blocking_increment_no_initial() {
     val docId = TestUtils.docId()
     coll.increment(docId, 3) match {
-      case Success(result)                    => assert(false, s"success not expected")
-      case Failure(err: KeyNotFoundException) =>
-      case Failure(err)                       => assert(false, s"unexpected error $err")
+      case Success(result)                         => assert(false, s"success not expected")
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
   @Test
@@ -112,9 +112,9 @@ class BinarySpec extends ScalaIntegrationTest {
   def blocking_decrement_no_initial() {
     val docId = TestUtils.docId()
     coll.decrement(docId, 3) match {
-      case Success(result)                    => assert(false, s"success not expected")
-      case Failure(err: KeyNotFoundException) =>
-      case Failure(err)                       => assert(false, s"unexpected error $err")
+      case Success(result)                         => assert(false, s"success not expected")
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
 

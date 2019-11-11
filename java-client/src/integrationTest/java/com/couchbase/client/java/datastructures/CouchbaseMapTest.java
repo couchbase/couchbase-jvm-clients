@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.java.datastructures;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -86,7 +86,7 @@ class CouchbaseMapTest extends JavaIntegrationTest {
     void shouldCreateEmptyMap() {
         CouchbaseMap<Integer> map = new CouchbaseMap<>(uuid, collection, Integer.class, options);
         assertEquals(0, map.size());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldPut() {
@@ -126,7 +126,7 @@ class CouchbaseMapTest extends JavaIntegrationTest {
         assertEquals(5, map.size());
         map.clear();
         assertEquals(0, map.size());
-        assertThrows(KeyNotFoundException.class, () -> {collection.get(uuid);});
+        assertThrows(DocumentNotFoundException.class, () -> {collection.get(uuid);});
     }
     @Test
     void shouldEntrySet() {

@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.error;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-
 /**
  * Thrown when the server reports a temporary failure that
  * is very likely to be lock-related (like an already locked
@@ -28,19 +26,10 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  *
  * @since 3.0
  */
-public class LockException extends CouchbaseException implements RetryableOperationException {
-  private final String key;
+public class DocumentLockedException extends CouchbaseException {
 
-  private LockException(String key) {
-    super("Failed to acquire or release the lock on key [" + redactUser(key) + "]");
-    this.key = key;
+  public DocumentLockedException(KeyValueErrorContext ctx) {
+    super("Server indicates the document is (already) locked", ctx);
   }
 
-  public static LockException forKey(String key) {
-    return new LockException(key);
-  }
-
-  public String key() {
-    return key;
-  }
 }

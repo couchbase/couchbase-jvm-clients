@@ -226,7 +226,7 @@ public class ReactiveCollection {
 
       if (opts.projections().isEmpty() && !opts.withExpiry()) {
         GetRequest request = asyncCollection.fullGetRequest(id, opts);
-        return Reactor.wrap(request, GetAccessor.get(core, id, request, transcoder), true);
+        return Reactor.wrap(request, GetAccessor.get(core, request, transcoder), true);
       } else {
         SubdocGetRequest request = asyncCollection.subdocGetRequest(id, opts);
         return Reactor.wrap(request, GetAccessor.subdocGet(core, id, request, transcoder), true);
@@ -258,7 +258,7 @@ public class ReactiveCollection {
       GetAndLockOptions.Built opts = options.build();
       final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
       GetAndLockRequest request = asyncCollection.getAndLockRequest(id, lockTime, opts);
-      return Reactor.wrap(request, GetAccessor.getAndLock(core, id, request, transcoder), true);
+      return Reactor.wrap(request, GetAccessor.getAndLock(core, request, transcoder), true);
     });
   }
 
@@ -321,7 +321,7 @@ public class ReactiveCollection {
       .fromStream(asyncCollection.getAllReplicasRequests(id, options))
       .flatMap(request ->
               Reactor
-                .wrap(request, GetAccessor.get(core, id, request, environment().transcoder()), true)
+                .wrap(request, GetAccessor.get(core, request, environment().transcoder()), true)
                 .onErrorResume(t -> {
                   coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
                   // Swallow any errors from individual replicas

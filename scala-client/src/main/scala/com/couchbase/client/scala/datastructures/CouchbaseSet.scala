@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.datastructures
 
 import com.couchbase.client.core.error.subdoc.MultiMutationException
-import com.couchbase.client.core.error.{CASMismatchException, KeyNotFoundException}
+import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
@@ -77,14 +77,14 @@ class CouchbaseSet[T](
               case Failure(err: CASMismatchException) =>
                 // Recurse to try again
                 remove(elem)
-              case Failure(err: KeyNotFoundException) => false
-              case Failure(err)                       => throw err
+              case Failure(err: DocumentNotFoundException) => false
+              case Failure(err)                            => throw err
             }
           }
         }
 
-      case Failure(_: KeyNotFoundException) => false
-      case Failure(err)                     => throw err
+      case Failure(_: DocumentNotFoundException) => false
+      case Failure(err)                          => throw err
     }
 
     out
@@ -95,7 +95,7 @@ class CouchbaseSet[T](
 
     result match {
       case Success(_) =>
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         retryIfDocDoesNotExist(f)
       case Failure(err) => throw err
@@ -126,9 +126,9 @@ class CouchbaseSet[T](
     val result = op.flatMap(result => result.contentAs[Int](0))
 
     result match {
-      case Success(count)                   => count
-      case Failure(_: KeyNotFoundException) => 0
-      case Failure(err)                     => throw err
+      case Success(count)                        => count
+      case Failure(_: DocumentNotFoundException) => 0
+      case Failure(err)                          => throw err
     }
   }
 
@@ -140,9 +140,9 @@ class CouchbaseSet[T](
       .map(array => array.toSeq.toSet.asInstanceOf[Set[T]])
 
     result match {
-      case Success(values: Set[T])          => values
-      case Failure(_: KeyNotFoundException) => Set.empty[T]
-      case Failure(err)                     => throw err
+      case Success(values: Set[T])               => values
+      case Failure(_: DocumentNotFoundException) => Set.empty[T]
+      case Failure(err)                          => throw err
     }
   }
 
@@ -165,7 +165,7 @@ class CouchbaseSet[T](
 
     result match {
       case Success(_) => this
-      case Failure(_: KeyNotFoundException) =>
+      case Failure(_: DocumentNotFoundException) =>
         initialize()
         this.+=(elem)
       case Failure(err: MultiMutationException) =>

@@ -155,7 +155,7 @@ class LoggingEventConsumerTest {
     }
 
     @Override
-    protected void injectExportableParams(Map<String, Object> data) {
+    public void injectExportableParams(Map<String, Object> data) {
       data.putAll(this.data);
     }
   }

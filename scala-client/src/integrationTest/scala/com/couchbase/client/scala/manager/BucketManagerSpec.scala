@@ -17,7 +17,7 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 
-import com.couchbase.client.core.error.KeyNotFoundException
+import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
@@ -131,7 +131,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(collection.exists(id).get.exists)
     buckets.flushBucket(bucketName).get
 
-    waitUntilThrows(classOf[KeyNotFoundException], () => collection.get(id).get)
+    waitUntilThrows(classOf[DocumentNotFoundException], () => collection.get(id).get)
   }
 
   @Test

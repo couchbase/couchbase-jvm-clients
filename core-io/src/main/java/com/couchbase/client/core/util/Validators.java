@@ -16,7 +16,12 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
+
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Common validators used throughout the client.
@@ -41,6 +46,14 @@ public class Validators {
     }
   }
 
+  public static void notNull(final Object input, final String identifier, final Supplier<ErrorContext> errorContext) {
+    try {
+      notNull(input, identifier);
+    } catch (Exception cause) {
+      throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
+    }
+  }
+
   /**
    * Check if the given string is not null or empty.
    *
@@ -53,6 +66,14 @@ public class Validators {
   public static void notNullOrEmpty(final String input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw new IllegalArgumentException(identifier + " cannot be null or empty");
+    }
+  }
+
+  public static void notNullOrEmpty(final String input, final String identifier, final Supplier<ErrorContext> errorContext) {
+    try {
+      notNullOrEmpty(input, identifier);
+    } catch (Exception cause) {
+      throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
   }
 

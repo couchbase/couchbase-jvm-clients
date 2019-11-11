@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.datastructures;
 
-import com.couchbase.client.core.error.KeyNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -27,7 +27,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static junit.framework.TestCase.assertNotNull;
@@ -72,7 +71,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     void after() {
          try {
              collection.remove(uuid);
-         } catch (KeyNotFoundException e) {
+         } catch (DocumentNotFoundException e) {
              // that's fine
          }
     }
@@ -226,7 +225,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
         Iterator<Long> it = list.iterator();
         assertFalse(it.hasNext());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldBeAbleToStartWithEmptyIteratorAndAdd() {
@@ -267,7 +266,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         assertEquals(list.size(), 5);
         list.clear();
         assertTrue(list.isEmpty());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldAllowMultipleClears() {
@@ -276,7 +275,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         assertEquals(list.size(), 5);
         list.clear();
         assertTrue(list.isEmpty());
-        assertThrows(KeyNotFoundException.class, () -> collection.get(uuid));
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
         assertDoesNotThrow(() -> list.clear());
     }
     @Test
