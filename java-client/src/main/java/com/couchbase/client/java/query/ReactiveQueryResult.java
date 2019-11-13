@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -58,14 +59,23 @@ public class ReactiveQueryResult {
 	 * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to the
 	 * requested entity class
 	 *
-	 *
-	 * The flux can complete successfully or throw
-	 * - {@link DecodingFailedException } when the decoding cannot be completed successfully
-	 *
 	 * @param target target class for converting the query row
 	 * @return {@link Flux}
+   * @throws DecodingFailedException (async) if the decoding cannot be completed successfully
 	 */
 	public <T> Flux<T> rowsAs(Class<T> target) {
+		return response.rows().map(n -> serializer.deserialize(target, n.data()));
+	}
+
+  /**
+   * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to the
+   * requested entity type
+   *
+   * @param target target type for converting the query row
+   * @return {@link Flux}
+   * @throws DecodingFailedException (async) if the decoding cannot be completed successfully
+   */
+	public <T> Flux<T> rowsAs(TypeRef<T> target) {
 		return response.rows().map(n -> serializer.deserialize(target, n.data()));
 	}
 

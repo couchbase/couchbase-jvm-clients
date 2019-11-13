@@ -16,15 +16,16 @@
 
 package com.couchbase.client.java.query;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The result of a N1QL query, including rows and associated metadata.
@@ -78,12 +79,26 @@ public class QueryResult {
     }
 
     /**
-     * Returns all rows, converted into the target class.
+     * Returns all rows, converted into instances of the target class.
      *
      * @param target the target class to deserialize into.
      * @throws DecodingFailedException if any row could not be successfully deserialized.
      */
     public <T> List<T> rowsAs(final Class<T> target) {
+        final List<T> converted = new ArrayList<>(rows.size());
+        for (QueryChunkRow row : rows) {
+            converted.add(serializer.deserialize(target, row.data()));
+        }
+        return converted;
+    }
+
+    /**
+     * Returns all rows, converted into instances of the target type.
+     *
+     * @param target the target type to deserialize into.
+     * @throws DecodingFailedException if any row could not be successfully deserialized.
+     */
+    public <T> List<T> rowsAs(final TypeRef<T> target) {
         final List<T> converted = new ArrayList<>(rows.size());
         for (QueryChunkRow row : rows) {
             converted.add(serializer.deserialize(target, row.data()));

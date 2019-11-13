@@ -16,34 +16,59 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JavaType;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.EncodingFailedException;
-import com.couchbase.client.java.json.RepackagedJsonValueModule;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValueModule;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 /**
- * The default JSON serializer.
- *
- * @implNote The serializer is backed by a repackaged version of Jackson,
- * but this is an implementation detail that users should not depend on.
+ * A serializer backed by a user-provided Jackson {@code ObjectMapper}.
  * <p>
- * Be aware that this serializer does not recognize standard Jackson annotations.
- * @see JacksonJsonSerializer
+ * In order to use this class you must add Jackson to your class path.
+ * <p>
+ * Make sure to register {@link JsonValueModule} with your {@code ObjectMapper}
+ * so it can handle Couchbase {@link JsonObject} instances if desired.
+ * <p>
+ * Example usage:
+ * <pre>
+ * ObjectMapper mapper = new ObjectMapper();
+ * mapper.registerModule(new JsonValueModule());
+ *
+ * ClusterEnvironment env = ClusterEnvironment.builder()
+ *     .jsonSerializer(new JacksonJsonSerializer(mapper))
+ *     .build();
+ * </pre>
+ * <p>
+ *
+ * @see JsonValueModule
  */
-public class DefaultJsonSerializer implements JsonSerializer {
+public class JacksonJsonSerializer implements JsonSerializer {
+  private final ObjectMapper mapper;
 
-  private final ObjectMapper mapper = new ObjectMapper();
-
-  public static DefaultJsonSerializer create() {
-    return new DefaultJsonSerializer();
+  /**
+   * Returns a new instance backed by a the given ObjectMapper.
+   */
+  public static JacksonJsonSerializer create(ObjectMapper mapper) {
+    return new JacksonJsonSerializer(mapper);
   }
 
-  private DefaultJsonSerializer() {
-    mapper.registerModule(new RepackagedJsonValueModule());
+  /**
+   * Returns a new instance backed by a default ObjectMapper.
+   */
+  public static JacksonJsonSerializer create() {
+    final ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JsonValueModule());
+    return create(mapper);
+  }
+
+  private JacksonJsonSerializer(ObjectMapper mapper) {
+    this.mapper = requireNonNull(mapper);
   }
 
   @Override
@@ -83,5 +108,4 @@ public class DefaultJsonSerializer implements JsonSerializer {
           + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
     }
   }
-
 }

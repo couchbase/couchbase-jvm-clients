@@ -16,8 +16,17 @@
 
 package com.couchbase.client.java.codec;
 
-class DefaultJsonSerializerTest extends JsonSerializerTestBase {
-  private static final JsonSerializer serializer = DefaultJsonSerializer.create();
+import com.couchbase.client.java.json.JsonValueModule;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+class JacksonJsonSerializerTest extends JsonSerializerTestBase {
+  private static final JsonSerializer serializer = createSerializer();
+
+  private static JsonSerializer createSerializer() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JsonValueModule());
+    return JacksonJsonSerializer.create(mapper);
+  }
 
   @Override
   protected JsonSerializer serializer() {

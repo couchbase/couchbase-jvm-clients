@@ -18,10 +18,12 @@ package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
-import com.couchbase.client.java.codec.JsonTranscoder;
+import com.couchbase.client.java.codec.JacksonJsonSerializer;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
 
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ClusterEnvironment extends CoreEnvironment {
@@ -31,8 +33,23 @@ public class ClusterEnvironment extends CoreEnvironment {
 
   private ClusterEnvironment(Builder builder) {
     super(builder);
-    this.jsonSerializer = builder.jsonSerializer == null ? DefaultJsonSerializer.create() : builder.jsonSerializer;
-    this.transcoder = builder.transcoder == null ? JsonTranscoder.create(jsonSerializer) : builder.transcoder;
+    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, () -> newDefaultSerializer());
+    this.transcoder = defaultIfNull(builder.transcoder, () -> JsonTranscoder.create(jsonSerializer));
+  }
+
+  private JsonSerializer newDefaultSerializer() {
+    // Be very careful not to reference any classes from the optional Jackson library
+    // otherwise users will get NoClassDefFoundError when Jackson is absent.
+    return jacksonIsPresent() ? JacksonJsonSerializer.create() : DefaultJsonSerializer.create();
+  }
+
+  private boolean jacksonIsPresent() {
+    try {
+      Class.forName("com.fasterxml.jackson.databind.ObjectMapper", false, getClass().getClassLoader());
+      return true;
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
   }
 
   @Override
@@ -77,10 +94,17 @@ public class ClusterEnvironment extends CoreEnvironment {
     }
 
     /**
-     * Allows to override the default serializer going to be used for all JSON values.
+     * Sets the default serializer for converting between JSON and Java objects.
+     * <p>
+     * Providing your own serializer gives you complete control over the conversion.
+     * <p>
+     * If this method is not called, the client's behavior depends on whether Jackson is in
+     * the class path. If Jackson is present, an instance of {@link JacksonJsonSerializer}
+     * will be used. Otherwise the client will fall back to {@link DefaultJsonSerializer}.
      *
      * @param jsonSerializer the serializer used for all JSON values.
      * @return this builder for chaining purposes.
+     * @see JacksonJsonSerializer
      */
     public Builder jsonSerializer(final JsonSerializer jsonSerializer) {
       notNull(jsonSerializer, "Json Serializer");

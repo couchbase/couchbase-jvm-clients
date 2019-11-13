@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.java.codec.Transcoder;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -105,12 +106,24 @@ public class GetResult {
   }
 
   /**
-   * Decodes the content of the document into a the target class.
+   * Decodes the content of the document into an instance of the target class.
    *
    * @param target the target class to decode the encoded content into.
    */
-  @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(final Class<T> target) {
+    return transcoder.decode(target, content, flags);
+  }
+
+  /**
+   * Decodes the content of the document into an instance of the target type.
+   * Example usage:
+   * <pre>
+   * List&lt;String> strings = result.contentAs(new TypeRef&lt;List&lt;String>>(){});
+   * </pre>
+   *
+   * @param target the type to decode the encoded content into.
+   */
+  public <T> T contentAs(final TypeRef<T> target) {
     return transcoder.decode(target, content, flags);
   }
 

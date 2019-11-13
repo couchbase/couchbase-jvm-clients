@@ -18,6 +18,7 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -47,6 +48,10 @@ public class ReactiveAnalyticsResult {
     }
 
     public <T> Flux<T> rowsAs(final Class<T> target) {
+        return response.rows().map(row -> serializer.deserialize(target, row.data()));
+    }
+
+    public <T> Flux<T> rowsAs(final TypeRef<T> target) {
         return response.rows().map(row -> serializer.deserialize(target, row.data()));
     }
 

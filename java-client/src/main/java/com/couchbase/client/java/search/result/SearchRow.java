@@ -18,6 +18,7 @@ package com.couchbase.client.java.search.result;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -116,6 +117,15 @@ public class SearchRow {
      * @return the fields mapped to the given target type
      */
     public <T> T fieldsAs(final Class<T> target) {
+        return serializer.deserialize(target, fields);
+    }
+
+    /**
+     * The value of each requested field (as defined in the {@link SearchQuery}.
+     *
+     * @return the fields mapped to the given target type
+     */
+    public <T> T fieldsAs(final TypeRef<T> target) {
         return serializer.deserialize(target, fields);
     }
 

@@ -19,22 +19,18 @@ package com.couchbase.client.java.codec;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
+import static java.util.Objects.requireNonNull;
+
 public class JsonTranscoder implements Transcoder {
 
-  public static JsonTranscoder INSTANCE = JsonTranscoder.create();
-
   private final JsonSerializer serializer;
-
-  public static JsonTranscoder create() {
-    return create(DefaultJsonSerializer.create());
-  }
 
   public static JsonTranscoder create(JsonSerializer serializer) {
     return new JsonTranscoder(serializer);
   }
 
   private JsonTranscoder(final JsonSerializer serializer) {
-    this.serializer = serializer;
+    this.serializer = requireNonNull(serializer);
   }
 
   @Override
@@ -60,6 +56,11 @@ public class JsonTranscoder implements Transcoder {
         "If you want to read already encoded JSON, use the RawJsonTranscoder, otherwise read it " +
         "with the RawBinaryTranscoder!");
     }
+    return serializer.deserialize(target, input);
+  }
+
+  @Override
+  public <T> T decode(TypeRef<T> target, byte[] input, int flags) {
     return serializer.deserialize(target, input);
   }
 

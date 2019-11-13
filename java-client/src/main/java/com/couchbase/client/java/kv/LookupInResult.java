@@ -18,14 +18,12 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.time.Duration;
 import java.util.Arrays;
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 /**
  * This result is returned from successful KeyValue subdocument lookup responses.
@@ -71,14 +69,28 @@ public class LookupInResult {
   // TODO these should return null if exists is false
 
   /**
-   * Decodes the content at the given index into the target class.
+   * Decodes the content at the given index into an instance of the target class.
    *
    * @param index the index of the subdoc value to decode.
    * @param target the target type to decode into.
    * @return the decoded content into the generic type requested.
    */
-  @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
+    return serializer.deserialize(target, getFieldAtIndex(index).value());
+  }
+
+  /**
+   * Decodes the content at the given index into an instance of the target type.
+   *
+   * @param index the index of the subdoc value to decode.
+   * @param target the target type to decode into.
+   * @return the decoded content into the generic type requested.
+   */
+  public <T> T contentAs(int index, final TypeRef<T> target) {
+    return serializer.deserialize(target, getFieldAtIndex(index).value());
+  }
+
+  private SubdocField getFieldAtIndex(int index) {
     if (index >= 0 && index < encoded.length) {
       SubdocField value = encoded[index];
       if (value == null) {
@@ -87,7 +99,7 @@ public class LookupInResult {
       value.error().map(err -> {
         throw err;
       });
-      return serializer.deserialize(target, value.value());
+      return value;
     } else {
       throw new IllegalArgumentException("Index " + index + " is invalid");
     }

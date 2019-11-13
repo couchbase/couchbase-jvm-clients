@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.util.ArrayList;
@@ -71,12 +72,26 @@ public class AnalyticsResult {
   }
 
   /**
-   * Returns all rows, converted into the target class.
+   * Returns all rows, converted into instances of the target class.
    *
    * @param target the target class to deserialize into.
    * @throws DecodingFailedException if any row could not be successfully deserialized.
    */
   public <T> List<T> rowsAs(final Class<T> target) {
+    final List<T> converted = new ArrayList<>(rows.size());
+    for (AnalyticsChunkRow row : rows) {
+      converted.add(serializer.deserialize(target, row.data()));
+    }
+    return converted;
+  }
+
+  /**
+   * Returns all rows, converted into instances of the target type.
+   *
+   * @param target the target type to deserialize into.
+   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   */
+  public <T> List<T> rowsAs(final TypeRef<T> target) {
     final List<T> converted = new ArrayList<>(rows.size());
     for (AnalyticsChunkRow row : rows) {
       converted.add(serializer.deserialize(target, row.data()));

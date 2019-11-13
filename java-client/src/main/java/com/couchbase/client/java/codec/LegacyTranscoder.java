@@ -21,22 +21,18 @@ import com.couchbase.client.java.CommonOptions;
 
 import java.nio.charset.StandardCharsets;
 
+import static java.util.Objects.requireNonNull;
+
 public class LegacyTranscoder implements Transcoder {
 
-  public static LegacyTranscoder INSTANCE = LegacyTranscoder.create();
-
   private final JsonSerializer jsonSerializer;
-
-  public static LegacyTranscoder create() {
-    return create(DefaultJsonSerializer.create());
-  }
 
   public static LegacyTranscoder create(JsonSerializer jsonSerializer) {
     return new LegacyTranscoder(jsonSerializer);
   }
 
   private LegacyTranscoder(final JsonSerializer jsonSerializer) {
-    this.jsonSerializer = jsonSerializer;
+    this.jsonSerializer = requireNonNull(jsonSerializer);
   }
 
   @Override
@@ -65,6 +61,11 @@ public class LegacyTranscoder implements Transcoder {
     } else {
       return jsonSerializer.deserialize(target, input);
     }
+  }
+
+  @Override
+  public <T> T decode(TypeRef<T> target, byte[] input, int flags) {
+    return jsonSerializer.deserialize(target, input);
   }
 
 }

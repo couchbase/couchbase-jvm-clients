@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.DecodingFailedException;
+
 /**
  * The transcoder is responsible for transcoding KV binary packages between their binary and their java object
  * representation.
@@ -35,10 +37,22 @@ public interface Transcoder {
    *
    * @param target the target type to decode.
    * @param input the wire representation to decode.
-   * @oaram flags the flags on the wire
+   * @param flags the flags on the wire
    * @return the decoded entity.
    */
   <T> T decode(Class<T> target, byte[] input, int flags);
+
+  /**
+   * Decodes the wire representation into the entity based on the data format.
+   *
+   * @param target the target type to decode.
+   * @param input the wire representation to decode.
+   * @param flags the flags on the wire
+   * @return the decoded entity.
+   */
+  default <T> T decode(TypeRef<T> target, byte[] input, int flags) {
+    throw new DecodingFailedException(getClass().getSimpleName() + " does not support decoding via TypeRef.");
+  }
 
   /**
    * Represents the tuple of encoded value and flags to be used on the wire.

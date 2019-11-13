@@ -22,6 +22,14 @@
             <artifactId>core-io</artifactId>
         </dependency>
 
+        <!-- External, Optional Dependencies -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>com.couchbase.client</groupId>

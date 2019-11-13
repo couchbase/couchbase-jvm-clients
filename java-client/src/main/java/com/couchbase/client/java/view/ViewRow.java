@@ -16,17 +16,14 @@
 
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.error.ViewServiceException;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.json.MapperException;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.json.JacksonTransformers;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.codec.TypeRef;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -54,8 +51,8 @@ public class ViewRow {
     this.raw = raw;
     this.serializer = serializer;
     try {
-      this.rootNode = JacksonTransformers.MAPPER.readTree(raw);
-    } catch (IOException e) {
+      this.rootNode = Mapper.decodeIntoTree(raw);
+    } catch (MapperException e) {
       throw new ViewServiceException("Could not parse row!");
     }
   }
@@ -81,6 +78,17 @@ public class ViewRow {
   }
 
   /**
+   * Decodes the key into the given target type if present.
+   *
+   * @param target the target type.
+   * @param <T> the generic type to decode into.
+   * @return the decoded key, if present.
+   */
+  public <T> Optional<T> keyAs(final TypeRef<T> target) {
+    return decode(target, "key");
+  }
+
+  /**
    * Decodes the value into the given target type if present.
    *
    * @param target the target type.
@@ -92,26 +100,53 @@ public class ViewRow {
   }
 
   /**
+   * Decodes the value into the given target type if present.
+   *
+   * @param target the target type.
+   * @param <T> the generic type to decode into.
+   * @return the decoded value, if present.
+   */
+  public <T> Optional<T> valueAs(final TypeRef<T> target) {
+    return decode(target, "value");
+  }
+
+  /**
    * Helper method to turn a given path of the raw data into the target class.
    *
    * @param target the target class to decode into.
    * @param path the path of the raw json.
-   * @param <T> the generic type to decide into.
+   * @param <T> the generic type to decode into.
    * @return the generic decoded object if present and not null.
    */
   private <T> Optional<T> decode(final Class<T> target, final String path) {
-    try {
-      JsonNode subNode = rootNode.path(path);
-      if (subNode == null || subNode.isNull() || subNode.isMissingNode()) {
-        return Optional.empty();
-      }
+    return findNonNullNode(path).map(subNode -> {
       // daschl: I know this is a bit wasteful, but key and value are sub-structures of the
       // overall result and to make use of the serializer we need to turn it into a byte array
-      byte[] raw = JacksonTransformers.MAPPER.writeValueAsBytes(subNode);
-      return Optional.of(serializer.deserialize(target, raw));
-    } catch (JsonProcessingException e) {
-      throw new DecodingFailedException("Could not decode " + path +" in view row!");
-    }
+      byte[] raw = Mapper.encodeAsBytes(subNode);
+      return serializer.deserialize(target, raw);
+    });
+  }
+
+  /**
+   * Helper method to turn a given path of the raw data into the target type.
+   *
+   * @param target the target type to decode into.
+   * @param path the path of the raw json.
+   * @param <T> the generic type to decode into.
+   * @return the generic decoded object if present and not null.
+   */
+  private <T> Optional<T> decode(final TypeRef<T> target, final String path) {
+    return findNonNullNode(path).map(subNode -> {
+      // daschl: I know this is a bit wasteful, but key and value are sub-structures of the
+      // overall result and to make use of the serializer we need to turn it into a byte array
+      byte[] raw = Mapper.encodeAsBytes(subNode);
+      return serializer.deserialize(target, raw);
+    });
+  }
+
+  private Optional<JsonNode> findNonNullNode(String path) {
+    JsonNode subNode = rootNode.get(path);
+    return subNode == null || subNode.isNull() ? Optional.empty() : Optional.of(subNode);
   }
 
   @Override

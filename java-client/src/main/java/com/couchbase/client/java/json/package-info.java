@@ -15,18 +15,6 @@
  */
 
 /**
- * Holds all classes that are needed for the Couchbase Java SDK.
- */
-
-/**
- * Utilities and interfaces for encoding and decoding.
- */
-
-/**
- * Holds classes related to the environment and its configuration.
- */
-
-/**
- * JSON encoding and decoding, as well as marker interfaces and classes.
+ * JSON encoding and decoding.
  */
 package com.couchbase.client.java.json;

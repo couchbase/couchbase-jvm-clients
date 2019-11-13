@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class JsonTranscoderTest {
 
-  private static final Transcoder JSON_TRANSCODER = JsonTranscoder.create();
+  private static final Transcoder JSON_TRANSCODER = JsonTranscoder.create(DefaultJsonSerializer.create());
 
   @Test
   void encodesJsonObject() {
