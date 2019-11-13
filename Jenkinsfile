@@ -38,8 +38,6 @@ pipeline {
                     }
                 }
 
-                // TODO: ANY CODE QUALITY TOOLING GOES HERE e.g LINTING
-
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
             }
         }
@@ -48,6 +46,13 @@ pipeline {
             steps {
                 cleanWs()
                 buildsAndTests(PLATFORMS)
+            }
+            post {
+                always {
+                    // Process the Junit test results
+                    junit 'couchbase-jvm-clients/java-client/target/surefire-reports/*.xml'
+                    junit 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
+                }
             }
         }
         stage('package') {
@@ -145,13 +150,6 @@ pipeline {
 ////                    archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
 //                }
 //            }
-        }
-    }
-    post {
-        always {
-            // Process the Junit test results
-            junit 'couchbase-jvm-clients/java-client/target/surefire-reports/*.xml'
-            junit 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
         }
     }
 }
