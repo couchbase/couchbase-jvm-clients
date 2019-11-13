@@ -60,6 +60,14 @@ public class KeyValueLocator implements Locator {
       KeyValueRequest r = (KeyValueRequest) request;
       String bucket = r.bucket();
       BucketConfig bucketConfig = config.bucketConfig(bucket);
+
+      if (bucketConfig == null) {
+        // Since a bucket is opened lazily, it might not be available yet (or for some
+        // other reason the config is gone) - send it into retry!
+        RetryOrchestrator.maybeRetry(ctx, request, RetryReason.BUCKET_NOT_AVAILABLE);
+        return;
+      }
+
       if (bucketConfig instanceof CouchbaseBucketConfig) {
         couchbaseBucket(r, nodes, (CouchbaseBucketConfig) bucketConfig, ctx);
       } else if (bucketConfig instanceof MemcachedBucketConfig) {

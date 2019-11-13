@@ -112,7 +112,7 @@ public interface ConfigurationProvider  {
    *              already present.
    * @return once refreshed completes the mono (or fails if error).
    */
-  Mono<Void> refreshCollectionMap(String bucket, boolean force);
+  void refreshCollectionMap(String bucket, boolean force);
 
   /**
    * Returns true if an initial global config load attempt is in progress.

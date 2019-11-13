@@ -110,10 +110,8 @@ public class AsyncScope {
    *
    * @return the default collection once opened.
    */
-  CompletableFuture<AsyncCollection> defaultCollection() {
-    return CompletableFuture.completedFuture(
-      new AsyncCollection(CollectionIdentifier.DEFAULT_COLLECTION, scopeName, bucketName, core, environment)
-    );
+  AsyncCollection defaultCollection() {
+    return new AsyncCollection(CollectionIdentifier.DEFAULT_COLLECTION, scopeName, bucketName, core, environment);
   }
 
   /**
@@ -123,19 +121,9 @@ public class AsyncScope {
    * @return the requested collection if successful.
    */
   @Stability.Volatile
-  public CompletableFuture<AsyncCollection> collection(final String name) {
-    notNullOrEmpty(name, "Name");
-
-    if (name.equals(CollectionIdentifier.DEFAULT_COLLECTION)) {
-      throw new IllegalArgumentException("Referencing the default collection by name is not allowed, please use the" +
-        " provided explicit methods instead");
-    }
-
-    return core
-      .configurationProvider()
-      .refreshCollectionMap(bucketName, false)
-      .then(Mono.defer(() -> Mono.just(new AsyncCollection(name, scopeName, bucketName, core, environment))))
-      .toFuture();
+  public AsyncCollection collection(final String name) {
+    core.configurationProvider().refreshCollectionMap(bucketName, false);
+    return new AsyncCollection(name, scopeName, bucketName, core, environment);
   }
 
 }

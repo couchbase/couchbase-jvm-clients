@@ -68,19 +68,19 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
     * @param scopeName the name of the scope
     */
   @Stability.Volatile
-  def scope(scopeName: String): SMono[ReactiveScope] = {
-    SMono.fromFuture(async.scope(scopeName)).map(v => new ReactiveScope(v, async.name))
+  def scope(scopeName: String): ReactiveScope = {
+    new ReactiveScope(async.scope(scopeName), async.name)
   }
 
   /** Opens and returns the default Couchbase scope. */
   @Stability.Volatile
-  def defaultScope: SMono[ReactiveScope] = {
+  def defaultScope: ReactiveScope = {
     scope(DefaultResources.DefaultScope)
   }
 
   /** Returns the Couchbase default collection resource. */
-  def defaultCollection: SMono[ReactiveCollection] = {
-    scope(DefaultResources.DefaultScope).flatMap(v => v.defaultCollection)
+  def defaultCollection: ReactiveCollection = {
+    scope(DefaultResources.DefaultScope).defaultCollection
   }
 
   /** Opens a Couchbase collection resource on the default scope.
@@ -90,8 +90,8 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
     * @return a created collection resource
     */
   @Stability.Volatile
-  def collection(collectionName: String): SMono[ReactiveCollection] = {
-    scope(DefaultResources.DefaultScope).flatMap(v => v.collection(collectionName))
+  def collection(collectionName: String): ReactiveCollection = {
+    scope(DefaultResources.DefaultScope).collection(collectionName)
   }
 
   /** Performs a view query against the cluster.

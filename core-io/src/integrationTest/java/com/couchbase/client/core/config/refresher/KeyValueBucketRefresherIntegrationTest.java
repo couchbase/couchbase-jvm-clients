@@ -72,7 +72,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
       }
     };
 
-    core.openBucket(config().bucketname()).block();
+    core.openBucket(config().bucketname());
     refresher.register(config().bucketname()).block();
     long expected = env.ioConfig().configPollInterval().toNanos();
 

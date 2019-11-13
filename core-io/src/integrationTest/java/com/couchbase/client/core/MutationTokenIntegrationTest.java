@@ -45,7 +45,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
   static void beforeAll() {
     env = environment().ioConfig(IoConfig.mutationTokensEnabled(true)).build();
     core = Core.create(env, authenticator(), seedNodes());
-    core.openBucket(config().bucketname()).block();
+    core.openBucket(config().bucketname());
     collectionIdentifier = CollectionIdentifier.fromDefault(config().bucketname());
   }
 

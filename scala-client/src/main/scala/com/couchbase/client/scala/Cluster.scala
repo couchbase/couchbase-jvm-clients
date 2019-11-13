@@ -92,10 +92,7 @@ class Cluster private[scala] (
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): Bucket = {
-    AsyncUtils
-      .block(async.bucket(bucketName))
-      .map(new Bucket(_))
-      .get
+    new Bucket(async.bucket(bucketName))
   }
 
   import com.couchbase.client.scala.util.DurationConversions._

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -56,11 +57,13 @@ class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
     ProposedBucketConfigInspectingProvider inspectingProvider = new ProposedBucketConfigInspectingProvider(core.configurationProvider());
     ClusterManagerBucketRefresher refresher = new ClusterManagerBucketRefresher(inspectingProvider, core);
 
-    core.openBucket(config().bucketname()).block();
+    core.openBucket(config().bucketname());
+
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
 
     refresher.register(config().bucketname()).block();
 
-    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 1);
+    waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 1);
 
     ProposedBucketConfigContext proposed = inspectingProvider.proposedConfigs().get(0);
     assertEquals(config().bucketname(), proposed.bucketName());

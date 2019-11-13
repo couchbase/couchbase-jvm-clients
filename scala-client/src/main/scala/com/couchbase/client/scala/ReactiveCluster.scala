@@ -207,8 +207,8 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @param bucketName the name of the bucket to open
     */
-  def bucket(bucketName: String): SMono[ReactiveBucket] = {
-    SMono.fromFuture(async.bucket(bucketName)).map(v => new ReactiveBucket(v))
+  def bucket(bucketName: String): ReactiveBucket = {
+    new ReactiveBucket(async.bucket(bucketName))
   }
 
   /** Shutdown all cluster resources.search

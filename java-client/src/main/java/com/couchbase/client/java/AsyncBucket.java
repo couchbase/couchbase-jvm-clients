@@ -130,17 +130,8 @@ public class AsyncBucket {
    * @return the {@link AsyncScope} once opened.
    */
   @Stability.Volatile
-  public CompletableFuture<AsyncScope> scope(final String name) {
-    notNullOrEmpty(name, "Scope");
-
-    if (name.equals(CollectionIdentifier.DEFAULT_SCOPE)) {
-      throw new IllegalArgumentException("Referencing the default scope by name is not allowed, please use the" +
-        " provided explicit methods instead");
-    }
-
-    return CompletableFuture.completedFuture(
-      new AsyncScope(name, this.name, core, environment)
-    );
+  public AsyncScope scope(final String name) {
+    return new AsyncScope(name, this.name, core, environment);
   }
 
   /**
@@ -149,10 +140,8 @@ public class AsyncBucket {
    * @return the {@link AsyncScope} once opened.
    */
   @Stability.Volatile
-  public CompletableFuture<AsyncScope> defaultScope() {
-    return CompletableFuture.completedFuture(
-      new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment)
-    );
+  public AsyncScope defaultScope() {
+    return new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment);
   }
 
   /**
@@ -160,8 +149,8 @@ public class AsyncBucket {
    *
    * @return the {@link AsyncCollection} once opened.
    */
-  public CompletableFuture<AsyncCollection> defaultCollection() {
-    return defaultScope().thenCompose(AsyncScope::defaultCollection);
+  public AsyncCollection defaultCollection() {
+    return defaultScope().defaultCollection();
   }
 
   /**
@@ -170,9 +159,8 @@ public class AsyncBucket {
    * @return the {@link AsyncCollection} once opened.
    */
   @Stability.Volatile
-  public CompletableFuture<AsyncCollection> collection(final String collection) {
-    notNullOrEmpty(collection, "Collection");
-    return defaultScope().thenCompose(scope -> scope.collection(collection));
+  public AsyncCollection collection(final String collection) {
+    return defaultScope().collection(collection);
   }
 
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName) {

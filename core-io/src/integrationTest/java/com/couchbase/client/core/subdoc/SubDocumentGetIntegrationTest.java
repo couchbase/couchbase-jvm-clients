@@ -48,7 +48,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   static void beforeAll() {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
-    core.openBucket(config().bucketname()).block();
+    core.openBucket(config().bucketname());
   }
 
   @AfterAll

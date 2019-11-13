@@ -79,10 +79,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     */
   @Stability.Volatile
   def scope(scopeName: String): Scope = {
-    AsyncUtils
-      .block(async.scope(scopeName))
-      .map(asyncScope => new Scope(asyncScope, async.name))
-      .get
+    new Scope(async.scope(scopeName), async.name)
   }
 
   /** Opens and returns the default Couchbase scope. */

@@ -417,11 +417,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param request the request to retry.
    */
   private void handleOutdatedCollection(final KeyValueRequest<Response> request) {
-    final long start = System.nanoTime();
-    ioContext.core().configurationProvider().refreshCollectionMap(request.bucket(), true).subscribe(v -> {}, err -> {
-      Duration duration = Duration.ofNanos(System.nanoTime() - start);
-      eventBus.publish(new CollectionMapRefreshFailedEvent(duration, ioContext, err));
-    });
+    ioContext.core().configurationProvider().refreshCollectionMap(request.bucket(), true);
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_COLLECTION_OUTDATED);
   }
 

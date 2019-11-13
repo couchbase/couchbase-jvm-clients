@@ -42,12 +42,12 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
   def name = async.name
 
   /** Opens and returns the default collection on this scope. */
-  private[scala] def defaultCollection: SMono[ReactiveCollection] = {
+  private[scala] def defaultCollection: ReactiveCollection = {
     collection(DefaultResources.DefaultCollection)
   }
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
-  def collection(collectionName: String): SMono[ReactiveCollection] = {
-    SMono.fromFuture(async.collection(collectionName)).map(v => new ReactiveCollection(v))
+  def collection(collectionName: String): ReactiveCollection = {
+    new ReactiveCollection(async.collection(collectionName))
   }
 }

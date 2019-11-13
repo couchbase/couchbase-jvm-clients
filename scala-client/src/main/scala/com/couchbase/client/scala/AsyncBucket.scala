@@ -65,21 +65,19 @@ class AsyncBucket private[scala] (
     * @param scopeName the name of the scope
     */
   @Stability.Volatile
-  def scope(scopeName: String): Future[AsyncScope] = {
-    Future {
-      new AsyncScope(scopeName, name, core, environment)
-    }
+  def scope(scopeName: String): AsyncScope = {
+    new AsyncScope(scopeName, name, core, environment)
   }
 
   /** Opens and returns the default Couchbase scope. */
   @Stability.Volatile
-  def defaultScope: Future[AsyncScope] = {
+  def defaultScope: AsyncScope = {
     scope(DefaultResources.DefaultScope)
   }
 
   /** Returns the Couchbase default collection resource. */
-  def defaultCollection: Future[AsyncCollection] = {
-    scope(DefaultResources.DefaultScope).flatMap(_.defaultCollection)
+  def defaultCollection: AsyncCollection = {
+    scope(DefaultResources.DefaultScope).defaultCollection
   }
 
   /** Opens a Couchbase collection resource on the default scope.
@@ -89,8 +87,8 @@ class AsyncBucket private[scala] (
     * @return a created collection resource
     */
   @Stability.Volatile
-  def collection(collectionName: String): Future[AsyncCollection] = {
-    scope(DefaultResources.DefaultScope).flatMap(_.collection(collectionName))
+  def collection(collectionName: String): AsyncCollection = {
+    scope(DefaultResources.DefaultScope).collection(collectionName)
   }
 
   /** Performs a view query against the cluster.

@@ -25,6 +25,7 @@ import com.couchbase.client.core.msg.diagnostics.PingKVRequest;
 import com.couchbase.client.core.msg.diagnostics.PingRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -242,14 +243,17 @@ public class HealthPinger {
                 state = PingServiceHealth.PingState.TIMEOUT;
               }
 
+              HostAndPort lastDispatchedTo = req.context().lastDispatchedTo();
+              HostAndPort lastDispatchedFrom = req.context().lastDispatchedFrom();
               return Mono.just(new PingServiceHealth(
-                      ServiceType.KV,
-                      state,
-                      id,
-                      TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.context().lastDispatchedFrom().toString(),
-                      req.context().lastDispatchedTo().toString(),
-                      bucket));
+                ServiceType.KV,
+                state,
+                id,
+                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
+                lastDispatchedFrom == null ? null : lastDispatchedFrom.toString(),
+                lastDispatchedTo == null ? null : lastDispatchedTo.toString(),
+                bucket
+              ));
             });
   }
 

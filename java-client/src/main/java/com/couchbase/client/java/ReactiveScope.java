@@ -19,7 +19,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import reactor.core.publisher.Mono;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -90,8 +89,8 @@ public class ReactiveScope {
    *
    * @return the default collection once opened.
    */
-  Mono<ReactiveCollection> defaultCollection() {
-    return Mono.fromFuture(asyncScope.defaultCollection()).map(ReactiveCollection::new);
+  ReactiveCollection defaultCollection() {
+    return new ReactiveCollection(asyncScope.defaultCollection());
   }
 
   /**
@@ -101,8 +100,8 @@ public class ReactiveScope {
    * @return the requested collection if successful.
    */
   @Stability.Volatile
-  public Mono<ReactiveCollection> collection(final String name) {
-    return Mono.fromFuture(asyncScope.collection(name)).map(ReactiveCollection::new);
+  public ReactiveCollection collection(final String name) {
+    return new ReactiveCollection(asyncScope.collection(name));
   }
 
 }

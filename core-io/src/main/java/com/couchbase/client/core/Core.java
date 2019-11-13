@@ -309,17 +309,15 @@ public class Core {
    * as the reason.
    */
   @Stability.Internal
-  public Mono<Void> openBucket(final String name) {
-    return Mono.defer(() -> {
-      long start = System.nanoTime();
-      return configurationProvider
-        .openBucket(name)
-        .doOnSuccess(ignored -> eventBus.publish(new BucketOpenedEvent(
+  public void openBucket(final String name) {
+    long start = System.nanoTime();
+    configurationProvider
+      .openBucket(name)
+      .subscribe(v -> {}, t -> {}, () -> eventBus.publish(new BucketOpenedEvent(
           Duration.ofNanos(System.nanoTime() - start),
           coreContext,
           name
         )));
-    });
   }
 
   /**

@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,8 +51,10 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
   static void beforeAll() {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
-    core.openBucket(config().bucketname()).block();
+    core.openBucket(config().bucketname());
     cid = CollectionIdentifier.fromDefault(config().bucketname());
+
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
   }
 
   @AfterAll

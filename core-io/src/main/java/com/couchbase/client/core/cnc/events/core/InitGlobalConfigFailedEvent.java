@@ -34,7 +34,7 @@ public class InitGlobalConfigFailedEvent extends AbstractEvent {
                                      Throwable cause) {
     super(severity, Category.CORE, duration, context);
     this.reason = reason;
-    if (reason == Reason.UNSUPPORTED) {
+    if (reason == Reason.UNSUPPORTED || reason == Reason.SHUTDOWN) {
       // We do not need a stack if it is simply unsupported, it just adds noise to the debug logs
       this.cause = null;
     } else {

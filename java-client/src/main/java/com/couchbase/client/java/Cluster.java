@@ -268,8 +268,7 @@ public class Cluster {
    * @return a {@link Bucket} once opened.
    */
   public Bucket bucket(final String name) {
-    AsyncBucket b = block(asyncCluster.bucket(name));
-    return new Bucket(b);
+    return new Bucket(asyncCluster.bucket(name));
   }
 
   /**

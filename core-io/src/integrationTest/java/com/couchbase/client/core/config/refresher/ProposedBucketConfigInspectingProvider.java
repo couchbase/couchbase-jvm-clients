@@ -81,8 +81,8 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public Mono<Void> refreshCollectionMap(String bucket, boolean force) {
-    return delegate.refreshCollectionMap(bucket, force);
+  public void refreshCollectionMap(String bucket, boolean force) {
+    delegate.refreshCollectionMap(bucket, force);
   }
 
   @Override

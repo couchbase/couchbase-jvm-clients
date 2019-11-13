@@ -26,21 +26,29 @@ import java.time.Duration;
  */
 public class CollectionMapRefreshFailedEvent extends AbstractEvent {
 
-  private final Throwable reason;
+  private final Throwable cause;
+  private final Reason reason;
 
-  public CollectionMapRefreshFailedEvent(Duration duration, Context context, Throwable reason) {
+  public CollectionMapRefreshFailedEvent(Duration duration, Context context, Throwable cause, Reason reason) {
     super(Severity.WARN, Category.CONFIG, duration, context);
+    this.cause = cause;
     this.reason = reason;
   }
 
   @Override
   public Throwable cause() {
-    return reason;
+    return cause;
   }
 
   @Override
   public String description() {
     return "Collection Map refresh failed: " + reason;
+  }
+
+  public enum Reason {
+    FAILED,
+    NOT_SUPPORTED,
+    UNKNOWN
   }
 
 }

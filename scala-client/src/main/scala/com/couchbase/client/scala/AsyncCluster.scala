@@ -98,10 +98,9 @@ class AsyncCluster(
     *
     * @param bucketName the name of the bucket to open
     */
-  def bucket(bucketName: String): Future[AsyncBucket] = {
-    FutureConversions
-      .javaMonoToScalaFuture(core.openBucket(bucketName))
-      .map(v => new AsyncBucket(bucketName, core, environment))
+  def bucket(bucketName: String): AsyncBucket = {
+    core.openBucket(bucketName)
+    new AsyncBucket(bucketName, core, environment)
   }
 
   /** Performs a N1QL query against the cluster.

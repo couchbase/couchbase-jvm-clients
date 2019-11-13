@@ -84,7 +84,11 @@ public enum RetryReason {
    * The underlying channel on the endpoint closed while this operation was still in-flight and we
    * do not have a response yet.
    */
-  CHANNEL_CLOSED_WHILE_IN_FLIGHT(false, false);
+  CHANNEL_CLOSED_WHILE_IN_FLIGHT(false, false),
+  /**
+   * If the bucket is not available, for example if it is currently in the process of being opened.
+   */
+  BUCKET_NOT_AVAILABLE(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

@@ -370,12 +370,10 @@ public class AsyncCluster {
    * @param name the name of the bucket to open.
    * @return a {@link AsyncBucket} once opened.
    */
-  public CompletableFuture<AsyncBucket> bucket(final String name) {
+  public AsyncBucket bucket(final String name) {
     notNullOrEmpty(name, "Name");
-    return core
-      .openBucket(name)
-      .thenReturn(new AsyncBucket(name, core, environment.get()))
-      .toFuture();
+    core.openBucket(name);
+    return new AsyncBucket(name, core, environment.get());
   }
 
   /**

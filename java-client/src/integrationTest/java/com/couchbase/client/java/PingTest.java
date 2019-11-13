@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
 import com.couchbase.client.core.diag.PingServiceHealth;
+import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -48,6 +50,9 @@ class PingTest extends JavaIntegrationTest {
   static void setup() {
     cluster = Cluster.connect(connectionString(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
+
+    // TODO: fix this hack once diagnostics and ping on all levels are stable
+    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
   }
 
   @AfterAll

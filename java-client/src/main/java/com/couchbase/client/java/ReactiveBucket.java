@@ -18,24 +18,18 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
-import com.couchbase.client.core.retry.FailFastRetryStrategy;
-import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
 import com.couchbase.client.java.manager.collection.ReactiveCollectionManager;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import static com.couchbase.client.java.diagnostics.PingOptions.pingOptions;
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.diagnostics.PingOptions.pingOptions;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
 /**
@@ -106,8 +100,8 @@ public class ReactiveBucket {
    * @return the {@link ReactiveScope} once opened.
    */
   @Stability.Volatile
-  public Mono<ReactiveScope> scope(final String name) {
-    return Mono.fromFuture(asyncBucket.scope(name)).map(ReactiveScope::new);
+  public ReactiveScope scope(final String name) {
+    return new ReactiveScope(asyncBucket.scope(name));
   }
 
   /**
@@ -116,8 +110,8 @@ public class ReactiveBucket {
    * @return the {@link ReactiveScope} once opened.
    */
   @Stability.Volatile
-  public Mono<ReactiveScope> defaultScope() {
-    return Mono.fromFuture(asyncBucket.defaultScope()).map(ReactiveScope::new);
+  public ReactiveScope defaultScope() {
+    return new ReactiveScope(asyncBucket.defaultScope());
   }
 
   /**
@@ -125,8 +119,8 @@ public class ReactiveBucket {
    *
    * @return the {@link ReactiveCollection} once opened.
    */
-  public Mono<ReactiveCollection> defaultCollection() {
-    return defaultScope().flatMap(ReactiveScope::defaultCollection);
+  public ReactiveCollection defaultCollection() {
+    return defaultScope().defaultCollection();
   }
 
   /**
@@ -135,8 +129,8 @@ public class ReactiveBucket {
    * @return the {@link ReactiveCollection} once opened.
    */
   @Stability.Volatile
-  public Mono<ReactiveCollection> collection(final String name) {
-    return defaultScope().flatMap(reactiveScope -> reactiveScope.collection(name));
+  public ReactiveCollection collection(final String name) {
+    return defaultScope().collection(name);
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {

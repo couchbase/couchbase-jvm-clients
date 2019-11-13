@@ -17,9 +17,9 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
@@ -32,7 +32,6 @@ import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
-import com.couchbase.client.core.error.CollectionsNotAvailableException;
 import com.couchbase.client.core.error.ConfigException;
 
 import com.couchbase.client.core.error.CouchbaseException;
@@ -50,7 +49,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
-import java.util.HashSet;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -366,33 +365,48 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public Mono<Void> refreshCollectionMap(final String bucket, final boolean force) {
+  public void refreshCollectionMap(final String bucket, final boolean force) {
     if (!collectionMap.hasBucketMap(bucket) || force) {
-      return Mono.defer(() -> {
-        GetCollectionManifestRequest request = new GetCollectionManifestRequest(
-          core.context().environment().timeoutConfig().kvTimeout(),
-          core.context(),
-          BestEffortRetryStrategy.INSTANCE,
-          new CollectionIdentifier(bucket, Optional.empty(), Optional.empty())
-        );
-        core.send(request);
-        return Reactor
-          .wrap(request, request.response(), true)
-          .flatMap(response -> {
-            if (response.status().success() && response.manifest().isPresent()) {
-              parseAndStoreCollectionsManifest(bucket, response.manifest().get());
-              return Mono.empty();
-            } else {
-              if (response.status() == ResponseStatus.UNKNOWN) {
-                return Mono.error(new CollectionsNotAvailableException());
-              } else {
-                return Mono.error(new CouchbaseException(response.toString()));
-              }
-            }
-          });
+      long start = System.nanoTime();
+      GetCollectionManifestRequest request = new GetCollectionManifestRequest(
+        core.context().environment().timeoutConfig().kvTimeout(),
+        core.context(),
+        BestEffortRetryStrategy.INSTANCE,
+        new CollectionIdentifier(bucket, Optional.empty(), Optional.empty())
+      );
+      core.send(request);
+      request.response().whenComplete((response, throwable) -> {
+        final Duration duration = Duration.ofNanos(System.nanoTime() - start);
+        if (throwable != null) {
+          eventBus.publish(new CollectionMapRefreshFailedEvent(
+            duration,
+            core.context(),
+            throwable,
+            CollectionMapRefreshFailedEvent.Reason.FAILED
+          ));
+          return;
+        }
+
+        if (response.status().success() && response.manifest().isPresent()) {
+          parseAndStoreCollectionsManifest(bucket, response.manifest().get());
+        } else {
+          if (response.status() == ResponseStatus.UNKNOWN) {
+            eventBus.publish(new CollectionMapRefreshFailedEvent(
+              duration,
+              core.context(),
+              null,
+              CollectionMapRefreshFailedEvent.Reason.NOT_SUPPORTED
+            ));
+          } else {
+            eventBus.publish(new CollectionMapRefreshFailedEvent(
+              duration,
+              core.context(),
+              new CouchbaseException(response.toString()),
+              CollectionMapRefreshFailedEvent.Reason.UNKNOWN
+            ));
+          }
+        }
       });
-    } else {
-      return Mono.empty();
     }
   }
 

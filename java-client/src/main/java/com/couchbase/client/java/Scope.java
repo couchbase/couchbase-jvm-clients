@@ -94,7 +94,7 @@ public class Scope {
    * @return the default collection once opened.
    */
   Collection defaultCollection() {
-    return new Collection(block(asyncScope.defaultCollection()));
+    return new Collection(asyncScope.defaultCollection());
   }
 
   /**
@@ -105,7 +105,7 @@ public class Scope {
    */
   @Stability.Volatile
   public Collection collection(final String name) {
-    return new Collection(block(asyncScope.collection(name)));
+    return new Collection(asyncScope.collection(name));
   }
 
 }

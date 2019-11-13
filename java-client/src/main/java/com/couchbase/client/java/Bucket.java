@@ -123,7 +123,7 @@ public class Bucket {
    */
   @Stability.Volatile
   public Scope scope(final String name) {
-    return block(asyncBucket.scope(name).thenApply(Scope::new));
+    return new Scope(asyncBucket.scope(name));
   }
 
   /**
@@ -133,7 +133,7 @@ public class Bucket {
    */
   @Stability.Volatile
   public Scope defaultScope() {
-    return block(asyncBucket.defaultScope().thenApply(Scope::new));
+    return new Scope(asyncBucket.defaultScope());
   }
 
   /**

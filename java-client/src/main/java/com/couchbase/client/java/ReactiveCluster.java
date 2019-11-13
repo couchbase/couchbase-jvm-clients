@@ -260,10 +260,8 @@ public class ReactiveCluster {
    * @param name the name of the bucket to open.
    * @return a {@link ReactiveBucket} once opened.
    */
-  public Mono<ReactiveBucket> bucket(final String name) {
-    return Mono
-      .fromFuture(asyncCluster.bucket(name))
-      .map(ReactiveBucket::new);
+  public ReactiveBucket bucket(final String name) {
+    return new ReactiveBucket(asyncCluster.bucket(name));
   }
 
   /**
