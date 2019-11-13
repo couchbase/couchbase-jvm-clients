@@ -240,4 +240,80 @@ class SubdocGetSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
+
+  private def prepare(content: ujson.Obj = ujson.Obj("hello" -> "world")): String = {
+    val docId = TestUtils.docId(0)
+    coll.remove(docId)
+    coll.insert(docId, content).get
+    docId
+  }
+
+  @Test
+  def xattrIsReordered() {
+    val docId = prepare()
+
+    coll.lookupIn(docId, Array(get("hello"), exists("does_not_exist").xattr)) match {
+      case Success(result) =>
+        assert(result.contentAs[String](0).get == "world")
+        result.contentAs[Boolean](1) match {
+          case Failure(err: PathNotFoundException) =>
+          case Success(v)                          => assert(false, s"should not succeed")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
+        }
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def xattrIsReorderedWithExpiry() {
+    val content = ujson.Obj("hello" -> "world")
+    val docId   = TestUtils.docId(0)
+    coll.remove(docId)
+    coll.insert(docId, content, expiry = Duration.apply(20, TimeUnit.SECONDS)).get
+
+    coll.lookupIn(docId, Array(get("hello"), exists("does_not_exist").xattr), withExpiry = true) match {
+      case Success(result) =>
+        assert(result.expiry.isDefined)
+        assert(result.contentAs[String](0).get == "world")
+        result.contentAs[Boolean](1) match {
+          case Failure(err: PathNotFoundException) =>
+          case Success(v)                          => assert(false, s"should not succeed")
+          case Failure(err)                        => assert(false, s"unexpected error $err")
+        }
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  def demo() {
+    val content = ujson.Obj("hello" -> "world")
+    val docId   = TestUtils.docId(0)
+    coll.remove(docId)
+    coll.insert(docId, content, expiry = Duration.apply(20, TimeUnit.SECONDS)).get
+
+    // doc level error
+    coll.lookupIn("does-not-exist", Array(LookupInSpec.get("hello")))
+
+    // mutateIn spec fails
+    coll.mutateIn(
+      docId,
+      Array(
+        MutateInSpec.replace("does-not-exist", "blah"),
+        MutateInSpec.replace("hello", "mars"),
+        MutateInSpec.replace("does-not-exist2", "blah")
+      )
+    )
+
+    // lookupIn spec fails
+    coll.lookupIn(
+      docId,
+      Array(
+        LookupInSpec.get("does_not_exist"),
+        LookupInSpec.get("hello"),
+        LookupInSpec.exists("does_not_exist2")
+      )
+    )
+  }
+
 }

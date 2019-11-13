@@ -37,7 +37,7 @@ public class LookupInSpecStandard extends LookupInSpec {
   }
 
   @Stability.Internal
-  public SubdocGetRequest.Command export() {
-    return new SubdocGetRequest.Command(type, path, xattr);
+  public SubdocGetRequest.Command export(int originalIndex) {
+    return new SubdocGetRequest.Command(type, path, xattr, originalIndex);
   }
 }

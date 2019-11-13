@@ -73,7 +73,7 @@ public class Increment extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
         JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
         return new SubdocMutateRequest.Command(
                 SubdocCommandType.COUNTER,
@@ -81,7 +81,8 @@ public class Increment extends MutateInSpec {
                 serializer.serialize(delta),
                 createPath,
                 xattr,
-                false
+                false,
+                originalIndex
         );
     }
 }

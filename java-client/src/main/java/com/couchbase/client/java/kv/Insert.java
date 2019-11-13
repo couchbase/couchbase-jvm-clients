@@ -84,7 +84,7 @@ public class Insert extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
         JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
         return new SubdocMutateRequest.Command(
@@ -93,7 +93,8 @@ public class Insert extends MutateInSpec {
             serializer.serialize(doc),
             createPath,
             xattr,
-            expandMacro
+            expandMacro,
+            originalIndex
         );
     }
 }

@@ -75,7 +75,12 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
         case _ =>
           val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
-          spec.map(_.convert).foreach(commands.add)
+
+          spec.zipWithIndex
+            .map(v => v._1.convert(v._2))
+            // xattrs need to come first
+            .sortBy(!_.xattr())
+            .foreach(v => commands.add(v))
 
           if (commands.isEmpty) {
             Failure(SubdocMutateRequest.errIfNoCommands())
@@ -111,7 +116,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
     response.status() match {
 
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubdocField] = response.values().asScala
+        val values: Array[SubdocField] = response.values()
 
         MutateInResult(id, values, response.cas(), response.mutationToken().asScala)
 

@@ -61,20 +61,22 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     } else {
       val commands = new java.util.ArrayList[SubdocGetRequest.Command]()
 
-      // Put expiration on the end so it doesn't mess up indexing
-      // Update: no, all xattr commands need to go at start
       if (withExpiration) {
-        commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true))
+        commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, ExpTime, true, spec.size))
       }
 
-      spec
+      spec.zipWithIndex
         .map {
-          case x: Get =>
+          case (x: Get, idx) =>
             val cmd = if (x.path == "") SubdocCommandType.GET_DOC else SubdocCommandType.GET
-            new SubdocGetRequest.Command(cmd, x.path, x._xattr)
-          case x: Exists => new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x._xattr)
-          case x: Count  => new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x._xattr)
+            new SubdocGetRequest.Command(cmd, x.path, x._xattr, idx)
+          case (x: Exists, idx) =>
+            new SubdocGetRequest.Command(SubdocCommandType.EXISTS, x.path, x._xattr, idx)
+          case (x: Count, idx) =>
+            new SubdocGetRequest.Command(SubdocCommandType.COUNT, x.path, x._xattr, idx)
         }
+        // xattrs need to come first
+        .sortBy(!_.xattr())
         .foreach(commands.add)
 
       if (commands.isEmpty) {
@@ -128,7 +130,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): Option[LookupInResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubdocField] = response.values().asScala
+        val values: Seq[SubdocField] = response.values()
 
         if (withExpiration) {
           var exptime: Option[Duration] = None
@@ -174,7 +176,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): Try[Option[GetResult]] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubdocField] = response.values().asScala
+        val values: Seq[SubdocField] = response.values()
 
         val out = JsonObject.create
 

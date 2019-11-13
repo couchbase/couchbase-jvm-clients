@@ -74,7 +74,7 @@ public class Replace extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
         JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
 
         SubdocCommandType command = path.equals("") ? SubdocCommandType.SET_DOC : SubdocCommandType.REPLACE;
@@ -85,7 +85,8 @@ public class Replace extends MutateInSpec {
             serializer.serialize(doc),
             false,
             xattr,
-            expandMacro
+            expandMacro,
+            originalIndex
         );
     }
 }

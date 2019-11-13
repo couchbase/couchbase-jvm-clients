@@ -28,14 +28,15 @@ public class Remove extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer) {
+    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
         return new SubdocMutateRequest.Command(
                 SubdocCommandType.DELETE,
                 path,
                 Bytes.EMPTY_BYTE_ARRAY,
                 false,
                 xattr,
-                false
+                false,
+                originalIndex
         );
     }
 }

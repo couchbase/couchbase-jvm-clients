@@ -82,6 +82,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -313,28 +314,35 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    List<SubdocGetRequest.Command> commands = new ArrayList<>();
 
-    if (opts.withExpiry()) {
-      commands.add(new SubdocGetRequest.Command(
-        SubdocCommandType.GET,
-        EXPIRATION_MACRO,
-        true
-      ));
-    }
+    List<SubdocGetRequest.Command> commands = new ArrayList<>(16);
 
     if (!opts.projections().isEmpty()) {
-      commands.addAll(opts
-        .projections()
-        .stream()
-        .map(s -> new SubdocGetRequest.Command(SubdocCommandType.GET, s, false))
-        .collect(Collectors.toList())
-      );
+      if (opts.projections().size() > 16) {
+        throw new UnsupportedOperationException("Only a maximum of 16 fields can be "
+          + "projected per request.");
+      }
+
+      List<String> projections = opts.projections();
+      for (int i = 0; i < projections.size(); i ++) {
+        commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, projections.get(i), false, commands.size()));
+      }
     } else {
       commands.add(new SubdocGetRequest.Command(
         SubdocCommandType.GET_DOC,
         "",
-        false
+        false,
+        commands.size()
+      ));
+    }
+
+    if (opts.withExpiry()) {
+      // xattrs must go first
+      commands.add(0, new SubdocGetRequest.Command(
+              SubdocCommandType.GET,
+              EXPIRATION_MACRO,
+              true,
+              commands.size()
       ));
     }
 
@@ -949,11 +957,15 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id");
     notNullOrEmpty(specs, "LookupInSpecs");
 
-    ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>();
+    ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>(specs.size());
 
-    for (LookupInSpec spec : specs) {
-      commands.add(spec.export());
+    for (int i = 0; i < specs.size(); i ++) {
+      LookupInSpec spec = specs.get(i);
+      commands.add(spec.export(i));
     }
+
+    // xattrs come first
+    commands.sort(Comparator.comparing(v -> !v.xattr()));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -1017,14 +1029,20 @@ public class AsyncCollection {
       notNull(options, "MutateInOptions");
       MutateInOptions.Built opts = options.build();
 
+
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
       JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
-      List<SubdocMutateRequest.Command> commands = specs
-        .stream()
-        .map(v -> v.encode(serializer))
-        .collect(Collectors.toList());
+      ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
+
+      for (int i = 0; i < specs.size(); i++) {
+        MutateInSpec spec = specs.get(i);
+        commands.add(spec.encode(serializer, i));
+      }
+
+      // xattrs come first
+      commands.sort(Comparator.comparing(v -> !v.xattr()));
 
       boolean accessDeleted = false;
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,

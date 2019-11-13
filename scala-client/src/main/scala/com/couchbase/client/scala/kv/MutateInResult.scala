@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.kv
 
+import java.util.NoSuchElementException
+
 import com.couchbase.client.core.msg.kv.{MutationToken, SubdocField}
 import com.couchbase.client.scala.api.HasDurabilityTokens
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
@@ -24,7 +26,7 @@ import scala.compat.java8.OptionConverters._
   * */
 case class MutateInResult(
     id: String,
-    private val content: Seq[SubdocField],
+    private val content: Array[SubdocField],
     cas: Long,
     mutationToken: Option[MutationToken]
 ) extends HasDurabilityTokens {
@@ -38,13 +40,17 @@ case class MutateInResult(
     * @tparam T as this is only applicable for counters, the application should pass T=Long
     */
   def contentAs[T](index: Int)(implicit deserializer: JsonDeserializer[T]): Try[T] = {
-    if (index < 0 || index >= content.size) {
+    if (index < 0 || index >= content.length) {
       Failure(new IllegalArgumentException(s"$index is out of bounds"))
     } else {
       val field = content(index)
-      field.error().asScala match {
-        case Some(err) => Failure(err)
-        case _         => deserializer.deserialize(field.value)
+      if (field == null) {
+        Failure(new NoSuchElementException(s"No result exists at index ${index}"))
+      } else {
+        field.error().asScala match {
+          case Some(err) => Failure(err)
+          case _         => deserializer.deserialize(field.value)
+        }
       }
     }
   }

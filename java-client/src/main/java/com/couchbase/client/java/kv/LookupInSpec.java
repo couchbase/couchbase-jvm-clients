@@ -22,21 +22,11 @@ import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 public abstract class LookupInSpec {
   @Stability.Internal
-  abstract public SubdocGetRequest.Command export();
+  abstract public SubdocGetRequest.Command export(int originalIndex);
 
   public static LookupInSpecStandard get(final String path) {
     SubdocCommandType command = path.equals("") ? SubdocCommandType.GET_DOC : SubdocCommandType.GET;
     return new LookupInSpecStandard(command, path);
-  }
-
-  /**
-   * @deprecated use LookupInSpec.get with a blank path ("") instead
-   */
-  // TODO remove when transactions no longer depends on this
-  @Deprecated
-  @Stability.Internal
-  public static LookupInSpecFull getFullDocument() {
-    return new LookupInSpecFull();
   }
 
   public static LookupInSpecStandard exists(final String path) {

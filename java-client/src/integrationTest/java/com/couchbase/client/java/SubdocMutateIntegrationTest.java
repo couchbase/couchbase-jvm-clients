@@ -24,6 +24,7 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
@@ -249,18 +251,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("bar2", getContent(docId).getString("foo2"));
     }
 
-    // TODO remove when transactions no longer depends on this (replace should be used instead)
-    @Test
-    public void upsertFullDocument() {
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        String docId = prepare(content);
-
-        coll.mutateIn(docId,
-                Arrays.asList(MutateInSpec.upsert("", JsonObject.create().put("foo2", "bar2"))));
-
-        assertEquals("bar2", getContent(docId).getString("foo2"));
-    }
-
     @Test
     public void replaceStringDoesNotExist() {
         checkSingleOpFailure(JsonObject.create(),
@@ -427,6 +417,19 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", 10),
                 Arrays.asList(MutateInSpec.increment("x.foo", 5).xattr()));
         assertEquals(15, (int) updatedContent.getInt("foo"));
+    }
+
+    @Test
+    public void xattrOpsAreReordered() {
+      JsonObject content = JsonObject.create();
+      String docId = prepareXattr(content);
+
+      MutateInResult result = coll.mutateIn(docId,
+              Arrays.asList(MutateInSpec.insert("foo2", "bar2"),
+                      MutateInSpec.increment("x.foo", 5).xattr()));
+
+      assertThrows(NoSuchElementException.class, () -> result.contentAs(0, String.class));
+      assertEquals(5, result.contentAs(1, Integer.class));
     }
 
     @Test
@@ -605,7 +608,8 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         String docId = prepare(content);
 
         coll.mutateIn(docId,
-                Arrays.asList(MutateInSpec.insert("foo2", "bar2")), MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
+                Arrays.asList(MutateInSpec.insert("foo2", "bar2")),
+                MutateInOptions.mutateInOptions().expiry(Duration.ofSeconds(10)));
 
         GetResult result = coll.get(docId, GetOptions.getOptions().withExpiry(true));
         assertTrue(result.expiry().isPresent());

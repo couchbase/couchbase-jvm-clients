@@ -72,7 +72,7 @@ object MutateInSpec {
       case _                => false
     }
     if (path == "")
-      Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Insert")))
+      Upsert(path, Failure(new IllegalArgumentException("Cannot pass an empty path to Upsert")))
     else Upsert(path, serializer.serialize(value), _expandMacro = expandMacro)
   }
 
@@ -229,7 +229,7 @@ object MutateInSpec {
 
 /** Represents an intent to perform a single SubDocument mutation. */
 sealed trait MutateInSpec {
-  private[scala] def convert: SubdocMutateRequest.Command
+  private[scala] def convert(originalIndex: Int): SubdocMutateRequest.Command
 
   private[scala] val typ: SubdocCommandType
 }
@@ -242,8 +242,16 @@ trait MutateInSpecStandard extends MutateInSpec {
   private[scala] val _createPath: Boolean
   private[scala] val _expandMacro: Boolean
 
-  private[scala] def convert =
-    new SubdocMutateRequest.Command(typ, path, value, _createPath, _xattr, _expandMacro)
+  private[scala] def convert(originalIndex: Int) =
+    new SubdocMutateRequest.Command(
+      typ,
+      path,
+      value,
+      _createPath,
+      _xattr,
+      _expandMacro,
+      originalIndex
+    )
 
   private[scala] def value = fragment.get
 }
@@ -284,8 +292,16 @@ case class Replace(
     copy(path, fragment, _xattr = true, _expandMacro = _expandMacro)
   }
 
-  def convert =
-    new SubdocMutateRequest.Command(typ, path, fragment.get, false, _xattr, _expandMacro)
+  def convert(originalIndex: Int) =
+    new SubdocMutateRequest.Command(
+      typ,
+      path,
+      fragment.get,
+      false,
+      _xattr,
+      _expandMacro,
+      originalIndex
+    )
 }
 
 case class Upsert(
@@ -316,7 +332,8 @@ case class Remove(path: String, private[scala] val _xattr: Boolean = false) exte
     copy(path, _xattr = true)
   }
 
-  def convert = new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, _xattr, false)
+  def convert(originalIndex: Int) =
+    new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, _xattr, false, originalIndex)
 }
 
 case class ArrayAppend(
@@ -417,8 +434,8 @@ case class Increment(
     copy(path, delta, _xattr, _createPath = true)
   }
 
-  def convert = {
+  def convert(originalIndex: Int) = {
     val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
-    new SubdocMutateRequest.Command(typ, path, bytes, _createPath, _xattr, false)
+    new SubdocMutateRequest.Command(typ, path, bytes, _createPath, _xattr, false, originalIndex)
   }
 }

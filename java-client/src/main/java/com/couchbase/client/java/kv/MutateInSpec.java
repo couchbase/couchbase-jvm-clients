@@ -23,7 +23,7 @@ import com.couchbase.client.java.codec.JsonSerializer;
 public abstract class MutateInSpec {
 
     @Stability.Internal
-    public abstract SubdocMutateRequest.Command encode(JsonSerializer defaultSerializer);
+    public abstract SubdocMutateRequest.Command encode(JsonSerializer defaultSerializer, int originalIndex);
 
     /**
      * Creates a command with the intention of replacing an existing value in a JSON object.
@@ -74,24 +74,6 @@ public abstract class MutateInSpec {
      */
     public static <T> Upsert upsert(final String path, final Object value) {
         return new Upsert(path, value);
-    }
-
-    /**
-     * Creates a command with the intention of upserting the full body of a JSON document.
-     * <p>
-     * Provided to support advanced workflows that need to set a document's extended attributes (xattrs)
-     * at the same time as the document's regular content.
-     *
-     * @deprecated this functionality has been deprecated and will be removed in a future release.  Instead, specify
-     * a blank path ("") on an upsert command
-     *
-     * @param value the value to upsert to the document's body
-     */
-    // TODO remove when transactions no longer depends on this
-    @Deprecated
-    @Stability.Internal
-    public static <T> FullDocument fullDocument(final Object value) {
-        return new FullDocument(value);
     }
 
     /**

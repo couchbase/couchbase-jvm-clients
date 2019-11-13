@@ -156,7 +156,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ResponseStatus overallStatus = decodeStatus(response);
     Optional<SubDocumentException> error = Optional.empty();
 
-    List<SubdocField> values;
+    SubdocField[] values;
 
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
@@ -168,24 +168,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         SubDocumentOpResponseStatus opStatus = decodeSubDocumentStatus(opStatusRaw);
         SubDocumentException err = mapSubDocumentError(opStatus, commands.get(index).path, origKey);
         error = Optional.of(new MultiMutationException(index, opStatus, err));
-        values = new ArrayList<>();
+        values = new SubdocField[0];
       }
       else {
         // "For successful multi mutations, there will be zero or more results; each of the results containing a value."
-        values = new ArrayList<>(commands.size());
+        values = new SubdocField[commands.size()];
 
         // Check we can read index (1 byte) and status (2 bytes), else we're done
         int INDEX_PLUS_STATUS_FIELDS_BYTES = 3;
         while (body.isReadable(INDEX_PLUS_STATUS_FIELDS_BYTES)) {
           byte index = body.readByte();
-
-          // Only counter ops return values.  Pad the returned values so we can do contentAs(counterOpIdx)
-          while (values.size() < index) {
-            Command padding = commands.get(values.size());
-            SubdocField op = new SubdocField(SubDocumentOpResponseStatus.SUCCESS, Optional.empty(), Bytes.EMPTY_BYTE_ARRAY, padding.path, padding.type);
-            values.add(op);
-          }
-
           Command command = commands.get(index);
 
           // "Status of the mutation. If the status indicates success, the next two fields are applicable. If it is an
@@ -197,18 +189,18 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
             SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
 
             SubdocField op = new SubdocField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
-            values.add(op);
+            values[command.originalIndex] = op;
           } else {
             int valueLength = body.readInt();
             byte[] value = new byte[valueLength];
             body.readBytes(value, 0, valueLength);
             SubdocField op = new SubdocField(status, Optional.empty(), value, command.path, command.type);
-            values.add(op);
+            values[command.originalIndex] = op;
           }
         }
       }
     } else {
-      values = new ArrayList<>();
+      values = new SubdocField[0];
     }
 
 
@@ -246,15 +238,17 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     private final boolean createParent;
     private final boolean xattr;
     private final boolean expandMacro;
+    private final int originalIndex;
 
-      public Command(SubdocCommandType type, String path, byte[] fragment,
-                   boolean createParent, boolean xattr, boolean expandMacro) {
+    public Command(SubdocCommandType type, String path, byte[] fragment,
+                   boolean createParent, boolean xattr, boolean expandMacro, int originalIndex) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
       this.fragment = fragment;
       this.createParent = createParent;
       this.expandMacro = expandMacro;
+      this.originalIndex = originalIndex;
     }
 
     public ByteBuf encode(final ByteBufAllocator alloc) {
@@ -280,6 +274,14 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       buffer.writeBytes(fragment);
 
       return buffer;
+    }
+
+    public int originalIndex() {
+      return originalIndex;
+    }
+
+    public boolean xattr() {
+      return xattr;
     }
   }
 

@@ -110,11 +110,11 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   @Override
   public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
-    List<SubdocField> values;
+    SubdocField[] values;
     List<SubDocumentException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
-      values = new ArrayList<>(commands.size());
+      values = new SubdocField[commands.size()];
       for (Command command : commands) {
         short statusRaw = body.readShort();
         SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
@@ -129,10 +129,10 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         byte[] value = new byte[valueLength];
         body.readBytes(value, 0, valueLength);
         SubdocField op = new SubdocField(status, error, value, command.path, command.type);
-        values.add(op);
+        values[command.originalIndex] = op;
       }
     } else {
-      values = new ArrayList<>();
+      values = new SubdocField[0];
     }
 
     short rawStatus = status(response);
@@ -173,11 +173,13 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     private final SubdocCommandType type;
     private final String path;
     private final boolean xattr;
+    private final int originalIndex;
 
-    public Command(SubdocCommandType type, String path, boolean xattr) {
+    public Command(SubdocCommandType type, String path, boolean xattr, int originalIndex) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
+      this.originalIndex = originalIndex;
     }
 
     public ByteBuf encode(ByteBufAllocator alloc) {
@@ -194,6 +196,14 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       buffer.writeShort(pathLength);
       buffer.writeBytes(path);
       return buffer;
+    }
+
+    public int originalIndex() {
+      return originalIndex;
+    }
+
+    public boolean xattr() {
+      return xattr;
     }
   }
 

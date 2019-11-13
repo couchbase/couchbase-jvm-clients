@@ -21,6 +21,7 @@ import com.couchbase.client.core.msg.kv.SubdocField;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -35,7 +36,7 @@ public class MutateInResult extends MutationResult {
   /**
    * Holds the encoded subdoc responses.
    */
-  private final List<SubdocField> encoded;
+  private final SubdocField[] encoded;
 
   /**
    * The default JSON serializer that should be used.
@@ -49,7 +50,7 @@ public class MutateInResult extends MutationResult {
    * @param cas the cas of the outer doc.
    * @param mutationToken the mutation token of the doc, if present.
    */
-  MutateInResult(final List<SubdocField> encoded, final long cas, final Optional<MutationToken> mutationToken, JsonSerializer serializer) {
+  MutateInResult(final SubdocField[] encoded, final long cas, final Optional<MutationToken> mutationToken, JsonSerializer serializer) {
     super(cas, mutationToken);
     this.encoded = encoded;
     this.serializer = serializer;
@@ -76,8 +77,11 @@ public class MutateInResult extends MutationResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final Class<T> target, final JsonSerializer serializer) {
-    if (index >= 0 && index < encoded.size()) {
-      SubdocField value = encoded.get(index);
+    if (index >= 0 && index < encoded.length) {
+      SubdocField value = encoded[index];
+      if (value == null) {
+        throw new NoSuchElementException("No result exists at index " + index);
+      }
       value.error().map(err -> {
         throw err;
       });

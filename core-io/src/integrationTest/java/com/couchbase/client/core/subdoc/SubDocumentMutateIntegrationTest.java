@@ -108,7 +108,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
    */
   private void testSingleGetChildFailure(String input, String path, Class<?> expected) {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false));
+            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false, 0));
 
     testChildFailure(input, commands, expected);
    }

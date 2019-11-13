@@ -21,12 +21,15 @@ import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 
@@ -45,7 +48,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Holds a possible projection.
    */
-  private Set<String> projections;
+  private List<String> projections;
 
   /**
    * Creates a new set of {@link GetOptions} with a {@link JsonObject} target.
@@ -103,7 +106,7 @@ public class GetOptions extends CommonOptions<GetOptions> {
    */
   public GetOptions project(final Iterable<String> paths) {
     if (projections == null) {
-      projections = new HashSet<>();
+      projections = new ArrayList<>();
     }
 
     for (String path : paths) {
@@ -139,8 +142,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
       return withExpiry;
     }
 
-    public Set<String> projections() {
-      return projections == null ? emptySet() : projections;
+    public List<String> projections() {
+      return projections == null ? emptyList() : projections;
     }
 
     public Transcoder transcoder() {

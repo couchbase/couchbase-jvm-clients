@@ -427,6 +427,19 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def twoSpecsIncludingCounter() {
+    val content      = ujson.Obj("foo" -> 10, "hello" -> "world")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, Array(replace("hello", "mars"), increment("foo", 5))) match {
+      case Success(result) =>
+        assert(result.contentAs[String](0).isFailure)
+        assert(result.contentAs[Long](1).get == 15)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
   def counter_minus5() {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10), Array(decrement("foo", 3)))
     assert(updatedContent("foo").num == 7)
@@ -549,6 +562,18 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def xattrOpsAreReordered() {
+    val content      = ujson.Obj("hello" -> "world")
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, Array(replace("hello", "mars"), increment("foo", 5).xattr)) match {
+      case Success(result) =>
+        assert(result.contentAs[Long](1).get == 5)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
   def counter_minus5_xatr() {
     val updatedContent =
       checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10), Array(decrement("x.foo", 3).xattr))
@@ -566,7 +591,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def insert_expand_macro_xattr() {
     val updatedContent = checkSingleOpSuccessXattr(
       ujson.Obj(),
-      Array(insert("x.foo", MutateInMacro.MutationCAS).xattr)
+      Array(insert("x.foo", MutateInMacro.CAS).xattr)
     )
     assert(updatedContent("foo").str != "${Mutation.CAS}")
   }

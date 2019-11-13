@@ -22,7 +22,9 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
@@ -35,7 +37,7 @@ public class LookupInResult {
   /**
    * Holds the encoded subdoc responses.
    */
-  private final List<SubdocField> encoded;
+  private final SubdocField[] encoded;
 
   /**
    * Holds the cas of the response.
@@ -53,7 +55,7 @@ public class LookupInResult {
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final List<SubdocField> encoded, final long cas, JsonSerializer serializer) {
+  LookupInResult(final SubdocField[] encoded, final long cas, JsonSerializer serializer) {
     this.cas = cas;
     this.encoded = encoded;
     this.serializer = serializer;
@@ -77,8 +79,11 @@ public class LookupInResult {
    */
   @SuppressWarnings({ "unchecked" })
   public <T> T contentAs(int index, final Class<T> target) {
-    if (index >= 0 && index < encoded.size()) {
-      SubdocField value = encoded.get(index);
+    if (index >= 0 && index < encoded.length) {
+      SubdocField value = encoded[index];
+      if (value == null) {
+        throw new NoSuchElementException("No result exists at index " + index);
+      }
       value.error().map(err -> {
         throw err;
       });
@@ -113,9 +118,9 @@ public class LookupInResult {
    * @return true if a value is present at the index, false otherwise.
    */
   public boolean exists(int index) {
-    if (index >= 0 && index < encoded.size()) {
-      SubdocField value = encoded.get(index);
-      return value.status().success();
+    if (index >= 0 && index < encoded.length) {
+      SubdocField value = encoded[index];
+      return value != null && value.status().success();
     } else {
       return false;
     }
@@ -124,7 +129,7 @@ public class LookupInResult {
   @Override
   public String toString() {
     return "LookupInResult{" +
-      "encoded=" + encoded +
+      "encoded=" + Arrays.asList(encoded) +
       ", cas=" + cas +
       ", serializer=" + serializer +
       '}';

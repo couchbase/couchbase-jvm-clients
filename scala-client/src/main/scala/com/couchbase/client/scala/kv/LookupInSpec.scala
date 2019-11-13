@@ -57,7 +57,8 @@ object LookupInSpec {
 /** Represents a single SubDocument lookup operation, such as fetching a particular field. */
 sealed trait LookupInSpec
 
-case class Get(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Get(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
+    extends LookupInSpec {
 
   /** $Xattr */
   def xattr: Get = {
@@ -65,7 +66,8 @@ case class Get(path: String, private[scala] val _xattr: Boolean = false) extends
   }
 }
 
-case class Exists(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Exists(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
+    extends LookupInSpec {
 
   /** $Xattr */
   def xattr: Exists = {
@@ -73,7 +75,8 @@ case class Exists(path: String, private[scala] val _xattr: Boolean = false) exte
   }
 }
 
-case class Count(path: String, private[scala] val _xattr: Boolean = false) extends LookupInSpec {
+case class Count(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
+    extends LookupInSpec {
 
   /** $Xattr */
   def xattr: Count = {

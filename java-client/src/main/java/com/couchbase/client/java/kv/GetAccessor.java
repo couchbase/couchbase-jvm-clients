@@ -148,10 +148,12 @@ public enum GetAccessor {
     byte[] content = null;
 
     for (SubdocField value : response.values()) {
-      if (EXPIRATION_MACRO.equals(value.path())) {
-        exptime = value.value();
-      } else if (value.path().isEmpty()) {
-        content = value.value();
+      if (value != null) {
+        if (EXPIRATION_MACRO.equals(value.path())) {
+          exptime = value.value();
+        } else if (value.path().isEmpty()) {
+          content = value.value();
+        }
       }
     }
 
@@ -179,7 +181,8 @@ public enum GetAccessor {
     ObjectNode root = Mapper.createObjectNode();
 
     for (SubdocField value : response.values()) {
-      if (value.status() != SubDocumentOpResponseStatus.SUCCESS
+      if (value == null
+              || value.status() != SubDocumentOpResponseStatus.SUCCESS
               || value.path().isEmpty()
               || EXPIRATION_MACRO.equals(value.path())) {
         continue;

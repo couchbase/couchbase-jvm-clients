@@ -6,15 +6,15 @@ sealed trait MutateInMacro {
 
 object MutateInMacro {
 
-  case object MutationCAS extends MutateInMacro {
+  case object CAS extends MutateInMacro {
     private[scala] val value = """"${Mutation.CAS}""""
   }
 
-  case object MutationSeqNo extends MutateInMacro {
+  case object SeqNo extends MutateInMacro {
     private[scala] val value = """"${Mutation.seqno}""""
   }
 
-  case object MutationCrc32c extends MutateInMacro {
+  case object ValueCrc32c extends MutateInMacro {
     private[scala] val value = """"${Mutation.value_crc32c}""""
   }
 }
