@@ -16,20 +16,27 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.{Authenticator}
-import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator}
+import com.couchbase.client.core.env.Authenticator
+import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 
 case class ClusterOptions(
     authenticator: Authenticator,
-    environment: Option[ClusterEnvironment] = None
+    environment: Option[ClusterEnvironment] = None,
+    seedNodes: Option[Set[SeedNode]] = None
 ) {
   def environment(environment: ClusterEnvironment): ClusterOptions = {
     copy(environment = Some(environment))
+  }
+  def seedNodes(seedNodes: Set[SeedNode]): ClusterOptions = {
+    copy(seedNodes = Some(seedNodes))
   }
 }
 
 object ClusterOptions {
   def create(username: String, password: String): ClusterOptions = {
     ClusterOptions(PasswordAuthenticator(username, password))
+  }
+  def create(authenticator: Authenticator): ClusterOptions = {
+    ClusterOptions(authenticator)
   }
 }

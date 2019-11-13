@@ -88,7 +88,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     * @return the cluster options ready to be used.
     */
   protected def clusterOptions: ClusterOptions = {
-    ClusterOptions(authenticator, environment.build.toOption)
+    ClusterOptions(authenticator, environment.build.toOption, Some(seedNodes))
   }
 
   protected def authenticator: Authenticator = {

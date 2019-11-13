@@ -50,7 +50,7 @@ public class CoreContext extends AbstractContext {
   private final Core core;
 
   /**
-   * The aauthenticator to be used for this core.
+   * The authenticator to be used for this core.
    */
   private final Authenticator authenticator;
 

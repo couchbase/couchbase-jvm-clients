@@ -74,7 +74,7 @@ public class ReactiveCluster {
    * @param password the password of the user with appropriate permissions on the cluster.
    * @return if properly connected, returns a {@link ReactiveCluster}.
    */
-  public static Mono<ReactiveCluster> connect(final String connectionString, final String username,
+  public static ReactiveCluster connect(final String connectionString, final String username,
                                         final String password) {
     return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
@@ -86,14 +86,17 @@ public class ReactiveCluster {
    * @param options custom options when creating the cluster.
    * @return if properly connected, returns a {@link ReactiveCluster}.
    */
-  public static Mono<ReactiveCluster> connect(final String connectionString, final ClusterOptions options) {
-    return Mono.defer(() -> {
-      ClusterOptions.Built opts = options.build();
-      Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
-      Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
-      ReactiveCluster cluster = new ReactiveCluster(environmentSupplier, opts.authenticator(), seedNodes);
-      return cluster.asyncCluster.performGlobalConnect().then(Mono.just(cluster));
-    });
+  public static ReactiveCluster connect(final String connectionString, final ClusterOptions options) {
+    ClusterOptions.Built opts = options.build();
+    Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+
+    Set<SeedNode> seedNodes;
+    if (opts.seedNodes() != null && !opts.seedNodes().isEmpty()) {
+      seedNodes = opts.seedNodes();
+    } else {
+      seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+    }
+    return new ReactiveCluster(environmentSupplier, opts.authenticator(), seedNodes);
   }
 
   /**

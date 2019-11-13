@@ -19,6 +19,8 @@ package com.couchbase.client.core.msg.manager;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import java.util.Arrays;
+
 public class BucketConfigResponse extends BaseResponse {
 
   private byte[] config;
@@ -32,4 +34,11 @@ public class BucketConfigResponse extends BaseResponse {
     return config;
   }
 
+  @Override
+  public String toString() {
+    return "BucketConfigResponse{" +
+      "config=" + Arrays.toString(config) +
+      ", status=" + status() +
+      '}';
+  }
 }

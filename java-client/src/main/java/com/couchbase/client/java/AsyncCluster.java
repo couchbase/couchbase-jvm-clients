@@ -108,8 +108,7 @@ public class AsyncCluster {
    * @param password the password of the user with appropriate permissions on the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final String username,
-                                                        final String password) {
+  public static AsyncCluster connect(final String connectionString, final String username, final String password) {
     return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
@@ -120,14 +119,17 @@ public class AsyncCluster {
    * @param options custom options when creating the cluster.
    * @return if properly connected, returns a {@link AsyncCluster}.
    */
-  public static CompletableFuture<AsyncCluster> connect(final String connectionString, final ClusterOptions options) {
-    return Mono.defer(() -> {
-      ClusterOptions.Built opts = options.build();
-      Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
-      Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
-      AsyncCluster cluster = new AsyncCluster(environmentSupplier, opts.authenticator(), seedNodes);
-      return cluster.performGlobalConnect().then(Mono.just(cluster));
-    }).toFuture();
+  public static AsyncCluster connect(final String connectionString, final ClusterOptions options) {
+    ClusterOptions.Built opts = options.build();
+    Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+
+    Set<SeedNode> seedNodes;
+    if (opts.seedNodes() != null && !opts.seedNodes().isEmpty()) {
+      seedNodes = opts.seedNodes();
+    } else {
+      seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+    }
+    return new AsyncCluster(environmentSupplier, opts.authenticator(), seedNodes);
   }
 
   static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString, final ClusterOptions.Built opts) {
@@ -148,15 +150,6 @@ public class AsyncCluster {
   }
 
   /**
-   * Tries to set up the global connect ("gcccp") if possible.
-   *
-   * @return once this setup is completed, will return.
-   */
-  Mono<Void> performGlobalConnect() {
-    return core.initGlobalConfig().timeout(environment.get().timeoutConfig().connectTimeout());
-  }
-
-  /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
    * @param environment the environment to use for this cluster.
@@ -171,6 +164,8 @@ public class AsyncCluster {
     this.queryIndexManager = new AsyncQueryIndexManager(this);
     this.analyticsIndexManager = new AsyncAnalyticsIndexManager(this);
     this.authenticator = authenticator;
+
+    core.initGlobalConfig();
   }
 
   /**

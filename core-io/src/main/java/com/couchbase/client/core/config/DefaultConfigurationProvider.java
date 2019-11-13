@@ -115,6 +115,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private final AtomicBoolean alternateAddrChecked = new AtomicBoolean(false);
 
+  private volatile boolean globalConfigLoadInProgress = false;
+
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
    */
@@ -222,7 +224,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public Mono<Void> loadAndRefreshGlobalConfig() {
     return Mono.defer(() -> {
       if (!shutdown.get()) {
-
+        globalConfigLoadInProgress = true;
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
         int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
 
@@ -241,7 +243,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             proposeGlobalConfig(ctx);
             return ctx;
           })
-          .then(globalRefresher.start());
+          .then(globalRefresher.start())
+          .doOnTerminate(() -> {
+            globalConfigLoadInProgress = false;
+          });
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -645,6 +650,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return clusterManagerRefresher.register(bucket);
       }
     });
+  }
+
+  @Override
+  public boolean globalConfigLoadInProgress() {
+    return globalConfigLoadInProgress;
   }
 
   /**

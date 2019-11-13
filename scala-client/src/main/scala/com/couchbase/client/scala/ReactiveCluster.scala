@@ -278,15 +278,17 @@ object ReactiveCluster {
     extractClusterEnvironment(connectionString, options) match {
       case Success(ce) =>
         implicit val ec: ExecutionContextExecutor = ce.ec
-        val seedNodes                             = seedNodesFromConnectionString(connectionString, ce)
+        val seedNodes = if (options.seedNodes.isDefined) {
+          options.seedNodes.get
+        } else {
+          seedNodesFromConnectionString(connectionString, ce)
+        }
         SMono
           .just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
-          .flatMap(
-            cluster =>
-              cluster.async
-                .performGlobalConnect()
-                .`then`(SMono.just(cluster))
-          )
+          .flatMap(cluster => {
+            cluster.async.performGlobalConnect()
+            SMono.just(cluster)
+          })
       case Failure(err) => SMono.raiseError(err)
     }
   }

@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc.events.core;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 
 import java.time.Duration;
 
@@ -27,10 +28,23 @@ import java.time.Duration;
 public class InitGlobalConfigFailedEvent extends AbstractEvent {
 
   private final Reason reason;
+  private final Throwable cause;
 
-  public InitGlobalConfigFailedEvent(Severity severity, Duration duration, CoreContext context, Reason reason) {
+  public InitGlobalConfigFailedEvent(Severity severity, Duration duration, CoreContext context, Reason reason,
+                                     Throwable cause) {
     super(severity, Category.CORE, duration, context);
     this.reason = reason;
+    if (reason == Reason.UNSUPPORTED) {
+      // We do not need a stack if it is simply unsupported, it just adds noise to the debug logs
+      this.cause = null;
+    } else {
+      this.cause = cause;
+    }
+  }
+
+  @Override
+  public Throwable cause() {
+    return cause;
   }
 
   @Override
@@ -44,7 +58,8 @@ public class InitGlobalConfigFailedEvent extends AbstractEvent {
   public enum Reason {
     UNSUPPORTED(Severity.DEBUG),
     NO_CONFIG_FOUND(Severity.WARN),
-    UNKNOWN(Severity.WARN);
+    UNKNOWN(Severity.WARN),
+    SHUTDOWN(Severity.DEBUG);
 
     private final Severity severity;
 

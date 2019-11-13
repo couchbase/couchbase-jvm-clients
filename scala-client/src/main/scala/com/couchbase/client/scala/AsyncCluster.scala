@@ -243,12 +243,8 @@ class AsyncCluster(
     )
   }
 
-  private[scala] def performGlobalConnect(): SMono[Void] = {
-    SMono(
-      core
-        .initGlobalConfig()
-        .timeout(env.timeoutConfig.connectTimeout)
-    )
+  private[scala] def performGlobalConnect() {
+    core.initGlobalConfig()
   }
 }
 
@@ -291,9 +287,13 @@ object AsyncCluster {
       case Success(ce) =>
         implicit val ec = ce.ec
         Future {
-          val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-          val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes)
-          cluster.performGlobalConnect().block()
+          val seedNodes = if (options.seedNodes.isDefined) {
+            options.seedNodes.get
+          } else {
+            seedNodesFromConnectionString(connectionString, ce)
+          }
+          val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+          cluster.performGlobalConnect()
           cluster
         }
       case Failure(err) => Future.failed(err)

@@ -37,10 +37,13 @@ import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
@@ -259,9 +262,7 @@ public class Core {
 
   @Stability.Internal
   public Stream<EndpointHealth> diagnostics() {
-    return nodes
-            .stream()
-            .flatMap(node -> node.diagnostics());
+    return nodes.stream().flatMap(Node::diagnostics);
   }
 
   /**
@@ -272,25 +273,35 @@ public class Core {
    * and will allow the higher level components to move on where possible.</p>
    */
   @Stability.Internal
-  public Mono<Void> initGlobalConfig() {
+  public void initGlobalConfig() {
     long start = System.nanoTime();
-    return configurationProvider
+    configurationProvider
       .loadAndRefreshGlobalConfig()
-      .onErrorResume(throwable -> {
-        InitGlobalConfigFailedEvent.Reason reason = InitGlobalConfigFailedEvent.Reason.UNKNOWN;
-        if (throwable instanceof UnsupportedConfigMechanismException) {
-          reason = InitGlobalConfigFailedEvent.Reason.UNSUPPORTED;
-        } else if (throwable instanceof GlobalConfigNotFoundException) {
-          reason = InitGlobalConfigFailedEvent.Reason.NO_CONFIG_FOUND;
+      .subscribe(
+        v -> {},
+        throwable -> {
+          InitGlobalConfigFailedEvent.Reason reason = InitGlobalConfigFailedEvent.Reason.UNKNOWN;
+          if (throwable instanceof UnsupportedConfigMechanismException) {
+            reason = InitGlobalConfigFailedEvent.Reason.UNSUPPORTED;
+          } else if (throwable instanceof GlobalConfigNotFoundException) {
+            reason = InitGlobalConfigFailedEvent.Reason.NO_CONFIG_FOUND;
+          } else if (throwable instanceof ConfigException) {
+            if (throwable.getCause() instanceof RequestCanceledException) {
+              RequestContext ctx = ((RequestCanceledException) throwable.getCause()).context().requestContext();
+              if (ctx.request().cancellationReason() == CancellationReason.SHUTDOWN) {
+                reason = InitGlobalConfigFailedEvent.Reason.SHUTDOWN;
+              }
+            }
+          }
+          eventBus.publish(new InitGlobalConfigFailedEvent(
+            reason.severity(),
+            Duration.ofNanos(System.nanoTime() - start),
+            context(),
+            reason,
+            throwable
+          ));
         }
-        eventBus.publish(new InitGlobalConfigFailedEvent(
-          reason.severity(),
-          Duration.ofNanos(start - System.nanoTime()),
-          context(),
-          reason
-        ));
-        return Mono.empty();
-      });
+      );
   }
 
   /**

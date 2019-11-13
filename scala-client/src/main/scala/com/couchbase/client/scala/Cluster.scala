@@ -225,9 +225,13 @@ object Cluster {
     AsyncCluster
       .extractClusterEnvironment(connectionString, options)
       .map(ce => {
-        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster   = new Cluster(ce, options.authenticator, seedNodes)
-        cluster.async.performGlobalConnect().block()
+        val seedNodes = if (options.seedNodes.isDefined) {
+          options.seedNodes.get
+        } else {
+          seedNodesFromConnectionString(connectionString, ce)
+        }
+        val cluster = new Cluster(ce, options.authenticator, seedNodes)
+        cluster.async.performGlobalConnect()
         cluster
       })
   }

@@ -63,10 +63,6 @@ public class ClusterConfig {
     bucketConfigs.remove(bucketName);
   }
 
-  public boolean hasBucket(final String bucketName) {
-    return bucketConfigs.containsKey(bucketName);
-  }
-
   public Map<String, BucketConfig> bucketConfigs() {
     return bucketConfigs;
   }

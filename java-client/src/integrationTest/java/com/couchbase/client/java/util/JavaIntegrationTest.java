@@ -17,8 +17,10 @@
 package com.couchbase.client.java.util;
 
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -74,14 +76,15 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   protected static ClusterOptions clusterOptions() {
     return ClusterOptions
       .clusterOptions(authenticator())
-      .environment(environment().build());
+      .environment(environment().build())
+      .seedNodes(seedNodes());
   }
 
   protected static Authenticator authenticator() {
     return PasswordAuthenticator.create(config().adminUsername(), config().adminPassword());
   }
 
-  private static Set<SeedNode> seedNodes() {
+  protected static Set<SeedNode> seedNodes() {
     return config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
       Optional.of(cfg.ports().get(Services.KV)),

@@ -19,9 +19,13 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.java.env.ClusterEnvironment;
 
+import java.util.Set;
+
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * Allows to specify custom options when connecting to the cluster.
@@ -29,7 +33,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class ClusterOptions {
 
   private ClusterEnvironment environment;
-
+  private Set<SeedNode> seedNodes;
   private final Authenticator authenticator;
 
   private ClusterOptions(final Authenticator authenticator) {
@@ -50,6 +54,13 @@ public class ClusterOptions {
     return this;
   }
 
+  @Stability.Volatile
+  public ClusterOptions seedNodes(final Set<SeedNode> seedNodes) {
+    notNull(seedNodes, "SeedNodes");
+    this.seedNodes = seedNodes;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -63,6 +74,10 @@ public class ClusterOptions {
 
     public ClusterEnvironment environment() {
       return environment;
+    }
+
+    public Set<SeedNode> seedNodes() {
+      return seedNodes;
     }
 
   }

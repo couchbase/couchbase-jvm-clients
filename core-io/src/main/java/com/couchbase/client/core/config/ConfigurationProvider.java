@@ -114,4 +114,11 @@ public interface ConfigurationProvider  {
    */
   Mono<Void> refreshCollectionMap(String bucket, boolean force);
 
+  /**
+   * Returns true if an initial global config load attempt is in progress.
+   *
+   * @return true if it is in progress, false if not (done or failed).
+   */
+  boolean globalConfigLoadInProgress();
+
 }

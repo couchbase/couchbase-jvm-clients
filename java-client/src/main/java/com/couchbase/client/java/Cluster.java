@@ -102,10 +102,14 @@ public class Cluster {
   public static Cluster connect(final String connectionString, final ClusterOptions options) {
     ClusterOptions.Built opts = options.build();
     Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
-    Set<SeedNode> seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
-    Cluster cluster = new Cluster(environmentSupplier, opts.authenticator(), seedNodes);
-    cluster.async().performGlobalConnect().block();
-    return cluster;
+
+    Set<SeedNode> seedNodes;
+    if (opts.seedNodes() != null && !opts.seedNodes().isEmpty()) {
+      seedNodes = opts.seedNodes();
+    } else {
+      seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
+    }
+    return new Cluster(environmentSupplier, opts.authenticator(), seedNodes);
   }
 
   /**

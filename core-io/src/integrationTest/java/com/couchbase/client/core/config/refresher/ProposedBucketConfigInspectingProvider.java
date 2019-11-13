@@ -85,4 +85,8 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
     return delegate.refreshCollectionMap(bucket, force);
   }
 
+  @Override
+  public boolean globalConfigLoadInProgress() {
+    return false;
+  }
 }

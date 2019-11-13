@@ -50,7 +50,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
     collections = cluster.bucket(config().bucketname()).collections();
   }
 

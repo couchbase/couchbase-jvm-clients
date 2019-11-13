@@ -522,10 +522,10 @@ class CoreTest {
     };
 
     when(configProvider.loadAndRefreshGlobalConfig()).thenReturn(Mono.error(new GlobalConfigNotFoundException()));
-    core.initGlobalConfig().block();
+    core.initGlobalConfig();
 
     when(configProvider.loadAndRefreshGlobalConfig()).thenReturn(Mono.error(new UnsupportedConfigMechanismException()));
-    core.initGlobalConfig().block();
+    core.initGlobalConfig();
 
     int numRaised = 0;
     for (Event event : EVENT_BUS.publishedEvents()) {
