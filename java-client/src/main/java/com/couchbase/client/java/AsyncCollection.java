@@ -597,8 +597,8 @@ public class AsyncCollection {
    * @return the observe request used for exists.
    */
   ObserveViaCasRequest existsRequest(final String id, final ExistsOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "ExistsOptions");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "ExistsOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     ExistsOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());

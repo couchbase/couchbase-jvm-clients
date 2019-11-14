@@ -143,4 +143,10 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertTrue(exception.context().requestContext().retryReasons().contains(RetryReason.KV_LOCKED));
   }
 
+  @Test
+  void verifyExistsExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.exists("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.exists(null));
+  }
+
 }

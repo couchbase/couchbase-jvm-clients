@@ -17,7 +17,13 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DefaultErrorUtil;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
+import com.couchbase.client.core.error.ServerOutOfMemoryException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 
@@ -31,16 +37,22 @@ public class ExistsAccessor {
     return request
       .response()
       .thenApply(response -> {
-        boolean found = response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
-          || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
-        if (response.status().success() && found) {
-            return new ExistsResult(true, response.cas());
-        } else if (!found) {
-          return new ExistsResult(false, 0);
-        } else {
-          throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
+        if (response.status().success()) {
+          boolean found = response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
+            || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
+          return new ExistsResult(found, found ? response.cas() : 0);
         }
-      });
+
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+        switch (response.status()) {
+          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
+          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
+          case TEMPORARY_FAILURE: // intended fallthrough to the case below
+          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
+          default: throw new CouchbaseException("Exists operation failed", ctx);
+        }
+      })
+      .whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
 }

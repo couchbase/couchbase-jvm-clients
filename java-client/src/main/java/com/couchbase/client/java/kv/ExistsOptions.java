@@ -25,16 +25,14 @@ public class ExistsOptions extends CommonOptions<ExistsOptions> {
     return new ExistsOptions();
   }
 
-  private ExistsOptions() {
-  }
+  private ExistsOptions() { }
 
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  @Stability.Internal
+  public class Built extends BuiltCommonOptions { }
 
-
-  }
 }

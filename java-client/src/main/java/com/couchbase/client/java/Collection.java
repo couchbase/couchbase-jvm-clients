@@ -257,7 +257,7 @@ public class Collection {
    * <p>Note that individual errors are ignored, so you can think of this API as a best effort
    * approach which explicitly emphasises availability over consistency.</p>
    *
-   * @param id the document id.
+   * @param id the document id which is used to uniquely identify it.
    * @return a stream of results from the active and the replica.
    */
   public Stream<GetReplicaResult> getAllReplicas(final String id) {
@@ -270,7 +270,7 @@ public class Collection {
    * <p>By default all available replicas and the active node will be asked and returned as
    * an async stream. If configured differently in the options</p>
    *
-   * @param id the document id.
+   * @param id the document id which is used to uniquely identify it.
    * @param options the custom options.
    * @return a stream of results from the active and the replica depending on the options.
    */
@@ -281,7 +281,7 @@ public class Collection {
   /**
    * Reads all available replicas, and returns the first found.
    *
-   * @param id the document id.
+   * @param id the document id which is used to uniquely identify it.
    * @return the first available replica.
    */
   public GetReplicaResult getAnyReplica(final String id) {
@@ -291,7 +291,7 @@ public class Collection {
   /**
    * Reads all available replicas, and returns the first found.
    *
-   * @param id the document id.
+   * @param id the document id which is used to uniquely identify it.
    * @param options the custom options.
    * @return the first available replica.
    */
@@ -300,10 +300,12 @@ public class Collection {
   }
 
   /**
-   * Checks if the given document ID exists on the active partition with default options.
+   * Checks if the given document ID exists on the active partition.
    *
-   * @param id the document ID
+   * @param id the document id which is used to uniquely identify it.
    * @return a {@link ExistsResult} completing once loaded or failed.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id) {
     return block(async().exists(id));
@@ -312,8 +314,10 @@ public class Collection {
   /**
    * Checks if the given document ID exists on the active partition with custom options.
    *
-   * @param id the document ID
+   * @param id the document id which is used to uniquely identify it.
    * @return a {@link ExistsResult} completing once loaded or failed.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id, final ExistsOptions options) {
     return block(async().exists(id, options));
