@@ -18,8 +18,9 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DefaultErrorUtil;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 
 import java.util.concurrent.CompletableFuture;
@@ -39,11 +40,13 @@ public enum UpsertAccessor {
     final CompletableFuture<MutationResult> mutationResult = request
       .response()
       .thenApply(response -> {
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+
         switch (response.status()) {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
-            throw CASMismatchException.forKey(key);
+            throw new CasMismatchException(ctx);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

@@ -24,19 +24,7 @@ package com.couchbase.client.core.error;
  */
 public class DurabilityImpossibleException extends CouchbaseException {
 
-    public DurabilityImpossibleException() {
-        super();
-    }
-
-    public DurabilityImpossibleException(String message) {
-        super(message);
-    }
-
-    public DurabilityImpossibleException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public DurabilityImpossibleException(Throwable cause) {
-        super(cause);
+    public DurabilityImpossibleException(final KeyValueErrorContext ctx) {
+        super("With the current cluster configuration, the requested durability guarantees are impossible", ctx);
     }
 }

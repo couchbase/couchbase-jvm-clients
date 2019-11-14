@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -327,7 +327,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
                       .cas(gr.cas())
                       .durability(DurabilityLevel.MAJORITY));
     }
-    catch (CASMismatchException err) {
+    catch (CasMismatchException err) {
       errorCount += 1;
     }
 
@@ -338,7 +338,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
                       .cas(gr.cas())
                       .durability(DurabilityLevel.MAJORITY));
     }
-    catch (CASMismatchException err) {
+    catch (CasMismatchException err) {
       errorCount += 1;
     }
 

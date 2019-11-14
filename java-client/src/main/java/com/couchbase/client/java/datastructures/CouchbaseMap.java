@@ -31,7 +31,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
@@ -135,7 +135,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                         Collections.singletonList(MutateInSpec.upsert(key, value)),
                         mapOptions.mutateInOptions().cas(returnCas));
                 return result;
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 //will need to retry get-and-set
             }
         }
@@ -175,7 +175,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                 return result;
             } catch (DocumentNotFoundException e) {
                 return null;
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 //will have to retry get-and-remove
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {

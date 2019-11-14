@@ -41,7 +41,7 @@ public class PrependAccessor {
         final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
         switch (response.status()) {
           case EXISTS:
-            throw CASMismatchException.forKey(key);
+            throw new CasMismatchException(ctx);
           case NOT_STORED:
             throw new DocumentNotFoundException(ctx);
           default:

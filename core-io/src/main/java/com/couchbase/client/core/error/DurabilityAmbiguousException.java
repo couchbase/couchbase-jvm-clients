@@ -23,19 +23,7 @@ package com.couchbase.client.core.error;
  */
 public class DurabilityAmbiguousException extends CouchbaseException {
 
-    public DurabilityAmbiguousException() {
-        super();
-    }
-
-    public DurabilityAmbiguousException(String message) {
-        super(message);
-    }
-
-    public DurabilityAmbiguousException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public DurabilityAmbiguousException(Throwable cause) {
-        super(cause);
+    public DurabilityAmbiguousException(final KeyValueErrorContext ctx) {
+        super("The server returned with a durability ambiguous response on this request", ctx);
     }
 }

@@ -18,6 +18,12 @@ public class KeyValueErrorContext extends ErrorContext {
     return new KeyValueErrorContext(request, status);
   }
 
+  public static KeyValueErrorContext incompleteRequest(final KeyValueRequest<?> request) {
+    return new KeyValueErrorContext(request, null);
+  }
+
+
+
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);

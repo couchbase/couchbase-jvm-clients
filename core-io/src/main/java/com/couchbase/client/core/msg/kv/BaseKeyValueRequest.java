@@ -158,6 +158,10 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ctx.put("documentId", redactUser(new String(key, UTF_8)));
     }
 
+    if (this instanceof SyncDurabilityRequest) {
+      ctx.put("syncDurability", ((SyncDurabilityRequest) this).durabilityLevel());
+    }
+
     return ctx;
   }
 

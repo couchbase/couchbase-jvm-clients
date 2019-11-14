@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
@@ -134,7 +135,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
             cas, flexibleExtras, extras, key, content);
         }
         else {
-          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
         }
       } else {
         request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,

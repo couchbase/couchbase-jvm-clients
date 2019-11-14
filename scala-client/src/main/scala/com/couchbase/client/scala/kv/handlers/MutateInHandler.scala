@@ -16,7 +16,11 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.{CASMismatchException, DocumentExistsException}
+import com.couchbase.client.core.error.{
+  CasMismatchException,
+  DocumentExistsException,
+  KeyValueErrorContext
+}
 import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
@@ -129,7 +133,10 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       case ResponseStatus.EXISTS =>
         document match {
           case StoreSemantics.Insert => throw DocumentExistsException.forKey(id)
-          case _                     => throw CASMismatchException.forKey(id)
+          case _ => {
+            val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
+            throw new CasMismatchException(ctx)
+          }
         }
 
       case _ => throw DefaultErrors.throwOnBadResult(id, response.status())

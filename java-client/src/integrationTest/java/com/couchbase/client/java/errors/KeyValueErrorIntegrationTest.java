@@ -149,4 +149,10 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.exists(null));
   }
 
+  @Test
+  void verifyRemoveExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.remove("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.remove(null));
+  }
+
 }

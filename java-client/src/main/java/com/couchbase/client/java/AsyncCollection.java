@@ -628,23 +628,20 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
+    notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     RemoveOptions.Built opts = options.build();
-    return RemoveAccessor.remove(core, removeRequest(id, options), id, opts.persistTo(),
-      opts.replicateTo());
+    return RemoveAccessor.remove(core, removeRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
   /**
    * Helper method to create the remove request.
    *
    * @param id the id of the document to remove.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
    * @return the remove request.
    */
-  RemoveRequest removeRequest(final String id, final RemoveOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "RemoveOptions");
-    RemoveOptions.Built opts = options.build();
-
+  RemoveRequest removeRequest(final String id, final RemoveOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
@@ -1053,6 +1050,10 @@ public class AsyncCollection {
       request.context().clientContext(opts.clientContext());
       return request;
     }
+  }
+
+  CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
   }
 
 }

@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -82,7 +83,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
             partition(), opaque, cas, flexibleExtras, extras, key, noBody());
         }
         else {
-          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
         }
       } else {
         request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),

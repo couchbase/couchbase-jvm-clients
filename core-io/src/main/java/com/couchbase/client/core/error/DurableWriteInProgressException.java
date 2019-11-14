@@ -23,19 +23,8 @@ package com.couchbase.client.core.error;
  */
 public class DurableWriteInProgressException extends CouchbaseException {
 
-    public DurableWriteInProgressException() {
-        super();
+    public DurableWriteInProgressException(final KeyValueErrorContext ctx) {
+        super("The server cannot serve the request document because a durable write is in progress", ctx);
     }
 
-    public DurableWriteInProgressException(String message) {
-        super(message);
-    }
-
-    public DurableWriteInProgressException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public DurableWriteInProgressException(Throwable cause) {
-        super(cause);
-    }
 }

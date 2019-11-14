@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.datastructures
 
 import com.couchbase.client.core.error.subdoc.MultiMutationException
-import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
+import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
@@ -74,7 +74,7 @@ class CouchbaseSet[T](
               case Failure(err: MultiMutationException) =>
                 if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) false
                 else throw err
-              case Failure(err: CASMismatchException) =>
+              case Failure(err: CasMismatchException) =>
                 // Recurse to try again
                 remove(elem)
               case Failure(err: DocumentNotFoundException) => false

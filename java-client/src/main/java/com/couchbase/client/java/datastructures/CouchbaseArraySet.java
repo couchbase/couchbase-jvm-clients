@@ -30,7 +30,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValue;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.java.kv.ArraySetOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
@@ -220,7 +220,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException | DocumentNotFoundException ex) {
+            } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -284,7 +284,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                             arraySetOptions.mutateInOptions().cas(cas));
                     return true;
                 }
-            } catch (CASMismatchException e) {
+            } catch (CasMismatchException e) {
                 //retry
             } catch (DocumentNotFoundException ex) {
                 return false;

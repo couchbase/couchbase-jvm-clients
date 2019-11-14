@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.CASMismatchException
+import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
@@ -58,7 +58,7 @@ class CouchbaseQueue[T](
 
         mutateResult match {
           case Success(_)                         => value
-          case Failure(err: CASMismatchException) =>
+          case Failure(err: CasMismatchException) =>
             // Recurse to try again
             dequeue()
           case Failure(err) => throw err

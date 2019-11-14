@@ -30,19 +30,10 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  *
  * @since 2.0
  */
-public class CASMismatchException extends CouchbaseException {
-  private final String key;
+public class CasMismatchException extends CouchbaseException {
 
-  private CASMismatchException(String key) {
-    super("Document with key [" + redactUser(key) + "] has been concurrently modified");
-    this.key = key;
+  public CasMismatchException(final KeyValueErrorContext ctx) {
+    super("Document has been concurrently modified on the server", ctx);
   }
 
-  public static CASMismatchException forKey(String key) {
-    return new CASMismatchException(key);
-  }
-
-  public String key() {
-    return key;
-  }
 }

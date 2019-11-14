@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
@@ -291,7 +291,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(insert.cas() != 0);
 
     assertThrows(
-      CASMismatchException.class,
+      CasMismatchException.class,
       () -> collection.remove(id, removeOptions().cas(insert.cas() + 100))
     );
 
@@ -340,7 +340,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
     assertTrue(upsert.cas() != 0);
 
-    assertThrows(CASMismatchException.class, () -> collection.replace(
+    assertThrows(CasMismatchException.class, () -> collection.replace(
       id,
       JsonObject.empty(),
       ReplaceOptions.replaceOptions().cas(upsert.cas() + 1))

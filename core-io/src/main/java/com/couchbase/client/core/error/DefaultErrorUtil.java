@@ -34,14 +34,14 @@ public class DefaultErrorUtil {
             case SERVER_BUSY:
                 return new TemporaryFailureException(errorContext);
             case TOO_BIG: return ValueTooLargeException.forKey(id);
-            case EXISTS: return CASMismatchException.forKey(id);
+            case EXISTS: return new CasMismatchException(errorContext);
             case NOT_STORED: return DocumentMutationLostException.forKey(id);
             case NOT_FOUND: return new DocumentNotFoundException(errorContext);
             case OUT_OF_MEMORY: return new ServerOutOfMemoryException(errorContext);
-            case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException();
-            case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException();
-            case SYNC_WRITE_AMBIGUOUS: return new DurabilityAmbiguousException();
-            case SYNC_WRITE_IN_PROGRESS: return new DurableWriteInProgressException();
+            case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException(errorContext);
+            case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException(errorContext);
+            case SYNC_WRITE_AMBIGUOUS: return new DurabilityAmbiguousException(errorContext);
+            case SYNC_WRITE_IN_PROGRESS: return new DurableWriteInProgressException(errorContext);
             case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: return new DurableWriteReCommitInProgressException(errorContext);
 
                 // Any other error should not make it to this generic error handling

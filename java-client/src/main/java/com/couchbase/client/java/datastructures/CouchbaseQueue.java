@@ -31,7 +31,7 @@ import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.java.kv.CommonDatastructureOptions;
 import com.couchbase.client.java.kv.GetOptions;
@@ -161,7 +161,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 return current;
             } catch (DocumentNotFoundException ex) {
                 return null;
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 //will have to retry get-and-remove
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -242,7 +242,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 delegate.remove();
                 doneRemove = true;
                 lastVisited--;
-            } catch (CASMismatchException | DocumentNotFoundException e) {
+            } catch (CasMismatchException | DocumentNotFoundException e) {
                 throw new ConcurrentModificationException("Couldn't remove while iterating: " + e);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {

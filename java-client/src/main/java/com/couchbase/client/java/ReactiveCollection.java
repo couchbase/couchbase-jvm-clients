@@ -21,6 +21,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -77,6 +79,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
@@ -405,8 +408,9 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> remove(final String id, final RemoveOptions options) {
     return Mono.defer(() -> {
+      notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       RemoveOptions.Built opts = options.build();
-      RemoveRequest request = asyncCollection.removeRequest(id, options);
+      RemoveRequest request = asyncCollection.removeRequest(id, opts);
       return Reactor.wrap(
         request,
         RemoveAccessor.remove(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -624,6 +628,5 @@ public class ReactiveCollection {
       );
     });
   }
-
 
 }

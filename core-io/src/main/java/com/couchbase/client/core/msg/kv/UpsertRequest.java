@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -107,7 +108,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
             partition(), opaque, noCas(), flexibleExtras, extras, key, content);
         }
         else {
-          throw new DurabilityLevelNotAvailableException(syncReplicationType.get());
+          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
         }
       } else {
         request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.SET, datatype, partition(),

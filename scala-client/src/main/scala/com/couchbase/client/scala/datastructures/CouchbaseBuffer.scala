@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
+import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
@@ -93,7 +93,7 @@ class CouchbaseBuffer[T](
 
         mutateResult match {
           case Success(_)                         => value
-          case Failure(err: CASMismatchException) =>
+          case Failure(err: CasMismatchException) =>
             // Recurse to try again
             remove(index)
           case Failure(err) => throw err

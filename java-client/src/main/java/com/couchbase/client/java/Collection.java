@@ -18,14 +18,10 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DocumentLockedException;
-import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestTimeoutException;
-import com.couchbase.client.core.error.ServerOutOfMemoryException;
-import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
@@ -324,10 +320,14 @@ public class Collection {
   }
 
   /**
-   * Removes a Document from a collection with default options.
+   * Removes a Document from a collection.
    *
-   * @param id the id of the document to remove.
+   * @param id the document id which is used to uniquely identify it.
    * @return a {@link MutationResult} once removed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id) {
     return block(async().remove(id));
@@ -336,9 +336,13 @@ public class Collection {
   /**
    * Removes a Document from a collection with custom options.
    *
-   * @param id the id of the document to remove.
+   * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
    * @return a {@link MutationResult} once removed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id, final RemoveOptions options) {
     return block(async().remove(id, options));

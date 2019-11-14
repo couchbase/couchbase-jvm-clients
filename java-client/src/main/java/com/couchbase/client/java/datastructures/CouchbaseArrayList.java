@@ -31,7 +31,7 @@ import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.java.kv.ArrayListOptions;
@@ -186,7 +186,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 return result;
             } catch (DocumentNotFoundException e) {
                 createEmptyList();
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 //will need to retry get-and-set
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -251,7 +251,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             } catch (DocumentNotFoundException e) {
                 // ArrayList will throw if underlying list was cleared before a remove.
                 throw new IndexOutOfBoundsException("Index:" + index);
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 //will have to retry get-and-remove
             } catch (PathNotFoundException e) {
                 throw new IndexOutOfBoundsException("Index: " + index);
@@ -375,7 +375,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 delegate.remove();
                 this.cursor = lastVisited;
                 this.lastVisited = -1;
-            } catch (CASMismatchException | DocumentNotFoundException ex) {
+            } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -401,7 +401,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 this.cas = updated.cas();
                 //also correctly reset the state:
                 delegate.set(e);
-            } catch (CASMismatchException | DocumentNotFoundException ex) {
+            } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
@@ -435,7 +435,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 } else {
                     throw new ConcurrentModificationException("List was modified since iterator creation", ex);
                 }
-            } catch (CASMismatchException ex) {
+            } catch (CasMismatchException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation", ex);
             } catch (MultiMutationException ex) {
                 if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {

@@ -38,11 +38,12 @@ public enum ReplaceAccessor {
     final CompletableFuture<MutationResult> mutationResult = request
       .response()
       .thenApply(response -> {
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
         switch (response.status()) {
           case SUCCESS:
             return new MutationResult(response.cas(), response.mutationToken());
           case EXISTS:
-            throw CASMismatchException.forKey(key);
+            throw new CasMismatchException(ctx);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

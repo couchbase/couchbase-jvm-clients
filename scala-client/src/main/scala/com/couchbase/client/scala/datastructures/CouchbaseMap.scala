@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CASMismatchException, DocumentNotFoundException}
+import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
 import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException}
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
@@ -111,7 +111,7 @@ class CouchbaseMap[T](
 
         mutateResult match {
           case Success(_)                         => Some(value)
-          case Failure(err: CASMismatchException) =>
+          case Failure(err: CasMismatchException) =>
             // Recurse to try again
             remove(key)
           case Failure(err) => throw err

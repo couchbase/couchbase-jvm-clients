@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-
 /**
  * This exception is raised when a durability level has been requested that is not available on the server.
  *
@@ -25,22 +23,8 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
  */
 public class DurabilityLevelNotAvailableException extends CouchbaseException {
 
-  public DurabilityLevelNotAvailableException() {
+  public DurabilityLevelNotAvailableException(final KeyValueErrorContext ctx) {
+    super("Durability level is not supported by this version of the server", ctx);
   }
 
-  public DurabilityLevelNotAvailableException(String message) {
-    super(message);
-  }
-
-  public DurabilityLevelNotAvailableException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public DurabilityLevelNotAvailableException(Throwable cause) {
-    super(cause);
-  }
-
-  public DurabilityLevelNotAvailableException(DurabilityLevel level) {
-    super("Durability level " + level + " is not supported by this version of the server");
-  }
 }

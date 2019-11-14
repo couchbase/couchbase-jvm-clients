@@ -1,9 +1,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CASMismatchException;
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.service.kv.Observe;
@@ -25,13 +26,15 @@ public class MutateInAccessor {
     return request
       .response()
       .thenApply(response -> {
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+
         switch (response.status()) {
           case SUCCESS:
             return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
           case EXISTS:
-            throw insertDocument ? DocumentExistsException.forKey(key) : CASMismatchException.forKey(key);
+            throw insertDocument ? DocumentExistsException.forKey(key) : new CasMismatchException(ctx);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
