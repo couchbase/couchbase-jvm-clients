@@ -292,7 +292,7 @@ public abstract class BaseEndpoint implements Endpoint {
             }
           });
 
-        if (env.ioConfig().tcpKeepAliveEnabled()) {
+        if (env.ioConfig().tcpKeepAlivesEnabled() && !(eventLoopGroup instanceof DefaultEventLoopGroup)) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
           if (eventLoopGroup instanceof EpollEventLoopGroup) {
             channelBootstrap.option(
