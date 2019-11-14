@@ -97,26 +97,6 @@ class EnvironmentSpec {
   }
 
   @Test
-  def service_config() {
-    val env = ClusterEnvironment.builder
-      .serviceConfig(
-        ServiceConfig()
-          .keyValueServiceConfig(
-            KeyValueServiceConfig()
-              .endpoints(5)
-          )
-          .queryServiceConfig(
-            QueryServiceConfig()
-              .maxEndpoints(10)
-              .minEndpoints(3)
-          )
-      )
-      .build
-      .get
-    env.shutdown()
-  }
-
-  @Test
   def logging_config() {
     val env = ClusterEnvironment.builder
       .loggerConfig(

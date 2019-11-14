@@ -64,13 +64,13 @@ class BuilderPropertySetterTest {
   @Test
   void setInt() {
     CoreEnvironment.Builder builder = newEnvironmentBuilder();
-    setter.set(builder, "service.queryService.minEndpoints", "76");
+    setter.set(builder, "io.maxHttpConnections", "76");
 
-    ServiceConfig service = builder.serviceConfig().build();
-    assertEquals(76, service.queryServiceConfig().minEndpoints());
+    IoConfig io = builder.ioConfig().build();
+    assertEquals(76, io.maxHttpConnections());
 
     IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-      () -> setter.set(builder, "service.queryService.minEndpoints", "garbage"));
+      () -> setter.set(builder, "io.maxHttpConnections", "garbage"));
 
     assertEquals("Expected an int but got \"garbage\".",
       e.getMessage());
@@ -80,12 +80,12 @@ class BuilderPropertySetterTest {
   void setDuration() {
     CoreEnvironment.Builder builder = newEnvironmentBuilder();
 
-    setter.set(builder, "service.queryService.idleTime", "0");
-    setter.set(builder, "service.analyticsService.idleTime", "2s");
+    setter.set(builder, "io.idleHttpConnectionTimeout", "0");
+    setter.set(builder, "io.tcpKeepAliveTime", "2s");
 
-    ServiceConfig service = builder.serviceConfig().build();
-    assertEquals(Duration.ZERO, service.queryServiceConfig().idleTime());
-    assertEquals(Duration.ofSeconds(2), service.analyticsServiceConfig().idleTime());
+    IoConfig io = builder.ioConfig().build();
+    assertEquals(Duration.ZERO, io.idleHttpConnectionTimeout());
+    assertEquals(Duration.ofSeconds(2), io.tcpKeepAliveTime());
   }
 
   @Test

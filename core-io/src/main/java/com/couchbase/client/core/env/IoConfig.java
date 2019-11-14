@@ -19,6 +19,7 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
+import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
@@ -38,6 +39,9 @@ public class IoConfig {
   public static final Duration DEFAULT_TCP_KEEPALIVE_TIME = Duration.ofSeconds(60);
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
+  public static final int DEFAULT_NUM_KV_CONNECTIONS = 1;
+  public static final int DEFAULT_MAX_HTTP_CONNECTIONS = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS;
+  public static final Duration DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME;
 
   private final Set<SaslMechanism> allowedSaslMechanisms;
   private final boolean mutationTokensEnabled;
@@ -53,6 +57,9 @@ public class IoConfig {
   private final boolean dnsSrvEnabled;
   private final boolean tcpKeepAlivesEnabled;
   private final Duration tcpKeepAliveTime;
+  private final int numKvConnections;
+  private final int maxHttpConnections;
+  private final Duration idleHttpConnectionTimeout;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -75,6 +82,9 @@ public class IoConfig {
     networkResolution = builder.networkResolution;
     tcpKeepAlivesEnabled = builder.tcpKeepAlivesEnabled;
     tcpKeepAliveTime = builder.tcpKeepAliveTime;
+    numKvConnections = builder.numKvConnections;
+    maxHttpConnections = builder.maxHttpConnections;
+    idleHttpConnectionTimeout = builder.idleHttpConnectionTimeout;
   }
 
   public static IoConfig create() {
@@ -141,6 +151,18 @@ public class IoConfig {
     return builder().tcpKeepAliveTime(tcpKeepAliveTime);
   }
 
+  public static Builder numKvConnections(int numKvConnections) {
+    return builder().numKvConnections(numKvConnections);
+  }
+
+  public static Builder maxHttpConnections(int maxHttpConnections) {
+    return builder().maxHttpConnections(maxHttpConnections);
+  }
+
+  public static Builder idleHttpConnectionTimeout(Duration idleHttpConnectionTimeout) {
+    return builder().idleHttpConnectionTimeout(idleHttpConnectionTimeout);
+  }
+
   public Set<SaslMechanism> allowedSaslMechanisms() {
     return allowedSaslMechanisms;
   }
@@ -197,6 +219,18 @@ public class IoConfig {
     return tcpKeepAliveTime;
   }
 
+  public int numKvConnections() {
+    return numKvConnections;
+  }
+
+  public int maxHttpConnections() {
+    return maxHttpConnections;
+  }
+
+  public Duration idleHttpConnectionTimeout() {
+    return idleHttpConnectionTimeout;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -217,6 +251,9 @@ public class IoConfig {
     export.put("searchCircuitBreakerConfig", searchCircuitBreakerConfig.enabled() ? searchCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("analyticsCircuitBreakerConfig", analyticsCircuitBreakerConfig.enabled() ? analyticsCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("managerCircuitBreakerConfig", managerCircuitBreakerConfig.enabled() ? managerCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("numKvConnections", numKvConnections);
+    export.put("maxHttpConnections", maxHttpConnections);
+    export.put("idleHttpConnectionTimeout", idleHttpConnectionTimeout);
     return export;
   }
 
@@ -236,6 +273,9 @@ public class IoConfig {
     private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
     private boolean tcpKeepAlivesEnabled = DEFAULT_TCP_KEEPALIVE_ENABLED;
     private Duration tcpKeepAliveTime = DEFAULT_TCP_KEEPALIVE_TIME;
+    private int numKvConnections = DEFAULT_NUM_KV_CONNECTIONS;
+    private int maxHttpConnections = DEFAULT_MAX_HTTP_CONNECTIONS;
+    private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -379,6 +419,21 @@ public class IoConfig {
 
     public Builder networkResolution(final NetworkResolution networkResolution) {
       this.networkResolution = networkResolution;
+      return this;
+    }
+
+    public Builder numKvConnections(int numKvConnections) {
+      this.numKvConnections = numKvConnections;
+      return this;
+    }
+
+    public Builder maxHttpConnections(int maxHttpConnections) {
+      this.maxHttpConnections = maxHttpConnections;
+      return this;
+    }
+
+    public Builder idleHttpConnectionTimeout(Duration idleHttpConnectionTimeout) {
+      this.idleHttpConnectionTimeout = idleHttpConnectionTimeout;
       return this;
     }
   }

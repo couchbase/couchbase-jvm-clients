@@ -16,8 +16,7 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.ServiceConfig;
-import com.couchbase.client.core.service.KeyValueServiceConfig;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
@@ -34,8 +33,8 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    ServiceConfig.Builder serviceConfig = ServiceConfig.keyValueServiceConfig(KeyValueServiceConfig.builder().endpoints(8));
-    environment = environment().serviceConfig(serviceConfig).build();
+    IoConfig.Builder ioConfig = IoConfig.numKvConnections(8);
+    environment = environment().ioConfig(ioConfig).build();
     cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

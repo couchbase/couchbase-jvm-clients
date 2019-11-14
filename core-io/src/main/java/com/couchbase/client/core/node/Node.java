@@ -29,22 +29,26 @@ import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.diag.EndpointHealth;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.ServiceConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.AnalyticsService;
+import com.couchbase.client.core.service.AnalyticsServiceConfig;
 import com.couchbase.client.core.service.KeyValueService;
+import com.couchbase.client.core.service.KeyValueServiceConfig;
 import com.couchbase.client.core.service.ManagerService;
 import com.couchbase.client.core.service.QueryService;
+import com.couchbase.client.core.service.QueryServiceConfig;
 import com.couchbase.client.core.service.SearchService;
+import com.couchbase.client.core.service.SearchServiceConfig;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.service.ViewService;
+import com.couchbase.client.core.service.ViewServiceConfig;
 import com.couchbase.client.core.util.CompositeStateful;
 import com.couchbase.client.core.util.Stateful;
 import reactor.core.publisher.Flux;
@@ -390,22 +394,39 @@ public class Node implements Stateful<NodeState> {
   protected Service createService(final ServiceType serviceType, final int port,
                                   final Optional<String> bucket) {
     CoreEnvironment env = ctx.environment();
-    ServiceConfig sc = env.serviceConfig();
     String address = alternateAddress.orElseGet(identifier::address);
 
     switch (serviceType) {
       case KV:
-        return new KeyValueService(sc.keyValueServiceConfig(), ctx, address, port, bucket, authenticator);
+        return new KeyValueService(
+          KeyValueServiceConfig.endpoints(env.ioConfig().numKvConnections()).build(), ctx, address, port, bucket, authenticator);
       case MANAGER:
         return new ManagerService(ctx, address, port);
       case QUERY:
-        return new QueryService(sc.queryServiceConfig(), ctx, address, port);
+        return new QueryService(QueryServiceConfig
+          .maxEndpoints(env.ioConfig().maxHttpConnections())
+          .idleTime(env.ioConfig().idleHttpConnectionTimeout())
+          .build(),
+          ctx, address, port
+        );
       case VIEWS:
-        return new ViewService(sc.viewServiceConfig(), ctx, address, port);
+        return new ViewService(ViewServiceConfig
+          .maxEndpoints(env.ioConfig().maxHttpConnections())
+          .idleTime(env.ioConfig().idleHttpConnectionTimeout())
+          .build(),
+          ctx, address, port);
       case SEARCH:
-        return new SearchService(sc.searchServiceConfig(), ctx, address, port);
+        return new SearchService(SearchServiceConfig
+          .maxEndpoints(env.ioConfig().maxHttpConnections())
+          .idleTime(env.ioConfig().idleHttpConnectionTimeout())
+          .build(),
+          ctx, address, port);
       case ANALYTICS:
-        return new AnalyticsService(sc.analyticsServiceConfig(), ctx, address, port);
+        return new AnalyticsService(AnalyticsServiceConfig
+          .maxEndpoints(env.ioConfig().maxHttpConnections())
+          .idleTime(env.ioConfig().idleHttpConnectionTimeout())
+          .build(),
+          ctx, address, port);
       default:
         throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
     }

@@ -53,11 +53,11 @@ class SystemPropertyPropertyLoaderTest {
   @Test
   void shouldApplyProperties() {
     Properties properties = new Properties();
-    properties.setProperty("com.couchbase.env.service.queryService.minEndpoints", "23");
+    properties.setProperty("com.couchbase.env.io.maxHttpConnections", "23");
     properties.setProperty("com.couchbase.env.io.configPollInterval", "2m");
 
     parse(properties, env -> {
-      assertEquals(23, env.serviceConfig().queryServiceConfig().minEndpoints());
+      assertEquals(23, env.ioConfig().maxHttpConnections());
       assertEquals(Duration.ofMinutes(2), env.ioConfig().configPollInterval());
     });
   }

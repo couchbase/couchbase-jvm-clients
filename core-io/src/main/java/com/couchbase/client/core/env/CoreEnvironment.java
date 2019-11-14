@@ -97,7 +97,6 @@ public class CoreEnvironment {
   private final CompressionConfig compressionConfig;
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
-  private final ServiceConfig serviceConfig;
   private final DiagnosticsConfig diagnosticsConfig;
   private final Supplier<RequestTracer> requestTracer;
 
@@ -137,7 +136,6 @@ public class CoreEnvironment {
     this.ioConfig = builder.ioConfig.build();
     this.compressionConfig = builder.compressionConfig.build();
     this.timeoutConfig = builder.timeoutConfig.build();
-    this.serviceConfig = builder.serviceConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
     this.diagnosticsConfig = builder.diagnosticsConfig.build();
@@ -265,10 +263,6 @@ public class CoreEnvironment {
 
   public SecurityConfig securityConfig() {
     return securityConfig;
-  }
-
-  public ServiceConfig serviceConfig() {
-    return serviceConfig;
   }
 
   public CompressionConfig compressionConfig() {
@@ -407,7 +401,6 @@ public class CoreEnvironment {
     input.put("compressionConfig", compressionConfig.exportAsMap());
     input.put("securityConfig", securityConfig.exportAsMap());
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
-    input.put("serviceConfig", serviceConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
     input.put("diagnosticsConfig", diagnosticsConfig.exportAsMap());
 
@@ -429,7 +422,6 @@ public class CoreEnvironment {
     private CompressionConfig.Builder compressionConfig = CompressionConfig.builder();
     private SecurityConfig.Builder securityConfig = SecurityConfig.builder();
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
-    private ServiceConfig.Builder serviceConfig = ServiceConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private DiagnosticsConfig.Builder diagnosticsConfig = DiagnosticsConfig.builder();
     private Supplier<EventBus> eventBus = null;
@@ -489,15 +481,6 @@ public class CoreEnvironment {
 
     public TimeoutConfig.Builder timeoutConfig() {
       return this.timeoutConfig;
-    }
-
-    public SELF serviceConfig(final ServiceConfig.Builder serviceConfig) {
-      this.serviceConfig = requireNonNull(serviceConfig);
-      return self();
-    }
-
-    public ServiceConfig.Builder serviceConfig() {
-      return serviceConfig;
     }
 
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {

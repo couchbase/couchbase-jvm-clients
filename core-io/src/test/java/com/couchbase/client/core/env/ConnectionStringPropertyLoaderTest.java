@@ -58,8 +58,8 @@ class ConnectionStringPropertyLoaderTest {
 
   @Test
   void shouldApplyPropertiesFromConnectionString() {
-    parse("couchbase://127.0.0.1?service.queryService.minEndpoints=23&io.configPollInterval=2m", env -> {
-      assertEquals(23, env.serviceConfig().queryServiceConfig().minEndpoints());
+    parse("couchbase://127.0.0.1?io.maxHttpConnections=23&io.configPollInterval=2m", env -> {
+      assertEquals(23, env.ioConfig().maxHttpConnections());
       assertEquals(Duration.ofMinutes(2), env.ioConfig().configPollInterval());
     });
   }

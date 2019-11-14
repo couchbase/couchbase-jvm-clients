@@ -56,7 +56,6 @@ object ClusterEnvironment {
       private[scala] val compressionConfig: Option[CompressionConfig] = None,
       private[scala] val securityConfig: Option[SecurityConfig] = None,
       private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
-      private[scala] val serviceConfig: Option[ServiceConfig] = None,
       private[scala] val loggerConfig: Option[LoggerConfig] = None,
       private[scala] val retryStrategy: Option[RetryStrategy] = None
   ) {
@@ -108,14 +107,6 @@ object ClusterEnvironment {
       */
     def timeoutConfig(config: TimeoutConfig): ClusterEnvironment.Builder = {
       copy(timeoutConfig = Some(config))
-    }
-
-    /** Sets the [[ServiceConfig]] config.
-      *
-      * @return this, for chaining
-      */
-    def serviceConfig(config: ServiceConfig): ClusterEnvironment.Builder = {
-      copy(serviceConfig = Some(config))
     }
 
     /** Sets the [[IoConfig]] config.
@@ -185,7 +176,6 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.compressionConfig.foreach(v => coreBuilder.compressionConfig(v.toCore))
   builder.securityConfig.foreach(v => coreBuilder.securityConfig(v.toCore))
   builder.timeoutConfig.foreach(v => coreBuilder.timeoutConfig(v.toCore))
-  builder.serviceConfig.foreach(v => coreBuilder.serviceConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
 
