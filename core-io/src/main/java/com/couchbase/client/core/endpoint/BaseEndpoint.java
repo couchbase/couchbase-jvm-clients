@@ -27,7 +27,9 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
@@ -253,8 +255,9 @@ public abstract class BaseEndpoint implements Endpoint {
     final AtomicLong attemptStart = new AtomicLong();
     Mono
       .defer((Supplier<Mono<Channel>>) () -> {
-        long connectTimeoutMs = endpointContext
-          .environment()
+        CoreEnvironment env = endpointContext.environment();
+
+        long connectTimeoutMs = env
           .timeoutConfig()
           .connectTimeout()
           .toMillis();
@@ -273,7 +276,7 @@ public abstract class BaseEndpoint implements Endpoint {
             protected void initChannel(final Channel ch) {
               ChannelPipeline pipeline = ch.pipeline();
 
-              SecurityConfig config = endpointContext.environment().securityConfig();
+              SecurityConfig config = env.securityConfig();
               if (config.tlsEnabled()) {
                 try {
                   pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config));
@@ -281,13 +284,22 @@ public abstract class BaseEndpoint implements Endpoint {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }
               }
-              if (endpointContext.environment().ioConfig().captureTraffic().contains(serviceType)) {
+              if (env.ioConfig().captureTraffic().contains(serviceType)) {
                 pipeline.addLast(new TrafficCaptureHandler(endpointContext));
               }
               pipelineInitializer().init(BaseEndpoint.this, pipeline);
               pipeline.addLast(new PipelineErrorHandler(BaseEndpoint.this));
             }
           });
+
+        if (env.ioConfig().tcpKeepAliveEnabled()) {
+          channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+          if (eventLoopGroup instanceof EpollEventLoopGroup) {
+            channelBootstrap.option(
+              EpollChannelOption.TCP_KEEPIDLE,
+              (int) TimeUnit.MILLISECONDS.toSeconds(env.ioConfig().tcpKeepAliveTime().toMillis()));
+          }
+        }
 
         attemptStart.set(System.nanoTime());
         return channelFutureIntoMono(channelBootstrap.connect());

@@ -35,6 +35,8 @@ public class IoConfig {
 
   public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = true;
   public static final boolean DEFAULT_DNS_SRV_ENABLED = true;
+  public static final boolean DEFAULT_TCP_KEEPALIVE_ENABLED = true;
+  public static final Duration DEFAULT_TCP_KEEPALIVE_TIME = Duration.ofSeconds(60);
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
 
@@ -50,6 +52,8 @@ public class IoConfig {
   private final Set<ServiceType> captureTraffic;
   private final NetworkResolution networkResolution;
   private final boolean dnsSrvEnabled;
+  private final boolean tcpKeepAliveEnabled;
+  private final Duration tcpKeepAliveTime;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -70,6 +74,8 @@ public class IoConfig {
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
     networkResolution = builder.networkResolution;
+    tcpKeepAliveEnabled = builder.tcpKeepAliveEnabled;
+    tcpKeepAliveTime = builder.tcpKeepAliveTime;
   }
 
   public static IoConfig create() {
@@ -128,6 +134,14 @@ public class IoConfig {
     return builder().networkResolution(networkResolution);
   }
 
+  public static Builder tcpKeepAliveEnabled(final boolean tcpKeepAliveEnabled) {
+    return builder().tcpKeepAliveEnabled(tcpKeepAliveEnabled);
+  }
+
+  public static Builder tcpKeepAliveTime(final Duration tcpKeepAliveTime) {
+    return builder().tcpKeepAliveTime(tcpKeepAliveTime);
+  }
+
   public Set<SaslMechanism> allowedSaslMechanisms() {
     return allowedSaslMechanisms;
   }
@@ -176,6 +190,14 @@ public class IoConfig {
     return networkResolution;
   }
 
+  public boolean tcpKeepAliveEnabled() {
+    return tcpKeepAliveEnabled;
+  }
+
+  public Duration tcpKeepAliveTime() {
+    return tcpKeepAliveTime;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -187,6 +209,8 @@ public class IoConfig {
     export.put("mutationTokensEnabled", mutationTokensEnabled);
     export.put("networkResolution", networkResolution.name());
     export.put("dnsSrvEnabled", dnsSrvEnabled);
+    export.put("tcpKeepAliveEnabled", tcpKeepAliveEnabled);
+    export.put("tcpKeepAliveTime", tcpKeepAliveTime);
     export.put("configPollIntervalMillis", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -210,7 +234,9 @@ public class IoConfig {
     private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
     private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
-    private boolean dnsSrvEnabled;
+    private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
+    private boolean tcpKeepAliveEnabled = DEFAULT_TCP_KEEPALIVE_ENABLED;
+    private Duration tcpKeepAliveTime = DEFAULT_TCP_KEEPALIVE_TIME;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -243,6 +269,26 @@ public class IoConfig {
 
     boolean dnsSrvEnabled() {
       return dnsSrvEnabled;
+    }
+
+    public Builder tcpKeepAliveEnabled(boolean tcpKeepAliveEnabled) {
+      this.tcpKeepAliveEnabled = tcpKeepAliveEnabled;
+      return this;
+    }
+
+    /**
+     * Allows to customize the idle time after which a tcp keepalive gets fired.
+     * <p>
+     * Please note that this setting only propagates to the OS on linux when the epoll transport is used. On all
+     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * the default behavior).
+     *
+     * @param tcpKeepAliveTime the custom keepalive time.
+     * @return this builder for chaining purposes.
+     */
+    public Builder tcpKeepAliveTime(final Duration tcpKeepAliveTime) {
+      this.tcpKeepAliveTime = tcpKeepAliveTime;
+      return this;
     }
 
     /**
