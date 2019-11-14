@@ -35,6 +35,7 @@ import java.util.UUID;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -48,6 +49,8 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(connectionString(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
+
+    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
   }
 
   @AfterAll
