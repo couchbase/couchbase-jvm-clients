@@ -24,9 +24,15 @@ import com.couchbase.client.core.diag.DiagnosticsResult
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
+import com.couchbase.client.scala.AsyncCluster.{
+  extractClusterEnvironment,
+  seedNodesFromConnectionString
+}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -43,7 +49,7 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -86,9 +92,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * @param statement the N1QL statement to execute
-    * @param options   any query options - see [[query.QueryOptions]] for documentation
+    * @param options   any query options - see [[QueryOptions]] for documentation
     *
-    * @return a `Mono` containing a [[query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     **/
   def query(
@@ -262,7 +268,7 @@ object ReactiveCluster {
       connectionString: String,
       username: String,
       password: String
-  ): SMono[ReactiveCluster] = {
+  ): Try[ReactiveCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
@@ -275,23 +281,19 @@ object ReactiveCluster {
     *
     * @return a Mono[ReactiveCluster] representing a connection to the cluster
     */
-  def connect(connectionString: String, options: ClusterOptions): SMono[ReactiveCluster] = {
-    extractClusterEnvironment(connectionString, options) match {
-      case Success(ce) =>
+  def connect(connectionString: String, options: ClusterOptions): Try[ReactiveCluster] = {
+    extractClusterEnvironment(connectionString, options)
+      .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
         val seedNodes = if (options.seedNodes.isDefined) {
           options.seedNodes.get
         } else {
           seedNodesFromConnectionString(connectionString, ce)
         }
-        SMono
-          .just(new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes)))
-          .flatMap(cluster => {
-            cluster.async.performGlobalConnect()
-            SMono.just(cluster)
-          })
-      case Failure(err) => SMono.raiseError(err)
-    }
+        val cluster = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
+        cluster.async.performGlobalConnect()
+        cluster
+      })
   }
 
 }

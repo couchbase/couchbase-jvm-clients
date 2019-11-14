@@ -181,7 +181,7 @@ class AsyncCluster(
                           )
                         )
                       })
-                )
+              )
           )
           .toFuture
 
@@ -271,13 +271,13 @@ object AsyncCluster {
     * @param username         the name of a user with appropriate permissions on the cluster.
     * @param password         the password of a user with appropriate permissions on the cluster.
     *
-    * @return a [[AsyncCluster]] representing a connection to the cluster
+    * @return an [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(
       connectionString: String,
       username: String,
       password: String
-  ): Future[AsyncCluster] = {
+  ): Try[AsyncCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator(username, password)))
   }
 
@@ -288,24 +288,20 @@ object AsyncCluster {
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param options custom options used when connecting to the cluster.
     *
-    * @return a [[AsyncCluster]] representing a connection to the cluster
+    * @return an [[AsyncCluster]] representing a connection to the cluster
     */
-  def connect(connectionString: String, options: ClusterOptions): Future[AsyncCluster] = {
-    extractClusterEnvironment(connectionString, options) match {
-      case Success(ce) =>
-        implicit val ec = ce.ec
-        Future {
-          val seedNodes = if (options.seedNodes.isDefined) {
-            options.seedNodes.get
-          } else {
-            seedNodesFromConnectionString(connectionString, ce)
-          }
-          val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
-          cluster.performGlobalConnect()
-          cluster
+  def connect(connectionString: String, options: ClusterOptions): Try[AsyncCluster] = {
+    extractClusterEnvironment(connectionString, options)
+      .map(ce => {
+        val seedNodes = if (options.seedNodes.isDefined) {
+          options.seedNodes.get
+        } else {
+          seedNodesFromConnectionString(connectionString, ce)
         }
-      case Failure(err) => Future.failed(err)
-    }
+        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+        cluster.performGlobalConnect()
+        cluster
+      })
   }
 
   private[client] def searchQuery(request: SearchRequest, core: Core): Future[SearchResult] = {
@@ -337,7 +333,7 @@ object AsyncCluster {
                         meta
                       )
                     })
-              )
+            )
         )
         .toFuture
 
