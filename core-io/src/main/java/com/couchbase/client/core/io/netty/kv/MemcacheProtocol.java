@@ -527,6 +527,7 @@ public enum MemcacheProtocol {
       return ResponseStatus.SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
             || status == Status.SUBDOC_DOC_NOT_JSON.status
+            || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
             || status == Status.SUBDOC_INVALID_COMBO.status) {
       return ResponseStatus.SUBDOC_FAILURE;

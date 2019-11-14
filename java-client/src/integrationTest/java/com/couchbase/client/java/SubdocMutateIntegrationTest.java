@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
@@ -682,5 +683,18 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("bar_orig_1", updated.getString("foo1"));
     }
 
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @Test
+    public void multipleXattrKeysShouldFail() {
+        String docId = docId();
 
+        assertThrows(XattrInvalidKeyComboException.class, () -> {
+            coll.mutateIn(docId,
+                    Arrays.asList(
+                            MutateInSpec.increment("count", 1).xattr().createPath(),
+                            MutateInSpec.arrayAppend("logs", "someValue"),
+                            MutateInSpec.upsert("logs[-1].c", MutateInMacro.CAS).xattr()),
+                    MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
+        });
+    }
 }

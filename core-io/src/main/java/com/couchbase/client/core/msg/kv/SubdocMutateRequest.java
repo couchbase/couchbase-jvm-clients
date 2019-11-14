@@ -26,6 +26,7 @@ import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -205,26 +206,18 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     }
 
 
-    // Note that we send all subdoc requests as multi currently so always get this back on error
+    // Handle any document-level failures here
     if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
-        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
-        0,
-        null,
-        SubDocumentOpResponseStatus.DOC_NOT_JSON
-      );
-      error = Optional.of(new DocumentNotJsonException(errorContext, 0));
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON);
+      error = Optional.of(new DocumentNotJsonException(e, 0));
     } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
-        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
-        0,
-        null,
-        SubDocumentOpResponseStatus.DOC_TOO_DEEP
-      );
-      error = Optional.of(new DocumentTooDeepException(errorContext, 0));
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP);
+      error = Optional.of(new DocumentTooDeepException(e, 0));
+    } else if (rawOverallStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
+      error = Optional.of(new XattrInvalidKeyComboException(e, 0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
-
 
     return new SubdocMutateResponse(
       overallStatus,
@@ -232,6 +225,15 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       values,
       cas(response),
       extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+    );
+  }
+
+  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status) {
+    return new SubDocumentErrorContext(
+            KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+            0,
+            null,
+            status
     );
   }
 
