@@ -260,11 +260,11 @@ public class ReactiveCluster {
   /**
    * Opens a {@link ReactiveBucket} with the given name.
    *
-   * @param name the name of the bucket to open.
+   * @param bucketName the name of the bucket to open.
    * @return a {@link ReactiveBucket} once opened.
    */
-  public ReactiveBucket bucket(final String name) {
-    return new ReactiveBucket(asyncCluster.bucket(name));
+  public ReactiveBucket bucket(final String bucketName) {
+    return new ReactiveBucket(asyncCluster.bucket(bucketName));
   }
 
   /**

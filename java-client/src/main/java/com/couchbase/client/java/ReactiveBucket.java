@@ -130,8 +130,8 @@ public class ReactiveBucket {
    * @return the {@link ReactiveCollection} once opened.
    */
   @Stability.Volatile
-  public ReactiveCollection collection(final String name) {
-    return defaultScope().collection(name);
+  public ReactiveCollection collection(final String collectionName) {
+    return defaultScope().collection(collectionName);
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {

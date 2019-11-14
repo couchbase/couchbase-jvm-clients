@@ -274,11 +274,11 @@ public class Cluster {
   /**
    * Opens a {@link Bucket} with the given name.
    *
-   * @param name the name of the bucket to open.
+   * @param bucketName the name of the bucket to open.
    * @return a {@link Bucket} once opened.
    */
-  public Bucket bucket(final String name) {
-    return new Bucket(asyncCluster.bucket(name));
+  public Bucket bucket(final String bucketName) {
+    return new Bucket(asyncCluster.bucket(bucketName));
   }
 
   /**

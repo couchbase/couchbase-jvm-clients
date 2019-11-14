@@ -117,13 +117,13 @@ public class AsyncScope {
   /**
    * Opens a collection for this scope with an explicit name.
    *
-   * @param name the collection name.
+   * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
   @Stability.Volatile
-  public AsyncCollection collection(final String name) {
+  public AsyncCollection collection(final String collectionName) {
     core.configurationProvider().refreshCollectionMap(bucketName, false);
-    return new AsyncCollection(name, scopeName, bucketName, core, environment);
+    return new AsyncCollection(collectionName, scopeName, bucketName, core, environment);
   }
 
 }

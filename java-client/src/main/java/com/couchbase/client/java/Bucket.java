@@ -154,8 +154,8 @@ public class Bucket {
    * @return the {@link Collection} once opened.
    */
   @Stability.Volatile
-  public Collection collection(final String name) {
-    return defaultScope().collection(name);
+  public Collection collection(final String collectionName) {
+    return defaultScope().collection(collectionName);
   }
 
   /**

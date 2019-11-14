@@ -96,12 +96,12 @@ public class ReactiveScope {
   /**
    * Opens a collection for this scope with an explicit name.
    *
-   * @param name the collection name.
+   * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
   @Stability.Volatile
-  public ReactiveCollection collection(final String name) {
-    return new ReactiveCollection(asyncScope.collection(name));
+  public ReactiveCollection collection(final String collectionName) {
+    return new ReactiveCollection(asyncScope.collection(collectionName));
   }
 
 }

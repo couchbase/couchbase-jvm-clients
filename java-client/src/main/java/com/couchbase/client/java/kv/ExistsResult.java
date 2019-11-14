@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.util.Objects;
 
 /**
@@ -51,6 +53,7 @@ public class ExistsResult {
    *
    * <p>Note that if the document does not exist, this will return 0!</p>
    */
+  @Stability.Volatile
   public long cas() {
     return cas;
   }

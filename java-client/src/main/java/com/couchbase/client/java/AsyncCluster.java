@@ -369,13 +369,13 @@ public class AsyncCluster {
   /**
    * Opens a {@link AsyncBucket} with the given name.
    *
-   * @param name the name of the bucket to open.
+   * @param bucketName the name of the bucket to open.
    * @return a {@link AsyncBucket} once opened.
    */
-  public AsyncBucket bucket(final String name) {
-    notNullOrEmpty(name, "Name");
-    core.openBucket(name);
-    return new AsyncBucket(name, core, environment.get());
+  public AsyncBucket bucket(final String bucketName) {
+    notNullOrEmpty(bucketName, "Name");
+    core.openBucket(bucketName);
+    return new AsyncBucket(bucketName, core, environment.get());
   }
 
   /**

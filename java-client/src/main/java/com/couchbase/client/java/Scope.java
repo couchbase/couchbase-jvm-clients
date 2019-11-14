@@ -100,12 +100,12 @@ public class Scope {
   /**
    * Opens a collection for this scope with an explicit name.
    *
-   * @param name the collection name.
+   * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
   @Stability.Volatile
-  public Collection collection(final String name) {
-    return new Collection(asyncScope.collection(name));
+  public Collection collection(final String collectionName) {
+    return new Collection(asyncScope.collection(collectionName));
   }
 
 }

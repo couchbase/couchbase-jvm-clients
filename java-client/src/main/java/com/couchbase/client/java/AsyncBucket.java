@@ -161,8 +161,8 @@ public class AsyncBucket {
    * @return the {@link AsyncCollection} once opened.
    */
   @Stability.Volatile
-  public AsyncCollection collection(final String collection) {
-    return defaultScope().collection(collection);
+  public AsyncCollection collection(final String collectionName) {
+    return defaultScope().collection(collectionName);
   }
 
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName) {
