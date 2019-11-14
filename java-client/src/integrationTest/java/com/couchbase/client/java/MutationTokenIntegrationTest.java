@@ -138,7 +138,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     String id = UUID.randomUUID().toString();
     CounterResult result = collection.binary().increment(
       id,
-      incrementOptions().initial(Optional.of(1L))
+      incrementOptions().initial(1L)
     );
     assertMutationToken(result.mutationToken());
   }
@@ -148,7 +148,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     String id = UUID.randomUUID().toString();
     CounterResult result = collection.binary().decrement(
       id,
-      decrementOptions().initial(Optional.of(1L))
+      decrementOptions().initial(1L)
     );
     assertMutationToken(result.mutationToken());
   }

@@ -594,7 +594,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     CounterResult result = collection.binary().increment(
       id,
-      incrementOptions().initial(Optional.of(5L))
+      incrementOptions().initial(5L)
     );
 
     assertTrue(result.cas() != 0);
@@ -626,7 +626,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     CounterResult result = collection.binary().decrement(
       id,
-      decrementOptions().initial(Optional.of(2L))
+      decrementOptions().initial(2L)
     );
 
     assertTrue(result.cas() != 0);

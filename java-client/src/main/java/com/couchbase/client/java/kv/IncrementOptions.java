@@ -46,8 +46,8 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     return this;
   }
 
-  public IncrementOptions initial(Optional<Long> initial) {
-    this.initial = initial;
+  public IncrementOptions initial(long initial) {
+    this.initial = Optional.of(initial);
     return this;
   }
 

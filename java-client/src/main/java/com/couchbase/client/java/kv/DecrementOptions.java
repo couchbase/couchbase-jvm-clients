@@ -45,8 +45,8 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
     return this;
   }
 
-  public DecrementOptions initial(Optional<Long> initial) {
-    this.initial = initial;
+  public DecrementOptions initial(long initial) {
+    this.initial = Optional.of(initial);
     return this;
   }
 
