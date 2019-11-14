@@ -37,7 +37,7 @@ case class IoConfig(
   private[scala] def toCore: core.env.IoConfig.Builder = {
     val builder = core.env.IoConfig.builder()
 
-    builder.mutationTokensEnabled(mutationTokensEnabled)
+    builder.enableMutationTokens(mutationTokensEnabled)
     allowedSaslMechanisms.foreach(v => builder.allowedSaslMechanisms(v.asJava))
     configPollInterval.foreach(v => builder.configPollInterval(v))
     kvCircuitBreakerConfig.foreach(v => builder.kvCircuitBreakerConfig(v.toCore))

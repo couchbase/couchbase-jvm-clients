@@ -28,7 +28,7 @@ case class SecurityConfig(
   private[scala] def toCore: core.env.SecurityConfig.Builder = {
     val builder = new core.env.SecurityConfig.Builder
 
-    builder.tlsEnabled(tlsEnabled)
+    builder.enableTls(tlsEnabled)
     trustCertificates.foreach(
       t => builder.trustCertificates(scala.collection.JavaConverters.seqAsJavaList(t))
     )

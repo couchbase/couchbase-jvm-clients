@@ -59,8 +59,12 @@ public class SecurityConfig {
     return new SecurityConfig(builder());
   }
 
-  public static Builder tlsEnabled(boolean tlsEnabled) {
-    return builder().tlsEnabled(tlsEnabled);
+  public static Builder enableTls(boolean tlsEnabled) {
+    return builder().enableTls(tlsEnabled);
+  }
+
+  public static Builder enableNativeTls(boolean nativeTlsEnabled) {
+    return builder().enableNativeTls(nativeTlsEnabled);
   }
 
   public static Builder trustCertificates(final List<X509Certificate> certificates) {
@@ -171,12 +175,12 @@ public class SecurityConfig {
       return new SecurityConfig(this);
     }
 
-    public Builder tlsEnabled(boolean tlsEnabled) {
+    public Builder enableTls(boolean tlsEnabled) {
       this.tlsEnabled = tlsEnabled;
       return this;
     }
 
-    public Builder nativeTlsEnabled(boolean nativeTlsEnabled) {
+    public Builder enableNativeTls(boolean nativeTlsEnabled) {
       this.nativeTlsEnabled = nativeTlsEnabled;
       return this;
     }

@@ -137,7 +137,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
   @Test
   void disallowObserveWhenTokensDisabled() {
     ClusterEnvironment environment = environment()
-      .ioConfig(IoConfig.mutationTokensEnabled(false))
+      .ioConfig(IoConfig.enableMutationTokens(false))
       .build();
     Cluster cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());

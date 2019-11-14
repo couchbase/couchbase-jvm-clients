@@ -73,7 +73,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @BeforeAll
     static void setup() {
         environment = environment()
-                .ioConfig(IoConfig.mutationTokensEnabled(true).captureTraffic(ServiceType.QUERY))
+                .ioConfig(IoConfig.enableMutationTokens(true).captureTraffic(ServiceType.QUERY))
                 .build();
         cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
         Bucket bucket = cluster.bucket(config().bucketname());

@@ -69,7 +69,7 @@ class SystemPropertyPropertyLoaderTest {
       Files.write(Paths.get(certPath), CERT_CONTENT.getBytes(StandardCharsets.UTF_8));
 
       Properties properties = new Properties();
-      properties.setProperty("com.couchbase.env.security.tlsEnabled", "true");
+      properties.setProperty("com.couchbase.env.security.enableTls", "true");
       properties.setProperty("com.couchbase.env.security.trustCertificate", certPath);
 
       parse(properties, env -> {

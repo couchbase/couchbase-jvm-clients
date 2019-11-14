@@ -58,8 +58,8 @@ public class LoggerConfig {
     return builder().loggerName(loggerName);
   }
 
-  public static Builder diagnosticContextEnabled(boolean diagnosticContextEnabled) {
-    return builder().diagnosticContextEnabled(diagnosticContextEnabled);
+  public static Builder enableDiagnosticContext(boolean diagnosticContextEnabled) {
+    return builder().enableDiagnosticContext(diagnosticContextEnabled);
   }
 
   public static Builder customLogger(LoggingEventConsumer.Logger customLogger) {
@@ -135,7 +135,7 @@ public class LoggerConfig {
       return this;
     }
 
-    public Builder diagnosticContextEnabled(boolean diagnosticContextEnabled) {
+    public Builder enableDiagnosticContext(boolean diagnosticContextEnabled) {
       this.diagnosticContextEnabled = diagnosticContextEnabled;
       return this;
     }

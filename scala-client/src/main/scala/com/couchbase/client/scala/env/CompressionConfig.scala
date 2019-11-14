@@ -36,7 +36,7 @@ case class CompressionConfig(
   private[scala] def toCore: core.env.CompressionConfig.Builder = {
     val builder = new core.env.CompressionConfig.Builder
 
-    builder.enabled(enabled)
+    builder.enable(enabled)
     builder.minSize(minSize)
     builder.minRatio(minRatio)
 

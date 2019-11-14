@@ -241,7 +241,7 @@ class CompressionTest {
 
   private ChannelContext ctx(boolean enabled) {
     return new ChannelContext(
-      CompressionConfig.builder().enabled(enabled).build(),
+      CompressionConfig.builder().enable(enabled).build(),
       false,
       false,
       Optional.of(cid.bucket()),

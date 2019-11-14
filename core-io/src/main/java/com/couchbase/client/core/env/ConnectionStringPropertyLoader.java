@@ -60,7 +60,7 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
   @Override
   public void load(final CoreEnvironment.Builder builder) {
     if (connectionString.scheme() == ConnectionString.Scheme.COUCHBASES) {
-      setter.set(builder, "security.tlsEnabled", "true");
+      setter.set(builder, "security.enableTls", "true");
     }
 
     for (Map.Entry<String, String> entry : connectionString.params().entrySet()) {

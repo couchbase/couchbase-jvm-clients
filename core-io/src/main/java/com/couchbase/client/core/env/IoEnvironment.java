@@ -90,6 +90,10 @@ public class IoEnvironment {
     return builder().viewEventLoopGroup(viewEventLoopGroup);
   }
 
+  public static Builder enableNativeIo(boolean nativeIoEnabled) {
+    return builder().enableNativeIo(nativeIoEnabled);
+  }
+
   /**
    * Returns this environment as a map so it can be exported into i.e. JSON for display.
    */
@@ -340,7 +344,7 @@ public class IoEnvironment {
       return this;
     }
 
-    public Builder nativeIoEnabled(boolean nativeIoEnabled) {
+    public Builder enableNativeIo(boolean nativeIoEnabled) {
       this.nativeIoEnabled = nativeIoEnabled;
       return this;
     }

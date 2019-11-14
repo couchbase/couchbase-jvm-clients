@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-
 public class IoConfig {
 
   public static final boolean DEFAULT_MUTATION_TOKENS_ENABLED = true;
@@ -52,7 +51,7 @@ public class IoConfig {
   private final Set<ServiceType> captureTraffic;
   private final NetworkResolution networkResolution;
   private final boolean dnsSrvEnabled;
-  private final boolean tcpKeepAliveEnabled;
+  private final boolean tcpKeepAlivesEnabled;
   private final Duration tcpKeepAliveTime;
 
   private IoConfig(Builder builder) {
@@ -74,7 +73,7 @@ public class IoConfig {
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
     networkResolution = builder.networkResolution;
-    tcpKeepAliveEnabled = builder.tcpKeepAliveEnabled;
+    tcpKeepAlivesEnabled = builder.tcpKeepAlivesEnabled;
     tcpKeepAliveTime = builder.tcpKeepAliveTime;
   }
 
@@ -86,12 +85,12 @@ public class IoConfig {
     return new IoConfig.Builder();
   }
 
-  public static Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
-    return builder().mutationTokensEnabled(mutationTokensEnabled);
+  public static Builder enableMutationTokens(boolean mutationTokensEnabled) {
+    return builder().enableMutationTokens(mutationTokensEnabled);
   }
 
-  public static Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
-    return builder().dnsSrvEnabled(dnsSrvEnabled);
+  public static Builder enableDnsSrv(boolean dnsSrvEnabled) {
+    return builder().enableDnsSrv(dnsSrvEnabled);
   }
 
   public static Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
@@ -134,8 +133,8 @@ public class IoConfig {
     return builder().networkResolution(networkResolution);
   }
 
-  public static Builder tcpKeepAliveEnabled(final boolean tcpKeepAliveEnabled) {
-    return builder().tcpKeepAliveEnabled(tcpKeepAliveEnabled);
+  public static Builder enableTcpKeepAlives(final boolean tcpKeepAliveEnabled) {
+    return builder().enableTcpKeepAlives(tcpKeepAliveEnabled);
   }
 
   public static Builder tcpKeepAliveTime(final Duration tcpKeepAliveTime) {
@@ -190,8 +189,8 @@ public class IoConfig {
     return networkResolution;
   }
 
-  public boolean tcpKeepAliveEnabled() {
-    return tcpKeepAliveEnabled;
+  public boolean tcpKeepAlivesEnabled() {
+    return tcpKeepAlivesEnabled;
   }
 
   public Duration tcpKeepAliveTime() {
@@ -209,7 +208,7 @@ public class IoConfig {
     export.put("mutationTokensEnabled", mutationTokensEnabled);
     export.put("networkResolution", networkResolution.name());
     export.put("dnsSrvEnabled", dnsSrvEnabled);
-    export.put("tcpKeepAliveEnabled", tcpKeepAliveEnabled);
+    export.put("tcpKeepAlivesEnabled", tcpKeepAlivesEnabled);
     export.put("tcpKeepAliveTime", tcpKeepAliveTime);
     export.put("configPollIntervalMillis", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -235,7 +234,7 @@ public class IoConfig {
     private Set<ServiceType> captureTraffic;
     private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
     private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
-    private boolean tcpKeepAliveEnabled = DEFAULT_TCP_KEEPALIVE_ENABLED;
+    private boolean tcpKeepAlivesEnabled = DEFAULT_TCP_KEEPALIVE_ENABLED;
     private Duration tcpKeepAliveTime = DEFAULT_TCP_KEEPALIVE_TIME;
 
     public IoConfig build() {
@@ -257,22 +256,18 @@ public class IoConfig {
      *
      * @return this, for chaining
      */
-    public Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
+    public Builder enableMutationTokens(boolean mutationTokensEnabled) {
       this.mutationTokensEnabled = mutationTokensEnabled;
       return this;
     }
 
-    public Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
+    public Builder enableDnsSrv(boolean dnsSrvEnabled) {
       this.dnsSrvEnabled = dnsSrvEnabled;
       return this;
     }
 
-    boolean dnsSrvEnabled() {
-      return dnsSrvEnabled;
-    }
-
-    public Builder tcpKeepAliveEnabled(boolean tcpKeepAliveEnabled) {
-      this.tcpKeepAliveEnabled = tcpKeepAliveEnabled;
+    public Builder enableTcpKeepAlives(boolean tcpKeepAlivesEnabled) {
+      this.tcpKeepAlivesEnabled = tcpKeepAlivesEnabled;
       return this;
     }
 

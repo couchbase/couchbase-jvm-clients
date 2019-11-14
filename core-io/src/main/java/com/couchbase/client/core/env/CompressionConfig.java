@@ -71,8 +71,8 @@ public class CompressionConfig {
    * @param enabled true to enable, false otherwise.
    * @return this {@link Builder} for chaining purposes.
    */
-  public static Builder enabled(boolean enabled) {
-    return builder().enabled(enabled);
+  public static Builder enable(boolean enabled) {
+    return builder().enable(enabled);
   }
 
   /**
@@ -169,7 +169,7 @@ public class CompressionConfig {
      * @param enabled true to enable, false otherwise.
      * @return this {@link Builder} for chaining purposes.
      */
-    public Builder enabled(boolean enabled) {
+    public Builder enable(boolean enabled) {
       this.enabled = enabled;
       return this;
     }

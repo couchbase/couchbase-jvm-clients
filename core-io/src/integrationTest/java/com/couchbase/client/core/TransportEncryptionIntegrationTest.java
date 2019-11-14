@@ -91,7 +91,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueIgnoringServerCert() throws Exception {
     CoreEnvironment env = secureEnvironment(SecurityConfig
-      .tlsEnabled(true)
+      .enableTls(true)
       .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
@@ -130,7 +130,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     }
 
     CoreEnvironment env = secureEnvironment(SecurityConfig
-      .tlsEnabled(true)
+      .enableTls(true)
       .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
@@ -163,14 +163,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfNoTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.tlsEnabled(true), null));
+    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.enableTls(true), null));
   }
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfMoreThanOneTrustPresent() {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
-      .tlsEnabled(true)
+      .enableTls(true)
       .trustManagerFactory(mock(TrustManagerFactory.class))
       .trustCertificates(mock(List.class)), null)
     );
@@ -181,7 +181,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   void failsIfWrongCertPresent() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = secureEnvironment(SecurityConfig
-      .tlsEnabled(true)
+      .enableTls(true)
       .trustCertificates(mock(List.class)), eventBus);
     Core core = Core.create(env, authenticator(), secureSeeds());
 

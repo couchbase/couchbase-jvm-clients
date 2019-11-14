@@ -93,7 +93,7 @@ class LoggingEventConsumerTest {
   @Test
   void attachesClientContextIfEnabled() {
     LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer.create(
-      LoggerConfig.diagnosticContextEnabled(true).customLogger(logger).build()
+      LoggerConfig.enableDiagnosticContext(true).customLogger(logger).build()
     );
 
     RequestContext context = mock(RequestContext.class);
