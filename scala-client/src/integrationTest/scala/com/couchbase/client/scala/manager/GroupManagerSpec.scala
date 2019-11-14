@@ -126,7 +126,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
         .password("password")
         .roles(SecurityAdmin, BucketFullAccessWildcard)
         .groups(GroupA, GroupB)
-    )
+    ).block()
 
     var userMeta = users.getUser(Username, AuthDomain.Local).block()
 

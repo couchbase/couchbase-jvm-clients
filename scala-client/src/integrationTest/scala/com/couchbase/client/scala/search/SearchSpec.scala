@@ -84,6 +84,7 @@ class SearchSpec extends ScalaIntegrationTest {
       SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
     ) match {
       case Success(result) =>
+        println(result.errors)
         assert(result.errors.isEmpty)
         assert(1 == result.rows.size)
         result.rows.foreach(row => {

@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.query
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.QueryException
@@ -48,7 +49,9 @@ class QuerySpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
-    cluster.query("create primary index on `" + config.bucketname + "`")
+    cluster.queryIndexes.createPrimaryIndex(config.bucketname).get
+    cluster.queryIndexes.watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true).get
+
     bucketName = config.bucketname()
   }
 

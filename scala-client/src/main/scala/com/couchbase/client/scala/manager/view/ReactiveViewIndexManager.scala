@@ -226,6 +226,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       viewNode.put("map", value.map)
       value.reduce.foreach((r: String) => viewNode.put("reduce", r))
       views.set(key, viewNode)
+      Unit
     })
     root
   }

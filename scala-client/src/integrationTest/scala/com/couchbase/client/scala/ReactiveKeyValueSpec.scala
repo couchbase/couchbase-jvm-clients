@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentNotFoundException, DocumentLockedException}
+import com.couchbase.client.core.error.{DocumentLockedException, DocumentNotFoundException, RequestTimeoutException}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -138,9 +138,9 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case _            => assert(false, s"unexpected error")
     }
 
-    wrap(coll.getAndLock(docId, 30.seconds)) match {
+    wrap(coll.getAndLock(docId, 30.seconds, timeout = 100.milliseconds)) match {
       case Success(Some(result))                 => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: DocumentLockedException) =>
+      case Failure(err: RequestTimeoutException) =>
       case Failure(err)                          => assert(false, s"unexpected error $err")
       case _                                     => assert(false, s"unexpected error")
     }

@@ -161,7 +161,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
 
   /** Polls the specified indexes until they are all online.
     *
-    * @param bucketName        the bucket to remove the index from.
+    * @param bucketName        the bucket to watch on
     * @param indexNames        the indexes to poll.
     * @param watchPrimary      include the bucket's primary index.  If the bucket has no primary index, the operation
     *                          will fail with [[QueryIndexNotFoundException]]

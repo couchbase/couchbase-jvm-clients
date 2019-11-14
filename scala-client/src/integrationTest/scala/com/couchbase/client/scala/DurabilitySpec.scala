@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException
+import com.couchbase.client.core.error.{DurabilityLevelNotAvailableException, RequestTimeoutException}
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
@@ -32,6 +32,7 @@ class DurabilitySpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
+  @IgnoreWhen(replicasLessThan = 2)
   @Test
   def replicateTo_2() {
     val docId   = TestUtils.docId()
@@ -42,6 +43,7 @@ class DurabilitySpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(replicasLessThan = 2)
   @Test
   def persistTo_2() {
     val docId   = TestUtils.docId()
@@ -57,8 +59,7 @@ class DurabilitySpec extends ScalaIntegrationTest {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Durability.Majority) match {
-      case Success(result)                                    => assert(false, s"success not expected")
-      case Failure(err: DurabilityLevelNotAvailableException) =>
+      case Success(result)                                    =>
       case Failure(err)                                       => assert(false, s"unexpected error $err")
     }
   }
@@ -79,10 +80,11 @@ class DurabilitySpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Durability.Majority, timeout = Duration.Zero) match {
       case Success(_)                             => assert(false, s"unexpected success")
-      case Failure(err: IllegalArgumentException) =>
+      case Failure(err: RequestTimeoutException) =>
       case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
+
   @Test
   def Majority() {
     val docId   = TestUtils.docId()

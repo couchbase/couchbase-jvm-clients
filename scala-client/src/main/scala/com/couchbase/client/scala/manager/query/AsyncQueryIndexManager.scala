@@ -475,7 +475,7 @@ class QueryIndexAlreadyExistsException(cause: QueryException) extends QueryExcep
 case class QueryIndex(
     name: String,
     private val is_primary: Option[Boolean],
-    private val `type`: QueryIndexType,
+    private val using: Option[String],
     state: String,
     private val keyspace_id: String,
     private val index_key: Seq[String],
@@ -487,7 +487,10 @@ case class QueryIndex(
 
   def indexKey: Seq[String] = index_key
 
-  def typ: QueryIndexType = `type`
+  def typ: QueryIndexType = using match {
+    case Some("gsi") => QueryIndexType.GSI
+    case _ => QueryIndexType.View
+  }
 }
 
 object QueryIndex {

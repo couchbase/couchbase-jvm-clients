@@ -44,6 +44,9 @@ class PingSpec extends ScalaIntegrationTest {
 
   @Test
   def ping(): Unit = {
+    // TODO: Force a bucket connection. Needs to wait for bucket to be ready.
+    bucket.defaultCollection.get("does_not_exist")
+
     val pr = bucket.ping().get
     assert(!pr.services.isEmpty)
     val psh = pr.services.stream.filter(_.`type` == ServiceType.KV).findFirst.get

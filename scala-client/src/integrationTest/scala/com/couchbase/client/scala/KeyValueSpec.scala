@@ -1,6 +1,7 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentNotFoundException, DocumentLockedException}
+import com.couchbase.client.core.error.{DocumentLockedException, DocumentNotFoundException, RequestTimeoutException}
+import com.couchbase.client.core.retry.RetryReason
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
@@ -146,9 +147,11 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
 
-    coll.getAndLock(docId, 30.seconds) match {
+    coll.getAndLock(docId, 30.seconds, timeout = 100.milliseconds) match {
       case Success(result)                       => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: DocumentLockedException) =>
+      case Failure(err: RequestTimeoutException) =>
+        assert(err.context().requestContext().retryReasons().size() == 1)
+        assert(err.context().requestContext().retryReasons().iterator().next() == RetryReason.KV_LOCKED)
       case Failure(err)                          => assert(false, s"unexpected error $err")
     }
   }
