@@ -21,11 +21,16 @@ import com.couchbase.client.core.annotation.Stability;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +65,10 @@ public class SecurityConfig {
 
   public static Builder trustCertificates(final List<X509Certificate> certificates) {
     return builder().trustCertificates(certificates);
+  }
+
+  public static Builder trustCertificate(final Path certificatePath) {
+    return builder().trustCertificate(certificatePath);
   }
 
   public static Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
@@ -175,6 +184,16 @@ public class SecurityConfig {
     public Builder trustCertificates(final List<X509Certificate> certificates) {
       this.trustCertificates = certificates;
       return this;
+    }
+
+    public Builder trustCertificate(final Path certificatePath) {
+      final StringBuilder contentBuilder = new StringBuilder();
+      try {
+        Files.lines(certificatePath, StandardCharsets.UTF_8).forEach(s -> contentBuilder.append(s).append("\n"));
+      } catch (IOException ex) {
+        throw new IllegalArgumentException("Could not read trust certificate from file \"" + certificatePath + "\"" , ex);
+      }
+      return trustCertificates(decodeCertificates(Collections.singletonList(contentBuilder.toString())));
     }
 
     public Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {

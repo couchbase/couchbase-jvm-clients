@@ -16,16 +16,28 @@
 
 package com.couchbase.client.core.env;
 
+import java.util.Properties;
 import java.util.function.BiConsumer;
 
 public class SystemPropertyPropertyLoader implements PropertyLoader<CoreEnvironment.Builder> {
+
   private static final String PREFIX = "com.couchbase.env.";
 
   private final BuilderPropertySetter setter = new BuilderPropertySetter();
 
+  private final Properties properties;
+
+  public SystemPropertyPropertyLoader() {
+    this(System.getProperties());
+  }
+
+  public SystemPropertyPropertyLoader(final Properties properties) {
+    this.properties = properties;
+  }
+
   @Override
   public void load(CoreEnvironment.Builder builder) {
-    forEachStringSystemProperty((name, value) -> {
+    forEachStringProperty((name, value) -> {
       if (name.startsWith(PREFIX)) {
         try {
           setter.set(builder, name.substring(PREFIX.length()), value);
@@ -38,8 +50,8 @@ public class SystemPropertyPropertyLoader implements PropertyLoader<CoreEnvironm
     });
   }
 
-  private static void forEachStringSystemProperty(BiConsumer<String, String> action) {
-    System.getProperties().forEach((key, value) -> {
+  private void forEachStringProperty(final BiConsumer<String, String> action) {
+    properties.forEach((key, value) -> {
       if (key instanceof String && value instanceof String) {
         action.accept((String) key, (String) value);
       }

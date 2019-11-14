@@ -20,12 +20,15 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Golang;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -245,6 +248,8 @@ class BuilderPropertySetter {
 
       .register(Duration.class, "a duration qualified by a time unit (like \"2.5s\" or \"300ms\")",
         d -> requireNonNegative(Golang.parseDuration(d)))
+
+      .register(Path.class, "an open file from a path", s -> Paths.get(s))
 
       .register(Iterable.class, new CollectionConverter(ArrayList.class))
       .register(Collection.class, new CollectionConverter(ArrayList.class))
