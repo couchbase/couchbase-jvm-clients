@@ -49,8 +49,10 @@ pipeline {
             }
             post {
                 always {
+                    shWithEcho("find .")
                     // Process the Junit test results
                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -184,14 +186,14 @@ def buildsAndTests(PLATFORMS) {
                             batWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
                                 batWithEcho("java -version")
-                                batWithEcho("make")
+                                batWithEcho("make deps-only")
                                 batWithEcho("mvn package -Dmaven.test.skip")
                             }
                         } else {
                             shWithEcho("dir deps")
                             dir('couchbase-jvm-clients') {
                                 shWithEcho("java -version")
-                                shWithEcho("make")
+                                shWithEcho("make deps-only")
                                 shWithEcho("mvn package -Dmaven.test.skip")
                             }
                         }
