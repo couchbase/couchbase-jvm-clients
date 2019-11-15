@@ -145,6 +145,15 @@ pipeline {
 //            }
         }
     }
+    post {
+        always {
+            shWithEcho("pwd")
+            shWithEcho("find .")
+            // Process the Junit test results
+            junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+            junit allowEmptyResults: true, testResults: 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
+        }
+    }
 }
 
 void shWithEcho(String command) {
