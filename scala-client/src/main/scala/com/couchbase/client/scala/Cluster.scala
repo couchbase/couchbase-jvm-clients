@@ -30,7 +30,11 @@ import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
-import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, BucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.bucket.{
+  AsyncBucketManager,
+  BucketManager,
+  ReactiveBucketManager
+}
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.manager.search.SearchIndexManager

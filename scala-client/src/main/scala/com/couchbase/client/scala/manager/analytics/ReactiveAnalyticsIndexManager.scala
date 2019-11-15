@@ -53,10 +53,12 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
   private val IndexNotFound                   = 24047
   private val IndexAlreadyExists              = 24048
 
-  def createDataverse(dataverseName: String,
-                      ignoreIfExists: Boolean = false,
-                      timeout: Duration = DefaultTimeout,
-                      retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def createDataverse(
+      dataverseName: String,
+      ignoreIfExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     quote(dataverseName) match {
       case Success(quoted) =>
         val statement: String = {
@@ -71,10 +73,12 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     }
   }
 
-  def dropDataverse(dataverseName: String,
-                    ignoreIfNotExists: Boolean = false,
-                    timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def dropDataverse(
+      dataverseName: String,
+      ignoreIfNotExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     quote(dataverseName) match {
       case Success(quoted) =>
         val statement = {
@@ -89,13 +93,15 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     }
   }
 
-  def createDataset(datasetName: String,
-                    bucketName: String,
-                    dataverseName: Option[String] = None,
-                    condition: Option[String] = None,
-                    ignoreIfExists: Boolean = false,
-                    timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def createDataset(
+      datasetName: String,
+      bucketName: String,
+      dataverseName: Option[String] = None,
+      condition: Option[String] = None,
+      ignoreIfExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     val statement: Try[String] = for {
       quoted1 <- quoteMulti(dataverseName, Some(datasetName))
       quoted2 <- quote(bucketName)
@@ -123,11 +129,13 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     }
   }
 
-  def dropDataset(datasetName: String,
-                  dataverseName: Option[String] = None,
-                  ignoreIfNotExists: Boolean = false,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def dropDataset(
+      datasetName: String,
+      dataverseName: Option[String] = None,
+      ignoreIfNotExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     quoteMulti(dataverseName, Some(datasetName)) match {
       case Success(quoted) =>
         val statement = {
@@ -144,19 +152,22 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
 
   def getAllDatasets(
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy): SFlux[AnalyticsDataset] = {
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SFlux[AnalyticsDataset] = {
     cluster
       .analyticsQuery("SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"")
       .flatMapMany(result => result.rowsAs[AnalyticsDataset])
   }
 
-  def createIndex(indexName: String,
-                  datasetName: String,
-                  fields: GenMap[String, AnalyticsDataType],
-                  dataverseName: Option[String] = None,
-                  ignoreIfExists: Boolean = false,
-                  timeout: Duration = DefaultTimeout,
-                  retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def createIndex(
+      indexName: String,
+      datasetName: String,
+      fields: GenMap[String, AnalyticsDataType],
+      dataverseName: Option[String] = None,
+      ignoreIfExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     val statement: Try[String] = for {
       quoted1 <- quote(indexName)
       quoted2 <- quoteMulti(dataverseName, Some(datasetName))
@@ -189,12 +200,14 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
       .mkString("(", ",", ")")
   }
 
-  def dropIndex(indexName: String,
-                datasetName: String,
-                dataverseName: Option[String] = None,
-                ignoreIfNotExists: Boolean = false,
-                timeout: Duration = DefaultTimeout,
-                retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[Unit] = {
+  def dropIndex(
+      indexName: String,
+      datasetName: String,
+      dataverseName: Option[String] = None,
+      ignoreIfNotExists: Boolean = false,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
     quoteMulti(dataverseName, Some(datasetName), Some(indexName)) match {
       case Success(quoted) =>
         val statement = {
@@ -209,8 +222,10 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     }
   }
 
-  def getAllIndexes(timeout: Duration = DefaultTimeout,
-                    retryStrategy: RetryStrategy = DefaultRetryStrategy): SFlux[AnalyticsIndex] = {
+  def getAllIndexes(
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SFlux[AnalyticsIndex] = {
     cluster
       .analyticsQuery("SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"")
       .flatMapMany(result => result.rowsAs[AnalyticsIndex])
@@ -238,12 +253,15 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
       statement: String,
       itemName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy): SMono[ReactiveAnalyticsResult] = {
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[ReactiveAnalyticsResult] = {
     cluster
-      .analyticsQuery(statement,
-                      AnalyticsOptions()
-                        .timeout(timeout)
-                        .retryStrategy(retryStrategy))
+      .analyticsQuery(
+        statement,
+        AnalyticsOptions()
+          .timeout(timeout)
+          .retryStrategy(retryStrategy)
+      )
       .onErrorResume(t => {
 
         val err = findCause(t, classOf[HttpStatusCodeException]).asScala match {

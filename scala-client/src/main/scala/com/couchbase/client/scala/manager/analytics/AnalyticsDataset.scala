@@ -17,10 +17,12 @@ package com.couchbase.client.scala.manager.analytics
 import com.couchbase.client.scala.implicits.Codec
 import com.github.plokhotnyuk.jsoniter_scala.macros.named
 
-case class AnalyticsDataset(@named("DatasetName") name: String,
-                            @named("DataverseName") dataverseName: String,
-                            @named("LinkName") linkName: String,
-                            @named("BucketName") bucketName: String)
+case class AnalyticsDataset(
+    @named("DatasetName") name: String,
+    @named("DataverseName") dataverseName: String,
+    @named("LinkName") linkName: String,
+    @named("BucketName") bucketName: String
+)
 
 object AnalyticsDataset {
   implicit val codec: Codec[AnalyticsDataset] = Codec.codec[AnalyticsDataset]
