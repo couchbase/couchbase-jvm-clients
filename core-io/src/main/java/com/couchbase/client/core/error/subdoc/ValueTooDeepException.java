@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error.subdoc;
 
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when proposed value would make the document too deep to parse.
  *
@@ -29,7 +31,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class ValueTooDeepException extends SubDocumentException {
 
-    public ValueTooDeepException(String id, String path) {
-        super("Provided value makes the path " + path + " too deep in " + id);
+    public ValueTooDeepException(ErrorContext ctx, int index) {
+        super("Provided value makes the path too deep in the document", ctx, index);
     }
+
 }

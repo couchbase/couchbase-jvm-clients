@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when the provided value cannot be inserted at the given path.
  *
@@ -27,7 +29,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class CannotInsertValueException extends SubDocumentException {
 
-    public CannotInsertValueException(String reason) {
-        super(reason);
+    public CannotInsertValueException(ErrorContext ctx, int index) {
+        super("Cannot insert the subdoc value", ctx, index);
     }
+
 }

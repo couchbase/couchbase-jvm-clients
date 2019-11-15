@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.datastructures
 
 import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
-import com.couchbase.client.core.error.subdoc.{MultiMutationException, PathNotFoundException}
+import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
@@ -192,10 +192,8 @@ class CouchbaseMap[T](
     )
 
     result match {
-      case Success(_) => this
-      case Failure(err: MultiMutationException) =>
-        if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) this
-        else throw err
+      case Success(_)                            => this
+      case Failure(_: PathNotFoundException)     => this
       case Failure(_: DocumentNotFoundException) => this
       case Failure(err)                          => throw err
     }

@@ -33,7 +33,6 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
-import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.InsertOptions;
@@ -173,15 +172,10 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         mapOptions.mutateInOptions().cas(returnCas));
                 return result;
-            } catch (DocumentNotFoundException e) {
+            } catch (DocumentNotFoundException | PathNotFoundException e) {
                 return null;
             } catch (CasMismatchException ex) {
                 //will have to retry get-and-remove
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    return null;
-                }
-                throw ex;
             }
         }
         throw new RetryExhaustedException("Couldn't perform set in less than " + mapOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");

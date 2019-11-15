@@ -2,7 +2,7 @@ package com.couchbase.client.scala.kv
 
 import java.util.NoSuchElementException
 
-import com.couchbase.client.core.msg.kv.{MutationToken, SubdocField}
+import com.couchbase.client.core.msg.kv.{MutationToken, SubDocumentField}
 import com.couchbase.client.scala.api.HasDurabilityTokens
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 
@@ -26,7 +26,7 @@ import scala.compat.java8.OptionConverters._
   * */
 case class MutateInResult(
     id: String,
-    private val content: Array[SubdocField],
+    private val content: Array[SubDocumentField],
     cas: Long,
     mutationToken: Option[MutationToken]
 ) extends HasDurabilityTokens {

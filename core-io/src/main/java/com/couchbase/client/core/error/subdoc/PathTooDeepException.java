@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when path is too deep to parse. Depth of a path is determined by how
  * many components (or levels) it contains.
@@ -29,8 +31,9 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class PathTooDeepException extends SubDocumentException {
 
-    public PathTooDeepException(String path) {
-        super("Path too deep: " + path);
+    public PathTooDeepException(ErrorContext ctx, int index) {
+        super("Subdoc path too deep", ctx, index);
     }
+
 }
     

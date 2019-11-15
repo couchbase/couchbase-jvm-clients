@@ -18,7 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocField;
+import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.json.JsonObject;
@@ -27,14 +27,13 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GetAccessorTest {
 
   @Test
-  void projectNonRecursive() throws Exception {
+  void projectNonRecursive() {
     Map<String, String> paths = new HashMap<>();
     paths.put("foo", "\"bar\"");
     paths.put("created", "true");
@@ -51,7 +50,7 @@ class GetAccessorTest {
   }
 
   @Test
-  void ignoresEmptyField() throws Exception {
+  void ignoresEmptyField() {
     Map<String, String> paths = new HashMap<>();
     paths.put("", "\"bar\"");
     paths.put("created", "true");
@@ -65,7 +64,7 @@ class GetAccessorTest {
   }
 
   @Test
-  void ignoresExpirationMacro() throws Exception {
+  void ignoresExpirationMacro() {
     Map<String, String> paths = new HashMap<>();
     paths.put(GetAccessor.EXPIRATION_MACRO, "\"bar\"");
     paths.put("created", "true");
@@ -79,27 +78,7 @@ class GetAccessorTest {
   }
 
   @Test
-  void ignoresNonSuccessField() throws Exception {
-    List<SubdocField> values = Arrays.asList(
-      new SubdocField(SubDocumentOpResponseStatus.SUCCESS, Optional.empty(),
-              "42".getBytes(UTF_8), "a", SubdocCommandType.GET),
-      new SubdocField(SubDocumentOpResponseStatus.PATH_NOT_FOUND,
-              Optional.of(mapSubDocumentError(SubDocumentOpResponseStatus.PATH_NOT_FOUND, "", "")),
-              "99".getBytes(UTF_8), "b" , SubdocCommandType.GET)
-    );
-
-    // TODO
-//    SubdocGetResponse response = new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0);
-//    byte[] result = GetAccessor.projectRecursive(response);
-//
-//    JsonObject expected = JsonObject.create()
-//      .put("a", 42);
-//
-//    assertEquals(expected, JsonObject.fromJson(result));
-  }
-
-  @Test
-  void nestedObjects() throws Exception {
+  void nestedObjects() {
     Map<String, String> paths = new HashMap<>();
     paths.put("l1.l2.k1", "\"v1\"");
     paths.put("l1.k2", "\"v2\"");
@@ -126,11 +105,11 @@ class GetAccessorTest {
    * @return a created response.
    */
   private SubdocGetResponse response(final Map<String, String> paths) {
-    List<SubdocField> values = paths
+    List<SubDocumentField> values = paths
       .entrySet()
             .stream()
             .map(e ->
-                    new SubdocField(
+                    new SubDocumentField(
                             SubDocumentOpResponseStatus.SUCCESS,
                             Optional.empty(),
                             e.getValue().getBytes(UTF_8),
@@ -139,6 +118,6 @@ class GetAccessorTest {
                     )
             )
       .collect(Collectors.toList());
-    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values.toArray(new SubdocField[values.size()]), 0);
+    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values.toArray(new SubDocumentField[values.size()]), 0);
   }
 }

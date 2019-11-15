@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when the delta in an arithmetic operation (eg counter) is invalid. In this
  * SDK, this is equivalent to saying that the delta is zero.
@@ -29,11 +31,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class BadDeltaException extends SubDocumentException {
 
-    public BadDeltaException(String message) {
-        super(message);
+    public BadDeltaException(ErrorContext ctx, int index) {
+        super("Delta must not be zero, or is otherwise invalid", ctx, index);
     }
 
-    public BadDeltaException() {
-        super("Delta must not be zero, or is otherwise invalid");
-    }
 }

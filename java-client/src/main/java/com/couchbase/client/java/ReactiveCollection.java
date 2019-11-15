@@ -588,7 +588,7 @@ public class ReactiveCollection {
    */
   public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
     return Mono.defer(() -> {
-
+      notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       LookupInOptions.Built opts = options.build();
       JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
@@ -622,8 +622,9 @@ public class ReactiveCollection {
   public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs,
                                        final MutateInOptions options) {
     return Mono.defer(() -> {
+      notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       MutateInOptions.Built opts = options.build();
-      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, options);
+      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, opts);
       return Reactor.wrap(
         request,
         MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.storeSemantics() == StoreSemantics.INSERT, environment().jsonSerializer()),

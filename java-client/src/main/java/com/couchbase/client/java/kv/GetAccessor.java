@@ -147,7 +147,7 @@ public enum GetAccessor {
     byte[] exptime = null;
     byte[] content = null;
 
-    for (SubdocField value : response.values()) {
+    for (SubDocumentField value : response.values()) {
       if (value != null) {
         if (EXPIRATION_MACRO.equals(value.path())) {
           exptime = value.value();
@@ -180,7 +180,7 @@ public enum GetAccessor {
   static byte[] projectRecursive(final SubdocGetResponse response) {
     ObjectNode root = Mapper.createObjectNode();
 
-    for (SubdocField value : response.values()) {
+    for (SubDocumentField value : response.values()) {
       if (value == null
               || value.status() != SubDocumentOpResponseStatus.SUCCESS
               || value.path().isEmpty()

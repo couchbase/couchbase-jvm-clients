@@ -1,21 +1,18 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.DocumentExistsException
-import com.couchbase.client.core.error.subdoc.MultiMutationException
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.core.error.{DocumentExistsException, InvalidArgumentException}
+import com.couchbase.client.core.error.subdoc.{
+  PathExistsException,
+  PathNotFoundException,
+  SubDocumentException
+}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
 import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec, StoreSemantics}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{
-  Capabilities,
-  ClusterAwareIntegrationTest,
-  ClusterType,
-  IgnoreWhen
-}
+import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -100,11 +97,11 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.mutateIn(docId, Array[MutateInSpec]()) match {
       case Success(result)                        => assert(false, s"unexpected success")
-      case Failure(err: IllegalArgumentException) =>
-      case Failure(err) =>
-        assert(false, s"unexpected error $err")
+      case Failure(err: InvalidArgumentException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
+
   @Test
   def insert_string() {
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
@@ -208,14 +205,14 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   private def checkSingleOpFailure(
       content: ujson.Obj,
       ops: Seq[MutateInSpec],
-      expected: SubDocumentOpResponseStatus
+      expected: Class[_ <: Any]
   ) = {
     val (docId, cas) = prepare(content)
 
     coll.mutateIn(docId, ops) match {
       case Success(result) => assert(false, "should not succeed")
-      case Failure(err: MultiMutationException) =>
-        assert(err.firstFailureStatus() == expected)
+      case Failure(err: SubDocumentException) =>
+        assert(err.getClass.isAssignableFrom(expected))
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -223,14 +220,14 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   private def checkSingleOpFailureXattr(
       content: ujson.Obj,
       ops: Seq[MutateInSpec],
-      expected: SubDocumentOpResponseStatus
+      expected: Class[_ <: Any]
   ) = {
     val (docId, cas) = prepareXattr(content)
 
     coll.mutateIn(docId, ops) match {
       case Success(result) => assert(false, "should not succeed")
-      case Failure(err: MultiMutationException) =>
-        assert(err.firstFailureStatus() == expected)
+      case Failure(err: SubDocumentException) =>
+        assert(err.getClass.isAssignableFrom(expected))
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
@@ -240,7 +237,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailure(
       ujson.Obj("foo" -> "bar"),
       Array(insert("foo", "bar2")),
-      SubDocumentOpResponseStatus.PATH_EXISTS
+      classOf[PathExistsException]
     )
   }
 
@@ -318,7 +315,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailure(
       ujson.Obj(),
       Array(replace("foo", "bar2")),
-      SubDocumentOpResponseStatus.PATH_NOT_FOUND
+      classOf[PathNotFoundException]
     )
   }
 
@@ -404,7 +401,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val updatedContent = checkSingleOpFailure(
       ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
       Array(arrayAddUnique("foo", "cruel")),
-      SubDocumentOpResponseStatus.PATH_EXISTS
+      classOf[PathExistsException]
     )
   }
 
@@ -465,7 +462,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailureXattr(
       ujson.Obj(),
       Array(MutateInSpec.remove("x.foo").xattr),
-      SubDocumentOpResponseStatus.PATH_NOT_FOUND
+      classOf[PathNotFoundException]
     )
   }
 
@@ -474,7 +471,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailureXattr(
       ujson.Obj("foo" -> "bar"),
       Array(insert("x.foo", "bar2").xattr),
-      SubDocumentOpResponseStatus.PATH_EXISTS
+      classOf[PathExistsException]
     )
   }
 
@@ -490,7 +487,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailure(
       ujson.Obj(),
       Array(replace("x.foo", "bar2").xattr),
-      SubDocumentOpResponseStatus.PATH_NOT_FOUND
+      classOf[PathNotFoundException]
     )
   }
 
@@ -550,7 +547,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailureXattr(
       ujson.Obj("foo" -> ujson.Arr("hello", "cruel", "world")),
       Array(arrayAddUnique("x.foo", "cruel").xattr),
-      SubDocumentOpResponseStatus.PATH_EXISTS
+      classOf[PathExistsException]
     )
   }
 
@@ -608,7 +605,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailureXattr(
       ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")),
       Array(insert("x.foo.baz", "bar2")),
-      SubDocumentOpResponseStatus.PATH_NOT_FOUND
+      classOf[PathNotFoundException]
     )
   }
 
@@ -692,7 +689,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     checkSingleOpFailure(
       ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")),
       Array(insert("foo.baz", "bar2")),
-      SubDocumentOpResponseStatus.PATH_EXISTS
+      classOf[PathExistsException]
     )
   }
 
@@ -799,7 +796,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       )
     ) match {
       case Success(result)                        => assert(false, "should not succeed")
-      case Failure(err: IllegalArgumentException) =>
+      case Failure(err: InvalidArgumentException) =>
       case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
@@ -830,9 +827,9 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       docId,
       Array(insert("foo0", "bar0"), insert("foo1", "bar1"), MutateInSpec.remove("foo3"))
     ) match {
-      case Success(result)                      =>
-      case Failure(err: MultiMutationException) =>
-      case Failure(err)                         => assert(false, s"unexpected error $err")
+      case Success(result)                   =>
+      case Failure(err: PathExistsException) =>
+      case Failure(err)                      => assert(false, s"unexpected error $err")
     }
 
     val updated = getContent(docId)

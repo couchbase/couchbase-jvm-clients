@@ -27,6 +27,8 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -247,6 +250,30 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
       () -> collection.unlock(id, result.cas() + 1)
     );
     assertNotNull(thrown.context());
+  }
+
+  @Test
+  void verifyLookupInExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.lookupIn(null, null));
+    assertThrows(InvalidArgumentException.class, () -> collection.lookupIn("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.lookupIn("foo", Collections.emptyList()));
+    assertThrows(InvalidArgumentException.class, () -> collection.lookupIn(
+      "foo",
+      Collections.singletonList(LookupInSpec.get("foo")),
+      null
+    ));
+  }
+
+  @Test
+  void verifyMutateInExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.mutateIn(null, null));
+    assertThrows(InvalidArgumentException.class, () -> collection.mutateIn("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.mutateIn("foo", Collections.emptyList()));
+    assertThrows(InvalidArgumentException.class, () -> collection.mutateIn(
+      "foo",
+      Collections.singletonList(MutateInSpec.insert("foo", "bar")),
+      null
+    ));
   }
 
 }

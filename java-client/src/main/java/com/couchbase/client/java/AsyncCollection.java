@@ -919,7 +919,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<LookupInResult> lookupIn(final String id, final List<LookupInSpec> specs,
                                                     final LookupInOptions options) {
-    notNull(options, "LookupInOptions");
+    notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     LookupInOptions.Built opts = options.build();
     final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
     return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), serializer);
@@ -934,8 +934,8 @@ public class AsyncCollection {
    * @return the subdoc lookup request.
    */
   SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs, final LookupInOptions.Built opts) {
-    notNullOrEmpty(id, "Id");
-    notNullOrEmpty(specs, "LookupInSpecs");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNullOrEmpty(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>(specs.size());
 
@@ -978,10 +978,11 @@ public class AsyncCollection {
   public CompletableFuture<MutateInResult> mutateIn(final String id,
                                                     final List<MutateInSpec> specs,
                                                     final MutateInOptions options) {
+    notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     MutateInOptions.Built opts = options.build();
     return MutateInAccessor.mutateIn(
       core,
-      mutateInRequest(id, specs, options),
+      mutateInRequest(id, specs, opts),
       id,
       opts.persistTo(),
       opts.replicateTo(),
@@ -995,21 +996,17 @@ public class AsyncCollection {
    *
    * @param id the outer document ID.
    * @param specs the spec which specifies the type of mutations to perform.
-   * @param options custom options to modify the mutation options.
+   * @param opts custom options to modify the mutation options.
    * @return the subdoc mutate request.
    */
-  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs, final MutateInOptions options) {
+  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs, final MutateInOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNullOrEmpty(specs, "MutateInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     if (specs.isEmpty()) {
-      throw SubdocMutateRequest.errIfNoCommands();
+      throw SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-      throw SubdocMutateRequest.errIfTooManyCommands();
+      throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     } else {
-      notNullOrEmpty(id, "Id");
-      notNull(specs, "MutateInSpecs");
-      notNull(options, "MutateInOptions");
-      MutateInOptions.Built opts = options.build();
-
-
       Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
       JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();

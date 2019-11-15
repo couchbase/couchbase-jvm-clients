@@ -18,6 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext
 import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
@@ -130,7 +131,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): Option[LookupInResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubdocField] = response.values()
+        val values: Seq[SubDocumentField] = response.values()
 
         if (withExpiration) {
           var exptime: Option[Duration] = None
@@ -162,7 +163,10 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       case ResponseStatus.SUBDOC_FAILURE =>
         response.error().asScala match {
           case Some(err) => throw err
-          case _         => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+          case _ => {
+            val ctx = ReducedKeyValueErrorContext.create(id)
+            throw new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0)
+          }
         }
 
       case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
@@ -176,7 +180,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): Try[Option[GetResult]] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubdocField] = response.values()
+        val values: Seq[SubDocumentField] = response.values()
 
         val out = JsonObject.create
 
@@ -196,7 +200,10 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       case ResponseStatus.SUBDOC_FAILURE =>
         response.error().asScala match {
           case Some(err) => Failure(err)
-          case _         => Failure(new SubDocumentException("Unknown SubDocument failure occurred") {})
+          case _ => {
+            val ctx = ReducedKeyValueErrorContext.create(id)
+            Failure(new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0))
+          }
         }
 
       case _ => Failure(DefaultErrors.throwOnBadResult(id, response.status()))

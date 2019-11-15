@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when a path already exists and it shouldn't
  *
@@ -24,11 +26,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class PathExistsException extends SubDocumentException {
 
-    public PathExistsException(String id, String path) {
-        super("Path " + path + " already exist in document " + id);
+    public PathExistsException(ErrorContext ctx, int index) {
+        super("Path already exists in document", ctx, index);
     }
 
-    public PathExistsException(String reason) {
-        super(reason);
-    }
 }

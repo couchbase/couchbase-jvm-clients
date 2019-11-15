@@ -19,10 +19,12 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.subdoc.MultiMutationException;
+import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -34,7 +36,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -157,7 +158,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ResponseStatus overallStatus = decodeStatus(response);
     Optional<SubDocumentException> error = Optional.empty();
 
-    SubdocField[] values;
+    SubDocumentField[] values;
 
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
@@ -167,13 +168,12 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         byte index = body.readByte();
         short opStatusRaw = body.readShort();
         SubDocumentOpResponseStatus opStatus = decodeSubDocumentStatus(opStatusRaw);
-        SubDocumentException err = mapSubDocumentError(opStatus, commands.get(index).path, origKey);
-        error = Optional.of(new MultiMutationException(index, opStatus, err));
-        values = new SubdocField[0];
-      }
-      else {
+        Command c = commands.get(index);
+        error = Optional.of(mapSubDocumentError(this, opStatus, c.path, c.originalIndex));
+        values = new SubDocumentField[0];
+      } else {
         // "For successful multi mutations, there will be zero or more results; each of the results containing a value."
-        values = new SubdocField[commands.size()];
+        values = new SubDocumentField[commands.size()];
 
         // Check we can read index (1 byte) and status (2 bytes), else we're done
         int INDEX_PLUS_STATUS_FIELDS_BYTES = 3;
@@ -187,29 +187,41 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
           SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
 
           if (status != SubDocumentOpResponseStatus.SUCCESS) {
-            SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
+            SubDocumentException err = mapSubDocumentError(this, status, command.path, command.originalIndex);
 
-            SubdocField op = new SubdocField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
+            SubDocumentField op = new SubDocumentField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
             values[command.originalIndex] = op;
           } else {
             int valueLength = body.readInt();
             byte[] value = new byte[valueLength];
             body.readBytes(value, 0, valueLength);
-            SubdocField op = new SubdocField(status, Optional.empty(), value, command.path, command.type);
+            SubDocumentField op = new SubDocumentField(status, Optional.empty(), value, command.path, command.type);
             values[command.originalIndex] = op;
           }
         }
       }
     } else {
-      values = new SubdocField[0];
+      values = new SubDocumentField[0];
     }
 
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      error = Optional.of(new DocumentNotJsonException(origKey));
+      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
+        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+        0,
+        null,
+        SubDocumentOpResponseStatus.DOC_NOT_JSON
+      );
+      error = Optional.of(new DocumentNotJsonException(errorContext, 0));
     } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      error = Optional.of(new DocumentTooDeepException(origKey));
+      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
+        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+        0,
+        null,
+        SubDocumentOpResponseStatus.DOC_TOO_DEEP
+      );
+      error = Optional.of(new DocumentTooDeepException(errorContext, 0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 
@@ -223,12 +235,20 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     );
   }
 
-  public static RuntimeException errIfNoCommands() {
-    return new IllegalArgumentException("No SubDocument commands provided");
+  public static InvalidArgumentException errIfNoCommands(ErrorContext errorContext) {
+    return new InvalidArgumentException(
+      "Argument validation failed",
+      new IllegalArgumentException("No SubDocument commands provided"),
+      errorContext
+    );
   }
 
-  public static RuntimeException errIfTooManyCommands() {
-    return new IllegalArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided");
+  public static InvalidArgumentException errIfTooManyCommands(ErrorContext errorContext) {
+    return new InvalidArgumentException(
+      "Argument validation failed",
+      new IllegalArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided"),
+      errorContext
+    );
   }
 
   public static class Command {

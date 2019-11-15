@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error.subdoc;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.ErrorContext;
 
 /**
  * An abstract common class for all {@link CouchbaseException} that relates
@@ -25,17 +26,16 @@ import com.couchbase.client.core.error.CouchbaseException;
  * @author Simon Baslé
  * @since 2.0
  */
-public abstract class SubDocumentException extends CouchbaseException {
+public class SubDocumentException extends CouchbaseException {
 
-    protected SubDocumentException(String message) {
-        super(message);
+    private final int index;
+
+    public SubDocumentException(String message, ErrorContext ctx, int index) {
+        super(message, ctx);
+        this.index = index;
     }
 
-    protected SubDocumentException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    protected SubDocumentException(Throwable cause) {
-        super(cause);
+    public int index() {
+        return index;
     }
 }

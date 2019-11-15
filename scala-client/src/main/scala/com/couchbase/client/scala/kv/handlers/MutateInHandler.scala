@@ -16,12 +16,13 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.error.{
   CasMismatchException,
   DocumentExistsException,
-  KeyValueErrorContext
+  KeyValueErrorContext,
+  ReducedKeyValueErrorContext
 }
-import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -87,9 +88,11 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
             .foreach(v => commands.add(v))
 
           if (commands.isEmpty) {
-            Failure(SubdocMutateRequest.errIfNoCommands())
+            Failure(SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id)))
           } else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-            Failure(SubdocMutateRequest.errIfNoCommands())
+            Failure(
+              SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id))
+            )
           } else {
             Try(
               new SubdocMutateRequest(
@@ -120,14 +123,17 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
     response.status() match {
 
       case ResponseStatus.SUCCESS =>
-        val values: Array[SubdocField] = response.values()
+        val values: Array[SubDocumentField] = response.values()
 
         MutateInResult(id, values, response.cas(), response.mutationToken().asScala)
 
       case ResponseStatus.SUBDOC_FAILURE =>
         response.error().asScala match {
           case Some(err) => throw err
-          case _         => throw new SubDocumentException("Unknown SubDocument failure occurred") {}
+          case _ => {
+            val ctx = ReducedKeyValueErrorContext.create(id) // todo! needs to be better
+            throw new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0)
+          }
         }
 
       case ResponseStatus.EXISTS =>

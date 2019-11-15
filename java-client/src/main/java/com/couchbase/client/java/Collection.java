@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
@@ -498,9 +499,12 @@ public class Collection {
   /**
    * Performs lookups to document fragments with default options.
    *
-   * @param id the outer document ID.
+   * @param id the document id which is used to uniquely identify it.
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs) {
     return block(async().lookupIn(id, specs));
@@ -509,10 +513,13 @@ public class Collection {
   /**
    * Performs lookups to document fragments with custom options.
    *
-   * @param id the outer document ID.
+   * @param id the document id which is used to uniquely identify it.
    * @param specs the spec which specifies the type of lookups to perform.
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
     return block(async().lookupIn(id, specs, options));
@@ -524,6 +531,11 @@ public class Collection {
    * @param id the outer document ID.
    * @param specs the spec which specifies the type of mutations to perform.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
+   * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs) {
     return block(async().mutateIn(id, specs));
@@ -536,9 +548,13 @@ public class Collection {
    * @param specs the spec which specifies the type of mutations to perform.
    * @param options custom options to modify the mutation options.
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
+   * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs,
-                                 final MutateInOptions options) {
+  public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs, final MutateInOptions options) {
     return block(async().mutateIn(id, specs, options));
   }
 

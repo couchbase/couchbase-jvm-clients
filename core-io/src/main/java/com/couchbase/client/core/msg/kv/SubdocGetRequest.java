@@ -18,8 +18,10 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
+import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -29,7 +31,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -110,29 +111,29 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   @Override
   public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
-    SubdocField[] values;
+    SubDocumentField[] values;
     List<SubDocumentException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
-      values = new SubdocField[commands.size()];
+      values = new SubDocumentField[commands.size()];
       for (Command command : commands) {
         short statusRaw = body.readShort();
         SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
         Optional<SubDocumentException> error = Optional.empty();
         if (status != SubDocumentOpResponseStatus.SUCCESS) {
           if (errors == null) errors = new ArrayList<>();
-          SubDocumentException err = mapSubDocumentError(status, command.path, origKey);
+          SubDocumentException err = mapSubDocumentError(this, status, command.path, command.originalIndex());
           errors.add(err);
           error = Optional.of(err);
         }
         int valueLength = body.readInt();
         byte[] value = new byte[valueLength];
         body.readBytes(value, 0, valueLength);
-        SubdocField op = new SubdocField(status, error, value, command.path, command.type);
+        SubDocumentField op = new SubDocumentField(status, error, value, command.path, command.type);
         values[command.originalIndex] = op;
       }
     } else {
-      values = new SubdocField[0];
+      values = new SubDocumentField[0];
     }
 
     short rawStatus = status(response);
@@ -146,7 +147,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
         status = ResponseStatus.SUCCESS;
       }
-      // If a single subdoc op was tried and failed, return that directly
+      // If a single subdoc op was tried and failed, retursn that directly
       else if (commands.size() == 1 && errors != null && errors.size() == 1) {
         error = Optional.of(errors.get(0));
       }
@@ -155,9 +156,21 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         status = ResponseStatus.SUCCESS;
       }
     } else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      error = Optional.of(new DocumentNotJsonException(origKey));
+      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
+        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+        0,
+        null,
+        SubDocumentOpResponseStatus.DOC_NOT_JSON
+      );
+      error = Optional.of(new DocumentNotJsonException(errorContext, 0));
     } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      error = Optional.of(new DocumentTooDeepException(origKey));
+      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
+        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+        0,
+        null,
+        SubDocumentOpResponseStatus.DOC_TOO_DEEP
+      );
+      error = Optional.of(new DocumentTooDeepException(errorContext, 0));
     }
     // If a single subdoc op was tried and failed, return that directly
     else if (commands.size() == 1 && errors != null && errors.size() == 1) {

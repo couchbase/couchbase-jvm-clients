@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when a path does not exist in the document.
  * The exact meaning of path existence depends on the operation and inputs.
@@ -25,11 +27,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class PathNotFoundException extends SubDocumentException {
 
-    public PathNotFoundException(String id, String path) {
-        super("Path " + path + " not found in document " + id);
+    public PathNotFoundException(ErrorContext ctx, int index) {
+        super("Subdoc path not found in the document", ctx, index);
     }
 
-    public PathNotFoundException(String reason) {
-        super(reason);
-    }
 }

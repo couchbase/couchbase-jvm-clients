@@ -21,19 +21,18 @@ import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 public class SubdocMutateResponse extends BaseResponse {
 
-  private final SubdocField[] values;
+  private final SubDocumentField[] values;
   private final long cas;
   private final Optional<MutationToken> mutationToken;
   private final Optional<SubDocumentException> error;
 
   public SubdocMutateResponse(ResponseStatus status,
                               Optional<SubDocumentException> error,
-                              SubdocField[] values,
+                              SubDocumentField[] values,
                               long cas,
                               Optional<MutationToken> mutationToken) {
     super(status);
@@ -43,7 +42,7 @@ public class SubdocMutateResponse extends BaseResponse {
     this.mutationToken = mutationToken;
   }
 
-  public SubdocField[] values() {
+  public SubDocumentField[] values() {
     return values;
   }
 

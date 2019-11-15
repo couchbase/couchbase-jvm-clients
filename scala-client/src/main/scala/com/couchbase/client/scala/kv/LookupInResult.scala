@@ -4,7 +4,7 @@ import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.msg.kv.{
   SubDocumentOpResponseStatus,
   SubdocCommandType,
-  SubdocField
+  SubDocumentField
 }
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonTranscoder, Transcoder}
 
@@ -30,7 +30,7 @@ import scala.reflect.runtime.universe._
   **/
 case class LookupInResult(
     id: String,
-    private val content: Seq[SubdocField],
+    private val content: Seq[SubDocumentField],
     private[scala] val flags: Int,
     cas: Long,
     expiry: Option[Duration],

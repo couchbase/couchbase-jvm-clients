@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 
+import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
@@ -67,9 +68,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   void loadPrimitives() {
     String id = UUID.randomUUID().toString();
 
-    collection.upsert(
-      id, JsonObject.create().put("foo", "bar").put("num", 1234)
-    );
+    collection.upsert(id, JsonObject.create().put("foo", "bar").put("num", 1234));
 
     LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.get("foo"), LookupInSpec.get("num")));
     assertEquals("bar", result.contentAs(0, String.class));
@@ -126,7 +125,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     assertThrows(
       PathNotFoundException.class,
-      () -> collection.lookupIn(id, Collections.singletonList(LookupInSpec.get("not_exist")))
+      () -> collection.lookupIn(id, Collections.singletonList(LookupInSpec.get("not_exist"))).contentAsObject(0)
     );
   }
 
@@ -146,35 +145,17 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     assertEquals("bar", result.contentAs(1, String.class));
   }
 
-
   @Test
-  void doNotFetchExpiration() {
+  void existsSingle() {
     String id = UUID.randomUUID().toString();
 
-    collection.upsert(id, JsonObject.create().put("foo", "bar"),
-            UpsertOptions.upsertOptions()
-                    .expiry(Duration.ofSeconds(60)));
+    collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
-    LookupInResult result = collection.lookupIn(id,
-            Arrays.asList(
-                    LookupInSpec.get("not_exist"),
-                    LookupInSpec.get("foo")));
+    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.exists("not_exist")));
+
+    assertFalse(result.exists(0));
+    assertThrows(PathNotFoundException.class, () -> assertTrue(result.contentAs(0, Boolean.class)));
   }
-
-  // TODO this throws and shouldn't. need to implement single subdoc path. check old client AsyncLookupInBuilder
-//  @Test
-//  void existsSingle() {
-//    String id = UUID.randomUUID().toString();
-//
-//    collection.upsert(id, JsonObject.create().put("foo", "bar"));
-//
-//    LookupInResult result = collection.lookupIn(id, lookupInOps().exists("not_exist")).get();
-//
-//    assertFalse(result.exists(0));
-//    assertThrows(PathNotFoundException.class, () ->
-//            assertTrue(result.contentAs(0, Boolean.class))
-//    );
-//  }
 
   @Test
   void existsMulti() {

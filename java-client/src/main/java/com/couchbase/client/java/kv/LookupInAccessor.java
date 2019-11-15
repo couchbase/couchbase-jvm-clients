@@ -17,18 +17,16 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.DefaultErrorUtil;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
-import com.couchbase.client.core.msg.kv.SubdocField;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
+import com.couchbase.client.core.error.KeyValueErrorContext;
+import com.couchbase.client.core.error.ServerOutOfMemoryException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class LookupInAccessor {
 
@@ -40,13 +38,18 @@ public class LookupInAccessor {
     return request
       .response()
       .thenApply(response -> {
+        if (response.status().success()) {
+          return new LookupInResult(response.values(), response.cas(), serializer, null);
+        }
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
         switch (response.status()) {
-          case SUCCESS:
-            return new LookupInResult(response.values(), response.cas(), serializer);
-          case SUBDOC_FAILURE:
-            throw response.error().orElse(new SubDocumentException("Unknown SubDocument failure occurred") {});
-            default:
-                throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
+          case SUBDOC_FAILURE: return new LookupInResult(response.values(), response.cas(), serializer, ctx);
+          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
+          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
+          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
+          case TEMPORARY_FAILURE: // intended fallthrough to the case below
+          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
+          default: throw new CouchbaseException("LookupIn operation failed", ctx);
         }
       });
   }

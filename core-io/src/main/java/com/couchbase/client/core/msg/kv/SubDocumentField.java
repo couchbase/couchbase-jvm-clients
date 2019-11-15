@@ -16,25 +16,23 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-// TODO rename SubDocumentField as part of public interface now
-public class SubdocField {
+@Stability.Internal
+public class SubDocumentField {
   private final SubDocumentOpResponseStatus status;
   private final Optional<SubDocumentException> error;
   private final byte[] value;
   private final String path;
   private final SubdocCommandType type;
 
-  public SubdocField(SubDocumentOpResponseStatus status,
-                     Optional<SubDocumentException> error,
-                     byte[] value,
-                     String path,
-                     SubdocCommandType type) {
+  public SubDocumentField(SubDocumentOpResponseStatus status, Optional<SubDocumentException> error, byte[] value,
+                          String path, SubdocCommandType type) {
     this.status = status;
     this.error = error;
     this.value = value;
@@ -70,4 +68,5 @@ public class SubdocField {
       ", path='" + path + '\'' +
       '}';
   }
+
 }

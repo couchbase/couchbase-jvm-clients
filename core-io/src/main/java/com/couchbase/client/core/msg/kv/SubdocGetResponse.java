@@ -21,23 +21,22 @@ import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 public class SubdocGetResponse extends BaseResponse {
 
-  private final SubdocField[] values;
+  private final SubDocumentField[] values;
   private final long cas;
   private final Optional<SubDocumentException> error;
 
-  public SubdocGetResponse(ResponseStatus status, Optional<SubDocumentException> error, SubdocField[] values, long cas) {
+  public SubdocGetResponse(ResponseStatus status, Optional<SubDocumentException> error, SubDocumentField[] values, long cas) {
     super(status);
     this.error = error;
     this.values = values;
     this.cas = cas;
   }
 
-  public SubdocField[] values() {
+  public SubDocumentField[] values() {
     return values;
   }
 

@@ -74,45 +74,6 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     return content;
   }
 
-  /**
-   * Perform subdoc operations and assert the result is a MultiMutationException containing a single
-   * expected child exception
-   */
-  private void testChildFailure(String input, List<SubdocGetRequest.Command> commands, Class<?> expected) {
-    String id = UUID.randomUUID().toString();
-    byte[] content = insertContent(id, input);
-
-    SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
-    core.send(request);
-
-    SubdocGetResponse response = null;
-    try {
-      response = request.response().get();
-    } catch (InterruptedException | ExecutionException e) {
-      fail("Failed with " + e);
-    }
-    assertFalse(response.status().success());
-    assertEquals(ResponseStatus.SUBDOC_FAILURE, response.status());
-    assertTrue(response.error().isPresent());
-    assertTrue(response.error().get() instanceof MultiMutationException);
-    MultiMutationException err = (MultiMutationException) response.error().get();
-    assertTrue(expected.isInstance(err.getCause()));
-    assertTrue(response.cas() != 0);
-  }
-
-
-  /**
-   * Perform a single get subdoc operation and assert the result is a MultiMutationException containing a single
-   * expected child exception
-   */
-  private void testSingleGetChildFailure(String input, String path, Class<?> expected) {
-    List<SubdocGetRequest.Command> commands = Arrays.asList(
-            new SubdocGetRequest.Command(SubdocCommandType.GET, path,  false, 0));
-
-    testChildFailure(input, commands, expected);
-   }
-
 
   // TODO add macro expansion support
 //  @Ignore("requires macro expansion support")

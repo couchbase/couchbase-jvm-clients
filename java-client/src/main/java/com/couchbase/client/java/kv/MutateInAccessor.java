@@ -32,7 +32,7 @@ public class MutateInAccessor {
           case SUCCESS:
             return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
           case SUBDOC_FAILURE:
-            throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
+            throw response.error().orElse(new SubDocumentException("Unknown SubDocument error", ctx, 0));
           case EXISTS:
             throw insertDocument ? new DocumentExistsException(ctx) : new CasMismatchException(ctx);
           default:

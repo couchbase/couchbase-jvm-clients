@@ -83,4 +83,12 @@ public class Validators {
     }
   }
 
+  public static void notNullOrEmpty(final List<?> input, final String identifier, final Supplier<ErrorContext> errorContext) {
+    try {
+      notNullOrEmpty(input, identifier);
+    } catch (Exception cause) {
+      throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
+    }
+  }
+
 }

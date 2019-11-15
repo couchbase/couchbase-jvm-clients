@@ -18,8 +18,10 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
+import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -595,39 +597,43 @@ public enum MemcacheProtocol {
   /**
    * For any response that can be returned by a SubDocument command - path, document, or execution-based - map it to
    * an appropriate SubDocumentException.
-   *
-   * @param status the SubDocument status code
-   * @param path the path of the SubDocument command
-   * @param id the id of the document
    */
-  public static SubDocumentException mapSubDocumentError(SubDocumentOpResponseStatus status, String path, String id) {
+  public static SubDocumentException mapSubDocumentError(KeyValueRequest<?> request, SubDocumentOpResponseStatus status,
+                                                         String path, int index) {
+    SubDocumentErrorContext ctx = new SubDocumentErrorContext(
+      KeyValueErrorContext.completedRequest(request, ResponseStatus.SUBDOC_FAILURE),
+      index,
+      path,
+      status
+    );
+
     switch(status) {
       case PATH_NOT_FOUND:
-        return new PathNotFoundException(id, path);
+        return new PathNotFoundException(ctx, index);
       case PATH_MISMATCH:
-        return new PathMismatchException(id, path);
+        return new PathMismatchException(ctx, index);
       case PATH_TOO_BIG:
-        return new PathTooDeepException(path);
+        return new PathTooDeepException(ctx, index);
       case DOC_TOO_DEEP:
-        return new DocumentTooDeepException(id);
+        return new DocumentTooDeepException(ctx, index);
       case VALUE_CANTINSERT:
-        return new CannotInsertValueException("Cannot insert on path " + path);
+        return new CannotInsertValueException(ctx, index);
       case DOC_NOT_JSON:
-        return new DocumentNotJsonException(id);
+        return new DocumentNotJsonException(ctx, index);
       case NUM_RANGE:
-        return new NumberTooBigException();
+        return new NumberTooBigException(ctx, index);
       case DELTA_RANGE:
-        return new BadDeltaException();
+        return new BadDeltaException(ctx, index);
       case PATH_EXISTS:
-        return new PathExistsException(id, path);
+        return new PathExistsException(ctx, index);
       case VALUE_TOO_DEEP:
-        return new ValueTooDeepException(id, path);
+        return new ValueTooDeepException(ctx, index);
       case XATTR_INVALID_FLAG_COMBO:
-        return new XattrInvalidFlagComboException(path);
+        return new XattrInvalidFlagComboException(ctx, index);
       case XATTR_UNKNOWN_MACRO:
-        return new XattrUnknownMacroException(path);
+        return new XattrUnknownMacroException(ctx, index);
       default:
-        return new SubDocumentException("SubDocument operation failed with status " + status.toString()) {};
+        return new SubDocumentException("Unknown subdoc response code", ctx, index);
     }
   }
 

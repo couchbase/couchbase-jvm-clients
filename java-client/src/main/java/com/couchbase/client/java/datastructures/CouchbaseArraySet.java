@@ -23,8 +23,8 @@ import java.util.Set;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.subdoc.MultiMutationException;
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.error.subdoc.PathExistsException;
+import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
@@ -222,11 +222,8 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 this.lastVisited = -1;
             } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
-                }
-                throw ex;
+            } catch (PathNotFoundException ex) {
+                throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
             }
         }
 
@@ -246,11 +243,8 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                     Collections.singletonList(MutateInSpec.arrayAddUnique("", t)),
                     arraySetOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
             return true;
-        } catch (MultiMutationException ex) {
-            if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) {
-                return false;
-            }
-            throw ex;
+        } catch (PathExistsException ex) {
+            return false;
         }
     }
 

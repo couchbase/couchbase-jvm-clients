@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error.subdoc;
 
 
+import com.couchbase.client.core.error.ErrorContext;
+
 /**
  * Subdocument exception thrown when a macro has been requested when not using extended attributes.
  *
@@ -25,7 +27,8 @@ package com.couchbase.client.core.error.subdoc;
  */
 public class XattrInvalidFlagComboException extends SubDocumentException {
 
-    public XattrInvalidFlagComboException(String path) {
-        super("Need to specify xattr flag when requesting macro for path " + path);
+    public XattrInvalidFlagComboException(ErrorContext ctx, int index) {
+        super("Need to specify xattr flag when requesting macro for path", ctx, index);
     }
+
 }

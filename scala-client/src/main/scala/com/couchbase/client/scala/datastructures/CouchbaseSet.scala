@@ -15,11 +15,10 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.subdoc.MultiMutationException
+import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
+import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
 import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
 
@@ -70,10 +69,8 @@ class CouchbaseSet[T](
             )
 
             out = mutateResult match {
-              case Success(value) => true
-              case Failure(err: MultiMutationException) =>
-                if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) false
-                else throw err
+              case Success(value)                     => true
+              case Failure(_: PathNotFoundException)  => false
               case Failure(err: CasMismatchException) =>
                 // Recurse to try again
                 remove(elem)
@@ -168,10 +165,8 @@ class CouchbaseSet[T](
       case Failure(_: DocumentNotFoundException) =>
         initialize()
         this.+=(elem)
-      case Failure(err: MultiMutationException) =>
-        if (err.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_EXISTS) this
-        else throw err
-      case Failure(err) => throw err
+      case Failure(_: PathExistsException) => this
+      case Failure(err)                    => throw err
     }
   }
 

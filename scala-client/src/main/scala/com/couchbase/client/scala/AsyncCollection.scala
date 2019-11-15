@@ -326,6 +326,7 @@ class AsyncCollection(
       transcoder: Transcoder = JsonTranscoder.Instance,
       @Stability.Internal accessDeleted: Boolean = false
   ): Future[MutateInResult] = {
+
     val req = mutateInHandler.request(
       id,
       spec,

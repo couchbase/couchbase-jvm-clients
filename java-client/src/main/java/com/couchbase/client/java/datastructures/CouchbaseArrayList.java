@@ -26,14 +26,12 @@ import java.util.ListIterator;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
-import com.couchbase.client.core.error.subdoc.MultiMutationException;
 import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
@@ -188,11 +186,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 createEmptyList();
             } catch (CasMismatchException ex) {
                 //will need to retry get-and-set
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new IndexOutOfBoundsException("Index: " + index);
-                }
-                throw ex;
+            } catch (PathNotFoundException ex) {
+                throw new IndexOutOfBoundsException("Index: " + index);
             }
         }
         throw new RetryExhaustedException("Couldn't perform set in less than " +  arrayListOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
@@ -220,11 +215,6 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             }
         } catch (PathNotFoundException e) {
             throw new IndexOutOfBoundsException("Index: " + index);
-        } catch (MultiMutationException ex) {
-            if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                throw new IndexOutOfBoundsException("Index: " + index);
-            }
-            throw ex;
         }
     }
 
@@ -255,11 +245,6 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 //will have to retry get-and-remove
             } catch (PathNotFoundException e) {
                 throw new IndexOutOfBoundsException("Index: " + index);
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new IndexOutOfBoundsException("Index: " + index);
-                }
-                throw ex;
             }
         }
         throw new RetryExhaustedException("Couldn't perform set in less than " + arrayListOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
@@ -377,11 +362,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 this.lastVisited = -1;
             } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
-                }
-                throw ex;
+            } catch (PathNotFoundException ex) {
+                throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
             }
         }
 
@@ -403,11 +385,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 delegate.set(e);
             } catch (CasMismatchException | DocumentNotFoundException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation: " + ex);
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
-                }
-                throw ex;
+            } catch (PathNotFoundException ex) {
+                throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
             }
         }
 
@@ -437,11 +416,8 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 }
             } catch (CasMismatchException ex) {
                 throw new ConcurrentModificationException("List was modified since iterator creation", ex);
-            } catch (MultiMutationException ex) {
-                if (ex.firstFailureStatus() == SubDocumentOpResponseStatus.PATH_NOT_FOUND) {
-                    throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
-                }
-                throw ex;
+            } catch (PathNotFoundException ex) {
+                throw new ConcurrentModificationException("Element doesn't exist anymore at index: " + index);
             }
         }
     }
