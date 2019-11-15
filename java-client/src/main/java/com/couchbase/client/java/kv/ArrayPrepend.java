@@ -39,7 +39,14 @@ public class ArrayPrepend extends MutateInSpec {
 
     ArrayPrepend(String path, Object doc) {
         this.path = path;
-        this.doc = doc;
+        if (doc instanceof MutateInMacro) {
+            this.doc = ((MutateInMacro) doc).value();
+            expandMacro = true;
+            xattr = true;
+        }
+        else {
+            this.doc = doc;
+        }
     }
 
     /**
@@ -71,16 +78,6 @@ public class ArrayPrepend extends MutateInSpec {
     public ArrayPrepend serializer(final JsonSerializer serializer) {
         notNull(serializer, "Serializer");
         this.serializer = serializer;
-        return this;
-    }
-
-    /**
-     * Sets that this contains a macro that should be expanded on the server.  For internal use.
-     * @return this, for chaining
-     */
-    @Stability.Internal
-    public ArrayPrepend expandMacro() {
-        expandMacro = true;
         return this;
     }
 

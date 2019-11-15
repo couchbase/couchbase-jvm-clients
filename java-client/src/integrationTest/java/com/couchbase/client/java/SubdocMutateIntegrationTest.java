@@ -23,9 +23,11 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInMacro;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -83,7 +85,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         String docId = docId();
         coll.mutateIn(docId,
                 Arrays.asList(MutateInSpec.insert("x", content).xattr()),
-                mutateInOptions().insertDocument(true));
+                mutateInOptions().storeSemantics(StoreSemantics.INSERT));
         return docId;
     }
 
@@ -447,15 +449,21 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("${Mutation.CAS}", updatedContent.getString("foo"));
     }
 
-    // TODO macro sentinel values
     @Test
     @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     public void insertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.insert("x.foo", "${Mutation.CAS}").xattr().expandMacro()));
+                Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.CAS).xattr()));
         assertNotEquals("${Mutation.CAS}", updatedContent.getString("foo"));
     }
 
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    public void upsertExpandMacroXattr() {
+        JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
+                Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.CAS).xattr()));
+        assertNotEquals("${Mutation.CAS}", updatedContent.getString("foo"));
+    }
 
     @Test
     public void insertXattrCreatePath() {

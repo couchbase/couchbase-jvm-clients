@@ -13,17 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.core.error;
 
-/**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
- */
-public class DocumentNotFoundException extends CouchbaseException {
+package com.couchbase.client.java.kv;
 
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
+import com.couchbase.client.core.annotation.Stability;
+
+@Stability.Volatile
+public enum MutateInMacro {
+  CAS("${Mutation.CAS}"),
+
+  SEQ_NO("${Mutation.seqno}"),
+
+  VALUE_CRC_32C("${Mutation.value_crc32c");
+
+  private final String value;
+
+  MutateInMacro(String value) {
+    this.value = value;
   }
 
+  String value() {
+    return value;
+  }
 }

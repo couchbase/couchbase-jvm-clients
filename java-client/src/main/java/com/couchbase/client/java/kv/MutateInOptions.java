@@ -53,20 +53,6 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     return this;
   }
 
-  // TODO this can be removed when transactions no longer depends on it
-  @Deprecated
-  @Stability.Internal
-  public MutateInOptions insertDocument(boolean insertDocument) {
-    return storeSemantics(StoreSemantics.INSERT);
-  }
-
-  // TODO this can be removed when transactions no longer depends on it
-  @Deprecated
-  @Stability.Internal
-  public MutateInOptions upsertDocument(boolean upsertDocument) {
-    return storeSemantics(StoreSemantics.UPSERT);
-  }
-
   public MutateInOptions storeSemantics(final StoreSemantics storeSemantics) {
     notNull(storeSemantics, "StoreSemantics");
     this.storeSemantics = storeSemantics;

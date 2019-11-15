@@ -39,7 +39,14 @@ public class ArrayInsert extends MutateInSpec {
 
     ArrayInsert(String path, Object doc) {
         this.path = path;
-        this.doc = doc;
+        if (doc instanceof MutateInMacro) {
+            this.doc = ((MutateInMacro) doc).value();
+            expandMacro = true;
+            xattr = true;
+        }
+        else {
+            this.doc = doc;
+        }
     }
 
     /**
@@ -57,16 +64,6 @@ public class ArrayInsert extends MutateInSpec {
      */
     public ArrayInsert createPath() {
         createPath = true;
-        return this;
-    }
-
-    /**
-     * Sets that this contains a macro that should be expanded on the server.  For internal use.
-     * @return this, for chaining
-     */
-    @Stability.Internal
-    public ArrayInsert expandMacro() {
-        expandMacro = true;
         return this;
     }
 

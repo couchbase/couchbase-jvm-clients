@@ -38,7 +38,14 @@ public class Replace extends MutateInSpec {
 
     Replace(String path, Object doc) {
         this.path = path;
-        this.doc = doc;
+        if (doc instanceof MutateInMacro) {
+            this.doc = ((MutateInMacro) doc).value();
+            expandMacro = true;
+            xattr = true;
+        }
+        else {
+            this.doc = doc;
+        }
     }
 
     /**
@@ -47,16 +54,6 @@ public class Replace extends MutateInSpec {
      */
     public Replace xattr() {
         xattr = true;
-        return this;
-    }
-
-    /**
-     * Sets that this contains a macro that should be expanded on the server.  For internal use.
-     * @return this, for chaining
-     */
-    @Stability.Internal
-    public Replace expandMacro() {
-        expandMacro = true;
         return this;
     }
 

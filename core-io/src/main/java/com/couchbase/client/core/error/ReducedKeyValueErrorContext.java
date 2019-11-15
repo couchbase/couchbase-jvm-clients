@@ -25,6 +25,10 @@ public class ReducedKeyValueErrorContext extends ErrorContext {
     return new ReducedKeyValueErrorContext(id, collectionIdentifier);
   }
 
+  public static ReducedKeyValueErrorContext create(final String id) {
+    return new ReducedKeyValueErrorContext(id, null);
+  }
+
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);

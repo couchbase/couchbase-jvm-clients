@@ -234,7 +234,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
         MutateInSpec.upsert("qix", "qux"),
         MutateInSpec.replace("", content)
       ),
-      MutateInOptions.mutateInOptions().upsertDocument(true)
+      MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT)
     );
 
     GetResult doc = collection.get(id);
@@ -253,7 +253,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
         MutateInSpec.upsert("qix", "qux"),
         MutateInSpec.replace("", content)
       ),
-      MutateInOptions.mutateInOptions().insertDocument(true)
+      MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.INSERT)
     );
 
     GetResult doc = collection.get(id);
