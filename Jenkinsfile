@@ -3,7 +3,7 @@ def PLATFORMS = ["ubuntu16"]
 def DEFAULT_PLATFORM = PLATFORMS[0]
 
 pipeline {
-    agent none
+    agent { label 'master' }
     options {
         timeout(time: 60, unit: 'MINUTES')
     }
