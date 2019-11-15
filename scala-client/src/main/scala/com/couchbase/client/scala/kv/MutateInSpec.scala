@@ -94,7 +94,7 @@ object MutateInSpec {
     * @param values     the values to append.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayAppend[T](path: String, values: T*)(
+  def arrayAppend[T](path: String, values: Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayAppend = {
     if (values.size == 1) {
@@ -105,12 +105,12 @@ object MutateInSpec {
       }
       ArrayAppend(path, serializer.serialize(value), _expandMacro = expandMacro)
     } else {
-      ArrayAppend(path, encodeMulti(serializer, values: _*))
+      ArrayAppend(path, encodeMulti(serializer, values))
     }
   }
 
   /** Encode all provided values into one, comma-separated, Array[Byte] */
-  private def encodeMulti[T](serializer: JsonSerializer[T], values: T*): Try[Array[Byte]] = {
+  private def encodeMulti[T](serializer: JsonSerializer[T], values: Seq[T]): Try[Array[Byte]] = {
     if (values.isEmpty) {
       Failure(new IllegalArgumentException("Empty set of values provided"))
     } else {
@@ -148,7 +148,7 @@ object MutateInSpec {
     * @param values     the value(s) to prepend.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayPrepend[T](path: String, values: T*)(
+  def arrayPrepend[T](path: String, values: Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayPrepend = {
     if (values.size == 1) {
@@ -159,7 +159,7 @@ object MutateInSpec {
       }
       ArrayPrepend(path, serializer.serialize(value), _expandMacro = expandMacro)
     } else {
-      ArrayPrepend(path, encodeMulti(serializer, values: _*))
+      ArrayPrepend(path, encodeMulti(serializer, values))
     }
   }
 
@@ -171,7 +171,7 @@ object MutateInSpec {
     * @param value      the value(s) to insert.  $SupportedTypes
     * @param ev         $JsonSerializer
     */
-  def arrayInsert[T](path: String, values: T*)(
+  def arrayInsert[T](path: String, values: Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayInsert = {
     if (values.size == 1) {
@@ -182,7 +182,7 @@ object MutateInSpec {
       }
       ArrayInsert(path, serializer.serialize(value), _expandMacro = expandMacro)
     } else {
-      ArrayInsert(path, encodeMulti(serializer, values: _*))
+      ArrayInsert(path, encodeMulti(serializer, values))
     }
   }
 

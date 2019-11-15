@@ -17,9 +17,17 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.JsonSerializer;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -31,22 +39,15 @@ import static com.couchbase.client.core.util.Validators.notNull;
  */
 public class ArrayAppend extends MutateInSpec {
     private final String path;
-    private final Object doc;
+    private final List<?> doc;
     private boolean xattr = false;
     private boolean expandMacro = false;
     private boolean createPath = false;
     private JsonSerializer serializer;
 
-    ArrayAppend(String path, Object doc) {
+    ArrayAppend(String path, List<?> doc) {
         this.path = path;
-        if (doc instanceof MutateInMacro) {
-            this.doc = ((MutateInMacro) doc).value();
-            expandMacro = true;
-            xattr = true;
-        }
-        else {
-            this.doc = doc;
-        }
+        this.doc = doc;
     }
 
     /**
@@ -87,7 +88,7 @@ public class ArrayAppend extends MutateInSpec {
         return new SubdocMutateRequest.Command(
             SubdocCommandType.ARRAY_PUSH_LAST,
             path,
-            serializer.serialize(doc),
+            MutateInUtil.convertDocsToBytes(doc, serializer),
             createPath,
             xattr,
             expandMacro,

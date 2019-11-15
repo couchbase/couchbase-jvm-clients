@@ -16,6 +16,7 @@
 package com.couchbase.client.java.datastructures;
 
 import java.util.AbstractQueue;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -138,7 +139,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
             throw new NullPointerException("Unsupported null value");
         }
         collection.mutateIn(id,
-                Collections.singletonList(MutateInSpec.arrayPrepend("", e)),
+                Collections.singletonList(MutateInSpec.arrayPrepend("", Arrays.asList(e))),
                 queueOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
         return true;
     }

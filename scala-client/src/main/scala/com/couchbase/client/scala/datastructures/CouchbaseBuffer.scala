@@ -119,7 +119,7 @@ class CouchbaseBuffer[T](
     val f = () =>
       collection.mutateIn(
         id,
-        Array(MutateInSpec.arrayAppend("", value)),
+        Array(MutateInSpec.arrayAppend("", Seq(value))),
         timeout = opts.timeout,
         retryStrategy = opts.retryStrategy,
         durability = opts.durability
@@ -132,7 +132,7 @@ class CouchbaseBuffer[T](
     val f = () =>
       collection.mutateIn(
         id,
-        Array(MutateInSpec.arrayPrepend("", value)),
+        Array(MutateInSpec.arrayPrepend("", Seq(value))),
         timeout = opts.timeout,
         retryStrategy = opts.retryStrategy,
         durability = opts.durability
@@ -233,7 +233,7 @@ class CouchbaseBuffer[T](
   override def insertAll(index: Int, values: Traversable[T]): Unit = {
     val result = collection.mutateIn(
       id,
-      Array(MutateInSpec.arrayAppend("[" + index + "]", values.toSeq: _*)),
+      Array(MutateInSpec.arrayAppend("[" + index + "]", values.toSeq)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
       durability = opts.durability

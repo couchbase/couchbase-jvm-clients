@@ -17,6 +17,7 @@ package com.couchbase.client.java.datastructures;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -204,7 +205,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             while (retry < 2) {
                 try {
                     collection.mutateIn(id,
-                            Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", element)),
+                            Collections.singletonList(MutateInSpec.arrayInsert("[" + index + "]", Arrays.asList(element))),
                             arrayListOptions.mutateInOptions());
                     return;
                 } catch (DocumentNotFoundException e) {
@@ -397,7 +398,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
             try {
                 MutateInResult updated = collection.mutateIn(
                         id,
-                        Collections.singletonList(MutateInSpec.arrayInsert(idx, e)),
+                        Collections.singletonList(MutateInSpec.arrayInsert(idx, Arrays.asList(e))),
                         arrayListOptions.mutateInOptions().cas(cas));
                 //update the cas so that several mutations in a row can work
                 this.cas = updated.cas();

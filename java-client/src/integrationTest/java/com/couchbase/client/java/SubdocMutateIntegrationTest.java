@@ -275,22 +275,50 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void arrayAppend() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
-                Arrays.asList(MutateInSpec.arrayAppend("foo", "world")));
+                Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world"))));
         assertEquals(JsonArray.from("hello", "world"), updatedContent.getArray("foo"));
     }
 
     @Test
-    void arrayPrepend() {
+    public void arrayAppendMulti() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
-                Arrays.asList(MutateInSpec.arrayPrepend("foo", "world")));
+                Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world", "mars"))));
+        assertEquals(JsonArray.from("hello", "world", "mars"), updatedContent.getArray("foo"));
+    }
+
+  @Test
+  public void arrayAppendListString() {
+    JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
+            Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world", Arrays.asList("mars", "jupiter")))));
+    assertEquals(JsonArray.from("hello", "world", JsonArray.from("mars", "jupiter")), updatedContent.getArray("foo"));
+  }
+
+  @Test
+    public void arrayPrepend() {
+        JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
+                Arrays.asList(MutateInSpec.arrayPrepend("foo", Arrays.asList("world"))));
         assertEquals(JsonArray.from("world", "hello"), updatedContent.getArray("foo"));
+    }
+
+    @Test
+    public void arrayPrependMulti() {
+      JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello")),
+              Arrays.asList(MutateInSpec.arrayPrepend("foo", Arrays.asList("world", "mars"))));
+      assertEquals(JsonArray.from("world", "mars", "hello"), updatedContent.getArray("foo"));
     }
 
     @Test
     void arrayInsert() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                Arrays.asList(MutateInSpec.arrayInsert("foo[1]", "cruel")));
+                Arrays.asList(MutateInSpec.arrayInsert("foo[1]", Arrays.asList("cruel"))));
         assertEquals(JsonArray.from("hello", "cruel", "world"), updatedContent.getArray("foo"));
+    }
+
+    @Test
+    public void arrayInsertMulti() {
+      JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
+              Arrays.asList(MutateInSpec.arrayInsert("foo[1]", Arrays.asList("cruel", "mars"))));
+      assertEquals(JsonArray.from("hello", "cruel", "mars", "world"), updatedContent.getArray("foo"));
     }
 
     @Test
@@ -380,21 +408,21 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void arrayAppendXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello")),
-                Arrays.asList(MutateInSpec.arrayAppend("x.foo", "world").xattr()));
+                Arrays.asList(MutateInSpec.arrayAppend("x.foo", Arrays.asList("world")).xattr()));
         assertEquals(JsonArray.from("hello", "world"), updatedContent.getArray("foo"));
     }
 
     @Test
     void arrayPrependXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello")),
-                Arrays.asList(MutateInSpec.arrayPrepend("x.foo", "world").xattr()));
+                Arrays.asList(MutateInSpec.arrayPrepend("x.foo", Arrays.asList("world")).xattr()));
         assertEquals(JsonArray.from("world", "hello"), updatedContent.getArray("foo"));
     }
 
     @Test
     void arrayInsertXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonArray.from("hello", "world")),
-                Arrays.asList(MutateInSpec.arrayInsert("x.foo[1]", "cruel").xattr()));
+                Arrays.asList(MutateInSpec.arrayInsert("x.foo[1]", Arrays.asList("cruel")).xattr()));
         assertEquals(JsonArray.from("hello", "cruel", "world"), updatedContent.getArray("foo"));
     }
 
@@ -494,14 +522,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void arrayAppendXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.arrayAppend("x.foo", "world").xattr().createPath()));
+                Arrays.asList(MutateInSpec.arrayAppend("x.foo", Arrays.asList("world")).xattr().createPath()));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
     @Test
     void arrayPrependXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.arrayPrepend("x.foo", "world").xattr().createPath()));
+                Arrays.asList(MutateInSpec.arrayPrepend("x.foo", Arrays.asList("world")).xattr().createPath()));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
@@ -566,14 +594,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void arrayAppendCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                Arrays.asList(MutateInSpec.arrayAppend("foo", "world").createPath()));
+                Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world")).createPath()));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
     @Test
     void arrayPrependCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                Arrays.asList(MutateInSpec.arrayPrepend("foo", "world").createPath()));
+                Arrays.asList(MutateInSpec.arrayPrepend("foo", Arrays.asList("world")).createPath()));
         assertEquals(JsonArray.from("world"), updatedContent.getArray("foo"));
     }
 
@@ -692,7 +720,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
             coll.mutateIn(docId,
                     Arrays.asList(
                             MutateInSpec.increment("count", 1).xattr().createPath(),
-                            MutateInSpec.arrayAppend("logs", "someValue"),
+                            MutateInSpec.arrayAppend("logs", Arrays.asList("someValue")),
                             MutateInSpec.upsert("logs[-1].c", MutateInMacro.CAS).xattr()),
                     MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
         });

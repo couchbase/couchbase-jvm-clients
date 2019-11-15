@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
+import java.util.List;
+
 public abstract class MutateInSpec {
 
     @Stability.Internal
@@ -82,10 +84,10 @@ public abstract class MutateInSpec {
      * Will error if the last element of the path does not exist or is not an array.
      *
      * @param path     the path identifying an array to which to append the value.
-     * @param value the value to append
+     * @param values the value(s) to append
      */
-    public static <T> ArrayAppend arrayAppend(final String path, final Object value) {
-        return new ArrayAppend(path, value);
+    public static <T> ArrayAppend arrayAppend(final String path, final List<?> values) {
+        return new ArrayAppend(path, values);
     }
 
     /**
@@ -94,10 +96,10 @@ public abstract class MutateInSpec {
      * Will error if the last element of the path does not exist or is not an array.
      *
      * @param path     the path identifying an array to which to append the value.
-     * @param value the value to prepend
+     * @param values the value(s) to prepend
      */
-    public static <T> ArrayPrepend arrayPrepend(final String path, final Object value) {
-        return new ArrayPrepend(path, value);
+    public static <T> ArrayPrepend arrayPrepend(final String path, final List<?> values) {
+        return new ArrayPrepend(path, values);
     }
 
     /**
@@ -106,10 +108,10 @@ public abstract class MutateInSpec {
      * Will error if the last element of the path does not exist or is not an array.
      *
      * @param path     the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
-     * @param value the value to insert
+     * @param values the value(s) to insert
      */
-    public static <T> ArrayInsert arrayInsert(final String path, final Object value) {
-        return new ArrayInsert(path, value);
+    public static <T> ArrayInsert arrayInsert(final String path, final List<?> values) {
+        return new ArrayInsert(path, values);
     }
 
     /**
