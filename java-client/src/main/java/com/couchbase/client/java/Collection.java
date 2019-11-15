@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
@@ -349,11 +350,14 @@ public class Collection {
   }
 
   /**
-   * Inserts a full document which does not exist yet with default options.
+   * Inserts a full document which does not exist yet.
    *
-   * @param id the document id to insert.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to insert.
    * @return a {@link MutationResult} once inserted.
+   * @throws DocumentExistsException the given document id is already present in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content) {
     return block(async().insert(id, content));
@@ -362,21 +366,26 @@ public class Collection {
   /**
    * Inserts a full document which does not exist yet with custom options.
    *
-   * @param id the document id to insert.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to insert.
    * @param options custom options to customize the insert behavior.
    * @return a {@link MutationResult} once inserted.
+   * @throws DocumentExistsException the given document id is already present in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content, final InsertOptions options) {
     return block(async().insert(id, content, options));
   }
 
   /**
-   * Upserts a full document which might or might not exist yet with default options.
+   * Upserts a full document which might or might not exist yet.
    *
-   * @param id the document id to upsert.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to upsert.
    * @return a {@link MutationResult} once upserted.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content) {
     return block(async().upsert(id, content));
@@ -385,21 +394,27 @@ public class Collection {
   /**
    * Upserts a full document which might or might not exist yet with custom options.
    *
-   * @param id the document id to upsert.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to upsert.
    * @param options custom options to customize the upsert behavior.
    * @return a {@link MutationResult} once upserted.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content, final UpsertOptions options) {
     return block(async().upsert(id, content, options));
   }
 
   /**
-   * Replaces a full document which already exists with default options.
+   * Replaces a full document which already exists.
    *
-   * @param id the document id to replace.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to replace.
    * @return a {@link MutationResult} once replaced.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content) {
     return block(async().replace(id, content));
@@ -408,10 +423,14 @@ public class Collection {
   /**
    * Replaces a full document which already exists with custom options.
    *
-   * @param id the document id to replace.
+   * @param id the document id which is used to uniquely identify it.
    * @param content the document content to replace.
    * @param options custom options to customize the replace behavior.
    * @return a {@link MutationResult} once replaced.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content, final ReplaceOptions options) {
     return block(async().replace(id, content, options));

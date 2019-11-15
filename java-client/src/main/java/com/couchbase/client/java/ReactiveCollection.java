@@ -440,8 +440,9 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> insert(final String id, Object content, final InsertOptions options) {
     return Mono.defer(() -> {
+      notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       InsertOptions.Built opts = options.build();
-      InsertRequest request = asyncCollection.insertRequest(id, content, options);
+      InsertRequest request = asyncCollection.insertRequest(id, content, opts);
       return Reactor.wrap(
         request,
         InsertAccessor.insert(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -471,8 +472,9 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
     return Mono.defer(() -> {
-      UpsertRequest request = asyncCollection.upsertRequest(id, content, options);
+      notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       UpsertOptions.Built opts = options.build();
+      UpsertRequest request = asyncCollection.upsertRequest(id, content, opts);
       return Reactor.wrap(
         request,
         UpsertAccessor.upsert(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -502,8 +504,9 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
     return Mono.defer(() -> {
+      notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       ReplaceOptions.Built opts = options.build();
-      ReplaceRequest request = asyncCollection.replaceRequest(id, content, options);
+      ReplaceRequest request = asyncCollection.replaceRequest(id, content, opts);
       return Reactor.wrap(
         request,
         ReplaceAccessor.replace(core, request, id, opts.persistTo(), opts.replicateTo()),

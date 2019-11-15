@@ -669,11 +669,10 @@ public class AsyncCollection {
    * @param options custom options to customize the insert behavior.
    * @return a {@link CompletableFuture} completing once inserted or failed.
    */
-  public CompletableFuture<MutationResult> insert(final String id, Object content,
-                                                  final InsertOptions options) {
+  public CompletableFuture<MutationResult> insert(final String id, Object content, final InsertOptions options) {
+    notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     InsertOptions.Built opts = options.build();
-    return InsertAccessor.insert(core, insertRequest(id, content, options), id, opts.persistTo(),
-      opts.replicateTo());
+    return InsertAccessor.insert(core, insertRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
   /**
@@ -681,14 +680,12 @@ public class AsyncCollection {
    *
    * @param id the document id to insert.
    * @param content the document content to insert.
-   * @param options custom options to customize the insert behavior.
+   * @param opts custom options to customize the insert behavior.
    * @return the insert request.
    */
-  InsertRequest insertRequest(final String id, final Object content, final InsertOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "InsertOptions");
-    InsertOptions.Built opts = options.build();
+  InsertRequest insertRequest(final String id, final Object content, final InsertOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -720,16 +717,10 @@ public class AsyncCollection {
    * @param options custom options to customize the upsert behavior.
    * @return a {@link CompletableFuture} completing once upserted or failed.
    */
-  public CompletableFuture<MutationResult> upsert(final String id, Object content,
-                                                  final UpsertOptions options) {
+  public CompletableFuture<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
+    notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     UpsertOptions.Built opts = options.build();
-    return UpsertAccessor.upsert(
-      core,
-      upsertRequest(id, content, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return UpsertAccessor.upsert(core, upsertRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
   /**
@@ -737,14 +728,12 @@ public class AsyncCollection {
    *
    * @param id the document id to upsert.
    * @param content the document content to upsert.
-   * @param options custom options to customize the upsert behavior.
+   * @param opts custom options to customize the upsert behavior.
    * @return the upsert request.
    */
-  UpsertRequest upsertRequest(final String id, final Object content, final UpsertOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "UpsertOptions");
-    UpsertOptions.Built opts = options.build();
+  UpsertRequest upsertRequest(final String id, final Object content, final UpsertOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -789,16 +778,10 @@ public class AsyncCollection {
    * @param options custom options to customize the replace behavior.
    * @return a {@link CompletableFuture} completing once replaced or failed.
    */
-  public CompletableFuture<MutationResult> replace(final String id, Object content,
-                                                   final ReplaceOptions options) {
+  public CompletableFuture<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
+    notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     ReplaceOptions.Built opts = options.build();
-    return ReplaceAccessor.replace(
-      core,
-      replaceRequest(id, content, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return ReplaceAccessor.replace(core, replaceRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
   /**
@@ -806,15 +789,12 @@ public class AsyncCollection {
    *
    * @param id the document id to replace.
    * @param content the document content to replace.
-   * @param options custom options to customize the replace behavior.
+   * @param opts custom options to customize the replace behavior.
    * @return the replace request.
    */
-  ReplaceRequest replaceRequest(final String id, final Object content,
-                                final ReplaceOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "ReplaceOptions");
-    ReplaceOptions.Built opts = options.build();
+  ReplaceRequest replaceRequest(final String id, final Object content, final ReplaceOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());

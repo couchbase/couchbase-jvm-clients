@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.errors;
 
+import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestTimeoutException;
@@ -24,6 +26,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -40,6 +43,7 @@ import java.util.stream.IntStream;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
+import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,6 +157,51 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   void verifyRemoveExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.remove("foo", null));
     assertThrows(InvalidArgumentException.class, () -> collection.remove(null));
+  }
+
+  @Test
+  void verifyInsertExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.insert("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.insert(null, "bar"));
+    assertThrows(InvalidArgumentException.class, () -> collection.insert("foo", "bar", null));
+
+    String id = UUID.randomUUID().toString();
+    collection.insert(id, "bar");
+
+    DocumentExistsException thrown = assertThrows(
+      DocumentExistsException.class,
+      () -> collection.insert(id, "bar")
+    );
+    assertNotNull(thrown.context());
+  }
+
+  @Test
+  void verifyUpsertExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.upsert("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.upsert(null, "bar"));
+    assertThrows(InvalidArgumentException.class, () -> collection.upsert("foo", "bar", null));
+  }
+
+  @Test
+  void verifyReplaceExceptions() {
+    DocumentNotFoundException thrown = assertThrows(
+      DocumentNotFoundException.class,
+      () -> collection.replace(UUID.randomUUID().toString(), "bar")
+    );
+    assertNotNull(thrown.context());
+
+    assertThrows(InvalidArgumentException.class, () -> collection.replace("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.replace(null, "bar"));
+    assertThrows(InvalidArgumentException.class, () -> collection.replace("foo", "bar", null));
+
+    String id = UUID.randomUUID().toString();
+    MutationResult result = collection.upsert(id, "bar");
+
+    CasMismatchException mismatch = assertThrows(
+      CasMismatchException.class,
+      () -> collection.replace(id, "bar", replaceOptions().cas(result.cas() + 1))
+    );
+    assertNotNull(mismatch.context());
   }
 
 }

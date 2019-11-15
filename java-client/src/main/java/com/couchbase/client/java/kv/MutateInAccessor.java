@@ -34,7 +34,7 @@ public class MutateInAccessor {
           case SUBDOC_FAILURE:
             throw response.error().orElse(new SubDocumentException("Unknown SubDocument error") {});
           case EXISTS:
-            throw insertDocument ? DocumentExistsException.forKey(key) : new CasMismatchException(ctx);
+            throw insertDocument ? new DocumentExistsException(ctx) : new CasMismatchException(ctx);
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }

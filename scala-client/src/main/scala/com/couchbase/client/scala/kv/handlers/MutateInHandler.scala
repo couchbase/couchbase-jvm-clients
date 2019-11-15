@@ -132,7 +132,10 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
       case ResponseStatus.EXISTS =>
         document match {
-          case StoreSemantics.Insert => throw DocumentExistsException.forKey(id)
+          case StoreSemantics.Insert => {
+            val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
+            throw new DocumentExistsException(ctx)
+          }
           case _ => {
             val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
             throw new CasMismatchException(ctx)
