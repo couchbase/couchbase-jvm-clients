@@ -24,21 +24,24 @@ import java.util.concurrent.CompletableFuture;
 
 public class UnlockAccessor {
 
-  public static CompletableFuture<Void> unlock(final String key,
-                                               final Core core,
-                                               final UnlockRequest request) {
+  public static CompletableFuture<Void> unlock(final String key, final Core core, final UnlockRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
+        if (response.status().success()) {
+          return null;
+        }
+
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
         switch (response.status()) {
-          case SUCCESS:
-            return null;
-          // Special Case for backwards compatibility (see MB-13087)
-          /*case TEMPORARY_FAILURE:
-            throw new DocumentLockedException.forKey(key);*/
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
+          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
+          case LOCKED: throw new CasMismatchException(ctx);
+          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
+          case TEMPORARY_FAILURE: // intended fallthrough to the case below
+          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
+          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
+          default: throw new CouchbaseException("Unlock operation failed", ctx);
         }
       });
   }

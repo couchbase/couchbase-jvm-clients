@@ -839,8 +839,9 @@ public class AsyncCollection {
    * @return the touch request.
    */
   TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "TouchOptions");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     TouchOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
@@ -870,8 +871,7 @@ public class AsyncCollection {
    * @param options the options to customize.
    * @return the future which completes once a response has been received.
    */
-  public CompletableFuture<Void> unlock(final String id, final long cas,
-                                        final UnlockOptions options) {
+  public CompletableFuture<Void> unlock(final String id, final long cas, final UnlockOptions options) {
     return UnlockAccessor.unlock(id, core, unlockRequest(id, cas, options));
   }
 
@@ -884,8 +884,11 @@ public class AsyncCollection {
    * @return the unlock request.
    */
   UnlockRequest unlockRequest(final String id, final long cas, final UnlockOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "UnlockOptions");
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "UnlockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    if (cas == 0) {
+      throw new InvalidArgumentException("CAS cannot be 0", null, ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    }
     UnlockOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());

@@ -38,9 +38,11 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
@@ -279,7 +281,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else if (statusIndicatesInvalidChannel(status)) {
       closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
-      RetryReason retryReason = statusCodeIndicatesRetry(status);
+      RetryReason retryReason = statusCodeIndicatesRetry(status, request);
       if (retryReason == null) {
         try {
           Response decoded = request.decode(response, channelContext);
@@ -364,14 +366,18 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   /**
    * Certain error codes can be transparently retried in the client instead of being raised to the user.
+   * <p>
+   * Note this special case where LOCKED returned for unlock should NOT be retried, because it does not make
+   * sense (someone else unlocked the document). Usually this is turned into a CAS mismatch at the higher
+   * levels.
    *
    * @param status the status code to check.
    * @return the retry reason that indicates the retry.
    */
-  private RetryReason statusCodeIndicatesRetry(final ResponseStatus status) {
+  private RetryReason statusCodeIndicatesRetry(final ResponseStatus status, final Request<?> request) {
     switch (status) {
       case LOCKED:
-        return RetryReason.KV_LOCKED;
+        return request instanceof UnlockRequest ? null : RetryReason.KV_LOCKED;
       case TEMPORARY_FAILURE:
         return RetryReason.KV_TEMPORARY_FAILURE;
       case SYNC_WRITE_IN_PROGRESS:

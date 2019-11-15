@@ -26,6 +26,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
@@ -44,6 +45,7 @@ import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
+import static com.couchbase.client.java.kv.TouchOptions.touchOptions;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -202,6 +204,49 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
       () -> collection.replace(id, "bar", replaceOptions().cas(result.cas() + 1))
     );
     assertNotNull(mismatch.context());
+  }
+
+  @Test
+  void verifyTouchExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch(null, Duration.ofSeconds(1), null));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", null, touchOptions()));
+
+    DocumentNotFoundException thrown = assertThrows(
+      DocumentNotFoundException.class,
+      () -> collection.touch(UUID.randomUUID().toString(), Duration.ofSeconds(1))
+    );
+    assertNotNull(thrown.context());
+  }
+
+  @Test
+  void verifyUnlockExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.unlock(null, 0));
+    assertThrows(InvalidArgumentException.class, () -> collection.unlock("foo", 0));
+    assertThrows(InvalidArgumentException.class, () -> collection.unlock("foo", 0, null));
+
+    DocumentNotFoundException thrown = assertThrows(
+      DocumentNotFoundException.class,
+      () -> collection.unlock(UUID.randomUUID().toString(), 1)
+    );
+    assertNotNull(thrown.context());
+  }
+
+  /**
+   * Ignored for the mock because it still returns TMPFAIL (like the old servers)
+   */
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void verifyUnlockCasMismatch() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, "foo");
+    GetResult result = collection.getAndLock(id, Duration.ofSeconds(5));
+
+    CasMismatchException thrown = assertThrows(
+      CasMismatchException.class,
+      () -> collection.unlock(id, result.cas() + 1)
+    );
+    assertNotNull(thrown.context());
   }
 
 }

@@ -437,11 +437,14 @@ public class Collection {
   }
 
   /**
-   * Updates the expiry of the document with the given id with default options.
+   * Updates the expiry of the document with the given id.
    *
-   * @param id the id of the document to update.
+   * @param id the document id which is used to uniquely identify it.
    * @param expiry the new expiry for the document.
    * @return a {@link MutationResult} once the operation completes.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry) {
     return block(async().touch(id, expiry));
@@ -450,20 +453,27 @@ public class Collection {
   /**
    * Updates the expiry of the document with the given id with custom options.
    *
-   * @param id the id of the document to update.
+   * @param id the document id which is used to uniquely identify it.
    * @param expiry the new expiry for the document.
    * @param options the custom options.
    * @return a {@link MutationResult} once the operation completes.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
     return block(async().touch(id, expiry, options));
   }
 
   /**
-   * Unlocks a document if it has been locked previously, with default options.
+   * Unlocks a document if it has been locked previously.
    *
-   * @param id the id of the document.
+   * @param id the document id which is used to uniquely identify it.
    * @param cas the CAS value which is needed to unlock it.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas) {
     block(async().unlock(id, cas));
@@ -473,9 +483,13 @@ public class Collection {
   /**
    * Unlocks a document if it has been locked previously, with custom options.
    *
-   * @param id the id of the document.
+   * @param id the document id which is used to uniquely identify it.
    * @param cas the CAS value which is needed to unlock it.
    * @param options the options to customize.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas, final UnlockOptions options) {
     block(async().unlock(id, cas, options));
