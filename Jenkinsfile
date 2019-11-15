@@ -50,8 +50,7 @@ pipeline {
             post {
                 always {
                     // Process the Junit test results
-                    junit 'couchbase-jvm-clients/java-client/target/surefire-reports/*.xml'
-                    junit 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
                 }
             }
         }
