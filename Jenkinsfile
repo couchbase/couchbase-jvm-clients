@@ -47,14 +47,6 @@ pipeline {
                 cleanWs()
                 buildsAndTests(PLATFORMS)
             }
-            post {
-                always {
-                    shWithEcho("find .")
-                    // Process the Junit test results
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                    junit allowEmptyResults: true, testResults: 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
-                }
-            }
         }
         stage('package') {
             agent { label 'ubuntu14||ubuntu16||centos6||centos7' }
@@ -213,6 +205,14 @@ def buildsAndTests(PLATFORMS) {
                         }
                         // TODO: IF YOU HAVE INTEGRATION TESTS THAT RUN AGAINST THE MOCK DO THAT HERE
                         // USING THE PACKAGE(S) CREATED ABOVE
+                    }
+                    post {
+                        always {
+                            shWithEcho("find .")
+                            // Process the Junit test results
+                            junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                            junit allowEmptyResults: true, testResults: 'couchbase-jvm-clients/core-io/target/surefire-reports/*.xml'
+                        }
                     }
                 }
             }
