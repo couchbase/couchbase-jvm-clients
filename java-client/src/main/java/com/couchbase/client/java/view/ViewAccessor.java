@@ -38,17 +38,17 @@ import java.util.function.Function;
 @Stability.Internal
 public class ViewAccessor {
 
-    public static CompletableFuture<ViewResult> viewQueryAsync(final Core core, final ViewRequest request, final JsonSerializer serializer) {
+    public static CompletableFuture<ViewResult> viewQueryAsync(final Core core, final ViewRequest request,
+                                                               final JsonSerializer serializer) {
         return viewQueryInternal(core, request)
-          .flatMap(response -> response
-            .rows()
-            .collectList()
-            .map(rows -> new ViewResult(response.header(), rows, serializer))
+          .flatMap(response ->
+            response.rows().collectList().map(rows -> new ViewResult(response.header(), rows, serializer))
           )
           .toFuture();
     }
 
-    public static Mono<ReactiveViewResult> viewQueryReactive(final Core core, final ViewRequest request, final JsonSerializer serializer) {
+    public static Mono<ReactiveViewResult> viewQueryReactive(final Core core, final ViewRequest request,
+                                                             final JsonSerializer serializer) {
         return viewQueryInternal(core, request).map(r -> new ReactiveViewResult(r, serializer));
     }
 
@@ -56,4 +56,5 @@ public class ViewAccessor {
         core.send(request);
         return Reactor.wrap(request, request.response(), true);
     }
+
 }

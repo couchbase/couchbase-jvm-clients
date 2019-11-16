@@ -21,6 +21,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.diagnostics.PingResponse;
 import com.couchbase.client.core.msg.view.ViewRequest;
@@ -168,15 +170,15 @@ public class AsyncBucket {
   }
 
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
-    notNull(options, "ViewOptions");
+    notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name));
     ViewOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
     return ViewAccessor.viewQueryAsync(core, viewRequest(designDoc, viewName, opts), serializer);
   }
 
   ViewRequest viewRequest(final String designDoc, final String viewName, final ViewOptions.Built opts) {
-    notNullOrEmpty(designDoc, "DesignDoc");
-    notNullOrEmpty(viewName, "ViewName");
+    notNullOrEmpty(designDoc, "DesignDoc", () -> new ReducedViewErrorContext(designDoc, viewName, name));
+    notNullOrEmpty(viewName, "ViewName", () -> new ReducedViewErrorContext(designDoc, viewName, name));
 
     String query = opts.query();
     Optional<byte[]> keysJson = Optional.ofNullable(opts.keys()).map(s -> s.getBytes(StandardCharsets.UTF_8));

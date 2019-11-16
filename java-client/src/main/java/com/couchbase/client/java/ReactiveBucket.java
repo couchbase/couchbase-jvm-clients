@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diag.PingResult;
+import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -138,14 +139,10 @@ public class ReactiveBucket {
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
-    notNull(options, "ViewOptions");
+    notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name()));
     ViewOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return ViewAccessor.viewQueryReactive(
-      asyncBucket.core(),
-      asyncBucket.viewRequest(designDoc, viewName, opts),
-      serializer
-    );
+    return ViewAccessor.viewQueryReactive(asyncBucket.core(), asyncBucket.viewRequest(designDoc, viewName, opts), serializer);
   }
 
   /**

@@ -22,6 +22,8 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
 import com.couchbase.client.core.error.DecodingFailedException;
 import com.couchbase.client.core.json.stream.CopyingStreamWindow;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
@@ -91,6 +93,8 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    */
   protected abstract JsonStreamParser.Builder parserBuilder();
 
+  private volatile RequestContext requestContext;
+
   public final void cleanup() {
     if (parser != null) {
       parser.close();
@@ -99,6 +103,15 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     decodingFailure = null;
     headerComplete = false;
     doCleanup();
+  }
+
+  @Override
+  public void updateRequestContext(final RequestContext requestContext) {
+    this.requestContext = requestContext;
+  }
+
+  protected RequestContext requestContext() {
+    return requestContext;
   }
 
   protected void markHeaderComplete() {

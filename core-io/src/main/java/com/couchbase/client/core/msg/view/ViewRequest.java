@@ -36,8 +36,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 public class ViewRequest extends BaseRequest<ViewResponse>
@@ -114,4 +117,16 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   public boolean idempotent() {
     return true;
   }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx = new HashMap<>();
+    ctx.put("type", serviceType().ident());
+    ctx.put("bucket", redactMeta(bucket));
+    ctx.put("designDoc", redactMeta(design));
+    ctx.put("viewName", redactMeta(view));
+    ctx.put("development", development);
+    return ctx;
+  }
+
 }

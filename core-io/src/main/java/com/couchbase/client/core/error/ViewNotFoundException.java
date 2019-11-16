@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.view;
+package com.couchbase.client.core.error;
 
-public class ViewError {
+public class ViewNotFoundException extends CouchbaseException {
 
-  private String error;
-  private String reason;
-
-  public ViewError(String error, String reason) {
-    this.error = error;
-    this.reason = reason;
-  }
-
-  public String error() {
-    return error;
-  }
-
-  public String reason() {
-    return reason;
+  public ViewNotFoundException(ErrorContext ctx) {
+    super("The queried view is not found on the server", ctx);
   }
 
 }

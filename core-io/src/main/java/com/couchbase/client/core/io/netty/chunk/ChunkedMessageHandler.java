@@ -144,6 +144,7 @@ public abstract class ChunkedMessageHandler
       FullHttpRequest encoded = currentRequest.encode();
       encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
       encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
+      chunkResponseParser.updateRequestContext(currentRequest.context());
       ctx.write(encoded, promise);
     } catch (Throwable t) {
       currentRequest.response().completeExceptionally(t);

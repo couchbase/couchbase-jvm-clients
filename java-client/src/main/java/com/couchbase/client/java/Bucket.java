@@ -20,6 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.ViewNotFoundException;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -155,10 +158,31 @@ public class Bucket {
     return defaultScope().collection(name);
   }
 
+  /**
+   * Queries a view on the bucket.
+   *
+   * @param designDoc the name of the design document in which the view resides.
+   * @param viewName the name of the view to query.
+   * @return a {@link ViewResult} once completed.
+   * @throws ViewNotFoundException if the view or design document is not found on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public ViewResult viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
+  /**
+   * Queries a view on the bucket with custom options.
+   *
+   * @param designDoc the name of the design document in which the view resides.
+   * @param viewName the name of the view to query.
+   * @param options allows to customize view options.
+   * @return a {@link ViewResult} once completed.
+   * @throws ViewNotFoundException if the view or design document is not found on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public ViewResult viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     return block(asyncBucket.viewQuery(designDoc, viewName, options));
   }

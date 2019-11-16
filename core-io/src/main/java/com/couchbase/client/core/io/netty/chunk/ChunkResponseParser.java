@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.chunk;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
@@ -83,5 +84,10 @@ public interface ChunkResponseParser<H extends ChunkHeader, ROW extends ChunkRow
    * Returns the currently assigned mono for the trailer bits.
    */
   Mono<T> trailer();
+
+  /**
+   * Sets the request context for the current request in the parser, can be used for error handling.
+   */
+  void updateRequestContext(RequestContext requestContext);
 
 }
