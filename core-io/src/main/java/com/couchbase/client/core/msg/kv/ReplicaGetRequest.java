@@ -27,6 +27,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
+import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
@@ -60,4 +61,11 @@ public class ReplicaGetRequest extends GetRequest {
     }
   }
 
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx =  super.serviceContext();
+    ctx.put("isReplica", true);
+    ctx.put("replicaNum", replica);
+    return ctx;
+  }
 }

@@ -72,14 +72,18 @@ import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
@@ -320,18 +324,22 @@ public class ReactiveCollection {
    * @return a flux of results from all replicas
    */
   public Flux<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
-    return Flux
-      .fromStream(asyncCollection.getAllReplicasRequests(id, options))
-      .flatMap(request ->
-              Reactor
-                .wrap(request, GetAccessor.get(core, request, environment().transcoder()), true)
-                .onErrorResume(t -> {
-                  coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
-                  // Swallow any errors from individual replicas
-                  return Mono.empty();
-                })
-                .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
-      .switchIfEmpty(Mono.error(new NoSuchElementException()));
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(options, "GetAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    GetAllReplicasOptions.Built opts = options.build();
+    Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvTimeout());
+
+    return Reactor
+      .toMono(() -> asyncCollection.getAllReplicasRequests(id, opts, timeout))
+      .flux()
+      .flatMap(Flux::fromStream)
+      .flatMap(request -> Reactor
+        .wrap(request, GetAccessor.get(core, request, environment().transcoder()), true)
+        .onErrorResume(t -> {
+          coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
+          return Mono.empty(); // Swallow any errors from individual replicas
+        })
+        .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)));
   }
 
   /**
@@ -358,8 +366,11 @@ public class ReactiveCollection {
   public Mono<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
     GetAnyReplicaOptions.Built built = options.build();
     GetAllReplicasOptions opts = GetAllReplicasOptions.getAllReplicasOptions().clientContext(built.clientContext());
-    built.timeout().ifPresent(v -> opts.timeout(v));
-    built.retryStrategy().ifPresent(v -> opts.retryStrategy(v));
+    built.timeout().ifPresent(opts::timeout);
+    built.retryStrategy().ifPresent(opts::retryStrategy);
+    if (built.transcoder() != null) {
+      opts.transcoder(built.transcoder());
+    }
 
     return getAllReplicas(id, opts).next();
   }

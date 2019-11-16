@@ -22,12 +22,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.error.AggregateErrorContext;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -51,9 +53,9 @@ import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
-import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
+import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
@@ -82,22 +84,23 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
-import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ANY_REPLICA_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
@@ -463,7 +466,7 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  public List<CompletableFuture<GetReplicaResult>> getAllReplicas(final String id) {
+  public CompletableFuture<List<CompletableFuture<GetReplicaResult>>> getAllReplicas(final String id) {
     return getAllReplicas(id, DEFAULT_GET_ALL_REPLICAS_OPTIONS);
   }
 
@@ -474,13 +477,17 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  public List<CompletableFuture<GetReplicaResult>> getAllReplicas(final String id, final GetAllReplicasOptions options) {
-    return getAllReplicasRequests(id, options)
-      .map(request ->
-              GetAccessor
-                .get(core, request, environment.transcoder())
-                .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
-      .collect(Collectors.toList());
+  public CompletableFuture<List<CompletableFuture<GetReplicaResult>>> getAllReplicas(final String id, final GetAllReplicasOptions options) {
+    notNull(options, "GetAllReplicasOptions");
+    GetAllReplicasOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
+
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    return getAllReplicasRequests(id, opts, timeout)
+      .thenApply(stream -> stream.map(request -> GetAccessor
+        .get(core, request, transcoder)
+        .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
+        .collect(Collectors.toList()));
   }
 
   /**
@@ -501,50 +508,61 @@ public class AsyncCollection {
    * @return a future containing the first available replica.
    */
   public CompletableFuture<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "GetAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAnyReplicaOptions.Built built = options.build();
 
     GetAllReplicasOptions opts = GetAllReplicasOptions.getAllReplicasOptions().clientContext(built.clientContext());
-    built.timeout().ifPresent(v -> opts.timeout(v));
-    built.retryStrategy().ifPresent(v -> opts.retryStrategy(v));
+    built.timeout().ifPresent(opts::timeout);
+    built.retryStrategy().ifPresent(opts::retryStrategy);
+    if (built.transcoder() != null) {
+      opts.transcoder(built.transcoder());
+    }
 
-    List<CompletableFuture<GetReplicaResult>> futures = getAllReplicas(id, opts);
+    CompletableFuture<List<CompletableFuture<GetReplicaResult>>> listOfFutures = getAllReplicas(id, opts);
 
     // Aggregating the futures here will discard the individual errors, which we don't need
-    CompletableFuture<GetReplicaResult> f = new CompletableFuture<>();
-    Consumer<GetReplicaResult> complete = f::complete;
-    futures.forEach(s -> s.thenAccept(complete));
+    CompletableFuture<GetReplicaResult> anyReplicaFuture = new CompletableFuture<>();
+    listOfFutures.whenComplete((futures, throwable) -> {
+      if (throwable != null) {
+        anyReplicaFuture.completeExceptionally(throwable);
+      }
 
-    // If all the futures error, make sure the overall future still times out
-    Duration timeout = built.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    core.context().environment().scheduler().schedule(() -> f.completeExceptionally(new TimeoutException()),
-            timeout.toMillis(),
-            TimeUnit.MILLISECONDS);
+      final AtomicBoolean successCompleted = new AtomicBoolean(false);
+      final AtomicInteger totalCompleted = new AtomicInteger(0);
+      final List<ErrorContext> nestedContexts = Collections.synchronizedList(new ArrayList<>());
+      futures.forEach(individual -> individual.whenComplete((result, error) -> {
+        int completed = totalCompleted.incrementAndGet();
+        if (error != null) {
+          if (error instanceof CompletionException && error.getCause() instanceof CouchbaseException) {
+            nestedContexts.add(((CouchbaseException) error.getCause()).context());
+          }
+        }
+        if (result != null && successCompleted.compareAndSet(false, true)) {
+          anyReplicaFuture.complete(result);
+        }
+        if (!successCompleted.get() && completed == futures.size()) {
+          anyReplicaFuture.completeExceptionally(new DocumentUnretrievableException(new AggregateErrorContext(nestedContexts)));
+        }
+      }));
+    });
 
-    return f;
+    return anyReplicaFuture;
   }
-
 
   /**
    * Helper method to assemble a stream of requests either to the active or to the replica.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param options custom options to change the default behavior.
+   * @param opts custom options to change the default behavior.
+   * @param timeout the timeout until we need to stop the get all replicas
    * @return a stream of requests.
    */
-  Stream<GetRequest> getAllReplicasRequests(final String id,
-                                            final GetAllReplicasOptions options) {
+  CompletableFuture<Stream<GetRequest>> getAllReplicasRequests(final String id, final GetAllReplicasOptions.Built opts, Duration timeout) {
     notNullOrEmpty(id, "Id");
-    notNull(options, "GetAllReplicasOptions");
-    GetAllReplicasOptions.Built opts = options.build();
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    BucketConfig config = core.clusterConfig().bucketConfig(bucket);
-    if (config == null) {
-      throw new CouchbaseException("No bucket config found, " +
-        "this is a bug and not supposed to happen. Please report!");
-    }
+    final BucketConfig config = core.clusterConfig().bucketConfig(bucket);
 
     if (config instanceof CouchbaseBucketConfig) {
       int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
@@ -562,9 +580,26 @@ public class AsyncCollection {
         replicaRequest.context().clientContext(opts.clientContext());
         requests.add(replicaRequest);
       }
-      return requests.stream();
+      return CompletableFuture.completedFuture(requests.stream());
+    } else if (config == null) {
+      // no bucket config found, it might be in-flight being opened so we need to reschedule the operation until
+      // the timeout fires!
+      final Duration retryDelay = Duration.ofMillis(100);
+      final CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
+      coreContext.environment().timer().schedule(() -> {
+        getAllReplicasRequests(id, opts, timeout.minus(retryDelay)).whenComplete((getRequestStream, throwable) -> {
+          if (throwable != null) {
+            future.completeExceptionally(throwable);
+          } else {
+            future.complete(getRequestStream);
+          }
+        });
+      }, retryDelay);
+      return future;
     } else {
-      throw CommonExceptions.getFromReplicaNotCouchbaseBucket();
+      final CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
+      future.completeExceptionally(CommonExceptions.getFromReplicaNotCouchbaseBucket());
+      return future;
     }
   }
 

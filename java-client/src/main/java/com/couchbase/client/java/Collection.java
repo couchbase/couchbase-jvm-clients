@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
@@ -251,26 +252,30 @@ public class Collection {
 
   /**
    * Reads from all available replicas and the active node and returns the results as a stream.
-   *
-   * <p>Note that individual errors are ignored, so you can think of this API as a best effort
-   * approach which explicitly emphasises availability over consistency.</p>
+   * <p>
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a stream of results from the active and the replica.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Stream<GetReplicaResult> getAllReplicas(final String id) {
     return getAllReplicas(id, DEFAULT_GET_ALL_REPLICAS_OPTIONS);
   }
 
   /**
-   * Reads all available or one replica and returns the results as a stream.
-   *
-   * <p>By default all available replicas and the active node will be asked and returned as
-   * an async stream. If configured differently in the options</p>
+   * Reads all available or one replica and returns the results as a stream with custom options.
+   * <p>
+   * By default all available replicas and the active node will be asked and returned as
+   * an async stream. If configured differently in the options
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options the custom options.
    * @return a stream of results from the active and the replica depending on the options.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Stream<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
     return reactiveCollection.getAllReplicas(id, options).toStream();
@@ -280,18 +285,24 @@ public class Collection {
    * Reads all available replicas, and returns the first found.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @return the first available replica.
+   * @return the first available result, might be the active or a replica.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetReplicaResult getAnyReplica(final String id) {
     return block(asyncCollection.getAnyReplica(id));
   }
 
   /**
-   * Reads all available replicas, and returns the first found.
+   * Reads all available replicas, and returns the first found with custom options.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options the custom options.
-   * @return the first available replica.
+   * @return the first available result, might be the active or a replica.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetReplicaResult getAnyReplica(final String id, final GetAnyReplicaOptions options) {
     return block(asyncCollection.getAnyReplica(id, options));

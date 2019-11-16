@@ -19,6 +19,7 @@ package com.couchbase.client.java.errors;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
@@ -26,6 +27,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInSpec;
@@ -44,11 +46,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 import static com.couchbase.client.java.kv.TouchOptions.touchOptions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -274,6 +278,19 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
       Collections.singletonList(MutateInSpec.insert("foo", "bar")),
       null
     ));
+  }
+
+  @Test
+  void verifyGetAllReplicasExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.getAllReplicas(null));
+    assertThrows(InvalidArgumentException.class, () -> collection.getAllReplicas("foo", null));
+    assertEquals(0, collection.getAllReplicas(UUID.randomUUID().toString()).count());
+  }
+
+  @Test
+  void verifyGetAnyReplicaExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.getAnyReplica(null));
+    assertThrows(InvalidArgumentException.class, () -> collection.getAnyReplica("foo", null));
   }
 
 }
