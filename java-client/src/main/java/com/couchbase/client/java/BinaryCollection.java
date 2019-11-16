@@ -16,6 +16,10 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
@@ -33,21 +37,65 @@ public class BinaryCollection {
     this.async = asyncBinaryCollection;
   }
 
+  /**
+   * Appends binary content to the document.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public MutationResult append(final String id, final byte[] content) {
     return block(async.append(id, content));
   }
 
-  public MutationResult append(final String id, final byte[] content,
-                               final AppendOptions options) {
+  /**
+   * Appends binary content to the document with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @param options custom options to customize the append behavior.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public MutationResult append(final String id, final byte[] content, final AppendOptions options) {
     return block(async.append(id, content, options));
   }
 
+  /**
+   * Prepends binary content to the document.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public MutationResult prepend(final String id, final byte[] content) {
     return block(async.prepend(id, content));
   }
 
-  public MutationResult prepend(final String id, final byte[] content,
-                                final PrependOptions options) {
+  /**
+   * Prepends binary content to the document with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @param options custom options to customize the prepend behavior.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public MutationResult prepend(final String id, final byte[] content, final PrependOptions options) {
     return block(async.prepend(id, content, options));
   }
 

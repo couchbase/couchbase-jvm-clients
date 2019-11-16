@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
@@ -33,6 +34,7 @@ import com.couchbase.client.java.kv.PrependAccessor;
 import com.couchbase.client.java.kv.PrependOptions;
 import reactor.core.publisher.Mono;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
@@ -57,11 +59,11 @@ public class ReactiveBinaryCollection {
     return append(id, content, DEFAULT_APPEND_OPTIONS);
   }
 
-  public Mono<MutationResult> append(final String id, final byte[] content,
-                                     final AppendOptions options) {
+  public Mono<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
     return Mono.defer(() -> {
+      notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
       AppendOptions.Built opts = options.build();
-      AppendRequest request = async.appendRequest(id, content, options);
+      AppendRequest request = async.appendRequest(id, content, opts);
       return Reactor.wrap(
         request,
         AppendAccessor.append(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -74,11 +76,11 @@ public class ReactiveBinaryCollection {
     return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
-  public Mono<MutationResult> prepend(final String id, final byte[] content,
-                                      final PrependOptions options) {
+  public Mono<MutationResult> prepend(final String id, final byte[] content, final PrependOptions options) {
     return Mono.defer(() -> {
-      PrependRequest request = async.prependRequest(id, content, options);
+      notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
       PrependOptions.Built opts = options.build();
+      PrependRequest request = async.prependRequest(id, content, opts);
       return Reactor.wrap(
         request,
         PrependAccessor.prepend(core, request, id, opts.persistTo(), opts.replicateTo()),

@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
@@ -63,23 +64,15 @@ public class AsyncBinaryCollection {
     return append(id, content, DEFAULT_APPEND_OPTIONS);
   }
 
-  public CompletableFuture<MutationResult> append(final String id, final byte[] content,
-                                                  final AppendOptions options) {
+  public CompletableFuture<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
+    notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     AppendOptions.Built opts = options.build();
-    return AppendAccessor.append(
-      core,
-      appendRequest(id, content, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return AppendAccessor.append(core, appendRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
-  AppendRequest appendRequest(final String id, final byte[] content, final AppendOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "AppendOptions");
-    AppendOptions.Built opts = options.build();
+  AppendRequest appendRequest(final String id, final byte[] content, final AppendOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -93,23 +86,15 @@ public class AsyncBinaryCollection {
     return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
-  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
-                                                   final PrependOptions options) {
+  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content, final PrependOptions options) {
+    notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     PrependOptions.Built opts = options.build();
-    return PrependAccessor.prepend(
-      core,
-      prependRequest(id, content, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return PrependAccessor.prepend(core, prependRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
-  PrependRequest prependRequest(final String id, final byte[] content, final PrependOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(content, "Content");
-    notNull(options, "PrependOptions");
-    PrependOptions.Built opts = options.build();
+  PrependRequest prependRequest(final String id, final byte[] content, final PrependOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
@@ -173,5 +158,9 @@ public class AsyncBinaryCollection {
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
     request.context().clientContext(opts.clientContext());
     return request;
+  }
+
+  CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
   }
 }
