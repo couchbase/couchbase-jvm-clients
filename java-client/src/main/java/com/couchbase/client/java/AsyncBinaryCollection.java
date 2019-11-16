@@ -109,21 +109,13 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
+    notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     IncrementOptions.Built opts = options.build();
-    return CounterAccessor.increment(
-      core,
-      incrementRequest(id, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return CounterAccessor.increment(core, incrementRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
-  IncrementRequest incrementRequest(final String id, final IncrementOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "IncrementOptions");
-    IncrementOptions.Built opts = options.build();
-
+  IncrementRequest incrementRequest(final String id, final IncrementOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
@@ -137,21 +129,13 @@ public class AsyncBinaryCollection {
   }
 
   public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
+    notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     DecrementOptions.Built opts = options.build();
-    return CounterAccessor.decrement(
-      core,
-      decrementRequest(id, options),
-      id,
-      opts.persistTo(),
-      opts.replicateTo()
-    );
+    return CounterAccessor.decrement(core, decrementRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
   }
 
-  DecrementRequest decrementRequest(final String id, final DecrementOptions options) {
-    notNullOrEmpty(id, "Id");
-    notNull(options, "DecrementOptions");
-    DecrementOptions.Built opts = options.build();
-
+  DecrementRequest decrementRequest(final String id, final DecrementOptions.Built opts) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),

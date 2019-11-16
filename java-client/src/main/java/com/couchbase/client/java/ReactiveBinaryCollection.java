@@ -95,8 +95,9 @@ public class ReactiveBinaryCollection {
 
   public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
     return Mono.defer(() -> {
-      IncrementRequest request = async.incrementRequest(id, options);
+      notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
       IncrementOptions.Built opts = options.build();
+      IncrementRequest request = async.incrementRequest(id, opts);
       return Reactor.wrap(
         request,
         CounterAccessor.increment(core, request, id, opts.persistTo(), opts.replicateTo()),
@@ -111,8 +112,9 @@ public class ReactiveBinaryCollection {
 
   public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
     return Mono.defer(() -> {
-      DecrementRequest request = async.decrementRequest(id, options);
+      notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
       DecrementOptions.Built opts = options.build();
+      DecrementRequest request = async.decrementRequest(id, opts);
       return Reactor.wrap(
         request,
         CounterAccessor.decrement(core, request, id, opts.persistTo(), opts.replicateTo()),

@@ -304,4 +304,18 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.binary().prepend("foo", new byte[] {}, null));
   }
 
+  @Test
+  void verifyIncrementExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().increment(null));
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().increment(null, null));
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().increment("foo", null));
+  }
+
+  @Test
+  void verifyDecrementExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().decrement(null));
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().decrement(null, null));
+    assertThrows(InvalidArgumentException.class, () -> collection.binary().decrement("foo", null));
+  }
+
 }
