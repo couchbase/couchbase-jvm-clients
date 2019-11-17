@@ -278,7 +278,10 @@ public class RequestContext extends CoreContext {
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
+
+    final Request<? extends Response> request = this.request;
     input.put("requestId", request.id());
+    input.put("idempotent", request.idempotent());
     input.put("requestType", request.getClass().getSimpleName());
     input.put("retried", retryAttempts());
     input.put("completed", request.completed());

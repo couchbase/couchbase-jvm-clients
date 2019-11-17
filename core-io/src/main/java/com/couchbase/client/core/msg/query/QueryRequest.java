@@ -35,6 +35,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class QueryRequest
   extends BaseRequest<QueryResponse>
@@ -101,5 +106,14 @@ public class QueryRequest
   @Override
   public boolean idempotent() {
     return idempotent;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx = new TreeMap<>();
+    ctx.put("type", serviceType().ident());
+    ctx.put("operationId", redactMeta(operationId()));
+    ctx.put("statement", redactUser(statement()));
+    return ctx;
   }
 }

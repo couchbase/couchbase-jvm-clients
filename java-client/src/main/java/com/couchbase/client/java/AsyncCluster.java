@@ -24,6 +24,7 @@ import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -243,8 +244,7 @@ public class AsyncCluster {
    * @return the {@link QueryResult} once the response arrives successfully.
    */
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
-    notNull(options, "QueryOptions");
-
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
     return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
@@ -258,18 +258,19 @@ public class AsyncCluster {
    * @return the constructed query request.
    */
   QueryRequest queryRequest(final String statement, final QueryOptions.Built options) {
-    notNullOrEmpty(statement, "Statement");
-
+    notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
     Duration timeout = options.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.get().retryStrategy());
 
-    JsonObject query = JsonObject.create();
+    final JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
     options.injectParams(query);
 
-    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator,
-      statement, query.toString().getBytes(StandardCharsets.UTF_8), options.readonly(), query.getString("client_context_id"));
+    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
+    final String clientContextId = query.getString("client_context_id");
+    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
+     queryBytes, options.readonly(), clientContextId);
     request.context().clientContext(options.clientContext());
     return request;
   }

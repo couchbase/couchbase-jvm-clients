@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2019 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,26 @@
 
 package com.couchbase.client.core.error;
 
+import java.util.Map;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
-/**
- * Indicates an optimistic locking failure.
- * <p>
- * The operation failed because the specified compare and swap (CAS) value
- * differs from the document's actual CAS value. This means the document
- * was modified since the original CAS value was acquired.
- * <p>
- * The application should usually respond by fetching a fresh version
- * of the document and repeating the failed operation.
- *
- * @since 2.0
- */
-public class CasMismatchException extends CouchbaseException {
+public class ReducedQueryErrorContext extends ErrorContext {
 
-  public CasMismatchException(final ErrorContext ctx) {
-    super("Document has been concurrently modified on the server", ctx);
+  private final String statement;
+
+  public ReducedQueryErrorContext(final String statement) {
+    super(null);
+    this.statement = statement;
+  }
+
+  @Override
+  public void injectExportableParams(final Map<String, Object> input) {
+    super.injectExportableParams(input);
+    if (statement != null) {
+      input.put("statement", redactUser(statement));
+    }
   }
 
 }

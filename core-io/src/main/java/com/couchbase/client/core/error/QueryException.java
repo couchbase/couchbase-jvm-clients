@@ -27,6 +27,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * There was a problem fulfilling the query request.
  * <p>
  * Check {@link #errors()} for further details.
+ * TODO: needs to go away once all the manaagement APIs are refactored
  *
  * @since 2.0.0
  */

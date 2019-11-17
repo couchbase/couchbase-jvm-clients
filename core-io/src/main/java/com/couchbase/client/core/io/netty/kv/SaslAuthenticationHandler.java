@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.KeyValueIoErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -30,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
 
@@ -205,16 +207,17 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
             completeAuth(ctx);
           }
         } catch (Exception ex) {
-          failConnect(ctx, "Unexpected error during SASL auth", response, ex);
+          failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
         }
       } else if (STATUS_AUTH_ERROR == status(response)) {
-        failConnect(ctx, "Authentication Failure", null, null);
+        failConnect(ctx, "Authentication Failure", null, null, status(response));
       } else {
         failConnect(
           ctx,
           "Unexpected Status 0x" + Integer.toHexString(status(response)) + " during SASL auth",
           response,
-          null
+          null,
+          status(response)
         );
       }
     } else {
@@ -222,7 +225,8 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         ctx,
         "Unexpected response type on channel read, this is a bug - please report. " + msg,
         null,
-        null
+        null,
+        (short) 0
       );
     }
 
@@ -265,7 +269,8 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         "SASL Client could not be constructed. Server Mechanisms: "
           + Arrays.toString(serverMechanisms),
         response,
-        e
+        e,
+        MemcacheProtocol.status(response)
       );
     }
   }
@@ -343,7 +348,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         throw new SaslException("Evaluation returned empty payload, this is unexpected!");
       }
     } catch (SaslException e) {
-      failConnect(ctx, "Failure while evaluating SASL Auth Response.", response, e);
+      failConnect(ctx, "Failure while evaluating SASL Auth Response.", response, e, MemcacheProtocol.status(response));
     }
   }
 
@@ -407,7 +412,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    *
    */
   private void failConnect(final ChannelHandlerContext ctx, final String message,
-                           final ByteBuf lastPacket, final Throwable cause) {
+                           final ByteBuf lastPacket, final Throwable cause, final short status) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
     byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
@@ -425,7 +430,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       message,
       packetCopy
     ));
-    interceptedConnectPromise.tryFailure(new AuthenticationException(message, cause));
+    interceptedConnectPromise.tryFailure(new AuthenticationException(message, new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext), cause));
   }
 
   /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.core.error;
 
 /**
- * Every exception that has to do with authentication problems should either
- * instantiate or subclass from this type.
+ * Indicates an operation failed because parsing of the input returned with an error.
  *
- * @since 2.0.0
+ * @since 3.0
  */
-public class AuthenticationException extends CouchbaseException {
+public class ParsingFailedException extends CouchbaseException {
 
-  public AuthenticationException(String message, ErrorContext ctx, Throwable cause) {
-    super(message, cause, ctx);
+  public ParsingFailedException(final ErrorContext ctx) {
+    super("Parsing of the input failed", ctx);
   }
+
 }

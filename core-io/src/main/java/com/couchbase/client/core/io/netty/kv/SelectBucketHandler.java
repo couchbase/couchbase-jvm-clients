@@ -23,6 +23,8 @@ import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.KeyValueIoErrorContext;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -46,6 +48,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -166,7 +169,11 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
           new SelectBucketFailedEvent(ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
-          new AuthenticationException("No Access to bucket " + bucketName)
+          new AuthenticationException(
+            "No Access to bucket " + redactMeta(bucketName),
+            new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext),
+            null
+          )
         );
       } else {
         endpointContext.environment().eventBus().publish(

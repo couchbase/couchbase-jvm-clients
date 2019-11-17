@@ -18,12 +18,9 @@ package com.couchbase.client.core.io.netty.query;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
-import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.QueryException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.service.ServiceType;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
   NonChunkedQueryMessageHandler(BaseEndpoint endpoint) {
@@ -32,6 +29,7 @@ class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(final HttpResponseStatus status, final String content) {
-    return new QueryException(content.getBytes(UTF_8));
+    // todo: this needs to be cleaned up with the management apis later
+    return new CouchbaseException("Unknown query error: " + content);
   }
 }

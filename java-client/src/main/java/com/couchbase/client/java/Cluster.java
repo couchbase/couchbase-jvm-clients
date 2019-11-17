@@ -22,6 +22,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -203,6 +205,8 @@ public class Cluster {
    *
    * @param statement the N1QL query statement as a raw string.
    * @return the {@link QueryResult} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public QueryResult query(final String statement) {
     return query(statement, DEFAULT_QUERY_OPTIONS);
@@ -214,6 +218,8 @@ public class Cluster {
    * @param statement the N1QL query statement as a raw string.
    * @param options the custom options for this query.
    * @return the {@link QueryResult} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public QueryResult query(final String statement, final QueryOptions options) {
     return block(async().query(statement, options));

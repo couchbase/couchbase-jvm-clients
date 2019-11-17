@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -192,6 +193,7 @@ public class ReactiveCluster {
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return asyncCluster.queryAccessor().queryReactive(
