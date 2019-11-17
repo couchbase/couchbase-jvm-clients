@@ -143,6 +143,8 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
+    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
+
     try {
       assertThrows(
         FeatureNotAvailableException.class,
