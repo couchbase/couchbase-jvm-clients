@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
@@ -120,7 +121,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
 
   @Override
   public Map<String, Object> serviceContext() {
-    Map<String, Object> ctx = new HashMap<>();
+    Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
     ctx.put("bucket", redactMeta(bucket));
     ctx.put("designDoc", redactMeta(design));

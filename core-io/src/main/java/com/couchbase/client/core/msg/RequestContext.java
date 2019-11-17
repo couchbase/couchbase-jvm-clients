@@ -205,6 +205,9 @@ public class RequestContext extends CoreContext {
    * calls).
    */
   public long logicalRequestLatency() {
+    if (logicallyCompletedAt == 0) {
+      return 0;
+    }
     return logicallyCompletedAt - request.createdAt();
   }
 

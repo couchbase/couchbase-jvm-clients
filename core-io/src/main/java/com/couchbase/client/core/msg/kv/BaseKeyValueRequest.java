@@ -32,6 +32,7 @@ import com.couchbase.client.core.util.Bytes;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -144,7 +145,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
 
   @Override
   public Map<String, Object> serviceContext() {
-    Map<String, Object> ctx = new HashMap<>();
+    Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
     ctx.put("opaque", operationId());
 

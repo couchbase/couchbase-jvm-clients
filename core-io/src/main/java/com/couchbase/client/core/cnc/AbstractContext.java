@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Common parent method for all contexts.
@@ -40,7 +41,7 @@ public abstract class AbstractContext implements Context {
 
   @Override
   public String exportAsString(final ExportFormat format) {
-    Map<String, Object> input = new HashMap<>();
+    Map<String, Object> input = new TreeMap<>();
     injectExportableParams(input);
     return format.apply(input);
   }
