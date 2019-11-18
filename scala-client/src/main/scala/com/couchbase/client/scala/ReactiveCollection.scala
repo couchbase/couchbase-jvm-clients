@@ -426,7 +426,7 @@ class ReactiveCollection(async: AsyncCollection) {
   /** Checks if a document exists.
     *
     * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
-  def exists[T](
+  def exists(
       id: String,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy

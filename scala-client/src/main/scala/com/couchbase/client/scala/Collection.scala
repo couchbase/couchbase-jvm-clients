@@ -473,7 +473,7 @@ class Collection(
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     **/
-  def exists[T](
+  def exists(
       id: String,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = retryStrategy
