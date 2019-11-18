@@ -7,8 +7,8 @@ import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.json.JsonArray
-import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.kv.{LookupInMacro, LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
@@ -314,6 +314,37 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         LookupInSpec.exists("does_not_exist2")
       )
     )
+  }
+
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def macros() {
+    val docId = prepare()
+
+    val result = coll
+      .lookupIn(
+        docId,
+        Array(
+          get(LookupInMacro.Document).xattr,
+          get(LookupInMacro.CAS).xattr,
+          get(LookupInMacro.IsDeleted).xattr,
+          get(LookupInMacro.LastModified).xattr,
+          get(LookupInMacro.RevId).xattr,
+          get(LookupInMacro.SeqNo).xattr,
+          get(LookupInMacro.ValueSizeBytes).xattr,
+          get(LookupInMacro.ExpiryTime).xattr
+        )
+      )
+      .get
+
+    result.contentAs[JsonObject](0).get
+    result.contentAs[String](1).get
+    assert(!result.contentAs[Boolean](2).get)
+    result.contentAs[String](3).get
+    result.contentAs[String](4).get
+    result.contentAs[String](5).get
+    result.contentAs[Int](6).get
+    result.contentAs[Int](7).get
   }
 
 }

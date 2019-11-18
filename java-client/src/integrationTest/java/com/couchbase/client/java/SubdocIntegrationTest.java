@@ -26,6 +26,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,6 +38,7 @@ import java.util.Collections;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
+import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
@@ -90,7 +92,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     LookupInResult result = collection.lookupIn(
       id,
-      Arrays.asList(LookupInSpec.get("obj"), LookupInSpec.get("arr"))
+      Arrays.asList(get("obj"), get("arr"))
     );
     assertEquals(JsonObject.empty(), result.contentAsObject(0));
     assertEquals(JsonArray.empty(), result.contentAsArray(1));
@@ -326,4 +328,34 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     assertEquals(1, errorCount);
   }
 
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+  @Test
+  void macros() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, JsonObject.create());
+
+    LookupInResult result = collection
+            .lookupIn(
+                    id,
+                    Arrays.asList(
+                            get(LookupInMacro.DOCUMENT).xattr(),
+                            get(LookupInMacro.CAS).xattr(),
+                            get(LookupInMacro.IS_DELETED).xattr(),
+                            get(LookupInMacro.LAST_MODIFIED).xattr(),
+                            get(LookupInMacro.REV_ID).xattr(),
+                            get(LookupInMacro.SEQ_NO).xattr(),
+                            get(LookupInMacro.VALUE_SIZE_BYTES).xattr(),
+                            get(LookupInMacro.EXPIRY_TIME).xattr()
+                    )
+            );
+
+    result.contentAs(0, JsonObject.class);
+    result.contentAs(1, String.class);
+    assertFalse(result.contentAs(2, Boolean.class));
+    result.contentAs(3, String.class);
+    result.contentAs(4, String.class);
+    result.contentAs(5, String.class);
+    result.contentAs(6, Integer.class);
+    result.contentAs(7, Integer.class);
+  }
 }

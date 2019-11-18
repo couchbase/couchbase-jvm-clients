@@ -15,22 +15,21 @@
  */
 package com.couchbase.client.scala.kv
 
-sealed trait MutateInMacro {
-  private[scala] def value: String
+/** Convenience macros to retrieve document metadata using a lookupIn Sub-Document call. */
+object LookupInMacro {
+  val Document = "$document"
+
+  val ExpiryTime = "$document.exptime"
+
+  val CAS = "$document.CAS"
+
+  val SeqNo = "$document.seqno"
+
+  val LastModified = "$document.last_modified"
+
+  val IsDeleted = "$document.deleted"
+
+  val ValueSizeBytes = "$document.value_bytes"
+
+  val RevId = "$document.revid"
 }
-
-object MutateInMacro {
-
-  case object CAS extends MutateInMacro {
-    private[scala] val value = """"${Mutation.CAS}""""
-  }
-
-  case object SeqNo extends MutateInMacro {
-    private[scala] val value = """"${Mutation.seqno}""""
-  }
-
-  case object ValueCrc32c extends MutateInMacro {
-    private[scala] val value = """"${Mutation.value_crc32c}""""
-  }
-}
-
