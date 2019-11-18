@@ -16,27 +16,27 @@
 
 package com.couchbase.client.tracing.opentracing;
 
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
-import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
+import com.couchbase.client.test.TestNodeConfig;
 import io.opentracing.mock.MockTracer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
+
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 
-/**
- * This should work on the mock, but I get auth errors :/ .. against a real cluster it works
- */
-@IgnoreWhen(clusterTypes = ClusterType.MOCKED)
 class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
 
   private static ClusterEnvironment environment;
@@ -48,10 +48,17 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
   static void beforeAll() {
     tracer = new MockTracer();
 
+    TestNodeConfig config = config().firstNodeWith(Services.KV).get();
+
     environment = ClusterEnvironment.builder().requestTracer(OpenTracingRequestTracer.wrap(tracer)).build();
+
     cluster = Cluster.connect(
-      config().firstNodeWith(Services.KV).get().hostname(),
-      clusterOptions(config().adminUsername(), config().adminPassword()).environment(environment)
+      config.hostname(),
+      clusterOptions(config().adminUsername(), config().adminPassword())
+        .environment(environment)
+        .seedNodes(new HashSet<>(Collections.singletonList(
+          SeedNode.create(config.hostname(), Optional.of(config.ports().get(Services.KV)), Optional.empty()))
+        ))
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

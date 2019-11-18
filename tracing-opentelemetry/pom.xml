@@ -16,7 +16,7 @@
     <description>Provides interoperability with OpenTelemetry</description>
 
     <properties>
-        <opentelemetry.version>0.1.0-SNAPSHOT</opentelemetry.version>
+        <opentelemetry.version>0.2.0-SNAPSHOT</opentelemetry.version>
     </properties>
 
     <dependencies>
