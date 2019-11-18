@@ -16,13 +16,25 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
+import com.couchbase.client.core.error.AnalyticsErrorContext;
 import com.couchbase.client.core.error.AnalyticsException;
+import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.CompilationFailedException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DatasetNotFoundException;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
+import com.couchbase.client.core.error.InternalServerException;
+import com.couchbase.client.core.error.JobQueueFullException;
+import com.couchbase.client.core.error.ParsingFailedException;
+import com.couchbase.client.core.error.TemporaryFailureException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 public class AnalyticsChunkResponseParser
@@ -64,7 +76,7 @@ public class AnalyticsChunkResponseParser
     .doOnValue("/metrics", v -> metrics = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(new AnalyticsException(errors));
+      failRows(errorsToThrowable(errors));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -82,7 +94,33 @@ public class AnalyticsChunkResponseParser
 
   @Override
   public Optional<Throwable> error() {
-    return Optional.ofNullable(errors).map(AnalyticsException::new);
+    return Optional.ofNullable(errors).map(this::errorsToThrowable);
+  }
+
+  private Throwable errorsToThrowable(final byte[] bytes) {
+    final List<ErrorCodeAndMessage> errors = bytes.length == 0
+      ? Collections.emptyList()
+      : ErrorCodeAndMessage.fromJsonArray(bytes);
+    AnalyticsErrorContext errorContext = new AnalyticsErrorContext(requestContext(), errors);
+    if (errors.size() >= 1) {
+      int code = errors.get(0).code();
+      if (code >= 25000 && code < 26000) {
+        return new InternalServerException(errorContext);
+      } else if (code >= 20000 && code < 21000) {
+        return new AuthenticationException("Could not authenticate analytics query", errorContext, null);
+      } else if (code == 23000 || code == 23003) {
+        return new TemporaryFailureException(errorContext);
+      } else if (code == 23007) {
+        return new JobQueueFullException(errorContext);
+      } else if (code == 24000) {
+        return new ParsingFailedException(errorContext);
+      } else if (code == 24044 || code == 24045) {
+          return new DatasetNotFoundException(errorContext);
+      } else if (code > 24000 && code < 25000) {
+        return new CompilationFailedException(errorContext);
+      }
+    }
+    return new CouchbaseException("Unknown analytics error", errorContext);
   }
 
   @Override

@@ -35,6 +35,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class AnalyticsRequest
   extends BaseRequest<AnalyticsResponse>
@@ -46,16 +51,21 @@ public class AnalyticsRequest
   private final byte[] query;
   private final int priority;
   private final boolean idempotent;
+  private final String contextId;
+  private final String statement;
 
   private final Authenticator authenticator;
 
   public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                          final Authenticator authenticator, final byte[] query, int priority, boolean idempotent) {
+                          final Authenticator authenticator, final byte[] query, int priority, boolean idempotent,
+                          final String contextId, final String statement) {
     super(timeout, ctx, retryStrategy);
     this.query = query;
     this.authenticator = authenticator;
     this.priority = priority;
     this.idempotent = idempotent;
+    this.contextId = contextId;
+    this.statement = statement;
   }
 
   @Override
@@ -91,5 +101,24 @@ public class AnalyticsRequest
   @Override
   public boolean idempotent() {
     return idempotent;
+  }
+
+  @Override
+  public String operationId() {
+    return contextId;
+  }
+
+  public String statement() {
+    return statement;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx = new TreeMap<>();
+    ctx.put("type", serviceType().ident());
+    ctx.put("operationId", redactMeta(operationId()));
+    ctx.put("statement", redactUser(statement()));
+    ctx.put("priority", priority);
+    return ctx;
   }
 }

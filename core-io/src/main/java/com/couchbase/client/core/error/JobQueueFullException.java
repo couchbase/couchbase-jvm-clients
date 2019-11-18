@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,14 @@
 package com.couchbase.client.core.error;
 
 /**
- * Thrown when the server reports a temporary failure.
+ * Indicates the analytics server job queue is full
  *
- * This is exception is very likely retryable.
- *
- * @author Michael Nitschinger
- * @since 2.1.0
+ * @since 3.0
  */
-public class TemporaryFailureException extends CouchbaseException {
+public class JobQueueFullException extends CouchbaseException {
 
-    public TemporaryFailureException(final ErrorContext ctx) {
-        super("The document is temporarily not accessible on the server", ctx);
-    }
+  public JobQueueFullException(final ErrorContext ctx) {
+    super("Server job queue is full", ctx);
+  }
 
 }

@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
@@ -221,8 +222,8 @@ public class ReactiveCluster {
    * @param options the custom options for this analytics query.
    * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
    */
-  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement,
-                                                      final AnalyticsOptions options) {
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return AnalyticsAccessor.analyticsQueryReactive(

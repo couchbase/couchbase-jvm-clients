@@ -230,6 +230,8 @@ public class Cluster {
    *
    * @param statement the query statement as a raw string.
    * @return the {@link AnalyticsResult} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public AnalyticsResult analyticsQuery(final String statement) {
     return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
@@ -241,6 +243,8 @@ public class Cluster {
    * @param statement the query statement as a raw string.
    * @param options the custom options for this query.
    * @return the {@link AnalyticsResult} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
     return block(async().analyticsQuery(statement, options));

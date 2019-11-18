@@ -24,6 +24,7 @@ import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -294,8 +295,7 @@ public class AsyncCluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
-    notNull(options, "AnalyticsOptions");
-
+    notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
     return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, opts), serializer);
@@ -309,8 +309,7 @@ public class AsyncCluster {
    * @return the created analytics request.
    */
   AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions.Built opts) {
-    notNullOrEmpty(statement, "Statement");
-
+    notNullOrEmpty(statement, "Statement", () -> new ReducedAnalyticsErrorContext(statement));
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
@@ -319,8 +318,10 @@ public class AsyncCluster {
     query.put("timeout", encodeDurationToMs(timeout));
     opts.injectParams(query);
 
+    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
+    final String clientContextId = query.getString("client_context_id");
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
-        query.toString().getBytes(StandardCharsets.UTF_8), opts.priority(), opts.readonly()
+        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement
     );
     request.context().clientContext(opts.clientContext());
     return request;

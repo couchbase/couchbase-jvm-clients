@@ -75,7 +75,9 @@ private[scala] class AnalyticsHandler() {
           core.context().authenticator(),
           queryBytes,
           if (options.priority) -1 else 0,
-          options.readonly.getOrElse(false)
+          options.readonly.getOrElse(false),
+          params.str("client_context_id"),
+          statement
         )
       })
     }

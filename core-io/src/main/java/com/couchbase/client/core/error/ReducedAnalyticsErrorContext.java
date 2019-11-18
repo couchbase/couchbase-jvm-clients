@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.error;
 
-/**
- * Thrown when the server reports a temporary failure.
- *
- * This is exception is very likely retryable.
- *
- * @author Michael Nitschinger
- * @since 2.1.0
- */
-public class TemporaryFailureException extends CouchbaseException {
+import java.util.Map;
 
-    public TemporaryFailureException(final ErrorContext ctx) {
-        super("The document is temporarily not accessible on the server", ctx);
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+
+public class ReducedAnalyticsErrorContext extends ErrorContext {
+
+  private final String statement;
+
+  public ReducedAnalyticsErrorContext(final String statement) {
+    super(null);
+    this.statement = statement;
+  }
+
+  @Override
+  public void injectExportableParams(final Map<String, Object> input) {
+    super.injectExportableParams(input);
+    if (statement != null) {
+      input.put("statement", redactUser(statement));
     }
+  }
 
 }
