@@ -32,6 +32,7 @@ import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
+import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
@@ -631,15 +632,14 @@ public class AsyncCollection {
    * @param options custom options to change the default behavior
    * @return the observe request used for exists.
    */
-  ObserveViaCasRequest existsRequest(final String id, final ExistsOptions options) {
+  GetMetaRequest existsRequest(final String id, final ExistsOptions options) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(options, "ExistsOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     ExistsOptions.Built opts = options.build();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    ObserveViaCasRequest request = new ObserveViaCasRequest(timeout, coreContext, collectionIdentifier,
-      retryStrategy, id, true, 0);
+    GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
     request.context().clientContext(opts.clientContext());
     return request;
   }

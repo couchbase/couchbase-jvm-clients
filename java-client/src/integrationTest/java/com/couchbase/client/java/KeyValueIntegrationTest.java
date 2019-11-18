@@ -95,7 +95,11 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertFalse(getResult.expiry().isPresent());
   }
 
+  /**
+   * Mock does not support Get Meta, so we need to ignore it there.
+   */
   @Test
+  @IgnoreWhen( clusterTypes = ClusterType.MOCKED )
   void exists() {
     String id = UUID.randomUUID().toString();
 

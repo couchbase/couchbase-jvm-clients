@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
+import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
@@ -394,7 +395,7 @@ public class ReactiveCollection {
    */
   public Mono<ExistsResult> exists(final String id, final ExistsOptions options) {
     return Mono.defer(() -> {
-      ObserveViaCasRequest request = asyncCollection.existsRequest(id, options);
+      GetMetaRequest request = asyncCollection.existsRequest(id, options);
       return Reactor
         .wrap(request, ExistsAccessor.exists(id, core, request), true);
     });

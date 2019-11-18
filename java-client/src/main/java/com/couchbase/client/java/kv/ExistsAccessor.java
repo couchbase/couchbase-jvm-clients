@@ -24,6 +24,8 @@ import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.ServerOutOfMemoryException;
 import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 
@@ -31,16 +33,18 @@ import java.util.concurrent.CompletableFuture;
 
 public class ExistsAccessor {
 
+  private static ExistsResult CACHED_NOT_FOUND = new ExistsResult(false, 0);
+
   public static CompletableFuture<ExistsResult> exists(final String key, final Core core,
-                                                       final ObserveViaCasRequest request) {
+                                                       final GetMetaRequest request) {
     core.send(request);
     return request
       .response()
       .thenApply(response -> {
         if (response.status().success()) {
-          boolean found = response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_PERSISTED
-            || response.observeStatus() == ObserveViaCasResponse.ObserveStatus.FOUND_NOT_PERSISTED;
-          return new ExistsResult(found, found ? response.cas() : 0);
+          return new ExistsResult(true, response.cas());
+        } else if (response.status() == ResponseStatus.NOT_FOUND) {
+          return CACHED_NOT_FOUND;
         }
 
         final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());

@@ -885,7 +885,12 @@ public enum MemcacheProtocol {
     /**
      * Returns the collections manifest for a bucket.
      */
-    COLLECTIONS_GET_MANIFEST((byte) 0xba);
+    COLLECTIONS_GET_MANIFEST((byte) 0xba),
+
+    /**
+     * Fetches metadata for a document
+     */
+    GET_META((byte) 0xa0);
 
     private final byte opcode;
 

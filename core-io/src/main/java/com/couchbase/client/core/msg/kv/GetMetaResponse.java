@@ -14,10 +14,30 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala.api
+package com.couchbase.client.core.msg.kv;
 
-/** The result of an `exists` operation.
-  *
-  * @param exists whether the document exists
-  */
-case class ExistsResult(exists: Boolean, cas: Long)
+import com.couchbase.client.core.msg.BaseResponse;
+import com.couchbase.client.core.msg.ResponseStatus;
+
+/**
+ * Represents the response of a {@link GetMetaRequest}.
+ *
+ * @since 2.0.0
+ */
+public class GetMetaResponse extends BaseResponse {
+
+  private final long cas;
+
+  GetMetaResponse(final ResponseStatus status, final long cas) {
+    super(status);
+    this.cas = cas;
+  }
+
+  /**
+   * Returns the CAS value of the document at the time of the fetch.
+   */
+  public long cas() {
+    return cas;
+  }
+
+}

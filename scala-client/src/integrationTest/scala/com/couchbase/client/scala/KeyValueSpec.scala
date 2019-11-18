@@ -53,6 +53,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def exists() {
     val docId = TestUtils.docId()
     coll.remove(docId)
