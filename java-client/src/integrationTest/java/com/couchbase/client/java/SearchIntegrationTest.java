@@ -16,8 +16,14 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
+import com.couchbase.client.java.manager.search.SearchIndex;
+import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -28,6 +34,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
+import static com.couchbase.client.java.search.SearchOptions.searchOptions;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -35,44 +42,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
 class SearchIntegrationTest extends JavaIntegrationTest {
-
-    private static final String INDEX_DEF = "{\n" +
-      "  \"type\": \"fulltext-index\",\n" +
-      "  \"name\": \"$NAME$\",\n" +
-      "  \"sourceType\": \"couchbase\",\n" +
-      "  \"sourceName\": \"$BUCKET$\",\n" +
-      "  \"planParams\": {\n" +
-      "    \"maxPartitionsPerPIndex\": 171\n" +
-      "  },\n" +
-      "  \"params\": {\n" +
-      "    \"doc_config\": {\n" +
-      "      \"docid_prefix_delim\": \"\",\n" +
-      "      \"docid_regexp\": \"\",\n" +
-      "      \"mode\": \"type_field\",\n" +
-      "      \"type_field\": \"type\"\n" +
-      "    },\n" +
-      "    \"mapping\": {\n" +
-      "      \"analysis\": {},\n" +
-      "      \"default_analyzer\": \"standard\",\n" +
-      "      \"default_datetime_parser\": \"dateTimeOptional\",\n" +
-      "      \"default_field\": \"_all\",\n" +
-      "      \"default_mapping\": {\n" +
-      "        \"dynamic\": true,\n" +
-      "        \"enabled\": true\n" +
-      "      },\n" +
-      "      \"default_type\": \"_default\",\n" +
-      "      \"docvalues_dynamic\": true,\n" +
-      "      \"index_dynamic\": true,\n" +
-      "      \"store_dynamic\": false,\n" +
-      "      \"type_field\": \"_type\"\n" +
-      "    },\n" +
-      "    \"store\": {\n" +
-      "      \"indexType\": \"scorch\",\n" +
-      "      \"kvStoreName\": \"\"\n" +
-      "    }\n" +
-      "  },\n" +
-      "  \"sourceParams\": {}\n" +
-      "}";
 
     private static Cluster cluster;
     private static Collection collection;
@@ -82,47 +51,49 @@ class SearchIntegrationTest extends JavaIntegrationTest {
         cluster = Cluster.connect(connectionString(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
-
-        String indexDef = INDEX_DEF
-          .replace("$BUCKET$", config().bucketname())
-          .replace("$NAME$", "idx-" + config().bucketname());
-
-        // cluster.searchIndexes().upsertIndex(SearchIndex.fromJson(indexDef.getBytes(StandardCharsets.UTF_8)));
+        cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
     }
 
     @AfterAll
     static void tearDown() {
+        cluster.searchIndexes().dropIndex("idx-" + config().bucketname());
         cluster.disconnect();
     }
 
     @Test
-    @Disabled("fails most of the time, needs to be looked at and reenabled soon")
     void simpleSearch() throws Exception {
-        String docId = UUID.randomUUID().toString();
-        collection.insert(docId, "{\"name\": \"michael\"}");
+       String docId = UUID.randomUUID().toString();
+       MutationResult insertResult = collection.insert(docId, "{\"name\": \"michael\"}");
 
-        for (int i = 0; i < 20; i++) {
-            try {
-                SearchResult result = cluster.searchQuery(
-                  "idx-" + config().bucketname(),
-                  SearchQuery.queryString("michael")
-                );
+       int maxTries = 20;
+       for (int i = 0; i < maxTries; i++) {
+        try {
+            SearchResult result = cluster.searchQuery(
+              "idx-" + config().bucketname(),
+              SearchQuery.queryString("michael"),
+              searchOptions().consistentWith(MutationState.from(insertResult.mutationToken().get()))
+            );
 
-                if (result.rows().size() >= 1) {
-                    assertEquals(docId, result.rows().get(0).id());
+            assertFalse(result.rows().isEmpty());
+            boolean foundInserted = false;
+            for (SearchRow row : result.rows()) {
+                if (row.id().equals(docId)) {
+                    foundInserted = true;
                 }
-                return;
-            } catch (Exception ex) {
-                // TODO: we need to figure out a better way to make sure an index
-                // TODO: is properly created to avoid race conditions in unit tests
-                // System.err.println(ex);
-                // ex.printStackTrace();
-                Thread.sleep(1000);
             }
+            assertTrue(foundInserted);
+            break;
+        } catch (CouchbaseException ex) {
+            // this is a pretty dirty hack to avoid a race where we don't know if the index
+            // is ready yet
+            if (ex.getMessage().contains("no planPIndexes for indexName")
+              || ex.getMessage().contains("pindex_consistency mismatched partition")) {
+                Thread.sleep(500);
+                continue;
+            }
+            throw ex;
         }
-
-        // index didn't come up after 10 seconds :/
-        fail();
+       }
     }
 
 }

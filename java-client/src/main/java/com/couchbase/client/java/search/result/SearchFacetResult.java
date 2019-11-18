@@ -24,12 +24,7 @@ import com.couchbase.client.java.search.facet.SearchFacet;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-public interface FacetResult {
-
-    /**
-     * @return the name of the {@link SearchFacet} this result corresponds to.
-     */
-    String name();
+public interface SearchFacetResult {
 
     /**
      * @return the field the {@link SearchFacet} was targeting.

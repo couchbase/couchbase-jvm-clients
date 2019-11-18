@@ -13,35 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.search.result;
 
-/**
- * Represents the status of a FTS query.
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
- */
-public interface SearchStatus {
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
-    /**
-     * the total number of FTS pindexes that were queried.
-     */
-    long totalCount();
+import java.util.Map;
+import java.util.Objects;
 
-    /**
-     * the number of FTS pindexes queried that successfully answered.
-     */
-    long successCount();
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class SearchStatus {
 
-    /**
-     * the number of FTS pindexes queried that gave an error.
-     */
-    long errorCount();
+    private final long errorCount;
+    private final long successCount;
+    private final Map<String, String> errors;
 
-    /**
-     * @return true if all FTS indexes answered successfully.
-     */
-    boolean isSuccess();
+    @JsonCreator
+    private SearchStatus(
+      @JsonProperty("failed") final long errorCount,
+      @JsonProperty("successful") final long successCount,
+      @JsonProperty("errors") final Map<String, String> errors) {
+        this.errorCount = errorCount;
+        this.successCount = successCount;
+        this.errors = errors;
+    }
+
+    public long successCount() {
+        return this.successCount;
+    }
+
+    public long errorCount() {
+        return this.errorCount;
+    }
+
+    public Map<String, String> errors() {
+        return errors;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SearchStatus that = (SearchStatus) o;
+        return errorCount == that.errorCount &&
+          successCount == that.successCount &&
+          Objects.equals(errors, that.errors);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(errorCount, successCount, errors);
+    }
+
+    @Override
+    public String toString() {
+        return "SearchStatus{" +
+          "errorCount=" + errorCount +
+          ", successCount=" + successCount +
+          ", errors=" + errors +
+          '}';
+    }
+
 }

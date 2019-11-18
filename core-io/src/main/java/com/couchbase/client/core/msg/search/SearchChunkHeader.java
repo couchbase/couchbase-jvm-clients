@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.search;
 
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 
 public class SearchChunkHeader implements ChunkHeader {
@@ -28,5 +29,12 @@ public class SearchChunkHeader implements ChunkHeader {
 
     public byte[] getStatus() {
         return status;
+    }
+
+    @Override
+    public String toString() {
+        return "SearchChunkHeader{" +
+          "status=" + new String(status, CharsetUtil.UTF_8) +
+          '}';
     }
 }

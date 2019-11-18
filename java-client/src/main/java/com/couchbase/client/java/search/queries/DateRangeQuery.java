@@ -17,9 +17,9 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.SearchUtils;
 
-import java.util.Date;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * A FTS query that matches documents on a range of dates. At least one bound is required, and the parser
@@ -85,13 +85,9 @@ public class DateRangeQuery extends SearchQuery {
 
     /**
      * Sets the lower boundary of the range, inclusive or not depending on the second parameter.
-     *
-     * Works with a {@link Date} object, which is converted to RFC 3339 format using
-     * {@link SearchUtils#toFtsUtcString(Date)}, so you shouldn't use a non-default {@link #dateTimeParser(String)}
-     * after that.
      */
-    public DateRangeQuery start(Date start, boolean inclusive) {
-        this.start = SearchUtils.toFtsUtcString(start);
+    public DateRangeQuery start(ZonedDateTime start, boolean inclusive) {
+        this.start = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         this.inclusiveStart = inclusive;
         return this;
     }
@@ -99,28 +95,18 @@ public class DateRangeQuery extends SearchQuery {
     /**
      * Sets the lower boundary of the range.
      * The lower boundary is considered inclusive by default on the server side.
-     *
-     * Works with a {@link Date} object, which is converted to RFC 3339 format using
-     * {@link SearchUtils#toFtsUtcString(Date)}, so you shouldn't use a non-default {@link #dateTimeParser(String)}
-     * after that.
-     *
-     * @see #start(Date, boolean)
      */
-    public DateRangeQuery start(Date start) {
-        this.start = SearchUtils.toFtsUtcString(start);
+    public DateRangeQuery start(ZonedDateTime start) {
+        this.start = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         this.inclusiveStart = null;
         return this;
     }
 
     /**
      * Sets the upper boundary of the range, inclusive or not depending on the second parameter.
-     *
-     * Works with a {@link Date} object, which is converted to RFC 3339 format using
-     * {@link SearchUtils#toFtsUtcString(Date)}, so you shouldn't use a non-default {@link #dateTimeParser(String)}
-     * after that.
      */
-    public DateRangeQuery end(Date end, boolean inclusive) {
-        this.end = SearchUtils.toFtsUtcString(end);
+    public DateRangeQuery end(ZonedDateTime end, boolean inclusive) {
+        this.end = end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         this.inclusiveEnd = inclusive;
         return this;
     }
@@ -128,24 +114,18 @@ public class DateRangeQuery extends SearchQuery {
     /**
      * Sets the upper boundary of the range.
      * The upper boundary is considered exclusive by default on the server side.
-     *
-     * Works with a {@link Date} object, which is converted to RFC 3339 format using
-     * {@link SearchUtils#toFtsUtcString(Date)}, so you shouldn't use a non-default {@link #dateTimeParser(String)}
-     * after that.
-     *
-     * @see #end(Date, boolean)
      */
-    public DateRangeQuery end(Date end) {
-        this.end = SearchUtils.toFtsUtcString(end);
+    public DateRangeQuery end(ZonedDateTime end) {
+        this.end = end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         this.inclusiveEnd = null;
         return this;
     }
 
     /**
      * The name of the date/time parser to use to interpret {@link #start(String)} and {@link #end(String)}. Should not
-     * be modified when passing in {@link Date}.
+     * be modified when passing in {@link ZonedDateTime}.
      */
-    public DateRangeQuery dateTimeParser(String dateTimeParser) {
+    public DateRangeQuery dateTimeParser(final String dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
         return this;
     }

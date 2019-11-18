@@ -22,11 +22,16 @@ public class SearchMetrics {
     private final long took;
     private final long totalRows;
     private final double maxScore;
+    private final long successPartitionCount;
+    private final long errorPartitionCount;
 
-    public SearchMetrics(long took, long totalRows, double maxScore) {
+    public SearchMetrics(long took, long totalRows, double maxScore, final long successPartitionCount,
+                         final long errorPartitionCount) {
         this.took = took;
         this.totalRows = totalRows;
         this.maxScore = maxScore;
+        this.successPartitionCount = successPartitionCount;
+        this.errorPartitionCount = errorPartitionCount;
     }
 
     public Duration took() {
@@ -41,12 +46,26 @@ public class SearchMetrics {
         return this.maxScore;
     }
 
+    public long successPartitionCount() {
+        return successPartitionCount;
+    }
+
+    public long errorPartitionCount() {
+        return errorPartitionCount;
+    }
+
+    public long totalPartitionCount() {
+        return successPartitionCount + errorPartitionCount;
+    }
+
     @Override
     public String toString() {
-        return "DefaultSearchMetrics{" +
-                "took=" + took +
-                ", totalRows=" + totalRows +
-                ", maxScore=" + maxScore +
-                '}';
+        return "SearchMetrics{" +
+          "took=" + took +
+          ", totalRows=" + totalRows +
+          ", maxScore=" + maxScore +
+          ", successPartitionCount=" + successPartitionCount +
+          ", errorPartitionCount=" + errorPartitionCount +
+          '}';
     }
 }

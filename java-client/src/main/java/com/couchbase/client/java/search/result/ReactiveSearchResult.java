@@ -20,14 +20,17 @@ import com.couchbase.client.java.search.SearchMetaData;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 public class ReactiveSearchResult {
 
     private final Flux<SearchRow> rows;
+    private final Mono<Map<String, SearchFacetResult>> facets;
     private final Mono<SearchMetaData> meta;
 
-    public ReactiveSearchResult(Flux<SearchRow> rows,
-                                Mono<SearchMetaData> meta) {
+    public ReactiveSearchResult(Flux<SearchRow> rows, Mono<Map<String, SearchFacetResult>> facets, Mono<SearchMetaData> meta) {
         this.rows = rows;
+        this.facets = facets;
         this.meta = meta;
     }
 
@@ -45,5 +48,9 @@ public class ReactiveSearchResult {
      */
     public Mono<SearchMetaData> metaData() {
         return meta;
+    }
+
+    public Mono<Map<String, SearchFacetResult>> facets() {
+        return facets;
     }
 }

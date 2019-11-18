@@ -15,14 +15,14 @@
  */
 package com.couchbase.client.java.search.sort;
 
-public enum FieldMode {
+public enum SearchFieldMode {
     DEFAULT("default"),
     MIN("min"),
     MAX("max");
 
     private final String value;
 
-    FieldMode(String value) {
+    SearchFieldMode(String value) {
         this.value = value;
     }
 

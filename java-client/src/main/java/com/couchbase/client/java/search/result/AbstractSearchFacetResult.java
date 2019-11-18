@@ -15,25 +15,18 @@
  */
 package com.couchbase.client.java.search.result;
 
-public abstract class AbstractFacetResult implements FacetResult {
+public abstract class AbstractSearchFacetResult implements SearchFacetResult {
 
-    protected final String name;
     protected final String field;
     protected final long total;
     protected final long missing;
     protected final long other;
 
-    protected AbstractFacetResult(String name, String field, long total, long missing, long other) {
-        this.name = name;
+    protected AbstractSearchFacetResult(String field, long total, long missing, long other) {
         this.field = field;
         this.total = total;
         this.missing = missing;
         this.other = other;
-    }
-
-    @Override
-    public String name() {
-        return this.name;
     }
 
     @Override

@@ -43,7 +43,7 @@ public abstract class SearchSort {
         }
     }
 
-    public SearchSort descending(boolean descending) {
+    public SearchSort desc(boolean descending) {
         this.descending = descending;
         return this;
     }
@@ -51,14 +51,14 @@ public abstract class SearchSort {
     /**
      * Sort by the document identifier.
      */
-    public static SearchSortId sortId() {
+    public static SearchSortId byId() {
         return new SearchSortId();
     }
 
     /**
      * Sort by the hit score.
      */
-    public static SearchSortScore sortScore() {
+    public static SearchSortScore byScore() {
         return new SearchSortScore();
     }
 
@@ -67,7 +67,7 @@ public abstract class SearchSort {
      *
      * @param field the field name.
      */
-    public static SearchSortField sortField(String field) {
+    public static SearchSortField byField(String field) {
         return new SearchSortField(field);
     }
 
@@ -78,7 +78,7 @@ public abstract class SearchSort {
      * @param locationLat latitude of the location.
      * @param field the field name.
      */
-    public static SearchSortGeoDistance sortGeoDistance(double locationLon, double locationLat, String field) {
+    public static SearchSortGeoDistance byGeoDistance(double locationLon, double locationLat, String field) {
         return new SearchSortGeoDistance(locationLon, locationLat, field);
     }
 

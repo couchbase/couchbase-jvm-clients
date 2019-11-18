@@ -18,6 +18,8 @@ package com.couchbase.client.java.search.facet;
 
 import com.couchbase.client.java.json.JsonObject;
 
+import java.util.List;
+
 /**
  * Base class for all FTS facets in querying.
  *
@@ -28,27 +30,27 @@ import com.couchbase.client.java.json.JsonObject;
 public abstract class SearchFacet {
 
     private final String field;
-    private final int limit;
+    private final int size;
 
-    protected SearchFacet(String field, int limit) {
+    SearchFacet(String field, int size) {
         this.field = field;
-        this.limit = limit;
+        this.size = size;
     }
 
-    public static TermFacet term(String field, int limit) {
-        return new TermFacet(field, limit);
+    public static TermFacet term(String field, int size) {
+        return new TermFacet(field, size);
     }
 
-    public static NumericRangeFacet numeric(String field, int limit) {
-        return new NumericRangeFacet(field, limit);
+    public static NumericRangeFacet numericRange(String field, int size, List<NumericRange> ranges) {
+        return new NumericRangeFacet(field, size, ranges);
     }
 
-    public static DateRangeFacet date(String field, int limit) {
-        return new DateRangeFacet(field, limit);
+    public static DateRangeFacet dateRange(String field, int size, List<DateRange> ranges) {
+        return new DateRangeFacet(field, size, ranges);
     }
 
-    public void injectParams(JsonObject queryJson) {
-        queryJson.put("size", limit);
+    public void injectParams(final JsonObject queryJson) {
+        queryJson.put("size", size);
         queryJson.put("field", field);
     }
 

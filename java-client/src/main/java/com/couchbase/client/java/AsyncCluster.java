@@ -26,6 +26,7 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
+import com.couchbase.client.core.error.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
@@ -345,17 +346,17 @@ public class AsyncCluster {
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
    */
   public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
-    notNull(options, "SearchOptions");
+    notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
     return SearchAccessor.searchQueryAsync(core, searchRequest(indexName, query, opts), serializer);
   }
 
   SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
-    notNullOrEmpty(indexName, "IndexName");
-    notNull(query, "SearchQuery");
-
+    notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
     JsonObject params = query.export();
+    opts.injectParams(indexName, params);
     byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
 
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());

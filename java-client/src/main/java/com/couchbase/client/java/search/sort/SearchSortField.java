@@ -27,31 +27,31 @@ public class SearchSortField extends SearchSort {
 
     private final String field;
 
-    private FieldType type;
-    private FieldMode mode;
-    private FieldMissing missing;
+    private SearchFieldType type;
+    private SearchFieldMode mode;
+    private SearchFieldMissing missing;
 
-    public SearchSortField(String field) {
+    SearchSortField(String field) {
         this.field = field;
     }
 
     @Override
-    public SearchSortField descending(boolean descending) {
-        super.descending(descending);
+    public SearchSortField desc(boolean descending) {
+        super.desc(descending);
         return this;
     }
 
-    public SearchSortField type(FieldType type) {
+    public SearchSortField type(SearchFieldType type) {
         this.type = type;
         return this;
     }
 
-    public SearchSortField mode(FieldMode mode) {
+    public SearchSortField mode(SearchFieldMode mode) {
         this.mode = mode;
         return this;
     }
 
-    public SearchSortField missing(FieldMissing missing) {
+    public SearchSortField missing(SearchFieldMissing missing) {
         this.missing = missing;
         return this;
     }

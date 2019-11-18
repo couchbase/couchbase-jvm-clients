@@ -16,37 +16,18 @@
 
 package com.couchbase.client.java.search;
 
-import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.result.SearchMetrics;
-import com.couchbase.client.java.search.result.SearchStatus;
+
+import java.util.Map;
 
 public class SearchMetaData {
-    private final SearchStatus status;
+    private final Map<String, String> errors;
     private final SearchMetrics metrics;
 
-    SearchMetaData(final SearchStatus status, final SearchMetrics metrics) {
-        this.status = status;
+    SearchMetaData(final Map<String, String> errors, final SearchMetrics metrics) {
+        this.errors = errors;
         this.metrics = metrics;
     }
-
-    /**
-     * The {@link SearchStatus} allows to check if the request was a full success ({@link SearchStatus#isSuccess()})
-     * and gives more details about status for each queried index.
-     */
-    public SearchStatus status() {
-        return status;
-    }
-
-    /**
-     * If one or more facet were requested via the {@link SearchQuery#addFacet(String, SearchFacet)} method
-     * when querying, contains the result of each facet.
-     *
-     * <p>The map keys are the names given to each requested facet.</p>
-     */
-    // TODO facets
-//  Map<String, FacetResult> facets() {
-//
-//  }
 
     /**
      * Provides a {@link SearchMetrics} object giving statistics on the request like number of rows, total time taken...
@@ -55,11 +36,15 @@ public class SearchMetaData {
         return metrics;
     }
 
+    public Map<String, String> errors() {
+        return errors;
+    }
+
     @Override
     public String toString() {
         return "SearchMeta{" +
-          "status=" + status +
-          ", metrics=" + metrics +
+          "metrics=" + metrics +
+          ", errors=" + errors +
           '}';
     }
 }

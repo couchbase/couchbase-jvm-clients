@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.msg.search;
 
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 
 public class SearchChunkTrailer implements ChunkTrailer {
@@ -23,11 +24,13 @@ public class SearchChunkTrailer implements ChunkTrailer {
     private final long totalRows;
     private final double maxScore;
     private final long took;
+    private final byte[] facets;
 
-    public SearchChunkTrailer(long totalRows, double maxScore, long took) {
+    public SearchChunkTrailer(long totalRows, double maxScore, long took, byte[] facets) {
         this.totalRows = totalRows;
         this.maxScore = maxScore;
         this.took = took;
+        this.facets = facets;
     }
 
     public long totalRows() {
@@ -40,5 +43,19 @@ public class SearchChunkTrailer implements ChunkTrailer {
 
     public long took() {
         return took;
+    }
+
+    public byte[] facets() {
+        return facets;
+    }
+
+    @Override
+    public String toString() {
+        return "SearchChunkTrailer{" +
+          "totalRows=" + totalRows +
+          ", maxScore=" + maxScore +
+          ", took=" + took +
+          ", facets=" + (facets != null ? new String(facets, CharsetUtil.UTF_8) : "null") +
+          '}';
     }
 }

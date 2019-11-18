@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.java.search.facet.NumericRangeFacet;
+package com.couchbase.client.java.search.sort;
 
-import java.util.List;
+public enum SearchGeoDistanceUnits {
+  Meters("meters"),
+  Miles("miles"),
+  Centimeters("centimeters"),
+  Millimeters("millimeters"),
+  NauticalMiles("nauticalmiles"),
+  Kilometers("kilometers"),
+  Feet("feet"),
+  Yards("yards"),
+  Inch("inch");
 
-/**
- * Represents the result of a {@link NumericRangeFacet}.
- *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
- */
-public interface NumericRangeFacetResult extends FacetResult {
+  private final String identifier;
 
-    List<NumericRange> numericRanges();
+  SearchGeoDistanceUnits(final String identifier) {
+    this.identifier = identifier;
+  }
+
+  public String identifier() {
+    return identifier;
+  }
+
 }

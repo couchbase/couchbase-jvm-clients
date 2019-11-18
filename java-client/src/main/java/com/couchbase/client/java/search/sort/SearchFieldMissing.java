@@ -15,15 +15,14 @@
  */
 package com.couchbase.client.java.search.sort;
 
-public enum FieldType {
-    AUTO("auto"),
-    STRING("string"),
-    NUMBER("number"),
-    DATE("date");
+
+public enum SearchFieldMissing {
+    FIRST("first"),
+    LAST("last");
 
     private final String value;
 
-    FieldType(String value) {
+    SearchFieldMissing(String value) {
         this.value = value;
     }
 

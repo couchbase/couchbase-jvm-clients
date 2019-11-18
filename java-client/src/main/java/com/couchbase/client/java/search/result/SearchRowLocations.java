@@ -22,111 +22,91 @@ import com.couchbase.client.java.json.JsonObject;
 import java.util.*;
 
 /**
- * A default implementation of a {@link RowLocations}.
+ * A default implementation of a {@link SearchRowLocations}.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
 @Stability.Volatile
-public class DefaultRowLocations implements RowLocations {
+public class SearchRowLocations {
 
-    private final Map<String, Map<String, List<RowLocation>>> locations = new HashMap<String, Map<String, List<RowLocation>>>();
+    private final Map<String, Map<String, List<SearchRowLocation>>> locations = new HashMap<String, Map<String, List<SearchRowLocation>>>();
     private int size;
 
-    @Override
-    public RowLocations add(RowLocation l) {
+    private SearchRowLocations add(SearchRowLocation l) {
         //note: it is not expected that multiple threads concurrently add a RowLocation, as even a
         //streaming parser would parse a single hit in its entirety, not individual locations.
-        Map<String, List<RowLocation>> byTerm = locations.get(l.field());
-        if (byTerm == null) {
-            byTerm = new HashMap<String, List<RowLocation>>();
-            locations.put(l.field(), byTerm);
-        }
+        Map<String, List<SearchRowLocation>> byTerm = locations.computeIfAbsent(l.field(), k -> new HashMap<>());
 
-        List<RowLocation> list = byTerm.get(l.term());
-        if (list == null) {
-            list = new ArrayList<RowLocation>();
-            byTerm.put(l.term(), list);
-        }
+        List<SearchRowLocation> list = byTerm.computeIfAbsent(l.term(), k -> new ArrayList<>());
 
         list.add(l);
         size++;
         return this;
     }
 
-    @Override
-    public List<RowLocation> get(String field) {
-        Map<String, List<RowLocation>> byTerm = locations.get(field);
+    public List<SearchRowLocation> get(String field) {
+        Map<String, List<SearchRowLocation>> byTerm = locations.get(field);
         if (byTerm == null) {
             return Collections.emptyList();
         }
 
-        List<RowLocation> result = new LinkedList<RowLocation>();
-        for (List<RowLocation> termList : byTerm.values()) {
+        List<SearchRowLocation> result = new LinkedList<>();
+        for (List<SearchRowLocation> termList : byTerm.values()) {
             result.addAll(termList);
         }
         return result;
     }
 
-    @Override
-    public List<RowLocation> get(String field, String term) {
-        Map<String, List<RowLocation>> byTerm = locations.get(field);
+    public List<SearchRowLocation> get(String field, String term) {
+        Map<String, List<SearchRowLocation>> byTerm = locations.get(field);
         if (byTerm == null) {
             return Collections.emptyList();
         }
 
-        List<RowLocation> result = byTerm.get(term);
+        List<SearchRowLocation> result = byTerm.get(term);
         if (result == null) {
             return Collections.emptyList();
         }
-        return new ArrayList<RowLocation>(result);
+        return new ArrayList<>(result);
     }
 
-    @Override
-    public List<RowLocation> getAll() {
-        List<RowLocation> all = new LinkedList<RowLocation>();
-        for (Map.Entry<String, Map<String, List<RowLocation>>> terms : locations.entrySet()) {
-            for (List<RowLocation> rowLocations : terms.getValue().values()) {
+    public List<SearchRowLocation> getAll() {
+        List<SearchRowLocation> all = new LinkedList<>();
+        for (Map.Entry<String, Map<String, List<SearchRowLocation>>> terms : locations.entrySet()) {
+            for (List<SearchRowLocation> rowLocations : terms.getValue().values()) {
                 all.addAll(rowLocations);
             }
         }
         return all;
     }
 
-    @Override
-    public long count() {
-        return size;
-    }
-
-    @Override
     public List<String> fields() {
         return new ArrayList(locations.keySet());
     }
 
-    @Override
     public List<String> termsFor(String field) {
-        final Map<String, List<RowLocation>> termMap = locations.get(field);
+        final Map<String, List<SearchRowLocation>> termMap = locations.get(field);
         if (termMap == null) {
             return Collections.emptyList();
         }
-        return new ArrayList<String>(termMap.keySet());
+        return new ArrayList<>(termMap.keySet());
     }
 
-    @Override
     public Set<String> terms() {
-        Set<String> termSet = new HashSet<String>();
-        for (Map<String,List<RowLocation>> termMap : locations.values()) {
+        Set<String> termSet = new HashSet<>();
+        for (Map<String,List<SearchRowLocation>> termMap : locations.values()) {
             termSet.addAll(termMap.keySet());
         }
         return termSet;
     }
 
     /**
-     * Parses a FTS JSON representation of a {@link RowLocations}.
+     * Parses a FTS JSON representation of a {@link SearchRowLocations}.
      */
-    public static RowLocations from(JsonObject locationsJson) {
-        DefaultRowLocations hitLocations = new DefaultRowLocations();
+    public static SearchRowLocations from(JsonObject locationsJson) {
+        SearchRowLocations hitLocations = new SearchRowLocations();
         if (locationsJson == null) {
             return hitLocations;
         }
@@ -150,7 +130,7 @@ public class DefaultRowLocations implements RowLocations {
                             arrayPositions[j] = arrayPositionsJson.getLong(j);
                         }
                     }
-                    hitLocations.add(new RowLocation(field, term, pos, start, end, arrayPositions));
+                    hitLocations.add(new SearchRowLocation(field, term, pos, start, end, arrayPositions));
                 }
             }
         }
@@ -159,13 +139,13 @@ public class DefaultRowLocations implements RowLocations {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("DefaultRowLocations{")
+        StringBuilder sb = new StringBuilder("SearchRowLocations{")
                 .append("size=").append(size)
                 .append(", locations=[");
 
-        for (Map<String, List<RowLocation>> map : locations.values()) {
-            for (List<RowLocation> rowLocations : map.values()) {
-                for (RowLocation rowLocation : rowLocations) {
+        for (Map<String, List<SearchRowLocation>> map : locations.values()) {
+            for (List<SearchRowLocation> rowLocations : map.values()) {
+                for (SearchRowLocation rowLocation : rowLocations) {
                     sb.append(rowLocation).append(",");
                 }
             }

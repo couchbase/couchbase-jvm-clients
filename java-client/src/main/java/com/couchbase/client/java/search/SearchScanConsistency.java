@@ -30,6 +30,11 @@ public enum SearchScanConsistency {
      * <p>This is also the fastest mode, because we avoid the cost of obtaining the vector,
      * and we also avoid any wait for the index to catch up to the vector.</p>
      */
-    NOT_BOUNDED
+    NOT_BOUNDED {
+        @Override
+        public String toString() {
+            return "";
+        }
+    }
 
 }

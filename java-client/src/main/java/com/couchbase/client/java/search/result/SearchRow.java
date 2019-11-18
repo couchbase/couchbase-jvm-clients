@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -46,12 +47,12 @@ public class SearchRow {
     private final String id;
     private final double score;
     private final JsonObject explanation;
-    private final RowLocations locations;
+    private final SearchRowLocations locations;
     private final Map<String, List<String>> fragments;
     private final byte[] fields;
     private final JsonSerializer serializer;
 
-    public SearchRow(String index, String id, double score, JsonObject explanation, RowLocations locations,
+    public SearchRow(String index, String id, double score, JsonObject explanation, SearchRowLocations locations,
                      Map<String, List<String>> fragments, byte[] fields, JsonSerializer serializer) {
         this.index = index;
         this.id = id;
@@ -64,7 +65,7 @@ public class SearchRow {
     }
 
     /**
-     * The name of the FTS pindex that gave this result.
+     * The name of the FTS index that gave this result.
      */
     public String index() {
         return this.index;
@@ -92,9 +93,9 @@ public class SearchRow {
     }
 
     /**
-     * This rows's location, as an {@link RowLocations} map-like object.
+     * This rows's location, as an {@link SearchRowLocations} map-like object.
      */
-    public RowLocations locations() {
+    public SearchRowLocations locations() {
         return this.locations;
     }
 
@@ -172,7 +173,7 @@ public class SearchRow {
                 explanationJson = JsonObject.empty();
             }
 
-            RowLocations locations = DefaultRowLocations.from(hit.getObject("locations"));
+            SearchRowLocations locations = SearchRowLocations.from(hit.getObject("locations"));
 
             JsonObject fragmentsJson = hit.getObject("fragments");
             Map<String, List<String>> fragments;
@@ -194,8 +195,12 @@ public class SearchRow {
             } else {
                 fragments = Collections.emptyMap();
             }
-            // daschl: this is a bit wasteful and should be streamlined
-            byte[] fields = JacksonTransformers.MAPPER.writeValueAsBytes(hit.getObject("fields").toMap());
+
+            byte[] fields = null;
+            if (hit.containsKey("fields")) {
+                // daschl: this is a bit wasteful and should be streamlined
+                JacksonTransformers.MAPPER.writeValueAsBytes(hit.getObject("fields").toMap());
+            }
             return new SearchRow(index, id, score, explanationJson, locations, fragments, fields, serializer);
         } catch (IOException e) {
             throw new DecodingFailedException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
@@ -205,14 +210,14 @@ public class SearchRow {
 
     @Override
     public String toString() {
-        return "DefaultSearchQueryRow{" +
-                "index='" + index + '\'' +
-                ", id='" + id + '\'' +
-                ", score=" + score +
-                ", explanation=" + explanation +
-                ", locations=" + locations +
-                ", fragments=" + redactUser(fragments) +
-                ", fields=" + redactUser(fields) +
-                '}';
+        return "SearchRow{" +
+            "index='" + redactMeta(index) + '\'' +
+            ", id='" + id + '\'' +
+            ", score=" + score +
+            ", explanation=" + explanation +
+            ", locations=" + redactUser(locations) +
+            ", fragments=" + redactUser(fragments) +
+            ", fields=" + redactUser(fields) +
+            '}';
     }
 }

@@ -18,29 +18,32 @@ package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.json.JacksonTransformers;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.search.result.DateRangeSearchFacetResult;
+import com.couchbase.client.java.search.result.NumericRangeSearchFacetResult;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
+import com.couchbase.client.java.search.result.SearchFacetResult;
 import com.couchbase.client.java.search.result.SearchMetrics;
-import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchStatus;
-import com.couchbase.client.java.search.result.DefaultSearchStatus;
+import com.couchbase.client.java.search.result.TermSearchFacetResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Internal helper to access and convert view requests and responses.
@@ -50,87 +53,74 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Stability.Internal
 public class SearchAccessor {
 
-    // TODO facets are streaming (update: they're not, but they need adding)
+    private static final byte[] NULL = new byte[] { 'n', 'u', 'l', 'l' };
 
-    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request, final JsonSerializer serializer) {
+    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request,
+                                                                   final JsonSerializer serializer) {
         core.send(request);
         return Mono.fromFuture(request.response())
-
-                .flatMap(response -> response.rows()
-                        .map(row -> SearchRow.fromResponse(row, serializer))
-                        .collectList()
-
-                        .flatMap(rows -> response.trailer()
-                                .map(trailer -> {
-                                    byte[] rawStatus = response.header().getStatus();
-                                    List<RuntimeException> errors = SearchAccessor.parseErrors(rawStatus);
-                                    SearchMetaData meta = parseMeta(response, trailer);
-
-                                    return new SearchResult(rows, errors, meta);
-                                })
-                        )
-                )
-
-                .toFuture();
+          .flatMap(response -> response.rows()
+              .map(row -> SearchRow.fromResponse(row, serializer))
+              .collectList()
+              .flatMap(rows -> response
+                .trailer()
+                .map(trailer -> new SearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
+              )
+          )
+          .toFuture();
     }
 
-    static SearchMetaData parseMeta(SearchResponse response, SearchChunkTrailer trailer) {
-        byte[] rawStatus = response.header().getStatus();
-        SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
-        SearchMetrics metrics = new SearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
-        SearchMetaData meta = new SearchMetaData(status, metrics);
-        return meta;
-    }
-
-    public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request, final JsonSerializer serializer) {
+    public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request,
+                                                                 final JsonSerializer serializer) {
         core.send(request);
-        return Mono.fromFuture(request.response())
-
-                .map(response -> {
-                    byte[] rawStatus = response.header().getStatus();
-                    SearchStatus status = DefaultSearchStatus.fromBytes(rawStatus);
-
-
-                    // Any errors should be raised in SearchServiceException and will be returned directly
-                    Flux<SearchRow> rows = response.rows()
-                            .map(row -> SearchRow.fromResponse(row, serializer));
-
-                    Mono<SearchMetaData> meta = response.trailer()
-                            .map(trailer -> {
-                                SearchMetrics metrics = new SearchMetrics(trailer.took(), trailer.totalRows(), trailer.maxScore());
-
-                                return new SearchMetaData(status, metrics);
-                            });
-
-                    return new ReactiveSearchResult(rows, meta);
-                });
+        return Mono
+          .fromFuture(request.response())
+          .map(response -> {
+            Flux<SearchRow> rows = response.rows().map(row -> SearchRow.fromResponse(row, serializer));
+            Mono<SearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
+            Mono<Map<String, SearchFacetResult>> facets = response.trailer().map(SearchAccessor::parseFacets);
+            return new ReactiveSearchResult(rows, facets, meta);
+          });
     }
 
-    static List<RuntimeException> parseErrors(final byte[] status) {
-        try {
-            JsonObject jsonStatus = JacksonTransformers.MAPPER.readValue(status, JsonObject.class);
+    private static Map<String, SearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {
+      byte[] rawFacets = trailer.facets();
+      if (rawFacets == null || rawFacets.length == 0 || Arrays.equals(rawFacets, NULL)) {
+        return Collections.emptyMap();
+      }
 
-            Object errorsRaw = jsonStatus.get("errors");
-
-            List<RuntimeException> exceptions = new ArrayList<>();
-
-            if (errorsRaw instanceof JsonArray) {
-                JsonArray errorsJson = (JsonArray) errorsRaw;
-                for (Object o : errorsJson) {
-                    exceptions.add(new RuntimeException(String.valueOf(o)));
-                }
-            } else if (errorsRaw instanceof JsonObject) {
-                JsonObject errorsJson = (JsonObject) errorsRaw;
-                for (String key : errorsJson.getNames()) {
-                    exceptions.add(new RuntimeException(key + ": " + errorsJson.get(key)));
-                }
-            }
-
-            return exceptions;
-
-        } catch (IOException e) {
-            throw new DecodingFailedException("Failed to decode row '" + new String(status, UTF_8) + "'", e);
+      JsonNode tree = Mapper.decodeIntoTree(rawFacets);
+      Map<String, SearchFacetResult> facets = new HashMap<>();
+      if (tree.isObject()) {
+        ObjectNode objectNode = (ObjectNode) tree;
+        Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
+        while (iter.hasNext()) {
+          Map.Entry<String, JsonNode> entry = iter.next();
+          JsonNode facetEntry = entry.getValue();
+          if (facetEntry.has("numeric_ranges")) {
+            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, NumericRangeSearchFacetResult.class));
+          } else if (facetEntry.has("date_ranges")) {
+            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, DateRangeSearchFacetResult.class));
+          } else {
+            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, TermSearchFacetResult.class));
+          }
         }
+      } else {
+        throw new IllegalStateException("Expected facets root to be an object!");
+      }
+      return facets;
+    }
+
+    private static SearchMetaData parseMeta(final SearchResponse response, final SearchChunkTrailer trailer) {
+        SearchStatus status = Mapper.decodeInto(response.header().getStatus(), SearchStatus.class);
+        SearchMetrics metrics = new SearchMetrics(
+          trailer.took(),
+          trailer.totalRows(),
+          trailer.maxScore(),
+          status.successCount(),
+          status.errorCount()
+        );
+        return new SearchMetaData(status.errors(), metrics);
     }
 
 }

@@ -15,23 +15,28 @@
  */
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A range (or bucket) for a {@link TermFacetResult}.
+ * A range (or bucket) for a {@link TermSearchFacetResult}.
  * Counts the number of occurrences of a given term.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@Stability.Volatile
-public class TermRange {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class SearchTermRange {
 
     private final String name;
     private final long count;
 
-    public TermRange(String name, long count) {
+    @JsonCreator
+    public SearchTermRange(
+      @JsonProperty("term") String name,
+      @JsonProperty("count") long count) {
         this.name = name;
         this.count = count;
     }
@@ -46,11 +51,9 @@ public class TermRange {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("{");
-        sb.append("name='").append(name).append('\'');
-        sb.append(", count=").append(count);
-        sb.append('}');
-        return sb.toString();
+        return "{" + "name='" + name + '\'' +
+          ", count=" + count +
+          '}';
     }
 
     @Override
@@ -62,7 +65,7 @@ public class TermRange {
             return false;
         }
 
-        TermRange termRange = (TermRange) o;
+        SearchTermRange termRange = (SearchTermRange) o;
 
         if (count != termRange.count) {
             return false;

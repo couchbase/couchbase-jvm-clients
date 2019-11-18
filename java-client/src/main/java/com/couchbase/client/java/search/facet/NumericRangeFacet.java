@@ -18,8 +18,7 @@ package com.couchbase.client.java.search.facet;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 /**
  * A facet that categorizes rows into numerical ranges (or buckets) provided by the user.
@@ -30,37 +29,11 @@ import java.util.Map;
  */
 public class NumericRangeFacet extends SearchFacet {
 
-    private static class NumericRange {
-        public final Double min;
-        public final Double max;
+    private final List<NumericRange> ranges;
 
-        public NumericRange(Double min, Double max) {
-            this.min = min;
-            this.max = max;
-        }
-    }
-
-    private final Map<String, NumericRange> numericRanges;
-
-    protected NumericRangeFacet(String field, int limit) {
+    NumericRangeFacet(String field, int limit, List<NumericRange> ranges) {
         super(field, limit);
-        this.numericRanges = new HashMap<String, NumericRange>();
-    }
-
-    protected void checkRange(String name, Double min, Double max) {
-        if (name == null) {
-            throw new NullPointerException("Cannot create numeric range without a name");
-        }
-        if (min == null && max == null) {
-            throw new NullPointerException("Cannot create numeric range without min nor max");
-        }
-    }
-
-    public NumericRangeFacet addRange(String name, Double min, Double max) {
-        checkRange(name, min, max);
-        this.numericRanges.put(name, new NumericRange(min, max));
-
-        return this;
+        this.ranges = ranges;
     }
 
     @Override
@@ -68,15 +41,15 @@ public class NumericRangeFacet extends SearchFacet {
         super.injectParams(queryJson);
 
         JsonArray numericRange = JsonArray.empty();
-        for (Map.Entry<String, NumericRange> nr : numericRanges.entrySet()) {
+        for (NumericRange nr : ranges) {
             JsonObject nrJson = JsonObject.create();
-            nrJson.put("name", nr.getKey());
+            nrJson.put("name", nr.name());
 
-            if (nr.getValue().min != null) {
-                nrJson.put("min", nr.getValue().min);
+            if (nr.min() != null) {
+                nrJson.put("min", nr.min());
             }
-            if (nr.getValue().max != null) {
-                nrJson.put("max", nr.getValue().max);
+            if (nr.max() != null) {
+                nrJson.put("max", nr.max());
             }
 
             numericRange.add(nrJson);

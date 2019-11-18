@@ -255,6 +255,8 @@ public class Cluster {
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link SearchRequest} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public SearchResult searchQuery(final String indexName, final SearchQuery query) {
     return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
@@ -266,6 +268,8 @@ public class Cluster {
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.
    * @return the {@link SearchRequest} once the response arrives successfully.
+   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public SearchResult searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
     return block(asyncCluster.searchQuery(indexName, query, options));

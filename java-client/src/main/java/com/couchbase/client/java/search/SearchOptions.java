@@ -22,6 +22,7 @@ import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.result.SearchResult;
@@ -38,7 +39,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private Integer skip;
   private Boolean explain;
   private SearchScanConsistency consistency;
-  private List<MutationToken> consistentWith;
+  private MutationState consistentWith;
   private HighlightStyle highlightStyle;
   private String[] highlightFields;
   private JsonArray sort;
@@ -75,11 +76,6 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     return this;
   }
 
-  public SearchOptions serializer(final JsonSerializer serializer) {
-    this.serializer = serializer;
-    return this;
-  }
-
   /**
    * Activates or deactivates the explanation of each result hit in the response, according to the parameter.
    *
@@ -88,40 +84,6 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    */
   public SearchOptions explain(boolean explain) {
     this.explain = explain;
-    return this;
-  }
-
-  /**
-   * Sets the unparameterized consistency to consider for this FTS query. This replaces any
-   * consistency tuning previously set.
-   *
-   * @param consistency the simple consistency to use.
-   * @return this SearchQuery for chaining.
-   */
-  public SearchOptions scanConsistency(SearchScanConsistency consistency) {
-    this.consistency = consistency;
-    return this;
-  }
-
-  /**
-   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
-   *
-   * @param tokens the mutation tokens
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public SearchOptions consistentWith(MutationToken... tokens) {
-    this.consistentWith = Arrays.asList(tokens);
-    return this;
-  }
-
-  /**
-   * Sets the {@link MutationToken}s this query should be consistent with.  These tokens are returned from mutations.
-   *
-   * @param tokens the mutation tokens
-   * @return this {@link QueryOptions} for chaining.
-   */
-  public SearchOptions consistentWith(List<MutationToken> tokens) {
-    this.consistentWith = tokens;
     return this;
   }
 
@@ -177,17 +139,42 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * Configures the list of fields for which the whole value should be included in the response. If empty, no field
    * values are included.
    *
-   * This drives the inclusion of the {@link SearchRow#fields() fields} in each {@link SearchRow hit}.
+   * This drives the inclusion of the fields in each {@link SearchRow hit}.
    *
    * Note that to be highlighted, the fields must be stored in the FTS index.
    *
-   * @param fields
+   * @param fields the fields to include.
    * @return this SearchQuery for chaining.
    */
   public SearchOptions fields(String... fields) {
     if (fields != null) {
       this.fields = fields;
     }
+    return this;
+  }
+
+  /**
+   * Sets the unparameterized consistency to consider for this FTS query. This replaces any
+   * consistency tuning previously set.
+   *
+   * @param consistency the simple consistency to use.
+   * @return this SearchQuery for chaining.
+   */
+  public SearchOptions scanConsistency(SearchScanConsistency consistency) {
+    this.consistency = consistency;
+    consistentWith = null;
+    return this;
+  }
+
+  /**
+   * Sets mutation tokens this query should be consistent with.
+   *
+   * @param consistentWith the mutation state to be consistent with.
+   * @return this {@link QueryOptions} for chaining.
+   */
+  public SearchOptions consistentWith(final MutationState consistentWith) {
+    this.consistentWith = consistentWith;
+    consistency = null;
     return this;
   }
 
@@ -208,6 +195,10 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * @return this SearchQuery for chaining.
    */
   public SearchOptions sort(Object... sort) {
+    if (this.sort == null) {
+      this.sort = JsonArray.create();
+    }
+
     if (sort != null) {
       for (Object o : sort) {
         if (o instanceof String) {
@@ -216,10 +207,8 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
           JsonObject params = JsonObject.create();
           ((SearchSort) o).injectParams(params);
           this.sort.add(params);
-        } else if (o instanceof JsonObject) {
-          this.sort.add(o);
         } else {
-          throw new IllegalArgumentException("Only String ort SearchSort " +
+          throw new IllegalArgumentException("Only String or SearchSort " +
             "instances are allowed as sort arguments!");
         }
       }
@@ -237,14 +226,15 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    *
    * Note that to be faceted, a field's value must be stored in the FTS index.
    *
-   * @param facetName the name of the facet to add (or replace if one already exists with same name).
-   * @param facet the facet to add.
+   * @param facets the facets to add to the query.
    */
-  public SearchOptions addFacet(String facetName, SearchFacet facet) {
-    if (facet == null || facetName == null) {
-      throw new NullPointerException("Facet name and description must not be null");
-    }
-    this.facets.put(facetName,  facet);
+  public SearchOptions facets(final Map<String, SearchFacet> facets) {
+    this.facets = facets;
+    return this;
+  }
+
+  public SearchOptions serializer(final JsonSerializer serializer) {
+    this.serializer = serializer;
     return this;
   }
 
@@ -266,7 +256,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
      * @param queryJson the prepared {@link JsonObject} for the whole query.
      */
     @Stability.Internal
-    public void injectParams(JsonObject queryJson) {
+    public void injectParams(final String indexName, JsonObject queryJson) {
       if (limit != null && limit >= 0) {
         queryJson.put("size", limit);
       }
@@ -289,11 +279,11 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       if (fields != null && fields.length > 0) {
         queryJson.put("fields", JsonArray.from((Object[]) fields));
       }
-      if (!sort.isEmpty()) {
+      if (sort != null && !sort.isEmpty()) {
         queryJson.put("sort", sort);
       }
 
-      if (!facets.isEmpty()) {
+      if (facets != null && !facets.isEmpty()) {
         JsonObject f = JsonObject.create();
         for (Map.Entry<String, SearchFacet> entry : facets.entrySet()) {
           JsonObject facetJson = JsonObject.create();
@@ -305,20 +295,18 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
       JsonObject control = JsonObject.empty();
 
-      //check need for consistency
-      // TODO JCBC-1495
-      /*
-      if (consistency != null || mutationState != null) {
+      if (consistency != null && consistency != SearchScanConsistency.NOT_BOUNDED) {
         JsonObject consistencyJson = JsonObject.create();
-
-        if (consistency == ScanConsistency.NOT_BOUNDED) {
-          consistencyJson.put("level", "");
-        } else if (mutationState != null) {
-          consistencyJson.put("level", "at_plus");
-          consistencyJson.put("vectors", JsonObject.create().put(this.indexName, mutationState.exportForFts()));
-        }
+        consistencyJson.put("level", consistency.toString());
         control.put("consistency", consistencyJson);
-      }*/
+      }
+
+      if (consistentWith != null) {
+        JsonObject consistencyJson = JsonObject.create();
+        consistencyJson.put("level", "at_plus");
+        consistencyJson.put("vectors", JsonObject.create().put(indexName, consistentWith.exportForSearch()));
+        control.put("consistency", consistencyJson);
+      }
 
       //if any control was set, inject it
       if (!control.isEmpty()) {

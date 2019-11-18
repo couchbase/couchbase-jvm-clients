@@ -29,8 +29,8 @@ public class SearchSortId extends SearchSort {
     }
 
     @Override
-    public SearchSortId descending(boolean descending) {
-        super.descending(descending);
+    public SearchSortId desc(boolean descending) {
+        super.desc(descending);
         return this;
     }
 

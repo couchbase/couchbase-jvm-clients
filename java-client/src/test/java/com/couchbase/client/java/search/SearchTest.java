@@ -39,11 +39,10 @@ class SearchTest {
         InputStream json = getClass().getClassLoader().getResourceAsStream("sdk-testcases/search/alltimeouts.json");
         SearchResult result = SearchMock.loadSearchTestCase(json);
 
-        assertEquals(6, result.errors().size());
-        assertEquals(6, result.metaData().status().errorCount());
-        assertEquals(6, result.metaData().status().totalCount());
-        assertEquals(0, result.metaData().status().successCount());
-        assertFalse(result.metaData().status().isSuccess());
+        assertEquals(6, result.metaData().errors().size());
+        assertEquals(6, result.metaData().metrics().errorPartitionCount());
+        assertEquals(6, result.metaData().metrics().totalPartitionCount());
+        assertEquals(0, result.metaData().metrics().successPartitionCount());
     }
 
 }

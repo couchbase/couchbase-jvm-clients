@@ -16,7 +16,13 @@
 
 package com.couchbase.client.core.io.netty.search;
 
-import com.couchbase.client.core.error.SearchServiceException;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
+import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InternalServerException;
+import com.couchbase.client.core.error.SearchErrorContext;
+import com.couchbase.client.core.error.SearchIndexNotFoundException;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.search.SearchChunkHeader;
@@ -25,22 +31,22 @@ import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 
 import java.util.Optional;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 public class SearchChunkResponseParser
   extends BaseChunkResponseParser<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer> {
 
   private byte[] status;
   private byte[] error;
+  private byte[] facets;
 
-    private long totalRows;
-    private double maxScore;
-    private long took;
+  private long totalRows;
+  private double maxScore;
+  private long took;
 
   @Override
   protected void doCleanup() {
     status = null;
     error = null;
+    facets = null;
     totalRows = 0;
     maxScore = 0.0;
     took = 0;
@@ -50,12 +56,13 @@ public class SearchChunkResponseParser
     .doOnValue("/status", v -> status = v.readBytes())
     .doOnValue("/error", v -> {
       error = v.readBytes();
-      failRows(new SearchServiceException(new String(error, UTF_8)));
+      failRows(errorsToThrowable(error));
     })
     .doOnValue("/hits/-", v -> emitRow(new SearchChunkRow(v.readBytes())))
     .doOnValue("/total_rows", v -> totalRows = v.readLong())
     .doOnValue("/max_score", v -> maxScore = v.readDouble())
-    .doOnValue("/took", v -> took = v.readLong());
+    .doOnValue("/took", v -> took = v.readLong())
+    .doOnValue("/facets", v -> facets = v.readBytes());
 
   @Override
   protected JsonStreamParser.Builder parserBuilder() {
@@ -69,12 +76,31 @@ public class SearchChunkResponseParser
 
   @Override
   public Optional<Throwable> error() {
-    return Optional.ofNullable(error).map(e -> new SearchServiceException(new String(e, UTF_8)));
+    return Optional.ofNullable(error).map(this::errorsToThrowable);
   }
 
-    @Override
-    public void signalComplete() {
-        completeRows();
-        completeTrailer(new SearchChunkTrailer(totalRows, maxScore, took));
+  private Throwable errorsToThrowable(final byte[] bytes) {
+    int statusCode = responseHeader().status().code();
+    String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, CharsetUtil.UTF_8);
+    SearchErrorContext errorContext = new SearchErrorContext(
+      HttpProtocol.decodeStatus(responseHeader().status()),
+      requestContext(),
+      statusCode
+    );
+    if (statusCode == 400 && errorDecoded.contains("index not found")) {
+      return new SearchIndexNotFoundException(errorContext);
+    } else if (statusCode == 500) {
+      return new InternalServerException(errorContext);
+    } else if (statusCode == 401 || statusCode == 403) {
+      return new AuthenticationException("Could not authenticate search query", errorContext, null);
     }
+    return new CouchbaseException("Unknown search error: " + errorDecoded, errorContext);
+  }
+
+  @Override
+  public void signalComplete() {
+    completeRows();
+    completeTrailer(new SearchChunkTrailer(totalRows, maxScore, took, facets));
+  }
+
 }

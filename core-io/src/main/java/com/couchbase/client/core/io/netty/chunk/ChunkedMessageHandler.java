@@ -210,6 +210,7 @@ public abstract class ChunkedMessageHandler
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
     currentResponseStatus = msg;
+    chunkResponseParser.updateResponseHeader(msg);
     convertedResponseStatus = HttpProtocol.decodeStatus(msg.status());
     chunkResponseParser.initialize(ctx.channel().config());
   }

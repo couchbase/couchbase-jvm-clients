@@ -30,7 +30,7 @@ import java.util.Arrays;
  * @since 2.3.0
  */
 @Stability.Volatile
-public class RowLocation {
+public class SearchRowLocation {
 
     private final String field;
     private final String term;
@@ -43,17 +43,13 @@ public class RowLocation {
      */
     private final long[] arrayPositions;
 
-    public RowLocation(String field, String term, long pos, long start, long end, long[] arrayPositions) {
+    SearchRowLocation(String field, String term, long pos, long start, long end, long[] arrayPositions) {
         this.field = field;
         this.term = term;
         this.pos = pos;
         this.start = start;
         this.end = end;
         this.arrayPositions = arrayPositions;
-    }
-
-    public RowLocation(String field, String term, long pos, long start, long end) {
-        this(field, term, pos, start, end, null);
     }
 
     public String field() {
@@ -92,7 +88,7 @@ public class RowLocation {
             return false;
         }
 
-        RowLocation that = (RowLocation) o;
+        SearchRowLocation that = (SearchRowLocation) o;
 
         if (pos != that.pos) {
             return false;

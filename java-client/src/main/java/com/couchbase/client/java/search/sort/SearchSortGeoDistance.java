@@ -29,9 +29,9 @@ public class SearchSortGeoDistance extends SearchSort {
     private final String field;
     private final double locationLon;
     private final double locationLat;
-    private String unit;
+    private SearchGeoDistanceUnits unit;
 
-    public SearchSortGeoDistance(double locationLon, double locationLat, String field) {
+    SearchSortGeoDistance(double locationLon, double locationLat, String field) {
         this.field = field;
         this.locationLon = locationLon;
         this.locationLat = locationLat;
@@ -43,12 +43,12 @@ public class SearchSortGeoDistance extends SearchSort {
     }
 
     @Override
-    public SearchSortGeoDistance descending(boolean descending) {
-        super.descending(descending);
+    public SearchSortGeoDistance desc(final boolean descending) {
+        super.desc(descending);
         return this;
     }
 
-    public SearchSortGeoDistance unit(String unit) {
+    public SearchSortGeoDistance unit(final SearchGeoDistanceUnits unit) {
         this.unit = unit;
         return this;
     }
@@ -56,12 +56,10 @@ public class SearchSortGeoDistance extends SearchSort {
     @Override
     public void injectParams(JsonObject queryJson) {
         super.injectParams(queryJson);
-
         queryJson.put("location", JsonArray.from(locationLon, locationLat));
         queryJson.put("field", field);
-
         if (unit != null) {
-            queryJson.put("unit", unit);
+            queryJson.put("unit", unit.identifier());
         }
     }
 }

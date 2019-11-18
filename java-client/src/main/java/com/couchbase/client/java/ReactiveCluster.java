@@ -23,6 +23,7 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
+import com.couchbase.client.core.error.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -251,7 +252,8 @@ public class ReactiveCluster {
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
   public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
-    notNull(options, "SearchOptions");
+    notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(indexName, query, opts), serializer);

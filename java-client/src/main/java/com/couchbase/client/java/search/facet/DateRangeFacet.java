@@ -17,11 +17,8 @@ package com.couchbase.client.java.search.facet;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.SearchUtils;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 /**
  * A facet that categorizes rows inside date ranges (or buckets) provided by the user.
@@ -32,30 +29,11 @@ import java.util.Map;
  */
 public class DateRangeFacet extends SearchFacet {
 
-    private final Map<String, DateRange> dateRanges;
+    private final List<DateRange> dateRanges;
 
-    DateRangeFacet(String field, int limit) {
+    DateRangeFacet(String field, int limit, List<DateRange> dateRanges) {
         super(field, limit);
-        this.dateRanges = new HashMap<String, DateRange>();
-    }
-
-    protected void checkRange(String name, String start, String end) {
-        if (name == null) {
-            throw new NullPointerException("Cannot create date range without a name");
-        }
-        if (start == null && end == null) {
-            throw new NullPointerException("Cannot create date range without start nor end");
-        }
-    }
-
-    public DateRangeFacet addRange(String rangeName, Date start, Date end) {
-        return addRange(rangeName, SearchUtils.toFtsUtcString(start), SearchUtils.toFtsUtcString(end));
-    }
-
-    public DateRangeFacet addRange(String rangeName, String start, String end) {
-        checkRange(rangeName, start, end);
-        this.dateRanges.put(rangeName, new DateRange(start, end));
-        return this;
+        this.dateRanges = dateRanges;
     }
 
     @Override
@@ -63,15 +41,15 @@ public class DateRangeFacet extends SearchFacet {
         super.injectParams(queryJson);
 
         JsonArray dateRange = JsonArray.empty();
-        for (Map.Entry<String, DateRange> dr : dateRanges.entrySet()) {
+        for (DateRange dr : dateRanges) {
             JsonObject drJson = JsonObject.create();
-            drJson.put("name", dr.getKey());
+            drJson.put("name", dr.name());
 
-            if (dr.getValue().start != null) {
-                drJson.put("start", dr.getValue().start);
+            if (dr.start() != null) {
+                drJson.put("start", dr.start());
             }
-            if (dr.getValue().end != null) {
-                drJson.put("end", dr.getValue().end);
+            if (dr.end() != null) {
+                drJson.put("end", dr.end());
             }
 
             dateRange.add(drJson);
@@ -79,14 +57,4 @@ public class DateRangeFacet extends SearchFacet {
         queryJson.put("date_ranges", dateRange);
     }
 
-    private static class DateRange {
-
-        public final String start;
-        public final String end;
-
-        public DateRange(String start, String end) {
-            this.start = start;
-            this.end = end;
-        }
-    }
 }

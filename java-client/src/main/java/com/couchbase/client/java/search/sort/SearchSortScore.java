@@ -29,8 +29,8 @@ public class SearchSortScore extends SearchSort {
     }
 
     @Override
-    public SearchSortScore descending(boolean descending) {
-        super.descending(descending);
+    public SearchSortScore desc(boolean descending) {
+        super.desc(descending);
         return this;
     }
 

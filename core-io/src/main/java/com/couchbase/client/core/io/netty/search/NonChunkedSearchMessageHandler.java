@@ -18,8 +18,7 @@ package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
-import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.SearchServiceException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -31,7 +30,8 @@ class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(final HttpResponseStatus status, final String content) {
-    return new SearchServiceException(content, new HttpStatusCodeException(status));
+    // todo: this needs to be cleaned up with the management apis later
+    return new CouchbaseException("Unknown search error: " + content);
   }
 
 }

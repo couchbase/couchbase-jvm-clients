@@ -30,6 +30,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class SearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
@@ -76,5 +81,13 @@ public class SearchRequest extends BaseRequest<SearchResponse>
     @Override
     public boolean idempotent() {
         return true;
+    }
+
+    @Override
+    public Map<String, Object> serviceContext() {
+        Map<String, Object> ctx = new TreeMap<>();
+        ctx.put("type", serviceType().ident());
+        ctx.put("indexName", redactMeta(indexName));
+        return ctx;
     }
 }

@@ -16,11 +16,12 @@
 
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.search.SearchMetaData;
 
 import java.util.List;
+import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
@@ -36,25 +37,24 @@ public class SearchResult {
     private final List<SearchRow> rows;
 
     /**
-     * If errors happened during the responses, they will be stored in here.
-     */
-    private final List<RuntimeException> errors;
-
-    /**
      * The metadata for this search result.
      */
     private final SearchMetaData meta;
 
     /**
+     * Holds the facets if any returned.
+     */
+    private final Map<String, SearchFacetResult> facets;
+
+    /**
      * Creates a new SearchResult.
      *
      * @param rows the rows/hits for this result.
-     * @param errors any errors that came up.
      * @param meta the search metadata.
      */
-    public SearchResult(final List<SearchRow> rows, final List<RuntimeException> errors, final SearchMetaData meta) {
+    public SearchResult(final List<SearchRow> rows, final Map<String, SearchFacetResult> facets, final SearchMetaData meta) {
         this.rows = rows;
-        this.errors = errors;
+        this.facets = facets;
         this.meta = meta;
     }
 
@@ -74,21 +74,18 @@ public class SearchResult {
     }
 
     /**
-     * Returns all errors that appeared as part of the response.
-     *
-     * <p>This might go away, keeping it for now</p>
+     * Returns the facets if present in this query.
      */
-    @Stability.Internal
-    public List<RuntimeException> errors() {
-        return errors;
+    public Map<String, SearchFacetResult> facets() {
+        return facets;
     }
 
     @Override
     public String toString() {
         return "SearchResult{" +
-          "rows=" + rows +
-          ", errors=" + errors +
-          ", meta=" + meta +
+          "rows=" + redactUser(rows) +
+          ", meta=" + redactMeta(meta) +
+          ", facets=" + redactUser(facets) +
           '}';
     }
 }
