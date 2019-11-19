@@ -18,7 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.error.EncodingFailedException
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{UpsertRequest, UpsertResponse}
+import com.couchbase.client.core.msg.kv.{KeyValueRequest, UpsertRequest, UpsertResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
@@ -37,7 +37,7 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 private[scala] class UpsertHandler(hp: HandlerParams)
-    extends RequestHandler[UpsertResponse, MutationResult] {
+    extends KeyValueRequestHandler[UpsertResponse, MutationResult] {
 
   def request[T](
       id: String,
@@ -88,7 +88,11 @@ private[scala] class UpsertHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: UpsertResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[UpsertResponse],
+      id: String,
+      response: UpsertResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)

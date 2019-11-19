@@ -17,7 +17,7 @@
 package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{UnlockRequest, UnlockResponse}
+import com.couchbase.client.core.msg.kv.{KeyValueRequest, UnlockRequest, UnlockResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.kv.DefaultErrors
@@ -31,7 +31,8 @@ import scala.util.{Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class UnlockHandler(hp: HandlerParams) extends RequestHandler[UnlockResponse, Unit] {
+private[scala] class UnlockHandler(hp: HandlerParams)
+    extends KeyValueRequestHandler[UnlockResponse, Unit] {
 
   def request[T](
       id: String,
@@ -62,7 +63,11 @@ private[scala] class UnlockHandler(hp: HandlerParams) extends RequestHandler[Unl
     }
   }
 
-  def response(id: String, response: UnlockResponse): Unit = {
+  def response(
+      request: KeyValueRequest[UnlockResponse],
+      id: String,
+      response: UnlockResponse
+  ): Unit = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
       case _                      => throw DefaultErrors.throwOnBadResult(id, response.status())

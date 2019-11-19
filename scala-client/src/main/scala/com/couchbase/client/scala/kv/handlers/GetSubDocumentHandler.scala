@@ -124,6 +124,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   }
 
   def response(
+      request: KeyValueRequest[SubdocGetResponse],
       id: String,
       response: SubdocGetResponse,
       withExpiration: Boolean,
@@ -174,6 +175,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   }
 
   def responseProject(
+      request: KeyValueRequest[SubdocGetResponse],
       id: String,
       response: SubdocGetResponse,
       transcoder: Transcoder

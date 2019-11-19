@@ -17,7 +17,7 @@
 package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse}
+import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.codec.Transcoder
@@ -33,7 +33,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetFullDocHandler(hp: HandlerParams)
-    extends RequestHandlerWithTranscoder[GetResponse, Option[GetResult]] {
+    extends KeyValueRequestHandlerWithTranscoder[GetResponse, Option[GetResult]] {
 
   def request[T](
       id: String,
@@ -56,6 +56,7 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
   }
 
   override def response(
+      request: KeyValueRequest[GetResponse],
       id: String,
       response: GetResponse,
       transcoder: Transcoder

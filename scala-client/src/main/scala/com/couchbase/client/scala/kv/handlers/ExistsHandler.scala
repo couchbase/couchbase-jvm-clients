@@ -20,6 +20,7 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{
   GetMetaRequest,
   GetMetaResponse,
+  KeyValueRequest,
   ObserveViaCasRequest,
   ObserveViaCasResponse
 }
@@ -37,7 +38,7 @@ import scala.util.{Success, Try}
   * @author Graham Pople
   */
 private[scala] class ExistsHandler(hp: HandlerParams)
-    extends RequestHandler[GetMetaResponse, ExistsResult] {
+    extends KeyValueRequestHandler[GetMetaResponse, ExistsResult] {
   def request(
       id: String,
       timeout: java.time.Duration,
@@ -63,7 +64,11 @@ private[scala] class ExistsHandler(hp: HandlerParams)
       )
   }
 
-  override def response(id: String, response: GetMetaResponse): ExistsResult = {
+  override def response(
+      request: KeyValueRequest[GetMetaResponse],
+      id: String,
+      response: GetMetaResponse
+  ): ExistsResult = {
     response.status() match {
       case ResponseStatus.SUCCESS   => ExistsResult(true, response.cas())
       case ResponseStatus.NOT_FOUND => ExistsResult(false, 0)

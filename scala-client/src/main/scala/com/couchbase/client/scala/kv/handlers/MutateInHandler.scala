@@ -27,12 +27,11 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
-import com.couchbase.client.scala.codec.{JsonSerializer, Transcoder}
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.Validate
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Try}
 
@@ -116,6 +115,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
   }
 
   def response(
+      request: KeyValueRequest[SubdocMutateResponse],
       id: String,
       document: StoreSemantics = StoreSemantics.Replace,
       response: SubdocMutateResponse
@@ -131,7 +131,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
         response.error().asScala match {
           case Some(err) => throw err
           case _ => {
-            val ctx = ReducedKeyValueErrorContext.create(id) // todo! needs to be better
+            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
             throw new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0)
           }
         }
@@ -139,11 +139,11 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       case ResponseStatus.EXISTS =>
         document match {
           case StoreSemantics.Insert => {
-            val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
+            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
             throw new DocumentExistsException(ctx)
           }
           case _ => {
-            val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
+            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
             throw new CasMismatchException(ctx)
           }
         }

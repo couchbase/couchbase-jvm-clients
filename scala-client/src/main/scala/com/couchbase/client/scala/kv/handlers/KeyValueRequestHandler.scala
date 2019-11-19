@@ -16,12 +16,19 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.msg.Response
+import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.scala.codec.Transcoder
 
-private[scala] trait RequestHandler[Resp, Res] {
-  def response(id: String, response: Resp): Res
+private[scala] trait KeyValueRequestHandler[Resp <: Response, Res] {
+  def response(request: KeyValueRequest[Resp], id: String, response: Resp): Res
 }
 
-private[scala] trait RequestHandlerWithTranscoder[Resp, Res] {
-  def response(id: String, response: Resp, transcoder: Transcoder): Res
+private[scala] trait KeyValueRequestHandlerWithTranscoder[Resp <: Response, Res] {
+  def response(
+      request: KeyValueRequest[Resp],
+      id: String,
+      response: Resp,
+      transcoder: Transcoder
+  ): Res
 }

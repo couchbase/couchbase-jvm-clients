@@ -88,17 +88,17 @@ class AsyncCollection(
   val binary = new AsyncBinaryCollection(this)
 
   private[scala] def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res]
+      handler: KeyValueRequestHandler[Resp, Res]
   ): Future[Res] = {
     AsyncCollection.wrap(in, id, handler, core)
   }
 
   private[scala] def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res],
+      handler: KeyValueRequestHandler[Resp, Res],
       durability: Durability,
       remove: Boolean,
       timeout: java.time.Duration
@@ -227,7 +227,7 @@ class AsyncCollection(
           val out: Future[GetResult] = FutureConverters
             .toScala(request.response())
             .flatMap(response => {
-              val ret = getSubDocHandler.responseProject(id, response, transcoder) match {
+              val ret = getSubDocHandler.responseProject(request, id, response, transcoder) match {
                 case Success(v: Option[GetResult]) =>
                   v match {
                     case Some(x) => Future.successful(x)
@@ -273,14 +273,7 @@ class AsyncCollection(
       transcoder: Transcoder
   ): Future[GetResult] = {
     val req = getFullDocHandler.request(id, timeout, retryStrategy)
-    AsyncCollection
-      .wrap(req, id, getFullDocHandler, transcoder, core)
-      .map {
-        case Some(x) => x
-        // TODO
-        case _ =>
-          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
-      }
+    AsyncCollection.wrapGet(req, id, getFullDocHandler, transcoder, core)
   }
 
   private def getSubDoc(
@@ -298,13 +291,15 @@ class AsyncCollection(
 
         FutureConverters
           .toScala(request.response())
-          .map(response => getSubDocHandler.response(id, response, withExpiry, transcoder))
-          .map {
-            case Some(x) => x
-            // TODO
-            case _ =>
-              throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
-          }
+          .flatMap(response => {
+            getSubDocHandler
+              .response(request, id, response, withExpiry, transcoder) match {
+              case Some(x) => Future.successful(x)
+              case _ =>
+                val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+                Future.failed(new DocumentNotFoundException(ctx))
+            }
+          })
 
       case Failure(err) => Future.failed(err)
     }
@@ -346,7 +341,7 @@ class AsyncCollection(
 
         val out = FutureConverters
           .toScala(request.response())
-          .map(response => mutateInHandler.response(id, document, response))
+          .map(response => mutateInHandler.response(request, id, document, response))
 
         durability match {
           case ClientVerified(replicateTo, persistTo) =>
@@ -392,14 +387,7 @@ class AsyncCollection(
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetResult] = {
     val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
-    AsyncCollection
-      .wrap(req, id, getAndLockHandler, transcoder, core)
-      .map {
-        case Some(x) => x
-        // TODO
-        case _ =>
-          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
-      }
+    AsyncCollection.wrapGet(req, id, getAndLockHandler, transcoder, core)
   }
 
   /** Unlock a locked document.
@@ -425,15 +413,8 @@ class AsyncCollection(
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetResult] = {
-    val req = getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
-    AsyncCollection
-      .wrap(req, id, getAndTouchHandler, transcoder, core)
-      .map {
-        case Some(x) => x
-        // TODO
-        case _ =>
-          throw new DocumentNotFoundException(KeyValueErrorContext.completedRequest(null, null))
-      }
+    val in = getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
+    AsyncCollection.wrapGet(in, id, getAndTouchHandler, transcoder, core)
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -478,29 +459,24 @@ class AsyncCollection(
       case Failure(err) => Seq(Future.failed(err))
 
       case Success(reqs: Seq[GetRequest]) =>
-        val out = reqs.map(request => {
+        reqs.map(request => {
           core.send(request)
 
           FutureConverters
             .toScala(request.response())
-            .map(response => {
+            .flatMap(response => {
               val isReplica = request match {
                 case _: GetRequest => false
                 case _             => true
               }
-              getFromReplicaHandler.response(id, response, isReplica, transcoder)
+              getFromReplicaHandler.response(request, id, response, isReplica, transcoder) match {
+                case Some(x) => Future.successful(x)
+                case _ =>
+                  val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+                  Future.failed(new DocumentNotFoundException(ctx))
+              }
             })
-            .map {
-              case Some(x) => x
-              // TODO: FIXME
-              case _ =>
-                throw new DocumentNotFoundException(
-                  KeyValueErrorContext.completedRequest(null, null)
-                )
-            }
         })
-
-        out
     }
   }
 
@@ -534,9 +510,9 @@ object AsyncCollection {
   private[scala] val getFullDoc = Array(LookupInSpec.get(""))
 
   private def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res],
+      handler: KeyValueRequestHandler[Resp, Res],
       core: Core
   )(implicit ec: ExecutionContext): Future[Res] = {
     in match {
@@ -545,7 +521,7 @@ object AsyncCollection {
 
         val out = FutureConverters
           .toScala(request.response())
-          .map(response => handler.response(id, response))
+          .map(response => handler.response(request, id, response))
 
         out
 
@@ -553,10 +529,37 @@ object AsyncCollection {
     }
   }
 
-  private def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+  private def wrapGet[Resp <: Response, Res](
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandlerWithTranscoder[Resp, Res],
+      handler: KeyValueRequestHandlerWithTranscoder[Resp, Option[Res]],
+      transcoder: Transcoder,
+      core: Core
+  )(implicit ec: ExecutionContext): Future[Res] = {
+    in match {
+      case Success(request) =>
+        core.send(request)
+
+        FutureConverters
+          .toScala(request.response())
+          .flatMap(response => {
+            handler
+              .response(request, id, response, transcoder) match {
+              case Some(x) => Future.successful(x)
+              case _ =>
+                val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+                Future.failed(new DocumentNotFoundException(ctx))
+            }
+          })
+
+      case Failure(err) => Future.failed(err)
+    }
+  }
+
+  private def wrap[Resp <: Response, Res](
+      in: Try[KeyValueRequest[Resp]],
+      id: String,
+      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
       transcoder: Transcoder,
       core: Core
   )(implicit ec: ExecutionContext): Future[Res] = {
@@ -566,7 +569,7 @@ object AsyncCollection {
 
         val out = FutureConverters
           .toScala(request.response())
-          .map(response => handler.response(id, response, transcoder))
+          .map(response => handler.response(request, id, response, transcoder))
 
         out
 
@@ -575,9 +578,9 @@ object AsyncCollection {
   }
 
   private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res],
+      handler: KeyValueRequestHandler[Resp, Res],
       durability: Durability,
       remove: Boolean,
       timeout: java.time.Duration,

@@ -15,12 +15,13 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv.handlers.RequestHandler
+import com.couchbase.client.scala.kv.handlers.KeyValueRequestHandler
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
@@ -49,9 +50,9 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   private[scala] val environment = async.environment
 
   private def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res]
+      handler: KeyValueRequestHandler[Resp, Res]
   ): SMono[Res] = {
     in match {
       case Success(request) =>
@@ -59,7 +60,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
         FutureConversions
           .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(id, r))
+          .map(r => handler.response(request, id, r))
 
       case Failure(err) => SMono.raiseError(err)
     }

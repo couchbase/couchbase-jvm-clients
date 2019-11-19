@@ -19,7 +19,7 @@ package com.couchbase.client.scala.kv.handlers
 import java.util.Optional
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{DecrementRequest, DecrementResponse}
+import com.couchbase.client.core.msg.kv.{DecrementRequest, DecrementResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.CounterResult
@@ -37,7 +37,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class BinaryDecrementHandler(hp: HandlerParams)
-    extends RequestHandler[DecrementResponse, CounterResult] {
+    extends KeyValueRequestHandler[DecrementResponse, CounterResult] {
 
   def request[T](
       id: String,
@@ -85,7 +85,11 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: DecrementResponse): CounterResult = {
+  def response(
+      request: KeyValueRequest[DecrementResponse],
+      id: String,
+      response: DecrementResponse
+  ): CounterResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         CounterResult(response.cas(), response.mutationToken().asScala, response.value())

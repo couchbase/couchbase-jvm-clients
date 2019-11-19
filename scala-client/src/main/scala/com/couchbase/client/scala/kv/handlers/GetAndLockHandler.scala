@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{GetAndLockRequest, GetAndLockResponse}
+import com.couchbase.client.core.msg.kv.{GetAndLockRequest, GetAndLockResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.codec.Transcoder
@@ -32,7 +32,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndLockHandler(hp: HandlerParams)
-    extends RequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
+    extends KeyValueRequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
 
   def request[T](
       id: String,
@@ -64,6 +64,7 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
   }
 
   override def response(
+      request: KeyValueRequest[GetAndLockResponse],
       id: String,
       response: GetAndLockResponse,
       transcoder: Transcoder
@@ -71,7 +72,7 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
     response.status() match {
       case ResponseStatus.SUCCESS =>
         Some(
-          new GetResult(
+          GetResult(
             id,
             Left(response.content),
             response.flags(),

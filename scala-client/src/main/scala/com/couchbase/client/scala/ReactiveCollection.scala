@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.msg.kv.GetRequest
+import com.couchbase.client.core.msg.kv.{GetRequest, KeyValueRequest}
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
@@ -25,7 +25,10 @@ import com.couchbase.client.scala.codec.{Conversions, JsonSerializer, JsonTransc
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.kv.handlers.{RequestHandler, RequestHandlerWithTranscoder}
+import com.couchbase.client.scala.kv.handlers.{
+  KeyValueRequestHandler,
+  KeyValueRequestHandlerWithTranscoder
+}
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -168,7 +171,7 @@ class ReactiveCollection(async: AsyncCollection) {
             .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
             .map(
               r =>
-                async.getSubDocHandler.responseProject(id, r, transcoder) match {
+                async.getSubDocHandler.responseProject(request, id, r, transcoder) match {
                   case Success(v)   => v
                   case Failure(err) => throw err
                 }
@@ -221,7 +224,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
         FutureConversions
           .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.getSubDocHandler.response(id, r, withExpiry, transcoder))
+          .map(r => async.getSubDocHandler.response(request, id, r, withExpiry, transcoder))
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -261,7 +264,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
         FutureConversions
           .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.mutateInHandler.response(id, document, r))
+          .map(r => async.mutateInHandler.response(request, id, document, r))
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -363,7 +366,7 @@ class ReactiveCollection(async: AsyncCollection) {
                 case _: GetRequest => false
                 case _             => true
               }
-              async.getFromReplicaHandler.response(id, r, isReplica, transcoder) match {
+              async.getFromReplicaHandler.response(request, id, r, isReplica, transcoder) match {
                 case Some(getResult) => SMono.just(getResult)
                 case _               => SMono.empty[GetReplicaResult]
               }
@@ -389,9 +392,9 @@ class ReactiveCollection(async: AsyncCollection) {
   }
 
   private def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandler[Resp, Res]
+      handler: KeyValueRequestHandler[Resp, Res]
   ): SMono[Res] = {
     in match {
       case Success(request) =>
@@ -399,16 +402,16 @@ class ReactiveCollection(async: AsyncCollection) {
 
         FutureConversions
           .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(id, r))
+          .map(r => handler.response(request, id, r))
 
       case Failure(err) => SMono.raiseError(err)
     }
   }
 
   private def wrap[Resp <: Response, Res](
-      in: Try[Request[Resp]],
+      in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: RequestHandlerWithTranscoder[Resp, Res],
+      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
       transcoder: Transcoder
   ): SMono[Res] = {
     in match {
@@ -417,7 +420,7 @@ class ReactiveCollection(async: AsyncCollection) {
 
         FutureConversions
           .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(id, r, transcoder))
+          .map(r => handler.response(request, id, r, transcoder))
 
       case Failure(err) => SMono.raiseError(err)
     }

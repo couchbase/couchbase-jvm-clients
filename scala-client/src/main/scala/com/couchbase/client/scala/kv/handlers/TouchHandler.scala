@@ -17,7 +17,7 @@
 package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{TouchRequest, TouchResponse, UnlockRequest, UnlockResponse}
+import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
@@ -35,7 +35,7 @@ import com.couchbase.client.scala.util.DurationConversions._
   * @since 1.0.0
   */
 private[scala] class TouchHandler(hp: HandlerParams)
-    extends RequestHandler[TouchResponse, MutationResult] {
+    extends KeyValueRequestHandler[TouchResponse, MutationResult] {
 
   def request[T](
       id: String,
@@ -66,7 +66,11 @@ private[scala] class TouchHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: TouchResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[TouchResponse],
+      id: String,
+      response: TouchResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)

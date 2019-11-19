@@ -19,7 +19,12 @@ package com.couchbase.client.scala.kv.handlers
 import com.couchbase.client.core.config.CouchbaseBucketConfig
 import com.couchbase.client.core.error.CommonExceptions
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, ReplicaGetRequest}
+import com.couchbase.client.core.msg.kv.{
+  GetRequest,
+  GetResponse,
+  KeyValueRequest,
+  ReplicaGetRequest
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.codec.Transcoder
@@ -81,6 +86,7 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
   }
 
   def response(
+      request: KeyValueRequest[GetResponse],
       id: String,
       response: GetResponse,
       isReplica: Boolean,

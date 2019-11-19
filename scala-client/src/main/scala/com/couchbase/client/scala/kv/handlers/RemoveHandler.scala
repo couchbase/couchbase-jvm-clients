@@ -34,7 +34,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class RemoveHandler(hp: HandlerParams)
-    extends RequestHandler[RemoveResponse, MutationResult] {
+    extends KeyValueRequestHandler[RemoveResponse, MutationResult] {
 
   def request[T](
       id: String,
@@ -68,7 +68,11 @@ private[scala] class RemoveHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: RemoveResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[RemoveResponse],
+      id: String,
+      response: RemoveResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)

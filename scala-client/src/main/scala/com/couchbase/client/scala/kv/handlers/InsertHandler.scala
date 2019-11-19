@@ -21,8 +21,8 @@ import com.couchbase.client.core.error.{
   EncodingFailedException,
   KeyValueErrorContext
 }
-import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{InsertRequest, InsertResponse}
+import com.couchbase.client.core.msg.{Request, ResponseStatus}
+import com.couchbase.client.core.msg.kv.{InsertRequest, InsertResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
@@ -41,7 +41,7 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 private[scala] class InsertHandler(hp: HandlerParams)
-    extends RequestHandler[InsertResponse, MutationResult] {
+    extends KeyValueRequestHandler[InsertResponse, MutationResult] {
 
   def request[T](
       id: String,
@@ -92,10 +92,14 @@ private[scala] class InsertHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: InsertResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[InsertResponse],
+      id: String,
+      response: InsertResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.EXISTS => {
-        val ctx = KeyValueErrorContext.completedRequest(null /*todo!*/, response.status())
+        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
         throw new DocumentExistsException(ctx)
       }
 

@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
   * @since 1.0.0
   */
 private[scala] class ReplaceHandler(hp: HandlerParams)
-    extends RequestHandler[ReplaceResponse, MutationResult] {
+    extends KeyValueRequestHandler[ReplaceResponse, MutationResult] {
 
   def request[T](
       id: String,
@@ -90,7 +90,11 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: ReplaceResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[ReplaceResponse],
+      id: String,
+      response: ReplaceResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)

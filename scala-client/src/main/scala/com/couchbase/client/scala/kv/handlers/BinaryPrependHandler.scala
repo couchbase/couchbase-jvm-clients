@@ -17,7 +17,12 @@
 package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{PrependRequest, PrependResponse}
+import com.couchbase.client.core.msg.kv.{
+  InsertResponse,
+  KeyValueRequest,
+  PrependRequest,
+  PrependResponse
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
@@ -35,7 +40,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class BinaryPrependHandler(hp: HandlerParams)
-    extends RequestHandler[PrependResponse, MutationResult] {
+    extends KeyValueRequestHandler[PrependResponse, MutationResult] {
 
   def request(
       id: String,
@@ -73,7 +78,11 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
     }
   }
 
-  def response(id: String, response: PrependResponse): MutationResult = {
+  def response(
+      request: KeyValueRequest[PrependResponse],
+      id: String,
+      response: PrependResponse
+  ): MutationResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)
