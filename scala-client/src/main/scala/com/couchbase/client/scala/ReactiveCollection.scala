@@ -158,7 +158,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  ): SMono[Option[GetResult]] = {
+  ): SMono[GetResult] = {
 
     // Implementation note: Option is returned because SMono.empty is hard to work with.  See JCBC-1310.
 
@@ -183,17 +183,15 @@ class ReactiveCollection(async: AsyncCollection) {
     } else if (withExpiry) {
       getSubDoc(id, AsyncCollection.getFullDoc, withExpiry, timeout, retryStrategy, transcoder)
         .map(
-          lookupInResult =>
-            lookupInResult.map(v => {
-              GetResult(
-                id,
-                Left(v.contentAs[Array[Byte]](0).get),
-                v.flags,
-                v.cas,
-                v.expiry,
-                transcoder
-              )
-            })
+          v =>
+            GetResult(
+              id,
+              Left(v.contentAs[Array[Byte]](0).get),
+              v.flags,
+              v.cas,
+              v.expiry,
+              transcoder
+            )
         )
     } else {
       getFullDoc(id, timeout, retryStrategy, transcoder)
@@ -205,7 +203,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder
-  ): SMono[Option[GetResult]] = {
+  ): SMono[GetResult] = {
     val req = async.getFullDocHandler.request(id, timeout, retryStrategy)
     wrap(req, id, async.getFullDocHandler, transcoder)
   }
@@ -217,7 +215,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder
-  ): SMono[Option[LookupInResult]] = {
+  ): SMono[LookupInResult] = {
     async.getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy) match {
       case Success(request) =>
         core.send(request)
@@ -279,7 +277,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  ): SMono[Option[GetResult]] = {
+  ): SMono[GetResult] = {
     val req = async.getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
     wrap(req, id, async.getAndLockHandler, transcoder)
   }
@@ -306,7 +304,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  ): SMono[Option[GetResult]] = {
+  ): SMono[GetResult] = {
     val req = async.getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
     wrap(req, id, async.getAndTouchHandler, transcoder)
   }
@@ -322,7 +320,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  ): SMono[Option[LookupInResult]] = {
+  ): SMono[LookupInResult] = {
     getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder)
   }
 

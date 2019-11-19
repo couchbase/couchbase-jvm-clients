@@ -489,7 +489,7 @@ case class QueryIndex(
 
   def typ: QueryIndexType = using match {
     case Some("gsi") => QueryIndexType.GSI
-    case _ => QueryIndexType.View
+    case _           => QueryIndexType.View
   }
 }
 

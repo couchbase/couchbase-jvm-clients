@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.error.{DocumentNotFoundException, KeyValueErrorContext}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -33,7 +34,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetFullDocHandler(hp: HandlerParams)
-    extends KeyValueRequestHandlerWithTranscoder[GetResponse, Option[GetResult]] {
+    extends KeyValueRequestHandlerWithTranscoder[GetResponse, GetResult] {
 
   def request[T](
       id: String,
@@ -60,21 +61,21 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
       id: String,
       response: GetResponse,
       transcoder: Transcoder
-  ): Option[GetResult] = {
+  ): GetResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(
-          GetResult(
-            id,
-            Left(response.content),
-            response.flags(),
-            response.cas,
-            Option.empty,
-            transcoder
-          )
+        GetResult(
+          id,
+          Left(response.content),
+          response.flags(),
+          response.cas,
+          Option.empty,
+          transcoder
         )
 
-      case ResponseStatus.NOT_FOUND => None
+      case ResponseStatus.NOT_FOUND =>
+        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        throw new DocumentNotFoundException(ctx)
 
       case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }

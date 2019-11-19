@@ -18,7 +18,11 @@ package com.couchbase.client.scala.kv.handlers
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.ReducedKeyValueErrorContext
+import com.couchbase.client.core.error.{
+  DocumentNotFoundException,
+  KeyValueErrorContext,
+  ReducedKeyValueErrorContext
+}
 import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
@@ -129,7 +133,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       response: SubdocGetResponse,
       withExpiration: Boolean,
       transcoder: Transcoder
-  ): Option[LookupInResult] = {
+  ): LookupInResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubDocumentField] = response.values()
@@ -145,21 +149,21 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
             } else true
           })
 
-          Some(
-            LookupInResult(
-              id,
-              removingExpTime,
-              DocumentFlags.Json,
-              response.cas(),
-              exptime,
-              transcoder
-            )
+          LookupInResult(
+            id,
+            removingExpTime,
+            DocumentFlags.Json,
+            response.cas(),
+            exptime,
+            transcoder
           )
         } else {
-          Some(LookupInResult(id, values, DocumentFlags.Json, response.cas(), None, transcoder))
+          LookupInResult(id, values, DocumentFlags.Json, response.cas(), None, transcoder)
         }
 
-      case ResponseStatus.NOT_FOUND => None
+      case ResponseStatus.NOT_FOUND =>
+        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        throw new DocumentNotFoundException(ctx)
 
       case ResponseStatus.SUBDOC_FAILURE =>
         response.error().asScala match {
@@ -179,7 +183,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       id: String,
       response: SubdocGetResponse,
       transcoder: Transcoder
-  ): Try[Option[GetResult]] = {
+  ): Try[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
         val values: Seq[SubDocumentField] = response.values()
@@ -194,10 +198,12 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         val y: Try[Seq[JsonObject]] = FunctionalUtil.traverse(x.toList)
 
         y.map(
-          _ => Some(GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None, transcoder))
+          _ => GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None, transcoder)
         )
 
-      case ResponseStatus.NOT_FOUND => Success(None)
+      case ResponseStatus.NOT_FOUND =>
+        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        Failure(new DocumentNotFoundException(ctx))
 
       case ResponseStatus.SUBDOC_FAILURE =>
         response.error().asScala match {

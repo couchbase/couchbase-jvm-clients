@@ -50,7 +50,9 @@ class QuerySpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname).get
-    cluster.queryIndexes.watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true).get
+    cluster.queryIndexes
+      .watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true)
+      .get
 
     bucketName = config.bucketname()
   }

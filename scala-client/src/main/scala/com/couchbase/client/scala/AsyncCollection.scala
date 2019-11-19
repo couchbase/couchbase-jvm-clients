@@ -224,26 +224,14 @@ class AsyncCollection(
         case Success(request) =>
           core.send(request)
 
-          val out: Future[GetResult] = FutureConverters
+          FutureConverters
             .toScala(request.response())
             .flatMap(response => {
-              val ret = getSubDocHandler.responseProject(request, id, response, transcoder) match {
-                case Success(v: Option[GetResult]) =>
-                  v match {
-                    case Some(x) => Future.successful(x)
-                    case _ => {
-                      val ctx = KeyValueErrorContext.completedRequest(request, response.status())
-                      Future.failed(new DocumentNotFoundException(ctx))
-                    }
-                  }
-
-                case Failure(err) => Future.failed(err)
+              getSubDocHandler.responseProject(request, id, response, transcoder) match {
+                case Success(v: GetResult) => Future.successful(v)
+                case Failure(err)          => Future.failed(err)
               }
-
-              ret
             })
-
-          out
 
         case Failure(err) => Future.failed(err)
       }
@@ -291,14 +279,8 @@ class AsyncCollection(
 
         FutureConverters
           .toScala(request.response())
-          .flatMap(response => {
-            getSubDocHandler
-              .response(request, id, response, withExpiry, transcoder) match {
-              case Some(x) => Future.successful(x)
-              case _ =>
-                val ctx = KeyValueErrorContext.completedRequest(request, response.status())
-                Future.failed(new DocumentNotFoundException(ctx))
-            }
+          .map(response => {
+            getSubDocHandler.response(request, id, response, withExpiry, transcoder)
           })
 
       case Failure(err) => Future.failed(err)
@@ -532,7 +514,7 @@ object AsyncCollection {
   private def wrapGet[Resp <: Response, Res](
       in: Try[KeyValueRequest[Resp]],
       id: String,
-      handler: KeyValueRequestHandlerWithTranscoder[Resp, Option[Res]],
+      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
       transcoder: Transcoder,
       core: Core
   )(implicit ec: ExecutionContext): Future[Res] = {
@@ -542,14 +524,8 @@ object AsyncCollection {
 
         FutureConverters
           .toScala(request.response())
-          .flatMap(response => {
-            handler
-              .response(request, id, response, transcoder) match {
-              case Some(x) => Future.successful(x)
-              case _ =>
-                val ctx = KeyValueErrorContext.completedRequest(request, response.status())
-                Future.failed(new DocumentNotFoundException(ctx))
-            }
+          .map(response => {
+            handler.response(request, id, response, transcoder)
           })
 
       case Failure(err) => Future.failed(err)

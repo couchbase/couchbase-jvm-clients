@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.error.{DocumentNotFoundException, KeyValueErrorContext}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetAndLockRequest, GetAndLockResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -23,7 +24,7 @@ import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.kv.{DefaultErrors, GetResult}
 import com.couchbase.client.scala.util.Validate
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Handles requests and responses for KV get-and-lock operations.
@@ -32,7 +33,7 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 private[scala] class GetAndLockHandler(hp: HandlerParams)
-    extends KeyValueRequestHandlerWithTranscoder[GetAndLockResponse, Option[GetResult]] {
+    extends KeyValueRequestHandlerWithTranscoder[GetAndLockResponse, GetResult] {
 
   def request[T](
       id: String,
@@ -68,21 +69,21 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
       id: String,
       response: GetAndLockResponse,
       transcoder: Transcoder
-  ): Option[GetResult] = {
+  ): GetResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        Some(
-          GetResult(
-            id,
-            Left(response.content),
-            response.flags(),
-            response.cas,
-            Option.empty,
-            transcoder
-          )
+        GetResult(
+          id,
+          Left(response.content),
+          response.flags(),
+          response.cas,
+          Option.empty,
+          transcoder
         )
 
-      case ResponseStatus.NOT_FOUND => None
+      case ResponseStatus.NOT_FOUND =>
+        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        throw new DocumentNotFoundException(ctx)
 
       case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
     }
