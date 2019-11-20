@@ -38,25 +38,19 @@ public class ReactiveCollectionManager {
    * Creates a collection if it does not already exist.
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionAlreadyExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public Mono<Void> createCollection(final CollectionSpec collectionSpec) {
     return toMono(() -> async.createCollection(collectionSpec));
   }
 
   /**
-   * Checks if the given collection exists in this bucket.
-   *
-   * @param collectionSpec the collection spec that contains the properties of the collection.
-   * @return true if it exists, false otherwise.
-   */
-  public Mono<Boolean> collectionExists(final CollectionSpec collectionSpec) {
-    return toMono(() -> async.collectionExists(collectionSpec));
-  }
-
-  /**
    * Drops a collection if it exists.
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec) {
     return toMono(() -> async.dropCollection(collectionSpec));
@@ -65,16 +59,18 @@ public class ReactiveCollectionManager {
   /**
    * Creates a scope if it does not already exist.
    *
-   * @param scopeSpec the scope spec that contains the properties of the scope.
+   * @param scopeName the name of the scope to create.
+   * @throws ScopeAlreadyExistsException (async) if the scope already exists.
    */
-  public Mono<Void> createScope(final ScopeSpec scopeSpec) {
-    return toMono(() -> async.createScope(scopeSpec));
+  public Mono<Void> createScope(final String scopeName) {
+    return toMono(() -> async.createScope(scopeName));
   }
 
   /**
    * Drops a scope if it exists.
    *
    * @param scopeName the name of the scope to drop.
+   * @throws ScopeNotFoundException (async) if the scope did not exist.
    */
   public Mono<Void> dropScope(final String scopeName) {
     return toMono(() -> async.dropScope(scopeName));
@@ -84,7 +80,8 @@ public class ReactiveCollectionManager {
    * Returns the scope if it exists.
    *
    * @param scopeName the name of the scope.
-   * @return a mono containing the {@link ScopeSpec} or an exception if it does not exist.
+   * @return a mono containing information about the scope.
+   * @throws ScopeNotFoundException (async) if scope does not exist.
    */
   public Mono<ScopeSpec> getScope(final String scopeName) {
     return toMono(() -> async.getScope(scopeName));

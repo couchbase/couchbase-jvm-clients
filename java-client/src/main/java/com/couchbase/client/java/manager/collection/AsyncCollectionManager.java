@@ -30,7 +30,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.manager.ManagerSupport;
-import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -73,6 +72,8 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
    * @return a {@link CompletableFuture} once the collection creation completed.
+   * @throws CollectionAlreadyExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec) {
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
@@ -87,53 +88,22 @@ public class AsyncCollectionManager extends ManagerSupport {
   }
 
   /**
-   * Checks if the given collection exists in this bucket.
-   *
-   * @param collectionSpec the collection spec that contains the properties of the collection.
-   * @return a {@link CompletableFuture} returning true if it exists, false otherwise.
-   */
-  public CompletableFuture<Boolean> collectionExists(final CollectionSpec collectionSpec) {
-    return loadManifest().thenApply(manifest -> {
-      for (CollectionsManifestScope scope : manifest.scopes()) {
-        if (scope.name().equals(collectionSpec.scopeName())) {
-          for (CollectionsManifestCollection collection : scope.collections()) {
-            if (collection.name().equals(collectionSpec.name())) {
-              return true;
-            }
-          }
-        }
-      }
-      return false;
-    });
-  }
-
-  /**
    * Creates a scope if it does not already exist.
    *
-   * @param scopeSpec the scope spec that contains the properties of the scope.
+   * @param scopeName the name of the scope to create.
    * @return a {@link CompletableFuture} once the scope creation completed.
+   * @throws ScopeAlreadyExistsException (async) if the scope already exists.
    */
-  public CompletableFuture<Void> createScope(final ScopeSpec scopeSpec) {
+  public CompletableFuture<Void> createScope(final String scopeName) {
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
       .create()
-      .add("name", scopeSpec.name());
+      .add("name", scopeName);
     final String path = pathForManifest(bucketName);
 
-    return Mono
-      .fromFuture(sendRequest(HttpMethod.POST, path, body).thenApply(response -> {
-        checkForErrors(response, scopeSpec.name(), null);
+    return sendRequest(HttpMethod.POST, path, body).thenApply(response -> {
+        checkForErrors(response, scopeName, null);
         return null;
-      }))
-      .then(Mono.defer(() -> {
-        List<Mono<Void>> collectionsCreated = scopeSpec
-          .collections()
-          .stream()
-          .map(s -> Mono.fromFuture(createCollection(s)))
-          .collect(Collectors.toList());
-
-        return collectionsCreated.isEmpty() ? Mono.empty() : Mono.when(collectionsCreated);
-      }))
-      .toFuture();
+      });
   }
 
   /**
@@ -141,6 +111,8 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
    * @return a {@link CompletableFuture} once the collection is dropped.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec) {
     final String path = pathForCollection(bucketName, collectionSpec.scopeName(), collectionSpec.name());
@@ -155,6 +127,7 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param scopeName the name of the scope to drop.
    * @return a {@link CompletableFuture} once the scope is dropped.
+   * @throws ScopeNotFoundException (async) if the scope did not exist.
    */
   public CompletableFuture<Void> dropScope(final String scopeName) {
     return sendRequest(HttpMethod.DELETE, pathForScope(bucketName, scopeName)).thenApply(response -> {
@@ -167,7 +140,8 @@ public class AsyncCollectionManager extends ManagerSupport {
    * Returns the scope if it exists.
    *
    * @param scopeName the name of the scope.
-   * @return a {@link CompletableFuture} containing the scope spec if it exists.
+   * @return a {@link CompletableFuture} containing information about the scope.
+   * @throws ScopeNotFoundException (async) if scope does not exist.
    */
   public CompletableFuture<ScopeSpec> getScope(final String scopeName) {
     return getAllScopes().thenApply(scopes -> {
