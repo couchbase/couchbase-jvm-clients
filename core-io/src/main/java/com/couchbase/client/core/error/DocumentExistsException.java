@@ -22,7 +22,7 @@ package com.couchbase.client.core.error;
  */
 public class DocumentExistsException extends CouchbaseException {
 
-  public DocumentExistsException(final KeyValueErrorContext ctx) {
+  public DocumentExistsException(final ErrorContext ctx) {
     super("Document with the given id already exists", ctx);
   }
 
