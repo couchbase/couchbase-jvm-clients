@@ -454,11 +454,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       () -> collection.upsert(id, JsonObject.empty(), upsertOptions().timeout(Duration.ofMillis(100))));
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
 
-    exception = assertThrows(
-      RequestTimeoutException.class,
-      () -> collection.unlock(id, locked.cas() + 1, unlockOptions().timeout(Duration.ofMillis(100)))
-    );
-    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
+    assertThrows(CasMismatchException.class, () -> collection.unlock(id, locked.cas() + 1));
 
     collection.unlock(id, locked.cas());
 
