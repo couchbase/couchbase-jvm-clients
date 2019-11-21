@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.ValueTooLargeException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.json.JsonObject;
@@ -646,4 +647,15 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(result.cas() != 0);
     assertEquals(0L, result.content());
   }
+
+  @Test
+  void throwsIfTooLarge() {
+    String id = UUID.randomUUID().toString();
+    JsonObject content = JsonObject.empty();
+    for (int i = 0; i < 400000; i++) {
+      content.put(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    }
+    assertThrows(ValueTooLargeException.class, () -> collection.upsert(id, content));
+  }
+
 }

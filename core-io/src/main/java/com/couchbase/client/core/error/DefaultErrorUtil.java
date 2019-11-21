@@ -33,7 +33,7 @@ public class DefaultErrorUtil {
             case TEMPORARY_FAILURE:
             case SERVER_BUSY:
                 return new TemporaryFailureException(errorContext);
-            case TOO_BIG: return ValueTooLargeException.forKey(id);
+            case TOO_BIG: return new ValueTooLargeException(errorContext);
             case EXISTS: return new CasMismatchException(errorContext);
             case NOT_STORED: return DocumentMutationLostException.forKey(id);
             case NOT_FOUND: return new DocumentNotFoundException(errorContext);

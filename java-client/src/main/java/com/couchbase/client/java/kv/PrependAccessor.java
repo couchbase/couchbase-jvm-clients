@@ -50,6 +50,7 @@ public class PrependAccessor {
           case SYNC_WRITE_AMBIGUOUS: throw new DurabilityAmbiguousException(ctx);
           case SYNC_WRITE_IN_PROGRESS: throw new DurableWriteInProgressException(ctx);
           case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
+          case TOO_BIG: throw new ValueTooLargeException(ctx);
           default: throw new CouchbaseException("Prepend operation failed", ctx);
         }
       });

@@ -168,6 +168,7 @@ public enum GetAccessor {
     Optional<Duration> expiration = exptime == null
       ? Optional.empty()
       : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
+
     return new GetResult(content, CodecFlags.JSON_COMPAT_FLAGS, cas, expiration, transcoder);
   }
 

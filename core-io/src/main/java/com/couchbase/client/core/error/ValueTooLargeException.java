@@ -15,26 +15,15 @@
  */
 package com.couchbase.client.core.error;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-
 /**
  * Thrown when the request is too big for some reason.
  *
  * @since 3.0
  */
 public class ValueTooLargeException extends CouchbaseException {
-  private final String key;
 
-  private ValueTooLargeException(String key) {
-    super("The value for key [" + redactUser(key) + "] is too large.");
-    this.key = key;
+  public ValueTooLargeException(final ErrorContext ctx) {
+    super("The document value is too large to be stored", ctx);
   }
 
-  public static ValueTooLargeException forKey(String key) {
-    return new ValueTooLargeException(key);
-  }
-
-  public String key() {
-    return key;
-  }
 }
