@@ -1,8 +1,18 @@
-//def PLATFORMS = [ "ubuntu16", "windows" ]
+// Want to make this matrix/parameterised, but:
+// - Cannot make a proper matrix Jenkins project that's also pipeline
+// - Seems to be no way to do e.g. multiple JDKs in a declarative pipeline
+// - Can do it with scripted pipeline, but anything inside a node {} block won't trigger the post block, so can't gather junit results
+// So, for now, everything is hard-coded.  It's unlikely to change often.
 def PLATFORMS = ["ubuntu16"]
 def DEFAULT_PLATFORM = PLATFORMS[0]
 def platform = DEFAULT_PLATFORM
 def LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14'
+def QUICK_TEST_MODE = false // to support quicker development iteration
+def ORACLE_JDK = "java"
+def ORACLE_JDK_8 = "8u192"
+def OPENJDK = "openjdk"
+def OPENJDK_8 = "8u202-b08"
+def OPENJDK_11 = "11.0.2+7"
 
 pipeline {
     agent { label 'master' }
@@ -27,13 +37,6 @@ pipeline {
             steps {
                 error("Exiting early as not valid run")
             }
-            post {
-                always {
-                    slackSend channel: '#sdk-builds',
-                            color: 'good',
-                            message: "THIS IS A TEST!! The pipeline ${currentBuild.fullDisplayName} completed successfully."
-                }
-            }
         }
 
         // Validations are intended to make sure that the commit is sane.  Things like code-formatting rules and basic
@@ -54,52 +57,59 @@ pipeline {
             // Hit a random scalafmt error when running on other Linux platforms...
             agent { label DEFAULT_PLATFORM }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/java-${JAVA_VERSION}"
-                PATH = "${WORKSPACE}/deps/java-${JAVA_VERSION}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             steps {
                 // Is cleanWs strictly needed?  Probably not, but hit odd AccessDeniedException errors without it...
+                // Update: and 'stale source detected' errors - just, always safer to clean then unstash
                 cleanWs()
                 unstash 'couchbase-jvm-clients'
-                installJDKIfNeeded(platform, JAVA_VERSION)
+                installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
 
                 dir('couchbase-jvm-clients') {
+                    shWithEcho("echo $JAVA_HOME")
+                    shWithEcho("ls $JAVA_HOME")
+                    shWithEcho("echo $PATH")
                     shWithEcho("java -version")
                     shWithEcho("make deps-only")
 
                     // Skips the tests, that's done in other stages
                     // The -B -Dorg... stuff hides download progress messages, very verbose
-                    // shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
 
                     // This is to speed up iteration during development, skips out some stuff
-                    shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
                 }
 
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
             }
         }
 
-        // Test against mock - do for gerrit changes
-        stage('validation testing (mock)') {
+        // Test against mock - this skips a lot of tests, and is intended for quick validation
+        stage('validation testing (mock, Oracle JDK 8)') {
             agent { label LINUX_AGENTS }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/java-${JAVA_VERSION}"
-                PATH = "${WORKSPACE}/deps/java-${JAVA_VERSION}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == true }
             }
             steps {
-                unstash 'couchbase-jvm-clients'
-                installJDKIfNeeded(platform, JAVA_VERSION)
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
 
-                dir('couchbase-jvm-clients') {
-                    // By default Java and Scala use mock for testing
-                    shWithEcho("mvn --fail-at-end test")
+                    dir('couchbase-jvm-clients') {
+                        // By default Java and Scala use mock for testing
+                        shWithEcho("mvn --fail-at-end test")
 
-                    // While iterating Jenkins development, this makes it much faster:
-                    // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+                        // While iterating Jenkins development, this makes it much faster:
+                        // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+                    }
                 }
             }
             post {
@@ -113,28 +123,87 @@ pipeline {
         }
 
         // Test against cbdyncluster - do for nightly tests
-        stage('testing linux (cbdyncluster)') {
+        // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
+        stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8) ') {
             agent { label 'sdk-integration-test-linux' }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/java-${JAVA_VERSION}"
-                PATH = "${WORKSPACE}/deps/java-${JAVA_VERSION}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                installJDKIfNeeded(platform, JAVA_VERSION)
-
-                dir('couchbase-jvm-clients') {
-                    script {
-                        testAgainstServer(SERVER_TEST_VERSION)
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
                     }
                 }
             }
             post {
                 always {
-                    // Process the Junit test results
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+                failure { emailFailure() }
+                success { emailSuccess() }
+            }
+        }
+
+        stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8) ') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("6.0.3", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+                failure { emailFailure() }
+                success { emailSuccess() }
+            }
+        }
+
+        stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8) ') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("5.5.5", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
                 }
                 failure { emailFailure() }
@@ -143,22 +212,26 @@ pipeline {
         }
 
         // Someone smarter than I could work out how to parameterise linux & windows testing without C&P...
-        stage('testing windows (cbdyncluster)') {
+        stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8) ') {
             agent { label 'sdk-integration-test-windows' }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/java-${JAVA_VERSION}"
-                PATH = "${WORKSPACE}/deps/java-${JAVA_VERSION}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                installJDKIfNeeded("windows", JAVA_VERSION)
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded("windows", ORACLE_JDK, ORACLE_JDK_8)
 
-                dir('couchbase-jvm-clients') {
-                    script {
-                        testAgainstServer(SERVER_TEST_VERSION)
+                    dir('couchbase-jvm-clients') {
+                        script {
+                            testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE)
+                        }
                     }
                 }
             }
@@ -170,8 +243,67 @@ pipeline {
             }
         }
 
+        stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11) ') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+                failure { emailFailure() }
+                success { emailSuccess() }
+            }
+        }
+
+        stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8) ') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+                failure { emailFailure() }
+                success { emailSuccess() }
+            }
+        }
+
         stage('package') {
             steps {
+                cleanWs()
                 unstash 'couchbase-jvm-clients'
 
                 dir('couchbase-jvm-clients') {
@@ -203,14 +335,13 @@ void emailFailure() {
 void shWithEcho(String command) {
     if (NODE_NAME.contains("windows")) {
         echo bat(script: command, returnStdout: true)
-    }
-    else {
+    } else {
         echo sh(script: command, returnStdout: true)
     }
 }
 
 // Installs JDK to the workspace using cbdep tool
-def installJDKIfNeeded(PLATFORM, JAVA_VERSION) {
+String installJDKIfNeeded(platform, javaPackage, javaVersion) {
     def install = false
 
     echo "checking install"
@@ -220,23 +351,18 @@ def installJDKIfNeeded(PLATFORM, JAVA_VERSION) {
     } else {
         echo "file deps does exist"
         dir("deps") {
-            install = !fileExists("java-${JAVA_VERSION}")
+            install = !fileExists("$javaPackage-${javaVersion}")
             if (install) {
-                echo "java-${JAVA_VERSION} exists"
+                echo "$javaPackage-${javaVersion} exists"
             } else {
-                echo "java-${JAVA_VERSION} does not exist"
+                echo "$javaPackage-${javaVersion} does not exist"
             }
         }
     }
 
     if (install) {
-        if (PLATFORM.contains("windows")) {
-            shWithEcho("mkdir deps && mkdir deps\\java-${JAVA_VERSION}")
-            shWithEcho("cbdep install -d deps java ${JAVA_VERSION}")
-        } else {
-            shWithEcho("mkdir deps && mkdir deps/java-${JAVA_VERSION}")
-            shWithEcho("cbdep install -d deps java ${JAVA_VERSION}")
-        }
+        shWithEcho("mkdir -p deps && mkdir -p deps/$javaPackage-${javaVersion}")
+        shWithEcho("cbdep install -d deps $javaPackage ${javaVersion}")
     }
 }
 
@@ -253,13 +379,19 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 
 // To be called inside a script {} block - required so can do try-finally logic to cleanup the cbdyncluster
 // (Inside a script {} block is 'scripted pipeline' syntax, different to the 'declarative pipeline' syntax elsewhere.)
-void testAgainstServer(String serverVersion) {
+void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE) {
     def clusterId = null
     try {
+        // For debugging
+        shWithEcho("echo $JAVA_HOME")
+        shWithEcho("ls $JAVA_HOME")
+        shWithEcho("echo $PATH")
+        shWithEcho("java -version")
+
         // For debugging, what clusters are open
         shWithEcho("cbdyncluster ps -a")
 
-        // May need to remove some if they're stuck.  -f forces, allows deleting cluster we didn't open
+        // May need to remove some manually if they're stuck.  -f forces, allows deleting cluster we didn't open
         // shWithEcho("cbdyncluster rm -f 3d023261")
 
         // Allocate the cluster
@@ -277,30 +409,37 @@ void testAgainstServer(String serverVersion) {
         createIntegrationTestPropertiesFile('scala-client/src/integrationTest/resources/integration.properties', ip)
 
         // Create the cluster
-        //shWithEcho("cbdyncluster --node kv,index,n1ql,fts --node kv --node kv --bucket default setup $clusterId")
-
-        // During development, this is faster (less tests)
-        shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
+        if (!QUICK_TEST_MODE) {
+            shWithEcho("cbdyncluster --node kv,index,n1ql,fts,cbas --node kv --node kv --bucket default setup $clusterId")
+        } else {
+            // During development, this is faster (less tests)
+            shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
+        }
 
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")
 
-        // Not enitrely sure why this is needed, should be around in the stash from the build phase
+        // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
 
         // The -B -Dorg... stuff hides download progress messages, very verbose
-        // shWithEcho("mvn --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+        if (!QUICK_TEST_MODE) {
+            // Removing scala for now
+            shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+        } else {
+            // This is for iteration during development, skips out some steps
+            shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
 
-        // This is for iteration during development, skips out some steps
-        shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            // While iterating Jenkins development, this makes it much faster:
+            // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+        }
 
-        // While iterating Jenkins development, this makes it much faster:
-        // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
     }
     finally {
         if (clusterId != null) {
             // Easy to run out of resources during iterating, so cleanup even
             // though cluster will be auto-removed after a time
+
             sh(script: "cbdyncluster rm $clusterId")
         }
     }
