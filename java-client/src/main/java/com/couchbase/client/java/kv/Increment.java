@@ -16,12 +16,9 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * An intention to perform a SubDocument increment operation.
@@ -30,11 +27,11 @@ import static com.couchbase.client.core.util.Validators.notNull;
  * @since 1.0.0
  */
 public class Increment extends MutateInSpec {
+
     private final String path;
     private final long delta;
     private boolean xattr = false;
     private boolean createPath = false;
-    private JsonSerializer serializer;
 
     Increment(String path, long delta) {
         this.path = path;
@@ -59,22 +56,7 @@ public class Increment extends MutateInSpec {
         return this;
     }
 
-    /**
-     * Allows to customize the serializer used to encode the value.
-     *
-     * @param serializer the serializer that should be used.
-     * @return this, for chaining
-     */
-    @Deprecated
-    @Stability.Internal
-    public Increment serializer(final JsonSerializer serializer) {
-        notNull(serializer, "Serializer");
-        this.serializer = serializer;
-        return this;
-    }
-
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
-        JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
+    public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
         return new SubdocMutateRequest.Command(
                 SubdocCommandType.COUNTER,
                 path,

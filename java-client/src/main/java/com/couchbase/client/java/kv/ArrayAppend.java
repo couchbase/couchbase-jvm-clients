@@ -16,20 +16,11 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.JsonSerializer;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * An intention to perform a SubDocument array append operation.
@@ -38,12 +29,12 @@ import static com.couchbase.client.core.util.Validators.notNull;
  * @since 1.0.0
  */
 public class ArrayAppend extends MutateInSpec {
+
     private final String path;
     private final List<?> doc;
     private boolean xattr = false;
     private boolean expandMacro = false;
     private boolean createPath = false;
-    private JsonSerializer serializer;
 
     ArrayAppend(String path, List<?> doc) {
         this.path = path;
@@ -68,23 +59,7 @@ public class ArrayAppend extends MutateInSpec {
         return this;
     }
 
-    /**
-     * Allows to customize the serializer used to encode the value.
-     *
-     * @param serializer the serializer that should be used.
-     * @return this, for chaining
-     */
-    @Deprecated
-    @Stability.Internal
-    public ArrayAppend serializer(final JsonSerializer serializer) {
-        notNull(serializer, "Serializer");
-        this.serializer = serializer;
-        return this;
-    }
-
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
-        JsonSerializer serializer = this.serializer == null ? defaultSerializer : this.serializer;
-
+    public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
         return new SubdocMutateRequest.Command(
             SubdocCommandType.ARRAY_PUSH_LAST,
             path,
