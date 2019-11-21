@@ -28,7 +28,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
  *
  * @since 2.0.0
  */
-abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF>> extends CommonOptions<SELF> {
+public abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptions<SELF>> extends CommonOptions<SELF> {
 
   /**
    * The custom durability persistence setting, if set.

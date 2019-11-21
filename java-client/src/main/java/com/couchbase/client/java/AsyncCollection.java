@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.AggregateErrorContext;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -30,6 +31,7 @@ import com.couchbase.client.core.error.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
@@ -48,6 +50,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
@@ -70,10 +73,12 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -676,7 +681,7 @@ public class AsyncCollection {
    */
   RemoveRequest removeRequest(final String id, final RemoveOptions.Built opts) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
       coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
@@ -721,7 +726,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
@@ -769,7 +774,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
@@ -830,7 +835,7 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
@@ -1047,7 +1052,7 @@ public class AsyncCollection {
     } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
       throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     } else {
-      Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+      Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
       JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
@@ -1068,6 +1073,32 @@ public class AsyncCollection {
       );
       request.context().clientContext(opts.clientContext());
       return request;
+    }
+  }
+
+  /**
+   * Helper method to decide if the user timeout, the kv timeout or the durable kv timeout should be used.
+   *
+   * @param opts the built opts from the command.
+   * @param config the env timeout config to use if not overridden by the user.
+   * @return the timeout to use for the op.
+   */
+  @SuppressWarnings("unchecked")
+  static Duration decideKvTimeout(CommonDurabilityOptions.BuiltCommonDurabilityOptions opts, TimeoutConfig config) {
+    Optional<Duration> userTimeout = opts.timeout();
+    if (userTimeout.isPresent()) {
+      return userTimeout.get();
+    }
+
+    boolean syncDurability = opts.durabilityLevel().isPresent() && (
+      opts.durabilityLevel().get() == DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER
+      || opts.durabilityLevel().get() == DurabilityLevel.PERSIST_TO_MAJORITY);
+    boolean pollDurability = opts.persistTo() != PersistTo.NONE;
+
+    if (syncDurability || pollDurability) {
+      return config.kvDurableTimeout();
+    } else {
+      return config.kvTimeout();
     }
   }
 

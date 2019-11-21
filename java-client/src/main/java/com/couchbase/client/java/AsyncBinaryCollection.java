@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.AsyncCollection.decideKvTimeout;
 import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_APPEND_OPTIONS;
 import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_DECREMENT_OPTIONS;
 import static com.couchbase.client.java.ReactiveBinaryCollection.DEFAULT_INCREMENT_OPTIONS;
@@ -74,7 +75,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     AppendRequest request = new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
@@ -96,7 +97,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     PrependRequest request = new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel());
@@ -116,7 +117,7 @@ public class AsyncBinaryCollection {
 
   IncrementRequest incrementRequest(final String id, final IncrementOptions.Built opts) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
@@ -136,7 +137,7 @@ public class AsyncBinaryCollection {
 
   DecrementRequest decrementRequest(final String id, final DecrementOptions.Built opts) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());

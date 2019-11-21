@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -26,6 +27,7 @@ import java.util.Optional;
 public class TimeoutConfig {
 
   public static final Duration DEFAULT_KV_TIMEOUT = Duration.ofMillis(2500);
+  public static final Duration DEFAULT_KV_DURABLE_TIMEOUT = Duration.ofSeconds(10);
   public static final Duration DEFAULT_MANAGEMENT_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_VIEW_TIMEOUT = Duration.ofSeconds(75);
@@ -35,6 +37,7 @@ public class TimeoutConfig {
   public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(10);
 
   private final Duration kvTimeout;
+  private final Duration kvDurableTimeout;
   private final Duration managementTimeout;
   private final Duration queryTimeout;
   private final Duration viewTimeout;
@@ -45,6 +48,7 @@ public class TimeoutConfig {
 
   private TimeoutConfig(final Builder builder) {
     kvTimeout = Optional.ofNullable(builder.kvTimeout).orElse(DEFAULT_KV_TIMEOUT);
+    kvDurableTimeout = Optional.ofNullable(builder.kvDurableTimeout).orElse(DEFAULT_KV_DURABLE_TIMEOUT);
     managementTimeout = Optional.ofNullable(builder.managementTimeout).orElse(DEFAULT_MANAGEMENT_TIMEOUT);
     queryTimeout = Optional.ofNullable(builder.queryTimeout).orElse(DEFAULT_QUERY_TIMEOUT);
     viewTimeout = Optional.ofNullable(builder.viewTimeout).orElse(DEFAULT_VIEW_TIMEOUT);
@@ -64,6 +68,11 @@ public class TimeoutConfig {
 
   public static Builder kvTimeout(Duration kvTimeout) {
     return builder().kvTimeout(kvTimeout);
+  }
+
+  @Stability.Volatile
+  public static Builder kvDurableTimeout(Duration kvDurableTimeout) {
+    return builder().kvDurableTimeout(kvDurableTimeout);
   }
 
   public static Builder managementTimeout(Duration managementTimeout) {
@@ -98,6 +107,11 @@ public class TimeoutConfig {
 
   public Duration kvTimeout() {
     return kvTimeout;
+  }
+
+  @Stability.Volatile
+  public Duration kvDurableTimeout() {
+    return kvDurableTimeout;
   }
 
   public Duration managementTimeout() {
@@ -136,6 +150,7 @@ public class TimeoutConfig {
     Map<String, Object> export = new LinkedHashMap<>();
 
     export.put("kvMs", kvTimeout.toMillis());
+    export.put("kvDurableMs", kvDurableTimeout.toMillis());
     export.put("managementMs", managementTimeout.toMillis());
     export.put("queryMs", queryTimeout.toMillis());
     export.put("viewMs", viewTimeout.toMillis());
@@ -151,6 +166,7 @@ public class TimeoutConfig {
   public static class Builder {
 
     private Duration kvTimeout = null;
+    private Duration kvDurableTimeout = null;
     private Duration managementTimeout = null;
     private Duration queryTimeout = null;
     private Duration viewTimeout = null;
@@ -172,6 +188,18 @@ public class TimeoutConfig {
      */
     public Builder kvTimeout(Duration kvTimeout) {
       this.kvTimeout = kvTimeout;
+      return this;
+    }
+
+    /**
+     * Sets the timeout to use for key-value operations if {@link DurabilityLevel} is set.
+     *
+     * <p>The default is 10 seconds.</p>
+     *
+     * @return this, for chaining
+     */
+    public Builder kvDurableTimeout(Duration kvDurableTimeout) {
+      this.kvDurableTimeout = kvDurableTimeout;
       return this;
     }
 
