@@ -125,7 +125,11 @@ public class KeyValueLocator implements Locator {
       return;
     }
 
-    throw new IllegalStateException("Node not found for request" + request);
+    if (ctx.core().configurationProvider().bucketConfigLoadInProgress()) {
+      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.BUCKET_OPEN_IN_PROGRESS);
+    } else {
+      throw new IllegalStateException("Node not found for request" + request);
+    }
   }
 
   private static boolean precheckCouchbaseBucket(final KeyValueRequest<?> request, final CouchbaseBucketConfig config) {

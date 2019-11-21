@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
@@ -95,6 +96,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
+
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
 
     try {
       String id = UUID.randomUUID().toString();
@@ -168,6 +171,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+  @SuppressWarnings("unchecked")
   void failsIfMoreThanOneTrustPresent() {
     assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
       .enableTls(true)
@@ -178,6 +182,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+  @SuppressWarnings("unchecked")
   void failsIfWrongCertPresent() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = secureEnvironment(SecurityConfig
@@ -186,22 +191,22 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     Core core = Core.create(env, authenticator(), secureSeeds());
 
     try {
-      // TODO assertThrows(Exception.class, () -> core.openBucket(config().bucketname()));
+      core.openBucket(config().bucketname());
 
-      assertTrue(eventBus.publishedEvents().size() > 0);
-      boolean hasEndpointConnectFailedEvent = false;
-      boolean hasSecureConnectionFailedEvent = false;
-      for (Event event : eventBus.publishedEvents()) {
-        if (event instanceof EndpointConnectionFailedEvent) {
-          hasEndpointConnectFailedEvent = true;
+      waitUntilCondition(() -> {
+        boolean hasEndpointConnectFailedEvent = false;
+        boolean hasSecureConnectionFailedEvent = false;
+        for (Event event : eventBus.publishedEvents()) {
+          if (event instanceof EndpointConnectionFailedEvent) {
+            hasEndpointConnectFailedEvent = true;
+          }
+          if (event instanceof SecureConnectionFailedEvent) {
+            hasSecureConnectionFailedEvent = true;
+          }
         }
-        if (event instanceof SecureConnectionFailedEvent) {
-          hasSecureConnectionFailedEvent = true;
-        }
-      }
 
-      assertTrue(hasEndpointConnectFailedEvent);
-      assertTrue(hasSecureConnectionFailedEvent);
+        return hasEndpointConnectFailedEvent && hasSecureConnectionFailedEvent;
+      });
     } finally {
       core.shutdown().block();
       env.shutdown();
