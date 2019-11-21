@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.error.DataverseExistsException;
+import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.AsyncCluster;
 import reactor.core.publisher.Mono;
 
@@ -32,14 +34,14 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   /**
-   * @throws DataverseAlreadyExistsException if a dataverse with the given name already exists
+   * @throws DataverseExistsException if a dataverse with the given name already exists
    */
   public Mono<Void> createDataverse(String dataverseName) {
     return toMono(() -> async.createDataverse(dataverseName));
   }
 
   /**
-   * @throws DataverseAlreadyExistsException if a dataverse with the given name already exist
+   * @throws DataverseExistsException if a dataverse with the given name already exist
    *                                         and the options do not specify to ignore this condition.
    */
   public Mono<Void> createDataverse(String dataverseName, CreateDataverseAnalyticsOptions options) {

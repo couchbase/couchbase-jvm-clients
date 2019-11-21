@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.analytics;
+package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.AnalyticsException;
+public class QueryIndexNotFoundException extends CouchbaseException {
 
-public class DatasetAlreadyExistsException extends AnalyticsException {
-  public DatasetAlreadyExistsException(AnalyticsException cause) {
-    super(cause);
+  public QueryIndexNotFoundException(String indexName) {
+    super("Query Index \"" + indexName + "\" not found");
   }
+
+  public QueryIndexNotFoundException(ErrorContext errorContext) {
+    super("Query Index not found", errorContext);
+  }
+
 }

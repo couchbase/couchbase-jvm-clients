@@ -17,6 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.ParsingFailedException;
+import com.couchbase.client.core.error.QueryErrorContext;
 import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -133,12 +136,12 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @Test
     void readOnlyViolation() {
         QueryOptions options = queryOptions().readonly(true);
-        QueryException e = assertThrows(QueryException.class, () ->
+        CouchbaseException e = assertThrows(CouchbaseException.class, () ->
             cluster.query(
                 "INSERT INTO " + bucketName + " (KEY, VALUE) values (\"foo\", \"bar\")",
                 options
             ));
-        assertEquals(1000, e.code());
+        assertEquals(1000, ((QueryErrorContext) e.context()).errors().get(0).code());
     }
 
     @Test
@@ -217,13 +220,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failOnSyntaxError() {
-        try {
-            cluster.query("invalid export");
-        }
-        catch (QueryException err) {
-            assertEquals("syntax error - at export", err.msg());
-            assertEquals(3000, err.code());
-        }
+        assertThrows(ParsingFailedException.class, () -> cluster.query("invalid export"));
     }
 
     @Test

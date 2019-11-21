@@ -16,9 +16,10 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.error.QueryIndexExistsException;
+import com.couchbase.client.core.error.QueryIndexNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
@@ -89,7 +90,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void createDuplicatePrimaryIndex() {
     indexes.createPrimaryIndex(bucketName);
-    assertThrows(QueryIndexAlreadyExistsException.class, () -> indexes.createPrimaryIndex(bucketName));
+    assertThrows(QueryIndexExistsException.class, () -> indexes.createPrimaryIndex(bucketName));
 
     // but this should succeed
     indexes.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions()
@@ -102,7 +103,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     final Set<String> fields = setOf("fieldA", "fieldB");
 
     indexes.createIndex(bucketName, indexName, fields);
-    assertThrows(QueryIndexAlreadyExistsException.class,
+    assertThrows(QueryIndexExistsException.class,
         () -> indexes.createIndex(bucketName, indexName, fields));
 
     // but this should succeed
@@ -328,7 +329,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     createPrimary.block(); // subscribe; this should trigger index creation
 
     // subscribe again and expect the Mono to try creating the index again.
-    assertThrows(QueryIndexAlreadyExistsException.class, createPrimary::block);
+    assertThrows(QueryIndexExistsException.class, createPrimary::block);
   }
 
   private static void assertNoIndexesPresent() {

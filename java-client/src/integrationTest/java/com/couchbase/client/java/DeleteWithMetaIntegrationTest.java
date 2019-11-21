@@ -22,7 +22,6 @@ import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.DeleteWithMetaRequest;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.DeleteWithMetaAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
@@ -35,17 +34,14 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -59,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class DeleteWithMetaIntegrationTest extends JavaIntegrationTest {
 
     static private Cluster cluster;
-    static private ClusterEnvironment environment;
     static private Collection collection;
     static private boolean isLastWriteWinsBucket;
 
@@ -161,7 +156,7 @@ class DeleteWithMetaIntegrationTest extends JavaIntegrationTest {
         assertThrows(PathNotFoundException.class, () ->
                 collection.lookupIn(id,
                         Arrays.asList(LookupInSpec.get("txn").xattr()),
-                        LookupInOptions.lookupInOptions()));
+                        LookupInOptions.lookupInOptions()).contentAsObject(0));
 
     }
 

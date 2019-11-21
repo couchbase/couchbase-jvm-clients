@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.query;
+package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.QueryException;
+public class QueryIndexExistsException extends CouchbaseException {
 
-public class QueryIndexAlreadyExistsException extends QueryException {
-  public QueryIndexAlreadyExistsException(QueryException cause) {
-    super(cause);
+  public QueryIndexExistsException(String indexName) {
+    super("Query Index \"" + indexName + "\" already exists");
   }
+
+  public QueryIndexExistsException(ErrorContext errorContext) {
+    super("Query Index already exists", errorContext);
+  }
+
 }

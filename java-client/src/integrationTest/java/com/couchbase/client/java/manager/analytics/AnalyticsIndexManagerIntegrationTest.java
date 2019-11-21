@@ -17,6 +17,13 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.error.AnalyticsIndexExistsException;
+import com.couchbase.client.core.error.AnalyticsIndexNotFoundException;
+import com.couchbase.client.core.error.AnalyticsLinkNotFoundException;
+import com.couchbase.client.core.error.DatasetExistsException;
+import com.couchbase.client.core.error.DatasetNotFoundException;
+import com.couchbase.client.core.error.DataverseExistsException;
+import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -123,7 +130,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   void createDataverseFailsIfAlreadyExists() {
     analytics.createDataverse(name);
 
-    assertThrows(DataverseAlreadyExistsException.class, () -> analytics.createDataverse(name));
+    assertThrows(DataverseExistsException.class, () -> analytics.createDataverse(name));
   }
 
   @Test
@@ -177,7 +184,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void createDatasetFailsIfAlreadyExists() {
     analytics.createDataset("foo", bucket.name());
-    assertThrows(DatasetAlreadyExistsException.class, () -> analytics.createDataset("foo", bucket.name()));
+    assertThrows(DatasetExistsException.class, () -> analytics.createDataset("foo", bucket.name()));
   }
 
   @Test
@@ -323,7 +330,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     analytics.createIndex(index, dataset, fields);
 
-    assertThrows(AnalyticsIndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields));
+    assertThrows(AnalyticsIndexExistsException.class, () -> analytics.createIndex(index, dataset, fields));
 
     // do the ignoreIfExists check here to, since the setup is a pain
     analytics.createIndex(index, dataset, fields,
@@ -335,7 +342,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createIndexAnalyticsOptions()
             .dataverseName(dataverse));
 
-    assertThrows(AnalyticsIndexAlreadyExistsException.class, () -> analytics.createIndex(index, dataset, fields,
+    assertThrows(AnalyticsIndexExistsException.class, () -> analytics.createIndex(index, dataset, fields,
         createIndexAnalyticsOptions()
             .dataverseName(dataverse)));
 

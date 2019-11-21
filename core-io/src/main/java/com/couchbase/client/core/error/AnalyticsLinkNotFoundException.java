@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.analytics;
+package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.AnalyticsException;
-
-public class DatasetNotFoundException extends AnalyticsException {
-  public DatasetNotFoundException(AnalyticsException cause) {
-    super(cause);
+public class AnalyticsLinkNotFoundException extends CouchbaseException {
+  public AnalyticsLinkNotFoundException(final ErrorContext ctx) {
+    super("The analytics link is not found", ctx);
   }
 }

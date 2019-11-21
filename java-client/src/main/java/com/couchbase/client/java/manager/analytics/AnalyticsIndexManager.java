@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.error.DataverseExistsException;
+import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.Cluster;
 
 import java.util.List;
@@ -41,14 +43,14 @@ public class AnalyticsIndexManager {
   }
 
   /**
-   * @throws DataverseAlreadyExistsException if a dataverse with the given name already exists
+   * @throws DataverseExistsException if a dataverse with the given name already exists
    */
   public void createDataverse(String dataverseName) {
     block(async.createDataverse(dataverseName));
   }
 
   /**
-   * @throws DataverseAlreadyExistsException if a dataverse with the given name already exist
+   * @throws DataverseExistsException if a dataverse with the given name already exist
    *                                         and the options do not specify to ignore this condition.
    */
   public void createDataverse(String dataverseName, CreateDataverseAnalyticsOptions options) {

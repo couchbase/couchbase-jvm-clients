@@ -365,6 +365,11 @@ public class Core {
   @Stability.Internal
   public Mono<Void> ensureServiceAt(final NodeIdentifier identifier, final ServiceType serviceType, final int port,
                                     final Optional<String> bucket, final Optional<String> alternateAddress) {
+    if (shutdown.get()) {
+      // We don't want do add a node if we are already shutdown!
+      return Mono.empty();
+    }
+
     return Flux
       .fromIterable(nodes)
       .filter(n -> n.identifier().equals(identifier))
@@ -443,11 +448,16 @@ public class Core {
       .then();
   }
 
+  @Stability.Internal
+  public Mono<Void> shutdown() {
+    return shutdown(coreContext.environment().timeoutConfig().disconnectTimeout());
+  }
+
   /**
    * Shuts down this core and all associated, owned resources.
    */
   @Stability.Internal
-  public Mono<Void> shutdown() {
+  public Mono<Void> shutdown(Duration timeout) {
     return Mono.defer(() -> {
       long start = System.nanoTime();
       if (shutdown.compareAndSet(false, true)) {
@@ -464,7 +474,7 @@ public class Core {
           .then();
       }
       return Mono.empty();
-    });
+    }).timeout(timeout);
   }
 
   /**

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.analytics;
+package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.AnalyticsException;
+public class DataverseNotFoundException extends CouchbaseException {
 
-public class DataverseAlreadyExistsException extends AnalyticsException {
-  public DataverseAlreadyExistsException(AnalyticsException cause) {
-    super(cause);
+  public DataverseNotFoundException(final ErrorContext ctx) {
+    super("The analytics dataverse is not found", ctx);
   }
+
 }

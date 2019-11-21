@@ -17,6 +17,8 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.QueryException;
+import com.couchbase.client.core.error.QueryIndexExistsException;
+import com.couchbase.client.core.error.QueryIndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -82,7 +84,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexAlreadyExistsException.class)) {
+          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexExistsException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -107,7 +109,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexAlreadyExistsException.class)) {
+          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexExistsException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -265,7 +267,7 @@ public class AsyncQueryIndexManager {
               .anyMatch(QueryIndex::primary);
 
           if (includePrimary && !primaryIndexPresent) {
-            throw QueryIndexNotFoundException.notFound("#primary");
+            throw new QueryIndexNotFoundException("#primary");
           }
 
           final Set<String> matchingIndexNames = matchingIndexes.stream()
@@ -274,7 +276,7 @@ public class AsyncQueryIndexManager {
 
           final Set<String> missingIndexNames = difference(indexNames, matchingIndexNames);
           if (!missingIndexNames.isEmpty()) {
-            throw QueryIndexNotFoundException.notFound(missingIndexNames.toString());
+            throw new QueryIndexNotFoundException(missingIndexNames.toString());
           }
 
           final Map<String, String> offlineIndexNameToState = matchingIndexes.stream()
@@ -322,17 +324,6 @@ public class AsyncQueryIndexManager {
   }
 
   private static final Map<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> errorMessageMap = new LinkedHashMap<>();
-
-  static {
-    // N1QL error codes: https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/n1ql-error-codes.html
-
-    errorMessageMap.put(code(4300), QueryIndexAlreadyExistsException::new);
-    errorMessageMap.put(message("index .* already exists"), QueryIndexAlreadyExistsException::new);
-
-    errorMessageMap.put(code(12004), QueryIndexNotFoundException::new); // primary index not found
-    errorMessageMap.put(code(12016), QueryIndexNotFoundException::new);
-    errorMessageMap.put(message("index .* not found"), QueryIndexNotFoundException::new);
-  }
 
   private static Predicate<QueryException> code(int code) {
     return e -> e.code() == code;

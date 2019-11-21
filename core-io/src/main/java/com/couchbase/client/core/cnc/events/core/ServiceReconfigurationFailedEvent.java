@@ -53,7 +53,7 @@ public class ServiceReconfigurationFailedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Service " + serviceType + " on " + redactSystem(hostname) + "failed to reconfigure: "
+    return "Service " + serviceType + " on " + redactSystem(hostname) + " failed to reconfigure: "
       + reason.getMessage();
   }
 }

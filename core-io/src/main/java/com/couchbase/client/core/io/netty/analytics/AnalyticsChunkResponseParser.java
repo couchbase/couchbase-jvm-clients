@@ -18,10 +18,16 @@ package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.error.AnalyticsErrorContext;
 import com.couchbase.client.core.error.AnalyticsException;
+import com.couchbase.client.core.error.AnalyticsIndexExistsException;
+import com.couchbase.client.core.error.AnalyticsIndexNotFoundException;
+import com.couchbase.client.core.error.AnalyticsLinkNotFoundException;
 import com.couchbase.client.core.error.AuthenticationException;
 import com.couchbase.client.core.error.CompilationFailedException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DatasetExistsException;
 import com.couchbase.client.core.error.DatasetNotFoundException;
+import com.couchbase.client.core.error.DataverseExistsException;
+import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.InternalServerException;
 import com.couchbase.client.core.error.JobQueueFullException;
@@ -114,8 +120,20 @@ public class AnalyticsChunkResponseParser
         return new JobQueueFullException(errorContext);
       } else if (code == 24000) {
         return new ParsingFailedException(errorContext);
-      } else if (code == 24044 || code == 24045) {
-          return new DatasetNotFoundException(errorContext);
+      } else if (code == 24006) {
+        return new AnalyticsLinkNotFoundException(errorContext);
+      } else if (code == 24040) {
+        return new DatasetExistsException(errorContext);
+      } else if (code == 24044 || code == 24045 || code == 24025) {
+        return new DatasetNotFoundException(errorContext);
+      } else if (code == 24034) {
+        return new DataverseNotFoundException(errorContext);
+      } else if (code == 24039) {
+        return new DataverseExistsException(errorContext);
+      } else if (code == 24047) {
+        return new AnalyticsIndexNotFoundException(errorContext);
+      } else if (code == 24048) {
+        return new AnalyticsIndexExistsException(errorContext);
       } else if (code > 24000 && code < 25000) {
         return new CompilationFailedException(errorContext);
       }

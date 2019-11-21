@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.analytics;
+package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.AnalyticsException;
+public class DatasetExistsException extends CouchbaseException {
 
-public class AnalyticsIndexNotFoundException extends AnalyticsException {
-  public AnalyticsIndexNotFoundException(AnalyticsException cause) {
-    super(cause);
+  public DatasetExistsException(final ErrorContext ctx) {
+    super("The analytics dataset already exists", ctx);
   }
+
 }

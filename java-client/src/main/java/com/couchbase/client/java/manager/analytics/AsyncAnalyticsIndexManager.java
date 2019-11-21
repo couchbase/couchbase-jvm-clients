@@ -23,6 +23,12 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.AnalyticsException;
+import com.couchbase.client.core.error.AnalyticsIndexExistsException;
+import com.couchbase.client.core.error.AnalyticsIndexNotFoundException;
+import com.couchbase.client.core.error.AnalyticsLinkNotFoundException;
+import com.couchbase.client.core.error.DatasetExistsException;
+import com.couchbase.client.core.error.DataverseExistsException;
+import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.json.Mapper;
@@ -87,7 +93,7 @@ public class AsyncAnalyticsIndexManager {
   }
 
   /**
-   * @throws DataverseAlreadyExistsException
+   * @throws DataverseExistsException
    */
   public CompletableFuture<Void> createDataverse(String dataverseName, CreateDataverseAnalyticsOptions options) {
     requireNonNull(dataverseName);
@@ -336,16 +342,6 @@ public class AsyncAnalyticsIndexManager {
   }
 
   private static final Map<Integer, Function<AnalyticsException, ? extends AnalyticsException>> errorMap = new HashMap<>();
-
-  {
-    errorMap.put(DATAVERSE_NOT_FOUND, DataverseNotFoundException::new);
-    errorMap.put(DATAVERSE_ALREADY_EXISTS, DataverseAlreadyExistsException::new);
-    errorMap.put(DATASET_NOT_FOUND, DatasetNotFoundException::new);
-    errorMap.put(DATASET_ALREADY_EXISTS, DatasetAlreadyExistsException::new);
-    errorMap.put(LINK_NOT_FOUND, AnalyticsLinkNotFoundException::new);
-    errorMap.put(INDEX_NOT_FOUND, AnalyticsIndexNotFoundException::new);
-    errorMap.put(INDEX_ALREADY_EXISTS, AnalyticsIndexAlreadyExistsException::new);
-  }
 
   private RuntimeException translateException(Throwable t) {
     final HttpStatusCodeException httpException = findCause(t, HttpStatusCodeException.class).orElse(null);

@@ -47,7 +47,6 @@ import reactor.core.scala.publisher.SMono
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -223,14 +222,15 @@ class AsyncCluster(
     */
   def disconnect(): Future[Unit] = {
     FutureConversions
-      .javaMonoToScalaMono(core.shutdown())
+      .javaMonoToScalaMono(core.shutdown(env.timeoutConfig.disconnectTimeout()))
       .flatMap(_ => {
         if (env.owned) {
-          env.shutdownReactive()
+          env.shutdownReactive(env.timeoutConfig.disconnectTimeout())
         } else {
           SMono.empty[Unit]
         }
       })
+      .timeout(env.timeoutConfig.disconnectTimeout())
       .toFuture
   }
 

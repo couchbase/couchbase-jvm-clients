@@ -32,12 +32,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 
-import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -153,7 +151,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
-    LookupInResult result = collection.lookupIn(id, Arrays.asList(LookupInSpec.exists("not_exist")));
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("not_exist")));
 
     assertFalse(result.exists(0));
     assertThrows(PathNotFoundException.class, () -> assertTrue(result.contentAs(0, Boolean.class)));
@@ -284,9 +282,9 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, initial);
 
     MutateInResult result = collection.mutateIn(id,
-            Arrays.asList(
-                    MutateInSpec.increment("mutated", 1)
-            ));
+      Collections.singletonList(
+        MutateInSpec.increment("mutated", 1)
+      ));
 
     assertEquals(1, result.contentAs(0, Integer.class));
   }
@@ -304,8 +302,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     int errorCount = 0;
 
     try {
-      MutateInResult result = collection.mutateIn(id,
-              Arrays.asList(MutateInSpec.upsert("mutated", 1)),
+      collection.mutateIn(id,
+        Collections.singletonList(MutateInSpec.upsert("mutated", 1)),
               MutateInOptions.mutateInOptions()
                       .cas(gr.cas())
                       .durability(DurabilityLevel.MAJORITY));
@@ -315,8 +313,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     }
 
     try {
-      MutateInResult result = collection.mutateIn(id,
-              Arrays.asList(MutateInSpec.upsert("mutated", 2)),
+      collection.mutateIn(id,
+        Collections.singletonList(MutateInSpec.upsert("mutated", 2)),
               MutateInOptions.mutateInOptions()
                       .cas(gr.cas())
                       .durability(DurabilityLevel.MAJORITY));
@@ -334,28 +332,35 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, JsonObject.create());
 
-    LookupInResult result = collection
-            .lookupIn(
-                    id,
-                    Arrays.asList(
-                            get(LookupInMacro.DOCUMENT).xattr(),
-                            get(LookupInMacro.CAS).xattr(),
-                            get(LookupInMacro.IS_DELETED).xattr(),
-                            get(LookupInMacro.LAST_MODIFIED).xattr(),
-                            get(LookupInMacro.REV_ID).xattr(),
-                            get(LookupInMacro.SEQ_NO).xattr(),
-                            get(LookupInMacro.VALUE_SIZE_BYTES).xattr(),
-                            get(LookupInMacro.EXPIRY_TIME).xattr()
-                    )
-            );
+    LookupInResult result = collection.lookupIn(
+      id,
+      Arrays.asList(
+        get(LookupInMacro.DOCUMENT).xattr(),
+        get(LookupInMacro.CAS).xattr(),
+        get(LookupInMacro.IS_DELETED).xattr(),
+        get(LookupInMacro.LAST_MODIFIED).xattr(),
+        get(LookupInMacro.SEQ_NO).xattr(),
+        get(LookupInMacro.VALUE_SIZE_BYTES).xattr(),
+        get(LookupInMacro.EXPIRY_TIME).xattr()
+      )
+    );
 
     result.contentAs(0, JsonObject.class);
     result.contentAs(1, String.class);
     assertFalse(result.contentAs(2, Boolean.class));
     result.contentAs(3, String.class);
     result.contentAs(4, String.class);
-    result.contentAs(5, String.class);
+    result.contentAs(5, Integer.class);
     result.contentAs(6, Integer.class);
-    result.contentAs(7, Integer.class);
+  }
+
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED }, missesCapabilities = { Capabilities.GLOBAL_CONFIG })
+  @Test
+  void madHatterMacros() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, JsonObject.create());
+
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(get(LookupInMacro.REV_ID).xattr()));
+    result.contentAs(0, String.class);
   }
 }

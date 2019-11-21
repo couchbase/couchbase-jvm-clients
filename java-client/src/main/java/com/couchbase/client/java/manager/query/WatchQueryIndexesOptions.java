@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.QueryIndexNotFoundException;
 
 public class WatchQueryIndexesOptions {
 
