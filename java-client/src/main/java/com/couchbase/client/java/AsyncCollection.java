@@ -351,7 +351,7 @@ public class AsyncCollection {
     }
 
     SubdocGetRequest request = new SubdocGetRequest(
-      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x8, commands
+      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands
     );
     request.context().clientContext(opts.clientContext());
     return request;
