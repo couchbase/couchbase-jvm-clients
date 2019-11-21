@@ -19,7 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.json.JsonObject;
@@ -44,7 +44,6 @@ import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
-import static com.couchbase.client.java.kv.UnlockOptions.unlockOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -233,8 +232,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertNotEquals(insert.cas(), getAndLock.cas());
     assertEquals(expected, getAndLock.contentAsObject());
 
-    RequestTimeoutException exception = assertThrows(
-      RequestTimeoutException.class,
+    TimeoutException exception = assertThrows(
+      TimeoutException.class,
       () -> collection.getAndLock(id, Duration.ofSeconds(30), getAndLockOptions().timeout(Duration.ofMillis(100)))
     );
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
@@ -449,8 +448,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult locked = collection.getAndLock(id, Duration.ofSeconds(30));
 
-    RequestTimeoutException exception = assertThrows(
-      RequestTimeoutException.class,
+    TimeoutException exception = assertThrows(
+      TimeoutException.class,
       () -> collection.upsert(id, JsonObject.empty(), upsertOptions().timeout(Duration.ofMillis(100))));
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
 

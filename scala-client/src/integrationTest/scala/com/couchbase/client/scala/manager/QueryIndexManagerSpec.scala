@@ -17,7 +17,7 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit.SECONDS
 
-import com.couchbase.client.core.error.RequestTimeoutException
+import com.couchbase.client.core.error.TimeoutException
 import com.couchbase.client.scala.manager.query.{
   QueryIndex,
   QueryIndexAlreadyExistsException,
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
-import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
@@ -280,8 +279,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     indexes.watchIndexes(bucketName, Seq("indexOne"), 3.seconds)
     createDeferredIndex("indexTwo")
     indexes.watchIndexes(bucketName, Seq("indexOne", "indexTwo"), 0.seconds) match {
-      case Success(value)                        => assert(false)
-      case Failure(err: RequestTimeoutException) =>
+      case Success(value)                 => assert(false)
+      case Failure(err: TimeoutException) =>
       case Failure(err) =>
         println(err)
         assert(false)

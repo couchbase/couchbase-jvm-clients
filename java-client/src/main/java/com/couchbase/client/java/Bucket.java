@@ -18,21 +18,16 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.ViewNotFoundException;
-import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.view.ViewIndexManager;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
-
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_PING_OPTIONS;
@@ -165,7 +160,7 @@ public class Bucket {
    * @param viewName the name of the view to query.
    * @return a {@link ViewResult} once completed.
    * @throws ViewNotFoundException if the view or design document is not found on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ViewResult viewQuery(final String designDoc, final String viewName) {
@@ -180,7 +175,7 @@ public class Bucket {
    * @param options allows to customize view options.
    * @return a {@link ViewResult} once completed.
    * @throws ViewNotFoundException if the view or design document is not found on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ViewResult viewQuery(final String designDoc, final String viewName, final ViewOptions options) {

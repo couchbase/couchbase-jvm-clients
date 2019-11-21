@@ -20,7 +20,7 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -115,8 +115,8 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     String validId = UUID.randomUUID().toString();
     collection.upsert(validId, JsonObject.empty());
     collection.getAndLock(validId, Duration.ofSeconds(5));
-    RequestTimeoutException exception = assertThrows(
-      RequestTimeoutException.class,
+    TimeoutException exception = assertThrows(
+      TimeoutException.class,
       () -> collection.getAndLock(validId, Duration.ofSeconds(5), getAndLockOptions().timeout(Duration.ofSeconds(1)))
     );
     assertTrue(exception.context().requestContext().retryReasons().contains(RetryReason.KV_LOCKED));
@@ -146,8 +146,8 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     String validId = UUID.randomUUID().toString();
     collection.upsert(validId, JsonObject.empty());
     collection.getAndLock(validId, Duration.ofSeconds(5));
-    RequestTimeoutException exception = assertThrows(
-      RequestTimeoutException.class,
+    TimeoutException exception = assertThrows(
+      TimeoutException.class,
       () -> collection.getAndTouch(validId, Duration.ofSeconds(2), getAndTouchOptions().timeout(Duration.ofSeconds(1)))
     );
     assertTrue(exception.context().requestContext().retryReasons().contains(RetryReason.KV_LOCKED));

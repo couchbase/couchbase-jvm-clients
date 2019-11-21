@@ -18,9 +18,11 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.CancellationErrorContext;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -150,12 +152,19 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   }
 
   @Override
-  public void cancel(CancellationReason reason) {
+  public void cancel(final CancellationReason reason) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.CANCELLED)) {
       cancellationReason = reason;
-      Exception exception = reason == CancellationReason.TIMEOUT
-        ? new RequestTimeoutException(this.getClass().getSimpleName(), new CancellationErrorContext(context()))
-        : new RequestCanceledException(this.getClass().getSimpleName(), new CancellationErrorContext(context()));
+      final Exception exception;
+
+      final String msg = this.getClass().getSimpleName();
+      final CancellationErrorContext ctx = new CancellationErrorContext(context());
+      if (reason == CancellationReason.TIMEOUT) {
+        exception = idempotent() ? new UnambiguousTimeoutException(msg, ctx) : new AmbiguousTimeoutException(msg, ctx);
+      } else {
+        exception = new RequestCanceledException(msg, ctx);
+      }
+
       response.completeExceptionally(exception);
     }
   }

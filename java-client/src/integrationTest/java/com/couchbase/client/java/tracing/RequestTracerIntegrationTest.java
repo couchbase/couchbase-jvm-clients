@@ -19,7 +19,7 @@ package com.couchbase.client.java.tracing;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -89,7 +89,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     try {
       collection.get(id, GetOptions.getOptions().timeout(Duration.ofNanos(1)));
       fail("Expected timeout exception");
-    } catch (RequestTimeoutException ex) {
+    } catch (TimeoutException ex) {
       assertTrue(true);
     }
 

@@ -26,7 +26,6 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.RequestTimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.msg.CancellationReason;

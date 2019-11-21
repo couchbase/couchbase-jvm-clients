@@ -3,7 +3,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.error.{
   DocumentLockedException,
   DocumentNotFoundException,
-  RequestTimeoutException
+  TimeoutException
 }
 import com.couchbase.client.core.retry.RetryReason
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
@@ -153,7 +153,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
     coll.getAndLock(docId, 30.seconds, timeout = 100.milliseconds) match {
       case Success(result) => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: RequestTimeoutException) =>
+      case Failure(err: TimeoutException) =>
         assert(err.context().requestContext().retryReasons().size() == 1)
         assert(
           err.context().requestContext().retryReasons().iterator().next() == RetryReason.KV_LOCKED

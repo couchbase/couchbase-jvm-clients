@@ -19,7 +19,7 @@ package com.couchbase.client.core.diag;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.diagnostics.PingKVRequest;
 import com.couchbase.client.core.msg.diagnostics.PingRequest;
@@ -192,7 +192,7 @@ public class HealthPinger {
             .onErrorResume(err -> {
               PingServiceHealth.PingState state = PingServiceHealth.PingState.ERROR;
 
-              if (err instanceof RequestTimeoutException) {
+              if (err instanceof TimeoutException) {
                 state = PingServiceHealth.PingState.TIMEOUT;
               }
 
@@ -239,7 +239,7 @@ public class HealthPinger {
             .onErrorResume(err -> {
               PingServiceHealth.PingState state = PingServiceHealth.PingState.ERROR;
 
-              if (err instanceof RequestTimeoutException) {
+              if (err instanceof TimeoutException) {
                 state = PingServiceHealth.PingState.TIMEOUT;
               }
 

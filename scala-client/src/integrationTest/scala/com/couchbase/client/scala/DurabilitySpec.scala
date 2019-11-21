@@ -1,9 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{
-  DurabilityLevelNotAvailableException,
-  RequestTimeoutException
-}
+import com.couchbase.client.core.error.{DurabilityLevelNotAvailableException, TimeoutException}
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
@@ -82,9 +79,9 @@ class DurabilitySpec extends ScalaIntegrationTest {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content, durability = Durability.Majority, timeout = Duration.Zero) match {
-      case Success(_)                            => assert(false, s"unexpected success")
-      case Failure(err: RequestTimeoutException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(_)                     => assert(false, s"unexpected success")
+      case Failure(err: TimeoutException) =>
+      case Failure(err)                   => assert(false, s"unexpected error $err")
     }
   }
 

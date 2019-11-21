@@ -3,7 +3,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.error.{
   DocumentLockedException,
   DocumentNotFoundException,
-  RequestTimeoutException
+  TimeoutException
 }
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
@@ -142,10 +142,10 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
 
     wrap(coll.getAndLock(docId, 30.seconds, timeout = 100.milliseconds)) match {
-      case Success(result)                       => assert(false, "should not have been able to relock locked doc")
-      case Failure(err: RequestTimeoutException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
-      case _                                     => assert(false, s"unexpected error")
+      case Success(result)                => assert(false, "should not have been able to relock locked doc")
+      case Failure(err: TimeoutException) =>
+      case Failure(err)                   => assert(false, s"unexpected error $err")
+      case _                              => assert(false, s"unexpected error")
     }
   }
 

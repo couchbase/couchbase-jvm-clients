@@ -23,7 +23,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
@@ -171,7 +171,7 @@ public class Collection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id) {
@@ -185,7 +185,7 @@ public class Collection {
    * @param options options to customize the get request.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id, final GetOptions options) {
@@ -199,7 +199,7 @@ public class Collection {
    * @param lockTime how long to lock the document for (values over 30 seconds will be capped).
    * @return a {@link GetResult} once the document has been locked and loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime) {
@@ -214,7 +214,7 @@ public class Collection {
    * @param options options to customize the get and lock request.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
@@ -228,7 +228,7 @@ public class Collection {
    * @param expiry the new expiration time for the document.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry) {
@@ -243,7 +243,7 @@ public class Collection {
    * @param options options to customize the get and touch request.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
@@ -258,7 +258,7 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a stream of results from the active and the replica.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Stream<GetReplicaResult> getAllReplicas(final String id) {
@@ -274,7 +274,7 @@ public class Collection {
    * @param id the document id which is used to uniquely identify it.
    * @param options the custom options.
    * @return a stream of results from the active and the replica depending on the options.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Stream<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
@@ -287,7 +287,7 @@ public class Collection {
    * @param id the document id which is used to uniquely identify it.
    * @return the first available result, might be the active or a replica.
    * @throws DocumentUnretrievableException no document retrievable with a successful status.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetReplicaResult getAnyReplica(final String id) {
@@ -301,7 +301,7 @@ public class Collection {
    * @param options the custom options.
    * @return the first available result, might be the active or a replica.
    * @throws DocumentUnretrievableException no document retrievable with a successful status.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetReplicaResult getAnyReplica(final String id, final GetAnyReplicaOptions options) {
@@ -313,7 +313,7 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link ExistsResult} completing once loaded or failed.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id) {
@@ -325,7 +325,7 @@ public class Collection {
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link ExistsResult} completing once loaded or failed.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id, final ExistsOptions options) {
@@ -339,7 +339,7 @@ public class Collection {
    * @return a {@link MutationResult} once removed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id) {
@@ -354,7 +354,7 @@ public class Collection {
    * @return a {@link MutationResult} once removed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id, final RemoveOptions options) {
@@ -368,7 +368,7 @@ public class Collection {
    * @param content the document content to insert.
    * @return a {@link MutationResult} once inserted.
    * @throws DocumentExistsException the given document id is already present in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content) {
@@ -383,7 +383,7 @@ public class Collection {
    * @param options custom options to customize the insert behavior.
    * @return a {@link MutationResult} once inserted.
    * @throws DocumentExistsException the given document id is already present in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content, final InsertOptions options) {
@@ -396,7 +396,7 @@ public class Collection {
    * @param id the document id which is used to uniquely identify it.
    * @param content the document content to upsert.
    * @return a {@link MutationResult} once upserted.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content) {
@@ -410,7 +410,7 @@ public class Collection {
    * @param content the document content to upsert.
    * @param options custom options to customize the upsert behavior.
    * @return a {@link MutationResult} once upserted.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content, final UpsertOptions options) {
@@ -425,7 +425,7 @@ public class Collection {
    * @return a {@link MutationResult} once replaced.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content) {
@@ -441,7 +441,7 @@ public class Collection {
    * @return a {@link MutationResult} once replaced.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content, final ReplaceOptions options) {
@@ -455,7 +455,7 @@ public class Collection {
    * @param expiry the new expiry for the document.
    * @return a {@link MutationResult} once the operation completes.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry) {
@@ -470,7 +470,7 @@ public class Collection {
    * @param options the custom options.
    * @return a {@link MutationResult} once the operation completes.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
@@ -484,7 +484,7 @@ public class Collection {
    * @param cas the CAS value which is needed to unlock it.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas) {
@@ -500,7 +500,7 @@ public class Collection {
    * @param options the options to customize.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas, final UnlockOptions options) {
@@ -514,7 +514,7 @@ public class Collection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs) {
@@ -529,7 +529,7 @@ public class Collection {
    * @param options custom options to modify the lookup options.
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
@@ -544,7 +544,7 @@ public class Collection {
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
    * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -561,7 +561,7 @@ public class Collection {
    * @return the {@link MutateInResult} once the mutation has been performed or failed.
    * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
    * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */

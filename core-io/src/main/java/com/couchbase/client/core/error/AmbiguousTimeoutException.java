@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2019 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@
 
 package com.couchbase.client.core.error;
 
-public class RequestTimeoutException extends CouchbaseException {
+/**
+ * This is a special case of the timeout exception, signaling that the timeout happened with an ambiguous cause.
+ */
+public class AmbiguousTimeoutException extends TimeoutException {
 
-  public RequestTimeoutException(String message, CancellationErrorContext ctx) {
+  public AmbiguousTimeoutException(final String message, final CancellationErrorContext ctx) {
     super(message, ctx);
-  }
-
-  @Override
-  public CancellationErrorContext context() {
-    return (CancellationErrorContext) super.context();
   }
 
 }

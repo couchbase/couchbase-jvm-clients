@@ -18,7 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -29,9 +29,7 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -118,7 +116,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     core.send(getRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> getRequest.response().get());
-    assertTrue(exception.getCause() instanceof RequestTimeoutException);
+    assertTrue(exception.getCause() instanceof TimeoutException);
   }
 
 }

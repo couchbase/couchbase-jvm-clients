@@ -19,7 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.RequestTimeoutException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
@@ -45,7 +45,7 @@ public class BinaryCollection {
    * @return a {@link MutationResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult append(final String id, final byte[] content) {
@@ -61,7 +61,7 @@ public class BinaryCollection {
    * @return a {@link MutationResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult append(final String id, final byte[] content, final AppendOptions options) {
@@ -76,7 +76,7 @@ public class BinaryCollection {
    * @return a {@link MutationResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult prepend(final String id, final byte[] content) {
@@ -92,7 +92,7 @@ public class BinaryCollection {
    * @return a {@link MutationResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult prepend(final String id, final byte[] content, final PrependOptions options) {
@@ -106,7 +106,7 @@ public class BinaryCollection {
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult increment(final String id) {
@@ -121,7 +121,7 @@ public class BinaryCollection {
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult increment(final String id, final IncrementOptions options) {
@@ -135,7 +135,7 @@ public class BinaryCollection {
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult decrement(final String id) {
@@ -150,7 +150,7 @@ public class BinaryCollection {
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws CasMismatchException if the document has been concurrently modified on the server.
-   * @throws RequestTimeoutException if the operation times out before getting a result.
+   * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult decrement(final String id, final DecrementOptions options) {
