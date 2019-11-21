@@ -24,6 +24,7 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
@@ -56,9 +57,11 @@ class CoreTest {
 
   private static CoreEnvironment ENV;
 
-  private static String LOCALHOST = "127.0.0.1";
+  private static final String LOCALHOST = "127.0.0.1";
 
   private static SimpleEventBus EVENT_BUS;
+
+  private static final Authenticator AUTHENTICATOR = PasswordAuthenticator.create("foo", "bar");
 
   @BeforeAll
   static void beforeAll() {
@@ -106,7 +109,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -202,7 +205,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -302,7 +305,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -385,7 +388,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -472,7 +475,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("127.0.0.1:9000", mock101);
     mocks.put("127.0.0.1:9001", mock102);
-    new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -514,7 +517,7 @@ class CoreTest {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     when(configProvider.configs()).thenReturn(Flux.empty());
 
-    Core core = new Core(ENV, mock(Authenticator.class), SeedNode.DEFAULT) {
+    Core core = new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;

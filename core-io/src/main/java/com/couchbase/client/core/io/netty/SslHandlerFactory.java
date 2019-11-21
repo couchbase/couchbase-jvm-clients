@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.OpenSsl;
@@ -39,12 +40,11 @@ public class SslHandlerFactory {
    */
   private static final boolean OPENSSL_AVAILABLE = OpenSsl.isAvailable();
 
-  public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config)
+  public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config, final Authenticator authenticator)
     throws Exception {
     SslProvider provider =  OPENSSL_AVAILABLE && config.nativeTlsEnabled() ? SslProvider.OPENSSL : SslProvider.JDK;
 
-    SslContextBuilder context = SslContextBuilder.forClient()
-      .sslProvider(provider);
+    SslContextBuilder context = SslContextBuilder.forClient().sslProvider(provider);
 
     if (config.trustManagerFactory() != null) {
       context.trustManager(config.trustManagerFactory());
@@ -52,11 +52,7 @@ public class SslHandlerFactory {
       context.trustManager(config.trustCertificates().toArray(new X509Certificate[0]));
     }
 
-    if (config.keyManagerFactory() != null) {
-      context.keyManager(config.keyManagerFactory());
-    } else if (config.key() != null) {
-      context.keyManager(config.key(), config.keyPassword(), config.keyCertChain().toArray(new X509Certificate[0]));
-    }
+    authenticator.applyTlsProperties(context);
 
     SslHandler sslHandler = context.build().newHandler(allocator);
 

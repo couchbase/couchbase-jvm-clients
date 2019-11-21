@@ -279,7 +279,7 @@ public abstract class BaseEndpoint implements Endpoint {
               SecurityConfig config = env.securityConfig();
               if (config.tlsEnabled()) {
                 try {
-                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config));
+                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config, endpointContext.authenticator()));
                 } catch (Exception e) {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }

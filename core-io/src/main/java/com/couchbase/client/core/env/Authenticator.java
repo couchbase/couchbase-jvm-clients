@@ -19,6 +19,7 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -40,7 +41,7 @@ public interface Authenticator {
    * @param pipeline the pipeline when the endpoint is constructed.
    */
   @Stability.Internal
-  void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline);
+  default void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) { }
 
   /**
    * Allows to add authentication credentials to the http request for the given service.
@@ -49,6 +50,26 @@ public interface Authenticator {
    * @param request the http request.
    */
   @Stability.Internal
-  void authHttpRequest(final ServiceType serviceType, final HttpRequest request);
+  default void authHttpRequest(final ServiceType serviceType, final HttpRequest request) { }
+
+  /**
+   * The authenticator gets the chance to attach the client certificate to the ssl context if needed.
+   *
+   * @param sslContextBuilder the netty context builder
+   */
+  @Stability.Internal
+  default void applyTlsProperties(final SslContextBuilder sslContextBuilder) { }
+
+  /**
+   * If this authenticator supports encrypted connections.
+   */
+  @Stability.Internal
+  default boolean supportsTls() { return true; }
+
+  /**
+   * If this authenticator supports non-encrypted connections.
+   */
+  @Stability.Internal
+  default boolean supportsNonTls() { return true; }
 
 }

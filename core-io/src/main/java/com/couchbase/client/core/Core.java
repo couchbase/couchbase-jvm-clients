@@ -39,6 +39,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -186,6 +187,12 @@ public class Core {
    * @param environment the environment for this core.
    */
   protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
+    if (environment.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
+      throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
+    } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
+      throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
+    }
+
     this.seedNodes = seedNodes;
     this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();

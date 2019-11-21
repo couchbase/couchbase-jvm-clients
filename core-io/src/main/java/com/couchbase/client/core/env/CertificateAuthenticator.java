@@ -16,21 +16,72 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 
+import javax.net.ssl.KeyManagerFactory;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.function.Supplier;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+
+/**
+ * Performs authentication through a client certificate.
+ */
 public class CertificateAuthenticator implements Authenticator {
 
-  public static CertificateAuthenticator INSTANCE = new CertificateAuthenticator();
+  private final PrivateKey key;
+  private final String keyPassword;
+  private final List<X509Certificate> keyCertChain;
+  private final Supplier<KeyManagerFactory> keyManagerFactory;
 
-  private CertificateAuthenticator() { }
+  public static CertificateAuthenticator fromKeyManagerFactory(final Supplier<KeyManagerFactory> keyManagerFactory) {
+    notNull(keyManagerFactory, "KeyManagerFactory");
+    return new CertificateAuthenticator(null, null, null, keyManagerFactory);
+  }
+
+  public static CertificateAuthenticator fromKey(final PrivateKey key, final String keyPassword,
+                                                 final List<X509Certificate> keyCertChain) {
+    notNull(key, "PrivateKey");
+    return new CertificateAuthenticator(key, keyPassword, keyCertChain, null);
+  }
+
+  private CertificateAuthenticator(final PrivateKey key, final String keyPassword,
+                                   final List<X509Certificate> keyCertChain,
+                                   final Supplier<KeyManagerFactory> keyManagerFactory) {
+    this.key = key;
+    this.keyPassword = keyPassword;
+    this.keyCertChain = keyCertChain;
+    this.keyManagerFactory = keyManagerFactory;
+
+    if (key != null && keyManagerFactory != null) {
+      throw new IllegalArgumentException("Either a key certificate or a key manager factory" +
+        " can be provided, but not both!");
+    }
+  }
 
   @Override
-  public void authKeyValueConnection(EndpointContext endpointContext, ChannelPipeline pipeline) { }
+  public void applyTlsProperties(final SslContextBuilder context) {
+    if (keyManagerFactory != null) {
+      context.keyManager(keyManagerFactory.get());
+    } else if (key != null) {
+      context.keyManager(key, keyPassword, keyCertChain.toArray(new X509Certificate[0]));
+    }
+  }
 
   @Override
-  public void authHttpRequest(ServiceType serviceType, HttpRequest request) { }
+  public boolean supportsNonTls() {
+    return false;
+  }
 
+  @Override
+  public String toString() {
+    return "CertificateAuthenticator{" +
+      "key=" + key +
+      ", keyPassword='" + keyPassword + '\'' +
+      ", keyCertChain=" + keyCertChain +
+      ", keyManagerFactory=" + keyManagerFactory +
+      '}';
+  }
 }
