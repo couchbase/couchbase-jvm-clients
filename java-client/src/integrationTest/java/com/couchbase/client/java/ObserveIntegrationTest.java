@@ -139,7 +139,9 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     ClusterEnvironment environment = environment()
       .ioConfig(IoConfig.enableMutationTokens(false))
       .build();
-    Cluster cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    Cluster cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator())
+      .environment(environment)
+      .seedNodes(seedNodes()));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
