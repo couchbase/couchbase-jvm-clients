@@ -121,4 +121,11 @@ public interface ConfigurationProvider  {
    */
   boolean globalConfigLoadInProgress();
 
+  /**
+   * Returns true if a bucket config load attempt is in progress.
+   *
+   * @return true if in progress, false if not.
+   */
+  boolean bucketConfigLoadInProgress();
+
 }

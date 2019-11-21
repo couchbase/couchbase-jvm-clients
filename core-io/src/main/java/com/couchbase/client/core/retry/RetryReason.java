@@ -88,7 +88,15 @@ public enum RetryReason {
   /**
    * If the bucket is not available, for example if it is currently in the process of being opened.
    */
-  BUCKET_NOT_AVAILABLE(true, false);
+  BUCKET_NOT_AVAILABLE(true, false),
+  /**
+   * If a concurrent bucket open is in progress.
+   */
+  BUCKET_OPEN_IN_PROGRESS(true, false),
+  /**
+   * If a concurrent global config load is in progress.
+   */
+  GLOBAL_CONFIG_LOAD_IN_PROGRESS(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

@@ -76,6 +76,11 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
+  public boolean bucketConfigLoadInProgress() {
+    return false;
+  }
+
+  @Override
   public CollectionMap collectionMap() {
     return delegate.collectionMap();
   }

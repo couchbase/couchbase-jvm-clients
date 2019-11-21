@@ -64,7 +64,9 @@ public class KeyValueLocator implements Locator {
       if (bucketConfig == null) {
         // Since a bucket is opened lazily, it might not be available yet (or for some
         // other reason the config is gone) - send it into retry!
-        RetryOrchestrator.maybeRetry(ctx, request, RetryReason.BUCKET_NOT_AVAILABLE);
+        RetryOrchestrator.maybeRetry(ctx, request, ctx.core().configurationProvider().bucketConfigLoadInProgress()
+          ? RetryReason.BUCKET_OPEN_IN_PROGRESS
+          : RetryReason.BUCKET_NOT_AVAILABLE);
         return;
       }
 

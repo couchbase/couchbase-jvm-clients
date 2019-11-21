@@ -67,8 +67,20 @@ public class RoundRobinLocator implements Locator {
                        final ClusterConfig config, final CoreContext ctx) {
     boolean isTargeted = request instanceof TargetedRequest;
 
-    if (!isTargeted && !config.hasClusterOrBucketConfig() && !ctx.core().configurationProvider().globalConfigLoadInProgress()) {
-      request.fail(FeatureNotAvailableException.clusterLevelQuery(serviceType));
+    if (!isTargeted && !config.hasClusterOrBucketConfig()) {
+      boolean globalLoadInProgress =  ctx.core().configurationProvider().globalConfigLoadInProgress();
+      boolean bucketLoadInProgress =ctx.core().configurationProvider().bucketConfigLoadInProgress();
+      boolean loadInProgress = globalLoadInProgress || bucketLoadInProgress;
+
+      if (loadInProgress) {
+        RetryOrchestrator.maybeRetry(
+          ctx,
+          request,
+          bucketLoadInProgress ? RetryReason.BUCKET_OPEN_IN_PROGRESS : RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS
+        );
+      } else {
+        request.fail(FeatureNotAvailableException.clusterLevelQuery(serviceType));
+      }
       return;
     }
 
