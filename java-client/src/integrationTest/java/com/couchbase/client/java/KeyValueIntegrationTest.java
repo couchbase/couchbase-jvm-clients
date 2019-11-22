@@ -132,7 +132,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     MutationResult mutationResult = collection.upsert(id, content);
     assertTrue(mutationResult.cas() != 0);
 
-    GetResult getResult = collection.get(id, getOptions().project("foo", "created"));
+    GetResult getResult = collection.get(id, getOptions().project("foo", "created", "notfound"));
     assertTrue(getResult.cas() != 0);
     assertFalse(getResult.expiry().isPresent());
 

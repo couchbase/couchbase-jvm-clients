@@ -130,10 +130,18 @@ public enum GetAccessor {
     return request
       .response()
       .thenApply(response -> {
-        if (response.status() == ResponseStatus.SUCCESS) {
+        if (response.status().success() || response.status() == ResponseStatus.SUBDOC_FAILURE) {
           return parseSubdocGet(response, transcoder);
         }
-        throw DefaultErrorUtil.defaultErrorForStatus(id, response.status());
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+        switch (response.status()) {
+          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
+          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
+          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
+          case TEMPORARY_FAILURE: // intended fallthrough to the case below
+          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
+          default: throw new CouchbaseException("Get operation failed", ctx);
+        }
       });
   }
 
