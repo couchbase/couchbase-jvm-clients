@@ -17,14 +17,11 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.KeyValueRequest;
-
 import java.util.Map;
+import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ReducedKeyValueErrorContext extends ErrorContext {
 
@@ -39,6 +36,10 @@ public class ReducedKeyValueErrorContext extends ErrorContext {
 
   public static ReducedKeyValueErrorContext create(final String id, final CollectionIdentifier collectionIdentifier) {
     return new ReducedKeyValueErrorContext(id, collectionIdentifier);
+  }
+
+  public static ReducedKeyValueErrorContext create(final String id, final String bucket, final String scope, final String collection) {
+    return new ReducedKeyValueErrorContext(id, new CollectionIdentifier(bucket, Optional.ofNullable(scope), Optional.ofNullable(collection)));
   }
 
   public static ReducedKeyValueErrorContext create(final String id) {

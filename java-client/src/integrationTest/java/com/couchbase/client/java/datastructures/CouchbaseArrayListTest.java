@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.UUID;
 
@@ -44,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 class CouchbaseArrayListTest extends JavaIntegrationTest {
+
     private static Cluster cluster;
     private static Collection collection;
     private static ArrayListOptions options;
@@ -143,7 +145,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldFailToAddPastEnd() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        List<Long> list = collection.list(uuid, Long.class);
         list.add(1L);
         assertEquals(1, list.size());
         assertThrows(IndexOutOfBoundsException.class, () -> list.add(3, 5L));
@@ -222,14 +224,14 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldReturnEmptyIterator() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        List<Long> list = collection.list(uuid, Long.class);
         Iterator<Long> it = list.iterator();
         assertFalse(it.hasNext());
         assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
     @Test
     void shouldBeAbleToStartWithEmptyIteratorAndAdd() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        List<Long> list = collection.list(uuid, Long.class);
         ListIterator<Long> it = list.listIterator();
         it.add(1L);
         // add will put the cursor on this single element, so now we should have a previous
@@ -238,7 +240,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotAllowAddAfterClear() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        List<Long> list = collection.list(uuid, Long.class);
         list.addAll(Arrays.asList(1L,2L,3L,4L,5L));
         ListIterator<Long> it = list.listIterator();
         it.next();
@@ -247,7 +249,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void canAddAfterClearIfIteratorThoughtItWasEmpty() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class);
+        List<Long> list = collection.list(uuid, Long.class);
         ListIterator<Long> it = list.listIterator();
 
         // list changes under the iterator, which thinks the list is empty
@@ -310,17 +312,17 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldCreateDirectlyFromTheCouchbaseCollection() {
-        CouchbaseArrayList<Long> list = collection.list(uuid, Long.class, options);
+        List<Long> list = collection.list(uuid, Long.class, options);
         assertTrue(list.isEmpty());
         list.add(0, 1L);
         assertFalse(list.isEmpty());
-        CouchbaseArrayList<Long> list2 = collection.list(uuid, Long.class, options);
+        List<Long> list2 = collection.list(uuid, Long.class, options);
         assertFalse(list2.isEmpty());
     }
 
     @Test
     void shouldAddViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -335,7 +337,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldSetViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -350,7 +352,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldRemoveViaIterator() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -366,7 +368,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
 
     @Test
     void shouldNotAddViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -378,7 +380,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotSetViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -391,7 +393,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotRemoveViaIteratorIfListChanged() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -404,7 +406,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotRemoveViaIteratorIfCleared() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -414,7 +416,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotSetViaIteratorIfCleared() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();
@@ -424,7 +426,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
     }
     @Test
     void shouldNotAddViaIteratorIfCleared() {
-        CouchbaseArrayList<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
+        List<Integer> list = collection.list(uuid, Integer.class, ArrayListOptions.arrayListOptions());
         list.addAll(Arrays.asList(1,2,3,4,5));
 
         ListIterator<Integer> it = list.listIterator();

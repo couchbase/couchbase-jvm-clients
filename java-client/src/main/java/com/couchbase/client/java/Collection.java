@@ -63,6 +63,7 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
+import static com.couchbase.client.java.kv.ArrayListOptions.arrayListOptions;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -575,11 +576,12 @@ public class Collection {
    *
    * @param id the list's document id.
    * @param entityType the class of the values contained in the set
-   * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
    * @return a {@link CouchbaseArrayList<T>}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public <T> CouchbaseArrayList<T> list(final String id, Class<T> entityType, ArrayListOptions options) {
-    return new CouchbaseArrayList<>(id, this, entityType, options);
+  public <T> List<T> list(final String id, final Class<T> entityType) {
+    return list(id, entityType, arrayListOptions());
   }
 
   /**
@@ -588,10 +590,13 @@ public class Collection {
    *
    * @param id the list's document id.
    * @param entityType the class of the values contained in the set
+   * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
    * @return a {@link CouchbaseArrayList<T>}.
-\   */
-  public <T> CouchbaseArrayList<T> list(final String id, Class<T> entityType) {
-    return new CouchbaseArrayList<>(id, this, entityType);
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public <T> List<T> list(final String id, final Class<T> entityType, final ArrayListOptions options) {
+    return new CouchbaseArrayList<>(id, this, entityType, options);
   }
 
   /**
