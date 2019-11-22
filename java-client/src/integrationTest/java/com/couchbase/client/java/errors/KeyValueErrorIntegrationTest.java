@@ -325,4 +325,18 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.list("id", Integer.class, null));
   }
 
+  @Test
+  void verifySetExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.set("id", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.set(null, Integer.class));
+    assertThrows(InvalidArgumentException.class, () -> collection.set("id", Integer.class, null));
+  }
+
+  @Test
+  void verifyMapExceptions() {
+    assertThrows(InvalidArgumentException.class, () -> collection.map("id", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.map(null, Integer.class));
+    assertThrows(InvalidArgumentException.class, () -> collection.map("id", Integer.class, null));
+  }
+
 }

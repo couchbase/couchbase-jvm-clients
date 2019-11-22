@@ -59,6 +59,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -66,6 +67,7 @@ import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
 import static com.couchbase.client.java.kv.ArrayListOptions.arrayListOptions;
 import static com.couchbase.client.java.kv.ArraySetOptions.arraySetOptions;
+import static com.couchbase.client.java.kv.MapOptions.mapOptions;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -637,11 +639,12 @@ public class Collection {
    *
    * @param id the map's document id.
    * @param entityType the class of the values contained the map, the keys are {@link String}s.
-   * @param options a {@link MapOptions} to use for all operations on this instance of the map.
    * @return a {@link CouchbaseMap<T>}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public <T> CouchbaseMap<T> map(final String id, final Class<T> entityType, MapOptions options) {
-    return new CouchbaseMap<>(id, this, entityType, options);
+  public <T> Map<String, T> map(final String id, final Class<T> entityType) {
+    return map(id, entityType, mapOptions());
   }
 
   /**
@@ -651,10 +654,13 @@ public class Collection {
    *
    * @param id the map's document id.
    * @param entityType the class of the values contained the map, the keys are {@link String}s.
+   * @param options a {@link MapOptions} to use for all operations on this instance of the map.
    * @return a {@link CouchbaseMap<T>}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public <T> CouchbaseMap<T> map(final String id, final Class<T> entityType) {
-    return new CouchbaseMap<>(id, this, entityType);
+  public <T> Map<String, T> map(final String id, final Class<T> entityType, MapOptions options) {
+    return new CouchbaseMap<>(id, this, entityType, options);
   }
 
   /**

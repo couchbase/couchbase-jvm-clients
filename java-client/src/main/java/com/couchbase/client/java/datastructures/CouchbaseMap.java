@@ -23,8 +23,9 @@ import java.util.Set;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Bucket;
 
@@ -41,7 +42,9 @@ import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.kv.MutateInSpec;
-import com.couchbase.client.java.kv.UpsertOptions;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * A CouchbaseMap is a {@link Map} backed by a {@link Bucket Couchbase} document (more specifically a
@@ -68,7 +71,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     private final GetOptions getOptions;
     private final LookupInOptions lookupInOptions;
     private final InsertOptions insertOptions;
-    private final UpsertOptions upsertOptions;
+
     /**
      * Create a new {@link CouchbaseMap}, backed by the document identified by <code>id</code>
      * in the given Couchbase <code>bucket</code>. Note that if the document already exists,
@@ -80,6 +83,10 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
      * @param options a {@link MapOptions} to use for all operations on this instance of the map.
      */
     public CouchbaseMap(String id, Collection collection, Class<E> entityType, MapOptions options) {
+        notNull(collection, "Collection", () -> ReducedKeyValueErrorContext.create(id, null, null, null));
+        notNullOrEmpty(id, "Id", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
+        notNull(entityType, "EntityType", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
+        notNull(options, "MapOptions", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
         this.id = id;
         this.collection = collection;
         this.entityTypeClass = entityType;
@@ -91,21 +98,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         this.mapOptions = mapOpts.build();
         this.getOptions = optionsIn.getOptions();
         this.lookupInOptions = optionsIn.lookupInOptions();
-        this.upsertOptions = optionsIn.upsertOptions();
         this.insertOptions = optionsIn.insertOptions();
-    }
-
-    /**
-     * Create a new {@link CouchbaseMap}, backed by the document identified by <code>id</code>
-     * in the given Couchbase <code>bucket</code>. Note that if the document already exists,
-     * its content will be used as initial content for this collection. Otherwise it is created empty.
-     *
-     * @param id the id of the Couchbase document to back the map.
-     * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a {@link Class<E>} describing the type of objects used as values in this Map.
-     */
-    public CouchbaseMap(String id, Collection collection, Class<E> entityType) {
-        this(id, collection, entityType, MapOptions.mapOptions());
     }
 
     @Override
@@ -138,7 +131,11 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                 //will need to retry get-and-set
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + mapOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new CouchbaseException("CouchbaseMap put failed",
+          new RetryExhaustedException("Couldn't perform put in less than "
+            +  mapOptions.casMismatchRetries()
+            + " iterations. It is likely concurrent modifications of this document are the reason")
+        );
     }
 
     @Override
@@ -149,9 +146,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                     Collections.singletonList(LookupInSpec.get(idx)),
                     lookupInOptions)
                     .contentAs(0, entityTypeClass);
-        } catch (PathNotFoundException e) {
-            return null;
-        } catch (DocumentNotFoundException e) {
+        } catch (PathNotFoundException | DocumentNotFoundException e) {
             return null;
         }
     }
@@ -178,7 +173,11 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
                 //will have to retry get-and-remove
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + mapOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new CouchbaseException("CouchbaseMap remove failed",
+          new RetryExhaustedException("Couldn't perform remove in less than "
+            +  mapOptions.casMismatchRetries()
+            + " iterations. It is likely concurrent modifications of this document are the reason")
+        );
     }
 
     @Override
@@ -188,6 +187,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Set<Entry<String, E>> entrySet() {
         JsonObject obj;
         try {
@@ -196,7 +196,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
             obj = JsonObject.empty();
         }
         // don't actually create the doc, yet.
-        return new CouchbaseEntrySet((Map<String, E> )obj.toMap());
+        return new CouchbaseEntrySet((Map<String, E>) obj.toMap());
     }
 
     @Override
@@ -230,7 +230,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         }
     }
 
-    private String checkKey(Object key) {
+    private String checkKey(final Object key) {
         if (key == null) {
             throw new NullPointerException("Unsupported null key");
         }
@@ -340,7 +340,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         private final Iterator<Entry<String, E>> delegateItr;
         private Entry<String, E> lastNext = null;
 
-        public CouchbaseEntrySetIterator(Iterator<Entry<String, E>> iterator) {
+        CouchbaseEntrySetIterator(Iterator<Entry<String, E>> iterator) {
             this.delegateItr = iterator;
         }
 
@@ -364,7 +364,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         }
     }
 
-    protected long createEmpty() {
+    private long createEmpty() {
         try {
             return collection.insert(id, JsonObject.empty(), insertOptions).cas();
         } catch (DocumentExistsException ex) {
