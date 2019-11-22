@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
@@ -75,8 +76,8 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     @Test
     void shouldNotCreateEmptyDoc() {
-        CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class);
-        assertThrows(DocumentNotFoundException.class, () -> {collection.get(uuid);});
+        collection.set(uuid, Integer.class);
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(uuid));
     }
 
     @Test
@@ -116,8 +117,8 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         set.addAll(Arrays.asList(1,2,3,4,5));
         assertTrue(set.contains(3));
         assertFalse(set.contains(6));
-        assertFalse(set.contains("foo"));
     }
+
     @Test
     void canAddObjectsThatAreClose()  {
         CouchbaseArraySet<Object> set = new CouchbaseArraySet<>(uuid, collection, Object.class, options);
@@ -151,9 +152,8 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
     void shouldIterate() {
         CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
         HashSet<Integer> javaSet = new HashSet<>(Arrays.asList(1,2,3,4,5));
-        Iterator<Integer> it = set.iterator();
-        while(it.hasNext()) {
-            assertTrue(javaSet.contains(it.next()));
+        for (Integer integer : set) {
+            assertTrue(javaSet.contains(integer));
         }
     }
     @Test
@@ -169,7 +169,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         assertEquals(4, set.size());
 
         // gotta do another next() before another remove()
-        assertThrows(IllegalStateException.class, () -> it.remove());
+        assertThrows(IllegalStateException.class, it::remove);
 
         // we last visited 1, so...
         assertFalse(set.contains(valToRemove));
@@ -182,8 +182,9 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         Iterator<Integer> it = set.iterator();
         it.next();
         set.clear();
-        assertThrows(ConcurrentModificationException.class, () -> it.remove());
+        assertThrows(ConcurrentModificationException.class, it::remove);
     }
+
     @Test
     void shouldNotRemoveViaIteratorIfListChanged() {
         CouchbaseArraySet<Integer> set = new CouchbaseArraySet<>(uuid, collection, Integer.class, options);
@@ -192,9 +193,9 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
 
         Iterator<Integer> it = set.iterator();
         it.next();
-        set.remove(Integer.valueOf(3));
+        set.remove(3);
         assertEquals(4, set.size());
-        assertThrows(ConcurrentModificationException.class, () -> {it.remove();});
+        assertThrows(ConcurrentModificationException.class, it::remove);
     }
     @Test
     void shouldNotWorkWithNonJsonValuePrimitives() {
@@ -206,12 +207,12 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
     }
     @Test
     void shouldCreateOffCouchbaseCollection() {
-        CouchbaseArraySet<Integer> set = collection.set(uuid, Integer.class, options);
+        Set<Integer> set = collection.set(uuid, Integer.class, options);
         assertTrue(set.isEmpty());
         set.add(1);
         assertFalse(set.isEmpty());
 
-        CouchbaseArraySet<Integer> set2 = collection.set(uuid, Integer.class, options);
-        assertFalse(set.isEmpty());
+        Set<Integer> set2 = collection.set(uuid, Integer.class, options);
+        assertFalse(set2.isEmpty());
     }
 }
