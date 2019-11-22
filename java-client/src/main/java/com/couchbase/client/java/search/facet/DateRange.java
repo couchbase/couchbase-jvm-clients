@@ -16,8 +16,7 @@
 
 package com.couchbase.client.java.search.facet;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 
 public class DateRange {
 
@@ -35,11 +34,11 @@ public class DateRange {
     return new DateRange(name, start, end);
   }
 
-  public static DateRange create(String name, ZonedDateTime start, ZonedDateTime end) {
+  public static DateRange create(String name, Instant start, Instant end) {
     return new DateRange(
       name,
-      start != null ? start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null,
-      end != null ? end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null
+      start != null ? start.toString() : null,
+      end != null ? end.toString() : null
     );
   }
 

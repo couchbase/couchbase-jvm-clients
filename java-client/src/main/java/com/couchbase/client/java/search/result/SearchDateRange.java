@@ -19,7 +19,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreat
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -34,8 +34,8 @@ import java.util.Objects;
 public class SearchDateRange {
 
     private final String name;
-    private final ZonedDateTime start;
-    private final ZonedDateTime end;
+    private final Instant start;
+    private final Instant end;
     private final long count;
 
     @JsonCreator
@@ -47,19 +47,19 @@ public class SearchDateRange {
         this.name = name;
         this.count = count;
 
-        this.start = ZonedDateTime.parse(start);
-        this.end = ZonedDateTime.parse(end);
+        this.start = Instant.parse(start);
+        this.end = Instant.parse(end);
     }
 
     public String name() {
         return name;
     }
 
-    public ZonedDateTime start() {
+    public Instant start() {
         return start;
     }
 
-    public ZonedDateTime end() {
+    public Instant end() {
         return end;
     }
 

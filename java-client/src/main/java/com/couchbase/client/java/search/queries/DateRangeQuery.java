@@ -18,8 +18,7 @@ package com.couchbase.client.java.search.queries;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchQuery;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 
 /**
  * A FTS query that matches documents on a range of dates. At least one bound is required, and the parser
@@ -86,8 +85,8 @@ public class DateRangeQuery extends SearchQuery {
     /**
      * Sets the lower boundary of the range, inclusive or not depending on the second parameter.
      */
-    public DateRangeQuery start(ZonedDateTime start, boolean inclusive) {
-        this.start = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public DateRangeQuery start(Instant start, boolean inclusive) {
+        this.start = start.toString();
         this.inclusiveStart = inclusive;
         return this;
     }
@@ -96,8 +95,8 @@ public class DateRangeQuery extends SearchQuery {
      * Sets the lower boundary of the range.
      * The lower boundary is considered inclusive by default on the server side.
      */
-    public DateRangeQuery start(ZonedDateTime start) {
-        this.start = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public DateRangeQuery start(Instant start) {
+        this.start = start.toString();
         this.inclusiveStart = null;
         return this;
     }
@@ -105,8 +104,8 @@ public class DateRangeQuery extends SearchQuery {
     /**
      * Sets the upper boundary of the range, inclusive or not depending on the second parameter.
      */
-    public DateRangeQuery end(ZonedDateTime end, boolean inclusive) {
-        this.end = end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public DateRangeQuery end(Instant end, boolean inclusive) {
+        this.end = end.toString();
         this.inclusiveEnd = inclusive;
         return this;
     }
@@ -115,15 +114,15 @@ public class DateRangeQuery extends SearchQuery {
      * Sets the upper boundary of the range.
      * The upper boundary is considered exclusive by default on the server side.
      */
-    public DateRangeQuery end(ZonedDateTime end) {
-        this.end = end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public DateRangeQuery end(Instant end) {
+        this.end = end.toString();
         this.inclusiveEnd = null;
         return this;
     }
 
     /**
      * The name of the date/time parser to use to interpret {@link #start(String)} and {@link #end(String)}. Should not
-     * be modified when passing in {@link ZonedDateTime}.
+     * be modified when passing in {@link Instant}.
      */
     public DateRangeQuery dateTimeParser(final String dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
