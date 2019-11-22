@@ -19,8 +19,10 @@ package com.couchbase.client.core.io.netty.view;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ViewErrorContext;
 import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
 import com.couchbase.client.core.msg.view.ViewChunkTrailer;
@@ -77,11 +79,13 @@ public class ViewChunkResponseParser
   @Override
   public Optional<Throwable> error() {
     return error.map(e -> {
-      ViewErrorContext errorContext = new ViewErrorContext(requestContext(), e);
-      if (e.error().equals("not_found")) {
+      int httpStatus = responseHeader().status().code();
+      ResponseStatus responseStatus = HttpProtocol.decodeStatus(responseHeader().status());
+      ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext(), e, httpStatus);
+      if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
         return new ViewNotFoundException(errorContext);
       }
-      return new CouchbaseException("Unknown view error", errorContext);
+      return new CouchbaseException("Unknown view error: " + e.toString(), errorContext);
     });
   }
 

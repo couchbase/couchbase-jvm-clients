@@ -34,4 +34,11 @@ public class ViewError {
     return reason;
   }
 
+  @Override
+  public String toString() {
+    return "ViewError{" +
+      "error='" + error + '\'' +
+      ", reason='" + reason + '\'' +
+      '}';
+  }
 }

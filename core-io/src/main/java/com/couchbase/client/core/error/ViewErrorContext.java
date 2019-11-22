@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.ViewError;
 
 import java.util.Map;
@@ -25,19 +26,17 @@ public class ViewErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
   private final ViewError viewError;
+  private final int httpStatus;
 
-  public ViewErrorContext(RequestContext requestContext, ViewError viewError) {
-    super(null);
+  public ViewErrorContext(ResponseStatus responseStatus, RequestContext requestContext, ViewError viewError, int httpStatus) {
+    super(responseStatus);
     this.requestContext = requestContext;
     this.viewError = viewError;
+    this.httpStatus = httpStatus;
   }
 
   public RequestContext requestContext() {
     return requestContext;
-  }
-
-  public ViewError viewError() {
-    return viewError;
   }
 
   @Override
@@ -50,5 +49,7 @@ public class ViewErrorContext extends ErrorContext {
       input.put("viewError", viewError.error());
       input.put("viewErrorReason", viewError.reason());
     }
+
+    input.put("httpStatus", httpStatus);
   }
 }

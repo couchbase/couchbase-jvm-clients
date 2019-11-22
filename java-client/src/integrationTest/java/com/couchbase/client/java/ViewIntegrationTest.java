@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.manager.view.View;
@@ -32,9 +31,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,24 +47,33 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   private static String VIEW_NAME = "all";
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static Bucket bucket;
   private static Collection collection;
 
   @BeforeAll
   static void setup() {
-    environment = environment().build();
-    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
+    cluster = Cluster.connect(connectionString(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
+    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
+
     createDesignDocument();
+
+    waitUntilCondition(() -> {
+      List<DesignDocument> designs = bucket.viewIndexes().getAllDesignDocuments(DesignDocumentNamespace.PRODUCTION);
+      for (DesignDocument design : designs) {
+        if (design.name().equals(DDOC_NAME)) {
+          return true;
+        }
+      }
+      return false;
+    });
   }
 
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   private static void createDesignDocument() {
