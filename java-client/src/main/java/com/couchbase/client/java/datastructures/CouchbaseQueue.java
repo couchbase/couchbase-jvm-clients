@@ -16,7 +16,6 @@
 package com.couchbase.client.java.datastructures;
 
 import java.util.AbstractQueue;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -25,7 +24,9 @@ import java.util.Queue;
 import com.couchbase.client.core.annotation.Stability;
 
 
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.Collection;
@@ -33,18 +34,17 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.java.kv.CommonDatastructureOptions;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
-import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.kv.StoreSemantics;
-import com.couchbase.client.java.kv.UpsertOptions;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * A CouchbaseQueue is a {@link Queue} backed by a {@link Collection Couchbase} document (more
@@ -67,11 +67,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
     private final Collection collection;
     private final Class<E> entityTypeClass;
     private final QueueOptions.Built queueOptions;
-    private final GetOptions getOptions;
     private final LookupInOptions lookupInOptions;
-    private final MutateInOptions mutateInOptions;
-    private final InsertOptions insertOptions;
-    private final UpsertOptions upsertOptions;
 
     /**
      * Create a new {@link Collection Couchbase-backed} Queue, backed by the document identified by <code>id</code>
@@ -84,6 +80,10 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
      * @param options a {@link CommonDatastructureOptions} to use for all operations on this instance of the queue.
      */
     public CouchbaseQueue(String id, Collection collection, Class<E> entityType, QueueOptions options) {
+        notNull(collection, "Collection", () -> ReducedKeyValueErrorContext.create(id, null, null, null));
+        notNullOrEmpty(id, "Id", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
+        notNull(entityType, "EntityType", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
+        notNull(options, "QueueOptions", () ->  ReducedKeyValueErrorContext.create(id, collection.bucketName(), collection.scopeName(), collection.name()));
         this.collection = collection;
         this.id = id;
         this.entityTypeClass = entityType;
@@ -93,24 +93,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         QueueOptions opts = QueueOptions.queueOptions();
         optionsIn.copyInto(opts);
         this.queueOptions = opts.build();
-        this.getOptions = optionsIn.getOptions();
         this.lookupInOptions = optionsIn.lookupInOptions();
-        this.upsertOptions = optionsIn.upsertOptions();
-        this.insertOptions = optionsIn.insertOptions();
-        this.mutateInOptions = optionsIn.mutateInOptions();
-    }
-
-    /**
-     * Create a new {@link Collection Couchbase-backed} Queue, backed by the document identified by <code>id</code>
-     * in <code>bucket</code>. Note that if the document already exists, its content will be used as initial
-     * content for this collection. Otherwise it is created empty.
-     *
-     * @param id the id of the Couchbase document to back the queue.
-     * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a {@link Class<E>} describing the type of objects in this Set.
-     */
-    public CouchbaseQueue(String id, Collection collection, Class<E> entityType) {
-        this(id, collection, entityType, QueueOptions.queueOptions());
     }
 
     @Override
@@ -139,7 +122,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
             throw new NullPointerException("Unsupported null value");
         }
         collection.mutateIn(id,
-                Collections.singletonList(MutateInSpec.arrayPrepend("", Arrays.asList(e))),
+                Collections.singletonList(MutateInSpec.arrayPrepend("", Collections.singletonList(e))),
                 queueOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
         return true;
     }
@@ -158,29 +141,32 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                         Collections.singletonList(MutateInSpec.remove(idx)),
                         queueOptions.mutateInOptions().cas(returnCas));
                 return current;
-            } catch (DocumentNotFoundException ex) {
+            } catch (DocumentNotFoundException | PathNotFoundException ex) {
                 return null;
             } catch (CasMismatchException ex) {
                 //will have to retry get-and-remove
-            } catch (PathNotFoundException ex) {
-                return null;
             }
         }
-        throw new RetryExhaustedException("Couldn't perform set in less than " + queueOptions.casMismatchRetries() + " iterations.  It is likely concurrent modifications of this document are the reason");
+        throw new CouchbaseException("CouchbaseQueue poll failed",
+          new RetryExhaustedException("Couldn't perform poll in less than "
+            +  queueOptions.casMismatchRetries()
+            + " iterations. It is likely concurrent modifications of this document are the reason")
+        );
     }
 
     @Override
     public E peek() {
         try {
-            LookupInResult result = collection.lookupIn(id,
-                    Collections.singletonList(LookupInSpec.get("[-1]")),
-                    lookupInOptions);
+            LookupInResult result = collection.lookupIn(
+              id,
+              Collections.singletonList(LookupInSpec.get("[-1]")),
+              lookupInOptions
+            );
             return result.contentAs(0, entityTypeClass);
-        } catch (DocumentNotFoundException e) {
+        } catch (DocumentNotFoundException | PathNotFoundException e) {
             return null;
-        } catch (PathNotFoundException e) {
-                return null; //the queue is empty
-        }
+        } //the queue is empty
+
     }
 
     public class CouchbaseQueueIterator<E> implements Iterator<E> {
@@ -190,7 +176,8 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
         private int lastVisited = -1;
         private boolean doneRemove = false;
 
-        public CouchbaseQueueIterator() {
+        @SuppressWarnings("unchecked")
+        CouchbaseQueueIterator() {
             JsonArray content;
             try {
                 GetResult result = collection.get(id);

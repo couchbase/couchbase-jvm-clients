@@ -60,6 +60,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -68,6 +69,7 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLI
 import static com.couchbase.client.java.kv.ArrayListOptions.arrayListOptions;
 import static com.couchbase.client.java.kv.ArraySetOptions.arraySetOptions;
 import static com.couchbase.client.java.kv.MapOptions.mapOptions;
+import static com.couchbase.client.java.kv.QueueOptions.queueOptions;
 
 /**
  * The {@link Collection} provides blocking, synchronous access to all collection APIs.
@@ -669,11 +671,12 @@ public class Collection {
    *
    * @param id the queue's document id.
    * @param entityType the class of the values contained in the queue.
-   * @param options a {@link QueueOptions} to use for all operations on this instance of the queue.
    * @return a {@link CouchbaseQueue<T>}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public <T> CouchbaseQueue<T> queue(final String id, final Class<T> entityType, QueueOptions options) {
-    return new CouchbaseQueue<>(id, this, entityType, options);
+  public <T> Queue<T> queue(final String id, final Class<T> entityType) {
+    return queue(id, entityType, queueOptions());
   }
 
   /**
@@ -682,9 +685,13 @@ public class Collection {
    *
    * @param id the queue's document id.
    * @param entityType the class of the values contained in the queue.
+   * @param options a {@link QueueOptions} to use for all operations on this instance of the queue.
    * @return a {@link CouchbaseQueue<T>}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public <T> CouchbaseQueue<T> queue(final String id, final Class<T> entityType) {
-    return new CouchbaseQueue<>(id, this, entityType);
+  public <T> Queue<T> queue(final String id, final Class<T> entityType, QueueOptions options) {
+    return new CouchbaseQueue<>(id, this, entityType, options);
   }
+
 }
