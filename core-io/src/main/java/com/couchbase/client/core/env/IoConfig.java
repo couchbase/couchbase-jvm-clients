@@ -43,7 +43,6 @@ public class IoConfig {
   public static final int DEFAULT_MAX_HTTP_CONNECTIONS = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS;
   public static final Duration DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME;
 
-  private final Set<SaslMechanism> allowedSaslMechanisms;
   private final boolean mutationTokensEnabled;
   private final Duration configPollInterval;
   private final CircuitBreakerConfig kvCircuitBreakerConfig;
@@ -67,9 +66,6 @@ public class IoConfig {
     configPollInterval = Optional
       .ofNullable(builder.configPollInterval)
       .orElse(DEFAULT_CONFIG_POLL_INTERVAL);
-    allowedSaslMechanisms = Optional
-      .ofNullable(builder.allowedSaslMechanisms)
-      .orElse(EnumSet.allOf(SaslMechanism.class));
     kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig.build();
     queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig.build();
     viewCircuitBreakerConfig = builder.viewCircuitBreakerConfig.build();
@@ -101,10 +97,6 @@ public class IoConfig {
 
   public static Builder enableDnsSrv(boolean dnsSrvEnabled) {
     return builder().enableDnsSrv(dnsSrvEnabled);
-  }
-
-  public static Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
-    return builder().allowedSaslMechanisms(allowedSaslMechanisms);
   }
 
   public static Builder configPollInterval(Duration configPollInterval) {
@@ -161,10 +153,6 @@ public class IoConfig {
 
   public static Builder idleHttpConnectionTimeout(Duration idleHttpConnectionTimeout) {
     return builder().idleHttpConnectionTimeout(idleHttpConnectionTimeout);
-  }
-
-  public Set<SaslMechanism> allowedSaslMechanisms() {
-    return allowedSaslMechanisms;
   }
 
   public CircuitBreakerConfig kvCircuitBreakerConfig() {
@@ -237,7 +225,6 @@ public class IoConfig {
   @Stability.Volatile
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
-    export.put("allowedSaslMechs", allowedSaslMechanisms);
     export.put("captureTraffic", captureTraffic);
     export.put("mutationTokensEnabled", mutationTokensEnabled);
     export.put("networkResolution", networkResolution.name());
@@ -259,7 +246,6 @@ public class IoConfig {
 
   public static class Builder {
 
-    private Set<SaslMechanism> allowedSaslMechanisms;
     private boolean mutationTokensEnabled = DEFAULT_MUTATION_TOKENS_ENABLED;
     private Duration configPollInterval;
     private CircuitBreakerConfig.Builder kvCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
@@ -279,11 +265,6 @@ public class IoConfig {
 
     public IoConfig build() {
       return new IoConfig(this);
-    }
-
-    public Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
-      this.allowedSaslMechanisms = allowedSaslMechanisms;
-      return this;
     }
 
     public Builder configPollInterval(Duration configPollInterval) {

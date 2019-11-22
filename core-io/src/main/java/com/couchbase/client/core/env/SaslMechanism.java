@@ -18,7 +18,6 @@ package com.couchbase.client.core.env;
 
 public enum SaslMechanism {
   PLAIN("PLAIN"),
-  CRAM_MD5("CRAM-MD5"),
   SCRAM_SHA1("SCRAM-SHA1"),
   SCRAM_SHA256("SCRAM-SHA256"),
   SCRAM_SHA512("SCRAM-SHA512");
@@ -42,8 +41,6 @@ public enum SaslMechanism {
   public static SaslMechanism from(final String mech) {
     if (mech.equalsIgnoreCase("PLAIN")) {
       return PLAIN;
-    } else if (mech.equalsIgnoreCase("CRAM-MD5")) {
-      return CRAM_MD5;
     } else if (mech.equalsIgnoreCase("SCRAM-SHA1")) {
       return SCRAM_SHA1;
     } else if (mech.equalsIgnoreCase("SCRAM-SHA256")) {

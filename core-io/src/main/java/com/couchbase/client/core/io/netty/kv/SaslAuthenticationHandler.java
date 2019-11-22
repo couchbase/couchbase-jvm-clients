@@ -31,7 +31,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
 
@@ -119,11 +118,11 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private ChannelPromise interceptedConnectPromise;
 
   public SaslAuthenticationHandler(final EndpointContext endpointContext, final String username,
-                                   final String password) {
+                                   final String password, final Set<SaslMechanism> allowedSaslMechanisms) {
     this.endpointContext = endpointContext;
     this.username = username;
     this.password = password;
-    this.allowedMechanisms = endpointContext.environment().ioConfig().allowedSaslMechanisms();
+    this.allowedMechanisms = allowedSaslMechanisms;
     this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
   }
 
@@ -363,8 +362,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     final String mech = saslClient.getMechanismName();
 
     ByteBuf body;
-    if (mech.equalsIgnoreCase(SaslMechanism.CRAM_MD5.mech())
-      || mech.equalsIgnoreCase(SaslMechanism.PLAIN.mech())) {
+    if (mech.equalsIgnoreCase(SaslMechanism.PLAIN.mech())) {
       String[] evaluated = new String(evaluatedBytes, UTF_8).split(" ");
       body = Unpooled.copiedBuffer(username + "\0" + evaluated[1], UTF_8);
     } else {

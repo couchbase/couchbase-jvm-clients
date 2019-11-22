@@ -24,7 +24,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 case class IoConfig(
     private[scala] val mutationTokensEnabled: Boolean = true,
-    private[scala] val allowedSaslMechanisms: Option[Set[SaslMechanism]] = None,
     private[scala] val configPollInterval: Option[Duration] = None,
     private[scala] val kvCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
     private[scala] val queryCircuitBreakerConfig: Option[CircuitBreakerConfig] = None,
@@ -38,7 +37,6 @@ case class IoConfig(
     val builder = core.env.IoConfig.builder()
 
     builder.enableMutationTokens(mutationTokensEnabled)
-    allowedSaslMechanisms.foreach(v => builder.allowedSaslMechanisms(v.asJava))
     configPollInterval.foreach(v => builder.configPollInterval(v))
     kvCircuitBreakerConfig.foreach(v => builder.kvCircuitBreakerConfig(v.toCore))
     queryCircuitBreakerConfig.foreach(v => builder.queryCircuitBreakerConfig(v.toCore))
@@ -56,14 +54,6 @@ case class IoConfig(
     */
   def mutationTokensEnabled(value: Boolean): IoConfig = {
     copy(mutationTokensEnabled = value)
-  }
-
-  /** Configures which SASL mechanisms can be used.
-    *
-    * @return this, for chaining
-    */
-  def allowedSaslMechanisms(value: Set[SaslMechanism]): IoConfig = {
-    copy(allowedSaslMechanisms = Some(value))
   }
 
   def configPollInterval(value: Duration): IoConfig = {

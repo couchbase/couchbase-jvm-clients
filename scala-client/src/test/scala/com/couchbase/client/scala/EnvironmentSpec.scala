@@ -1,6 +1,5 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.env.SaslMechanism
 import com.couchbase.client.scala.env._
 import org.junit.jupiter.api.Test
 
@@ -82,7 +81,6 @@ class EnvironmentSpec {
       .ioConfig(
         IoConfig()
           .mutationTokensEnabled(true)
-          .allowedSaslMechanisms(Set(SaslMechanism.PLAIN, SaslMechanism.CRAM_MD5))
           .configPollInterval(Duration("5 seconds"))
           .kvCircuitBreakerConfig(
             CircuitBreakerConfig()

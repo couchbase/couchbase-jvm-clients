@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -90,5 +91,20 @@ public class Validators {
       throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
   }
+
+  public static void notNullOrEmpty(final Set<?> input, final String identifier) {
+    if (input == null || input.isEmpty()) {
+      throw new IllegalArgumentException(identifier + " cannot be null or empty");
+    }
+  }
+
+  public static void notNullOrEmpty(final Set<?> input, final String identifier, final Supplier<ErrorContext> errorContext) {
+    try {
+      notNullOrEmpty(input, identifier);
+    } catch (Exception cause) {
+      throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
+    }
+  }
+
 
 }
