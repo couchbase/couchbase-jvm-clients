@@ -41,7 +41,7 @@ import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData}
+import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
@@ -188,16 +188,11 @@ class ReactiveCluster(val async: AsyncCluster) {
           .map(response => {
             val meta: SMono[SearchMetaData] = FutureConversions
               .javaMonoToScalaMono(response.trailer())
-              .map(trailer => {
-                val rawStatus = response.header.getStatus
-                val errors    = SearchHandler.parseSearchErrors(rawStatus)
-                // SCBC-46: errors need to be raised...
-                val meta = SearchHandler.parseSearchMeta(response, trailer)
+              .map(trailer => SearchHandler.parseSearchMeta(response, trailer))
 
-                meta
-              })
-
-            val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
+            val rows = FutureConversions
+              .javaFluxToScalaFlux(response.rows())
+              .map(row => SearchRow.fromResponse(row))
 
             ReactiveSearchResult(
               rows,

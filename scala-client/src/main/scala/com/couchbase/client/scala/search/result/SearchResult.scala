@@ -28,7 +28,6 @@ import scala.util.{Failure, Success, Try}
 
 /** The results of an FTS query.
   *
-  * @param errors          any execution error that happened.  Note that it is possible to have both rows and errors.
   * @param facets          any search facets returned
   * @param metaData            any additional information related to the FTS query
   *
@@ -37,7 +36,7 @@ import scala.util.{Failure, Success, Try}
   */
 case class SearchResult(
     private[scala] val _rows: Seq[SearchRow],
-    errors: Seq[RuntimeException],
+    // facets: Map[String, SearchFacetResult],
     metaData: SearchMetaData
 ) {
 
@@ -55,65 +54,7 @@ case class SearchResult(
   * @param meta            any additional information related to the FTS query
   */
 case class ReactiveSearchResult(
-    private[scala] val rows: SFlux[SearchChunkRow],
+    rows: SFlux[SearchRow],
+    // facets: SMono[Map[String, SearchFacetResult]],
     meta: SMono[SearchMetaData]
-) {
-
-  /** Return all rows, converted into the application's preferred representation.
-    *
-    * @tparam T $SupportedTypes
-    */
-  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
-    rows.map(
-      row =>
-        deserializer.deserialize(row.data()) match {
-          case Success(v)   => v
-          case Failure(err) => throw err
-        }
-    )
-  }
-}
-
-/** Metrics of a given FTS request.
-  *
-  * @param took        how long a request took executing on the server side
-  * @param totalRows   number of rows returned
-  * @param maxScore    the largest score amongst the rows.
-  */
-case class SearchMetrics(took: Duration, totalRows: Long, maxScore: Double)
-
-/** Represents the status of a FTS query.
-  *
-  * @param totalCount   the total number of FTS pindexes that were queried.
-  * @param successCount the number of FTS pindexes queried that successfully answered.
-  * @param errorCount   the number of FTS pindexes queried that gave an error. If &gt; 0,
-  */
-case class SearchStatus(totalCount: Long, successCount: Long, errorCount: Long) {
-
-  /** If all FTS indexes answered successfully. */
-  def isSuccess: Boolean = errorCount == 0
-}
-
-/** Additional information returned by the FTS service after any rows and errors.
-  *
-  * @param metrics         metrics related to the FTS request, if they are available
-  * @param warnings        any warnings returned from the FTS service
-  * @param status          the raw status string returned from the FTS service
-  */
-case class SearchMetaData(status: SearchStatus, metrics: SearchMetrics)
-
-private[scala] object SearchStatus {
-  def fromBytes(in: Array[Byte]): SearchStatus = {
-    JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
-      case Success(jo) =>
-        SearchStatus(
-          jo.numLong("total").getOrElse(0),
-          jo.numLong("successful").getOrElse(0),
-          jo.numLong("failed").getOrElse(0)
-        )
-
-      case Failure(err) =>
-        SearchStatus(0, 0, 0)
-    }
-  }
-}
+)

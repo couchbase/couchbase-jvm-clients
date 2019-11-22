@@ -16,10 +16,9 @@
 
 package com.couchbase.client.scala.search.facet
 
-import java.util.Date
+import java.time.Instant
 
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.search.util.SearchUtils
 
 /** Base class for all FTS facets in querying.
   *
@@ -92,7 +91,7 @@ object SearchFacet {
     *
     * @since 1.0.0
     */
-  case class DateRangeFacet(field: String, size: Option[Int] = None, dateRanges: Seq[DateRange])
+  case class DateRangeFacet(field: String, dateRanges: Seq[DateRange], size: Option[Int] = None)
       extends SearchFacet {
 
     override def injectParams(queryJson: JsonObject): Unit = {
@@ -118,4 +117,10 @@ object SearchFacet {
     * @param end    the start of the range (optional)
     */
   case class DateRange(name: String, start: Option[String], end: Option[String])
+
+  object DateRange {
+    def create(name: String, start: Option[Instant], end: Option[Instant]): DateRange = {
+      DateRange(name, start.map(_.toString), end.map(_.toString))
+    }
+  }
 }

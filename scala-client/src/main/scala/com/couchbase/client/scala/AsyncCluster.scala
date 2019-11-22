@@ -181,7 +181,7 @@ class AsyncCluster(
                           )
                         )
                       })
-                )
+              )
           )
           .toFuture
 
@@ -322,19 +322,13 @@ object AsyncCluster {
                 rows =>
                   FutureConversions
                     .javaMonoToScalaMono(response.trailer())
-                    .map(trailer => {
-
-                      val rawStatus = response.header.getStatus
-                      val errors    = SearchHandler.parseSearchErrors(rawStatus)
-                      val meta      = SearchHandler.parseSearchMeta(response, trailer)
-
-                      SearchResult(
-                        rows,
-                        errors,
-                        meta
-                      )
-                    })
-              )
+                    .map(
+                      trailer =>
+                        SearchResult(
+                          rows,
+                          SearchHandler.parseSearchMeta(response, trailer)
+                      ))
+            )
         )
         .toFuture
 

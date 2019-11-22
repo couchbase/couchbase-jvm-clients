@@ -18,23 +18,16 @@ package com.couchbase.client.scala.query.handlers
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchRequest, SearchResponse}
-import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{
-  FacetResult,
-  SearchMetaData,
-  SearchMetrics,
-  SearchStatus
-}
+import com.couchbase.client.scala.search.result.{SearchMetaData, SearchMetrics}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, Validate}
 
-import scala.collection.GenSeq
+import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -104,26 +97,39 @@ object SearchHandler {
       response: SearchResponse,
       trailer: SearchChunkTrailer
   ): SearchMetaData = {
-    val rawStatus = response.header.getStatus
-    val status    = SearchStatus.fromBytes(rawStatus)
-    val metrics =
-      SearchMetrics(Duration.fromNanos(trailer.took()), trailer.totalRows(), trailer.maxScore())
-    val meta = SearchMetaData(status, metrics)
-    meta
-  }
+    val meta: Try[SearchMetaData] = for {
+      status                <- JsonObjectSafe.fromJson(new String(response.header.getStatus, CharsetUtil.UTF_8))
+      totalPartitionCount   <- status.numLong("total")
+      successPartitionCount <- status.numLong("successful")
+      errorPartitionCount   <- status.numLong("failed")
+      errors                <- status.obj("errors")
 
-  private[scala] def parseSearchErrors(status: Array[Byte]): Seq[RuntimeException] = {
-    val jsonStatus = JacksonTransformers.MAPPER.readValue(status, classOf[JsonObject])
-    val errorsRaw  = jsonStatus.safe.get("errors")
-    errorsRaw match {
-      case Success(errorsJson: JsonArray) =>
-        errorsJson.toSeq.map(v => new RuntimeException(v.toString))
-      case Success(errorsJson: JsonObject) =>
-        errorsJson.names.toSeq.seq
-          .map(key => new RuntimeException(key + ": " + errorsJson.get(key)))
-      case Failure(err: NoSuchElementException) => Seq.empty
+      metrics <- Try(
+        SearchMetrics(
+          Duration.fromNanos(trailer.took),
+          trailer.totalRows,
+          trailer.maxScore,
+          totalPartitionCount,
+          successPartitionCount,
+          errorPartitionCount
+        )
+      )
+
+      meta <- Try(
+        SearchMetaData(
+          metrics,
+          errors.toMap.asInstanceOf[GenMap[String, String]]
+        )
+      )
+    } yield meta
+
+    meta match {
+      case Success(m) => m
       case _ =>
-        Seq(new RuntimeException("Server error: errors field returned, but contained no errors"))
+        SearchMetaData(
+          SearchMetrics(Duration.Zero, 0, 0, 0, 0, 0),
+          Map.empty[String, String]
+        )
     }
   }
 }

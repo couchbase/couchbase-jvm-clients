@@ -84,8 +84,8 @@ class SearchSpec extends ScalaIntegrationTest {
       SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
     ) match {
       case Success(result) =>
-        println(result.errors)
-        assert(result.errors.isEmpty)
+        println(result.metaData.errors)
+        assert(result.metaData.errors.isEmpty)
         assert(1 == result.rows.size)
         result.rows.foreach(row => {
           val fields = row.fieldsAs[JsonObject]

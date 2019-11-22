@@ -45,21 +45,22 @@ class SearchSpec {
       ),
       "facet3" -> SearchFacet.DateRangeFacet(
         "field3",
-        Some(10),
-        Seq(DateRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59")))
+        Seq(DateRange("range1", Some("2011-01-01T00:00:00"), Some("2011-12-31T23:59:59"))),
+        Some(10)
       )
     )
   }
 
   @Test
   def alltimeouts() {
+    classOf[SearchSpec]
     val json   = getClass.getClassLoader.getResourceAsStream("sdk-testcases/search/alltimeouts.json")
     val result = SearchMock.loadSearchTestCase(json)
 
-    assert(6 == result.errors.size)
-    assert(6 == result.metaData.status.errorCount)
-    assert(6 == result.metaData.status.totalCount)
-    assert(0 == result.metaData.status.successCount)
-    assert(!result.metaData.status.isSuccess)
+    assert(0 == result.rows.size)
+    assert(6 == result.metaData.errors.size)
+    assert(6 == result.metaData.metrics.errorPartitionCount)
+    assert(6 == result.metaData.metrics.totalPartitionCount)
+    assert(0 == result.metaData.metrics.successPartitionCount)
   }
 }

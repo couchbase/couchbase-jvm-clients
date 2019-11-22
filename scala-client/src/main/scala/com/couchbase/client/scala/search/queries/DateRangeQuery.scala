@@ -16,13 +16,13 @@
 
 package com.couchbase.client.scala.search.queries
 
-import java.util.Date
+import java.time.Instant
 
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.search.util.SearchUtils
 
-/** An FTS query that matches documents on a range of dates. At least one bound is required, and the parser
-  * to use for the date (in [[String]] form) can be customized (see [[#dateTimeParser(String)]]).
+/** An FTS query that matches documents on a range of dates. At least one bound is required.
+  *
+  * Datetimes can be provided as RFC3339 compliant strings in UTC timezone only, or more conveniently as an [[Instant]].
   *
   * @since 1.0.0
   */
@@ -63,49 +63,33 @@ case class DateRangeQuery(
   }
 
   /** Sets the lower boundary of the range, inclusive or not depending on the second parameter.
-    *
-    * Works with a [[Date]] object, which is converted to RFC 3339 format using
-    * [[SearchUtils#toFtsUtcString(Date)]], so you shouldn't use a non-default [[#dateTimeParser(String)]]
-    * after that.
     */
-  def start(start: Date, inclusive: Boolean): DateRangeQuery = {
-    copy(start = Some(SearchUtils.toFtsUtcString(start)), inclusiveStart = Some(inclusive))
+  def start(start: Instant, inclusive: Boolean): DateRangeQuery = {
+    copy(start = Some(start.toString), inclusiveStart = Some(inclusive))
   }
 
   /** Sets the lower boundary of the range.
     * The lower boundary is considered inclusive by default on the server side.
-    *
-    * Works with a [[Date]] object, which is converted to RFC 3339 format using
-    * [[SearchUtils#toFtsUtcString(Date)]], so you shouldn't use a non-default [[#dateTimeParser(String)]]
-    * after that.
     */
-  def start(start: Date): DateRangeQuery = {
-    copy(start = Some(SearchUtils.toFtsUtcString(start)), inclusiveStart = None)
+  def start(start: Instant): DateRangeQuery = {
+    copy(start = Some(start.toString), inclusiveStart = None)
   }
 
   /** Sets the upper boundary of the range, inclusive or not depending on the second parameter.
-    *
-    * Works with a [[Date]] object, which is converted to RFC 3339 format using
-    * [[SearchUtils#toFtsUtcString(Date)]], so you shouldn't use a non-default [[#dateTimeParser(String)]]
-    * after that.
     */
-  def end(end: Date, inclusive: Boolean): DateRangeQuery = {
-    copy(end = Some(SearchUtils.toFtsUtcString(end)), inclusiveEnd = Some(inclusive))
+  def end(end: Instant, inclusive: Boolean): DateRangeQuery = {
+    copy(end = Some(end.toString), inclusiveEnd = Some(inclusive))
   }
 
   /** Sets the upper boundary of the range.
     * The upper boundary is considered exclusive by default on the server side.
-    *
-    * Works with a [[Date]] object, which is converted to RFC 3339 format using
-    * [[SearchUtils#toFtsUtcString(Date)]], so you shouldn't use a non-default [[#dateTimeParser(String)]]
-    * after that.
     */
-  def end(end: Date): DateRangeQuery = {
-    copy(end = Some(SearchUtils.toFtsUtcString(end)), inclusiveEnd = None)
+  def end(end: Instant): DateRangeQuery = {
+    copy(end = Some(end.toString), inclusiveEnd = None)
   }
 
-  /** The name of the date/time parser to use to interpret `start` and `end`. Should not
-    * be modified when passing in [[Date]].
+  /** The name of the Instant/time parser to use to interpret `start` and `end`. Should not
+    * be modified when passing in [[Instant]].
     */
   def dateTimeParser(dateTimeParser: String): DateRangeQuery = {
     copy(dateTimeParser = Some(dateTimeParser))
