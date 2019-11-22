@@ -13,13 +13,15 @@ def ORACLE_JDK_8 = "8u192"
 def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
+EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
+//EMAILS = ['graham.pople@couchbase.com']
 
 pipeline {
     agent { label 'master' }
 
     options {
         // Safety check, prevent the script running forever
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 300, unit: 'MINUTES')
 
         // Normally stashes are cleared at the end of the run, but it can be helpful during debugging/development to
         // keep the last stash around (though currently, this workflow doesn't work due to
@@ -28,17 +30,6 @@ pipeline {
     }
 
     stages {
-        stage('job valid?') {
-            when {
-                expression {
-                    return _INTERNAL_OK_.toBoolean() != true
-                }
-            }
-            steps {
-                error("Exiting early as not valid run")
-            }
-        }
-
         // Validations are intended to make sure that the commit is sane.  Things like code-formatting rules and basic
         // sanity tests go here.
         stage('prepare and validate') {
@@ -117,8 +108,6 @@ pipeline {
                     // Process the Junit test results
                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
                 }
-                failure { emailFailure() }
-                success { emailSuccess() }
             }
         }
 
@@ -148,158 +137,148 @@ pipeline {
                 always {
                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
                 }
-                failure { emailFailure() }
-                success { emailSuccess() }
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8) ') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("6.0.3", QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-                failure { emailFailure() }
-                success { emailSuccess() }
-            }
-        }
+         stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8) ') {
+             agent { label 'sdk-integration-test-linux' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer("6.0.3", QUICK_TEST_MODE) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
 
-        stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8) ') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("5.5.5", QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-                failure { emailFailure() }
-                success { emailSuccess() }
-            }
-        }
+         stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8) ') {
+             agent { label 'sdk-integration-test-linux' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer("5.5.5", QUICK_TEST_MODE) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
 
-        // Someone smarter than I could work out how to parameterise linux & windows testing without C&P...
-        stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8) ') {
-            agent { label 'sdk-integration-test-windows' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded("windows", ORACLE_JDK, ORACLE_JDK_8)
+         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11) ') {
+             agent { label 'sdk-integration-test-linux' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
 
-                    dir('couchbase-jvm-clients') {
-                        script {
-                            testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE)
-                        }
-                    }
-                }
-            }
-            post {
-                always {
-                    // Process the Junit test results
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8) ') {
+             agent { label 'sdk-integration-test-linux' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
+                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
 
-        stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11) ') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-                failure { emailFailure() }
-                success { emailSuccess() }
-            }
-        }
-
-        stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8) ') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-                failure { emailFailure() }
-                success { emailSuccess() }
-            }
-        }
+         // Commented for now as sdk-integration-test-win temporarily down
+//         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8) ') {
+//             agent { label 'sdk-integration-test-win' }
+//             environment {
+//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//             }
+//             when {
+//                 expression
+//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//             }
+//             steps {
+//                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+//                     cleanWs()
+//                     unstash 'couchbase-jvm-clients'
+//                     installJDKIfNeeded("windows", ORACLE_JDK, ORACLE_JDK_8)
+//
+//                     dir('couchbase-jvm-clients') {
+//                         script {
+//                             testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE)
+//                         }
+//                     }
+//                 }
+//             }
+//             post {
+//                 always {
+//                     // Process the Junit test results
+//                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                 }
+//             }
+//         }
 
         stage('package') {
             steps {
@@ -307,29 +286,41 @@ pipeline {
                 unstash 'couchbase-jvm-clients'
 
                 dir('couchbase-jvm-clients') {
+                    shWithEcho("find . -iname *.jar")
                     // archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
-                    archiveArtifacts artifacts: 'java-client/build/libs/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'scala-client/build/libs/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'core-io/build/libs/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'java-client/target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'scala-client/target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'core-io/target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'java-examples/target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'tracing-opentelemetry/target/*.jar', fingerprint: true
+                    archiveArtifacts artifacts: 'tracing-opentracing/target/*.jar', fingerprint: true
                     archiveArtifacts artifacts: '**/pom.xml', fingerprint: true
                 }
             }
         }
     }
+    post {
+        failure { emailFailure() }
+        success { emailSuccess() }
+    }
 }
 
 void emailSuccess() {
-    def emailAddress = 'graham.pople@couchbase.com'
-    mail to: emailAddress,
-            subject: "Successful Pipeline: ${currentBuild.fullDisplayName}",
-            body: "Succeeded: ${env.BUILD_URL}"
+    EMAILS.each {
+        def email = it
+        mail to: email,
+                subject: "Successful Pipeline: ${currentBuild.fullDisplayName}",
+                body: "Succeeded: ${env.BUILD_URL}"
+    }
 }
 
 void emailFailure() {
-    def emailAddress = 'graham.pople@couchbase.com'
-    mail to: emailAddress,
-            subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
-            body: "Something is wrong with ${env.BUILD_URL}"
+    EMAILS.each {
+        def email = it
+        mail to: email,
+                subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
+                body: "Something is wrong with ${env.BUILD_URL}"
+    }
 }
 
 void shWithEcho(String command) {
@@ -337,6 +328,14 @@ void shWithEcho(String command) {
         echo bat(script: command, returnStdout: true)
     } else {
         echo sh(script: command, returnStdout: true)
+    }
+}
+
+void shIgnoreFailure(String command) {
+    if (NODE_NAME.contains("windows")) {
+        bat(script: command, returnStatus: true)
+    } else {
+        sh(script: command, returnStatus: true)
     }
 }
 
@@ -422,24 +421,28 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE) {
         // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
 
+        // Running Scala separately as when try to run everything together, it hangs
+        shIgnoreFailure("mvn -pl 'scala-client' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+
         // The -B -Dorg... stuff hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            // Removing scala for now
+            // Removing scala for now, see above
             shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
         } else {
             // This is for iteration during development, skips out some steps
             shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
 
-            // While iterating Jenkins development, this makes it much faster:
-            // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+            // Another iteration option, this runs just one test
+            //shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
         }
+
+
 
     }
     finally {
         if (clusterId != null) {
             // Easy to run out of resources during iterating, so cleanup even
             // though cluster will be auto-removed after a time
-
             sh(script: "cbdyncluster rm $clusterId")
         }
     }
