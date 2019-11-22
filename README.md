@@ -1,9 +1,9 @@
 # Couchbase JVM Clients
 
-This repository contains the next generation of Couchbase SDKs ("3.0") as well as a rewritten 
-`core-io` library.
+This repository contains the third generation of the Couchbase SDKs on the JVM ("3.0").
 
-It is currently in an `alpha` state and not ready for prime-time, although we are getting there.
+The SDKs are currently in a `beta` state, and should be stable to develop and experiment against. Please do not 
+use them in production until we release them as `GA` (planned for January 2020).
 
 ## Overview
 
@@ -13,12 +13,7 @@ This repository contains the following projects:
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
 
-And soon:
-
- - `kotlin-client`: the Kotlin language binding
- 
-Regular Couchbase users will note that both the Scala and the Kotlin binding are new! Yes they are, 
-and we are trying to develop them as first-class citizens similar to the Java client going forward.
+You'll also find utility libraries and integration components at the toplevel (i.e for tracing).
  
 Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html) 
 and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
@@ -44,7 +39,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0-alpha.7</version>
+        <version>3.0.0-beta.2</version>
     </dependency>
 </dependencies>
 ```
@@ -56,7 +51,7 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.0-alpha.7</version>
+        <version>1.0.0-beta.1</version>
     </dependency>
 </dependencies>
 ```
@@ -70,7 +65,7 @@ $ cd couchbase-jvm-clients
 $ make
 ```
 
-Yes, we need make because maven doesn't support the setup we need and neither does gradle. If you
+Yes, we need `make` because maven doesn't support the setup we need and neither does gradle. If you
 want to build for different scala versions, after the first `make` you can do this through:
 
 ```
@@ -90,7 +85,7 @@ Use `-DskipTests` to skip testing.
 You can test like this:
 
 ```
-$ mvn --fail-at-end clean test
+$ mvn clean test -fae
 ```
 
 ### Testing Infos
