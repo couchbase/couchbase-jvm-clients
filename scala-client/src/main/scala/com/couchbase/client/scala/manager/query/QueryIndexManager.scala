@@ -164,7 +164,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     * @param bucketName        the bucket to watch on
     * @param indexNames        the indexes to poll.
     * @param watchPrimary      include the bucket's primary index.  If the bucket has no primary index, the operation
-    *                          will fail with [[QueryIndexNotFoundException]]
+    *                          will fail with [[com.couchbase.client.core.error.QueryIndexNotFoundException]]
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
     */

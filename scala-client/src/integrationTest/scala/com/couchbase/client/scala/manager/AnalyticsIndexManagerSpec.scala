@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets
 
+import com.couchbase.client.core.error._
 import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.manager.analytics._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -83,8 +84,8 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     analytics.createDataverse(DataverseName).get
 
     analytics.createDataverse(DataverseName) match {
-      case Failure(err: DataverseAlreadyExistsException) =>
-      case _                                             =>
+      case Failure(err: DataverseExistsException) =>
+      case _                                      =>
     }
   }
 
@@ -114,8 +115,8 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
   def createDatasetTwice(): Unit = {
     analytics.createDataset(DatasetName, bucketName).get
     analytics.createDataset(DatasetName, bucketName) match {
-      case Failure(err: DatasetAlreadyExistsException) =>
-      case _                                           =>
+      case Failure(err: DatasetExistsException) =>
+      case _                                    =>
     }
     analytics.createDataset(DatasetName, bucketName, ignoreIfExists = true).get
   }
@@ -152,8 +153,8 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     analytics.createIndex(IndexName, DatasetName, fields).get
 
     analytics.createIndex(IndexName, DatasetName, fields) match {
-      case Failure(err: AnalyticsIndexAlreadyExistsException) =>
-      case _                                                  => assert(false)
+      case Failure(err: AnalyticsIndexExistsException) =>
+      case _                                           => assert(false)
     }
 
     analytics.createIndex(IndexName, DatasetName, fields, ignoreIfExists = true).get

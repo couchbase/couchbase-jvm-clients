@@ -35,23 +35,10 @@ import scala.util.{Failure, Success, Try}
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.RowTraversalUtil
 
-case class DataverseAlreadyExistsException(dataverseName: String)  extends CouchbaseException
-case class DataverseNotFoundException(dataverseName: String)       extends CouchbaseException
-case class DatasetNotFoundException(datasetName: String)           extends CouchbaseException
-case class DatasetAlreadyExistsException(datasetName: String)      extends CouchbaseException
-case class AnalyticsIndexNotFoundException(indexName: String)      extends CouchbaseException
-case class AnalyticsIndexAlreadyExistsException(indexName: String) extends CouchbaseException
-
 class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
 
   private[scala] val DefaultTimeout: Duration = cluster.async.env.timeoutConfig.managementTimeout()
   private[scala] val DefaultRetryStrategy     = cluster.async.env.retryStrategy
-  private val DataverseNotFound               = 24034
-  private val DataverseAlreadyExists          = 24039
-  private val DatasetNotFound                 = 24025
-  private val DatasetAlreadyExists            = 24040
-  private val IndexNotFound                   = 24047
-  private val IndexAlreadyExists              = 24048
 
   def createDataverse(
       dataverseName: String,
@@ -276,22 +263,8 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           case Some(e) => e
           case _ =>
             t match {
-              case e: AnalyticsException =>
-                if (e.hasErrorCode(DataverseNotFound)) new DataverseNotFoundException(itemName)
-                else if (e.hasErrorCode(DataverseAlreadyExists))
-                  new DataverseAlreadyExistsException(itemName)
-                else if (e.hasErrorCode(DatasetNotFound)) new DatasetNotFoundException(itemName)
-                else if (e.hasErrorCode(DatasetAlreadyExists))
-                  new DatasetAlreadyExistsException(itemName)
-                else if (e.hasErrorCode(IndexNotFound))
-                  new AnalyticsIndexNotFoundException(itemName)
-                else if (e.hasErrorCode(IndexAlreadyExists))
-                  new AnalyticsIndexAlreadyExistsException(itemName)
-                else e
-
               case e: RuntimeException => e
-
-              case _ => new RuntimeException(t)
+              case _                   => new RuntimeException(t)
             }
         }
 

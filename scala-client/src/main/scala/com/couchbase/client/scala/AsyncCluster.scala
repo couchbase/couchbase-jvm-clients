@@ -181,7 +181,7 @@ class AsyncCluster(
                           )
                         )
                       })
-              )
+                )
           )
           .toFuture
 
@@ -327,8 +327,9 @@ object AsyncCluster {
                         SearchResult(
                           rows,
                           SearchHandler.parseSearchMeta(response, trailer)
-                      ))
-            )
+                        )
+                    )
+              )
         )
         .toFuture
 

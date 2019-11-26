@@ -25,7 +25,7 @@ import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
+import org.junit.jupiter.api._
 
 import scala.util.{Failure, Success}
 
@@ -35,7 +35,6 @@ class SearchSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster  = _
   private var coll: Collection  = _
-  private val IndexName         = "test-index"
   private var ms: MutationState = _
 
   @BeforeAll
@@ -49,51 +48,51 @@ class SearchSpec extends ScalaIntegrationTest {
 
     ms = MutationState(Seq(result.mutationToken.get))
 
-    // The index may be pre-existing but on an old bucket that's been deleted.  Start again.
-    cluster.searchIndexes.dropIndex(IndexName) match {
-      case Success(_)                                 =>
-      case Failure(err: SearchIndexNotFoundException) =>
-    }
-
-    val index = SearchIndex(IndexName, config.bucketname)
+    val index = SearchIndex(indexName, config.bucketname)
     cluster.searchIndexes.upsertIndex(index).get
-
-    var done = false
-    while (!done) {
-      val result = cluster.searchIndexes.getIndex(IndexName)
-      if (result.isSuccess) done = true
-      else Thread.sleep(100)
-    }
-
-    // grahamp: Above still doesn't seem enough to solve these errors:
-    // Search Query Failed: "rest_index: Query, indexName: test-index, err: bleve: bleveIndexTargets, err: pindex: no planPIndexes for indexName: test-index"
-    // Adding a sleep until a better solution presents itself.
-    Thread.sleep(2000)
   }
+
+  private def indexName = "idx-" + config.bucketname
 
   @AfterAll
   def afterAll(): Unit = {
+    cluster.searchIndexes.dropIndex(indexName)
     cluster.disconnect()
   }
 
+  @Timeout(10)
   @Test
   def simple() {
-    cluster.searchQuery(
-      IndexName,
-      SearchQuery.matchPhrase("John Smith"),
-      SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
-    ) match {
-      case Success(result) =>
-        println(result.metaData.errors)
-        assert(result.metaData.errors.isEmpty)
-        assert(1 == result.rows.size)
-        result.rows.foreach(row => {
-          val fields = row.fieldsAs[JsonObject]
-          assert(fields.isFailure)
-        })
-      case Failure(exception) =>
-        println(exception)
-        assert(false)
+    def recurse(): Unit = {
+      cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("John Smith"),
+        SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+      ) match {
+        case Success(result) =>
+          if (result.metaData.errors.nonEmpty) {
+            // assume it's 'no planPIndexes' error indicating search indexes aren't ready yet
+            Thread.sleep(250)
+            recurse()
+          } else {
+            assert(1 == result.rows.size)
+            result.rows.foreach(row => {
+              val fields = row.fieldsAs[JsonObject]
+              assert(fields.isFailure)
+            })
+          }
+        case Failure(ex) =>
+          if (ex.getMessage.contains("no planPIndexes for indexName") || ex.getMessage.contains(
+                "pindex_consistency mismatched partition"
+              )) {
+            Thread.sleep(250)
+            recurse()
+          } else {
+            assert(false)
+          }
+      }
     }
+
+    recurse()
   }
 }

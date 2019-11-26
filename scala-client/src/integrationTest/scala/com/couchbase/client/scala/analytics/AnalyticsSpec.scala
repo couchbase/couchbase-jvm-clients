@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.analytics
 
-import com.couchbase.client.core.error.AnalyticsException
+import com.couchbase.client.core.error.{AnalyticsException, ParsingFailedException}
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -69,9 +69,9 @@ class AnalyticsSpec extends ScalaIntegrationTest {
   @Test
   def failsOnError(): Unit = {
     cluster.analyticsQuery("SELECT 1=") match {
-      case Success(result)                  => assert(false)
-      case Failure(err: AnalyticsException) =>
-      case Failure(err)                     => assert(false)
+      case Success(result)                      => assert(false)
+      case Failure(err: ParsingFailedException) =>
+      case Failure(err)                         => assert(false)
     }
   }
 }

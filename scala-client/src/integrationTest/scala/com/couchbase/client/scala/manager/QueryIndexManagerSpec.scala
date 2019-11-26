@@ -17,13 +17,12 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit.SECONDS
 
-import com.couchbase.client.core.error.TimeoutException
-import com.couchbase.client.scala.manager.query.{
-  QueryIndex,
-  QueryIndexAlreadyExistsException,
-  QueryIndexManager,
-  QueryIndexNotFoundException
+import com.couchbase.client.core.error.{
+  QueryIndexExistsException,
+  QueryIndexNotFoundException,
+  TimeoutException
 }
+import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexManager}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test._
@@ -70,8 +69,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()).get
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()) match {
-      case Success(value)                                 => assert(false)
-      case Failure(err: QueryIndexAlreadyExistsException) =>
+      case Success(value)                          => assert(false)
+      case Failure(err: QueryIndexExistsException) =>
       case Failure(err) =>
         assert(false)
     }
@@ -90,8 +89,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields)
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields) match {
-      case Success(value)                                 => assert(false)
-      case Failure(err: QueryIndexAlreadyExistsException) =>
+      case Success(value)                          => assert(false)
+      case Failure(err: QueryIndexExistsException) =>
       case Failure(err) =>
         assert(false)
     }
@@ -155,6 +154,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
       case Success(value)                            => assert(false)
       case Failure(err: QueryIndexNotFoundException) =>
       case Failure(err) =>
+        println(err)
         assert(false)
     }
 

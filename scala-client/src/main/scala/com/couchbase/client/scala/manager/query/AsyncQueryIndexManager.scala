@@ -18,7 +18,12 @@ package com.couchbase.client.scala.manager.query
 import java.util.concurrent.TimeoutException
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.error.{ErrorCodeAndMessage, QueryException}
+import com.couchbase.client.core.error.{
+  ErrorCodeAndMessage,
+  QueryException,
+  QueryIndexExistsException,
+  QueryIndexNotFoundException
+}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.retry.reactor.{Retry, RetryContext, RetryExhaustedException}
@@ -54,11 +59,6 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
-  private val IndexAlreadyExists: Regex           = "ndex (.*) already exists".r
-  private val IndexNotFound: Regex                = "ndex (.*) not found".r
-  private val ErrorIndexAlreadyExists             = 4300
-  private val ErrorPrimaryIndexNotFound           = 12004
-  private val ErrorIndexNotFound                  = 12016
   private val PrimaryIndexName                    = "#primary"
 
   /** Retries all indexes on a bucket.
@@ -291,14 +291,14 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
                 val primaryIndexPresent: Boolean = matchingIndexes.exists(_.isPrimary)
 
                 if (watchPrimary && !primaryIndexPresent) {
-                  throw QueryIndexNotFoundException.notFound(PrimaryIndexName)
+                  throw new QueryIndexNotFoundException(PrimaryIndexName)
                 } else {
                   val matchingIndexNames: Set[String] = matchingIndexes.map(_.name).toSet
 
                   val missingIndexNames: Set[String] = indexNames.toSet.diff(matchingIndexNames)
 
                   if (missingIndexNames.nonEmpty) {
-                    throw QueryIndexNotFoundException.notFound(missingIndexNames.mkString(","))
+                    throw new QueryIndexNotFoundException(missingIndexNames.mkString(","))
                   } else {
                     val offlineIndexes = matchingIndexes.filter(_.state != "online")
 
@@ -412,26 +412,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       .timeout(timeout)
       .retryStrategy(retryStrategy)
 
-    cluster.query(statement.toString, queryOpts) transform {
-      case s @ Success(_) => s
-      case Failure(err: QueryException) =>
-        val transformed = err.code() match {
-          case ErrorIndexAlreadyExists   => new QueryIndexAlreadyExistsException(err)
-          case ErrorPrimaryIndexNotFound => QueryIndexNotFoundException.notFound(PrimaryIndexName)
-          case ErrorIndexNotFound        => new QueryIndexNotFoundException("Index not found")
-          case _ =>
-            IndexAlreadyExists.findFirstMatchIn(err.msg()) match {
-              case Some(m) => new QueryIndexAlreadyExistsException(err)
-              case _ =>
-                IndexNotFound.findFirstMatchIn(err.msg()) match {
-                  case Some(m) => QueryIndexNotFoundException.notFound(m.group(1))
-                  case _       => err
-                }
-            }
-        }
-        Failure(transformed)
-      case Failure(cause) => Failure(cause)
-    }
+    cluster.query(statement.toString, queryOpts)
   }
 
   def wrap(
@@ -444,7 +425,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       case Failure(err: QueryIndexNotFoundException) =>
         if (ignoreIfNotExists) Success(Unit)
         else Failure(err)
-      case Failure(err: QueryIndexAlreadyExistsException) =>
+      case Failure(err: QueryIndexExistsException) =>
         if (ignoreIfExists) Success(Unit)
         else Failure(err)
       case Failure(err) => Failure(err)
@@ -454,22 +435,8 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
   }
 
 }
-@Stability.Volatile
-class QueryIndexNotFoundException(msg: String, errors: Seq[ErrorCodeAndMessage] = Seq())
-    extends QueryException(msg, errors.asJava) {}
-
-object QueryIndexNotFoundException {
-  def notFound(indexName: String) =
-    new QueryIndexNotFoundException(
-      "Index " + redactMeta(indexName) + " not found",
-      Seq(new ErrorCodeAndMessage(12004, "Index " + redactMeta(indexName) + " not found"))
-    )
-}
 
 private class IndexesNotReadyException extends RuntimeException
-
-@Stability.Volatile
-class QueryIndexAlreadyExistsException(cause: QueryException) extends QueryException(cause)
 
 @Stability.Volatile
 case class QueryIndex(
