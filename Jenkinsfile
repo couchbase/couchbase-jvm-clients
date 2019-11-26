@@ -113,7 +113,7 @@ pipeline {
 
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
-        stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8) ') {
+        stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8)') {
             agent { label 'sdk-integration-test-linux' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -140,7 +140,7 @@ pipeline {
             }
         }
 
-         stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8) ') {
+         stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8)') {
              agent { label 'sdk-integration-test-linux' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -167,7 +167,7 @@ pipeline {
              }
          }
 
-         stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8) ') {
+         stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8)') {
              agent { label 'sdk-integration-test-linux' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -194,7 +194,34 @@ pipeline {
              }
          }
 
-         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11) ') {
+        stage('testing  (Linux, cbdyncluster 5.1.3, Oracle JDK 8)') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11)') {
              agent { label 'sdk-integration-test-linux' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
@@ -221,7 +248,7 @@ pipeline {
              }
          }
 
-         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8) ') {
+         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8)') {
              agent { label 'sdk-integration-test-linux' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
@@ -249,7 +276,7 @@ pipeline {
          }
 
          // Commented for now as sdk-integration-test-win temporarily down
-//         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8) ') {
+//         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
 //             agent { label 'sdk-integration-test-win' }
 //             environment {
 //                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -319,7 +346,7 @@ void emailFailure() {
         def email = it
         mail to: email,
                 subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
-                body: "Something is wrong with ${env.BUILD_URL}"
+                body: "Something is wrong with ${env.BUILD_URL}: ${env.FAILED_TESTS}"
     }
 }
 
