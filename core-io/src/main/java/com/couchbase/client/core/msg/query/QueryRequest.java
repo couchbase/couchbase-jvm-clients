@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -45,6 +46,8 @@ public class QueryRequest
   extends BaseRequest<QueryResponse>
   implements HttpRequest<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse> {
 
+  public static final String OPERATION_NAME = "query";
+
   private static final String URI = "/query";
   private final byte[] query;
   private final String statement;
@@ -54,8 +57,8 @@ public class QueryRequest
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
-                      final String contextId) {
-    super(timeout, ctx, retryStrategy);
+                      final String contextId, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.statement = statement;
     this.authenticator = authenticator;

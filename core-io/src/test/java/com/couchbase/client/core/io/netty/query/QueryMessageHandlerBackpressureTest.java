@@ -135,6 +135,7 @@ class QueryMessageHandlerBackpressureTest {
       "select 1=1",
       "myquery".getBytes(UTF_8),
       true,
+      null,
       null
     );
     channel.writeAndFlush(request);

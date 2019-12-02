@@ -93,6 +93,11 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    */
   private final EndpointContext endpointContext;
 
+  /**
+   * Holds the start dispatch time for the current request.
+   */
+  private long dispatchTimingStart;
+
   protected NonChunkedHttpMessageHandler(final BaseEndpoint endpoint, final ServiceType serviceType) {
     this.endpoint = endpoint;
     this.endpointContext = endpoint.endpointContext();
@@ -134,6 +139,10 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         FullHttpRequest encoded = ((NonChunkedHttpRequest<Response>) msg).encode();
         encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
         encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
+        dispatchTimingStart = System.nanoTime();
+        if (currentRequest.internalSpan() != null) {
+          currentRequest.internalSpan().startDispatch();
+        }
         ctx.write(encoded, promise);
       } catch (Throwable t) {
         currentRequest.response().completeExceptionally(t);
@@ -183,6 +192,10 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
     try {
       if (msg instanceof FullHttpResponse) {
         try {
+          currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
+          if (currentRequest.internalSpan() != null) {
+            currentRequest.internalSpan().stopDispatch();
+          }
           FullHttpResponse httpResponse = (FullHttpResponse) msg;
           ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
           if (responseStatus == ResponseStatus.SUCCESS) {

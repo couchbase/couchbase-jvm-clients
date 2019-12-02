@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
@@ -28,6 +29,7 @@ import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -271,8 +273,12 @@ public class AsyncCluster {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
+    final InternalSpan span = environment()
+      .requestTracer()
+      .internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan().orElse(null));
+
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-     queryBytes, options.readonly(), clientContextId);
+     queryBytes, options.readonly(), clientContextId, span);
     request.context().clientContext(options.clientContext());
     return request;
   }

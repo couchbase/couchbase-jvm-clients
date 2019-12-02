@@ -19,6 +19,7 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -29,6 +30,7 @@ import com.couchbase.client.core.util.LRUCache;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
@@ -107,8 +110,7 @@ public class QueryAccessor {
      * @param options query options to use.
      * @return the future once the result is complete.
      */
-    public CompletableFuture<QueryResult> queryAsync(final QueryRequest request,
-                                                     final QueryOptions.Built options,
+    public CompletableFuture<QueryResult> queryAsync(final QueryRequest request, final QueryOptions.Built options,
                                                      final JsonSerializer serializer) {
         return queryInternal(request, options, options.adhoc(), serializer)
           .flatMap(response -> response
@@ -129,8 +131,7 @@ public class QueryAccessor {
      * @param options query options to use.
      * @return the mono once the result is complete.
      */
-    public Mono<ReactiveQueryResult> queryReactive(final QueryRequest request,
-                                                   final QueryOptions.Built options,
+    public Mono<ReactiveQueryResult> queryReactive(final QueryRequest request, final QueryOptions.Built options,
                                                    final JsonSerializer serializer) {
         return queryInternal(request, options, options.adhoc(), serializer).map(r -> new ReactiveQueryResult(r, serializer));
     }
@@ -143,15 +144,16 @@ public class QueryAccessor {
      * @param adhoc if this query is adhoc.
      * @return the mono once the result is complete.
      */
-    private Mono<QueryResponse> queryInternal(final QueryRequest request,
-                                              final QueryOptions.Built options,
-                                              final boolean adhoc,
-                                              final JsonSerializer serializer) {
+    private Mono<QueryResponse> queryInternal(final QueryRequest request, final QueryOptions.Built options,
+                                              final boolean adhoc, final JsonSerializer serializer) {
         if (adhoc) {
             core.send(request);
-            return Reactor.wrap(request, request.response(), true);
+            return Reactor
+              .wrap(request, request.response(), true)
+              .doFinally(signalType -> request.context().logicallyComplete());
         } else {
-            return maybePrepareAndExecute(request, options, serializer);
+            return maybePrepareAndExecute(request, options, serializer)
+              .doFinally(signalType -> request.context().logicallyComplete());
         }
     }
 
@@ -169,8 +171,7 @@ public class QueryAccessor {
      * @param options query options to use.
      * @return the mono once the result is complete.
      */
-    private Mono<QueryResponse> maybePrepareAndExecute(final QueryRequest request,
-                                                       final QueryOptions.Built options,
+    private Mono<QueryResponse> maybePrepareAndExecute(final QueryRequest request, final QueryOptions.Built options,
                                                        final JsonSerializer serializer) {
         final QueryCacheEntry cacheEntry = queryCache.get(request.statement());
         boolean enhancedEnabled = enhancedPreparedEnabled;
@@ -228,6 +229,9 @@ public class QueryAccessor {
             options.injectParams(query);
         }
 
+        InternalSpan span = core.context().environment().requestTracer()
+          .internalSpan("prepare", original.internalSpan().toRequestSpan());
+
         return new QueryRequest(
           original.timeout(),
           original.context(),
@@ -236,7 +240,8 @@ public class QueryAccessor {
           statement,
           query.toString().getBytes(StandardCharsets.UTF_8),
           true,
-          query.getString("client_context_id")
+          query.getString("client_context_id"),
+          span
         );
     }
 
@@ -254,6 +259,9 @@ public class QueryAccessor {
         query.put("timeout", encodeDurationToMs(original.timeout()));
         originalOptions.injectParams(query);
 
+        InternalSpan span = core.context().environment().requestTracer()
+          .internalSpan("execute", original.internalSpan().toRequestSpan());
+
         return new QueryRequest(
           original.timeout(),
           original.context(),
@@ -262,7 +270,8 @@ public class QueryAccessor {
           original.statement(),
           query.toString().getBytes(StandardCharsets.UTF_8),
           originalOptions.readonly(),
-          query.getString("client_context_id")
+          query.getString("client_context_id"),
+          span
         );
     }
 

@@ -107,6 +107,11 @@ public abstract class ChunkedMessageHandler
   private ResponseStatus convertedResponseStatus;
 
   /**
+   * Holds the start dispatch time for the current request.
+   */
+  private long dispatchTimingStart;
+
+  /**
    * Creates a new {@link ChunkedMessageHandler}.
    *
    * @param endpoint holds the surrounding endpoint.
@@ -145,6 +150,10 @@ public abstract class ChunkedMessageHandler
       encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
       encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
       chunkResponseParser.updateRequestContext(currentRequest.context());
+      dispatchTimingStart = System.nanoTime();
+      if (currentRequest.internalSpan() != null) {
+        currentRequest.internalSpan().startDispatch();
+      }
       ctx.write(encoded, promise);
     } catch (Throwable t) {
       currentRequest.response().completeExceptionally(t);
@@ -209,6 +218,10 @@ public abstract class ChunkedMessageHandler
   }
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
+    currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
+    if (currentRequest.internalSpan() != null) {
+      currentRequest.internalSpan().stopDispatch();
+    }
     currentResponseStatus = msg;
     chunkResponseParser.updateResponseHeader(msg);
     convertedResponseStatus = HttpProtocol.decodeStatus(msg.status());
@@ -246,6 +259,7 @@ public abstract class ChunkedMessageHandler
     currentResponse = null;
     currentRequest = null;
     currentResponseStatus = null;
+    dispatchTimingStart = 0;
   }
 
 }

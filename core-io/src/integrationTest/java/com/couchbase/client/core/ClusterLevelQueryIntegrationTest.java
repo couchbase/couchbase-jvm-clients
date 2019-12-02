@@ -63,6 +63,7 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
       "select 1=1",
       query.getBytes(StandardCharsets.UTF_8),
       true,
+      null,
       null
     );
     core.send(request);

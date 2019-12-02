@@ -135,7 +135,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
               statement,
               queryBytes,
               options.readonly.getOrElse(false),
-              params.str("client_context_id")
+              params.str("client_context_id"),
+              null /* TODO: RTO */
             )
 
             request
@@ -333,7 +334,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
       true,
-      query.str("client_context_id")
+      query.str("client_context_id"),
+      null /* TODO: RTO */
     )
   }
 
@@ -365,7 +367,8 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       original.statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
       originalOptions.readonly.getOrElse(false),
-      query.str("client_context_id")
+      query.str("client_context_id"),
+      null /* TODO: RTO */
     )
   }
 

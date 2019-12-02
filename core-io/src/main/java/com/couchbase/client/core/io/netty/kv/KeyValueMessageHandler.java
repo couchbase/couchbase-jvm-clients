@@ -252,12 +252,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
     request.context().serverLatency(serverTime);
 
+    long start = writtenRequestDispatchTimings.remove(opaque);
+    request.context().dispatchLatency(System.nanoTime() - start);
+
     if (request.internalSpan() != null) {
       request.internalSpan().stopDispatch();
     }
-
-    long start = writtenRequestDispatchTimings.remove(opaque);
-    request.context().dispatchLatency(System.nanoTime() - start);
 
     short statusCode = MemcacheProtocol.status(response);
     ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
