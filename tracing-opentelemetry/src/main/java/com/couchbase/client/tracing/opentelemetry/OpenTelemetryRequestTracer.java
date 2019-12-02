@@ -53,17 +53,34 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
   }
 
   @Override
-  public OpenTelemetryInternalSpan span(final String operationName, final RequestSpan requestSpan) {
+  public OpenTelemetryInternalSpan internalSpan(final String operationName, final RequestSpan requestSpan) {
     notNullOrEmpty(operationName, "OperationName");
-    Span parent = null;
-    if (requestSpan != null) {
-      if (requestSpan instanceof OpenTelemetryRequestSpan) {
-        parent = ((OpenTelemetryRequestSpan) requestSpan).span();
-      } else {
-        throw new IllegalArgumentException("RequestSpan must be of type OpenTracingRequestSpan");
-      }
+    return new OpenTelemetryInternalSpan(tracer, castSpan(requestSpan), operationName);
+  }
+
+  private Span castSpan(final RequestSpan requestSpan) {
+    if (requestSpan == null) {
+      return null;
     }
-    return new OpenTelemetryInternalSpan(tracer, parent, operationName);
+
+    if (requestSpan instanceof OpenTelemetryRequestSpan) {
+      return ((OpenTelemetryRequestSpan) requestSpan).span();
+    } else {
+      throw new IllegalArgumentException("RequestSpan must be of type OpenTelemetryRequestSpan");
+    }
+  }
+
+  @Override
+  public RequestSpan requestSpan(String operationName, RequestSpan parent) {
+    Span.Builder spanBuilder = tracer.spanBuilder(operationName);
+    if (parent != null) {
+      spanBuilder.setParent(castSpan(parent));
+    } else {
+      spanBuilder.setNoParent();
+    }
+    Span span = spanBuilder.startSpan();
+    tracer.withSpan(span).close();
+    return OpenTelemetryRequestSpan.wrap(tracer, span);
   }
 
   @Override

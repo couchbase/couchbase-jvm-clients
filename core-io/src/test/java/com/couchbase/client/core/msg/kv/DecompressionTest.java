@@ -61,7 +61,7 @@ class DecompressionTest {
     ));
 
     ReplicaGetRequest request = new ReplicaGetRequest("mydoc", Duration.ofSeconds(1),
-      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, (short) 1);
+      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, (short) 1, null);
     GetResponse decoded = request.decode(response, null);
 
     assertEquals(

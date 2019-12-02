@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
@@ -78,7 +79,6 @@ import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -97,6 +97,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -283,7 +284,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    InternalSpan span = environment.requestTracer().span(GetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(GetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -354,7 +355,7 @@ public class AsyncCollection {
       ));
     }
 
-    InternalSpan span = environment.requestTracer().span(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(
       timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands, span
     );
@@ -407,7 +408,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    InternalSpan span = environment.requestTracer().span(GetAndLockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(GetAndLockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetAndLockRequest request = new GetAndLockRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime, span
     );
@@ -459,7 +460,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().span(GetAndTouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(GetAndTouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetAndTouchRequest request = new GetAndTouchRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, expiry, span
     );
@@ -485,17 +486,25 @@ public class AsyncCollection {
    * @param id the document id.
    * @return a list of results from the active and the replica.
    */
-  public CompletableFuture<List<CompletableFuture<GetReplicaResult>>> getAllReplicas(final String id, final GetAllReplicasOptions options) {
+  public CompletableFuture<List<CompletableFuture<GetReplicaResult>>> getAllReplicas(final String id,
+                                                                                     final GetAllReplicasOptions options) {
     notNull(options, "GetAllReplicasOptions");
     GetAllReplicasOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    return getAllReplicasRequests(id, opts, timeout)
+    RequestSpan parent = environment.requestTracer().requestSpan(
+      "get_all_replicas",
+      opts.parentSpan().orElse(null)
+    );
+
+    return getAllReplicasRequests(id, opts, timeout, parent)
       .thenApply(stream -> stream.map(request -> GetAccessor
         .get(core, request, transcoder)
         .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList())
+      )
+      .whenComplete((completableFutures, throwable) -> parent.finish());
   }
 
   /**
@@ -526,6 +535,12 @@ public class AsyncCollection {
     if (built.transcoder() != null) {
       opts.transcoder(built.transcoder());
     }
+    RequestSpan parent = environment.requestTracer().requestSpan(
+      "get_any_replica",
+      built.parentSpan().orElse(null)
+    );
+    opts.parentSpan(parent);
+
 
     CompletableFuture<List<CompletableFuture<GetReplicaResult>>> listOfFutures = getAllReplicas(id, opts);
 
@@ -555,7 +570,7 @@ public class AsyncCollection {
       }));
     });
 
-    return anyReplicaFuture;
+    return anyReplicaFuture.whenComplete((getReplicaResult, throwable) -> parent.finish());
   }
 
   /**
@@ -566,7 +581,8 @@ public class AsyncCollection {
    * @param timeout the timeout until we need to stop the get all replicas
    * @return a stream of requests.
    */
-  CompletableFuture<Stream<GetRequest>> getAllReplicasRequests(final String id, final GetAllReplicasOptions.Built opts, Duration timeout) {
+  CompletableFuture<Stream<GetRequest>> getAllReplicasRequests(final String id, final GetAllReplicasOptions.Built opts,
+                                                               final Duration timeout, final RequestSpan parent) {
     notNullOrEmpty(id, "Id");
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
@@ -576,14 +592,15 @@ public class AsyncCollection {
       int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
       List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
 
-      InternalSpan span = environment.requestTracer().span("get", null);
+      InternalSpan span = environment.requestTracer().internalSpan(GetRequest.OPERATION_NAME, parent);
       GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
       activeRequest.context().clientContext(opts.clientContext());
       requests.add(activeRequest);
 
       for (int i = 0; i < numReplicas; i++) {
+        InternalSpan replicaSpan = environment.requestTracer().internalSpan(ReplicaGetRequest.OPERATION_NAME, parent);
         ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
-          id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1)
+          id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1), replicaSpan
         );
         replicaRequest.context().clientContext(opts.clientContext());
         requests.add(replicaRequest);
@@ -595,7 +612,7 @@ public class AsyncCollection {
       final Duration retryDelay = Duration.ofMillis(100);
       final CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
       coreContext.environment().timer().schedule(() -> {
-        getAllReplicasRequests(id, opts, timeout.minus(retryDelay)).whenComplete((getRequestStream, throwable) -> {
+        getAllReplicasRequests(id, opts, timeout.minus(retryDelay), parent).whenComplete((getRequestStream, throwable) -> {
           if (throwable != null) {
             future.completeExceptionally(throwable);
           } else {
@@ -646,7 +663,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().span(GetMetaRequest.OPERATION_NAME_EXISTS, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(GetMetaRequest.OPERATION_NAME_EXISTS, opts.parentSpan().orElse(null));
     GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -782,7 +799,7 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    InternalSpan span = environment.requestTracer().span("upsert", opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan("upsert", opts.parentSpan().orElse(null));
 
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
@@ -998,7 +1015,7 @@ public class AsyncCollection {
       flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
     }
 
-    InternalSpan span = environment.requestTracer().span(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().internalSpan(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       flags, commands, span);
     request.context().clientContext(opts.clientContext());

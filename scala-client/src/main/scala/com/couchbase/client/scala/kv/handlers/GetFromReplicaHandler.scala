@@ -68,7 +68,8 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
                   hp.core.context(),
                   hp.collectionIdentifier,
                   retryStrategy,
-                  (replicaIndex + 1).shortValue()
+                  (replicaIndex + 1).shortValue(),
+                  null /* todo: add rto */
                 )
             )
 

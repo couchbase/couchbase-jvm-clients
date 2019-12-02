@@ -105,7 +105,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     final List<TrackingInternalSpan> spans = Collections.synchronizedList(new ArrayList<>());
 
     @Override
-    public InternalSpan span(String operationName, RequestSpan parent) {
+    public InternalSpan internalSpan(String operationName, RequestSpan parent) {
       TrackingInternalSpan span = new TrackingInternalSpan();
       spans.add(span);
       return span;
@@ -119,6 +119,11 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     @Override
     public Mono<Void> stop(Duration timeout) {
       return Mono.empty();
+    }
+
+    @Override
+    public RequestSpan requestSpan(String operationName, RequestSpan parent) {
+      return new TrackingRequestSpan();
     }
   }
 
@@ -158,6 +163,13 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
 
     @Override
     public void stopDispatch() {
+
+    }
+  }
+
+  private static class TrackingRequestSpan implements RequestSpan {
+    @Override
+    public void finish() {
 
     }
   }

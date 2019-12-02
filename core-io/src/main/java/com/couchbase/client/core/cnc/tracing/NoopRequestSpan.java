@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.cnc;
+package com.couchbase.client.core.cnc.tracing;
 
-import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
 
-/**
- * Marker interface for external spans that can be passed in into the SDK option blocks.
- * <p>
- * Note that you'll most likely consume this interface through actual implementations from the tracer module that
- * is used for your application. You will not need to worry about this with the default logging tracer, but if you
- * are using OpenTracing or OpenTelemetry, look in their respective codebases for implementations of this class.
- */
-@Stability.Volatile
-public interface RequestSpan {
+public class NoopRequestSpan implements RequestSpan {
 
-  void finish();
+  public static NoopRequestSpan INSTANCE = new NoopRequestSpan();
 
+  private NoopRequestSpan() {
+  }
+
+  @Override
+  public void finish() {
+
+  }
 }

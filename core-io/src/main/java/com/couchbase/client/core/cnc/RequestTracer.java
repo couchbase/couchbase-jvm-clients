@@ -73,7 +73,16 @@ public interface RequestTracer {
    * @param parent the parent, can be null.
    * @return an internal span representing the toplevel request.
    */
-  InternalSpan span(String operationName, RequestSpan parent);
+  InternalSpan internalSpan(String operationName, RequestSpan parent);
+
+  /**
+   * Creates a new span that is created from the underlying tracer.
+   *
+   * @param operationName the name of the toplevel operation (i.e. "get")
+   * @param parent a possible parent.
+   * @return a request span that wraps the actual tracer implementation span.
+   */
+  RequestSpan requestSpan(String operationName, RequestSpan parent);
 
   /**
    * Starts the tracer if it hasn't been started, might be a noop depending on the implementation.

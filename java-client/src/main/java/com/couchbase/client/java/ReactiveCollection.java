@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -76,10 +77,12 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -329,9 +332,13 @@ public class ReactiveCollection {
     notNull(options, "GetAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     GetAllReplicasOptions.Built opts = options.build();
     Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvTimeout());
+    RequestSpan parent = environment().requestTracer().requestSpan(
+      "get_all_replicas",
+      opts.parentSpan().orElse(null)
+    );
 
     return Reactor
-      .toMono(() -> asyncCollection.getAllReplicasRequests(id, opts, timeout))
+      .toMono(() -> asyncCollection.getAllReplicasRequests(id, opts, timeout, parent))
       .flux()
       .flatMap(Flux::fromStream)
       .flatMap(request -> Reactor
@@ -340,7 +347,9 @@ public class ReactiveCollection {
           coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
           return Mono.empty(); // Swallow any errors from individual replicas
         })
-        .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)));
+        .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest))
+      )
+      .doFinally(signalType -> parent.finish());
   }
 
   /**
@@ -372,8 +381,12 @@ public class ReactiveCollection {
     if (built.transcoder() != null) {
       opts.transcoder(built.transcoder());
     }
-
-    return getAllReplicas(id, opts).next();
+    RequestSpan parent = environment().requestTracer().requestSpan(
+      "get_any_replica",
+      built.parentSpan().orElse(null)
+    );
+    opts.parentSpan(parent);
+    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.finish());
   }
 
   /**

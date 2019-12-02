@@ -29,7 +29,7 @@ import java.time.Duration;
 public class NoopRequestTracer implements RequestTracer {
 
   @Override
-  public InternalSpan span(final String operationName, final RequestSpan parent) {
+  public InternalSpan internalSpan(final String operationName, final RequestSpan parent) {
     return NoopInternalSpan.INSTANCE;
   }
 
@@ -41,6 +41,11 @@ public class NoopRequestTracer implements RequestTracer {
   @Override
   public Mono<Void> stop(final Duration timeout) {
     return Mono.empty();
+  }
+
+  @Override
+  public RequestSpan requestSpan(final String operationName, final RequestSpan parent) {
+    return NoopRequestSpan.INSTANCE;
   }
 
 }

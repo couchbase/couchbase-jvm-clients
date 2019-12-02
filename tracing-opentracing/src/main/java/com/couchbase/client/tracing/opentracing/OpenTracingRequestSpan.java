@@ -17,7 +17,9 @@
 package com.couchbase.client.tracing.opentracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import io.opentracing.Scope;
 import io.opentracing.Span;
+import io.opentracing.Tracer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -31,8 +33,15 @@ public class OpenTracingRequestSpan implements RequestSpan {
    */
   private final Span span;
 
-  private OpenTracingRequestSpan(final Span span) {
+  /**
+   * The OT tracer in use.
+   */
+  private final Tracer tracer;
+
+  private OpenTracingRequestSpan(final Tracer tracer, final Span span) {
+    notNull(tracer, "Tracer");
     notNull(span, "Span");
+    this.tracer = tracer;
     this.span = span;
   }
 
@@ -42,8 +51,8 @@ public class OpenTracingRequestSpan implements RequestSpan {
    * @param span the span that should act as the parent.
    * @return the created wrapped span.
    */
-  public static OpenTracingRequestSpan wrap(final Span span) {
-    return new OpenTracingRequestSpan(span);
+  public static OpenTracingRequestSpan wrap(final Tracer tracer, final Span span) {
+    return new OpenTracingRequestSpan(tracer, span);
   }
 
   /**
@@ -53,4 +62,10 @@ public class OpenTracingRequestSpan implements RequestSpan {
     return span;
   }
 
+  @Override
+  public void finish() {
+    try (Scope scope = tracer.activateSpan(span)) {
+      span.finish();
+    }
+  }
 }

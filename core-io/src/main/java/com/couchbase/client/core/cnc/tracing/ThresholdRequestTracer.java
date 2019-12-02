@@ -107,8 +107,13 @@ public class ThresholdRequestTracer implements RequestTracer {
   }
 
   @Override
-  public InternalSpan span(final String operationName, final RequestSpan parent) {
+  public InternalSpan internalSpan(final String operationName, final RequestSpan parent) {
     return new ThresholdInternalSpan(this, operationName, parent);
+  }
+
+  @Override
+  public RequestSpan requestSpan(final String operationName, final RequestSpan parent) {
+    return ThresholdRequestSpan.INSTANCE;
   }
 
   /**

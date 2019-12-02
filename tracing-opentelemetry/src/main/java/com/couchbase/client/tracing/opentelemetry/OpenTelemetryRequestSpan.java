@@ -17,7 +17,9 @@
 package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.trace.Span;
+import io.opentelemetry.trace.Tracer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -31,8 +33,12 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
    */
   private final Span span;
 
-  private OpenTelemetryRequestSpan(final Span span) {
+  private final Tracer tracer;
+
+  private OpenTelemetryRequestSpan(final Tracer tracer, final Span span) {
+    notNull(tracer, "Tracer");
     notNull(span, "Span");
+    this.tracer = tracer;
     this.span = span;
   }
 
@@ -42,8 +48,8 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
    * @param span the span that should act as the parent.
    * @return the created wrapped span.
    */
-  public static OpenTelemetryRequestSpan wrap(final Span span) {
-    return new OpenTelemetryRequestSpan(span);
+  public static OpenTelemetryRequestSpan wrap(final Tracer tracer, final Span span) {
+    return new OpenTelemetryRequestSpan(tracer, span);
   }
 
   /**
@@ -51,6 +57,13 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
    */
   Span span() {
     return span;
+  }
+
+  @Override
+  public void finish() {
+    try (Scope scope = tracer.withSpan(span)) {
+      span.end();
+    }
   }
 
 }

@@ -53,23 +53,37 @@ public class OpenTracingRequestTracer implements RequestTracer {
   }
 
   @Override
-  public OpenTracingInternalSpan span(final String operationName, final RequestSpan requestSpan) {
+  public OpenTracingInternalSpan internalSpan(final String operationName, final RequestSpan requestSpan) {
     notNullOrEmpty(operationName, "OperationName");
-    Span parent = null;
-    if (requestSpan != null) {
-      if (requestSpan instanceof OpenTracingRequestSpan) {
-        parent = ((OpenTracingRequestSpan) requestSpan).span();
-      } else {
-        throw new IllegalArgumentException("RequestSpan must be of type OpenTracingRequestSpan");
-      }
+    return new OpenTracingInternalSpan(tracer, castSpan(requestSpan), operationName);
+  }
+
+  private Span castSpan(final RequestSpan requestSpan) {
+    if (requestSpan == null) {
+      return null;
     }
-    return new OpenTracingInternalSpan(tracer, parent, operationName);
+
+    if (requestSpan instanceof OpenTracingRequestSpan) {
+      return ((OpenTracingRequestSpan) requestSpan).span();
+    } else {
+      throw new IllegalArgumentException("RequestSpan must be of type OpenTracingRequestSpan");
+    }
+  }
+
+  @Override
+  public RequestSpan requestSpan(final String operationName, final RequestSpan parent) {
+    Tracer.SpanBuilder builder = tracer.buildSpan(operationName);
+    if (parent != null) {
+      builder.asChildOf(castSpan(parent));
+    }
+    Span span = builder.start();
+    tracer.activateSpan(span).close();
+    return OpenTracingRequestSpan.wrap(tracer, span);
   }
 
   @Override
   public Mono<Void> start() {
     return Mono.empty(); // Tracer is not started by us
-
   }
 
   @Override
