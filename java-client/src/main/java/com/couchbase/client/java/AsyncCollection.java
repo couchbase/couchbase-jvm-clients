@@ -283,7 +283,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    InternalSpan span = environment.requestTracer().span("get", opts.parentSpan().orElse(null));
+    InternalSpan span = environment.requestTracer().span(GetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -354,8 +354,9 @@ public class AsyncCollection {
       ));
     }
 
+    InternalSpan span = environment.requestTracer().span(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(
-      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands
+      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands, span
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -406,8 +407,9 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
+    InternalSpan span = environment.requestTracer().span(GetAndLockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetAndLockRequest request = new GetAndLockRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime, span
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -457,8 +459,9 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().span(GetAndTouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     GetAndTouchRequest request = new GetAndTouchRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, expiry
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, expiry, span
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -643,7 +646,8 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy);
+    InternalSpan span = environment.requestTracer().span(GetMetaRequest.OPERATION_NAME_EXISTS, opts.parentSpan().orElse(null));
+    GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -994,8 +998,9 @@ public class AsyncCollection {
       flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
     }
 
+    InternalSpan span = environment.requestTracer().span(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      flags, commands);
+      flags, commands, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

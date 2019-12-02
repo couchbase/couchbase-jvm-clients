@@ -58,7 +58,8 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          expiration
+          expiration,
+          null /* todo: add rto */
         )
       )
     }

@@ -100,7 +100,7 @@ class KeyValueMessageHandlerTest {
 
     try {
       channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
-        CTX, CID, null));
+        CTX, CID, null, null));
       channel.flushOutbound();
 
       ByteBuf request = channel.readOutbound();
@@ -109,7 +109,7 @@ class KeyValueMessageHandlerTest {
       ReferenceCountUtil.release(request);
 
       channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
-        CTX, CID, null));
+        CTX, CID, null, null));
       channel.flushOutbound();
 
       request = channel.readOutbound();
@@ -143,7 +143,7 @@ class KeyValueMessageHandlerTest {
     channel.pipeline().fireChannelActive();
 
     try {
-      GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+      GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
       channel.writeOutbound(request);
 
       ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
@@ -169,8 +169,8 @@ class KeyValueMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
-      GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
-      GetRequest request2 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+      GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
+      GetRequest request2 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
       channel.writeOutbound(request1, request2);
 
       assertTrue(channel.isOpen());
@@ -208,7 +208,7 @@ class KeyValueMessageHandlerTest {
     for (MemcacheProtocol.Status status : closeOnThese) {
       EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
       try {
-        GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+        GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
         channel.writeOutbound(request1);
 
         ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
@@ -247,7 +247,7 @@ class KeyValueMessageHandlerTest {
     for (MemcacheProtocol.Status status : retryOnThese) {
       EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
       try {
-        GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE);
+        GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
         channel.writeOutbound(request);
 
         ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,

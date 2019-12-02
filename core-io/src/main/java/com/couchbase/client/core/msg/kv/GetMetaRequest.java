@@ -49,10 +49,10 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
  */
 public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
 
-  public GetMetaRequest(final String key, final Duration timeout, final CoreContext ctx,
-                        final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy) {
-    this(key, timeout, ctx, collectionIdentifier, retryStrategy, null /*TODO REMOVE ME */);
-  }
+  /**
+   * Note: since we use getMeta for exists, the command is different.
+   */
+  public static final String OPERATION_NAME_EXISTS = "exists";
 
   public GetMetaRequest(final String key, final Duration timeout, final CoreContext ctx,
                         final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final InternalSpan span) {

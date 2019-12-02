@@ -84,7 +84,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands, null);
     core.send(request);
 
     SubdocGetResponse response = null;
@@ -108,7 +108,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     insertContent(id, input);
 
     SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(1), core.context(),
-      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands);
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands, null);
     core.send(request);
 
     SubdocGetResponse response = null;

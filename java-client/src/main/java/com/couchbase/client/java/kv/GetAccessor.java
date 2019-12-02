@@ -98,7 +98,8 @@ public enum GetAccessor {
           case SERVER_BUSY: throw new TemporaryFailureException(ctx);
           default: throw new CouchbaseException("GetAndLock operation failed", ctx);
         }
-      });
+      })
+      .whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
   public static CompletableFuture<GetResult> getAndTouch(final Core core, final String id,
@@ -121,7 +122,8 @@ public enum GetAccessor {
           case SERVER_BUSY: throw new TemporaryFailureException(ctx);
           default: throw new CouchbaseException("GetAndTouch operation failed", ctx);
         }
-      });
+      })
+      .whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
   public static CompletableFuture<GetResult> subdocGet(final Core core, final String id, final SubdocGetRequest request,
@@ -142,7 +144,7 @@ public enum GetAccessor {
           case SERVER_BUSY: throw new TemporaryFailureException(ctx);
           default: throw new CouchbaseException("Get operation failed", ctx);
         }
-      });
+      }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
   private static GetResult parseSubdocGet(final SubdocGetResponse response, Transcoder transcoder) {

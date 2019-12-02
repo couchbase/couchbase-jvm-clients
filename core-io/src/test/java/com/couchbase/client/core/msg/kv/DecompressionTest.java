@@ -44,7 +44,7 @@ class DecompressionTest {
     ));
 
     GetRequest request = new GetRequest("mydoc", Duration.ofSeconds(1),
-      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE);
+      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, null);
     GetResponse decoded = request.decode(response, null);
 
     assertEquals(
@@ -79,7 +79,7 @@ class DecompressionTest {
 
     GetAndLockRequest request = new GetAndLockRequest("mydoc",
       Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
-      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1));
+      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), null);
     GetAndLockResponse decoded = request.decode(response, null);
 
     assertEquals(
@@ -97,7 +97,7 @@ class DecompressionTest {
 
     GetAndTouchRequest request = new GetAndTouchRequest("mydoc",
       Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
-      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1));
+      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), null);
     GetAndTouchResponse decoded = request.decode(response, null);
 
     assertEquals(

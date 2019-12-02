@@ -73,7 +73,14 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
             )
 
           val activeRequest =
-            new GetRequest(id, timeout, hp.core.context(), hp.collectionIdentifier, retryStrategy)
+            new GetRequest(
+              id,
+              timeout,
+              hp.core.context(),
+              hp.collectionIdentifier,
+              retryStrategy,
+              null /* todo: add rto */
+            )
 
           val requests: Seq[GetRequest] = activeRequest +: replicaRequests
 

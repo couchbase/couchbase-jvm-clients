@@ -111,7 +111,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       assertTrue(insertResponse.status().success());
 
       GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
-        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
+        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
       core.send(getRequest);
 
       GetResponse getResponse = getRequest.response().get();
@@ -150,7 +150,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       assertTrue(insertResponse.status().success());
 
       GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
-        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
+        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
       core.send(getRequest);
 
       GetResponse getResponse = getRequest.response().get();

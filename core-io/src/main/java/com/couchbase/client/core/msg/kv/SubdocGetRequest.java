@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
@@ -42,6 +43,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
+  public static final String OPERATION_NAME = "subdoc_get";
+
+
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_ACCESS_DELETED = (byte) 0x08;
 
@@ -51,8 +55,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   public SubdocGetRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           final RetryStrategy retryStrategy, final String key,
-                          final byte flags, final List<Command> commands) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+                          final byte flags, final List<Command> commands, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.flags = flags;
     this.commands = commands;
     this.origKey = key;

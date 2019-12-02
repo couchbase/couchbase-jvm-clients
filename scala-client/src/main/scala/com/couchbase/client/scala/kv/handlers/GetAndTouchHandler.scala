@@ -62,7 +62,8 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          expiration
+          expiration,
+          null /* todo: add rto */
         )
       )
     }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -40,12 +41,15 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  */
 public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
 
+  public static final String OPERATION_NAME = "get_and_lock";
+
+
   private final Duration lockFor;
 
   public GetAndLockRequest(final String key, final Duration timeout, final CoreContext ctx,
                            final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
-                           final Duration lockFor) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+                           final Duration lockFor, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.lockFor = lockFor;
   }
 

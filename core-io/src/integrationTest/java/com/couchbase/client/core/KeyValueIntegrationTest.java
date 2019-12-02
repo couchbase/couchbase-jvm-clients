@@ -39,9 +39,7 @@ import java.util.concurrent.ExecutionException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KeyValueIntegrationTest extends CoreIntegrationTest {
@@ -78,7 +76,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     assertTrue(insertResponse.status().success());
 
     GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1), core.context(),
-      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
     core.send(getRequest);
 
     GetResponse getResponse = getRequest.response().get();
@@ -112,7 +110,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
   @Test
   void timesOutVeryLowTimeoutDurations() {
     GetRequest getRequest = new GetRequest("foo", Duration.ofNanos(1), core.context(),
-      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy());
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
     core.send(getRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> getRequest.response().get());

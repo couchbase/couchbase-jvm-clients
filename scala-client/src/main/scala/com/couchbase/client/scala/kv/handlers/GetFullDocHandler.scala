@@ -51,7 +51,14 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
       validations
     } else {
       Success(
-        new GetRequest(id, timeout, hp.core.context(), hp.collectionIdentifier, retryStrategy)
+        new GetRequest(
+          id,
+          timeout,
+          hp.core.context(),
+          hp.collectionIdentifier,
+          retryStrategy,
+          null /* todo: add rto */
+        )
       )
     }
   }

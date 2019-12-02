@@ -95,7 +95,8 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
             retryStrategy,
             id,
             0,
-            commands
+            commands,
+            null /* todo: add rto */
           )
         )
       }

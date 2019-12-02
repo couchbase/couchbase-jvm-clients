@@ -49,10 +49,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
  */
 public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
-  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
-                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy) {
-    this(key, timeout, ctx, collectionIdentifier, retryStrategy, null /*TODO REMOVE ME */);
-  }
+  public static final String OPERATION_NAME = "get";
 
   public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
                     final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final InternalSpan span) {

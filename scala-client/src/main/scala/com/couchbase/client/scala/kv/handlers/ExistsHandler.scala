@@ -59,7 +59,8 @@ private[scala] class ExistsHandler(hp: HandlerParams)
           timeout,
           hp.core.context(),
           hp.collectionIdentifier,
-          retryStrategy
+          retryStrategy,
+          null /* todo: add rto */
         )
       )
   }

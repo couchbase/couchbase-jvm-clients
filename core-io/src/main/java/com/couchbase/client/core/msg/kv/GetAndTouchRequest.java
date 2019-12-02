@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -26,7 +27,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
@@ -40,13 +40,16 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  */
 public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse> {
 
+  public static final String OPERATION_NAME = "get_and_touch";
+
+
   private final Duration expiration;
 
 
   public GetAndTouchRequest(final String key, final Duration timeout, final CoreContext ctx,
                             CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
-                            final Duration expiration) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+                            final Duration expiration, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.expiration = expiration;
   }
 
