@@ -78,7 +78,8 @@ private[scala] class UpsertHandler(hp: HandlerParams)
               hp.core.context(),
               hp.collectionIdentifier,
               retryStrategy,
-              durability.toDurabilityLevel
+              durability.toDurabilityLevel,
+              null /* todo: add rto */
             )
           )
 

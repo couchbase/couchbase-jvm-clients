@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.msg.RequestContext;
 
 /**
@@ -56,5 +57,10 @@ public class NoopInternalSpan implements InternalSpan {
 
   @Override
   public void stopPayloadEncoding() {
+  }
+
+  @Override
+  public RequestSpan toRequestSpan() {
+    return NoopRequestSpan.INSTANCE;
   }
 }

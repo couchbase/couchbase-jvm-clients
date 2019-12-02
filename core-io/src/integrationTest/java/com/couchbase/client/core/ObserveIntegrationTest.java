@@ -70,7 +70,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
       Observe.ObserveReplicateTo.NONE, Optional.empty(), insertResponse.cas(), cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
 
     Observe.poll(ctx).timeout(MAX_WAIT).block();
   }
@@ -83,7 +83,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
       Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
 
     Observe.poll(ctx).timeout(MAX_WAIT).block();
   }
@@ -97,7 +97,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
       Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
     Observe.poll(ctx).timeout(MAX_WAIT).block();
 
     RemoveResponse removeResponse = performRemove(id);
@@ -105,7 +105,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.ACTIVE,
       Observe.ObserveReplicateTo.NONE, removeResponse.mutationToken(), 0, cid,
-      id, true, env.timeoutConfig().kvTimeout());
+      id, true, env.timeoutConfig().kvTimeout(), null);
     Observe.poll(ctx2).timeout(MAX_WAIT).block();
   }
 
@@ -118,19 +118,19 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
 
     final ObserveContext ctx = new ObserveContext(core.context(), Observe.ObservePersistTo.THREE,
       Observe.ObserveReplicateTo.NONE, insertResponse.mutationToken(), 0, cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
 
     assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx).timeout(MAX_WAIT).block());
 
     final ObserveContext ctx2 = new ObserveContext(core.context(), Observe.ObservePersistTo.NONE,
       Observe.ObserveReplicateTo.TWO, insertResponse.mutationToken(), 0, cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
 
     assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx2).timeout(MAX_WAIT).block());
 
     final ObserveContext ctx3 = new ObserveContext(core.context(), Observe.ObservePersistTo.FOUR,
       Observe.ObserveReplicateTo.THREE, insertResponse.mutationToken(), 0, cid,
-      id, false, env.timeoutConfig().kvTimeout());
+      id, false, env.timeoutConfig().kvTimeout(), null);
 
     assertThrows(ReplicaNotConfiguredException.class, () -> Observe.poll(ctx3).timeout(MAX_WAIT).block());
   }
@@ -144,7 +144,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      env.timeoutConfig().kvTimeout(), core.context(), cid, env.retryStrategy(), Optional.empty());
+      env.timeoutConfig().kvTimeout(), core.context(), cid, env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse;
@@ -166,7 +166,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
    */
   private RemoveResponse performRemove(final String id) {
     RemoveRequest removeRequest = new RemoveRequest(id, 0, env.timeoutConfig().kvTimeout(),
-      core.context(), cid, env.retryStrategy(), Optional.empty());
+      core.context(), cid, env.retryStrategy(), Optional.empty(), null);
     core.send(removeRequest);
 
     RemoveResponse removeResponse;

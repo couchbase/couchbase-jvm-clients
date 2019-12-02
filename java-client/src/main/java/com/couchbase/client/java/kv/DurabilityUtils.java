@@ -31,12 +31,9 @@ public enum DurabilityUtils {
    * Helper method to wrap a mutation result to perform durability requirements if needed.
    */
   public static <T extends MutationResult> CompletableFuture<T> wrapWithDurability(final CompletableFuture<T> input,
-                                                                     final String key,
-                                                                     final PersistTo persistTo,
-                                                                     final ReplicateTo replicateTo,
-                                                                     final Core core,
-                                                                     final KeyValueRequest<?> request,
-                                                                     boolean remove) {
+                                                                     final String key, final PersistTo persistTo,
+                                                                     final ReplicateTo replicateTo, final Core core,
+                                                                     final KeyValueRequest<?> request, boolean remove) {
     CompletableFuture<T> finalResult;
     if (persistTo == PersistTo.NONE && replicateTo == ReplicateTo.NONE) {
       finalResult = input;
@@ -51,7 +48,8 @@ public enum DurabilityUtils {
           request.collectionIdentifier(),
           key,
           remove,
-          request.timeout()
+          request.timeout(),
+          request.internalSpan().toRequestSpan()
         );
         return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });

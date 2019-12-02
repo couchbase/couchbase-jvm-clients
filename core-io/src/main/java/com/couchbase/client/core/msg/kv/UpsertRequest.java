@@ -44,21 +44,12 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  */
 public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implements SyncDurabilityRequest {
 
+  public static final String OPERATION_NAME = "upsert";
+
   private final byte[] content;
   private final long expiration;
   private final int flags;
   private final Optional<DurabilityLevel> syncReplicationType;
-
-  /*
-   * todo: remove me after all ops are converted
-   */
-  public UpsertRequest(final String key, final byte[] content,
-                       final long expiration, final int flags, final Duration timeout,
-                       final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                       final RetryStrategy retryStrategy,
-                       final Optional<DurabilityLevel> syncReplicationType) {
-    this(key, content, expiration, flags, timeout, ctx, collectionIdentifier, retryStrategy, syncReplicationType, null);
-  }
 
   public UpsertRequest(final String key, final byte[] content,
                        final long expiration, final int flags, final Duration timeout,

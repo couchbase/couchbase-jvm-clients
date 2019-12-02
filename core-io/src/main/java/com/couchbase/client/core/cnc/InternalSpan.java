@@ -67,4 +67,9 @@ public interface InternalSpan {
    */
   void stopDispatch();
 
+  /**
+   * Returns a request span that wraps the internal span.
+   */
+  RequestSpan toRequestSpan();
+
 }

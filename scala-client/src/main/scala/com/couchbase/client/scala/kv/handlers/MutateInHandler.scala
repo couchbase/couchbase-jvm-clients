@@ -106,7 +106,8 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                 commands,
                 expiration.getSeconds,
                 cas,
-                durability.toDurabilityLevel
+                durability.toDurabilityLevel,
+                null /* todo: rto */
               )
             )
           }

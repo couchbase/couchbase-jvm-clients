@@ -69,7 +69,8 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty());
+      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()),
+      env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
@@ -93,7 +94,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0, Duration.ofSeconds(1),
       core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
-      Optional.of(DurabilityLevel.MAJORITY));
+      Optional.of(DurabilityLevel.MAJORITY), null);
     core.send(insertRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());

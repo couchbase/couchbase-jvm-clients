@@ -704,8 +704,11 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    final InternalSpan span = environment
+      .requestTracer()
+      .internalSpan(RemoveRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
-      coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
+      coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -751,10 +754,25 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    Transcoder.EncodedValue encoded = transcoder.encode(content);
+    final InternalSpan span = environment
+      .requestTracer()
+      .internalSpan(InsertRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
+    long start = System.nanoTime();
+    Transcoder.EncodedValue encoded;
+    try {
+      span.startPayloadEncoding();
+      encoded = transcoder.encode(content);
+    } finally {
+      span.stopPayloadEncoding();
+    }
+    long end = System.nanoTime();
+
     InsertRequest request = new InsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
-      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
-    request.context().clientContext(opts.clientContext());
+      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
+    request.context()
+      .clientContext(opts.clientContext())
+      .encodeLatency(end - start);
     return request;
   }
 
@@ -799,7 +817,9 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    InternalSpan span = environment.requestTracer().internalSpan("upsert", opts.parentSpan().orElse(null));
+    final InternalSpan span = environment
+      .requestTracer()
+      .internalSpan(UpsertRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
 
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
@@ -860,10 +880,25 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    Transcoder.EncodedValue encoded = transcoder.encode(content);
+    final InternalSpan span = environment
+      .requestTracer()
+      .internalSpan(ReplaceRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
+    long start = System.nanoTime();
+    Transcoder.EncodedValue encoded;
+    try {
+      span.startPayloadEncoding();
+      encoded = transcoder.encode(content);
+    } finally {
+      span.stopPayloadEncoding();
+    }
+    long end = System.nanoTime();
+
     ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
-      timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel());
-    request.context().clientContext(opts.clientContext());
+      timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
+    request.context()
+      .clientContext(opts.clientContext())
+      .encodeLatency(end - start);
     return request;
   }
 
@@ -1078,12 +1113,23 @@ public class AsyncCollection {
       RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
       JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
+      final InternalSpan span = environment
+        .requestTracer()
+        .internalSpan(SubdocMutateRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
       ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
 
-      for (int i = 0; i < specs.size(); i++) {
-        MutateInSpec spec = specs.get(i);
-        commands.add(spec.encode(serializer, i));
+      long start = System.nanoTime();
+      try {
+        span.startPayloadEncoding();
+        for (int i = 0; i < specs.size(); i++) {
+          MutateInSpec spec = specs.get(i);
+          commands.add(spec.encode(serializer, i));
+        }
+      } finally {
+        span.stopPayloadEncoding();
       }
+      long end = System.nanoTime();
 
       // xattrs come first
       commands.sort(Comparator.comparing(v -> !v.xattr()));
@@ -1091,9 +1137,11 @@ public class AsyncCollection {
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
         opts.accessDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
-        opts.durabilityLevel()
+        opts.durabilityLevel(), span
       );
-      request.context().clientContext(opts.clientContext());
+      request.context()
+        .clientContext(opts.clientContext())
+        .encodeLatency(end - start);
       return request;
     }
   }

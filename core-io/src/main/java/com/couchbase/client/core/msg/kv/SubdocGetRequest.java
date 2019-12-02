@@ -45,7 +45,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   public static final String OPERATION_NAME = "subdoc_get";
 
-
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_ACCESS_DELETED = (byte) 0x08;
 

@@ -17,21 +17,26 @@
 package com.couchbase.client.core.service.kv;
 
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
+import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.retry.reactor.Repeat;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Implements traditional observe-based durability requirements.
@@ -52,15 +57,21 @@ public class Observe {
       );
     }
 
+    final RequestSpan parentSpan = ctx
+      .environment()
+      .requestTracer()
+      .requestSpan("observe", ctx.parentSpan());
+
     Flux<ObserveItem> observed = Flux.defer(() -> {
       BucketConfig config = ctx.core().clusterConfig().bucketConfig(ctx.collectionIdentifier().bucket());
       return Flux.just(validateReplicas(config, ctx.persistTo(), ctx.replicateTo()));
     })
-    .flatMap(replicas -> viaMutationToken(replicas, ctx));
-    return maybeRetry(observed, ctx).timeout(ctx.timeout());
+    .flatMap(replicas -> viaMutationToken(replicas, ctx, parentSpan));
+    return maybeRetry(observed, ctx).timeout(ctx.timeout()).doFinally(t -> parentSpan.finish());
   }
 
-  private static Flux<ObserveItem> viaMutationToken(final int bucketReplicas, final ObserveContext ctx) {
+  private static Flux<ObserveItem> viaMutationToken(final int bucketReplicas, final ObserveContext ctx,
+                                                    final RequestSpan parent) {
     if (!ctx.mutationToken().isPresent()) {
       throw new IllegalStateException("MutationToken is not present, this is a bug!");
     }
@@ -72,14 +83,18 @@ public class Observe {
 
     List<ObserveViaSeqnoRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
+      final InternalSpan span = ctx.environment().requestTracer()
+        .internalSpan(ObserveViaSeqnoRequest.OPERATION_NAME, parent);
       requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, 0, true,
-        mutationToken.partitionUUID(), id));
+        mutationToken.partitionUUID(), id, span));
     }
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
+        final InternalSpan span = ctx.environment().requestTracer()
+          .internalSpan(ObserveViaSeqnoRequest.OPERATION_NAME, parent);
         requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, i, false,
-          mutationToken.partitionUUID(), id));
+          mutationToken.partitionUUID(), id, span));
       }
     }
 
@@ -88,7 +103,8 @@ public class Observe {
         ctx.core().send(request);
         return Reactor
           .wrap(request, request.response(), true)
-          .onErrorResume(t-> Mono.empty());
+          .onErrorResume(t-> Mono.empty())
+          .doFinally(signalType -> request.context().logicallyComplete());
       })
       .map(response -> ObserveItem.fromMutationToken(mutationToken, response));
   }

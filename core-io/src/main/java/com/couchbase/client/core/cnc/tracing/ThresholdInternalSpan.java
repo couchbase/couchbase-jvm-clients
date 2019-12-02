@@ -72,4 +72,9 @@ public class ThresholdInternalSpan implements InternalSpan {
   public void stopPayloadEncoding() {
   }
 
+  @Override
+  public RequestSpan toRequestSpan() {
+    return ThresholdRequestSpan.INSTANCE;
+  }
+
 }

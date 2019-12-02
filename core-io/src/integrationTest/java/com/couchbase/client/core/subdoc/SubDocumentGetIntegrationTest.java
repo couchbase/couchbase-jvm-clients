@@ -62,7 +62,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
       Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
-      Optional.empty());
+      Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = null;

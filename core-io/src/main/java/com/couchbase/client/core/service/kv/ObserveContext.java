@@ -17,6 +17,7 @@
 package com.couchbase.client.core.service.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
@@ -36,10 +37,11 @@ public class ObserveContext extends CoreContext {
   private final boolean remove;
   private final Duration timeout;
   private final RetryStrategy retryStrategy;
+  private final RequestSpan parentSpan;
 
   public ObserveContext(CoreContext ctx, Observe.ObservePersistTo persistTo, Observe.ObserveReplicateTo replicateTo,
                         Optional<MutationToken> mutationToken, long cas, CollectionIdentifier collectionIdentifier, String key,
-                        boolean remove, Duration timeout) {
+                        boolean remove, Duration timeout, RequestSpan parentSpan) {
     super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
     this.persistTo = persistTo;
     this.replicateTo = replicateTo;
@@ -50,6 +52,7 @@ public class ObserveContext extends CoreContext {
     this.remove = remove;
     this.timeout = timeout;
     this.retryStrategy = FailFastRetryStrategy.INSTANCE;
+    this.parentSpan = parentSpan;
   }
 
   public Observe.ObservePersistTo persistTo() {
@@ -87,4 +90,9 @@ public class ObserveContext extends CoreContext {
   public RetryStrategy retryStrategy() {
     return retryStrategy;
   }
+
+  public RequestSpan parentSpan() {
+    return parentSpan;
+  }
+
 }

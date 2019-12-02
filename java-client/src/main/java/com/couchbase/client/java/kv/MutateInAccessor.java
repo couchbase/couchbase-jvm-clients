@@ -28,6 +28,8 @@ import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
+
 public class MutateInAccessor {
 
   public static CompletableFuture<MutateInResult> mutateIn(final Core core,
@@ -38,7 +40,7 @@ public class MutateInAccessor {
                                                            final Boolean insertDocument,
                                                            final JsonSerializer serializer) {
     core.send(request);
-    return request
+    final CompletableFuture<MutateInResult> mutateInResult = request
       .response()
       .thenApply(response -> {
         final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
@@ -53,19 +55,8 @@ public class MutateInAccessor {
           default:
             throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
         }
-      }).thenCompose(result -> {
-        final ObserveContext ctx = new ObserveContext(
-          core.context(),
-          persistTo.coreHandle(),
-          replicateTo.coreHandle(),
-          result.mutationToken(),
-          result.cas(),
-          request.collectionIdentifier(),
-          key,
-          false,
-          request.timeout()
-        );
-        return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });
+    return wrapWithDurability(mutateInResult, key, persistTo, replicateTo, core, request, false);
   }
+
 }

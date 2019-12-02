@@ -17,6 +17,7 @@
 package com.couchbase.client.tracing.opentracing;
 
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -120,6 +121,11 @@ public class OpenTracingInternalSpan implements InternalSpan {
     try (Scope scope = tracer.activateSpan(encodingSpan)) {
       encodingSpan.finish();
     }
+  }
+
+  @Override
+  public RequestSpan toRequestSpan() {
+    return OpenTracingRequestSpan.wrap(tracer, span);
   }
 
 }

@@ -104,7 +104,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       byte[] content = "hello, world".getBytes(UTF_8);
 
       InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty());
+        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();
@@ -143,7 +143,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       byte[] content = "hello, world".getBytes(UTF_8);
 
       InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty());
+        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
       core.send(insertRequest);
 
       InsertResponse insertResponse = insertRequest.response().get();

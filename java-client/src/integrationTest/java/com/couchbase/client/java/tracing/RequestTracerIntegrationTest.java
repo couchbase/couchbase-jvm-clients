@@ -165,6 +165,11 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     public void stopDispatch() {
 
     }
+
+    @Override
+    public RequestSpan toRequestSpan() {
+      return new TrackingRequestSpan();
+    }
   }
 
   private static class TrackingRequestSpan implements RequestSpan {

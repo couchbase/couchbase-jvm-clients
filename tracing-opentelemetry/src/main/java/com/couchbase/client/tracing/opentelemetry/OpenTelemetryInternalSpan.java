@@ -17,6 +17,7 @@
 package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -123,4 +124,8 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
     }
   }
 
+  @Override
+  public RequestSpan toRequestSpan() {
+    return OpenTelemetryRequestSpan.wrap(tracer, span);
+  }
 }

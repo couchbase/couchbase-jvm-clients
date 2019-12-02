@@ -80,7 +80,8 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
               hp.core.context(),
               hp.collectionIdentifier,
               retryStrategy,
-              durability.toDurabilityLevel
+              durability.toDurabilityLevel,
+              null /* todo: add rto */
             )
           )
 

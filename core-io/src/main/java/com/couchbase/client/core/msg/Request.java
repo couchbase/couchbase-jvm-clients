@@ -140,6 +140,11 @@ public interface Request<R extends Response> {
    */
   RetryStrategy retryStrategy();
 
+  /**
+   * Holds the internal span for this request.
+   *
+   * @return the internal span used for the request.
+   */
   InternalSpan internalSpan();
 
   /**
