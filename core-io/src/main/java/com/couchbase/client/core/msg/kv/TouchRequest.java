@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -36,12 +37,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 
 public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
 
+  public static final String OPERATION_NAME = "touch";
+
   private final long expiry;
 
-
   public TouchRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                      RetryStrategy retryStrategy, String key, long expiry) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+                      RetryStrategy retryStrategy, String key, long expiry, InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.expiry = expiry;
   }
 

@@ -46,7 +46,7 @@ public class TouchAccessor {
           case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
           default: throw new CouchbaseException("Touch operation failed", ctx);
         }
-      });
+      }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
 }

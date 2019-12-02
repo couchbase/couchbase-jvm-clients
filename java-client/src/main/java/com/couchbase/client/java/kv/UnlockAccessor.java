@@ -21,6 +21,8 @@ import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 public class UnlockAccessor {
 
@@ -43,6 +45,9 @@ public class UnlockAccessor {
           case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
           default: throw new CouchbaseException("Unlock operation failed", ctx);
         }
-      });
+      })
+      .whenComplete((aVoid, throwable) -> request.context().logicallyComplete())
+      // Don't ask, need this otherwise it won't compile (void vs. object)
+      .thenApply(o -> null);
   }
 }

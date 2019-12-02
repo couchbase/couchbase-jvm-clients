@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -25,6 +26,7 @@ import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
 import com.couchbase.client.core.msg.kv.PrependRequest;
+import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.kv.AppendAccessor;
 import com.couchbase.client.java.kv.AppendOptions;
@@ -77,8 +79,9 @@ public class AsyncBinaryCollection {
 
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().internalSpan(AppendRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     AppendRequest request = new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
-      opts.cas(), opts.durabilityLevel());
+      opts.cas(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -99,8 +102,9 @@ public class AsyncBinaryCollection {
 
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().internalSpan(PrependRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     PrependRequest request = new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
-      opts.cas(), opts.durabilityLevel());
+      opts.cas(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -119,8 +123,10 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().internalSpan(IncrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
-      opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
+      opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -139,8 +145,10 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().internalSpan(DecrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
-      opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel());
+      opts.delta(), opts.initial(), opts.expiry(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

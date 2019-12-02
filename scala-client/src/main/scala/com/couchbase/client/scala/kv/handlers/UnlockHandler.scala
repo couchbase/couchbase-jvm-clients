@@ -57,7 +57,8 @@ private[scala] class UnlockHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           id,
-          cas
+          cas,
+          null /* todo: rto */
         )
       )
     }

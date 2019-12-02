@@ -67,7 +67,8 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
           id,
           content,
           cas,
-          durability.toDurabilityLevel
+          durability.toDurabilityLevel,
+          null /* todo: rto */
         )
       )
     }

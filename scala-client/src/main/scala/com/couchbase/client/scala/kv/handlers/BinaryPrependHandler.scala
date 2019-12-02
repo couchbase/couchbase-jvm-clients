@@ -72,7 +72,8 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
           id,
           content,
           cas,
-          durability.toDurabilityLevel
+          durability.toDurabilityLevel,
+          null /* todo: rto */
         )
       )
     }

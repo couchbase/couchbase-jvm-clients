@@ -67,7 +67,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfDisabledAppend() {
-    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability);
+    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -78,7 +78,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfTooShortAppend() {
-    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability);
+    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -89,7 +89,7 @@ class CompressionTest {
 
   @Test
   void doesCompressLongAppend() {
-    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability);
+    AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
@@ -100,7 +100,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfDisabledPrepend() {
-    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability);
+    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
@@ -111,7 +111,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfTooShortPrepend() {
-    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability);
+    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
@@ -122,7 +122,7 @@ class CompressionTest {
 
   @Test
   void doesCompressLongPrepend() {
-    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability);
+    PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));

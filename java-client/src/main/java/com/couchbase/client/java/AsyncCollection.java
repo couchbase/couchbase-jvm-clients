@@ -941,8 +941,9 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InternalSpan span = environment.requestTracer().internalSpan(TouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      expiry.getSeconds());
+      expiry.getSeconds(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -988,7 +989,8 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    UnlockRequest request = new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas);
+    InternalSpan span = environment.requestTracer().internalSpan(UnlockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    UnlockRequest request = new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

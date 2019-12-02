@@ -79,7 +79,8 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
           delta,
           i,
           expiration.getSeconds.toInt,
-          durability.toDurabilityLevel
+          durability.toDurabilityLevel,
+          null /* todo: rto */
         )
       )
     }

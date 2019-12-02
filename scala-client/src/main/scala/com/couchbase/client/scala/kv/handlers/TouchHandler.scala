@@ -60,7 +60,8 @@ private[scala] class TouchHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           id,
-          expiry.toSeconds
+          expiry.toSeconds,
+          null /* todo: rto */
         )
       )
     }

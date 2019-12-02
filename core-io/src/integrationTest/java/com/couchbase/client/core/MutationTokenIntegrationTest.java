@@ -70,7 +70,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
     AppendRequest appendRequest = new AppendRequest(Duration.ofSeconds(1), core.context(),
       collectionIdentifier, env.retryStrategy(), id,
-      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
+      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty(), null);
     core.send(appendRequest);
 
     AppendResponse appendResponse = appendRequest.response().get();
@@ -93,7 +93,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
     PrependRequest prependRequest = new PrependRequest(Duration.ofSeconds(1), core.context(),
       collectionIdentifier, env.retryStrategy(), id,
-      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty());
+      ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty(), null);
     core.send(prependRequest);
 
     PrependResponse prependResponse = prependRequest.response().get();
@@ -222,7 +222,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(insertResponse.mutationToken());
 
     IncrementRequest incrementRequest = new IncrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
-      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty());
+      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(incrementRequest);
 
     IncrementResponse incrementResponse = incrementRequest.response().get();
@@ -244,7 +244,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(insertResponse.mutationToken());
 
     DecrementRequest decrementRequest = new DecrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
-      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty());
+      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(decrementRequest);
 
     DecrementResponse decrementResponse = decrementRequest.response().get();

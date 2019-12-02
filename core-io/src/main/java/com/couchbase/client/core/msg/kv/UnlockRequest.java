@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
@@ -37,11 +38,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 
 public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
 
+  public static final String OPERATION_NAME = "unlock";
+
   private final long cas;
 
   public UnlockRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                       RetryStrategy retryStrategy, String key, long cas) {
-    super(timeout, ctx, retryStrategy, key, collectionIdentifier);
+                       RetryStrategy retryStrategy, String key, long cas, InternalSpan span) {
+    super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.cas = cas;
   }
 
