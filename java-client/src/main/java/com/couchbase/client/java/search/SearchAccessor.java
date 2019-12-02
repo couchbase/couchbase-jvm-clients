@@ -37,6 +37,7 @@ import com.couchbase.client.java.search.result.SearchStatus;
 import com.couchbase.client.java.search.result.TermSearchFacetResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,6 +45,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * Internal helper to access and convert view requests and responses.
@@ -67,6 +69,7 @@ public class SearchAccessor {
                 .map(trailer -> new SearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
               )
           )
+          .doFinally(signalType -> request.context().logicallyComplete())
           .toFuture();
     }
 
@@ -80,7 +83,8 @@ public class SearchAccessor {
             Mono<SearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
             Mono<Map<String, SearchFacetResult>> facets = response.trailer().map(SearchAccessor::parseFacets);
             return new ReactiveSearchResult(rows, facets, meta);
-          });
+          })
+          .doFinally(signalType -> request.context().logicallyComplete());
     }
 
     private static Map<String, SearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {

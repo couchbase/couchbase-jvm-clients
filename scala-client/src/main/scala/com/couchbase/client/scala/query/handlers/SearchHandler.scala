@@ -85,7 +85,8 @@ private[scala] class SearchHandler() {
           retryStrategy,
           core.context().authenticator(),
           indexName,
-          queryBytes
+          queryBytes,
+          null /* todo: rto */
         )
       )
     }

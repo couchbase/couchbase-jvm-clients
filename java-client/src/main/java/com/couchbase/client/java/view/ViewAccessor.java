@@ -25,9 +25,11 @@ import com.couchbase.client.core.msg.view.ViewResponse;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -54,7 +56,9 @@ public class ViewAccessor {
 
     private static Mono<ViewResponse> viewQueryInternal(final Core core, final ViewRequest request) {
         core.send(request);
-        return Reactor.wrap(request, request.response(), true);
+        return Reactor
+          .wrap(request, request.response(), true)
+          .doFinally(signalType -> request.context().logicallyComplete());
     }
 
 }

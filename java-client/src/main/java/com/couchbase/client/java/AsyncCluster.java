@@ -327,8 +327,11 @@ public class AsyncCluster {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
+    final InternalSpan span = environment()
+      .requestTracer()
+      .internalSpan(AnalyticsRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
-        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement
+        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -368,7 +371,10 @@ public class AsyncCluster {
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator, indexName, bytes);
+    final InternalSpan span = environment()
+      .requestTracer()
+      .internalSpan(SearchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator, indexName, bytes, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

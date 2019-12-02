@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.diag.PingResult;
 import com.couchbase.client.core.env.Authenticator;
@@ -25,6 +26,7 @@ import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.diagnostics.PingResponse;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -187,8 +189,11 @@ public class AsyncBucket {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
+    final InternalSpan span = environment()
+      .requestTracer()
+      .internalSpan(ViewRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
     ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, authenticator, name, designDoc,
-      viewName, query, keysJson, development);
+      viewName, query, keysJson, development, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

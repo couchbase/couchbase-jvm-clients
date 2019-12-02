@@ -101,7 +101,8 @@ private[scala] class ViewHandler() {
           viewName,
           params,
           bytes.asJava,
-          isDevelopment
+          isDevelopment,
+          null /* todo: rto */
         )
       )
     }

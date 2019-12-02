@@ -77,7 +77,8 @@ private[scala] class AnalyticsHandler() {
           if (options.priority) -1 else 0,
           options.readonly.getOrElse(false),
           params.str("client_context_id"),
-          statement
+          statement,
+          null /* todo: rto */
         )
       })
     }

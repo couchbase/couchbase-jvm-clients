@@ -53,7 +53,9 @@ public class AnalyticsAccessor {
 
   private static Mono<AnalyticsResponse> analyticsQueryInternal(final Core core, final AnalyticsRequest request) {
     core.send(request);
-    return Reactor.wrap(request, request.response(), true);
+    return Reactor
+      .wrap(request, request.response(), true)
+      .doFinally(signalType -> request.context().logicallyComplete());
   }
 
 }

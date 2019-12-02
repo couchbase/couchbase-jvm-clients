@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -47,6 +48,9 @@ import static java.util.Objects.requireNonNull;
 public class ViewRequest extends BaseRequest<ViewResponse>
   implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse>, ScopedRequest {
 
+  public static final String OPERATION_NAME = "view";
+
+
   private final Authenticator authenticator;
   private final String bucket;
   private final boolean development;
@@ -58,8 +62,8 @@ public class ViewRequest extends BaseRequest<ViewResponse>
   public ViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                      final Authenticator authenticator, final String bucket, final String design,
                      final String view, final String query, Optional<byte[]> keysJson,
-                     final boolean development) {
-    super(timeout, ctx, retryStrategy);
+                     final boolean development, final InternalSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.authenticator = requireNonNull(authenticator);
     this.bucket = requireNonNull(bucket);
     this.design = requireNonNull(design);

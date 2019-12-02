@@ -89,6 +89,7 @@ object SearchMock {
       BestEffortRetryStrategy.INSTANCE,
       null,
       null,
+      null,
       null
     )
 

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
@@ -39,18 +40,15 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 public class SearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
 
+    public static final String OPERATION_NAME = "search";
+
     private final String indexName;
     private final byte[] content;
     private final Authenticator authenticator;
 
-    // TODO expose all other parameters
-    public SearchRequest(Duration timeout,
-                         CoreContext ctx,
-                         RetryStrategy retryStrategy,
-                         Authenticator authenticator,
-                         String indexName,
-                         byte[] content) {
-        super(timeout, ctx, retryStrategy);
+    public SearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
+                         String indexName, byte[] content, final InternalSpan span) {
+        super(timeout, ctx, retryStrategy, span);
         this.indexName = indexName;
         this.content = content;
         this.authenticator = authenticator;
