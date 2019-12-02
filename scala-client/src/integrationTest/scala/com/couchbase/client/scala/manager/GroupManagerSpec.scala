@@ -19,7 +19,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   private val Username                 = "integration-test-user"
   private val GroupA                   = "group-a"
   private val GroupB                   = "group-b"
-  private val SecurityAdmin            = Role("SecurityAdmin")
+  private val SecurityAdmin            = Role("security_admin")
   private val ReadOnlyAdmin            = Role("ro_admin")
   private val BucketFullAccessWildcard = Role("bucket_full_access", Some("*"))
 
@@ -28,18 +28,12 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    users = new ReactiveUserManager(cluster.async.core)
+    users = cluster.reactive.users
   }
 
   @AfterAll
   def tearDown(): Unit = {
     cluster.disconnect()
-  }
-
-  def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {
-    val expectedRolesAndOrigins            = expected.toSet
-    val actualRolesAndOrigins: Set[String] = userMeta.effectiveRolesAndOrigins.map(_.toString).toSet
-    assert(expectedRolesAndOrigins == actualRolesAndOrigins)
   }
 
   private def dropUserQuietly(name: String): Unit = {
@@ -66,6 +60,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     val allUsers = users.getAllGroups().collectSeq().block()
     assert(!allUsers.exists(_.name == groupName))
   }
+
   @AfterEach
   @BeforeEach
   def dropTestUser(): Unit = {
@@ -138,13 +133,21 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       userMeta.effectiveRoles.toSet
     )
 
-    // xxx possibly flaky, depends on order of origins reported by server?
-    checkRoleOrigins(
-      userMeta,
-      "SecurityAdmin<-[user]",
-      "ro_admin<-[group:group-a, group:group-b]",
-      "bucket_full_access[*]<-[group:group-b, user]"
-    )
+    assert(userMeta.effectiveRolesAndOrigins.size == 3)
+    val r1 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "security_admin").get
+    val r2 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "ro_admin").get
+    val r3 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "bucket_full_access").get
+
+    assert(r1.origins.size == 1)
+    assert(r1.origins.head.typ == "user")
+
+    assert(r2.origins.size == 2)
+    assert(r2.origins.exists(v => v.typ == "group" && v.name.contains("group-a")))
+    assert(r2.origins.exists(v => v.typ == "group" && v.name.contains("group-b")))
+
+    assert(r3.origins.size == 2)
+    assert(r3.origins.exists(v => v.typ == "user"))
+    assert(r3.origins.exists(v => v.typ == "group" && v.name.contains("group-b")))
 
     users.upsertGroup(users.getGroup(GroupA).block().roles(SecurityAdmin)).block()
     users.upsertGroup(users.getGroup(GroupB).block().roles(SecurityAdmin)).block()

@@ -76,6 +76,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
       () => users.getUser(username, AuthDomain.Local).block()
     )
   }
+
   @AfterEach
   @BeforeEach
   def dropTestUser(): Unit = {
@@ -196,7 +197,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
     checkRoleOrigins(userMeta, "admin<-[user]")
 
-    users.upsertUser(User(Username).displayName("Renamed").roles(Admin))
+    users.upsertUser(User(Username).displayName("Renamed").roles(Admin)).block()
 
     assertCanAuthenticate(Username, origPassword)
 

@@ -12,7 +12,7 @@ import com.couchbase.client.scala.kv.{LookupInMacro, LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -329,7 +329,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           get(LookupInMacro.CAS).xattr,
           get(LookupInMacro.IsDeleted).xattr,
           get(LookupInMacro.LastModified).xattr,
-          get(LookupInMacro.RevId).xattr,
           get(LookupInMacro.SeqNo).xattr,
           get(LookupInMacro.ValueSizeBytes).xattr,
           get(LookupInMacro.ExpiryTime).xattr
@@ -342,9 +341,29 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     assert(!result.contentAs[Boolean](2).get)
     result.contentAs[String](3).get
     result.contentAs[String](4).get
-    result.contentAs[String](5).get
+    result.contentAs[Int](5).get
     result.contentAs[Int](6).get
-    result.contentAs[Int](7).get
+  }
+
+  // The revid macro was introduced in a specific version of 6.5, so use sync-rep (a feature only released with 6.5)
+  // as a proxy
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), missesCapabilities = Array(Capabilities.SYNC_REPLICATION))
+  @Test
+  def revidMacro() {
+    val docId = prepare()
+
+    val result = coll
+      .lookupIn(
+        docId,
+        Array(
+          get(LookupInMacro.Document).xattr,
+          get(LookupInMacro.RevId).xattr,
+        )
+      )
+      .get
+
+    result.contentAs[JsonObject](0).get
+    result.contentAs[String](1).get
   }
 
 }

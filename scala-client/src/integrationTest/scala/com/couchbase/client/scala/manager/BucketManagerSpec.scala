@@ -143,7 +143,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def upsertShouldOverrideWhenPresent(): Unit = {
+  def  upsertShouldOverrideWhenPresent(): Unit = {
     val loaded: BucketSettings = buckets.getBucket(bucketName).get
     val newQuota: Int          = loaded.ramQuotaMB + 10
     val newSettings            = loaded.toCreateBucketSettings.ramQuotaMB(newQuota)
