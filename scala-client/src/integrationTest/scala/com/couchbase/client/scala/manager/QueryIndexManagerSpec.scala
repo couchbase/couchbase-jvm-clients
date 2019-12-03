@@ -67,13 +67,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
       .foreach(index => {
         println(s"Cleaning up index ${index}")
 
-        cluster.queryIndexes.dropIndex(config.bucketname, index.name) match {
-          case Failure(err: QueryIndexNotFoundException) =>
-            // Seeing this happening in CI tests, cannot reproduce locally - likely an artifact of old indexes
-            // in an odd state left lying around from previous tests
-            println(s"Found index $index but query service reported it didn't exist on drop...")
-          case _ =>
-        }
+        cluster.queryIndexes.dropIndex(config.bucketname, index.name).get
       })
   }
 

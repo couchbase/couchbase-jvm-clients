@@ -73,7 +73,8 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Seq[QueryIndex]] = {
     val statement =
-      s"""SELECT idx.* FROM system:indexes AS idx WHERE keyspace_id = "$bucketName" ORDER BY is_primary
+      s"""SELECT idx.* FROM system:indexes AS idx WHERE keyspace_id = "$bucketName"
+         | AND `using`="gsi" ORDER BY is_primary
          | DESC, name ASC""".stripMargin
 
     execInternal(readonly = true, statement, timeout, retryStrategy)
