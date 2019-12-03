@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import com.couchbase.client.core.error.{ParsingFailedException, QueryException}
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
@@ -55,6 +56,7 @@ class QuerySpec extends ScalaIntegrationTest {
       .get
 
     bucketName = config.bucketname()
+    TestUtils.waitForService(bucket, ServiceType.QUERY)
   }
 
   @AfterAll

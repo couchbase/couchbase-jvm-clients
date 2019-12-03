@@ -41,7 +41,10 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .dropUser(name)
       .onErrorResume(err => {
         if (err.isInstanceOf[UserNotFoundException]) SMono.empty
-        else SMono.raiseError(err)
+        else {
+          println(err.getMessage)
+          SMono.raiseError(err)
+        }
       })
       .block()
   }
@@ -51,7 +54,10 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .dropGroup(groupName)
       .onErrorResume(err => {
         if (err.isInstanceOf[GroupNotFoundException]) SMono.empty
-        else SMono.raiseError(err)
+        else {
+          println(err.getMessage)
+          SMono.raiseError(err)
+        }
       })
       .block()
   }

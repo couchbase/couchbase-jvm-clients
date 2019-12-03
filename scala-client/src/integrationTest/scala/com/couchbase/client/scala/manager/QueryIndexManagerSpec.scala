@@ -17,14 +17,16 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit.SECONDS
 
+import com.couchbase.client.core.diag.PingServiceHealth.PingState
 import com.couchbase.client.core.error.{
   QueryIndexExistsException,
   QueryIndexNotFoundException,
   TimeoutException
 }
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexManager}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -32,7 +34,7 @@ import org.junit.jupiter.api._
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
@@ -49,6 +51,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
     bucketName = config.bucketname
     indexes = cluster.queryIndexes
+    TestUtils.waitForService(bucket, ServiceType.QUERY)
   }
 
   @AfterAll
@@ -179,7 +182,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def dropNamedPrimaryIndex() = {
-    cluster.queryIndexes.createPrimaryIndex(config.bucketname, indexName = Some("namedPrimary"))
+    cluster.queryIndexes.createPrimaryIndex(config.bucketname, indexName = Some("namedPrimary")).get
 
     assert(getIndex("namedPrimary").get.isPrimary)
 
