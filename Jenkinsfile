@@ -448,13 +448,9 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE) {
         // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
 
-        // Running Scala separately as when try to run everything together, it hangs
-        shIgnoreFailure("mvn -pl 'scala-client' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
-
         // The -B -Dorg... stuff hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            // Removing scala for now, see above
-            shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            shWithEcho("mvn -pl '!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
         } else {
             // This is for iteration during development, skips out some steps
             shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
