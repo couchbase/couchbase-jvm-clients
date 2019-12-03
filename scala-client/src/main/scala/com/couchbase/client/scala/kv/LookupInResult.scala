@@ -1,17 +1,13 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.DecodingFailureException
-import com.couchbase.client.core.msg.kv.{
-  SubDocumentField,
-  SubDocumentOpResponseStatus,
-  SubdocCommandType
-}
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonTranscoder, Transcoder}
+import com.couchbase.client.core.error.{InvalidArgumentException, ReducedKeyValueErrorContext}
+import com.couchbase.client.core.msg.kv.{SubDocumentField, SubDocumentOpResponseStatus, SubdocCommandType}
+import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder}
 
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 import scala.compat.java8.OptionConverters._
+import scala.concurrent.duration.Duration
 import scala.reflect.runtime.universe._
+import scala.util.{Failure, Success, Try}
 
 /** The results of a SubDocument 'lookupIn' operation.
   *
@@ -47,7 +43,7 @@ case class LookupInResult(
       index: Int
   )(implicit deserializer: JsonDeserializer[T], tag: WeakTypeTag[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
-      Failure(new IllegalArgumentException(s"$index is out of bounds"))
+      Failure(new InvalidArgumentException(s"$index is out of bounds", null, ReducedKeyValueErrorContext.create(id)))
     } else {
       val field = content(index)
       field.error().asScala match {
@@ -60,7 +56,7 @@ case class LookupInResult(
                 Success(exists.asInstanceOf[T])
               } else {
                 Failure(
-                  new DecodingFailureException("Exists results can only be returned as Boolean")
+                  new InvalidArgumentException("Exists results can only be returned as Boolean", null, ReducedKeyValueErrorContext.create(id))
                 )
               }
             case _ => deserializer.deserialize(field.value)

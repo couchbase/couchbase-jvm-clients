@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.json
 
-import com.couchbase.client.core.error.DecodingFailureException
+import com.couchbase.client.core.error.InvalidArgumentException
 
 import scala.annotation.tailrec
 import scala.language.dynamics
@@ -43,7 +43,7 @@ case class GetSelecter(
     * If that value is not itself a String, its `toString` value will be returned.  If the value is `null`, then
     * `null` will be returned.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated
     */
   def str: String = GetSelecter.eval(mapped, path).map(v => ValueConvertor.str(v, pathStr)).get
 
@@ -51,9 +51,9 @@ case class GetSelecter(
     *
     * If that value is actually an Int it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailureException will be thrown.
+    * different type then InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def num: Int = GetSelecter.eval(mapped, path).map(v => ValueConvertor.num(v, pathStr)).get
@@ -62,9 +62,9 @@ case class GetSelecter(
     *
     * If that value is actually a Double it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toDouble` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailureException will be thrown.
+    * different type then InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def numDouble: Double =
@@ -74,9 +74,9 @@ case class GetSelecter(
     *
     * If that value is actually a Float it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toFloat` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailureException will be thrown.
+    * different type then InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def numFloat: Float =
@@ -86,9 +86,9 @@ case class GetSelecter(
     *
     * If that value is actually a Long it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toLong` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailureException will be thrown.
+    * different type then InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def numLong: Long =
@@ -96,27 +96,27 @@ case class GetSelecter(
 
   /** Returns the value at the current cursor as a `Boolean`.
     *
-    * If that value is actually a Boolean it is returned directly.  Else DecodingFailureException will be thrown.
+    * If that value is actually a Boolean it is returned directly.  Else InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def bool: Boolean = GetSelecter.eval(mapped, path).map(v => ValueConvertor.bool(v, pathStr)).get
 
   /** Returns the value at the current cursor as a `JsonObject`.
     *
-    * If that value is actually a JsonObject it is returned directly.  Else DecodingFailureException will be thrown.
+    * If that value is actually a JsonObject it is returned directly.  Else InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def obj: JsonObject = GetSelecter.eval(mapped, path).map(v => ValueConvertor.obj(v, pathStr)).get
 
   /** Returns the value at the current cursor as a `JsonArray`.
     *
-    * If that value is actually a JsonArray it is returned directly.  Else DecodingFailureException will be thrown.
+    * If that value is actually a JsonArray it is returned directly.  Else InvalidArgumentException will be thrown.
     *
-    * @throws DecodingFailureException if path established by the cursor could not be evaluated, or if the value could
+    * @throws InvalidArgumentException if path established by the cursor could not be evaluated, or if the value could
     *                                 not be converted
     */
   def arr: JsonArray = GetSelecter.eval(mapped, path).map(v => ValueConvertor.arr(v, pathStr)).get
@@ -124,11 +124,11 @@ case class GetSelecter(
 
 private[scala] object GetSelecter {
   private def couldNotFindKey(name: String) =
-    new DecodingFailureException(s"Could not find key $name")
+    new InvalidArgumentException(s"Could not find key $name", null, null)
   private def expectedObjectButFoundArray(name: String) =
-    new DecodingFailureException(s"Expected object or field for '$name' but found an array")
+    new InvalidArgumentException(s"Expected object or field for '$name' but found an array", null, null)
   private def expectedArrayButFoundObject(name: String) =
-    new DecodingFailureException(s"Expected array for '$name' but found an object")
+    new InvalidArgumentException(s"Expected array for '$name' but found an object", null, null)
 
   /** The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that
     * path. */
@@ -163,11 +163,11 @@ private[scala] object GetSelecter {
                       case Success(v) => Success(v)
                       case Failure(err) =>
                         Failure(
-                          new DecodingFailureException(s"Could not get idx $idx in array '$name'")
+                          new InvalidArgumentException(s"Could not get idx $idx in array '$name'", null, null)
                         )
                     }
                   case Failure(err) =>
-                    Failure(new DecodingFailureException(s"Could not find array '$name'"))
+                    Failure(new InvalidArgumentException(s"Could not find array '$name'", null, null))
                 }
               case Right(arr) =>
                 Failure(expectedObjectButFoundArray(name))
@@ -188,12 +188,12 @@ private[scala] object GetSelecter {
                   case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
                   case Success(v: Any) =>
                     Failure(
-                      new DecodingFailureException(
-                        s"Needed object or array at $name, but found '${v}'"
+                      new InvalidArgumentException(
+                        s"Needed object or array at $name, but found '${v}'", null, null
                       )
                     )
                   case _ =>
-                    Failure(new DecodingFailureException(s"Could not find anything matching $name"))
+                    Failure(new InvalidArgumentException(s"Could not find anything matching $name", null, null))
                 }
 
               case Right(arr) =>
@@ -214,19 +214,18 @@ private[scala] object GetSelecter {
                       case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
                       case Success(v: Any) =>
                         Failure(
-                          new DecodingFailureException(
-                            s"Needed object or array at $name[$idx], but found '${v}'"
+                          new InvalidArgumentException(
+                            s"Needed object or array at $name[$idx], but found '${v}'", null, null
                           )
                         )
                       case _ =>
                         Failure(
-                          new DecodingFailureException(
-                            s"Found array $name but nothing at index $idx"
-                          )
+                          new InvalidArgumentException(
+                            s"Found array $name but nothing at index $idx", null, null                          )
                         )
                     }
 
-                  case _ => Failure(new DecodingFailureException(s"Could not find array '$name'"))
+                  case _ => Failure(new InvalidArgumentException(s"Could not find array '$name'", null, null))
                 }
               case Right(arr) =>
                 eval(Right(arr), xs)

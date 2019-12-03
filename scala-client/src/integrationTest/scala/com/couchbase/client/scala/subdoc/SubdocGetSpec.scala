@@ -3,7 +3,7 @@ package com.couchbase.client.scala.subdoc
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.DecodingFailureException
+import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.durability.Durability
@@ -13,12 +13,7 @@ import com.couchbase.client.scala.kv.{LookupInMacro, LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{
-  Capabilities,
-  ClusterAwareIntegrationTest,
-  ClusterType,
-  IgnoreWhen
-}
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -210,9 +205,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
-          case Failure(err: DecodingFailureException) =>
-          case Success(v)                             => assert(false, s"should not succeed")
-          case Failure(err)                           => assert(false, s"unexpected error $err")
+          case Failure(err: InvalidArgumentException) =>
+          case Success(v)                            => assert(false, s"should not succeed")
+          case Failure(err)                          => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -238,9 +233,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
-          case Failure(err: DecodingFailureException) =>
-          case Success(v)                             => assert(false, s"should not succeed")
-          case Failure(err)                           => assert(false, s"unexpected error $err")
+          case Failure(err: InvalidArgumentException) =>
+          case Success(v)                            => assert(false, s"should not succeed")
+          case Failure(err)                          => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")

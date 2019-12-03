@@ -1,6 +1,6 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.DecodingFailureException
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.scala.json.JsonObject
 import org.junit.jupiter.api.{Assertions, Test}
 
@@ -103,7 +103,7 @@ class JsonObjectDynamicSpec {
   @Test
   def root_incorrectly_read_as_object() {
     Assertions.assertThrows(
-      classOf[DecodingFailureException],
+      classOf[InvalidArgumentException],
       () =>
         (
           json.dyn.address.obj
@@ -149,7 +149,7 @@ class JsonObjectDynamicSpec {
   @Test
   def name_arr() {
     Assertions.assertThrows(
-      classOf[DecodingFailureException],
+      classOf[InvalidArgumentException],
       () =>
         (
           json.dyn.name.arr
@@ -160,7 +160,7 @@ class JsonObjectDynamicSpec {
   @Test
   def name_0_str() {
     Assertions.assertThrows(
-      classOf[DecodingFailureException],
+      classOf[InvalidArgumentException],
       () =>
         (
           json.dyn.name(0).str
@@ -176,7 +176,7 @@ class JsonObjectDynamicSpec {
   @Test
   def address_0_no_exist_str() {
     Assertions.assertThrows(
-      classOf[DecodingFailureException],
+      classOf[InvalidArgumentException],
       () =>
         (
           json.dyn.address(0).no_exist.str
@@ -191,12 +191,12 @@ class JsonObjectDynamicSpec {
 
   @Test
   def address_1_obj() {
-    Assertions.assertThrows(classOf[DecodingFailureException], () => (json.dyn.address(1).obj))
+    Assertions.assertThrows(classOf[InvalidArgumentException], () => (json.dyn.address(1).obj))
   }
 
   @Test
   def address_minus1_obj() {
-    Assertions.assertThrows(classOf[DecodingFailureException], () => (json.dyn.address(-1).obj))
+    Assertions.assertThrows(classOf[InvalidArgumentException], () => (json.dyn.address(-1).obj))
   }
 
   @Test

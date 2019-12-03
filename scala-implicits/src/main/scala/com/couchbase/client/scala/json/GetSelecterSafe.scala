@@ -1,9 +1,9 @@
 package com.couchbase.client.scala.json
 
-import com.couchbase.client.core.error.DecodingFailureException
+import com.couchbase.client.core.error.InvalidArgumentException
 
 import scala.language.dynamics
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /** A 'safe' version of [[GetSelecter]] whose methods return `Try` rather than throw exceptions.
   *
