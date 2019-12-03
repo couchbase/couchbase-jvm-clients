@@ -183,7 +183,7 @@ pipeline {
                      unstash 'couchbase-jvm-clients'
                      installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                      dir('couchbase-jvm-clients') {
-                         script { testAgainstServer("5.5.5", QUICK_TEST_MODE) }
+                         script { testAgainstServer("5.5.5", QUICK_TEST_MODE, false) }
                      }
                  }
              }
@@ -210,7 +210,7 @@ pipeline {
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                     dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE) }
+                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE, false) }
                     }
                 }
             }
@@ -405,7 +405,7 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 
 // To be called inside a script {} block - required so can do try-finally logic to cleanup the cbdyncluster
 // (Inside a script {} block is 'scripted pipeline' syntax, different to the 'declarative pipeline' syntax elsewhere.)
-void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE) {
+void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE, boolean includeAnalytics = true) {
     def clusterId = null
     try {
         // For debugging
@@ -436,7 +436,12 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE) {
 
         // Create the cluster
         if (!QUICK_TEST_MODE) {
-            shWithEcho("cbdyncluster --node kv,index,n1ql,fts,cbas --node kv --node kv --bucket default setup $clusterId")
+            if (includeAnalytics) {
+                shWithEcho("cbdyncluster --node kv,index,n1ql,fts,cbas --node kv --node kv --bucket default setup $clusterId")
+            }
+            else {
+                shWithEcho("cbdyncluster --node kv,index,n1ql,fts --node kv --node kv --bucket default setup $clusterId")
+            }
         } else {
             // During development, this is faster (less tests)
             shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
