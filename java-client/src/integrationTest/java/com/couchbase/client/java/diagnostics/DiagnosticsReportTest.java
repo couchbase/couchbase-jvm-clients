@@ -58,7 +58,7 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
         assertFalse(json.isEmpty());
 
         // One for config().bucketname(), one for BUCKET_GLOBAL_SCOPE
-        assertEquals(2, response.endpoints(ServiceType.KV).size());
+        assertTrue(response.endpoints(ServiceType.KV).size() >= 2);
     }
 
     @IgnoreWhen( missesCapabilities = { Capabilities.QUERY }, clusterTypes = ClusterType.MOCKED)
@@ -82,6 +82,6 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
         assertFalse(json.isEmpty());
 
         // One for config().bucketname(), one for BUCKET_GLOBAL_SCOPE
-        assertEquals(2, response.endpoints(ServiceType.KV).size());
+        assertTrue(response.endpoints(ServiceType.KV).size() >= 2);
     }
 }
