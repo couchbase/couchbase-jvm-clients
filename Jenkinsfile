@@ -450,6 +450,9 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE, boolean in
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")
 
+        // Set the query indexer mode.  Without this query tests fail with "GSI CreatePrimaryIndex() - cause: Please Set Indexer Storage Mode Before Create Index"
+        shWithEcho("curl -v -X POST -u Administrator:password -d 'storageMode=plasma' http://" + ip + ":8091/settings/indexes")
+
         // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
 
