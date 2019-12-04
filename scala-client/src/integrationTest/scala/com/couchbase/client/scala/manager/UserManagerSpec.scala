@@ -20,12 +20,14 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import reactor.core.scala.publisher.SMono
 
+import scala.util.{Failure, Success}
+
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class UserManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster           = _
-  private var users: ReactiveUserManager = _
-  private var coll: Collection           = _
+  private var cluster: Cluster   = _
+  private var users: UserManager = _
+  private var coll: Collection   = _
 
   private val Username                 = "integration-test-user"
   private val Admin                    = Role("admin")
@@ -37,7 +39,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    users = cluster.reactive.users
+    users = cluster.users
   }
 
   @AfterAll
@@ -60,21 +62,34 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
   private def dropUserQuietly(name: String): Unit = {
     users
-      .dropUser(name)
-      .onErrorResume(err => {
-        if (err.isInstanceOf[UserNotFoundException]) SMono.empty
-        else SMono.raiseError(err)
-      })
-      .block()
+      .dropUser(name) match {
+      case Success(value)                      =>
+      case Failure(err: UserNotFoundException) =>
+      case Failure(err)                        => throw err
+    }
+    waitUntilUserDropped(name)
+  }
+
+  private def waitUntilUserPresent(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getUser(name) match {
+        case Success(_) => true
+        case _          => false
+      }
+    })
+  }
+
+  private def waitUntilUserDropped(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getUser(name) match {
+        case Failure(err: UserNotFoundException) => true
+        case _                                   => false
+      }
+    })
   }
 
   private def assertUserAbsent(username: String): Unit = {
-    val allUsers = users.getAllUsers().map(_.user).collectSeq().block()
-    assert(!allUsers.exists(_.username == username))
-    assertThrows(
-      classOf[UserNotFoundException],
-      () => users.getUser(username, AuthDomain.Local).block()
-    )
+    waitUntilUserDropped(username)
   }
 
   @AfterEach
@@ -142,7 +157,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def availableRoles(): Unit = {
-    val roles: Seq[RoleAndDescription] = users.availableRoles().collectSeq.block()
+    val roles: Seq[RoleAndDescription] = users.availableRoles().get
     // Full results vary by server version, but should at least contain the admin role.
     assert(roles.map(_.role).contains(Admin))
   }
@@ -150,8 +165,9 @@ class UserManagerSpec extends ScalaIntegrationTest {
   @Test
   def getAll(): Unit = {
     val user = User(Username, "Integration Test User", Seq(), Seq(Admin), Some("password"))
-    users.upsertUser(user).block()
-    val allUsers: Seq[UserAndMetadata] = users.getAllUsers().collectSeq().block()
+    users.upsertUser(user).get
+    waitUntilUserPresent(user.username)
+    val allUsers: Seq[UserAndMetadata] = users.getAllUsers().get
     val justUsers                      = allUsers.map(_.user)
     assert(justUsers.exists(_.username == user.username))
   }
@@ -165,7 +181,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
           .password("password")
           .roles(Role("bogus"))
           .displayName("Integration Test User")
-        users.upsertUser(user).block()
+        users.upsertUser(user).get
       }
     )
   }
@@ -182,14 +198,16 @@ class UserManagerSpec extends ScalaIntegrationTest {
           .displayName("Integration Test User")
           .roles(Admin)
       )
-      .block()
+      .get
+    waitUntilUserPresent(Username)
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
     assertCanAuthenticate(Username, origPassword)
 
-    var userMeta: UserAndMetadata = users.getUser(Username, AuthDomain.Local).block()
+    var userMeta: UserAndMetadata = users.getUser(Username, AuthDomain.Local).get
     assertEquals(AuthDomain.Local, userMeta.domain)
     assertEquals("Integration Test User", userMeta.user.displayName)
+
     val expectedRoles = Seq(Admin)
     assertEquals(expectedRoles, userMeta.innateRoles)
     assertEquals(expectedRoles, userMeta.user.roles)
@@ -197,7 +215,14 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
     checkRoleOrigins(userMeta, "admin<-[user]")
 
-    users.upsertUser(User(Username).displayName("Renamed").roles(Admin)).block()
+    users.upsertUser(User(Username).displayName("Renamed").roles(Admin)).get
+
+    Util.waitUntilCondition(() => {
+      users.getUser(Username) match {
+        case Success(value) => value.displayName == "Renamed"
+        case _              => false
+      }
+    })
 
     assertCanAuthenticate(Username, origPassword)
 
@@ -208,11 +233,18 @@ class UserManagerSpec extends ScalaIntegrationTest {
           .roles(ReadOnlyAdmin, BucketFullAccessWildcard)
           .password(newPassword)
       )
-      .block()
+      .get
+
+    Util.waitUntilCondition(() => {
+      users.getUser(Username) match {
+        case Success(value) => value.effectiveRoles.size == 2
+        case _              => false
+      }
+    })
 
     assertCanAuthenticate(Username, newPassword)
 
-    userMeta = users.getUser(Username, AuthDomain.Local).block()
+    userMeta = users.getUser(Username, AuthDomain.Local).get
     assertEquals("Renamed", userMeta.user.displayName)
     assertEquals(Set(ReadOnlyAdmin, BucketFullAccessWildcard), userMeta.innateRoles.toSet)
 
@@ -241,7 +273,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
   def dropAbsentUser(): Unit = {
     val name: String = "doesnotexist"
     val e: UserNotFoundException =
-      assertThrows(classOf[UserNotFoundException], () => users.dropUser(name).block())
+      assertThrows(classOf[UserNotFoundException], () => users.dropUser(name).get)
     assertEquals(name, e.username)
     assertEquals(AuthDomain.Local, e.domain)
   }

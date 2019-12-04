@@ -9,12 +9,14 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import reactor.core.scala.publisher.SMono
 
+import scala.util.{Failure, Success}
+
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class GroupManagerSpec extends ScalaIntegrationTest {
-  private var cluster: Cluster           = _
-  private var users: ReactiveUserManager = _
-  private var coll: Collection           = _
+  private var cluster: Cluster   = _
+  private var users: UserManager = _
+  private var coll: Collection   = _
 
   private val Username                 = "integration-test-user"
   private val GroupA                   = "group-a"
@@ -28,7 +30,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    users = cluster.reactive.users
+    users = cluster.users
   }
 
   @AfterAll
@@ -38,32 +40,62 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
   private def dropUserQuietly(name: String): Unit = {
     users
-      .dropUser(name)
-      .onErrorResume(err => {
-        if (err.isInstanceOf[UserNotFoundException]) SMono.empty
-        else {
-          println(err.getMessage)
-          SMono.raiseError(err)
-        }
-      })
-      .block()
+      .dropUser(name) match {
+      case Success(value)                      =>
+      case Failure(err: UserNotFoundException) =>
+      case Failure(err)                        => throw err
+    }
+    waitUntilUserDropped(name)
   }
 
-  private def dropGroupQuietly(groupName: String): Unit = {
+  private def dropGroupQuietly(name: String): Unit = {
     users
-      .dropGroup(groupName)
-      .onErrorResume(err => {
-        if (err.isInstanceOf[GroupNotFoundException]) SMono.empty
-        else {
-          println(err.getMessage)
-          SMono.raiseError(err)
-        }
-      })
-      .block()
+      .dropGroup(name) match {
+      case Success(value)                       =>
+      case Failure(err: GroupNotFoundException) =>
+      case Failure(err)                         => throw err
+    }
+    waitUntilGroupDropped(name)
+  }
+
+  private def waitUntilUserPresent(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getUser(name) match {
+        case Success(_) => true
+        case _          => false
+      }
+    })
+  }
+
+  private def waitUntilUserDropped(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getUser(name) match {
+        case Failure(err: UserNotFoundException) => true
+        case _                                   => false
+      }
+    })
+  }
+
+  private def waitUntilGroupPresent(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getGroup(name) match {
+        case Success(_) => true
+        case _          => false
+      }
+    })
+  }
+
+  private def waitUntilGroupDropped(name: String): Unit = {
+    Util.waitUntilCondition(() => {
+      users.getGroup(name) match {
+        case Failure(err: GroupNotFoundException) => true
+        case _                                    => false
+      }
+    })
   }
 
   private def assertGroupAbsent(groupName: String): Unit = {
-    val allUsers = users.getAllGroups().collectSeq().block()
+    val allUsers = users.getAllGroups().get
     assert(!allUsers.exists(_.name == groupName))
   }
 
@@ -79,19 +111,24 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def getAll(): Unit = {
-    users.upsertGroup(new Group(GroupA)).block()
-    users.upsertGroup(new Group(GroupB)).block()
-    val actualNames = users.getAllGroups().collectSeq().block().map(_.name)
+    users.upsertGroup(new Group(GroupA)).get
+    users.upsertGroup(new Group(GroupB)).get
+    waitUntilGroupPresent(GroupA)
+    waitUntilGroupPresent(GroupB)
+    val actualNames = users.getAllGroups().get.map(_.name)
     assert(actualNames.contains(GroupA))
     assert(actualNames.contains(GroupB))
   }
 
   @Test
   def drop(): Unit = {
-    users.upsertGroup(new Group(GroupA)).block()
-    users.upsertGroup(new Group(GroupB)).block()
-    users.dropGroup(GroupB).block()
-    val actualNames = users.getAllGroups().collectSeq().block().map(_.name)
+    users.upsertGroup(new Group(GroupA)).get
+    users.upsertGroup(new Group(GroupB)).get
+    waitUntilGroupPresent(GroupA)
+    waitUntilGroupPresent(GroupB)
+    users.dropGroup(GroupB).get
+    waitUntilGroupDropped(GroupB)
+    val actualNames = users.getAllGroups().get.map(_.name)
     assert(actualNames.contains(GroupA))
     assert(!actualNames.contains(GroupB))
   }
@@ -103,23 +140,25 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .upsertGroup(
         new Group(GroupA).description("a").roles(ReadOnlyAdmin).ldapGroupReference(fakeLdapRef)
       )
-      .block()
+      .get
     users
       .upsertGroup(
         new Group(GroupB).description("b").roles(ReadOnlyAdmin, BucketFullAccessWildcard)
       )
-      .block()
+      .get
+    waitUntilGroupPresent(GroupA)
+    waitUntilGroupPresent(GroupB)
 
-    assertEquals("a", users.getGroup(GroupA).block().description)
-    assertEquals("b", users.getGroup(GroupB).block().description)
+    assertEquals("a", users.getGroup(GroupA).get.description)
+    assertEquals("b", users.getGroup(GroupB).get.description)
 
-    assertEquals(Some(fakeLdapRef), users.getGroup(GroupA).block().ldapGroupReference)
-    assertEquals(Option.empty, users.getGroup(GroupB).block().ldapGroupReference)
+    assertEquals(Some(fakeLdapRef), users.getGroup(GroupA).get.ldapGroupReference)
+    assertEquals(Option.empty, users.getGroup(GroupB).get.ldapGroupReference)
 
-    assertEquals(Set(ReadOnlyAdmin), users.getGroup(GroupA).block().roles.toSet)
+    assertEquals(Set(ReadOnlyAdmin), users.getGroup(GroupA).get.roles.toSet)
     assertEquals(
       Set(ReadOnlyAdmin, BucketFullAccessWildcard),
-      users.getGroup(GroupB).block().roles.toSet
+      users.getGroup(GroupB).get.roles.toSet
     )
 
     users
@@ -129,9 +168,11 @@ class GroupManagerSpec extends ScalaIntegrationTest {
           .roles(SecurityAdmin, BucketFullAccessWildcard)
           .groups(GroupA, GroupB)
       )
-      .block()
+      .get
 
-    var userMeta = users.getUser(Username, AuthDomain.Local).block()
+    waitUntilUserPresent(Username)
+
+    var userMeta = users.getUser(Username, AuthDomain.Local).get
 
     assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
     assertEquals(
@@ -155,32 +196,54 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     assert(r3.origins.exists(v => v.typ == "user"))
     assert(r3.origins.exists(v => v.typ == "group" && v.name.contains("group-b")))
 
-    users.upsertGroup(users.getGroup(GroupA).block().roles(SecurityAdmin)).block()
-    users.upsertGroup(users.getGroup(GroupB).block().roles(SecurityAdmin)).block()
+    users.upsertGroup(users.getGroup(GroupA).get.roles(SecurityAdmin)).get
+    users.upsertGroup(users.getGroup(GroupB).get.roles(SecurityAdmin)).get
 
-    userMeta = users.getUser(Username, AuthDomain.Local).block()
+    Util.waitUntilCondition(() => {
+      users.getGroup(GroupA) match {
+        case Success(value) => value.roles.size == 1
+        case _              => false
+      }
+    })
+    Util.waitUntilCondition(() => {
+      users.getGroup(GroupB) match {
+        case Success(value) => value.roles.size == 1
+        case _              => false
+      }
+    })
+
+    userMeta = users.getUser(Username, AuthDomain.Local).get
     assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles.toSet)
   }
 
   @Test
   def dropAbsentGroup(): Unit = {
     val name = "doesnotexist"
-    val e    = assertThrows(classOf[GroupNotFoundException], () => users.dropGroup(name).block())
+    val e    = assertThrows(classOf[GroupNotFoundException], () => users.dropGroup(name).get)
     assertEquals(name, e.groupName)
   }
 
   @Test
   def removeUserFromAllGroups(): Unit = {
     // exercise the special-case code for upserting an empty group list.
-    users.upsertGroup(new Group(GroupA).roles(ReadOnlyAdmin)).block()
-    users.upsertUser(User(Username).password("password").groups(GroupA)).block()
+    users.upsertGroup(new Group(GroupA).roles(ReadOnlyAdmin)).get
+    waitUntilGroupPresent(GroupA)
+    users.upsertUser(User(Username).password("password").groups(GroupA)).get
+    waitUntilUserPresent(Username)
 
-    var userMeta = users.getUser(Username, AuthDomain.Local).block()
+    var userMeta = users.getUser(Username, AuthDomain.Local).get
     assertEquals(Seq(ReadOnlyAdmin), userMeta.effectiveRoles)
 
-    users.upsertUser(userMeta.user.groups()).block()
+    users.upsertUser(userMeta.user.groups()).get
 
-    userMeta = users.getUser(Username, AuthDomain.Local).block()
+    Util.waitUntilCondition(() => {
+      users.getUser(Username) match {
+        case Success(value) => value.groups.isEmpty
+        case _              => false
+      }
+    })
+
+    userMeta = users.getUser(Username, AuthDomain.Local).get
     assert(userMeta.effectiveRoles.isEmpty)
   }
 

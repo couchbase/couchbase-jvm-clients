@@ -21,6 +21,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
 import static com.couchbase.client.java.manager.user.UserManagerIntegrationTest.checkRoleOrigins;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,12 +74,67 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     dropUserQuietly(USERNAME);
     dropGroupQuietly(GROUP_A);
     dropGroupQuietly(GROUP_B);
+    waitUntilUserDropped(USERNAME);
+    waitUntilGroupDropped(GROUP_A);
+    waitUntilGroupDropped(GROUP_B);
+  }
+
+
+  private void waitUntilUserPresent(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getUser(LOCAL, name);
+        return true;
+      }
+      catch (UserNotFoundException err) {
+        return false;
+      }
+    });
+  }
+
+  private void waitUntilUserDropped(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getUser(LOCAL, name);
+        return false;
+      }
+      catch (UserNotFoundException err) {
+        return true;
+      }
+    });
+  }
+
+  private void waitUntilGroupPresent(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getGroup(name);
+        return true;
+      }
+      catch (GroupNotFoundException err) {
+        return false;
+      }
+    });
+  }
+
+  private void waitUntilGroupDropped(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getGroup(name);
+        return false;
+      }
+      catch (GroupNotFoundException err) {
+        return true;
+      }
+    });
   }
 
   @Test
   void getAll() {
     users.upsertGroup(new Group(GROUP_A));
     users.upsertGroup(new Group(GROUP_B));
+
+    waitUntilGroupPresent(GROUP_A);
+    waitUntilGroupPresent(GROUP_B);
 
     Set<String> actualNames = users.getAllGroups().stream()
         .map(Group::name)
@@ -86,6 +143,8 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     assertTrue(actualNames.containsAll(setOf(GROUP_A, GROUP_B)));
 
     users.dropGroup(GROUP_B);
+
+    waitUntilGroupDropped(GROUP_B);
 
     assertFalse(users.getAllGroups().stream()
         .map(Group::name)
@@ -97,6 +156,9 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     final String fakeLdapRef = "ou=Users";
     users.upsertGroup(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
     users.upsertGroup(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
+
+    waitUntilGroupPresent(GROUP_A);
+    waitUntilGroupPresent(GROUP_B);
 
     assertEquals("a", users.getGroup(GROUP_A).description());
     assertEquals("b", users.getGroup(GROUP_B).description());
@@ -112,6 +174,8 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
         .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
         .groups(GROUP_A, GROUP_B));
 
+    waitUntilUserPresent(USERNAME);
+
     UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
 
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.user().roles());
@@ -125,6 +189,9 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
     users.upsertGroup(users.getGroup(GROUP_A).roles(SECURITY_ADMIN));
     users.upsertGroup(users.getGroup(GROUP_B).roles(SECURITY_ADMIN));
+
+    Util.waitUntilCondition(() -> users.getGroup(GROUP_A).roles().size() == 1
+              && users.getGroup(GROUP_B).roles().size() == 1);
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.effectiveRoles());
@@ -142,12 +209,16 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     // exercise the special-case code for upserting an empty group list.
 
     users.upsertGroup(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
+    waitUntilGroupPresent(GROUP_A);
     users.upsertUser(new User(USERNAME).password("password").groups(GROUP_A));
+    waitUntilUserPresent(USERNAME);
 
     UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(READ_ONLY_ADMIN), userMeta.effectiveRoles());
 
     users.upsertUser(userMeta.user().groups(emptySet()));
+
+    Util.waitUntilCondition(() -> users.getUser(LOCAL, USERNAME).externalGroups().isEmpty());
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(emptySet(), userMeta.effectiveRoles());

@@ -18,11 +18,14 @@ package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.manager.bucket.BucketNotFoundException;
+import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
+import com.couchbase.client.test.Util;
 import com.couchbase.mock.deps.org.apache.http.auth.AuthScope;
 import com.couchbase.mock.deps.org.apache.http.auth.UsernamePasswordCredentials;
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider;
@@ -80,7 +83,32 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   @BeforeEach
   void dropTestUser() {
     dropUserQuietly(USERNAME);
+    waitUntilUserDropped(USERNAME);
     assertUserAbsent(USERNAME);
+  }
+
+  private void waitUntilUserPresent(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getUser(LOCAL, name);
+        return true;
+      }
+      catch (UserNotFoundException err) {
+        return false;
+      }
+    });
+  }
+
+  private void waitUntilUserDropped(String name) {
+    Util.waitUntilCondition(() -> {
+      try {
+        users.getUser(LOCAL, name);
+        return false;
+      }
+      catch (UserNotFoundException err) {
+        return true;
+      }
+    });
   }
 
   @Test
@@ -99,6 +127,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
         .password("password")
         .displayName("Integration Test User")
         .roles(ADMIN));
+    waitUntilUserPresent(USERNAME);
 
     assertTrue(users.getAllUsers().stream()
         .anyMatch(meta -> meta.user().username().equals(USERNAME)));
@@ -122,6 +151,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
         .password(origPassword)
         .displayName("Integration Test User")
         .roles(ADMIN));
+    waitUntilUserPresent(USERNAME);
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
     assertCanAuthenticate(USERNAME, origPassword);
@@ -140,6 +170,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
         .displayName("Renamed")
         .roles(ADMIN));
 
+    Util.waitUntilCondition(() -> {
+      UserAndMetadata user = users.getUser(LOCAL, USERNAME);
+      return user.user().displayName().equals("Renamed");
+    });
     assertCanAuthenticate(USERNAME, origPassword);
 
     users.upsertUser(
@@ -147,6 +181,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
             .displayName("Renamed")
             .roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
             .password(newPassword));
+    Util.waitUntilCondition(() -> {
+      UserAndMetadata user = users.getUser(LOCAL, USERNAME);
+      return user.user().roles().size() == 2;
+    });
 
     assertCanAuthenticate(USERNAME, newPassword);
 
