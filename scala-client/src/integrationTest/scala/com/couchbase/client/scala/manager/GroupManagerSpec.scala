@@ -1,5 +1,6 @@
 package com.couchbase.client.scala.manager
 
+import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
 import com.couchbase.client.scala.{Cluster, Collection}
@@ -53,6 +54,10 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .dropGroup(name) match {
       case Success(value)                       =>
       case Failure(err: GroupNotFoundException) =>
+      case Failure(err: CouchbaseException) =>
+        // Janky workaround for a problem seen in CI where ns_server appears not to be
+        // ready
+        if (!err.getMessage.contains("Method Not Allowed")) throw err
       case Failure(err)                         => throw err
     }
     waitUntilGroupDropped(name)
