@@ -56,6 +56,8 @@ class AnalyticsSpec extends ScalaIntegrationTest {
 
         val meta = result.metaData
 
+        println(meta)
+
         assert(!meta.clientContextId.isEmpty)
         assert(meta.signatureAs[JsonObject].isSuccess)
         assert(!meta.requestId.isEmpty)

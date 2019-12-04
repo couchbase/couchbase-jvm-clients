@@ -38,6 +38,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster            = _
   private var bucketName: String          = _
   private var indexes: SearchIndexManager = _
+
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
@@ -45,10 +46,18 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
     indexes = cluster.searchIndexes
+    indexes
+      .getAllIndexes()
+      .get
+      .foreach(index => indexes.dropIndex(index.name))
   }
 
   @AfterAll
   def tearDown(): Unit = {
+    indexes
+      .getAllIndexes()
+      .get
+      .foreach(index => indexes.dropIndex(index.name))
     cluster.disconnect()
   }
 

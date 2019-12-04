@@ -138,7 +138,9 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def upsertAndGet(): Unit = {
     views.upsertDesignDocument(OneExampleDesignDoc, DesignDocumentNamespace.Development).get
-    views.getAllDesignDocuments(DesignDocumentNamespace.Development).get
+    views
+      .getAllDesignDocuments(DesignDocumentNamespace.Development)
+      .get
       .foreach(dd => println(s"Design doc ${dd}"))
     val doc =
       views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
