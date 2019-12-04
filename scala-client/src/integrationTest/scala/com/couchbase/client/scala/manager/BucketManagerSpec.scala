@@ -27,12 +27,15 @@ import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
+import scala.util.{Failure, Success}
+
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class BucketManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster       = _
   private var buckets: BucketManager = _
   private var bucketName: String     = _
+
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
@@ -51,6 +54,24 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val buckets: BucketManager          = cluster.buckets
     val reactive: ReactiveBucketManager = cluster.reactive.buckets
     val async: AsyncBucketManager       = cluster.async.buckets
+  }
+
+  private def waitUntilHealthy(bucket: String): Unit = {
+    Util.waitUntilCondition(() => {
+      buckets.getBucket(bucket) match {
+        case Success(value) => value.healthy
+        case _              => false
+      }
+    })
+  }
+
+  private def waitUntilDropped(bucket: String): Unit = {
+    Util.waitUntilCondition(() => {
+      buckets.getBucket(bucket) match {
+        case Failure(err: BucketNotFoundException) => true
+        case _                                     => false
+      }
+    })
   }
 
   /**
@@ -80,7 +101,10 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val name: String = UUID.randomUUID.toString
     val bucket       = CreateBucketSettings(name, 100)
     buckets.create(bucket).get
+    waitUntilHealthy(name)
+
     val found = buckets.getAllBuckets().get.find(_.name == name).get
+
     assert(!found.flushEnabled)
     assert(found.ramQuotaMB == 100)
     assert(found.numReplicas == 1)
@@ -94,6 +118,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(replicasLessThan = 2)
   def createBucketWithCustomSettings(): Unit = {
     val name: String = UUID.randomUUID.toString
     val bucket = CreateBucketSettings(name, 110)
@@ -107,10 +132,12 @@ class BucketManagerSpec extends ScalaIntegrationTest {
       .conflictResolutionType(ConflictResolutionType.Timestamp)
 
     buckets.create(bucket).get
+    waitUntilHealthy(name)
 
     val found = buckets.getBucket(name).get
 
     buckets.dropBucket(name).get
+    waitUntilDropped(name)
 
     assert(found.flushEnabled == bucket.flushEnabled.get)
     assert(found.ramQuotaMB == bucket.ramQuotaMB)
@@ -119,7 +146,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.maxTTL == bucket.maxTTL.get)
     assert(found.ejectionMethod == bucket.ejectionMethod.get)
     assert(found.compressionMode == bucket.compressionMode.get)
-
   }
 
   @Test
@@ -138,7 +164,10 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def createShouldFailWhenPresent(): Unit = {
     assertThrows(
       classOf[BucketAlreadyExistsException],
-      () => buckets.create(CreateBucketSettings(bucketName, 100)).get
+      () => {
+        buckets.create(CreateBucketSettings(bucketName, 100)).get
+        waitUntilHealthy(bucketName)
+      }
     )
   }
 
@@ -148,8 +177,10 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val newQuota: Int          = loaded.ramQuotaMB + 10
     val newSettings            = loaded.toCreateBucketSettings.ramQuotaMB(newQuota)
     buckets.updateBucket(newSettings).get
-    val modified: BucketSettings = buckets.getBucket(bucketName).get
-    assertEquals(newQuota, modified.ramQuotaMB)
+    Util.waitUntilCondition(() => {
+      val modified: BucketSettings = buckets.getBucket(bucketName).get
+      modified.ramQuotaMB == newQuota
+    })
   }
 
   /**

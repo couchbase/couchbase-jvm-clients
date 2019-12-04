@@ -53,7 +53,6 @@ class SearchSpec {
 
   @Test
   def alltimeouts() {
-    classOf[SearchSpec]
     val json   = getClass.getClassLoader.getResourceAsStream("sdk-testcases/search/alltimeouts.json")
     val result = SearchMock.loadSearchTestCase(json)
 

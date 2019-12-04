@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.json.Mapper;
 
 import java.util.Map;
 
@@ -40,9 +42,27 @@ public class BucketSettings {
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
   private EjectionPolicy evictionPolicy = EjectionPolicy.VALUE_ONLY;
+  private boolean healthy = true;
 
   public static BucketSettings create(final String name) {
     return new BucketSettings(name);
+  }
+
+  static BucketSettings create(final JsonNode tree) {
+    BucketSettings settings = Mapper.convertValue(tree, BucketSettings.class);
+    JsonNode nodes = tree.get("nodes");
+    if (nodes.isArray() && !nodes.isEmpty()) {
+      for (final JsonNode node : nodes) {
+        String status = node.get("status").asText();
+        if (!status.equals("healthy")) {
+          settings.healthy = false;
+        }
+      }
+    }
+    else {
+      settings.healthy = false;
+    }
+    return settings;
   }
 
   private BucketSettings(final String name) {
@@ -168,6 +188,11 @@ public class BucketSettings {
   public BucketSettings ejectionPolicy(EjectionPolicy ejectionPolicy) {
     this.evictionPolicy = requireNonNull(ejectionPolicy);
     return this;
+  }
+
+  @Stability.Internal
+  public boolean healthy() {
+    return healthy;
   }
 
   @Override

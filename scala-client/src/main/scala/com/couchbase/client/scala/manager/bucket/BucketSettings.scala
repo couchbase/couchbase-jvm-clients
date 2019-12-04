@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, ValueOnly}
 import com.couchbase.client.scala.manager.user.AuthDomain.{External, Local}
@@ -209,7 +209,8 @@ case class BucketSettings(
     @upickle.implicits.key("evictionPolicy")
     ejectionMethod: EjectionMethod,
     maxTTL: Int,
-    compressionMode: CompressionMode
+    compressionMode: CompressionMode,
+    @Internal private[scala] val healthy: Boolean
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
@@ -239,6 +240,8 @@ object BucketSettings {
         val rawRAM       = json("quota")("rawRAM").num.toInt
         val ramMB        = rawRAM / (1024 * 1024)
         val numReplicas  = json("replicaNumber").num.toInt
+        val nodes        = json("nodes").arr
+        val isHealthy    = nodes.nonEmpty && !nodes.exists(_.obj("status").str != "healthy")
 
         BucketSettings(
           json("name").str,
@@ -249,7 +252,8 @@ object BucketSettings {
           CouchbasePickler.read[BucketType](json("bucketType")),
           CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
           json("maxTTL").num.toInt,
-          CouchbasePickler.read[CompressionMode](json("compressionMode"))
+          CouchbasePickler.read[CompressionMode](json("compressionMode")),
+          isHealthy
         )
       }
     )

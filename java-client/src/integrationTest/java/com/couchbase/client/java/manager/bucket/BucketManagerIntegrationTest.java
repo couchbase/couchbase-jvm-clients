@@ -26,6 +26,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,30 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     environment.shutdown();
   }
 
+  private void waitUntilHealthy(String bucket) {
+    Util.waitUntilCondition(() -> {
+      try {
+        BucketSettings bkt = buckets.getBucket(bucket);
+        return bkt.healthy();
+      }
+      catch (BucketNotFoundException err) {
+        return false;
+      }
+    });
+  }
+
+  private void waitUntilDropped(String bucket) {
+    Util.waitUntilCondition(() -> {
+      try {
+        buckets.getBucket(bucket);
+        return false;
+      }
+      catch (BucketNotFoundException err) {
+        return true;
+      }
+    });
+  }
+
   /**
    * This sanity test is kept intentionally vague on its assertions since it depends how the test-util decide
    * to setup the default bucket when the test is created.
@@ -93,9 +118,11 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String name = UUID.randomUUID().toString();
 
     buckets.createBucket(BucketSettings.create(name));
+    waitUntilHealthy(name);
     assertTrue(buckets.getAllBuckets().containsKey(name));
 
     buckets.dropBucket(name);
+    waitUntilDropped(name);
     assertFalse(buckets.getAllBuckets().containsKey(name));
   }
 
@@ -106,7 +133,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
     String id =  UUID.randomUUID().toString();
     collection.upsert(id, "value");
-    collection.exists(id);
+    assertTrue(collection.exists(id).exists());
 
     buckets.flushBucket(config().bucketname());
     waitUntilCondition(() -> !collection.exists(id).exists());
@@ -116,7 +143,10 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void createShouldFailWhenPresent() {
     assertThrows(
       BucketAlreadyExistsException.class,
-      () -> buckets.createBucket(BucketSettings.create(config().bucketname()))
+      () -> {
+        buckets.createBucket(BucketSettings.create(config().bucketname()));
+        waitUntilHealthy(config().bucketname());
+      }
     );
   }
 
@@ -130,8 +160,10 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     loaded.ramQuotaMB(newQuota);
     buckets.updateBucket(loaded);
 
-    BucketSettings modified = buckets.getBucket(config().bucketname());
-    assertEquals(newQuota, modified.ramQuotaMB());
+    Util.waitUntilCondition(() -> {
+      BucketSettings modified = buckets.getBucket(config().bucketname());
+      return newQuota == modified.ramQuotaMB();
+    });
   }
 
   @Test

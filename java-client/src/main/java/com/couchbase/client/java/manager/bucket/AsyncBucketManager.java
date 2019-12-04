@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.bucket;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -27,6 +28,7 @@ import com.couchbase.client.java.manager.ManagerSupport;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -155,7 +157,8 @@ public class AsyncBucketManager extends ManagerSupport {
         throw BucketNotFoundException.forBucket(bucketName);
       }
       checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]");
-      return Mapper.decodeInto(response.content(), BucketSettings.class);
+      JsonNode tree = Mapper.decodeIntoTree(response.content());
+      return BucketSettings.create(tree);
     });
   }
 
@@ -166,10 +169,13 @@ public class AsyncBucketManager extends ManagerSupport {
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
     return sendRequest(GET, pathForBuckets(), options.build()).thenApply(response -> {
       checkStatus(response, "get all buckets");
-      return Mapper
-        .decodeInto(response.content(), new TypeReference<List<BucketSettings>>() {})
-        .stream()
-        .collect(Collectors.toMap(BucketSettings::name, bs -> bs));
+      JsonNode tree = Mapper.decodeIntoTree(response.content());
+      Map<String, BucketSettings> out = new HashMap<>();
+      for (final JsonNode bucket : tree) {
+        BucketSettings b = BucketSettings.create(bucket);
+        out.put(b.name(), b);
+      }
+      return out;
     });
   }
 
