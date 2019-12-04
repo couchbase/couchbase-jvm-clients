@@ -242,6 +242,7 @@ object BucketSettings {
         val numReplicas  = json("replicaNumber").num.toInt
         val nodes        = json("nodes").arr
         val isHealthy    = nodes.nonEmpty && !nodes.exists(_.obj("status").str != "healthy")
+        val maxTTL       = json.value.get("maxTTL").map(_.num.toInt).getOrElse(0)
 
         BucketSettings(
           json("name").str,
@@ -251,7 +252,7 @@ object BucketSettings {
           Try(json("replicaIndex").bool).toOption.getOrElse(false),
           CouchbasePickler.read[BucketType](json("bucketType")),
           CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
-          json("maxTTL").num.toInt,
+          maxTTL,
           CouchbasePickler.read[CompressionMode](json("compressionMode")),
           isHealthy
         )
