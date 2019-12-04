@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
@@ -25,11 +24,8 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.Future;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.GenericFutureListener;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 
 import java.time.Duration;
 import java.util.HashSet;
@@ -38,7 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -51,6 +46,7 @@ public class IoEnvironment {
   public static final boolean DEFAULT_NATIVE_IO_ENABLED = true;
 
   private final boolean nativeIoEnabled;
+  private final int eventLoopThreadCount;
   private final Supplier<EventLoopGroup> managerEventLoopGroup;
   private final Supplier<EventLoopGroup> kvEventLoopGroup;
   private final Supplier<EventLoopGroup> queryEventLoopGroup;
@@ -90,6 +86,23 @@ public class IoEnvironment {
     return builder().viewEventLoopGroup(viewEventLoopGroup);
   }
 
+  /**
+   * Overrides the number of threads used per event loop.
+   * <p>
+   * If not manually overridden, a fair thread count is calculated, see {@link #fairThreadCount()} for more
+   * information on the heuristics.
+   * <p>
+   * Note that the count provided will only be used by event loops that the SDK creates. If you configure a custom
+   * event loop (i.e. through {@link #kvEventLoopGroup(EventLoopGroup)}) you are responsible for sizing it
+   * appropriately on your own.
+   *
+   * @param eventLoopThreadCount the number of event loops to use per pool.
+   * @return the {@link Builder} for chaining purposes.
+   */
+  public static Builder eventLoopThreadCount(int eventLoopThreadCount) {
+    return builder().eventLoopThreadCount(eventLoopThreadCount);
+  }
+
   public static Builder enableNativeIo(boolean nativeIoEnabled) {
     return builder().enableNativeIo(nativeIoEnabled);
   }
@@ -101,6 +114,7 @@ public class IoEnvironment {
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
     export.put("nativeIoEnabled", nativeIoEnabled);
+    export.put("eventLoopThreadCount", eventLoopThreadCount);
 
     Set<String> eventLoopGroups = new HashSet<>();
     eventLoopGroups.add(managerEventLoopGroup.get().getClass().getSimpleName());
@@ -116,13 +130,14 @@ public class IoEnvironment {
 
   private IoEnvironment(final Builder builder) {
     nativeIoEnabled = builder.nativeIoEnabled;
+    eventLoopThreadCount = builder.eventLoopThreadCount;
 
     Supplier<EventLoopGroup> httpDefaultGroup = null;
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
       || builder.viewEventLoopGroup == null) {
-      httpDefaultGroup = createEventLoopGroup(nativeIoEnabled, fairThreadCount(), "cb-io-http");
+      httpDefaultGroup = createEventLoopGroup(nativeIoEnabled, eventLoopThreadCount, "cb-io-http");
     }
 
     managerEventLoopGroup = builder.managerEventLoopGroup == null
@@ -131,7 +146,7 @@ public class IoEnvironment {
     sanityCheckEventLoop(managerEventLoopGroup);
 
     kvEventLoopGroup = builder.kvEventLoopGroup == null
-      ? createEventLoopGroup(nativeIoEnabled, fairThreadCount(), "cb-io-kv")
+      ? createEventLoopGroup(nativeIoEnabled, eventLoopThreadCount, "cb-io-kv")
       : builder.kvEventLoopGroup;
     sanityCheckEventLoop(kvEventLoopGroup);
 
@@ -298,9 +313,9 @@ public class IoEnvironment {
    * @return the number of threads deemed to be fair for the current system.
    */
   private static int fairThreadCount() {
-    int cores = Runtime.getRuntime().availableProcessors();
-    cores = cores < 2 ? 2 : cores;
-    cores = cores > 8 ? 8 : cores;
+    int cores = Runtime.getRuntime().availableProcessors() / 2;
+    cores = Math.max(cores, 2);
+    cores = Math.min(cores, 8);
     return cores;
   }
 
@@ -313,6 +328,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
+    private int eventLoopThreadCount = fairThreadCount();
 
     public Builder managerEventLoopGroup(EventLoopGroup managerEventLoopGroup) {
       this.managerEventLoopGroup = new ExternalSupplier<>(managerEventLoopGroup);
@@ -346,6 +362,27 @@ public class IoEnvironment {
 
     public Builder enableNativeIo(boolean nativeIoEnabled) {
       this.nativeIoEnabled = nativeIoEnabled;
+      return this;
+    }
+
+    /**
+     * Overrides the number of threads used per event loop.
+     * <p>
+     * If not manually overridden, a fair thread count is calculated, see {@link #fairThreadCount()} for more
+     * information on the heuristics.
+     * <p>
+     * Note that the count provided will only be used by event loops that the SDK creates. If you configure a custom
+     * event loop (i.e. through {@link #kvEventLoopGroup(EventLoopGroup)}) you are responsible for sizing it
+     * appropriately on your own.
+     *
+     * @param eventLoopThreadCount the number of event loops to use per pool.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder eventLoopThreadCount(int eventLoopThreadCount) {
+      if (eventLoopThreadCount < 1) {
+        throw new IllegalArgumentException("EventLoopThreadCount cannot be smaller than 1");
+      }
+      this.eventLoopThreadCount = eventLoopThreadCount;
       return this;
     }
 
