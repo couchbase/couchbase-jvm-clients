@@ -7,14 +7,21 @@ def PLATFORMS = ["ubuntu16"]
 def DEFAULT_PLATFORM = PLATFORMS[0]
 def platform = DEFAULT_PLATFORM
 def LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14'
-def QUICK_TEST_MODE = false // to support quicker development iteration
+def QUICK_TEST_MODE = false // enable to support quicker development iteration
+
+// Java versions available through cbdeps are on
+// https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
 def ORACLE_JDK = "java"
 def ORACLE_JDK_8 = "8u192"
 def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
+def CORRETTO = "corretto"
+def CORRETTO_8 = "8.232.09.1"
+def CORRETTO_11 = "11.0.4.11-1"
+
+// The lucky spammees
 EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
-//EMAILS = ['graham.pople@couchbase.com']
 
 pipeline {
     agent { label 'master' }
@@ -43,7 +50,7 @@ pipeline {
             }
         }
 
-        stage('build') {
+        stage('build Oracle 8') {
             // agent { label LINUX_AGENTS }
             // Hit a random scalafmt error when running on other Linux platforms...
             agent { label DEFAULT_PLATFORM }
@@ -74,6 +81,25 @@ pipeline {
                 }
 
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
+            }
+        }
+
+        stage('build Oracle 11') {
+            agent { label DEFAULT_PLATFORM }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}/bin:$PATH"
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_11)
+
+                    dir('couchbase-jvm-clients') {
+                        shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    }
+                }
             }
         }
 
@@ -275,7 +301,62 @@ pipeline {
              }
          }
 
-         // Commented for now as sdk-integration-test-win temporarily down
+        // Commented out until the failing tests are reduced
+//        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
+//            agent { label 'sdk-integration-test-linux' }
+//            environment {
+//                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
+//                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
+//            }
+//            when {
+//                expression
+//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//            }
+//            steps {
+//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+//                    cleanWs()
+//                    unstash 'couchbase-jvm-clients'
+//                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
+//                    dir('couchbase-jvm-clients') {
+//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+//                    }
+//                }
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
+
+        //        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
+//            agent { label 'sdk-integration-test-linux' }
+//            environment {
+//                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
+//                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
+//            }
+//            when {
+//                expression
+//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//            }
+//            steps {
+//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+//                    cleanWs()
+//                    unstash 'couchbase-jvm-clients'
+//                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
+//                    dir('couchbase-jvm-clients') {
+//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+//                    }
+//                }
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
+
+        // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
 //             agent { label 'sdk-integration-test-win' }
 //             environment {
