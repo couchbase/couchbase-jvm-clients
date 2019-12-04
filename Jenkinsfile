@@ -84,17 +84,17 @@ pipeline {
             }
         }
 
-        stage('build Oracle 11') {
+        stage('build OpenJDK 11') {
             agent { label DEFAULT_PLATFORM }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_11)
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
 
                     dir('couchbase-jvm-clients') {
                         shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
