@@ -52,7 +52,7 @@ object BucketType {
           case "membase"   => Couchbase
           case "memcached" => Memcached
           case "ephemeral" => Ephemeral
-        }
+      }
     )
 }
 @Volatile
@@ -78,7 +78,7 @@ object EjectionMethod {
         str match {
           case "fullEviction" => FullEviction
           case "valueOnly"    => ValueOnly
-        }
+      }
     )
 }
 
@@ -110,7 +110,7 @@ object CompressionMode {
           case "off"     => Off
           case "passive" => Passive
           case "active"  => Active
-        }
+      }
     )
 
 }
@@ -138,7 +138,7 @@ object ConflictResolutionType {
         str match {
           case "lww"   => Timestamp
           case "seqno" => SequenceNumber
-        }
+      }
     )
 }
 @Volatile
@@ -242,7 +242,12 @@ object BucketSettings {
         val numReplicas  = json("replicaNumber").num.toInt
         val nodes        = json("nodes").arr
         val isHealthy    = nodes.nonEmpty && !nodes.exists(_.obj("status").str != "healthy")
+        // Next two parameters only available post 5.X
         val maxTTL       = json.value.get("maxTTL").map(_.num.toInt).getOrElse(0)
+        val compressionMode = json.value
+          .get("compressionMode")
+          .map(v => CouchbasePickler.read[CompressionMode](v))
+          .getOrElse(CompressionMode.Off)
 
         BucketSettings(
           json("name").str,
@@ -253,7 +258,7 @@ object BucketSettings {
           CouchbasePickler.read[BucketType](json("bucketType")),
           CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
           maxTTL,
-          CouchbasePickler.read[CompressionMode](json("compressionMode")),
+          compressionMode,
           isHealthy
         )
       }
