@@ -317,7 +317,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     )
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED),
+    missesCapabilities = Array(Capabilities.SYNC_REPLICATION)
+  )
   @Test
   def macros() {
     // Document.LastModified is only available when memcached has done a flush, so force one
