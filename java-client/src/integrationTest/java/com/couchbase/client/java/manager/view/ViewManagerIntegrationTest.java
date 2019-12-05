@@ -101,7 +101,12 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
 
             DesignDocument newVersion = new DesignDocument(doc.name(), doc.views())
                 .putView("anotherView", "function (doc, meta) { emit(doc.foo, doc.bar); }");
-            assertRoundTrip(newVersion, namespace);
+
+            views.upsertDesignDocument(newVersion, namespace);
+
+            Util.waitUntilCondition(() -> {
+              return views.getDesignDocument(doc.name(), namespace).views().containsKey("anotherView");
+            });
           });
         }
     );
