@@ -60,7 +60,7 @@ class SearchSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
-  @Timeout(10)
+  @Timeout(120)
   @Test
   def simple() {
     def recurse(): Unit = {
@@ -82,6 +82,7 @@ class SearchSpec extends ScalaIntegrationTest {
             })
           }
         case Failure(ex) =>
+          println(ex.getMessage)
           if (ex.getMessage.contains("no planPIndexes for indexName") || ex.getMessage.contains(
                 "pindex_consistency mismatched partition"
               )) {
