@@ -88,7 +88,13 @@ public class BucketSettings {
     this.numReplicas = numReplicas;
     this.replicaIndexes = replicaIndex;
     this.maxTTL = maxTTL;
-    this.compressionMode = compressionMode;
+    if (compressionMode != null) {
+      this.compressionMode = compressionMode;
+    }
+    else {
+      // Couchbase 5.0 doesn't send a compressionMode
+      this.compressionMode = CompressionMode.OFF;
+    }
     this.bucketType = bucketType;
     this.conflictResolutionType = conflictResolutionType;
     this.evictionPolicy = evictionPolicy;
