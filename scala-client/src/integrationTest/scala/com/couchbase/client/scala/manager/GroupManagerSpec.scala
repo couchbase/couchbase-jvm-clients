@@ -32,6 +32,14 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     users = cluster.users
+
+    // Wait until nsserver is ready to serve
+    Util.waitUntilCondition(() => {
+      users.getAllGroups() match {
+        case Success(_) => true
+        case _ => false
+      }
+    })
   }
 
   @AfterAll
