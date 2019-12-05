@@ -23,6 +23,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -63,6 +64,33 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     forEachNamespace(namespace ->
         views.getAllDesignDocuments(namespace).forEach(ddoc ->
             views.dropDesignDocument(ddoc.name(), namespace)));
+    forEachNamespace(namespace ->
+            views.getAllDesignDocuments(namespace).forEach(ddoc ->
+                    waitUntilDesignDocDropped(ddoc.name(), namespace)));
+  }
+
+  private void waitUntilDesignDocPresent(String name, DesignDocumentNamespace ns) {
+    Util.waitUntilCondition(() -> {
+      try {
+        views.getDesignDocument(name, ns);
+        return true;
+      }
+      catch (DesignDocumentNotFoundException err) {
+        return false;
+      }
+    });
+  }
+
+  private void waitUntilDesignDocDropped(String name, DesignDocumentNamespace ns) {
+    Util.waitUntilCondition(() -> {
+      try {
+        views.getDesignDocument(name, ns);
+        return false;
+      }
+      catch (DesignDocumentNotFoundException err) {
+        return true;
+      }
+    });
   }
 
   @Test
@@ -85,6 +113,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
           DesignDocument doc = oneExampleDocument();
           assertRoundTrip(doc, namespace);
           views.dropDesignDocument(doc.name(), namespace);
+          waitUntilDesignDocDropped(doc.name(), namespace);
           assertThrows(DesignDocumentNotFoundException.class, () ->
               views.getDesignDocument(doc.name(), namespace));
         }
@@ -127,6 +156,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     forEachNamespace(namespace -> {
       Set<DesignDocument> docs = exampleDocuments();
       docs.forEach(doc -> views.upsertDesignDocument(doc, namespace));
+      docs.forEach(doc -> waitUntilDesignDocPresent(doc.name(), namespace));
       assertEquals(docs, new HashSet<>(views.getAllDesignDocuments(namespace)));
     });
   }
@@ -136,7 +166,9 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     DesignDocument doc = oneExampleDocument();
 
     views.upsertDesignDocument(doc, DEVELOPMENT);
+    waitUntilDesignDocPresent(doc.name(), DEVELOPMENT);
     views.publishDesignDocument(doc.name());
+    waitUntilDesignDocPresent(doc.name(), PRODUCTION);
 
     assertEquals(doc, views.getDesignDocument(doc.name(), PRODUCTION));
   }
@@ -147,8 +179,9 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     }
   }
 
-  private static void assertRoundTrip(DesignDocument doc, DesignDocumentNamespace namespace) {
+  private void assertRoundTrip(DesignDocument doc, DesignDocumentNamespace namespace) {
     views.upsertDesignDocument(doc, namespace);
+    waitUntilDesignDocPresent(doc.name(), namespace);
     DesignDocument roundTrip = views.getDesignDocument(doc.name(), namespace);
     assertEquals(doc, roundTrip);
   }

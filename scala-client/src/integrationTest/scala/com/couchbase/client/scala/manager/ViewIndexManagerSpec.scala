@@ -19,6 +19,7 @@ import java.util.UUID
 
 import com.couchbase.client.core.error.{DocumentNotFoundException, ViewServiceException}
 import com.couchbase.client.scala.manager.bucket._
+import com.couchbase.client.scala.manager.user.UserNotFoundException
 import com.couchbase.client.scala.manager.view._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.view.DesignDocumentNamespace
@@ -71,7 +72,26 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
           case Failure(err: DesignDocumentNotFoundException) => // ignore
           case _                                             => assert(false)
         }
+        waitUntilDesignDocDropped(doc.name, namespace)
       })
+    })
+  }
+
+  private def waitUntilDesignDocPresent(name: String, namespace: DesignDocumentNamespace): Unit = {
+    Util.waitUntilCondition(() => {
+      views.getDesignDocument(name, namespace) match {
+        case Success(_) => true
+        case _          => false
+      }
+    })
+  }
+
+  private def waitUntilDesignDocDropped(name: String, namespace: DesignDocumentNamespace): Unit = {
+    Util.waitUntilCondition(() => {
+      views.getDesignDocument(name, namespace) match {
+        case Failure(err: DesignDocumentNotFoundException) => true
+        case _                                   => false
+      }
     })
   }
 
@@ -121,6 +141,7 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
     Namespaces.foreach(namespace => {
       ExampleDesignDocuments.foreach(doc => {
         views.upsertDesignDocument(doc, namespace).get
+        waitUntilDesignDocPresent(doc.name, namespace)
       })
       val all = views.getAllDesignDocuments(namespace).get.toSet
       assert(ExampleDesignDocuments.toSet == all)
@@ -130,6 +151,7 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def getProd(): Unit = {
     views.upsertDesignDocument(OneExampleDesignDoc, DesignDocumentNamespace.Production).get
+    waitUntilDesignDocPresent(OneExampleDesignDoc.name, DesignDocumentNamespace.Production)
 
     val all = views.getAllDesignDocuments(DesignDocumentNamespace.Production).get
     assert(all.contains(OneExampleDesignDoc))
@@ -138,10 +160,7 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def upsertAndGet(): Unit = {
     views.upsertDesignDocument(OneExampleDesignDoc, DesignDocumentNamespace.Development).get
-    views
-      .getAllDesignDocuments(DesignDocumentNamespace.Development)
-      .get
-      .foreach(dd => println(s"Design doc ${dd}"))
+    waitUntilDesignDocPresent(OneExampleDesignDoc.name, DesignDocumentNamespace.Development)
     val doc =
       views.getDesignDocument(OneExampleDesignDoc.name, DesignDocumentNamespace.Development).get
 

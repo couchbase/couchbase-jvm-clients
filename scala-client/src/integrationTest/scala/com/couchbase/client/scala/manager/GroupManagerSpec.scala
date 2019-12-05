@@ -139,6 +139,11 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def emptyGroups() = {
+    assert(users.getAllGroups().get.isEmpty)
+  }
+
+  @Test
   def create(): Unit = {
     val fakeLdapRef = "ou=Users"
     users
