@@ -6,18 +6,14 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.DecodingFailedException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
+import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.kv.{LookupInMacro, LookupInSpec, MutateInSpec}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{
-  Capabilities,
-  ClusterAwareIntegrationTest,
-  ClusterType,
-  IgnoreWhen
-}
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -324,7 +320,11 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
   def macros() {
-    val docId = prepare()
+    // Document.LastModified is only available when memcached has done a flush, so force one
+    // with durability.
+    val docId = TestUtils.docId(0)
+    coll.remove(docId)
+    coll.upsert(docId, JsonObject.create, durability = Durability.MajorityAndPersistOnMaster).get
 
     val result = coll
       .lookupIn(
