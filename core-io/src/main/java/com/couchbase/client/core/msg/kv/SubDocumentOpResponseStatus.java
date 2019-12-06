@@ -96,6 +96,18 @@ public enum SubDocumentOpResponseStatus {
    */
   XATTR_UNKNOWN_MACRO,
   /**
+   * Unknown virtual attribute.
+   */
+  XATTR_UNKNOWN_VATTR,
+  /**
+   * Cannot modify this virtual attribute.
+   */
+  XATTR_CANNOT_MODIFY_VATTR,
+  /**
+   * Invalid XATTR order.
+   */
+  XATTR_INVALID_ORDER,
+  /**
    * Unknown error.
    */
   UNKNOWN;

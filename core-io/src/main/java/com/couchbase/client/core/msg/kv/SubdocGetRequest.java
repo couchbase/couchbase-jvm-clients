@@ -147,7 +147,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
-        || rawStatus == Status.SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED.status()) {
+        || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status()) {
       // Special case logic for CMD_EXISTS
       if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
         status = ResponseStatus.SUCCESS;
@@ -160,26 +160,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         // Otherwise return success, as some of the operations have succeeded
         status = ResponseStatus.SUCCESS;
       }
-    } else if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
-        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
-        0,
-        null,
-        SubDocumentOpResponseStatus.DOC_NOT_JSON
-      );
-      error = Optional.of(new DocumentNotJsonException(errorContext, 0));
-    } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext errorContext = new SubDocumentErrorContext(
-        KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
-        0,
-        null,
-        SubDocumentOpResponseStatus.DOC_TOO_DEEP
-      );
-      error = Optional.of(new DocumentTooDeepException(errorContext, 0));
-    }
-    // If a single subdoc op was tried and failed, return that directly
-    else if (commands.size() == 1 && errors != null && errors.size() == 1) {
-      error = Optional.of(errors.get(0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 

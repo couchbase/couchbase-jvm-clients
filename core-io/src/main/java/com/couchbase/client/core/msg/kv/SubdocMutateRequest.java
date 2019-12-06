@@ -168,7 +168,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       ByteBuf body = maybeBody.get();
 
       // If there's a multi-mutation failure we only get the first failure back
-      if (rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()) {
+      if (rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
+        || rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status()) {
         byte index = body.readByte();
         short opStatusRaw = body.readShort();
         SubDocumentOpResponseStatus opStatus = decodeSubDocumentStatus(opStatusRaw);
@@ -206,19 +207,6 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       }
     } else {
       values = new SubDocumentField[0];
-    }
-
-
-    // Handle any document-level failures here
-    if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON);
-      error = Optional.of(new DocumentNotJsonException(e, 0));
-    } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP);
-      error = Optional.of(new DocumentTooDeepException(e, 0));
-    } else if (rawOverallStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
-      error = Optional.of(new XattrInvalidKeyComboException(e, 0));
     }
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 

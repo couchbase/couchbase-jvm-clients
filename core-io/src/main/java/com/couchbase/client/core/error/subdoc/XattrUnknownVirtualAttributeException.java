@@ -16,23 +16,19 @@
 
 package com.couchbase.client.core.error.subdoc;
 
+
 import com.couchbase.client.core.error.ErrorContext;
 
 /**
- * Subdocument exception thrown when the delta in an arithmetic operation (eg counter) is invalid. In this
- * SDK, this is equivalent to saying that the delta is zero.
+ * Subdocument exception thrown when a virtual attribute has been requested which is not recognised by the server.
  *
- * Note that the server also returns the corresponding error code when the delta value itself is too big,
- * or not a number, but since the SDK enforces deltas to be of type long, these cases shouldn't come up.
- *
- * @author Simon Baslé
+ * @author Graham Pople
  * @since 2.0
- * @see ValueTooDeepException if the delta is valid but applying it to the current value would cause an overflow.
  */
-public class BadDeltaException extends SubDocumentException {
+public class XattrUnknownVirtualAttributeException extends SubDocumentException {
 
-    public BadDeltaException(ErrorContext ctx, int index) {
-        super("Delta must not be zero, or is otherwise invalid", ctx, index);
+    public XattrUnknownVirtualAttributeException(ErrorContext ctx, int index) {
+        super("The requested virtual attribute was not known for path", ctx, index);
     }
 
 }

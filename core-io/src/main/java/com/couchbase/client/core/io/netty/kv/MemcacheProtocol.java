@@ -526,7 +526,7 @@ public enum MemcacheProtocol {
     } else if (status == Status.SYNC_WRITE_RE_COMMIT_IN_PROGRESS.status) {
       return ResponseStatus.SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
-            || status == Status.SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED.status
+            || status == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status
             || status == Status.SUBDOC_DOC_NOT_JSON.status
             || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
@@ -585,6 +585,8 @@ public enum MemcacheProtocol {
       return SubDocumentOpResponseStatus.INVALID_COMBO;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status) {
       return SubDocumentOpResponseStatus.MULTI_PATH_FAILURE;
+    } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status) {
+      return SubDocumentOpResponseStatus.MULTI_PATH_FAILURE;
     } else if (status == Status.SUBDOC_XATTR_INVALID_FLAG_COMBO.status) {
       return SubDocumentOpResponseStatus.XATTR_INVALID_FLAG_COMBO;
     } else if (status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status) {
@@ -593,6 +595,12 @@ public enum MemcacheProtocol {
       return SubDocumentOpResponseStatus.XATTR_UNKNOWN_MACRO;
     } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
       return SubDocumentOpResponseStatus.SUCCESS_DELETED_DOCUMENT;
+    } else if (status == Status.SUBDOC_XATTR_UNKNOWN_VATTR.status) {
+      return SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR;
+    } else if (status == Status.SUBDOC_XATTR_CANNOT_MODIFY_VATTR.status) {
+      return SubDocumentOpResponseStatus.XATTR_CANNOT_MODIFY_VATTR;
+    } else if (status == Status.SUBDOC_INVALID_XATTR_ORDER.status) {
+      return SubDocumentOpResponseStatus.XATTR_INVALID_ORDER;
     } else {
       return SubDocumentOpResponseStatus.UNKNOWN;
     }
@@ -627,7 +635,7 @@ public enum MemcacheProtocol {
       case NUM_RANGE:
         return new NumberTooBigException(ctx, index);
       case DELTA_RANGE:
-        return new BadDeltaException(ctx, index);
+        return new DeltaInvalidException(ctx, index);
       case PATH_EXISTS:
         return new PathExistsException(ctx, index);
       case VALUE_TOO_DEEP:
@@ -636,6 +644,14 @@ public enum MemcacheProtocol {
         return new XattrInvalidFlagComboException(ctx, index);
       case XATTR_UNKNOWN_MACRO:
         return new XattrUnknownMacroException(ctx, index);
+      case XATTR_INVALID_KEY_COMBO:
+        return new XattrInvalidKeyComboException(ctx, index);
+      case XATTR_UNKNOWN_VATTR:
+        return new XattrUnknownVirtualAttributeException(ctx, index);
+      case XATTR_INVALID_ORDER:
+        return new XattrInvalidOrderException(ctx, index);
+      case XATTR_CANNOT_MODIFY_VATTR:
+        return new XattrCannotModifyVirtualAttributeException(ctx, index);
       default:
         return new SubDocumentException("Unknown subdoc response code", ctx, index);
     }
@@ -1050,14 +1066,25 @@ public enum MemcacheProtocol {
      */
     SUBDOC_XATTR_UNKNOWN_MACRO((short) 0xd0),
     /**
+     * Unknown virtual attribute.
+     */
+    SUBDOC_XATTR_UNKNOWN_VATTR((short) 0xd1),
+    /**
+     * Cannot modify virtual attribute.
+     */
+    SUBDOC_XATTR_CANNOT_MODIFY_VATTR((short) 0xd2),
+    /**
      * The subdoc operation completed successfully on the deleted document
      */
     SUBDOC_SUCCESS_DELETED_DOCUMENT((short) 0xcd),
     /**
      * The subdoc operation found the deleted document, but one or more path operations failed.
      */
-    SUBDOC_DELETED_DOCUMENT_PATH_OPERATIONS_FAILED((short) 0xd3),
-
+    SUBDOC_MULTI_PATH_FAILURE_DELETED((short) 0xd3),
+    /**
+     * Invalid ordering of the extended attributes.
+     */
+    SUBDOC_INVALID_XATTR_ORDER((short) 0xd4),
     /**
      * Invalid request. Returned if an invalid durability level is specified.
      */

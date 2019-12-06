@@ -23,6 +23,8 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -61,7 +63,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     byte[] content = in.getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
+      Duration.ofSeconds(5), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.empty(), null);
     core.send(insertRequest);
 
@@ -135,6 +137,10 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
 
   // TODO adding basic tests for DP, but really should port all subdoc tests from old client
 
+  /**
+   * The mock does not return it as multi path failure like the server does...
+   */
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   @Test
   void notJson() {
     singleGetOpCheckExpectedFailure("I am not json!", "no_exist", DocumentNotJsonException.class);
