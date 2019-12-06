@@ -29,6 +29,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -156,7 +157,7 @@ public class AsyncViewIndexManager {
     return sendRequest(GET, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
           throw notFound(t)
-              ? DesignDocumentNotFoundException.forName(name, namespace)
+              ? DesignDocumentNotFoundException.forName(name, namespace.toString())
               : new CouchbaseException("Failed to get design document [" + redactMeta(name) + "] from namespace " + namespace, t);
         })
         .thenApply(response ->
@@ -189,7 +190,8 @@ public class AsyncViewIndexManager {
    * @param namespace namespace to store it in
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public CompletableFuture<Void> upsertDesignDocument(DesignDocument doc, DesignDocumentNamespace namespace, UpsertDesignDocumentOptions options) {
+  public CompletableFuture<Void> upsertDesignDocument(final DesignDocument doc, final DesignDocumentNamespace namespace,
+                                                      final UpsertDesignDocumentOptions options) {
     final ObjectNode body = toJson(doc);
     return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), options.build(), body)
         .thenApply(response -> null);
@@ -202,7 +204,7 @@ public class AsyncViewIndexManager {
    * @param name name of the development design document
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> publishDesignDocument(String name) {
+  public CompletableFuture<Void> publishDesignDocument(final String name) {
     return publishDesignDocument(name, publishDesignDocumentOptions());
   }
 
@@ -214,7 +216,7 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> publishDesignDocument(String name, PublishDesignDocumentOptions options) {
+  public CompletableFuture<Void> publishDesignDocument(final String name, final PublishDesignDocumentOptions options) {
     return getDesignDocument(name, DEVELOPMENT)
         .thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION));
   }
@@ -226,7 +228,7 @@ public class AsyncViewIndexManager {
    * @param namespace namespace to remove it from
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace) {
+  public CompletableFuture<Void> dropDesignDocument(final String name, final DesignDocumentNamespace namespace) {
     return dropDesignDocument(name, namespace, dropDesignDocumentOptions());
   }
 
@@ -238,27 +240,33 @@ public class AsyncViewIndexManager {
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
-  public CompletableFuture<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace, DropDesignDocumentOptions options) {
+  public CompletableFuture<Void> dropDesignDocument(final String name, final DesignDocumentNamespace namespace,
+                                                    final DropDesignDocumentOptions options) {
     return sendRequest(DELETE, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
-          throw notFound(t)
-              ? DesignDocumentNotFoundException.forName(name, namespace)
-              : new CouchbaseException("Failed to drop design document [" + redactMeta(name) + "] from namespace " + namespace, t);
+          if (notFound(t)) {
+            throw DesignDocumentNotFoundException.forName(name, namespace.toString());
+          } else {
+            throw new CouchbaseException(
+              "Failed to drop design document [" + redactMeta(name) + "] from namespace " + namespace,
+              t
+            );
+          }
         })
         .thenApply(response -> null);
   }
 
-  private static boolean notFound(Throwable t) {
+  private static boolean notFound(final Throwable t) {
     return getHttpStatusCode(t) == HttpResponseStatus.NOT_FOUND.code();
   }
 
-  private static int getHttpStatusCode(Throwable t) {
+  private static int getHttpStatusCode(final Throwable t) {
     return findCause(t, HttpStatusCodeException.class)
         .map(HttpStatusCodeException::code)
         .orElse(0);
   }
 
-  private static ObjectNode toJson(DesignDocument doc) {
+  private static ObjectNode toJson(final DesignDocument doc) {
     final ObjectNode root = Mapper.createObjectNode();
     final ObjectNode views = root.putObject("views");
     doc.views().forEach((k, v) -> {
@@ -270,17 +278,20 @@ public class AsyncViewIndexManager {
     return root;
   }
 
-  private CompletableFuture<GenericViewResponse> sendRequest(GenericViewRequest request) {
+  private CompletableFuture<GenericViewResponse> sendRequest(final GenericViewRequest request) {
     core.send(request);
     return request.response();
   }
 
-  private CompletableFuture<GenericViewResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
+  private CompletableFuture<GenericViewResponse> sendRequest(final HttpMethod method, final String path,
+                                                             final CommonOptions<?>.BuiltCommonOptions options) {
     return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options),
         () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == GET, bucket));
   }
 
-  private CompletableFuture<GenericViewResponse> sendJsonRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options, Object body) {
+  private CompletableFuture<GenericViewResponse> sendJsonRequest(final HttpMethod method, final String path,
+                                                                 final CommonOptions<?>.BuiltCommonOptions options,
+                                                                 final Object body) {
     return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options), () -> {
       ByteBuf content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body));
       DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content);
@@ -290,13 +301,27 @@ public class AsyncViewIndexManager {
     }, method == GET, bucket));
   }
 
-  private Duration timeout(CommonOptions<?>.BuiltCommonOptions options) {
-    // Even though most of the requests are dispatched to the view service,
-    // these are management operations so use the manager timeout.
+  /**
+   * Helper method to extract the timeout from the common options.
+   * <p>
+   * Even though most of the requests are dispatched to the view service, these are management operations so
+   * use the manager timeout.
+   *
+   * @param options the options to extract from.
+   * @return the extracted timeout.
+   */
+  private Duration timeout(final CommonOptions<?>.BuiltCommonOptions options) {
     return options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
   }
 
-  private RetryStrategy retryStrategy(CommonOptions<?>.BuiltCommonOptions options) {
+  /**
+   * Helper method to extract the retry strategy from the common options.
+   *
+   * @param options the options to extract from.
+   * @return the extracted retry strategy.
+   */
+  private RetryStrategy retryStrategy(final CommonOptions<?>.BuiltCommonOptions options) {
     return options.retryStrategy().orElse(core.context().environment().retryStrategy());
   }
+
 }

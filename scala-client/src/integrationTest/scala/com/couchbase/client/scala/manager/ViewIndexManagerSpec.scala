@@ -15,18 +15,12 @@
  */
 package com.couchbase.client.scala.manager
 
-import java.util.UUID
-
-import com.couchbase.client.core.error.{DocumentNotFoundException, ViewServiceException}
-import com.couchbase.client.scala.manager.bucket._
-import com.couchbase.client.scala.manager.user.UserNotFoundException
+import com.couchbase.client.core.error.{DesignDocumentNotFoundException, ViewServiceException}
+import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.manager.view._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.view.DesignDocumentNamespace
-import com.couchbase.client.scala.{Cluster, Collection}
-import com.couchbase.client.test.Util.waitUntilThrows
 import com.couchbase.client.test._
-import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 

@@ -14,25 +14,22 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.view;
-
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.java.view.DesignDocumentNamespace;
+package com.couchbase.client.core.error;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 public class DesignDocumentNotFoundException extends CouchbaseException {
   private final String name;
-  private final DesignDocumentNamespace namespace;
+  private final String namespace;
 
-  private DesignDocumentNotFoundException(String name, DesignDocumentNamespace namespace) {
+  private DesignDocumentNotFoundException(String name, String namespace) {
     super("Design document [" + redactMeta(name) + "] not found in namespace " + namespace + ".");
     this.name = requireNonNull(name);
     this.namespace = requireNonNull(namespace);
   }
 
-  public static DesignDocumentNotFoundException forName(String name, DesignDocumentNamespace namespace) {
+  public static DesignDocumentNotFoundException forName(String name, String namespace) {
     return new DesignDocumentNotFoundException(name, namespace);
   }
 
@@ -40,7 +37,7 @@ public class DesignDocumentNotFoundException extends CouchbaseException {
     return name;
   }
 
-  public DesignDocumentNamespace namespace() {
+  public String namespace() {
     return namespace;
   }
 }

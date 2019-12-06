@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
 import com.couchbase.client.core.error.{
   CouchbaseException,
+  DesignDocumentNotFoundException,
   HttpStatusCodeException,
   ViewServiceException
 }
@@ -183,7 +184,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
     in match {
       case x: ViewServiceException =>
         if (x.content.contains("not_found")) {
-          DesignDocumentNotFoundException(designDocName, namespace)
+          DesignDocumentNotFoundException.forName(designDocName, namespace.toString)
         } else default()
       case _ => default()
     }

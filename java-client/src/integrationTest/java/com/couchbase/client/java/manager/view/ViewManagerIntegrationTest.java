@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.view;
 
+import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
