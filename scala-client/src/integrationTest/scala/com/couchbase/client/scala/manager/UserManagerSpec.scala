@@ -45,7 +45,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     Util.waitUntilCondition(() => {
       users.getAllGroups() match {
         case Success(_) => true
-        case _ => false
+        case _          => false
       }
     })
   }

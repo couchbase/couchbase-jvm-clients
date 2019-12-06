@@ -37,7 +37,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     Util.waitUntilCondition(() => {
       users.getAllGroups() match {
         case Success(_) => true
-        case _ => false
+        case _          => false
       }
     })
   }
@@ -62,11 +62,11 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .dropGroup(name) match {
       case Success(value)                       =>
       case Failure(err: GroupNotFoundException) =>
-      case Failure(err: CouchbaseException) =>
+      case Failure(err: CouchbaseException)     =>
         // Janky workaround for a problem seen in CI where ns_server appears not to be
         // ready
         if (!err.getMessage.contains("Method Not Allowed")) throw err
-      case Failure(err)                         => throw err
+      case Failure(err) => throw err
     }
     waitUntilGroupDropped(name)
   }

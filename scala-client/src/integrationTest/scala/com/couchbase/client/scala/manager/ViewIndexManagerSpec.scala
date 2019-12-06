@@ -90,7 +90,7 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
     Util.waitUntilCondition(() => {
       views.getDesignDocument(name, namespace) match {
         case Failure(err: DesignDocumentNotFoundException) => true
-        case _                                   => false
+        case _                                             => false
       }
     })
   }
