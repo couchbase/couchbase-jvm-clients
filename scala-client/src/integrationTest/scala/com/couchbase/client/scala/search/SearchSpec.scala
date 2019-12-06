@@ -16,14 +16,13 @@
 
 package com.couchbase.client.scala.search
 
-import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
-import com.couchbase.client.scala.manager.search.{SearchIndex, SearchIndexNotFoundException}
-import com.couchbase.client.scala.search.queries.{MatchAllQuery, SearchQuery}
+import com.couchbase.client.scala.manager.search.SearchIndex
+import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -60,10 +59,11 @@ class SearchSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
-  @Timeout(120)
   @Test
   def simple() {
-    def recurse(): Unit = {
+    // The wait is to try and get around an issue on CI where the search service repeatedly returns
+    // "pindex not available" errors
+    Util.waitUntilCondition(() => {
       cluster.searchQuery(
         indexName,
         SearchQuery.matchPhrase("John Smith"),
@@ -71,21 +71,12 @@ class SearchSpec extends ScalaIntegrationTest {
       ) match {
         case Success(result) =>
           result.metaData.errors.foreach(err => println(s"Err: ${err}"))
-          assert(1 == result.rows.size)
-          assert(result.rows.head.id == "test")
+          println(s"Rows: ${result.rows}")
+          1 == result.rows.size && result.rows.head.id == "test"
         case Failure(ex) =>
           println(ex.getMessage)
-          if (ex.getMessage.contains("no planPIndexes for indexName") || ex.getMessage.contains(
-                "pindex_consistency mismatched partition"
-              )) {
-            Thread.sleep(250)
-            recurse()
-          } else {
-            assert(false)
-          }
+          false
       }
-    }
-
-    recurse()
+    })
   }
 }
