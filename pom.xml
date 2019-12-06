@@ -16,8 +16,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <junit.version>5.5.2</junit.version>
-        <jackson.version>2.9.10</jackson.version>
-        <reactor.version>3.3.0.RELEASE</reactor.version>
+        <jackson.version>2.10.1</jackson.version>
+        <reactor.version>3.3.1.RELEASE</reactor.version>
 
         <!--Can override this with mvn -Dscala.compat.version=2.11-->
         <scala.compat.version>2.12</scala.compat.version>
@@ -117,7 +117,7 @@
         <plugins>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.0</version>
+                <version>2.22.2</version>
                 <configuration>
                     <trimStackTrace>false</trimStackTrace>
                     <includes>
@@ -129,12 +129,12 @@
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.22.0</version>
+                <version>2.22.2</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
@@ -185,7 +185,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.0.0</version>
+            <version>3.2.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

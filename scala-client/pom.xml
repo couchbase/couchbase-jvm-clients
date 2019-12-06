@@ -175,14 +175,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
-            <version>2.9.7</version>
+            <version>${jackson.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
-            <version>2.9.7</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
 
