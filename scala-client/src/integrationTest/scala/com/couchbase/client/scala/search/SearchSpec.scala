@@ -71,6 +71,7 @@ class SearchSpec extends ScalaIntegrationTest {
       ) match {
         case Success(result) =>
           if (result.metaData.errors.nonEmpty) {
+            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
             // assume it's 'no planPIndexes' error indicating search indexes aren't ready yet
             Thread.sleep(250)
             recurse()

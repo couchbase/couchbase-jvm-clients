@@ -26,6 +26,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -101,11 +102,13 @@ class PingTest extends JavaIntegrationTest {
 
   @Test
   void pingKV() {
-    PingServiceHealth psh = HealthPinger.pingKV(config().bucketname(),
-            cluster.core(),
-            Duration.ofSeconds(2),
-            FailFastRetryStrategy.INSTANCE).block();
-    assertEquals(PingServiceHealth.PingState.OK, psh.state());
+    Util.waitUntilCondition(() -> {
+      PingServiceHealth psh = HealthPinger.pingKV(config().bucketname(),
+              cluster.core(),
+              Duration.ofSeconds(2),
+              FailFastRetryStrategy.INSTANCE).block();
+      return PingServiceHealth.PingState.OK == psh.state();
+    });
   }
 
   @IgnoreWhen(missesCapabilities = {Capabilities.VIEWS}, clusterTypes = ClusterType.MOCKED)
