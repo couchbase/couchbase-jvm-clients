@@ -97,6 +97,7 @@ pipeline {
                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
 
                     dir('couchbase-jvm-clients') {
+                        shWithEcho("make deps-only")
                         shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
                     }
                 }
