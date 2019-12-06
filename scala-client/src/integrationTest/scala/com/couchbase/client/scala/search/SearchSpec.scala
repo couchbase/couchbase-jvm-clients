@@ -70,18 +70,9 @@ class SearchSpec extends ScalaIntegrationTest {
         SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
       ) match {
         case Success(result) =>
-          if (result.metaData.errors.nonEmpty) {
-            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
-            // assume it's 'no planPIndexes' error indicating search indexes aren't ready yet
-            Thread.sleep(250)
-            recurse()
-          } else {
-            assert(1 == result.rows.size)
-            result.rows.foreach(row => {
-              val fields = row.fieldsAs[JsonObject]
-              assert(fields.isFailure)
-            })
-          }
+          result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+          assert(1 == result.rows.size)
+          assert(result.rows.head.id == "test")
         case Failure(ex) =>
           println(ex.getMessage)
           if (ex.getMessage.contains("no planPIndexes for indexName") || ex.getMessage.contains(
