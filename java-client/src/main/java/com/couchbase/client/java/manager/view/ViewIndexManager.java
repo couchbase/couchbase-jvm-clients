@@ -17,7 +17,9 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 
 import java.util.List;
@@ -38,23 +40,27 @@ public class ViewIndexManager {
   }
 
   /**
-   * Returns the named design document from the specified namespace.
+   * Returns the design document from the cluster if present.
    *
-   * @param name name of the design document to retrieve
-   * @param namespace namespace to look in
-   * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
+   * @param name name of the design document to retrieve.
+   * @param namespace namespace to look in.
+   * @throws DesignDocumentNotFoundException if there is no design document with the given name present.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public DesignDocument getDesignDocument(String name, DesignDocumentNamespace namespace) {
     return block(async.getDesignDocument(name, namespace));
   }
 
   /**
-   * Returns the named design document from the specified namespace.
+   * Returns the design document from the cluster if present with custom options.
    *
    * @param name name of the design document to retrieve
    * @param namespace namespace to look in
    * @param options additional optional arguments (timeout, retry, etc.)
-   * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
+   * @throws DesignDocumentNotFoundException if there is no design document with the given name present.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public DesignDocument getDesignDocument(String name, DesignDocumentNamespace namespace, GetDesignDocumentOptions options) {
     return block(async.getDesignDocument(name, namespace, options));
@@ -66,6 +72,8 @@ public class ViewIndexManager {
    *
    * @param designDocument document to store
    * @param namespace namespace to store it in
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace) {
     block(async.upsertDesignDocument(designDocument, namespace));
@@ -78,6 +86,8 @@ public class ViewIndexManager {
    * @param designDocument document to store
    * @param namespace namespace to store it in
    * @param options additional optional arguments (timeout, retry, etc.)
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace, UpsertDesignDocumentOptions options) {
     block(async.upsertDesignDocument(designDocument, namespace, options));
@@ -89,6 +99,8 @@ public class ViewIndexManager {
    *
    * @param name name of the development design document
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void publishDesignDocument(String name) {
     block(async.publishDesignDocument(name));
@@ -101,6 +113,8 @@ public class ViewIndexManager {
    * @param name name of the development design document
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void publishDesignDocument(String name, PublishDesignDocumentOptions options) {
     block(async.publishDesignDocument(name, options));
@@ -112,6 +126,8 @@ public class ViewIndexManager {
    * @param name name of the document to remove
    * @param namespace namespace to remove it from
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void dropDesignDocument(String name, DesignDocumentNamespace namespace) {
     block(async.dropDesignDocument(name, namespace));
@@ -124,6 +140,8 @@ public class ViewIndexManager {
    * @param namespace namespace to remove it from
    * @param options additional optional arguments (timeout, retry, etc.)
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void dropDesignDocument(String name, DesignDocumentNamespace namespace, DropDesignDocumentOptions options) {
     block(async.dropDesignDocument(name, namespace, options));
@@ -133,6 +151,8 @@ public class ViewIndexManager {
    * Returns all of the design documents in the specified namespace.
    *
    * @param namespace namespace to query
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public List<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace) {
     return block(async.getAllDesignDocuments(namespace));
@@ -143,6 +163,8 @@ public class ViewIndexManager {
    *
    * @param namespace namespace to query
    * @param options additional optional arguments (timeout, retry, etc.)
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public List<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
     return block(async.getAllDesignDocuments(namespace, options));

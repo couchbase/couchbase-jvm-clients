@@ -37,9 +37,15 @@ public class ReducedViewErrorContext extends ErrorContext {
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
 
-    input.put("designDoc", redactMeta(designDoc));
-    input.put("viewName", redactMeta(viewName));
-    input.put("bucket", redactMeta(bucketName));
+    if (designDoc != null) {
+      input.put("designDoc", redactMeta(designDoc));
+    }
+    if (viewName != null) {
+      input.put("viewName", redactMeta(viewName));
+    }
+    if (bucketName != null) {
+      input.put("bucket", redactMeta(bucketName));
+    }
   }
 
 }

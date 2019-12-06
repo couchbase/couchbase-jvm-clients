@@ -31,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerResponse;
@@ -54,6 +55,8 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.requireUnqualified;
@@ -100,7 +103,7 @@ public class AsyncViewIndexManager {
    *
    * @param namespace namespace to query
    */
-  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(DesignDocumentNamespace namespace) {
+  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(final DesignDocumentNamespace namespace) {
     return getAllDesignDocuments(namespace, getAllDesignDocumentsOptions());
   }
 
@@ -110,12 +113,17 @@ public class AsyncViewIndexManager {
    * @param namespace namespace to query
    * @param options additional optional arguments (timeout, retry, etc.)
    */
-  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
+  public CompletableFuture<List<DesignDocument>> getAllDesignDocuments(final DesignDocumentNamespace namespace,
+                                                                       final GetAllDesignDocumentsOptions options) {
+    notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(null, null, bucket));
+    notNull(options, "GetAllDesignDocumentsOptions", () -> new ReducedViewErrorContext(null, null, bucket));
+
     return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), options.build()).thenApply(response -> {
       // Unlike the other view management requests, this request goes through the config manager endpoint.
       // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
       if (response.status() != ResponseStatus.SUCCESS) {
-        throw new CouchbaseException("Failed to get all design documents; response status=" + response.status() + "; response body=" + new String(response.content(), UTF_8));
+        throw new CouchbaseException("Failed to get all design documents; response status=" + response.status()
+          + "; response body=" + new String(response.content(), UTF_8));
       }
       return parseAllDesignDocuments(Mapper.decodeIntoTree(response.content()), namespace);
     });
@@ -154,6 +162,10 @@ public class AsyncViewIndexManager {
    * @throws DesignDocumentNotFoundException if the namespace does not contain a document with the given name
    */
   public CompletableFuture<DesignDocument> getDesignDocument(String name, DesignDocumentNamespace namespace, GetDesignDocumentOptions options) {
+    notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
+    notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
+    notNull(options, "GetDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
+
     return sendRequest(GET, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
           throw notFound(t)
@@ -164,10 +176,9 @@ public class AsyncViewIndexManager {
             parseDesignDocument(name, Mapper.decodeIntoTree(response.content())));
   }
 
-  private static DesignDocument parseDesignDocument(String name, JsonNode node) {
+  private static DesignDocument parseDesignDocument(final String name, final JsonNode node) {
     ObjectNode viewsNode = (ObjectNode) node.path("views");
-    Map<String, View> views = Mapper.convertValue(viewsNode, new TypeReference<Map<String, View>>() {
-    });
+    Map<String, View> views = Mapper.convertValue(viewsNode, new TypeReference<Map<String, View>>() {});
     return new DesignDocument(removeStart(name, "dev_"), views);
   }
 
@@ -192,6 +203,10 @@ public class AsyncViewIndexManager {
    */
   public CompletableFuture<Void> upsertDesignDocument(final DesignDocument doc, final DesignDocumentNamespace namespace,
                                                       final UpsertDesignDocumentOptions options) {
+    notNull(doc, "DesignDocument", () -> new ReducedViewErrorContext(null, null, bucket));
+    notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
+    notNull(options, "UpsertDesignDocumentOptions", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
+
     final ObjectNode body = toJson(doc);
     return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), options.build(), body)
         .thenApply(response -> null);
@@ -217,8 +232,9 @@ public class AsyncViewIndexManager {
    * @throws DesignDocumentNotFoundException if the development namespace does not contain a document with the given name
    */
   public CompletableFuture<Void> publishDesignDocument(final String name, final PublishDesignDocumentOptions options) {
-    return getDesignDocument(name, DEVELOPMENT)
-        .thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION));
+    notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
+    notNull(options, "PublishDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
+    return getDesignDocument(name, DEVELOPMENT).thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION));
   }
 
   /**
@@ -242,6 +258,10 @@ public class AsyncViewIndexManager {
    */
   public CompletableFuture<Void> dropDesignDocument(final String name, final DesignDocumentNamespace namespace,
                                                     final DropDesignDocumentOptions options) {
+    notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
+    notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
+    notNull(options, "DropDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
+
     return sendRequest(DELETE, pathForDesignDocument(name, namespace), options.build())
         .exceptionally(t -> {
           if (notFound(t)) {
