@@ -21,8 +21,8 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.InternalServerException;
-import com.couchbase.client.core.error.ParsingFailedException;
-import com.couchbase.client.core.error.PlanningFailedException;
+import com.couchbase.client.core.error.ParsingFailureException;
+import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementException;
 import com.couchbase.client.core.error.QueryErrorContext;
 import com.couchbase.client.core.error.QueryIndexException;
@@ -120,13 +120,13 @@ public class QueryChunkResponseParser
       String message = errors.get(0).message();
 
       if (code == 3000) {
-        return new ParsingFailedException(errorContext);
+        return new ParsingFailureException(errorContext);
       } else if (PREPARED_ERROR_CODES.contains(code)) {
         return new PreparedStatementException(errorContext);
       } else if (code == 4300 && message.matches("^.*index .+ already exists.*")) {
         return new QueryIndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {
-        return new PlanningFailedException(errorContext);
+        return new PlanningFailureException(errorContext);
       } else if (code == 12004 || code == 12016 || (code == 5000 && message.matches("^.*index .+ not found.*"))) {
         return new QueryIndexNotFoundException(errorContext);
       } else if (code == 5000 && message.matches("^.*Index .+ already exists.*")) {

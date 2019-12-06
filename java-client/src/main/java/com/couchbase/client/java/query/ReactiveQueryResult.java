@@ -17,7 +17,7 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
@@ -61,7 +61,7 @@ public class ReactiveQueryResult {
 	 *
 	 * @param target target class for converting the query row
 	 * @return {@link Flux}
-   * @throws DecodingFailedException (async) if the decoding cannot be completed successfully
+   * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
 	 */
 	public <T> Flux<T> rowsAs(Class<T> target) {
 		return response.rows().map(n -> serializer.deserialize(target, n.data()));
@@ -73,7 +73,7 @@ public class ReactiveQueryResult {
    *
    * @param target target type for converting the query row
    * @return {@link Flux}
-   * @throws DecodingFailedException (async) if the decoding cannot be completed successfully
+   * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
    */
 	public <T> Flux<T> rowsAs(TypeRef<T> target) {
 		return response.rows().map(n -> serializer.deserialize(target, n.data()));

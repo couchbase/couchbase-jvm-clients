@@ -19,7 +19,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-import com.couchbase.client.core.error.{ParsingFailedException, QueryException}
+import com.couchbase.client.core.error.{ParsingFailureException, QueryException}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
@@ -185,9 +185,9 @@ class QuerySpec extends ScalaIntegrationTest {
   def error_due_to_bad_syntax() {
     val x = cluster.query("""select*from""")
     x match {
-      case Success(result)                      => assert(false)
-      case Failure(err: ParsingFailedException) =>
-      case Failure(err)                         => throw err
+      case Success(result)                       => assert(false)
+      case Failure(err: ParsingFailureException) =>
+      case Failure(err)                          => throw err
     }
   }
 
@@ -243,7 +243,7 @@ class QuerySpec extends ScalaIntegrationTest {
   @Test
   def reactive_error_due_to_bad_syntax() {
     Assertions.assertThrows(
-      classOf[ParsingFailedException],
+      classOf[ParsingFailureException],
       () => {
         cluster.reactive
           .query("""sselect*from""")

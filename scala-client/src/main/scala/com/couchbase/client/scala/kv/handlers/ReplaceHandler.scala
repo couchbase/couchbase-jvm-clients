@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.EncodingFailedException
+import com.couchbase.client.core.error.EncodingFailureException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -86,7 +86,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
           )
 
         case Failure(err) =>
-          Failure(new EncodingFailedException(err))
+          Failure(new EncodingFailureException(err))
       }
     }
   }

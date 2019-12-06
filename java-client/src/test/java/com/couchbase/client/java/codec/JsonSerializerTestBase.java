@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -147,7 +147,7 @@ abstract class JsonSerializerTestBase {
     byte[] result = serializer().deserialize(byte[].class, input);
     assertArrayEquals(input, result);
 
-    assertThrows(DecodingFailedException.class, () -> {
+    assertThrows(DecodingFailureException.class, () -> {
       serializer().deserialize(new TypeRef<byte[]>() {
       }, input);
     });

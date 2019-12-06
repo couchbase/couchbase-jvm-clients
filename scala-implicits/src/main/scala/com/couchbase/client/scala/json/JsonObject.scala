@@ -18,7 +18,7 @@ package com.couchbase.client.scala.json
 
 import java.util
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
@@ -133,12 +133,12 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     *
     * If that value is actually an Int it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException  if the value was not one of $SupportedNumTypes or String
     */
   def num(name: String): Int = {
     val check = content.get(name)
@@ -150,12 +150,12 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
 
   /** Gets a Boolean value from this object.
     *
-    * If that value is actually a Boolean it is returned directly.  Else DecodingFailedException will be thrown.
+    * If that value is actually a Boolean it is returned directly.  Else DecodingFailureException will be thrown.
     *
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not a Boolean
+    * @throws DecodingFailureException  if the value was not a Boolean
     */
   def bool(name: String): Boolean = {
     val check = content.get(name)
@@ -169,12 +169,12 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     *
     * If that value is actually an Long it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toLong` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException  if the value was not one of $SupportedNumTypes or String
     */
   def numLong(name: String): Long = {
     val check = content.get(name)
@@ -188,12 +188,12 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     *
     * If that value is actually a Double it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toDouble` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException  if the value was not one of $SupportedNumTypes or String
     */
   def numDouble(name: String): Double = {
     val check = content.get(name)
@@ -207,12 +207,12 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     *
     * If that value is actually an Float it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toFloat` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException  if the value was not one of $SupportedNumTypes or String
     */
   def numFloat(name: String): Float = {
     val check = content.get(name)
@@ -229,7 +229,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not of type `JsonObject`
+    * @throws DecodingFailureException  if the value was not of type `JsonObject`
     */
   def obj(name: String): JsonObject = {
     val check = content.get(name)
@@ -246,7 +246,7 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     * @param name  $Name
     *
     * @throws NoSuchElementException   $NotExist
-    * @throws DecodingFailedException  if the value was not of type `JsonArray`
+    * @throws DecodingFailureException  if the value was not of type `JsonArray`
     */
   def arr(name: String): JsonArray = {
     val check = content.get(name)

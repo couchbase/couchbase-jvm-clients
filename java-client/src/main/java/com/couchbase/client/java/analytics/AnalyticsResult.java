@@ -17,7 +17,7 @@
 package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
@@ -75,7 +75,7 @@ public class AnalyticsResult {
    * Returns all rows, converted into instances of the target class.
    *
    * @param target the target class to deserialize into.
-   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   * @throws DecodingFailureException if any row could not be successfully deserialized.
    */
   public <T> List<T> rowsAs(final Class<T> target) {
     final List<T> converted = new ArrayList<>(rows.size());
@@ -89,7 +89,7 @@ public class AnalyticsResult {
    * Returns all rows, converted into instances of the target type.
    *
    * @param target the target type to deserialize into.
-   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   * @throws DecodingFailureException if any row could not be successfully deserialized.
    */
   public <T> List<T> rowsAs(final TypeRef<T> target) {
     final List<T> converted = new ArrayList<>(rows.size());
@@ -102,7 +102,7 @@ public class AnalyticsResult {
   /**
    * Returns all rows, converted into {@link JsonObject}s.
    *
-   * @throws DecodingFailedException if any row could not be successfully deserialized.
+   * @throws DecodingFailureException if any row could not be successfully deserialized.
    */
   public List<JsonObject> rowsAsObject() {
     return rowsAs(JsonObject.class);

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
@@ -52,7 +52,7 @@ public class RawJsonTranscoder implements Transcoder {
     } else if (target.isAssignableFrom(String.class)) {
       return (T) new String(input, StandardCharsets.UTF_8);
     } else {
-      throw new DecodingFailedException("RawJsonTranscoder can only decode into either byte[] or String!");
+      throw new DecodingFailureException("RawJsonTranscoder can only decode into either byte[] or String!");
     }
   }
 

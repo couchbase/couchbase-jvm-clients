@@ -18,7 +18,6 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
-import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
@@ -36,7 +35,7 @@ import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -47,7 +46,6 @@ import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -287,7 +285,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
           Response decoded = request.decode(response, channelContext);
           request.succeed(decoded);
         } catch (Throwable t) {
-          request.fail(new DecodingFailedException(t));
+          request.fail(new DecodingFailureException(t));
         }
       } else {
         RetryOrchestrator.maybeRetry(ioContext, request, retryReason);

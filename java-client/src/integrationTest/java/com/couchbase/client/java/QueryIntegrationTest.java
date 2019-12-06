@@ -18,9 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ParsingFailedException;
+import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.QueryErrorContext;
-import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
@@ -44,7 +43,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -220,7 +218,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failOnSyntaxError() {
-        assertThrows(ParsingFailedException.class, () -> cluster.query("invalid export"));
+        assertThrows(ParsingFailureException.class, () -> cluster.query("invalid export"));
     }
 
     @Test

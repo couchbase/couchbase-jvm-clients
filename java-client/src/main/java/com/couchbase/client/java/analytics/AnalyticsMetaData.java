@@ -17,13 +17,12 @@
 package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.query.QueryWarning;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -86,7 +85,7 @@ public class AnalyticsMetaData {
             try {
                 return JacksonTransformers.MAPPER.readValue(bytes, JsonObject.class);
             } catch (IOException e) {
-                throw new DecodingFailedException("Could not decode Analytics signature", e);
+                throw new DecodingFailureException("Could not decode Analytics signature", e);
             }
         });
     }

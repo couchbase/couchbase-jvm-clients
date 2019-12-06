@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
@@ -48,7 +48,7 @@ public class RawStringTranscoder implements Transcoder {
     if (target.isAssignableFrom(String.class)) {
       return (T) new String(input, StandardCharsets.UTF_8);
     } else {
-      throw new DecodingFailedException("RawStringTranscoder can only decode into String!");
+      throw new DecodingFailureException("RawStringTranscoder can only decode into String!");
     }
   }
 

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 
 /**
  * The transcoder is responsible for transcoding KV binary packages between their binary and their java object
@@ -51,7 +51,7 @@ public interface Transcoder {
    * @return the decoded entity.
    */
   default <T> T decode(TypeRef<T> target, byte[] input, int flags) {
-    throw new DecodingFailedException(getClass().getSimpleName() + " does not support decoding via TypeRef.");
+    throw new DecodingFailureException(getClass().getSimpleName() + " does not support decoding via TypeRef.");
   }
 
   /**

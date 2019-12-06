@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.codec
 import java.nio.charset.StandardCharsets
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import io.circe.Json
@@ -38,7 +38,7 @@ trait JsonDeserializer[T] {
   /** Decodes an Array[Byte] into a `T`.
     *
     * @param bytes bytes representing a documented, to be decoded
-    * @return `Success(T)` if successful, else a `Failure(DecodingFailedException)`
+    * @return `Success(T)` if successful, else a `Failure(DecodingFailureException)`
     */
   def deserialize(bytes: Array[Byte]): Try[T]
 }
@@ -82,7 +82,7 @@ object JsonDeserializer {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
       out match {
         case Success(_)   => out
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -93,7 +93,7 @@ object JsonDeserializer {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonObject]))
       out match {
         case Success(v)   => Success(v.safe)
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -104,7 +104,7 @@ object JsonDeserializer {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
       out match {
         case Success(_)   => out
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -115,7 +115,7 @@ object JsonDeserializer {
       val out = Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[JsonArray]))
       out match {
         case Success(v)   => Success(v.safe)
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -130,7 +130,7 @@ object JsonDeserializer {
       val out = Try(upickle.default.read[ujson.Value](bytes))
       out match {
         case Success(_)   => out
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -145,7 +145,7 @@ object JsonDeserializer {
       val out = Try(upickle.default.read[ujson.Obj](bytes))
       out match {
         case Success(_)   => out
-        case Failure(err) => Failure(new DecodingFailedException(err))
+        case Failure(err) => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -165,7 +165,7 @@ object JsonDeserializer {
     val out = Try(in)
     out match {
       case Success(_)   => out
-      case Failure(err) => Failure(new DecodingFailedException(err))
+      case Failure(err) => Failure(new DecodingFailureException(err))
     }
   }
 
@@ -214,7 +214,7 @@ object JsonDeserializer {
       val out = io.circe.parser.decode[io.circe.Json](str)
       out match {
         case Right(result) => Success(result)
-        case Left(err)     => Failure(new DecodingFailedException(err))
+        case Left(err)     => Failure(new DecodingFailureException(err))
       }
     }
   }
@@ -227,7 +227,7 @@ object JsonDeserializer {
       val str = new String(bytes, StandardCharsets.UTF_8)
       if (str == "true") Try(true)
       else if (str == "false") Try(false)
-      else Failure(new DecodingFailedException(s"Boolean field has invalid value '${str}'"))
+      else Failure(new DecodingFailureException(s"Boolean field has invalid value '${str}'"))
     }
   }
 

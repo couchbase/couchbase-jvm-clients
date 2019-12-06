@@ -17,7 +17,7 @@
 package com.couchbase.client.core.json.stream;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.json.Mapper;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -68,7 +68,7 @@ public class MatchedValue {
     try {
       return requireNonNull(Mapper.decodeInto(json, type));
     } catch (Exception e) {
-      throw new DecodingFailedException("Value at " + jsonPointer + " is not a " + type.getSimpleName(), e);
+      throw new DecodingFailureException("Value at " + jsonPointer + " is not a " + type.getSimpleName(), e);
     }
   }
 

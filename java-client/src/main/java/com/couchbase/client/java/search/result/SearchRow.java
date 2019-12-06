@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
@@ -203,7 +203,7 @@ public class SearchRow {
             }
             return new SearchRow(index, id, score, explanationJson, locations, fragments, fields, serializer);
         } catch (IOException e) {
-            throw new DecodingFailedException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
+            throw new DecodingFailureException("Failed to decode row '" + new String(row.data(), UTF_8) + "'", e);
         }
 
     }

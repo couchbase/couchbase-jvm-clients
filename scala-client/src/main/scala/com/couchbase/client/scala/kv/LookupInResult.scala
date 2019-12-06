@@ -1,10 +1,10 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.kv.{
+  SubDocumentField,
   SubDocumentOpResponseStatus,
-  SubdocCommandType,
-  SubDocumentField
+  SubdocCommandType
 }
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonTranscoder, Transcoder}
 
@@ -60,7 +60,7 @@ case class LookupInResult(
                 Success(exists.asInstanceOf[T])
               } else {
                 Failure(
-                  new DecodingFailedException("Exists results can only be returned as Boolean")
+                  new DecodingFailureException("Exists results can only be returned as Boolean")
                 )
               }
             case _ => deserializer.deserialize(field.value)

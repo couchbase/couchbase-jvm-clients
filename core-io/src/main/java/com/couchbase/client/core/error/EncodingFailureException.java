@@ -21,21 +21,21 @@ package com.couchbase.client.core.error;
  * @author Graham Pople
  * @since 2.0
  */
-public class EncodingFailedException extends CouchbaseException {
+public class EncodingFailureException extends CouchbaseException {
 
-    public EncodingFailedException() {
+    public EncodingFailureException() {
         super();
     }
 
-    public EncodingFailedException(String message) {
+    public EncodingFailureException(String message) {
         super(message);
     }
 
-    public EncodingFailedException(String message, Throwable cause) {
+    public EncodingFailureException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public EncodingFailedException(Throwable cause) {
+    public EncodingFailureException(Throwable cause) {
         super(cause);
     }
 }

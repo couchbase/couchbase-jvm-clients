@@ -18,7 +18,7 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Bytes;
@@ -133,7 +133,7 @@ public class QueryMetrics {
 			}
 			return Optional.ofNullable(JacksonTransformers.MAPPER.treeToValue(subNode, target));
 		} catch (JsonProcessingException e) {
-			throw new DecodingFailedException("Could not decode " + path + " in analytics metrics!");
+			throw new DecodingFailureException("Could not decode " + path + " in analytics metrics!");
 		}
 	}
 

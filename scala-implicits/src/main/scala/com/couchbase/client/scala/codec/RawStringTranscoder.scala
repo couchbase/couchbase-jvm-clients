@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.codec
 import java.nio.charset.StandardCharsets
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.kv.CodecFlags
 
 import scala.reflect.runtime.universe
@@ -39,7 +39,7 @@ class RawStringTranscoder extends TranscoderWithoutSerializer {
   ): Try[T] = {
     if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])
-    } else Failure(new DecodingFailedException("RawStringTranscoder can only decode into String!"))
+    } else Failure(new DecodingFailureException("RawStringTranscoder can only decode into String!"))
   }
 }
 

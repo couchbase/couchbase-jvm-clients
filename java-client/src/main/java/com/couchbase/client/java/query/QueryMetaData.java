@@ -17,11 +17,10 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -80,14 +79,14 @@ public class QueryMetaData {
      * <p>
      * It is returned as an Optional which will be empty if no signature information is available.
      *
-     * @throws DecodingFailedException when the signature cannot be decoded successfully
+     * @throws DecodingFailureException when the signature cannot be decoded successfully
      */
     public Optional<JsonObject> signature() {
         return header.signature().map(v -> {
             try {
                 return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
             } catch (IOException ex) {
-                throw new DecodingFailedException(ex);
+                throw new DecodingFailureException(ex);
             }
         });
     }
@@ -97,14 +96,14 @@ public class QueryMetaData {
      * <p>
      * It is returned as an Optional which will be empty if no profile information is available.
      *
-     * @throws DecodingFailedException when the profile cannot be decoded successfully
+     * @throws DecodingFailureException when the profile cannot be decoded successfully
      */
     public Optional<JsonObject> profile() {
         return trailer.profile().map(profile -> {
             try {
                 return JacksonTransformers.MAPPER.readValue(profile, JsonObject.class);
             } catch (IOException ex) {
-                throw new DecodingFailedException(ex);
+                throw new DecodingFailureException(ex);
             }
         });
     }
@@ -112,7 +111,7 @@ public class QueryMetaData {
     /**
      * Returns the {@link QueryMetrics} as returned by the query engine if enabled.
      *
-     * @throws DecodingFailedException when the metrics cannot be decoded successfully
+     * @throws DecodingFailureException when the metrics cannot be decoded successfully
      */
     public Optional<QueryMetrics> metrics() {
         return trailer.metrics().map(QueryMetrics::new);
@@ -123,7 +122,7 @@ public class QueryMetaData {
      * <p>
      * It is returned as an Optional which will be empty if no warnings were returned
      *
-     * @throws DecodingFailedException when the warnings cannot be decoded successfully
+     * @throws DecodingFailureException when the warnings cannot be decoded successfully
      */
     public List<QueryWarning> warnings() {
         return this.trailer.warnings().map(warnings ->

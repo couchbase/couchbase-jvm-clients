@@ -20,9 +20,9 @@ package com.couchbase.client.core.error;
  *
  * @since 3.0
  */
-public class ParsingFailedException extends CouchbaseException {
+public class ParsingFailureException extends CouchbaseException {
 
-  public ParsingFailedException(final ErrorContext ctx) {
+  public ParsingFailureException(final ErrorContext ctx) {
     super("Parsing of the input failed", ctx);
   }
 

@@ -20,9 +20,9 @@ package com.couchbase.client.core.error;
  *
  * @since 3.0
  */
-public class PlanningFailedException extends CouchbaseException {
+public class PlanningFailureException extends CouchbaseException {
 
-  public PlanningFailedException(final ErrorContext ctx) {
+  public PlanningFailureException(final ErrorContext ctx) {
     super("The server failed planning the query", ctx);
   }
 

@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.json
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 
 import scala.language.dynamics
 import scala.util.{Failure, Success, Try}

@@ -20,10 +20,9 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.json.stream.CopyingStreamWindow;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
-import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
@@ -152,7 +151,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     try {
       parser.feed(input);
 
-    } catch (DecodingFailedException e) {
+    } catch (DecodingFailureException e) {
       decodingFailure = e;
       failRows(e);
       failTrailer(e);
@@ -202,7 +201,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     try {
       parser.endOfInput();
 
-    } catch (DecodingFailedException e) {
+    } catch (DecodingFailureException e) {
       decodingFailure = e;
       failRows(e);
       failTrailer(e);

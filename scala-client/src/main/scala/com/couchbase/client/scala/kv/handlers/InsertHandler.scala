@@ -18,7 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.error.{
   DocumentExistsException,
-  EncodingFailedException,
+  EncodingFailureException,
   KeyValueErrorContext
 }
 import com.couchbase.client.core.msg.{Request, ResponseStatus}
@@ -88,7 +88,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
             )
           )
         case Failure(err) =>
-          Failure(new EncodingFailedException(err))
+          Failure(new EncodingFailureException(err))
       }
     }
   }

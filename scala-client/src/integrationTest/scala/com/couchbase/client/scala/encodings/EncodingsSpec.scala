@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.encodings
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.codec.{
   DocumentFlags,
@@ -78,9 +78,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out)                          => assert(false)
-      case Failure(err: DecodingFailedException) => // ujson.Str cannot be cast to ujson.Obj
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false)
+      case Failure(err: DecodingFailureException) => // ujson.Str cannot be cast to ujson.Obj
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
 
@@ -97,9 +97,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     }
 
     coll.get(docId).get.contentAs[String] match {
-      case Success(out)                          => assert(false)
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false)
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
 
     coll.get(docId, transcoder = RawJsonTranscoder.Instance).get.contentAs[String] match {
@@ -140,9 +140,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out)                          => assert(false, "should not succeed")
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false, "should not succeed")
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
 
@@ -153,9 +153,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content, transcoder = RawStringTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[String] match {
-      case Success(out)                          => assert(false)
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false)
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
 
     coll.get(docId, transcoder = RawStringTranscoder.Instance).get.contentAs[String] match {
@@ -197,9 +197,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, encoded, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[String] match {
-      case Success(out)                          => assert(false)
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false)
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
 
     coll.get(docId, transcoder = RawJsonTranscoder.Instance).get.contentAs[String] match {
@@ -267,9 +267,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content, transcoder = RawJsonTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out)                          => assert(false, "should not succeed")
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false, "should not succeed")
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
 
@@ -280,9 +280,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     coll.insert(docId, content, transcoder = RawBinaryTranscoder.Instance).get
 
     coll.get(docId).get.contentAs[ujson.Obj] match {
-      case Success(out)                          => assert(false, "should not succeed")
-      case Failure(err: DecodingFailedException) =>
-      case Failure(err)                          => assert(false, s"unexpected error $err")
+      case Success(out)                           => assert(false, "should not succeed")
+      case Failure(err: DecodingFailureException) =>
+      case Failure(err)                           => assert(false, s"unexpected error $err")
     }
   }
 

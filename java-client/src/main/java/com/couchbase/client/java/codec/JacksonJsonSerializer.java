@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
-import com.couchbase.client.core.error.EncodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValueModule;
 import com.fasterxml.jackson.databind.JavaType;
@@ -80,7 +80,7 @@ public class JacksonJsonSerializer implements JsonSerializer {
     try {
       return mapper.writeValueAsBytes(input);
     } catch (Throwable t) {
-      throw new EncodingFailedException("Serializing of content + " + redactUser(input) + " to JSON failed.", t);
+      throw new EncodingFailureException("Serializing of content + " + redactUser(input) + " to JSON failed.", t);
     }
   }
 
@@ -93,7 +93,7 @@ public class JacksonJsonSerializer implements JsonSerializer {
     try {
       return mapper.readValue(input, target);
     } catch (Throwable e) {
-      throw new DecodingFailedException("Deserialization of content into target " + target
+      throw new DecodingFailureException("Deserialization of content into target " + target
           + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
     }
   }
@@ -104,7 +104,7 @@ public class JacksonJsonSerializer implements JsonSerializer {
       JavaType type = mapper.getTypeFactory().constructType(target.type());
       return mapper.readValue(input, type);
     } catch (Throwable e) {
-      throw new DecodingFailedException("Deserialization of content into target " + target
+      throw new DecodingFailureException("Deserialization of content into target " + target
           + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
     }
   }

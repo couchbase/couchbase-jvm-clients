@@ -3,7 +3,7 @@ package com.couchbase.client.scala.subdoc
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.durability.Durability
@@ -210,9 +210,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
-          case Failure(err: DecodingFailedException) =>
-          case Success(v)                            => assert(false, s"should not succeed")
-          case Failure(err)                          => assert(false, s"unexpected error $err")
+          case Failure(err: DecodingFailureException) =>
+          case Success(v)                             => assert(false, s"should not succeed")
+          case Failure(err)                           => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -238,9 +238,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           case Failure(err)                        => assert(false, s"unexpected error $err")
         }
         result.contentAs[String](1) match {
-          case Failure(err: DecodingFailedException) =>
-          case Success(v)                            => assert(false, s"should not succeed")
-          case Failure(err)                          => assert(false, s"unexpected error $err")
+          case Failure(err: DecodingFailureException) =>
+          case Success(v)                             => assert(false, s"should not succeed")
+          case Failure(err)                           => assert(false, s"unexpected error $err")
         }
         assert(result.contentAs[Int](0).get == 1)
       case Failure(err) => assert(false, s"unexpected error $err")

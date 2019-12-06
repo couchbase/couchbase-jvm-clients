@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
@@ -72,7 +72,7 @@ public class QueryResult {
     /**
      * Returns all rows, converted into {@link JsonObject}s.
      *
-     * @throws DecodingFailedException if any row could not be successfully deserialized.
+     * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
     public List<JsonObject> rowsAsObject() {
         return rowsAs(JsonObject.class);
@@ -82,7 +82,7 @@ public class QueryResult {
      * Returns all rows, converted into instances of the target class.
      *
      * @param target the target class to deserialize into.
-     * @throws DecodingFailedException if any row could not be successfully deserialized.
+     * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
     public <T> List<T> rowsAs(final Class<T> target) {
         final List<T> converted = new ArrayList<>(rows.size());
@@ -96,7 +96,7 @@ public class QueryResult {
      * Returns all rows, converted into instances of the target type.
      *
      * @param target the target type to deserialize into.
-     * @throws DecodingFailedException if any row could not be successfully deserialized.
+     * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
     public <T> List<T> rowsAs(final TypeRef<T> target) {
         final List<T> converted = new ArrayList<>(rows.size());

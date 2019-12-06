@@ -19,7 +19,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.search.SearchChunkRow
 import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.json.JsonObject
@@ -107,7 +107,7 @@ object SearchRow {
       new SearchRow(index, id, score, explanationJson, locations.toOption, fragments, fields)
     } catch {
       case e: IOException =>
-        throw new DecodingFailedException(
+        throw new DecodingFailureException(
           "Failed to decode row '" + new String(row.data, UTF_8) + "'",
           e
         )

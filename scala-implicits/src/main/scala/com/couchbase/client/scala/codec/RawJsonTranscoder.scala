@@ -17,7 +17,7 @@ package com.couchbase.client.scala.codec
 
 import java.nio.charset.StandardCharsets
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.kv.CodecFlags
 
 import scala.reflect.runtime.universe
@@ -47,7 +47,9 @@ class RawJsonTranscoder extends TranscoderWithoutSerializer {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])
     } else
       Failure(
-        new DecodingFailedException("RawJsonTranscoder can only decode into Array[Byte] or String!")
+        new DecodingFailureException(
+          "RawJsonTranscoder can only decode into Array[Byte] or String!"
+        )
       )
   }
 }

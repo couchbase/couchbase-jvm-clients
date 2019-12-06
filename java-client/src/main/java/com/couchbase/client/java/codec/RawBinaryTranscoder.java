@@ -16,11 +16,9 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
-
-import java.nio.charset.StandardCharsets;
 
 public class RawBinaryTranscoder implements Transcoder {
 
@@ -48,7 +46,7 @@ public class RawBinaryTranscoder implements Transcoder {
     if (target.isAssignableFrom(byte[].class)) {
       return (T) input;
     } else {
-      throw new DecodingFailedException("RawBinaryTranscoder can only decode into byte[]!");
+      throw new DecodingFailureException("RawBinaryTranscoder can only decode into byte[]!");
     }
   }
 

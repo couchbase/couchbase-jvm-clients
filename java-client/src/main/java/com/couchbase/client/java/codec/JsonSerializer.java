@@ -16,8 +16,6 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailedException;
-
 /**
  * The {@link JsonSerializer} handles the serialization and deserialization of raw json data into java objects.
  */

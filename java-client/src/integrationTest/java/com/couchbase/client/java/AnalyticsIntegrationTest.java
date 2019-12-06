@@ -16,9 +16,8 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.ParsingFailedException;
+import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
-import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.json.JsonObject;
@@ -81,7 +80,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void failsOnError() {
-        assertThrows(ParsingFailedException.class, () -> cluster.analyticsQuery("SELECT 1="));
+        assertThrows(ParsingFailureException.class, () -> cluster.analyticsQuery("SELECT 1="));
     }
 
     @Test

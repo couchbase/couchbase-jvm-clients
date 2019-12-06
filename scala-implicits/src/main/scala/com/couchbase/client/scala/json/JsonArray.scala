@@ -2,7 +2,7 @@ package com.couchbase.client.scala.json
 
 import java.util
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.collection.JavaConverters._
@@ -73,12 +73,12 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     *
     * If that value is actually a Long it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toLong` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException   if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException   if the value was not one of $SupportedNumTypes or String
     */
   def numLong(idx: Int): Long = {
     ValueConvertor.numLong(values.get(idx), "array index")
@@ -88,12 +88,12 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     *
     * If that value is actually an Int it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toInt` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException   if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException   if the value was not one of $SupportedNumTypes or String
     */
   def num(idx: Int): Int = {
     ValueConvertor.num(values.get(idx), "array index")
@@ -103,12 +103,12 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     *
     * If that value is actually a Double it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toDouble` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException   if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException   if the value was not one of $SupportedNumTypes or String
     */
   def numDouble(idx: Int): Double = {
     ValueConvertor.numDouble(values.get(idx), "array index")
@@ -118,12 +118,12 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     *
     * If that value is actually a Float it is returned directly.  Else if it is one of $SupportedNumTypes or
     * String it will be converted with `toFloat` (which may throw if it cannot be converted).  Else if it is of a
-    * different type then DecodingFailedException will be thrown.
+    * different type then DecodingFailureException will be thrown.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException   if the value was not one of $SupportedNumTypes or String
+    * @throws DecodingFailureException   if the value was not one of $SupportedNumTypes or String
     */
   def numFloat(idx: Int): Float = {
     ValueConvertor.numFloat(values.get(idx), "array index")
@@ -134,7 +134,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException  if the value was not of type `Boolean`
+    * @throws DecodingFailureException  if the value was not of type `Boolean`
     */
   def bool(idx: Int): Boolean = {
     ValueConvertor.bool(values.get(idx), "array index")
@@ -147,7 +147,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException  if the value was not of type `JsonObject`
+    * @throws DecodingFailureException  if the value was not of type `JsonObject`
     */
   def obj(idx: Int): JsonObject = {
     ValueConvertor.obj(values.get(idx), "array index")
@@ -160,7 +160,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
-    * @throws DecodingFailedException  if the value was not of type `JsonArray`
+    * @throws DecodingFailureException  if the value was not of type `JsonArray`
     */
   def arr(idx: Int): JsonArray = {
     ValueConvertor.arr(values.get(idx), "array index")

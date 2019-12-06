@@ -20,9 +20,9 @@ package com.couchbase.client.core.error;
  *
  * @since 3.0
  */
-public class CompilationFailedException extends CouchbaseException {
+public class CompilationFailureException extends CouchbaseException {
 
-  public CompilationFailedException(final ErrorContext ctx) {
+  public CompilationFailureException(final ErrorContext ctx) {
     super("The query failed to compile on the server", ctx);
   }
 

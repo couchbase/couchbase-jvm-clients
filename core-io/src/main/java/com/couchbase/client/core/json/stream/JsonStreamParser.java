@@ -23,7 +23,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.async.ByteArray
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.error.DecodingFailedException;
+import com.couchbase.client.core.error.DecodingFailureException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -113,17 +113,17 @@ public class JsonStreamParser implements Closeable {
    * <p>
    * Call this method repeatedly as more input becomes available.
    *
-   * @throws DecodingFailedException if malformed JSON is detected in this chunk of input
+   * @throws DecodingFailureException if malformed JSON is detected in this chunk of input
    *                                 or if a value consumer throws an exception.
    */
-  public void feed(ByteBuf input) throws DecodingFailedException {
+  public void feed(ByteBuf input) throws DecodingFailureException {
     try {
       feedJackson(input);
       processTokens();
       collectGarbage();
 
     } catch (Throwable t) {
-      throw new DecodingFailedException(t);
+      throw new DecodingFailureException(t);
     }
   }
 
@@ -132,7 +132,7 @@ public class JsonStreamParser implements Closeable {
    * After calling this method no more data can be fed and parser assumes
    * no more data will be available.
    *
-   * @throws DecodingFailedException if malformed JSON is detected in this chunk of input.
+   * @throws DecodingFailureException if malformed JSON is detected in this chunk of input.
    */
   public void endOfInput() {
     try {
@@ -140,7 +140,7 @@ public class JsonStreamParser implements Closeable {
       processTokens();
 
     } catch (Throwable t) {
-      throw new DecodingFailedException(t);
+      throw new DecodingFailureException(t);
     }
   }
 

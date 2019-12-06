@@ -2,7 +2,7 @@ package com.couchbase.client.scala.json
 
 import java.util
 
-import com.couchbase.client.core.error.DecodingFailedException
+import com.couchbase.client.core.error.DecodingFailureException
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -38,13 +38,13 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * If that value is actually a Long it is returned directly in a `Success`.  Else if it is one of
     * $SupportedNumTypes or String it will be converted with `toLong` (which will return `Failure` if it cannot be
     * converted) and returned in a `Success`.  Else if it is of a different type then `Failure
-    * (DecodingFailedException)` will be returned.
+    * (DecodingFailureException)` will be returned.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
     * @return `Success(Long)` if the value exists and can successfully be converted to a Long.  `FailedFailed
-    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
+    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailureException)` if the value
     *         exists but could not be converted.
     */
   def numLong(idx: Int): Try[Long] = {
@@ -56,13 +56,13 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * If that value is actually an Int it is returned directly in a `Success`.  Else if it is one of
     * $SupportedNumTypes or String it will be converted with `toInt` (which will return `Failure` if it cannot be
     * converted) and returned in a `Success`.  Else if it is of a different type then `Failure
-    * (DecodingFailedException)` will be returned.
+    * (DecodingFailureException)` will be returned.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
     * @return `Success(Int)` if the value exists and can successfully be converted to an Int.  `FailedFailed
-    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
+    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailureException)` if the value
     *         exists but could not be converted.
     */
   def num(idx: Int): Try[Int] = {
@@ -74,13 +74,13 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * If that value is actually a Double it is returned directly in a `Success`.  Else if it is one of
     * $SupportedNumTypes or String it will be converted with `toDouble` (which will return `Failure` if it cannot be
     * converted) and returned in a `Success`.  Else if it is of a different type then `Failure
-    * (DecodingFailedException)` will be returned.
+    * (DecodingFailureException)` will be returned.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
     * @return `Success(Double)` if the value exists and can successfully be converted to a Double.  `FailedFailed
-    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
+    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailureException)` if the value
     *         exists but could not be converted.
     */
   def numDouble(idx: Int): Try[Double] = {
@@ -92,13 +92,13 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * If that value is actually a Float it is returned directly in a `Success`.  Else if it is one of
     * $SupportedNumTypes or String it will be converted with `toFloat` (which will return `Failure` if it cannot be
     * converted) and returned in a `Success`.  Else if it is of a different type then `Failure
-    * (DecodingFailedException)` will be returned.
+    * (DecodingFailureException)` will be returned.
     *
     * @param idx  $Index
     *
     * @throws IndexOutOfBoundsException $NotExist
     * @return `Success(Float)` if the value exists and can successfully be converted to a Float.  `FailedFailed
-    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
+    *         (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailureException)` if the value
     *         exists but could not be converted.
     */
   def numFloat(idx: Int): Try[Float] = {
@@ -109,7 +109,7 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     *
     * @param name  $Name
     * @return `Success(Boolean)` if the value exists and is a Boolean.  `FailedFailed
-    *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailedException)` if the value
+    *          (NoSuchElementException)` if the value did not exist.  `Failure(DecodingFailureException)` if the value
     *          exists but is not a Boolean.
     */
   def bool(idx: Int): Try[Boolean] = {
@@ -122,7 +122,7 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * @return `Success(JsonObjectSafe)` if the value exists and is a `JsonObject` or `JsonObjectSafe` (note this
     *         will be null if the
     *          value is null).  `FailedFailed(NoSuchElementException)` if the value did not exist.  `Failure
-    *          (DecodingFailedException)` if the value exists but is not a `JsonObject` or `JsonObjectSafe`.
+    *          (DecodingFailureException)` if the value exists but is not a `JsonObject` or `JsonObjectSafe`.
     */
   def obj(idx: Int): Try[JsonObjectSafe] = {
     Try(a.obj(idx)).map(JsonObjectSafe(_))
@@ -134,7 +134,7 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     * @return `Success(JsonArraySafe)` if the value exists and is a `JsonArray` or `JsonArraySafe` (note this
     *         will be null if the
     *          value is null).  `FailedFailed(NoSuchElementException)` if the value did not exist.  `Failure
-    *          (DecodingFailedException)` if the value exists but is not a `JsonArray` or `JsonArraySafe`.
+    *          (DecodingFailureException)` if the value exists but is not a `JsonArray` or `JsonArraySafe`.
     */
   def arr(idx: Int): Try[JsonArraySafe] = {
     Try(a.arr(idx)).map(v => JsonArraySafe(v))
