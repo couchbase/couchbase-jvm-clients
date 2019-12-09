@@ -50,7 +50,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @BeforeEach
   void beforeEach() {
     environment = environment().ioConfig(IoConfig.enableMutationTokens(true)).build();
-    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
+    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }

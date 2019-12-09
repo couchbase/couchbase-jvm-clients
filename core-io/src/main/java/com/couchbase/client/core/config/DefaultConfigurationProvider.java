@@ -172,7 +172,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .fromIterable(seedNodes.get())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
-            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
+            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
 
             final Optional<String> alternateAddress = alternate.map(a -> {
               ClusterConfig c = currentConfig;
@@ -201,7 +201,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             return keyValueLoader
               .load(identifier, seed.kvPort().orElse(kvPort), name, alternateAddress)
               .onErrorResume(t -> clusterManagerLoader.load(
-                identifier, seed.httpPort().orElse(managerPort), name, alternateAddress
+                identifier, seed.clusterManagerPort().orElse(managerPort), name, alternateAddress
               ));
           })
           .take(1)
@@ -233,7 +233,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .fromIterable(seedNodes.get())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
-            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.httpPort().orElse(DEFAULT_MANAGER_PORT));
+            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
             return globalLoader.load(identifier, seed.kvPort().orElse(kvPort));
           })
           .take(1)

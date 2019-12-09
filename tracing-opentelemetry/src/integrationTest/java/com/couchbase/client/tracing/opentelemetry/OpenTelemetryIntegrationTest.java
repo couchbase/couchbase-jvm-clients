@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -59,13 +60,13 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
       .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest")))
       .build();
 
+    final Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(
+      SeedNode.create(config.hostname(), Optional.of(config.ports().get(Services.KV)), Optional.empty()))
+    );
     cluster = Cluster.connect(
-      config.hostname(),
+      seedNodes,
       clusterOptions(config().adminUsername(), config().adminPassword())
         .environment(environment)
-        .seedNodes(new HashSet<>(Collections.singletonList(
-          SeedNode.create(config.hostname(), Optional.of(config.ports().get(Services.KV)), Optional.empty()))
-        ))
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

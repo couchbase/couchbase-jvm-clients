@@ -55,8 +55,8 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     requestTracer = new TrackingRequestTracer();
     environment = environment().requestTracer(requestTracer).build();
     cluster = Cluster.connect(
-      connectionString(),
-      ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes())
+      seedNodes(),
+      ClusterOptions.clusterOptions(authenticator()).environment(environment)
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

@@ -66,7 +66,7 @@ class DefaultConfigurationProviderTest {
     CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -87,7 +87,7 @@ class DefaultConfigurationProviderTest {
     assertEquals(3, provider.seedNodes().size());
     for (SeedNode node : provider.seedNodes()) {
       assertEquals(11210, node.kvPort().get());
-      assertEquals(8091, node.httpPort().get());
+      assertEquals(8091, node.clusterManagerPort().get());
     }
 
     assertEquals(Optional.empty(), ctx.alternateAddress());
@@ -98,7 +98,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -126,7 +126,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -159,7 +159,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
@@ -197,7 +197,7 @@ class DefaultConfigurationProviderTest {
     Core core = mock(Core.class);
     when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.DEFAULT);
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     String newConfig = readResource(
       "global_config_mad_hatter_multi_node.json",
@@ -209,7 +209,7 @@ class DefaultConfigurationProviderTest {
     assertEquals(2, provider.seedNodes().size());
     for (SeedNode sn : provider.seedNodes()) {
       assertEquals(11210, sn.kvPort().get());
-      assertEquals(8091, sn.httpPort().get());
+      assertEquals(8091, sn.clusterManagerPort().get());
       assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
     }
   }

@@ -76,8 +76,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   protected static ClusterOptions clusterOptions() {
     return ClusterOptions
       .clusterOptions(authenticator())
-      .environment(environment().build())
-      .seedNodes(seedNodes());
+      .environment(environment().build());
   }
 
   protected static Authenticator authenticator() {

@@ -49,7 +49,7 @@ class PingTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(connectionString(), clusterOptions());
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
 
     // TODO: fix this hack once diagnostics and ping on all levels are stable

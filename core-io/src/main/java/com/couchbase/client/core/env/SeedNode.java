@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.annotation.Stability;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -27,45 +25,86 @@ import java.util.Set;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
-@Stability.Volatile
+/**
+ * The {@link SeedNode} represents a combination of hostname/ip and port that is used during the SDK bootstrap.
+ * <p>
+ * Note that this class is used mostly internally but can be used during bootstrap to override the default ports on
+ * a per-node basis. Most of the time you want to use the connection string bootstrap instead.
+ */
 public class SeedNode {
 
-  public static final Set<SeedNode> DEFAULT = new HashSet<>(Collections.singletonList(
+  /**
+   * Seed node pointing to localhost with default ports.
+   */
+  public static final Set<SeedNode> LOCALHOST = new HashSet<>(Collections.singletonList(
     SeedNode.create("127.0.0.1")
   ));
 
+  /**
+   * The hostname or IP used.
+   */
   private final String address;
 
+  /**
+   * If present, an alternate KV port.
+   */
   private final Optional<Integer> kvPort;
-  private final Optional<Integer> httpPort;
 
-  public static SeedNode create(String address) {
+  /**
+   * If present, an alternate HTTP ("cluster manager") port.
+   */
+  private final Optional<Integer> clusterManagerPort;
+
+  /**
+   * Creates a seed node from a hostname and the default ports.
+   *
+   * @param address the hostname or IP of the seed node.
+   * @return the created {@link SeedNode}.
+   */
+  public static SeedNode create(final String address) {
     return create(address, Optional.empty(), Optional.empty());
   }
 
-  public static SeedNode create(String address, Optional<Integer> kvPort, Optional<Integer> httpPort) {
-    return new SeedNode(address, kvPort, httpPort);
+  /**
+   * Creates a seed node from a hostname and custom ports.
+   *
+   * @param address the hostname or IP of the seed node.
+   * @return the created {@link SeedNode}.
+   */
+  public static SeedNode create(final String address, final Optional<Integer> kvPort,
+                                final Optional<Integer> clusterManagerPort) {
+    return new SeedNode(address, kvPort, clusterManagerPort);
   }
 
-  private SeedNode(String address, Optional<Integer> kvPort, Optional<Integer> httpPort) {
+  private SeedNode(final String address, final Optional<Integer> kvPort, final Optional<Integer> clusterManagerPort) {
     notNullOrEmpty(address, "Address");
     notNull(kvPort, "KvPort");
-    notNull(httpPort, "HttpPort");
+    notNull(clusterManagerPort, "ClusterManagerPort");
+
     this.address = address;
     this.kvPort = kvPort;
-    this.httpPort = httpPort;
+    this.clusterManagerPort = clusterManagerPort;
   }
 
+  /**
+   * The ip address or hostname of this seed node.
+   */
   public String address() {
     return address;
   }
 
+  /**
+   * If present, the kv port.
+   */
   public Optional<Integer> kvPort() {
     return kvPort;
   }
 
-  public Optional<Integer> httpPort() {
-    return httpPort;
+  /**
+   * If present, the cluster manager port.
+   */
+  public Optional<Integer> clusterManagerPort() {
+    return clusterManagerPort;
   }
 
   @Override
@@ -73,7 +112,7 @@ public class SeedNode {
     return "SeedNode{" +
       "address='" + address + '\'' +
       ", kvPort=" + kvPort +
-      ", httpPort=" + httpPort +
+      ", clusterManagerPort=" + clusterManagerPort +
       '}';
   }
 
@@ -84,11 +123,12 @@ public class SeedNode {
     SeedNode seedNode = (SeedNode) o;
     return Objects.equals(address, seedNode.address) &&
       Objects.equals(kvPort, seedNode.kvPort) &&
-      Objects.equals(httpPort, seedNode.httpPort);
+      Objects.equals(clusterManagerPort, seedNode.clusterManagerPort);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(address, kvPort, httpPort);
+    return Objects.hash(address, kvPort, clusterManagerPort);
   }
+
 }

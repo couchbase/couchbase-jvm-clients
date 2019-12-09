@@ -38,7 +38,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(connectionString(), clusterOptions());
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
 
     DesignDocument designDocument = new DesignDocument(designDocName);

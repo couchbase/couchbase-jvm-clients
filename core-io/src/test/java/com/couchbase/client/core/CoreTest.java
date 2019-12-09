@@ -109,7 +109,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -205,7 +205,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -305,7 +305,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -388,7 +388,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -475,7 +475,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("127.0.0.1:9000", mock101);
     mocks.put("127.0.0.1:9001", mock102);
-    new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -517,7 +517,7 @@ class CoreTest {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     when(configProvider.configs()).thenReturn(Flux.empty());
 
-    Core core = new Core(ENV, AUTHENTICATOR, SeedNode.DEFAULT) {
+    Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;

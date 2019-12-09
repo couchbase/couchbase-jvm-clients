@@ -46,7 +46,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(connectionString(), clusterOptions());
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -139,9 +139,8 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     ClusterEnvironment environment = environment()
       .ioConfig(IoConfig.enableMutationTokens(false))
       .build();
-    Cluster cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator())
-      .environment(environment)
-      .seedNodes(seedNodes()));
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator())
+      .environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 

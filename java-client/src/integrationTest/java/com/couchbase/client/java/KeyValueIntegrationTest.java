@@ -71,7 +71,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(connectionString(), clusterOptions());
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }

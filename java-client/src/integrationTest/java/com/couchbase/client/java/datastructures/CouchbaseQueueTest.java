@@ -51,7 +51,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(connectionString(), clusterOptions());
+        cluster = Cluster.connect(seedNodes(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = QueueOptions.queueOptions();
     }

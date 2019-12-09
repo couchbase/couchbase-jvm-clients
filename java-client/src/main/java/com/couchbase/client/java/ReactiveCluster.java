@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
 import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
@@ -75,10 +76,9 @@ public class ReactiveCluster {
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param username the name of the user with appropriate permissions on the cluster.
    * @param password the password of the user with appropriate permissions on the cluster.
-   * @return if properly connected, returns a {@link ReactiveCluster}.
+   * @return the instantiated {@link ReactiveCluster}.
    */
-  public static ReactiveCluster connect(final String connectionString, final String username,
-                                        final String password) {
+  public static ReactiveCluster connect(final String connectionString, final String username, final String password) {
     return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
@@ -87,27 +87,48 @@ public class ReactiveCluster {
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param options custom options when creating the cluster.
-   * @return if properly connected, returns a {@link ReactiveCluster}.
+   * @return the instantiated {@link ReactiveCluster}.
    */
   public static ReactiveCluster connect(final String connectionString, final ClusterOptions options) {
-    ClusterOptions.Built opts = options.build();
-    Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    notNullOrEmpty(connectionString, "ConnectionString");
+    notNull(options, "ClusterOptions");
 
-    Set<SeedNode> seedNodes;
-    if (opts.seedNodes() != null && !opts.seedNodes().isEmpty()) {
-      seedNodes = opts.seedNodes();
-    } else {
-      seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
-    }
-    return new ReactiveCluster(environmentSupplier, opts.authenticator(), seedNodes);
+    final ClusterOptions.Built opts = options.build();
+    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    return new ReactiveCluster(
+      environmentSupplier,
+      opts.authenticator(),
+      seedNodesFromConnectionString(connectionString, environmentSupplier.get())
+    );
   }
+
+  /**
+   * Connect to a Couchbase cluster with a list of seed nodes and custom options.
+   * <p>
+   * Please note that you likely only want to use this method if you need to pass in custom ports for specific
+   * seed nodes during bootstrap. Otherwise we recommend relying ont he simpler {@link #connect(String, ClusterOptions)}
+   * method instead.
+   *
+   * @param seedNodes the seed nodes used to connect to the cluster.
+   * @param options custom options when creating the cluster.
+   * @return the instantiated {@link ReactiveCluster}.
+   */
+  public static ReactiveCluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
+    notNullOrEmpty(seedNodes, "SeedNodes");
+    notNull(options, "ClusterOptions");
+
+    final ClusterOptions.Built opts = options.build();
+    return new ReactiveCluster(extractClusterEnvironment(null, opts), opts.authenticator(), seedNodes);
+  }
+
 
   /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
    * @param environment the environment to use for this cluster.
    */
-  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
+  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
+                          final Set<SeedNode> seedNodes) {
     this(new AsyncCluster(environment, authenticator, seedNodes));
   }
 

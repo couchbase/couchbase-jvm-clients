@@ -83,7 +83,7 @@ class QueryMessageHandlerBackpressureTest {
     eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
     environment = CoreEnvironment.create();
-    core = Core.create(environment, PasswordAuthenticator.create("admin", "password"), SeedNode.DEFAULT);
+    core = Core.create(environment, PasswordAuthenticator.create("admin", "password"), SeedNode.LOCALHOST);
   }
 
   @AfterEach

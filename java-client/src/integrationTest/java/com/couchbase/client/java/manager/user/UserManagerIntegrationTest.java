@@ -68,7 +68,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(connectionString(), clusterOptions());
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
     cluster.bucket(config().bucketname());
     users = cluster.users();
   }

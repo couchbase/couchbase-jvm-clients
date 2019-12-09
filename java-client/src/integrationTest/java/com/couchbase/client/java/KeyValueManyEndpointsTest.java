@@ -35,7 +35,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   void beforeEach() {
     IoConfig.Builder ioConfig = IoConfig.numKvConnections(8);
     environment = environment().ioConfig(ioConfig).build();
-    cluster = Cluster.connect(connectionString(), ClusterOptions.clusterOptions(authenticator()).environment(environment).seedNodes(seedNodes()));
+    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
   }

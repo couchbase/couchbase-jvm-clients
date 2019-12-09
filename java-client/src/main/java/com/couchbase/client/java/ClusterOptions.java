@@ -19,10 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.java.env.ClusterEnvironment;
-
-import java.util.Set;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -33,7 +30,6 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 public class ClusterOptions {
 
   private ClusterEnvironment environment;
-  private Set<SeedNode> seedNodes;
   private final Authenticator authenticator;
 
   private ClusterOptions(final Authenticator authenticator) {
@@ -41,23 +37,19 @@ public class ClusterOptions {
   }
 
   public static ClusterOptions clusterOptions(final Authenticator authenticator) {
+    notNull(authenticator, "Authenticator");
     return new ClusterOptions(authenticator);
   }
 
   public static ClusterOptions clusterOptions(final String username, final String password) {
+    notNullOrEmpty(username, "Username");
+    notNullOrEmpty(password, "Password");
     return clusterOptions(PasswordAuthenticator.create(username, password));
   }
 
   public ClusterOptions environment(final ClusterEnvironment environment) {
     notNull(environment, "ClusterEnvironment");
     this.environment = environment;
-    return this;
-  }
-
-  @Stability.Volatile
-  public ClusterOptions seedNodes(final Set<SeedNode> seedNodes) {
-    notNull(seedNodes, "SeedNodes");
-    this.seedNodes = seedNodes;
     return this;
   }
 
@@ -74,10 +66,6 @@ public class ClusterOptions {
 
     public ClusterEnvironment environment() {
       return environment;
-    }
-
-    public Set<SeedNode> seedNodes() {
-      return seedNodes;
     }
 
   }

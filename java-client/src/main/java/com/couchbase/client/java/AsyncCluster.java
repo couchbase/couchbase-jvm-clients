@@ -29,7 +29,6 @@ import com.couchbase.client.core.error.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
-import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -106,50 +105,85 @@ public class AsyncCluster {
   private final Authenticator authenticator;
 
   /**
-   * Connect to a Couchbase cluster with a username and a password as credentials.
+   * Connect to a Couchbase cluster with a username and a password as authentication credentials.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param username the name of the user with appropriate permissions on the cluster.
    * @param password the password of the user with appropriate permissions on the cluster.
-   * @return if properly connected, returns a {@link AsyncCluster}.
+   * @return the instantiated {@link AsyncCluster}.
    */
   public static AsyncCluster connect(final String connectionString, final String username, final String password) {
     return connect(connectionString, clusterOptions(PasswordAuthenticator.create(username, password)));
   }
 
   /**
-   * Connect to a Couchbase cluster with custom {@link Authenticator}.
+   * Connect to a Couchbase cluster with a connection string and custom options.
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param options custom options when creating the cluster.
-   * @return if properly connected, returns a {@link AsyncCluster}.
+   * @return the instantiated {@link AsyncCluster}.
    */
   public static AsyncCluster connect(final String connectionString, final ClusterOptions options) {
-    ClusterOptions.Built opts = options.build();
-    Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    notNullOrEmpty(connectionString, "ConnectionString");
+    notNull(options, "ClusterOptions");
 
-    Set<SeedNode> seedNodes;
-    if (opts.seedNodes() != null && !opts.seedNodes().isEmpty()) {
-      seedNodes = opts.seedNodes();
-    } else {
-      seedNodes = seedNodesFromConnectionString(connectionString, environmentSupplier.get());
-    }
-    return new AsyncCluster(environmentSupplier, opts.authenticator(), seedNodes);
+    final ClusterOptions.Built opts = options.build();
+    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    return new AsyncCluster(
+      environmentSupplier,
+      opts.authenticator(),
+      seedNodesFromConnectionString(connectionString, environmentSupplier.get())
+    );
   }
 
-  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString, final ClusterOptions.Built opts) {
+  /**
+   * Connect to a Couchbase cluster with a list of seed nodes and custom options.
+   * <p>
+   * Please note that you likely only want to use this method if you need to pass in custom ports for specific
+   * seed nodes during bootstrap. Otherwise we recommend relying ont he simpler {@link #connect(String, ClusterOptions)}
+   * method instead.
+   *
+   * @param seedNodes the seed nodes used to connect to the cluster.
+   * @param options custom options when creating the cluster.
+   * @return the instantiated {@link AsyncCluster}.
+   */
+  public static AsyncCluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
+    notNullOrEmpty(seedNodes, "SeedNodes");
+    notNull(options, "ClusterOptions");
+
+    final ClusterOptions.Built opts = options.build();
+    return new AsyncCluster(extractClusterEnvironment(null, opts), opts.authenticator(), seedNodes);
+  }
+
+  /**
+   * Helper method to extract the cluster environment from the connection string and options.
+   *
+   * @param connectionString the connection string which is used to populate settings into it.
+   * @param opts the cluster options.
+   * @return the cluster environment, created if not passed in or the one supplied from the user.
+   */
+  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString,
+                                                                final ClusterOptions.Built opts) {
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
-      envSupplier = new OwnedSupplier<>(ClusterEnvironment
-        .builder()
-        .load(new ConnectionStringPropertyLoader(connectionString))
-        .build());
+      ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
+      if (connectionString != null) {
+        builder.load(new ConnectionStringPropertyLoader(connectionString));
+      }
+      envSupplier = new OwnedSupplier<>(builder.build());
     } else {
       envSupplier = opts::environment;
     }
     return envSupplier;
   }
 
+  /**
+   * Extracts the relevant seed nodes from the connection string.
+   *
+   * @param cs the connection string where it should be extracted from.
+   * @param environment the environment to load certain properties that influence how it is loaded.
+   * @return a set of seed nodes once extracted.
+   */
   static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment environment) {
     return ConnectionStringUtil.seedNodesFromConnectionString(cs, environment.ioConfig().dnsSrvEnabled());
   }

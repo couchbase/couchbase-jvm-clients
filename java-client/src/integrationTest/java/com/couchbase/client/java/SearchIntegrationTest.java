@@ -48,7 +48,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(connectionString(), clusterOptions());
+        cluster = Cluster.connect(seedNodes(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
         cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
