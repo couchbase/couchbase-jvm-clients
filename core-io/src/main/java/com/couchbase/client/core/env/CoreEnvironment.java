@@ -20,7 +20,6 @@ import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
-import com.couchbase.client.core.cnc.DiagnosticsMonitor;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.cnc.RequestTracer;
@@ -101,7 +100,6 @@ public class CoreEnvironment {
   private final Supplier<RequestTracer> requestTracer;
 
   private final LoggerConfig loggerConfig;
-  private final DiagnosticsMonitor diagnosticsMonitor;
 
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
@@ -144,9 +142,6 @@ public class CoreEnvironment {
       eventBus.get().start().block();
     }
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
-
-    diagnosticsMonitor = DiagnosticsMonitor.create(eventBus.get(), diagnosticsConfig);
-    diagnosticsMonitor.start().block();
 
     this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<RequestTracer>(
       ThresholdRequestTracer.create(eventBus.get())
@@ -336,8 +331,7 @@ public class CoreEnvironment {
    * @param timeout the timeout to wait maximum.
    */
   public Mono<Void> shutdownReactive(final Duration timeout) {
-    return Mono.defer(diagnosticsMonitor::stop)
-      .then(Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty()))
+    return Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty())
       .then(Mono.defer(() -> {
         timer.stop();
         return Mono.empty();
