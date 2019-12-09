@@ -18,7 +18,6 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.error.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 
 import java.util.List;
 import java.util.Set;
@@ -41,15 +40,16 @@ public class Validators {
    * @param input the input to check.
    * @param identifier the identifier that is part of the exception message.
    */
-  public static void notNull(final Object input, final String identifier) {
+  public static <T> T notNull(final T input, final String identifier) {
     if (input == null) {
       throw new IllegalArgumentException(identifier + " cannot be null");
     }
+    return input;
   }
 
-  public static void notNull(final Object input, final String identifier, final Supplier<ErrorContext> errorContext) {
+  public static <T> T notNull(final T input, final String identifier, final Supplier<ErrorContext> errorContext) {
     try {
-      notNull(input, identifier);
+      return notNull(input, identifier);
     } catch (Exception cause) {
       throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
@@ -64,47 +64,52 @@ public class Validators {
    * @param input the string to check.
    * @param identifier the identifier that is part of the exception message.
    */
-  public static void notNullOrEmpty(final String input, final String identifier) {
+  public static String notNullOrEmpty(final String input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw new IllegalArgumentException(identifier + " cannot be null or empty");
     }
+    return input;
   }
 
-  public static void notNullOrEmpty(final String input, final String identifier, final Supplier<ErrorContext> errorContext) {
+  public static String notNullOrEmpty(final String input, final String identifier,
+                                      final Supplier<ErrorContext> errorContext) {
     try {
-      notNullOrEmpty(input, identifier);
+      return notNullOrEmpty(input, identifier);
     } catch (Exception cause) {
       throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
   }
 
-  public static void notNullOrEmpty(final List<?> input, final String identifier) {
+  public static <T> List<T> notNullOrEmpty(final List<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw new IllegalArgumentException(identifier + " cannot be null or empty");
     }
+    return input;
   }
 
-  public static void notNullOrEmpty(final List<?> input, final String identifier, final Supplier<ErrorContext> errorContext) {
+  public static <T> List<T> notNullOrEmpty(final List<T> input, final String identifier,
+                                           final Supplier<ErrorContext> errorContext) {
     try {
-      notNullOrEmpty(input, identifier);
+      return notNullOrEmpty(input, identifier);
     } catch (Exception cause) {
       throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
   }
 
-  public static void notNullOrEmpty(final Set<?> input, final String identifier) {
+  public static <T> Set<T> notNullOrEmpty(final Set<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw new IllegalArgumentException(identifier + " cannot be null or empty");
     }
+    return input;
   }
 
-  public static void notNullOrEmpty(final Set<?> input, final String identifier, final Supplier<ErrorContext> errorContext) {
+  public static <T> Set<T> notNullOrEmpty(final Set<T> input, final String identifier,
+                                          final Supplier<ErrorContext> errorContext) {
     try {
-      notNullOrEmpty(input, identifier);
+      return notNullOrEmpty(input, identifier);
     } catch (Exception cause) {
       throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
     }
   }
-
 
 }
