@@ -139,10 +139,12 @@ public class ReactiveBucket {
   }
 
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
-    notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name()));
-    ViewOptions.Built opts = options.build();
-    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return ViewAccessor.viewQueryReactive(asyncBucket.core(), asyncBucket.viewRequest(designDoc, viewName, opts), serializer);
+    return Mono.defer(() -> {
+      notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name()));
+      ViewOptions.Built opts = options.build();
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      return ViewAccessor.viewQueryReactive(asyncBucket.core(), asyncBucket.viewRequest(designDoc, viewName, opts), serializer);
+    });
   }
 
   /**
@@ -156,7 +158,7 @@ public class ReactiveBucket {
    */
   @Stability.Volatile
   public Mono<PingResult> ping(final PingOptions options) {
-    return Mono.fromFuture(async().ping(options));
+    return Mono.defer(() -> Mono.fromFuture(async().ping(options)));
   }
 
   /**
