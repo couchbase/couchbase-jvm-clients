@@ -145,6 +145,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
+                    <headerLocation>config/checkstyle/checkstyle-header.txt</headerLocation>
                     <configLocation>config/checkstyle/checkstyle-basic.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
