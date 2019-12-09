@@ -116,7 +116,7 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
 
       case ResponseStatus.NOT_FOUND => None
 
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 

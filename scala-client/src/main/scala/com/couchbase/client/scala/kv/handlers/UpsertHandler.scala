@@ -98,7 +98,7 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)
 
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

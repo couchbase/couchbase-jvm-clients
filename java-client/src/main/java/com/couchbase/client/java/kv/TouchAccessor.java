@@ -23,6 +23,7 @@ import com.couchbase.client.core.msg.kv.TouchRequest;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class TouchAccessor {
@@ -35,17 +36,7 @@ public class TouchAccessor {
         if (response.status().success()) {
           return new MutationResult(response.cas(), response.mutationToken());
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case LOCKED: throw new DocumentLockedException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          default: throw new CouchbaseException("Touch operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 

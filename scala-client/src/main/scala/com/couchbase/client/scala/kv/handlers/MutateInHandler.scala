@@ -149,7 +149,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
           }
         }
 
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

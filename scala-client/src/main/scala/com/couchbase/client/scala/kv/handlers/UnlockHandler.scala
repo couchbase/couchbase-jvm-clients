@@ -71,7 +71,7 @@ private[scala] class UnlockHandler(hp: HandlerParams)
   ): Unit = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-      case _                      => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _                      => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

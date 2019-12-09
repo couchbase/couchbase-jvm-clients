@@ -97,7 +97,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -267,7 +266,7 @@ public class AsyncCollection {
     if (opts.projections().isEmpty() && !opts.withExpiry()) {
       return GetAccessor.get(core, fullGetRequest(id, opts), transcoder);
     } else {
-      return GetAccessor.subdocGet(core, id, subdocGetRequest(id, opts), transcoder);
+      return GetAccessor.subdocGet(core, subdocGetRequest(id, opts), transcoder);
     }
   }
 
@@ -442,7 +441,7 @@ public class AsyncCollection {
     notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndTouchOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return GetAccessor.getAndTouch(core, id, getAndTouchRequest(id, expiry, opts), transcoder);
+    return GetAccessor.getAndTouch(core, getAndTouchRequest(id, expiry, opts), transcoder);
   }
 
   /**
@@ -1019,7 +1018,7 @@ public class AsyncCollection {
     notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     LookupInOptions.Built opts = options.build();
     final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return LookupInAccessor.lookupInAccessor(id, core, lookupInRequest(id, specs, opts), serializer);
+    return LookupInAccessor.lookupInAccessor(core, lookupInRequest(id, specs, opts), serializer);
   }
 
   /**

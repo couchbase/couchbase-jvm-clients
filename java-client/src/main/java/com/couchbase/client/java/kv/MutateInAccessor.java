@@ -21,40 +21,36 @@ import com.couchbase.client.core.error.DefaultErrorUtil;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.core.service.kv.Observe;
-import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class MutateInAccessor {
 
-  public static CompletableFuture<MutateInResult> mutateIn(final Core core,
-                                                           final SubdocMutateRequest request,
-                                                           final String key,
-                                                           final PersistTo persistTo,
-                                                           final ReplicateTo replicateTo,
-                                                           final Boolean insertDocument,
+  public static CompletableFuture<MutateInResult> mutateIn(final Core core, final SubdocMutateRequest request,
+                                                           final String key, final PersistTo persistTo,
+                                                           final ReplicateTo replicateTo, final Boolean insertDocument,
                                                            final JsonSerializer serializer) {
     core.send(request);
     final CompletableFuture<MutateInResult> mutateInResult = request
       .response()
       .thenApply(response -> {
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-
-        switch (response.status()) {
-          case SUCCESS:
-            return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
-          case SUBDOC_FAILURE:
-            throw response.error().orElse(new SubDocumentException("Unknown SubDocument error", ctx, 0));
-          case EXISTS:
-            throw insertDocument ? new DocumentExistsException(ctx) : new CasMismatchException(ctx);
-          default:
-            throw DefaultErrorUtil.defaultErrorForStatus(key, response.status());
+        if (response.status().success()) {
+          return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
         }
+
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+        if (insertDocument && response.status() == ResponseStatus.EXISTS) {
+          throw new DocumentExistsException(ctx);
+        } else if (response.status() == ResponseStatus.SUBDOC_FAILURE && response.error().isPresent()) {
+          throw response.error().get();
+        }
+        throw keyValueStatusToException(request, response);
       });
     return wrapWithDurability(mutateInResult, key, persistTo, replicateTo, core, request, false);
   }

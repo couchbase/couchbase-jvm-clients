@@ -175,7 +175,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
           }
         }
 
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 
@@ -215,7 +215,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
           }
         }
 
-      case _ => Failure(DefaultErrors.throwOnBadResult(id, response.status()))
+      case _ => Failure(DefaultErrors.throwOnBadResult(request, response))
     }
   }
 }

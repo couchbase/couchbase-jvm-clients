@@ -23,16 +23,17 @@ import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.ServerOutOfMemoryException;
 import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
+
 public class LookupInAccessor {
 
-  public static CompletableFuture<LookupInResult> lookupInAccessor(final String id,
-                                                                   final Core core,
-                                                                   final SubdocGetRequest request,
+  public static CompletableFuture<LookupInResult> lookupInAccessor(final Core core, final SubdocGetRequest request,
                                                                    final JsonSerializer serializer) {
     core.send(request);
     return request
@@ -40,17 +41,11 @@ public class LookupInAccessor {
       .thenApply(response -> {
         if (response.status().success()) {
           return new LookupInResult(response.values(), response.cas(), serializer, null);
+        } else if (response.status() == ResponseStatus.SUBDOC_FAILURE) {
+          final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+          return new LookupInResult(response.values(), response.cas(), serializer, ctx);
         }
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case SUBDOC_FAILURE: return new LookupInResult(response.values(), response.cas(), serializer, ctx);
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("LookupIn operation failed", ctx);
-        }
-      });
+        throw keyValueStatusToException(request, response);
+      }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 }

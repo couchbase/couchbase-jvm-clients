@@ -86,7 +86,7 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
         val ctx = KeyValueErrorContext.completedRequest(request, response.status())
         throw new DocumentNotFoundException(ctx)
 
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

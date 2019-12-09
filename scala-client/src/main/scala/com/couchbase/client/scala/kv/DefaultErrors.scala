@@ -17,10 +17,14 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.error._
-import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.msg.Response
+import com.couchbase.client.core.msg.kv.KeyValueRequest
 
 private[scala] object DefaultErrors {
-  def throwOnBadResult(id: String, status: ResponseStatus): RuntimeException = {
-    DefaultErrorUtil.defaultErrorForStatus(id, status)
+  def throwOnBadResult(
+      request: KeyValueRequest[_ <: Response],
+      response: Response
+  ): CouchbaseException = {
+    DefaultErrorUtil.keyValueStatusToException(request, response)
   }
 }

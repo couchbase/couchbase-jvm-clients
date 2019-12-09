@@ -87,8 +87,7 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
     response.status() match {
       case ResponseStatus.SUCCESS =>
         MutationResult(response.cas(), response.mutationToken().asScala)
-
-      case _ => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _ => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

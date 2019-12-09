@@ -73,7 +73,7 @@ private[scala] class ExistsHandler(hp: HandlerParams)
     response.status() match {
       case ResponseStatus.SUCCESS   => ExistsResult(true, response.cas())
       case ResponseStatus.NOT_FOUND => ExistsResult(false, 0)
-      case _                        => throw DefaultErrors.throwOnBadResult(id, response.status())
+      case _                        => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

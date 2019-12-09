@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -28,7 +29,9 @@ import com.couchbase.client.java.codec.Transcoder;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Stability.Internal
@@ -56,16 +59,7 @@ public enum GetAccessor {
         if (response.status().success()) {
           return new GetResult(response.content(), response.flags(), response.cas(), Optional.empty(), transcoder);
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("Get operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       })
       .whenComplete((t, e) -> request.context().logicallyComplete());
   }
@@ -87,23 +81,13 @@ public enum GetAccessor {
         if (response.status().success()) {
           return new GetResult(response.content(), response.flags(), response.cas(), Optional.empty(), transcoder);
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case LOCKED: throw new DocumentLockedException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("GetAndLock operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       })
       .whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
-  public static CompletableFuture<GetResult> getAndTouch(final Core core, final String id,
-                                                         final GetAndTouchRequest request, Transcoder transcoder) {
+  public static CompletableFuture<GetResult> getAndTouch(final Core core, final GetAndTouchRequest request,
+                                                         final Transcoder transcoder) {
     core.send(request);
     return request
       .response()
@@ -111,22 +95,12 @@ public enum GetAccessor {
         if (response.status().success()) {
           return new GetResult(response.content(), response.flags(), response.cas(), Optional.empty(), transcoder);
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case LOCKED: throw new DocumentLockedException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("GetAndTouch operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       })
       .whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
-  public static CompletableFuture<GetResult> subdocGet(final Core core, final String id, final SubdocGetRequest request,
+  public static CompletableFuture<GetResult> subdocGet(final Core core, final SubdocGetRequest request,
                                                        final Transcoder transcoder) {
     core.send(request);
     return request
@@ -135,19 +109,11 @@ public enum GetAccessor {
         if (response.status().success() || response.status() == ResponseStatus.SUBDOC_FAILURE) {
           return parseSubdocGet(response, transcoder);
         }
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("Get operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       }).whenComplete((t, e) -> request.context().logicallyComplete());
   }
 
-  private static GetResult parseSubdocGet(final SubdocGetResponse response, Transcoder transcoder) {
+  private static GetResult parseSubdocGet(final SubdocGetResponse response, final Transcoder transcoder) {
     if (response.error().isPresent()) {
       throw response.error().get();
     }

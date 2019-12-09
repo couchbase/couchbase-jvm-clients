@@ -31,6 +31,8 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
+
 public class ExistsAccessor {
 
   private static ExistsResult CACHED_NOT_FOUND = new ExistsResult(false, 0);
@@ -46,15 +48,7 @@ public class ExistsAccessor {
         } else if (response.status() == ResponseStatus.NOT_FOUND) {
           return CACHED_NOT_FOUND;
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          default: throw new CouchbaseException("Exists operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       })
       .whenComplete((t, e) -> request.context().logicallyComplete());
   }

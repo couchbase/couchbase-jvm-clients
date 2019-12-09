@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class CounterAccessor {
@@ -38,22 +39,7 @@ public class CounterAccessor {
         if (response.status().success()) {
           return new CounterResult(response.cas(), response.value(), response.mutationToken());
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case EXISTS: throw new CasMismatchException(ctx);
-          case LOCKED: throw new DocumentLockedException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          case DURABILITY_INVALID_LEVEL: throw new DurabilityLevelNotAvailableException(ctx);
-          case DURABILITY_IMPOSSIBLE: throw new DurabilityImpossibleException(ctx);
-          case SYNC_WRITE_AMBIGUOUS: throw new DurabilityAmbiguousException(ctx);
-          case SYNC_WRITE_IN_PROGRESS: throw new DurableWriteInProgressException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          default: throw new CouchbaseException("Increment operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
 

@@ -43,9 +43,9 @@ import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.GetAccessor;
+import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
-import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
@@ -72,17 +72,11 @@ import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SignalType;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -238,7 +232,7 @@ public class ReactiveCollection {
         return Reactor.wrap(request, GetAccessor.get(core, request, transcoder), true);
       } else {
         SubdocGetRequest request = asyncCollection.subdocGetRequest(id, opts);
-        return Reactor.wrap(request, GetAccessor.subdocGet(core, id, request, transcoder), true);
+        return Reactor.wrap(request, GetAccessor.subdocGet(core, request, transcoder), true);
       }
     });
   }
@@ -297,7 +291,7 @@ public class ReactiveCollection {
       GetAndTouchOptions.Built opts = options.build();
       final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
       GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiry, opts);
-      return Reactor.wrap(request, GetAccessor.getAndTouch(core, id, request, transcoder), true);
+      return Reactor.wrap(request, GetAccessor.getAndTouch(core, request, transcoder), true);
     });
   }
 
@@ -617,7 +611,7 @@ public class ReactiveCollection {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
       return Reactor.wrap(
         request,
-        LookupInAccessor.lookupInAccessor(id, core, request, serializer),
+        LookupInAccessor.lookupInAccessor(core, request, serializer),
         true
       );
     });

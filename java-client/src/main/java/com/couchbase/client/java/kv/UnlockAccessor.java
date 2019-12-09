@@ -18,11 +18,14 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 
 public class UnlockAccessor {
 
@@ -33,18 +36,10 @@ public class UnlockAccessor {
       .thenApply(response -> {
         if (response.status().success()) {
           return null;
+        } else if (response.status() == ResponseStatus.LOCKED) {
+          throw new CasMismatchException(KeyValueErrorContext.completedRequest(request, response.status()));
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        switch (response.status()) {
-          case NOT_FOUND: throw new DocumentNotFoundException(ctx);
-          case LOCKED: throw new CasMismatchException(ctx);
-          case OUT_OF_MEMORY: throw new ServerOutOfMemoryException(ctx);
-          case TEMPORARY_FAILURE: // intended fallthrough to the case below
-          case SERVER_BUSY: throw new TemporaryFailureException(ctx);
-          case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: throw new DurableWriteReCommitInProgressException(ctx);
-          default: throw new CouchbaseException("Unlock operation failed", ctx);
-        }
+        throw keyValueStatusToException(request, response);
       })
       .whenComplete((aVoid, throwable) -> request.context().logicallyComplete())
       // Don't ask, need this otherwise it won't compile (void vs. object)
