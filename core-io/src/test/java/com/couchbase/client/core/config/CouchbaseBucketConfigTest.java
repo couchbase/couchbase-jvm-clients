@@ -63,7 +63,7 @@ class CouchbaseBucketConfigTest {
     void shouldGracefullyHandleEmptyPartitions() {
         CouchbaseBucketConfig config = readConfig("config_with_no_partitions.json");
 
-        assertEquals(CouchbaseBucketConfig.PARTITION_NOT_EXISTENT, config.nodeIndexForMaster(24, false));
+        assertEquals(CouchbaseBucketConfig.PARTITION_NOT_EXISTENT, config.nodeIndexForActive(24, false));
         assertEquals(CouchbaseBucketConfig.PARTITION_NOT_EXISTENT, config.nodeIndexForReplica(24, 1, false));
         assertFalse(config.ephemeral());
     }

@@ -39,7 +39,7 @@ public class GetReplicaResult extends GetResult {
    *
    * @param cas the cas from the doc.
    * @param expiration the expiration if fetched from the doc.
-   * @param isReplica whether the active/master replica returned this result
+   * @param isReplica whether the active or replica returned this result
    */
   private GetReplicaResult(final byte[] content,
                    final int flags,
@@ -61,7 +61,7 @@ public class GetReplicaResult extends GetResult {
   }
 
   /**
-   * Returns whether the replica that returned this result was the master.
+   * Returns whether the replica that returned this result was the replica or the active.
    */
   public boolean isReplica() {
     return isReplica;

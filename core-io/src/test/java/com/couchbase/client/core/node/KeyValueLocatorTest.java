@@ -69,7 +69,7 @@ class KeyValueLocatorTest {
     when(configMock.bucketConfig("bucket")).thenReturn(bucketMock);
     when(bucketMock.nodes()).thenReturn(Arrays.asList(nodeInfo1, nodeInfo2));
     when(bucketMock.numberOfPartitions()).thenReturn(1024);
-    when(bucketMock.nodeIndexForMaster(656, false)).thenReturn((short) 0);
+    when(bucketMock.nodeIndexForActive(656, false)).thenReturn((short) 0);
     when(bucketMock.nodeAtIndex(0)).thenReturn(nodeInfo1);
 
     locator.dispatch(getRequestMock, nodes, configMock, null);
@@ -105,8 +105,8 @@ class KeyValueLocatorTest {
     when(bucketMock.hasFastForwardMap()).thenReturn(true);
 
     // Fake a vbucket move in ffwd map from node 0 to node 1
-    when(bucketMock.nodeIndexForMaster(656, false)).thenReturn((short) 0);
-    when(bucketMock.nodeIndexForMaster(656, true)).thenReturn((short) 1);
+    when(bucketMock.nodeIndexForActive(656, false)).thenReturn((short) 0);
+    when(bucketMock.nodeIndexForActive(656, true)).thenReturn((short) 1);
 
     // Create Request
     GetRequest getRequest = mock(GetRequest.class);
@@ -161,8 +161,8 @@ class KeyValueLocatorTest {
     when(bucketMock.hasFastForwardMap()).thenReturn(false);
 
     // Fake a vbucket move in ffwd map from node 0 to node 1
-    when(bucketMock.nodeIndexForMaster(656, false)).thenReturn((short) 0);
-    when(bucketMock.nodeIndexForMaster(656, true)).thenReturn((short) 1);
+    when(bucketMock.nodeIndexForActive(656, false)).thenReturn((short) 0);
+    when(bucketMock.nodeIndexForActive(656, true)).thenReturn((short) 1);
 
     // Create Request
     GetRequest getRequest = mock(GetRequest.class);

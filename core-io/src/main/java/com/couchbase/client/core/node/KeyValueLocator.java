@@ -161,7 +161,7 @@ public class KeyValueLocator implements Locator {
     } else if (request instanceof ObserveViaSeqnoRequest && ((ObserveViaSeqnoRequest) request).replica() > 0) {
       return config.nodeIndexForReplica(partitionId, ((ObserveViaSeqnoRequest) request).replica() - 1, useFastForward);
     } else {
-      return config.nodeIndexForMaster(partitionId, useFastForward);
+      return config.nodeIndexForActive(partitionId, useFastForward);
     }
   }
 

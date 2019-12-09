@@ -86,13 +86,13 @@ public class PartitionInfo {
         }
 
         for (List<Short> partition : input) {
-            short master = partition.remove(0);
+            short active = partition.remove(0);
             short[] replicas = new short[partition.size()];
             int i = 0;
             for (short replica : partition) {
                 replicas[i++] = replica;
             }
-            partitions.add(new Partition(master, replicas));
+            partitions.add(new Partition(active, replicas));
         }
         return partitions;
     }

@@ -91,10 +91,10 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
      * @return a set containing the addresses of nodes with primary partitions.
      */
     private static Set<String> buildNodesWithPrimaryPartitions(final List<NodeInfo> nodeInfos,
-                                                                       final List<Partition> partitions) {
+                                                               final List<Partition> partitions) {
         Set<String> nodes = new HashSet<>(nodeInfos.size());
         for (Partition partition : partitions) {
-            int index = partition.master();
+            int index = partition.active();
             if (index >= 0) {
                 nodes.add(nodeInfos.get(index).hostname());
             }
@@ -177,16 +177,15 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
         return nodesWithPrimaryPartitions.contains(hostname);
     }
 
-    public short nodeIndexForMaster(int partition, boolean useFastForward) {
+    public short nodeIndexForActive(int partition, boolean useFastForward) {
         if (useFastForward && !hasFastForwardMap()) {
             throw new IllegalStateException("Could not get index from FF-Map, none found in this config.");
         }
 
         List<Partition> partitions = useFastForward ? partitionInfo.forwardPartitions() : partitionInfo.partitions();
         try {
-            return partitions.get(partition).master();
+            return partitions.get(partition).active();
         } catch (IndexOutOfBoundsException ex) {
-            // TODO: LOGGER.debug("Out of bounds on index for master " + partition + ".", ex);
             return PARTITION_NOT_EXISTENT;
         }
     }

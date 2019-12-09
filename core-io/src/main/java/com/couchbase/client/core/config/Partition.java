@@ -16,27 +16,24 @@
 
 package com.couchbase.client.core.config;
 
-import java.util.Arrays;
-import java.util.Collections;
-
 public class Partition {
 
-    private final short master;
+    private final short active;
     private final short[] replicas;
 
     /**
      * Creates a new {@link Partition}.
      *
-     * @param master the array index of the master
+     * @param active the array index of the active
      * @param replicas the array indexes of the replicas.
      */
-    public Partition(short master, short[] replicas) {
-        this.master = master;
+    public Partition(short active, short[] replicas) {
+        this.active = active;
         this.replicas = replicas;
     }
 
-    public short master() {
-        return master;
+    public short active() {
+        return active;
     }
 
     public short replica(int num) {
@@ -48,7 +45,7 @@ public class Partition {
 
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder("[" + master);
+        StringBuilder result = new StringBuilder("[" + active);
         for (short replica : replicas) {
             result.append(",").append(replica);
         }

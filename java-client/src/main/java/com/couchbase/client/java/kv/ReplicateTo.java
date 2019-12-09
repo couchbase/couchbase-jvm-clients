@@ -18,8 +18,6 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.service.kv.Observe;
 
-// TODO add this: Adding additional enumeration values for MASTER_PLUS_ONE, MASTER_PLUS_TWO, MASTER_PLUS_THREE.  Overall enumeration values would be MASTER, MASTER_PLUS_ONE, MASTER_PLUS_TWO, MASTER_PLUS_THREE, ONE, TWO, THREE, FOUR.
-
 public enum ReplicateTo {
   NONE(Observe.ObserveReplicateTo.NONE),
   ONE(Observe.ObserveReplicateTo.ONE),
