@@ -21,7 +21,11 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
-import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.{
+  CouchbaseException,
+  GroupNotFoundException,
+  UserNotFoundException
+}
 import com.couchbase.client.core.logging.RedactableArgument.{redactMeta, redactSystem, redactUser}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
@@ -35,15 +39,6 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Try}
-@Stability.Volatile
-class UserNotFoundException(val domain: AuthDomain, val username: String)
-    extends CouchbaseException(
-      "User [" + redactUser(username) + "] not found in " + domain + " domain."
-    )
-
-@Stability.Volatile
-class GroupNotFoundException(val groupName: String)
-    extends CouchbaseException("Group [" + redactSystem(groupName) + "] not found.")
 
 object ReactiveUserManager {
   // Some roles have an odd \u0019 which causes upickle to die
@@ -111,7 +106,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(new UserNotFoundException(domain, username))
+          SMono.raiseError(new UserNotFoundException(domain.alias, username))
         } else
           checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]") match {
             case Failure(err) => SMono.raiseError(err)
@@ -180,7 +175,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(new UserNotFoundException(domain, username))
+          SMono.raiseError(new UserNotFoundException(domain.alias, username))
         } else {
           checkStatus(response, "drop user [" + redactUser(username) + "]") match {
             case Failure(err) => SMono.raiseError(err)

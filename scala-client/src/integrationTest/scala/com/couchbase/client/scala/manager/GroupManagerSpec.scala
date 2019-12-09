@@ -1,14 +1,17 @@
 package com.couchbase.client.scala.manager
 
-import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
+import com.couchbase.client.core.error.{
+  CouchbaseException,
+  GroupNotFoundException,
+  UserNotFoundException
+}
+import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.SMono
 
 import scala.util.{Failure, Success}
 

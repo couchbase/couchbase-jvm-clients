@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.manager
 
-import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.scala.manager.user.{UserNotFoundException, _}
+import com.couchbase.client.core.error.{CouchbaseException, UserNotFoundException}
+import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.CouchbasePickler._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}

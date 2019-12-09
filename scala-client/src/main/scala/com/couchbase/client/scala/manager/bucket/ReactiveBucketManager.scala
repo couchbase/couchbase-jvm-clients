@@ -18,11 +18,14 @@ package com.couchbase.client.scala.manager.bucket
 import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.{DELETE, GET, POST}
-import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.logging.RedactableArgument.{redactMeta, redactUser}
+import com.couchbase.client.core.error.{
+  BucketAlreadyExistsException,
+  BucketNotFoundException,
+  CouchbaseException
+}
+import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
@@ -34,13 +37,6 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
 import scala.util.Failure
-@Stability.Volatile
-class BucketNotFoundException(val bucketName: String)
-    extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] not found.")
-
-@Stability.Volatile
-class BucketAlreadyExistsException(val bucketName: String)
-    extends CouchbaseException("Bucket [" + redactUser(bucketName) + "] already exists.")
 
 @Volatile
 class ReactiveBucketManager(core: Core) {
@@ -79,7 +75,7 @@ class ReactiveBucketManager(core: Core) {
         if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
           val content = new String(response.content, StandardCharsets.UTF_8)
           if (content.contains("Bucket with given name already exists")) {
-            SMono.raiseError(new BucketAlreadyExistsException(settings.name))
+            SMono.raiseError(BucketAlreadyExistsException.forBucket(settings.name))
           } else {
             SMono.raiseError(new CouchbaseException(content))
           }
@@ -139,7 +135,7 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(new BucketNotFoundException(bucketName))
+          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
@@ -158,7 +154,7 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(new BucketNotFoundException(bucketName))
+          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
@@ -195,7 +191,7 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(new BucketNotFoundException(bucketName))
+          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)

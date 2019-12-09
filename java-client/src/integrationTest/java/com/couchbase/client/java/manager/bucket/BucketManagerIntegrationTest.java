@@ -17,6 +17,8 @@
 package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.error.BucketAlreadyExistsException;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;

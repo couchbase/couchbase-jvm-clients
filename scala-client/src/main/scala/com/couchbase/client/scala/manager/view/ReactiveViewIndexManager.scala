@@ -25,7 +25,6 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http._
 import com.couchbase.client.core.error.{
   CouchbaseException,
   DesignDocumentNotFoundException,
-  HttpStatusCodeException,
   ViewServiceException
 }
 import com.couchbase.client.core.json.Mapper
@@ -33,7 +32,6 @@ import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.view.{GenericViewRequest, GenericViewResponse}
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.CbThrowables
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.transformers.JacksonTransformers
@@ -45,7 +43,6 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import scala.compat.java8.OptionConverters._
 
 class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
   private val DefaultTimeout: Duration =

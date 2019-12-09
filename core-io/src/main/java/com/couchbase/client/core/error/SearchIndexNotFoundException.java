@@ -22,4 +22,8 @@ public class SearchIndexNotFoundException extends CouchbaseException {
     super("The search index is not found on the server", ctx);
   }
 
+  public static SearchIndexNotFoundException forIndex(final String name) {
+    return new SearchIndexNotFoundException(new ReducedSearchErrorContext(name, null));
+  }
+
 }

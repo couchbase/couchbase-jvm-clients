@@ -18,8 +18,9 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.error.BucketAlreadyExistsException;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -29,10 +30,8 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;

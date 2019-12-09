@@ -17,6 +17,10 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CollectionAlreadyExistsException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeNotFoundException;
 
 import java.util.List;
 

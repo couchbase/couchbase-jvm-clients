@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.search;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class SearchIndexNotFoundException extends CouchbaseException {
-  private final String indexName;
+public class BucketNotFoundException extends CouchbaseException {
 
-  public SearchIndexNotFoundException(String indexName) {
-    super("Search Index [" + redactSystem(indexName) + "] not found.");
-    this.indexName = requireNonNull(indexName);
+  private final String bucketName;
+
+  BucketNotFoundException(final String bucketName) {
+    super("Bucket [" + redactMeta(bucketName) + "] not found.");
+    this.bucketName = requireNonNull(bucketName);
   }
 
-  public static SearchIndexNotFoundException forIndex(String indexName) {
-    return new SearchIndexNotFoundException(indexName);
+  public static BucketNotFoundException forBucket(final String bucketName) {
+    return new BucketNotFoundException(bucketName);
   }
 
-  public String indexName() {
-    return indexName;
+  public String bucketName() {
+    return bucketName;
   }
 }

@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.user;
 
+import com.couchbase.client.core.error.GroupNotFoundException;
+import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;

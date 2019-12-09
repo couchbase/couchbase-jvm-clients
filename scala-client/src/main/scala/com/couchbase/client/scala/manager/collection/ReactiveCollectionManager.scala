@@ -20,7 +20,13 @@ import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.config.CollectionsManifest
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
-import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.{
+  CollectionAlreadyExistsException,
+  CollectionNotFoundException,
+  CouchbaseException,
+  ScopeAlreadyExistsException,
+  ScopeNotFoundException
+}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.GenericManagerResponse
 import com.couchbase.client.core.retry.RetryStrategy
@@ -83,7 +89,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       .flatMap(scopes => {
         scopes.find(_.name == scopeName) match {
           case Some(scope) => SMono.just(scope)
-          case _           => SMono.raiseError(ScopeNotFoundException(scopeName))
+          case _           => SMono.raiseError(new ScopeNotFoundException(scopeName))
         }
       })
   }
@@ -223,17 +229,17 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
 
       if (response.status == ResponseStatus.NOT_FOUND) {
         if (error.contains("Scope with this name is not found")) {
-          Failure(ScopeNotFoundException(scopeName))
+          Failure(new ScopeNotFoundException(scopeName))
         } else if (error.contains("Collection with this name is not found")) {
-          Failure(CollectionNotFoundException(collectionName))
+          Failure(new CollectionNotFoundException(collectionName))
         } else {
           Failure(new CouchbaseException("Unknown error in CollectionManager: " + error))
         }
       } else if (response.status == ResponseStatus.INVALID_ARGS) {
         if (error.contains("Scope with this name already exists")) {
-          Failure(ScopeAlreadyExistsException(scopeName))
+          Failure(new ScopeAlreadyExistsException(scopeName))
         } else if (error.contains("Collection with this name already exists")) {
-          Failure(CollectionAlreadyExistsException(collectionName))
+          Failure(new CollectionAlreadyExistsException(collectionName))
         } else {
           Failure(new IllegalArgumentException("Unknown error in CollectionManager: " + error))
         }

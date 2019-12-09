@@ -17,6 +17,11 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 
+import com.couchbase.client.core.error.{
+  CollectionAlreadyExistsException,
+  ScopeAlreadyExistsException,
+  ScopeNotFoundException
+}
 import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.manager.collection._
 import com.couchbase.client.scala.util.ScalaIntegrationTest

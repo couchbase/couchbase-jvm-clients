@@ -17,7 +17,11 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 
-import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.{
+  BucketAlreadyExistsException,
+  BucketNotFoundException,
+  DocumentNotFoundException
+}
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}

@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.collection;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class CollectionAlreadyExistsException extends CouchbaseException {
-  private final String collectionName;
+public class ScopeNotFoundException extends CouchbaseException {
+  private final String scopeName;
 
-  public CollectionAlreadyExistsException(String collectionName) {
-    super("Collection [" + redactMeta(collectionName) + "] already exists.");
-    this.collectionName = requireNonNull(collectionName);
+  public ScopeNotFoundException(String scopeName) {
+    super("Scope [" + redactMeta(scopeName) + "] not found.");
+    this.scopeName = requireNonNull(scopeName);
   }
 
-  public static CollectionAlreadyExistsException forCollection(String collectionName) {
-    return new CollectionAlreadyExistsException(collectionName);
+  public static ScopeNotFoundException forScope(String scopeName) {
+    return new ScopeNotFoundException(scopeName);
   }
 
-  public String collectionName() {
-    return collectionName;
+  public String scopeName() {
+    return scopeName;
   }
 }

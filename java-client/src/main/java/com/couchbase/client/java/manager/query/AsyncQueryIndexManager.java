@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.error.QueryIndexExistsException;
 import com.couchbase.client.core.error.QueryIndexNotFoundException;

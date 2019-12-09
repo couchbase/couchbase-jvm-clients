@@ -17,9 +17,8 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.manager.bucket.BucketNotFoundException;
-import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;

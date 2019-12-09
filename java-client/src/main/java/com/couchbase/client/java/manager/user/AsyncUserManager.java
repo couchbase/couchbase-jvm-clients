@@ -19,6 +19,8 @@ package com.couchbase.client.java.manager.user;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.error.GroupNotFoundException;
+import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
@@ -79,7 +81,7 @@ public class AsyncUserManager extends ManagerSupport {
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
     return sendRequest(GET, pathForUser(domain, username), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw UserNotFoundException.forUser(domain, username);
+        throw UserNotFoundException.forUser(domain.alias(), username);
       }
       checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]");
       return Mapper.decodeInto(response.content(), UserAndMetadata.class);
@@ -147,7 +149,7 @@ public class AsyncUserManager extends ManagerSupport {
 
     return sendRequest(DELETE, pathForUser(domain, username), options.build()).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw UserNotFoundException.forUser(domain, username);
+        throw UserNotFoundException.forUser(domain.alias(), username);
       }
       checkStatus(response, "drop user [" + redactUser(username) + "]");
       return null;

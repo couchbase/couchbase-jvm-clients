@@ -14,30 +14,29 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.user;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
 public class UserNotFoundException extends CouchbaseException {
-  private final AuthDomain domain;
+  private final String domain;
   private final String username;
 
-  public UserNotFoundException(AuthDomain domain, String username) {
+  public UserNotFoundException(String domain, String username) {
     super("User [" + redactUser(username) + "] not found in " + domain + " domain.");
     this.domain = requireNonNull(domain);
     this.username = requireNonNull(username);
   }
 
-  public static UserNotFoundException forUser(AuthDomain domain, String username) {
+  public static UserNotFoundException forUser(String domain, String username) {
     return new UserNotFoundException(domain, username);
   }
 
-  public AuthDomain domain() {
+  public String domain() {
     return domain;
   }
 

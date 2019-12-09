@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.bucket;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class BucketNotFoundException extends CouchbaseException {
+public class CollectionNotFoundException extends CouchbaseException {
+  private final String collectionName;
 
-  private final String bucketName;
-
-  BucketNotFoundException(final String bucketName) {
-    super("Bucket [" + redactMeta(bucketName) + "] not found.");
-    this.bucketName = requireNonNull(bucketName);
+  public CollectionNotFoundException(String collectionName) {
+    super("Collection [" + redactMeta(collectionName) + "] not found.");
+    this.collectionName = requireNonNull(collectionName);
   }
 
-  static BucketNotFoundException forBucket(final String bucketName) {
-    return new BucketNotFoundException(bucketName);
+  public static CollectionNotFoundException forCollection(String collectionName) {
+    return new CollectionNotFoundException(collectionName);
   }
 
-  public String bucketName() {
-    return bucketName;
+  public String collectionName() {
+    return collectionName;
   }
 }

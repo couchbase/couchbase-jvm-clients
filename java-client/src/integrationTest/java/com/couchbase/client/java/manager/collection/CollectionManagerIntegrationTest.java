@@ -17,6 +17,10 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.error.CollectionAlreadyExistsException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;

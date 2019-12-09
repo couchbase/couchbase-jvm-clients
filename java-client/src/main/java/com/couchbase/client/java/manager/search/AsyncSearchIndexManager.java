@@ -30,6 +30,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.SearchIndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.java.json.JsonObject;

@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.{CouchbaseException, SearchIndexNotFoundException}
 import com.couchbase.client.core.logging.RedactableArgument.redactSystem
 import com.couchbase.client.core.msg.search.{GenericSearchRequest, GenericSearchResponse}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -33,10 +33,6 @@ import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-
-@Stability.Volatile
-case class SearchIndexNotFoundException(indexName: String)
-    extends CouchbaseException(s"Search index [${redactSystem(indexName)}] not found.")
 
 @Stability.Volatile
 class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
@@ -54,7 +50,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     case s @ Success(_) => s
     case Failure(err) =>
       if (err.getMessage.contains("index not found")) {
-        Failure(SearchIndexNotFoundException(indexName))
+        Failure(SearchIndexNotFoundException.forIndex(indexName))
       } else Failure(err)
   }
 
@@ -72,7 +68,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       case s @ Success(_) => s
       case Failure(err) =>
         if (err.getMessage.contains("index not found")) {
-          Failure(SearchIndexNotFoundException(indexName))
+          Failure(SearchIndexNotFoundException.forIndex(indexName))
         } else Failure(err)
     }
   }

@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.query;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static java.util.Objects.requireNonNull;
 
-@Stability.Internal
-class IndexesNotReadyException extends RuntimeException {
-  private final Map<String, String> indexNameToState;
+@Stability.Volatile
+public class ScopeAlreadyExistsException extends CouchbaseException {
+  private final String scopeName;
 
-  IndexesNotReadyException(Map<String, String> indexNameToState) {
-    super("Statuses of offline indexes: " + redactMeta(indexNameToState));
-    this.indexNameToState = Collections.unmodifiableMap(new HashMap<>(indexNameToState));
+  public ScopeAlreadyExistsException(String scopeName) {
+    super("Scope [" + redactMeta(scopeName) + "] already exists.");
+    this.scopeName = requireNonNull(scopeName);
   }
 
-  Map<String, String> indexNameToState() {
-    return indexNameToState;
+  public static ScopeAlreadyExistsException forScope(String scopeName) {
+    return new ScopeAlreadyExistsException(scopeName);
+  }
+
+  public String scopeName() {
+    return scopeName;
   }
 }

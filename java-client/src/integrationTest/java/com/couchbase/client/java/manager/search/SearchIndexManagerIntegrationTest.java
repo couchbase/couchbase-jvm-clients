@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.search;
 
+import com.couchbase.client.core.error.SearchIndexNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -70,7 +71,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void upsertTwice() throws Exception {
+  void upsertTwice() {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);

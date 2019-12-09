@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.bucket;
+package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class BucketAlreadyExistsException extends CouchbaseException {
+public class GroupNotFoundException extends CouchbaseException {
+  private final String groupName;
 
-  private final String bucketName;
-
-  BucketAlreadyExistsException(final String bucketName) {
-    super("Bucket [" + redactMeta(bucketName) + "] already exists.");
-    this.bucketName = requireNonNull(bucketName);
+  public GroupNotFoundException(String groupName) {
+    super("Group [" + redactSystem(groupName) + "] not found.");
+    this.groupName = requireNonNull(groupName);
   }
 
-  static BucketAlreadyExistsException forBucket(final String bucketName) {
-    return new BucketAlreadyExistsException(bucketName);
+  public static GroupNotFoundException forGroup(String groupName) {
+    return new GroupNotFoundException(groupName);
   }
 
-  public String bucketName() {
-    return bucketName;
+  public String groupName() {
+    return groupName;
   }
 }
